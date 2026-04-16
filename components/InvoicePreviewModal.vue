@@ -110,6 +110,7 @@
                     <p v-if="props.viewInvoice?.billing_email" class="text-xs break-all" :style="{ color: primaryColor }">{{ props.viewInvoice.billing_email }}</p>
                   </template>
                   <template v-else>
+                    <p v-if="localBilling.company_name" class="text-xs font-semibold text-gray-500">{{ localBilling.company_name }}</p>
                     <p class="text-sm font-semibold text-gray-800">{{ localBilling.first_name }} {{ localBilling.last_name }}</p>
                     <p v-if="localBilling.street" class="text-xs text-gray-500">{{ localBilling.street }} {{ localBilling.street_nr }}</p>
                     <p v-if="localBilling.zip || localBilling.city" class="text-xs text-gray-500">{{ localBilling.zip }} {{ localBilling.city }}</p>
@@ -120,6 +121,7 @@
 
                 <!-- Edit mode (only in edit mode) -->
                 <div v-else class="space-y-2">
+                  <input v-model="localBilling.company_name" placeholder="Firmenname (optional)" class="input-field w-full" />
                   <div class="grid grid-cols-2 gap-2">
                     <input v-model="localBilling.first_name" placeholder="Vorname *" required class="input-field" :class="{ 'border-red-400': billingErrors.first_name }" />
                     <input v-model="localBilling.last_name" placeholder="Nachname *" required class="input-field" :class="{ 'border-red-400': billingErrors.last_name }" />
@@ -455,6 +457,7 @@ const qrDataUrl = ref<string | null>(null)
 const qrLoading = ref(false)
 
 const localBilling = ref({
+  company_name: '',
   first_name: '',
   last_name: '',
   street: '',
@@ -483,6 +486,7 @@ watch(() => props.draft, (d) => {
     expandedItems.value = []
     qrDataUrl.value = null
     localBilling.value = {
+      company_name: (d as any).billing_company_name || '',
       first_name: d.billing_first_name || '',
       last_name: d.billing_last_name || '',
       street: d.billing_street || '',
@@ -582,6 +586,7 @@ async function sendInvoice() {
       ...props.draft,
       due_date: localDueDate.value || props.draft.due_date,
       notes: localNote.value || undefined,
+      billing_company_name: localBilling.value.company_name || undefined,
       billing_first_name: localBilling.value.first_name,
       billing_last_name: localBilling.value.last_name,
       billing_street: [localBilling.value.street, localBilling.value.street_nr].filter(Boolean).join(' '),

@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
     .eq('auth_user_id', authUser.id)
     .single()
 
-  if (!staffUser || !['admin', 'staff'].includes(staffUser.role)) {
+  if (!staffUser || !['admin', 'staff', 'tenant_admin'].includes(staffUser.role)) {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 

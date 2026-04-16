@@ -566,7 +566,7 @@
           <div v-else class="space-y-4">
             
             <!-- Payment Summary Box (nur wenn Zahlungen ausgewählt sind) -->
-            <div v-if="selectedPayments.length > 0" class="sticky top-0 z-10 rounded-lg px-4 py-3 shadow-sm border-l-4 space-y-2" :style="{ borderLeftColor: primaryColor, backgroundColor: primaryColor + '08', backdropFilter: 'blur(8px)' }">
+            <div v-if="selectedPayments.length > 0" class="sticky top-0 z-10 rounded-lg px-4 py-3 border-l-4 space-y-2" :style="{ borderLeftColor: primaryColor, backgroundColor: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.10)' }">
               <!-- Zeile 1: Anzahl + Betrag -->
               <div class="flex items-center justify-between gap-2">
                 <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide">{{ selectedPayments.length }} Zahlung{{ selectedPayments.length > 1 ? 'en' : '' }} ausgewählt</p>
@@ -575,11 +575,19 @@
               <!-- Zeile 2: Buttons -->
               <div class="flex gap-2">
                 <button
+                  v-if="selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p && !isInvoicedPayment(p) })"
                   class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md"
                   :style="{ backgroundColor: secondaryColor || '#22C55E' }"
                   @click="handleBulkPayment('cash')"
                 >
                   Bar bezahlen
+                </button>
+                <button
+                  v-if="selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p && isInvoicedPayment(p) })"
+                  class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-all hover:shadow-md"
+                  @click="handleBulkMarkAsPaid"
+                >
+                  Bar bezahlt (Verrechnet)
                 </button>
                 <button
                   v-if="selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p?.payment_status === 'pending' && !isInvoicedPayment(p) })"
@@ -602,13 +610,15 @@
                   'rounded-lg transition-all overflow-hidden border-l-4 shadow-sm',
                   payment.appointment?.status === 'cancelled'
                     ? 'border-l-orange-300 bg-orange-50 cursor-pointer hover:shadow-md'
-                    : payment.payment_status === 'completed'
+                    :                   payment.payment_status === 'completed'
                     ? 'border-l-green-300 bg-gray-50 opacity-60 cursor-not-allowed'
                     : (isInvoicedPayment(payment))
-                    ? 'border-l-blue-400 bg-blue-50'
+                    ? 'border-l-blue-400 bg-blue-50 cursor-pointer hover:shadow-md'
                     : 'hover:shadow-md cursor-pointer',
-                  selectedPayments.includes(payment.id) && payment.appointment?.status !== 'cancelled' && !isInvoicedPayment(payment) && payment.payment_status !== 'completed'
+                  selectedPayments.includes(payment.id) && !isInvoicedPayment(payment) && payment.appointment?.status !== 'cancelled' && payment.payment_status !== 'completed'
                     ? 'ring-2 ring-offset-0'
+                    : selectedPayments.includes(payment.id) && isInvoicedPayment(payment)
+                    ? 'ring-2 ring-blue-400 ring-offset-0'
                     : ''
                 ]"
                 :style="{
@@ -829,10 +839,9 @@
                          payment.payment_method }}
                     </span>
                   </div>
-                  <!-- Action-Buttons für verrechnete Zahlungen -->
-                  <div v-if="isInvoicedPayment(payment)" class="flex items-center gap-2 mt-1" @click.stop>
+                  <!-- Anzeigen-Button für verrechnete Zahlungen (direkt auf der Karte) -->
+                  <div v-if="isInvoicedPayment(payment) && payment.invoice_id" class="flex items-center mt-1" @click.stop>
                     <button
-                      v-if="payment.invoice_id"
                       @click.stop="handleViewInvoice(payment)"
                       class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors cursor-pointer"
                       :style="{ color: primaryColor, borderColor: primaryColor + '40' }"
@@ -841,20 +850,6 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                       </svg>
                       Anzeigen
-                    </button>
-                    <button
-                      @click.stop="handleMarkAsPaid(payment)"
-                      :disabled="payment._markingAsPaid"
-                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 cursor-pointer"
-                    >
-                      <svg v-if="payment._markingAsPaid" class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                      </svg>
-                      <svg v-else class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
-                      </svg>
-                      Bar bezahlt
                     </button>
                   </div>
                 </div>
@@ -1955,9 +1950,9 @@ const handlePaymentCardClick = (payment: any) => {
   else if (payment.payment_status === 'completed') {
     logger.debug('🔒 Payment is completed, cannot select')
   }
-  // If invoiced, ignore click (use action buttons instead)
+  // If invoiced, allow selection for bulk "Bar bezahlt"
   else if (isInvoicedPayment(payment)) {
-    logger.debug('🔒 Payment is invoiced, use action buttons')
+    togglePaymentSelection(payment.id)
   }
   // Otherwise, toggle selection
   else {
@@ -2998,60 +2993,34 @@ function cleanTxNote(note: string): string {
 const showInvoicePreview = ref(false)
 const invoiceDraft = ref<any>(null)
 
-async function loadInvoiceDraft(studentUserId: string) {
+async function loadInvoiceDraft(studentUserId: string, paymentIds?: string[]) {
   const result = await $fetch<{ hasOpenItems: boolean; draft: any }>('/api/invoices/auto-draft', {
     method: 'POST',
-    body: { student_user_id: studentUserId },
+    body: {
+      student_user_id: studentUserId,
+      ...(paymentIds?.length ? { payment_ids: paymentIds } : {}),
+    },
   })
   return result
 }
 
-async function switchPaymentToInvoice(payment: any) {
-  payment._switchingToInvoice = true
-  try {
-    await $fetch('/api/payments/manage', {
-      method: 'POST',
-      body: { action: 'switch-to-invoice', paymentId: payment.id },
-    })
-    payment.payment_method = 'invoice'
-    payment.invoice_id = null
-  } catch (err: any) {
-    alert(`Fehler: ${err?.data?.statusMessage || err.message}`)
-  } finally {
-    payment._switchingToInvoice = false
-  }
-}
-
-async function openInvoicePreviewForPayment(payment: any) {
-  if (!props.selectedStudent?.id) return
-  payment._loadingInvoice = true
-  try {
-    const result = await loadInvoiceDraft(props.selectedStudent.id)
-    if (result.hasOpenItems && result.draft) {
-      invoiceDraft.value = result.draft
-      showInvoicePreview.value = true
-    } else {
-      alert('Keine offenen Rechnungsposten gefunden.')
-    }
-  } catch (err: any) {
-    alert(`Fehler: ${err?.data?.statusMessage || err.message}`)
-  } finally {
-    payment._loadingInvoice = false
-  }
-}
-
 async function handleBulkInvoice() {
   if (!props.selectedStudent?.id || selectedPayments.value.length === 0) return
-  // Alle ausgewählten Zahlungen auf 'invoice' umbuchen (egal welche Methode sie aktuell haben)
-  const toSwitch = payments.value.filter(
-    p => selectedPayments.value.includes(p.id) && p.payment_method !== 'invoice' && p.payment_status === 'pending'
-  )
-  for (const p of toSwitch) {
-    await switchPaymentToInvoice(p)
+
+  // Only include non-invoiced pending payments in the new invoice
+  const pendingIds = payments.value
+    .filter(p => selectedPayments.value.includes(p.id) && !isInvoicedPayment(p) && p.payment_status === 'pending')
+    .map(p => p.id)
+
+  if (pendingIds.length === 0) {
+    alert('Keine offenen, noch nicht verrechneten Zahlungen ausgewählt.')
+    return
   }
-  // Jetzt Invoice-Draft laden (inkl. gerade umgebuchter + bereits vorhandener invoice-Zahlungen)
+
   try {
-    const result = await loadInvoiceDraft(props.selectedStudent.id)
+    // Pass IDs directly — auto-draft builds the preview without writing to DB.
+    // The DB write (payment_method/status update) only happens in send-draft when the user clicks "Senden".
+    const result = await loadInvoiceDraft(props.selectedStudent.id, pendingIds)
     if (result.hasOpenItems && result.draft) {
       invoiceDraft.value = result.draft
       showInvoicePreview.value = true
@@ -3087,8 +3056,38 @@ async function handleViewInvoice(payment: any) {
   }
 }
 
+async function handleBulkMarkAsPaid() {
+  const invoicedIds = selectedPayments.value.filter(id => {
+    const p = payments.value.find(p => p.id === id)
+    return p && isInvoicedPayment(p)
+  })
+  if (invoicedIds.length === 0) return
+
+  isProcessingBulkAction.value = true
+  try {
+    for (const payment_id of invoicedIds) {
+      await $fetch('/api/invoices/mark-paid', {
+        method: 'POST',
+        body: { payment_id },
+      })
+    }
+    selectedPayments.value = []
+    await loadPayments()
+  } catch (err: any) {
+    alert(`Fehler: ${err?.data?.statusMessage || err.message}`)
+  } finally {
+    isProcessingBulkAction.value = false
+  }
+}
+
 async function handleMarkAsPaid(payment: any) {
-  if (!confirm('Zahlung als bar bezahlt markieren?')) return
+  // Use inline confirmation to avoid confirm() being blocked by the browser inside modals
+  if (!payment._confirmMarkAsPaid) {
+    payment._confirmMarkAsPaid = true
+    setTimeout(() => { if (payment._confirmMarkAsPaid) payment._confirmMarkAsPaid = false }, 4000)
+    return
+  }
+  payment._confirmMarkAsPaid = false
   payment._markingAsPaid = true
   try {
     await $fetch('/api/invoices/mark-paid', {
