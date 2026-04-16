@@ -269,6 +269,10 @@
                         <p class="text-xs font-semibold text-gray-700">{{ draft?.creditor_name }}</p>
                         <p v-if="draft?.creditor_zip" class="text-xs text-gray-500">{{ draft?.creditor_zip }} {{ draft?.creditor_city }}</p>
                       </div>
+                      <div v-if="scorRef">
+                        <p class="text-xs text-gray-400">Referenz (SCOR)</p>
+                        <p class="text-xs font-mono font-semibold text-gray-700">{{ scorRef }}</p>
+                      </div>
                       <div>
                         <p class="text-xs text-gray-400">Betrag</p>
                         <p class="text-sm font-bold" :style="{ color: primaryColor }">{{ chf(computedTotal) }}</p>
@@ -517,7 +521,7 @@ async function loadQRCode(d: InvoiceDraft) {
         debtor_zip: d.billing_zip || '',
         debtor_city: d.billing_city || '',
         amount_rappen: computedTotal.value,
-        reference: '',
+        invoice_number: d.invoice_number_preview || '',
         additional_info: `Rechnung ${d.invoice_number_preview}`,
       },
     })
@@ -539,6 +543,25 @@ const totalCredits = computed(() => {
 
 const computedTotal = computed(() => {
   return (props.draft?.subtotal_rappen || 0) - totalDiscounts.value - totalCredits.value + (props.draft?.vat_amount_rappen || 0)
+})
+
+// ISO 11649 SCOR reference derived from invoice number preview (for display in modal)
+const scorRef = computed(() => {
+  const num = props.draft?.invoice_number_preview
+  if (!num) return ''
+  const cleaned = num.replace(/[^A-Z0-9]/gi, '').toUpperCase()
+  if (!cleaned) return ''
+  const numeric = (cleaned + 'RF00').split('').map((c: string) => {
+    const code = c.charCodeAt(0)
+    return code >= 65 && code <= 90 ? (code - 55).toString() : c
+  }).join('')
+  let remainder = 0
+  for (const ch of numeric) {
+    remainder = (remainder * 10 + parseInt(ch, 10)) % 97
+  }
+  const ref = 'RF' + String(98 - remainder).padStart(2, '0') + cleaned
+  // Format in groups of 4 for display
+  return ref.match(/.{1,4}/g)?.join(' ') || ref
 })
 
 function toggleItem(i: number) {

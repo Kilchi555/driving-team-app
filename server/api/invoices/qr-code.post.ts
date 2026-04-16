@@ -30,6 +30,7 @@ export default defineEventHandler(async (event) => {
       amount_rappen: body.amount_rappen || 0,
       currency: 'CHF',
       reference: body.reference || '',
+      invoice_number: body.invoice_number || '',
       additional_info: body.additional_info || '',
     }
 

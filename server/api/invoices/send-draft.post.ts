@@ -35,6 +35,7 @@ function generateInvoiceEmail(data: {
   qrCodeDataUrl?: string | null
   qrIban?: string | null
   creditorName?: string
+  scorRef?: string | null
 }): string {
   const brandColor = data.primaryColor || '#1E40AF'
   const brandColorLight = brandColor + '15'
@@ -141,6 +142,7 @@ function generateInvoiceEmail(data: {
                 <p style="margin:0 0 8px;font-size:12px;color:#64748b;">QR-Code mit Banking-App (z.B. PostFinance, UBS, Raiffeisen) oder TWINT scannen.</p>
                 ${data.qrIban ? `<p style="margin:0 0 3px;font-size:11px;color:#94a3b8;">QR-IBAN: <span style="color:#1e293b;font-family:monospace;font-weight:600;">${data.qrIban}</span></p>` : ''}
                 ${data.creditorName ? `<p style="margin:0 0 3px;font-size:11px;color:#94a3b8;">Empfänger: <span style="color:#1e293b;font-weight:600;">${data.creditorName}</span></p>` : ''}
+                ${data.scorRef ? `<p style="margin:0 0 3px;font-size:11px;color:#94a3b8;">Referenz: <span style="color:#1e293b;font-family:monospace;font-weight:600;">${data.scorRef}</span></p>` : ''}
                 <p style="margin:10px 0 0;font-size:18px;font-weight:800;color:${brandColor};">${_formatChf(data.totalRappen)}</p>
               </td>
             </tr>
@@ -339,7 +341,8 @@ export default defineEventHandler(async (event) => {
   let qrCodeDataUrl: string | null = null
   if ((draft as any).qr_iban) {
     try {
-      const { generateSwissQRBase64 } = await import('~/server/utils/swiss-qr')
+      const { generateSwissQRBase64, generateSCOR } = await import('~/server/utils/swiss-qr')
+      const scorRef = generateSCOR(invoiceNumber)
       qrCodeDataUrl = await generateSwissQRBase64({
         qr_iban: (draft as any).qr_iban,
         creditor_name: (draft as any).creditor_name || tenantData.name || '',
@@ -352,8 +355,10 @@ export default defineEventHandler(async (event) => {
         debtor_zip: draft.billing_zip || '',
         debtor_city: draft.billing_city || '',
         amount_rappen: draft.total_amount_rappen,
+        reference: scorRef,
         additional_info: `Rechnung ${invoiceNumber}`,
       })
+      ;(draft as any).scor_reference = scorRef
     } catch { /* QR optional – Fehler ignorieren */ }
   }
 
@@ -373,6 +378,7 @@ export default defineEventHandler(async (event) => {
         qrCodeDataUrl,
         qrIban: (draft as any).qr_iban || null,
         creditorName: (draft as any).creditor_name || tenantData.name,
+        scorRef: (draft as any).scor_reference || null,
       })
 
       // PDF generieren und als Anhang beifügen
