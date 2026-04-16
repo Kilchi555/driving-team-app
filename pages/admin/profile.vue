@@ -1338,6 +1338,78 @@
             </div>
           </div>
 
+          <!-- QR-Rechnung / Invoice Settings -->
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-1">Swiss QR-Rechnung &amp; Rechnungseinstellungen</h2>
+            <p class="text-sm text-gray-500 mb-4">Hinterlegte Daten werden automatisch in jede Rechnung eingetragen.</p>
+
+            <div class="space-y-4">
+              <!-- QR-IBAN -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">QR-IBAN</label>
+                <input
+                  v-model="invoiceSettings.qr_iban"
+                  type="text"
+                  placeholder="CH44 3199 9123 0008 8901 2"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                />
+                <p class="text-xs text-gray-400 mt-1">Die QR-IBAN deiner Bank für Swiss QR-Rechnungen. Leer lassen wenn nicht gewünscht.</p>
+              </div>
+
+              <!-- Invoice Address -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Absenderadresse (erscheint auf Rechnung)</label>
+                <div class="grid grid-cols-3 gap-2 mb-2">
+                  <input
+                    v-model="invoiceSettings.invoice_street"
+                    placeholder="Strasse"
+                    class="col-span-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                  <input
+                    v-model="invoiceSettings.invoice_street_nr"
+                    placeholder="Nr."
+                    class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                  <input
+                    v-model="invoiceSettings.invoice_zip"
+                    placeholder="PLZ"
+                    class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                  <input
+                    v-model="invoiceSettings.invoice_city"
+                    placeholder="Ort"
+                    class="col-span-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                </div>
+              </div>
+
+              <!-- Invoice Number Prefix -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Rechnungsnummer-Präfix</label>
+                <input
+                  v-model="invoiceSettings.invoice_number_prefix"
+                  type="text"
+                  placeholder="RE"
+                  maxlength="10"
+                  class="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+                <p class="text-xs text-gray-400 mt-1">Rechnungen werden z.B. als <span class="font-mono">{{ invoiceSettings.invoice_number_prefix || 'RE' }}-{{ new Date().getFullYear() }}-0001</span> nummeriert.</p>
+              </div>
+            </div>
+
+            <div class="mt-5 flex justify-end">
+              <button
+                @click="saveInvoiceSettings"
+                :disabled="isSavingInvoiceSettings"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm font-medium"
+              >
+                {{ isSavingInvoiceSettings ? 'Speichern…' : 'Rechnungseinstellungen speichern' }}
+              </button>
+            </div>
+          </div>
+
           <!-- Cash Payment Settings -->
           <div class="bg-white rounded-lg shadow-sm border p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Barzahlungs-Einstellungen</h2>
@@ -1746,10 +1818,58 @@ const sessionSettings = ref({
 const paymentSettings = ref({
   automatic_payment_enabled: false,
   automatic_payment_hours_before: 24,
-  automatic_authorization_hours_before: 72, // 3 Tage (max 5 Tage wegen Wallee)
+  automatic_authorization_hours_before: 72,
   cash_payments_enabled: true,
   cash_payment_visibility: 'staff_only'
 })
+
+const invoiceSettings = ref({
+  qr_iban: '',
+  invoice_street: '',
+  invoice_street_nr: '',
+  invoice_zip: '',
+  invoice_city: '',
+  invoice_number_prefix: 'RE',
+})
+const isSavingInvoiceSettings = ref(false)
+
+const loadInvoiceSettings = async (tenantId: string) => {
+  try {
+    const supabase = getSupabase()
+    const { data } = await supabase
+      .from('tenants')
+      .select('qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_number_prefix')
+      .eq('id', tenantId)
+      .maybeSingle()
+    if (data) {
+      invoiceSettings.value = {
+        qr_iban: (data as any).qr_iban || '',
+        invoice_street: (data as any).invoice_street || '',
+        invoice_street_nr: (data as any).invoice_street_nr || '',
+        invoice_zip: (data as any).invoice_zip || '',
+        invoice_city: (data as any).invoice_city || '',
+        invoice_number_prefix: (data as any).invoice_number_prefix || 'RE',
+      }
+    }
+  } catch (e) {
+    console.warn('Could not load invoice settings:', e)
+  }
+}
+
+const saveInvoiceSettings = async () => {
+  isSavingInvoiceSettings.value = true
+  try {
+    await $fetch('/api/invoices/save-settings', {
+      method: 'POST',
+      body: invoiceSettings.value,
+    })
+    showAutoSaveSuccess('Rechnungseinstellungen gespeichert')
+  } catch (e: any) {
+    showAutoSaveError('Fehler: ' + (e?.data?.statusMessage || e.message))
+  } finally {
+    isSavingInvoiceSettings.value = false
+  }
+}
 
 // Reminder Settings (NEW: Payment Confirmation Reminders)
 const reminderSettings = ref({
@@ -1927,6 +2047,7 @@ const loadData = async () => {
       
       await loadSessionSettings(tenantId)
       await loadPaymentSettings(tenantId)
+      await loadInvoiceSettings(tenantId)
       await loadReminderSettings(tenantId)
       await loadSARISettings(tenantId)
       await loadTemplates(tenantId)
