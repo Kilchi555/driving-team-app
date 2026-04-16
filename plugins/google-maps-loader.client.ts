@@ -27,6 +27,8 @@ export default defineNuxtPlugin(() => {
 
   script.onload = () => {
     logger.debug('✅ Google Maps API loaded successfully')
+    // Dispatch event so components can initialize Places after async load
+    window.dispatchEvent(new Event('google-maps-loaded'))
   }
 
   script.onerror = () => {

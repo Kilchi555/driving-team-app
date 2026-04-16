@@ -22,6 +22,19 @@ interface TenantRegistrationData {
   primary_color: string
   secondary_color: string
   logo_file?: File | null
+  // New optional fields
+  uid_number?: string
+  iban?: string
+  bank_name?: string
+  website_url?: string
+  staff_count?: string
+  language?: string
+  timezone?: string
+  accent_color?: string
+  instagram_url?: string
+  facebook_url?: string
+  selected_categories?: string   // comma-separated codes, e.g. "B,BE,A"
+  working_days_template?: string // JSON string
 }
 
 interface RegistrationResponse {
@@ -70,7 +83,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     // Daten aus FormData extrahieren
     const data: TenantRegistrationData = {
       name: '',
-    legal_company_name: '',
+      legal_company_name: '',
       slug: '',
       contact_person_first_name: '',
       contact_person_last_name: '',
@@ -82,7 +95,19 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       city: '',
       business_type: 'driving_school',
       primary_color: '#3B82F6',
-      secondary_color: '#10B981'
+      secondary_color: '#10B981',
+      uid_number: '',
+      iban: '',
+      bank_name: '',
+      website_url: '',
+      staff_count: '',
+      language: 'de',
+      timezone: 'Europe/Zurich',
+      accent_color: '',
+      instagram_url: '',
+      facebook_url: '',
+      selected_categories: '',
+      working_days_template: ''
     }
 
     let logoFile: File | null = null
@@ -239,7 +264,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         primary_color: data.primary_color,
         secondary_color: data.secondary_color,
         // Standard-Farben setzen
-        accent_color: data.primary_color, // Gleiche wie primary
+        accent_color: data.accent_color || data.primary_color,
         success_color: '#10B981',
         warning_color: '#F59E0B',
         error_color: '#EF4444',
@@ -252,14 +277,28 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         brand_name: data.name, // Standard: Firmenname
         // Trial-Management
         logo_url: logoUrl,
-        timezone: 'Europe/Zurich',
+        timezone: data.timezone || 'Europe/Zurich',
         currency: 'CHF',
-        language: 'de',
+        language: data.language || 'de',
         is_active: true,
         is_trial: true,
         trial_ends_at: trialEndsAt.toISOString(),
         subscription_plan: 'trial',
         subscription_status: 'active',
+        // Neue Felder
+        uid_number:    data.uid_number?.trim()    || null,
+        iban:          data.iban?.trim()          || null,
+        bank_name:     data.bank_name?.trim()     || null,
+        website_url:   data.website_url?.trim()   || null,
+        staff_count:   data.staff_count ? parseInt(data.staff_count) || null : null,
+        instagram_url: data.instagram_url?.trim() || null,
+        facebook_url:  data.facebook_url?.trim()  || null,
+        selected_categories: data.selected_categories
+          ? data.selected_categories.split(',').map(c => c.trim()).filter(Boolean)
+          : null,
+        working_days_template: data.working_days_template
+          ? JSON.parse(data.working_days_template)
+          : null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -290,7 +329,6 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       logger.debug('✅ Default data copied to tenant')
     } catch (defaultDataError) {
       console.warn('⚠️ Default data copy failed:', defaultDataError)
-      // Nicht kritisch - Tenant ist bereits erstellt
     }
 
     logger.debug('🎉 Tenant registration completed successfully:', newTenant.slug)
@@ -631,42 +669,60 @@ async function generateCustomerNumber(supabase: any): Promise<string> {
 }
 
 /**
- * Kopiert Standard-Daten zu einem neuen Tenant
+ * Kopiert ALLE Template-Kategorien (tenant_id IS NULL) in den neuen Tenant.
+ *
+ * Kein Filter nach Codes – der Tenant bekommt alle Kategorien aus den Templates.
+ * Unterkategorien bekommen ihre parent_category_id auf die neuen Tenant-IDs umgebogen.
  */
 async function copyDefaultDataToTenant(tenantId: string): Promise<void> {
   const supabase = getSupabaseAdmin()
-  
+
   try {
-    // Standard-Kategorien kopieren
-    const { data: standardCategories } = await supabase
+    const { data: allTemplates, error: fetchError } = await supabase
       .from('categories')
       .select('*')
-      .eq('tenant_id', '00000000-0000-0000-0000-000000000000') // Default Tenant
+      .is('tenant_id', null)
       .eq('is_active', true)
 
-    if (standardCategories && standardCategories.length > 0) {
-      const newCategories = standardCategories.map(cat => ({
-        ...cat,
-        id: crypto.randomUUID(),
-        tenant_id: tenantId,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }))
-
-      await supabase
-        .from('categories')
-        .insert(newCategories)
-
-      logger.debug(`✅ Copied ${newCategories.length} categories to tenant`)
+    if (fetchError || !allTemplates?.length) {
+      logger.warn('⚠️ No template categories found (tenant_id IS NULL)')
+      return
     }
 
-    // Weitere Standard-Daten können hier kopiert werden:
-    // - Evaluation-Templates
-    // - Pricing-Rules
-    // - etc.
+    // ID-Mapping: alte Template-ID → neue Tenant-UUID
+    const idMap = new Map<string, string>()
+    for (const cat of allTemplates) {
+      idMap.set(cat.id, crypto.randomUUID())
+    }
+
+    const now = new Date().toISOString()
+
+    // Hauptkategorien zuerst (parent_category_id IS NULL)
+    const parentCats = allTemplates.filter(c => !c.parent_category_id)
+    const leafCats   = allTemplates.filter(c =>  c.parent_category_id)
+
+    if (parentCats.length > 0) {
+      await supabase.from('categories').insert(
+        parentCats.map(cat => ({ ...cat, id: idMap.get(cat.id)!, tenant_id: tenantId, parent_category_id: null, created_at: now, updated_at: now }))
+      )
+      logger.debug(`✅ Copied ${parentCats.length} parent categories`)
+    }
+
+    if (leafCats.length > 0) {
+      await supabase.from('categories').insert(
+        leafCats.map(cat => ({
+          ...cat,
+          id: idMap.get(cat.id)!,
+          tenant_id: tenantId,
+          parent_category_id: cat.parent_category_id ? (idMap.get(cat.parent_category_id) ?? null) : null,
+          created_at: now,
+          updated_at: now,
+        }))
+      )
+      logger.debug(`✅ Copied ${leafCats.length} leaf categories`)
+    }
 
   } catch (error) {
     console.warn('⚠️ Error copying default data:', error)
-    // Nicht kritisch - Tenant funktioniert auch ohne Standard-Daten
   }
 }

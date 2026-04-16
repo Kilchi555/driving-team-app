@@ -3,12 +3,18 @@ import { ref, computed, watch } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
 
+interface TenantTrialInfo {
+  is_trial?: boolean
+  trial_ends_at?: string | null
+  subscription_plan?: string | null
+  current_period_end?: string | null
+}
+
 export const useTrialFeatures = () => {
   const supabase = getSupabase()
   const auth = useAuthStore()
 
-  // Lokaler Tenant-State nur für Trial-Infos
-  const tenant = ref<{ is_trial?: boolean; trial_ends_at?: string | null } | null>(null)
+  const tenant = ref<TenantTrialInfo | null>(null)
 
   const loadTenantTrial = async (tenantId?: string | null) => {
     if (!tenantId) {
@@ -18,7 +24,7 @@ export const useTrialFeatures = () => {
     try {
       const { data, error } = await supabase
         .from('tenants')
-        .select('is_trial, trial_ends_at')
+        .select('is_trial, trial_ends_at, subscription_plan, current_period_end')
         .eq('id', tenantId)
         .maybeSingle()
 
@@ -37,7 +43,18 @@ export const useTrialFeatures = () => {
     { immediate: true }
   )
 
+  // True if the tenant has an active paid subscription (regardless of trial)
+  const hasActiveSubscription = computed(() => {
+    const plan = tenant.value?.subscription_plan
+    if (!plan || plan === 'trial') return false
+    const periodEnd = tenant.value?.current_period_end
+    if (!periodEnd) return false
+    return new Date() <= new Date(periodEnd)
+  })
+
   const isTrialExpired = computed(() => {
+    // If they have a paid subscription they're never "expired"
+    if (hasActiveSubscription.value) return false
     if (!tenant.value?.is_trial || !tenant.value?.trial_ends_at) return false
     const trialEndsAt = new Date(tenant.value.trial_ends_at)
     return new Date() > trialEndsAt
@@ -64,12 +81,16 @@ export const useTrialFeatures = () => {
   }
 
   const getTrialStatus = () => {
+    if (hasActiveSubscription.value) {
+      return { status: 'active', message: 'Aktives Abonnement' }
+    }
+
     if (!tenant.value?.is_trial) {
       return { status: 'active', message: 'Vollzugriff verfügbar' }
     }
 
     if (isTrialExpired.value) {
-      return { status: 'expired', message: 'Trial abgelaufen - Upgrade erforderlich', daysLeft: 0 }
+      return { status: 'expired', message: 'Trial abgelaufen – Upgrade erforderlich', daysLeft: 0 }
     }
 
     const days = trialDaysLeft.value || 0
@@ -80,7 +101,15 @@ export const useTrialFeatures = () => {
     return { status: 'active', message: `Trial läuft noch ${days} Tage`, daysLeft: days }
   }
 
-  return { isTrialExpired, trialDaysLeft, showTrialWarning, canUseFeature, getTrialStatus }
+  return {
+    isTrialExpired,
+    trialDaysLeft,
+    showTrialWarning,
+    canUseFeature,
+    getTrialStatus,
+    hasActiveSubscription,
+    subscriptionPlan: computed(() => tenant.value?.subscription_plan ?? null),
+  }
 }
 
 

@@ -15,6 +15,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   // Skip auth middleware for public pages
   const publicRoutes = [
     '/',
+    '/upgrade',
     '/tenant-register',
     '/tenant-start',
     '/tenant-demo',
@@ -23,7 +24,8 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     '/login',
     '/register',
     '/reset-password',
-    '/partner'
+    '/partner',
+    '/payment',
   ]
   
   // Skip for dynamic routes that are public (like /[slug]/services, /[slug]/register)

@@ -634,37 +634,56 @@ const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate:
           }
         })
       } 
-      // FALL 2: Tag hat aktive Working Hours → nur die inaktiven Blöcke blockieren
+      // FALL 2: Tag hat aktive Working Hours → Nicht-Arbeitszeiten aus Block-Grenzen berechnen
+      // (save_day API speichert nur is_active:true Blöcke → inaktive Blöcke werden berechnet)
       else {
-        logger.debug(`✅ Day ${dayOfWeek}: Has active working hours - will show only non-working blocks`)
-        const inactiveBlocks = dayWorkingHours.filter(wh => wh.is_active === false)
-        
-        inactiveBlocks.forEach((block, index) => {
-          // Times are already converted to local time by the API (get-working-hours)
-          // Just use them directly as local time strings for FullCalendar
-          const [startHour, startMinute, startSecond] = block.start_time.split(':').map(Number)
-          const [endHour, endMinute, endSecond] = block.end_time.split(':').map(Number)
+        logger.debug(`✅ Day ${dayOfWeek}: Has active working hours - calculating non-working gaps`)
 
-          const startTime = `${dateStr}T${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}:${String(startSecond || 0).padStart(2, '0')}`
-          const endTime = `${dateStr}T${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}:${String(endSecond || 0).padStart(2, '0')}`
-          
-          events.push({
-            id: `non-working-${dayOfWeek}-${index}-${dateStr}`,
-            title: '',
-            start: startTime,
-            end: endTime,
-            backgroundColor: '#f3f4f6', // Helles Grau (durchklickbar)
-            borderColor: 'transparent',
-            textColor: 'transparent',
-            display: 'background',
-            classNames: ['non-working-hours-block'],
-            extendedProps: {
-              type: 'non_working_hours',
-              isNonWorkingHours: true,
-              isClickThrough: true
-            }
-          })
+        const activeBlocks = dayWorkingHours
+          .filter(wh => wh.is_active === true)
+          .sort((a, b) => a.start_time.localeCompare(b.start_time))
+
+        const makeGrayBlock = (startHHMM: string, endHHMM: string, idx: number) => ({
+          id: `non-working-${dayOfWeek}-${idx}-${dateStr}`,
+          title: '',
+          start: `${dateStr}T${startHHMM}`,
+          end: `${dateStr}T${endHHMM}`,
+          backgroundColor: '#f3f4f6',
+          borderColor: 'transparent',
+          textColor: 'transparent',
+          display: 'background',
+          classNames: ['non-working-hours-block'],
+          extendedProps: {
+            type: 'non_working_hours',
+            isNonWorkingHours: true,
+            isClickThrough: true
+          }
         })
+
+        // HH:MM:SS → HH:MM (FullCalendar braucht nur HH:MM)
+        const toHHMM = (t: string) => t.substring(0, 5)
+
+        let grayIdx = 0
+
+        // Block vor der ersten Arbeitszeit (z.B. 00:00 – 07:00)
+        if (activeBlocks[0].start_time > '00:00:00') {
+          events.push(makeGrayBlock('00:00', toHHMM(activeBlocks[0].start_time), grayIdx++))
+        }
+
+        // Lücken zwischen Arbeitszeit-Blöcken (z.B. Mittagspause 12:00 – 13:00)
+        for (let i = 0; i < activeBlocks.length - 1; i++) {
+          const gapStart = activeBlocks[i].end_time
+          const gapEnd = activeBlocks[i + 1].start_time
+          if (gapStart < gapEnd) {
+            events.push(makeGrayBlock(toHHMM(gapStart), toHHMM(gapEnd), grayIdx++))
+          }
+        }
+
+        // Block nach der letzten Arbeitszeit (z.B. 19:00 – 23:59)
+        const lastEnd = activeBlocks[activeBlocks.length - 1].end_time
+        if (lastEnd < '23:59:00') {
+          events.push(makeGrayBlock(toHHMM(lastEnd), '23:59', grayIdx++))
+        }
       }
       
       currentDate.setDate(currentDate.getDate() + 1)

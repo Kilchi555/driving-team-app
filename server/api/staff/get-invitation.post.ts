@@ -66,31 +66,66 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Invitation found:', invitation.email)
 
-    // Get tenant info
+    // Get tenant info (including slug for redirect)
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('business_type, id, name')
+      .select('business_type, id, name, slug')
       .eq('id', invitation.tenant_id)
       .single()
 
-    // Get categories if driving school
+    // Get categories if driving school (with hierarchy)
     let categories = []
     if (tenant?.business_type === 'driving_school') {
       const { data: cats } = await supabase
         .from('categories')
-        .select('code, name')
+        .select('code, name, parent_category_id, id, color')
         .eq('tenant_id', invitation.tenant_id)
         .eq('is_active', true)
         .order('code')
 
-      categories = cats || []
+      // Filter: show only leaf categories (subcategories, or mains without children)
+      const allCats = cats || []
+      const parentIds = new Set(allCats.map(c => c.parent_category_id).filter(Boolean))
+      categories = allCats.filter(c => !parentIds.has(c.id))
     }
+
+    // Get tenant standard locations (Treffpunkte)
+    const { data: locations } = await supabase
+      .from('locations')
+      .select('id, name, address, location_type')
+      .eq('tenant_id', invitation.tenant_id)
+      .eq('location_type', 'standard')
+      .eq('is_active', true)
+      .order('name')
+
+    // Get tenant exam locations (Prüfungsorte)
+    const { data: examLocations } = await supabase
+      .from('locations')
+      .select('id, name, address, location_type')
+      .eq('tenant_id', invitation.tenant_id)
+      .eq('location_type', 'exam')
+      .eq('is_active', true)
+      .order('name')
+
+    // Check if affiliate is enabled for this tenant
+    const { data: affiliateSetting } = await supabase
+      .from('tenant_settings')
+      .select('setting_value')
+      .eq('tenant_id', invitation.tenant_id)
+      .eq('category', 'affiliate')
+      .eq('setting_key', 'enabled')
+      .maybeSingle()
+
+    const affiliateEnabled = affiliateSetting?.setting_value === 'true'
 
     return {
       success: true,
       invitation,
       tenant,
-      categories
+      categories,
+      locations: locations || [],
+      examLocations: examLocations || [],
+      affiliateEnabled
     }
 
   } catch (error: any) {

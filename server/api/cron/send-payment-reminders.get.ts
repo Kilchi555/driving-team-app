@@ -178,13 +178,14 @@ export default defineEventHandler(async (event) => {
         const apt = appointmentMap.get(p.appointment_id)
         if (!apt) return ''
         const d = new Date(apt.start_time)
-        const dateStr = d.toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short' })
-        const timeStr = d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+        const tzOpts = { timeZone: 'Europe/Zurich' }
+        const dateStr = d.toLocaleDateString('de-CH', { ...tzOpts, weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+        const timeStr = d.toLocaleTimeString('de-CH', { ...tzOpts, hour: '2-digit', minute: '2-digit' })
         const amtCHF  = chf(p.total_amount_rappen || 0)
         return `
           <tr>
-            <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:14px;color:#374151">${dateStr}, ${timeStr}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:14px;color:#374151;font-weight:600">CHF ${amtCHF}</td>
+            <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;font-size:14px;color:#374151;white-space:nowrap;width:70%">${dateStr}, ${timeStr} Uhr</td>
+            <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;font-size:14px;color:#374151;font-weight:600;white-space:nowrap;width:30%">CHF ${amtCHF}</td>
           </tr>`
       }).join('')
 
@@ -224,15 +225,15 @@ export default defineEventHandler(async (event) => {
             <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px">
               <thead>
                 <tr style="background:#f9fafb">
-                  <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Termin</th>
-                  <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Betrag</th>
+                  <th style="padding:10px 16px;text-align:left;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;width:70%">Termin</th>
+                  <th style="padding:10px 16px;text-align:left;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;width:30%">Betrag</th>
                 </tr>
               </thead>
               <tbody>${paymentRows}</tbody>
               <tfoot>
                 <tr style="background:#f9fafb">
-                  <td style="padding:12px;font-size:14px;font-weight:700;color:#111827">Total</td>
-                  <td style="padding:12px;font-size:16px;font-weight:700;color:${primaryColor}">CHF ${totalCHF}</td>
+                  <td style="padding:12px 16px;font-size:14px;font-weight:700;color:#111827">Total</td>
+                  <td style="padding:12px 16px;font-size:16px;font-weight:700;color:${primaryColor}">CHF ${totalCHF}</td>
                 </tr>
               </tfoot>
             </table>

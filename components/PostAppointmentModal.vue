@@ -1,4 +1,11 @@
 <template>
+  <!-- Invoice Preview Modal -->
+  <InvoicePreviewModal
+    v-model="showInvoicePreview"
+    :draft="invoiceDraft"
+    @sent="onInvoiceSent"
+  />
+
   <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 z-50">
     <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-auto mt-20 overflow-hidden">
       
@@ -95,6 +102,24 @@
                   <span class="ml-2 font-medium">CHF {{ (currentPayment.total_amount_rappen / 100).toFixed(2) }}</span>
                 </div>
               </div>
+
+              <!-- Auf Rechnung umbuchen (nur wenn aktuell cash/pending) -->
+              <div
+                v-if="currentPayment.payment_method === 'cash' && currentPayment.payment_status === 'pending'"
+                class="mt-3 pt-3 border-t border-gray-200"
+              >
+                <button
+                  @click="switchToInvoice"
+                  :disabled="isSwitchingToInvoice"
+                  class="flex items-center gap-2 text-sm font-medium text-purple-700 hover:text-purple-900 disabled:opacity-50 transition-colors"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  {{ isSwitchingToInvoice ? 'Wird umgebucht…' : 'Auf Rechnung buchen' }}
+                </button>
+                <p v-if="switchedToInvoice" class="mt-1 text-xs text-green-600 font-medium">✅ Zahlung auf Rechnung umgestellt.</p>
+              </div>
             </div>
 
             <!-- Zahlungsoptionen -->
@@ -149,6 +174,22 @@
           </div>
         </div>
 
+        <!-- Hinweis: offene Rechnungsposten (bei 'completed') -->
+        <div
+          v-if="postAppointmentData.status === 'completed' && hasOpenInvoicePayments"
+          class="border-t pt-5"
+        >
+          <div class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+            <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+            <div>
+              <p class="text-sm font-semibold text-amber-800">Offene Rechnungsposten</p>
+              <p class="text-xs text-amber-700 mt-0.5">Nach dem Speichern kannst du direkt eine Rechnung für alle offenen Positionen erstellen und versenden.</p>
+            </div>
+          </div>
+        </div>
+
         <!-- Kommentar -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -196,10 +237,8 @@
 </template>
 
 <script setup lang="ts">
-
 import { ref, computed, watch } from 'vue'
 
-// Props
 interface Props {
   isVisible: boolean
   appointment: any
@@ -208,29 +247,26 @@ interface Props {
 
 const props = defineProps<Props>()
 
-// Emits
 const emit = defineEmits<{
   'close': []
   'saved': [data: any]
 }>()
 
-// Reactive data
-const postAppointmentData = ref({
-  status: 'completed',
-  paymentAction: 'credit',
-  comment: ''
-})
-
+const postAppointmentData = ref({ status: 'completed', paymentAction: 'credit', comment: '' })
 const isSaving = ref(false)
 
-// Computed
+// Invoice flow
+const showInvoicePreview = ref(false)
+const invoiceDraft = ref<any>(null)
+const hasOpenInvoicePayments = ref(false)
+const isSwitchingToInvoice = ref(false)
+const switchedToInvoice = ref(false)
+
 const isFormValid = computed(() => {
   if (!postAppointmentData.value.status) return false
-  
   if (['cancelled', 'no_show'].includes(postAppointmentData.value.status)) {
     return !!postAppointmentData.value.paymentAction
   }
-  
   return true
 })
 
@@ -239,7 +275,6 @@ const currentPayment = computed(() => {
   return props.appointment.payments[0] || null
 })
 
-// Methods
 const formatDateTime = (dateTime: string) => {
   if (!dateTime) return ''
   const date = new Date(dateTime)
@@ -247,67 +282,94 @@ const formatDateTime = (dateTime: string) => {
 }
 
 const getPaymentMethodText = (method: string) => {
-  const texts: Record<string, string> = {
-    'cash': 'Bar',
-    'invoice': 'Rechnung',
-    'wallee': 'Online',
-    'credit': 'Guthaben',
-    'keine': 'Keine'
-  }
+  const texts: Record<string, string> = { cash: 'Bar', invoice: 'Rechnung', wallee: 'Online', credit: 'Guthaben', keine: 'Keine' }
   return texts[method] || method
 }
 
 const getPaymentStatusText = (status: string) => {
-  const texts: Record<string, string> = {
-    'pending': 'Ausstehend',
-    'completed': 'Bezahlt',
-    'failed': 'Fehlgeschlagen',
-    'keine': 'Keine'
-  }
+  const texts: Record<string, string> = { pending: 'Ausstehend', completed: 'Bezahlt', failed: 'Fehlgeschlagen', keine: 'Keine' }
   return texts[status] || status
 }
 
-const closeModal = () => {
-  emit('close')
+const closeModal = () => emit('close')
+
+// Zahlung von cash auf invoice umbuchen
+const switchToInvoice = async () => {
+  if (!currentPayment.value || isSwitchingToInvoice.value) return
+  isSwitchingToInvoice.value = true
+  try {
+    await $fetch('/api/payments/manage', {
+      method: 'POST',
+      body: {
+        action: 'switch-to-invoice',
+        paymentId: currentPayment.value.id,
+      },
+    })
+    switchedToInvoice.value = true
+    currentPayment.value.payment_method = 'invoice'
+    hasOpenInvoicePayments.value = true
+  } catch (err: any) {
+    alert(`Fehler: ${err?.data?.statusMessage || err.message}`)
+  } finally {
+    isSwitchingToInvoice.value = false
+  }
+}
+
+// Nach completed speichern: prüfen ob offene invoice-Zahlungen vorhanden
+const checkAndLoadInvoiceDraft = async () => {
+  const userId = props.appointment?.user_id
+  if (!userId) return
+
+  try {
+    const result = await $fetch<{ hasOpenItems: boolean; draft: any }>('/api/invoices/auto-draft', {
+      method: 'POST',
+      body: { student_user_id: userId },
+    })
+
+    hasOpenInvoicePayments.value = result.hasOpenItems
+    invoiceDraft.value = result.draft
+  } catch (err) {
+    // non-fatal
+    hasOpenInvoicePayments.value = false
+  }
 }
 
 const savePostAppointmentData = async () => {
   if (!isFormValid.value) return
-  
   isSaving.value = true
-  
+
   try {
     const supabase = getSupabase()
-    
-    // 1. Termin-Status aktualisieren
+
     const { error: updateError } = await supabase
       .from('appointments')
       .update({
         post_appointment_status: postAppointmentData.value.status,
         notes: postAppointmentData.value.comment || null,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', props.appointment.id)
-    
+
     if (updateError) throw updateError
-    
-    // 2. Zahlungsverwaltung (falls abgesagt/nicht erschienen)
+
     if (['cancelled', 'no_show'].includes(postAppointmentData.value.status) && currentPayment.value) {
       if (postAppointmentData.value.paymentAction === 'refund') {
-        // Rückerstattung verarbeiten
         await processRefund()
       } else if (postAppointmentData.value.paymentAction === 'credit') {
-        // Guthaben gutschreiben
         await processCredit()
-      } else if (postAppointmentData.value.paymentAction === 'still_due') {
-        // Zahlung bleibt fällig - nichts zu tun
       }
     }
-    
-    logger.debug('✅ Post-appointment data saved successfully')
+
     emit('saved', postAppointmentData.value)
     closeModal()
-    
+
+    // Nach completed: kurz warten, dann Invoice-Draft laden und Preview öffnen
+    if (postAppointmentData.value.status === 'completed') {
+      await checkAndLoadInvoiceDraft()
+      if (hasOpenInvoicePayments.value && invoiceDraft.value) {
+        showInvoicePreview.value = true
+      }
+    }
   } catch (error: any) {
     console.error('❌ Error saving post-appointment data:', error)
     alert(`Fehler beim Speichern: ${error.message}`)
@@ -317,24 +379,23 @@ const savePostAppointmentData = async () => {
 }
 
 const processRefund = async () => {
-  // TODO: Implementierung der Rückerstattung
-  logger.debug('💰 Processing refund for payment:', currentPayment.value?.id)
+  console.warn('processRefund: TODO')
 }
 
 const processCredit = async () => {
-  // TODO: Implementierung der Guthaben-Gutschrift
-  logger.debug('💳 Processing credit for user:', props.appointment.user_id)
+  console.warn('processCredit: TODO')
 }
 
-// Watch for appointment changes
+const onInvoiceSent = (result: { invoice_id: string; invoice_number: string; total_amount_rappen: number }) => {
+  console.log('✅ Invoice sent:', result.invoice_number)
+}
+
 watch(() => props.appointment, (newAppointment) => {
   if (newAppointment) {
-    // Reset form
-    postAppointmentData.value = {
-      status: 'completed',
-      paymentAction: 'credit',
-      comment: ''
-    }
+    postAppointmentData.value = { status: 'completed', paymentAction: 'credit', comment: '' }
+    hasOpenInvoicePayments.value = false
+    invoiceDraft.value = null
+    switchedToInvoice.value = false
   }
 }, { immediate: true })
 </script>

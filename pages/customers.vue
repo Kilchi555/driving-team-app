@@ -760,21 +760,27 @@ const loadStudents = async (loadAppointments = true) => {
     
     // Alle Schüler-IDs sammeln
     const studentIds = studentsToProcess.map((s: any) => s.id)
-    
-    // Call API endpoint instead of direct Supabase queries
-    const instructorResponse = await $fetch('/api/admin/get-student-instructors', {
-      method: 'POST',
-      body: { studentIds }
-    }) as any
 
-    if (!instructorResponse?.success) {
-      throw new Error('Failed to load student instructors via API')
+    let allLessonInstructors: any[] = []
+    let instructorData: any[] = []
+
+    // Nur laden wenn Schüler vorhanden – leere Liste würde 400 zurückgeben
+    if (studentIds.length > 0) {
+      const instructorResponse = await $fetch('/api/admin/get-student-instructors', {
+        method: 'POST',
+        body: { studentIds }
+      }) as any
+
+      if (!instructorResponse?.success) {
+        throw new Error('Failed to load student instructors via API')
+      }
+
+      allLessonInstructors = instructorResponse.data?.allLessonInstructors || []
+      instructorData = instructorResponse.data?.instructorData || []
+      logger.debug('✅ Loaded instructor data for all students:', instructorData.length)
+    } else {
+      logger.debug('ℹ️ No students assigned – skipping instructor data load')
     }
-
-    const allLessonInstructors = instructorResponse.data?.allLessonInstructors || []
-    const instructorData = instructorResponse.data?.instructorData || []
-    
-    logger.debug('✅ Loaded instructor data for all students:', instructorData.length)
 
     // Erweiterte Schüler-Daten mit zusätzlichen Informationen
     const enrichedStudents = studentsToProcess.map((student: any) => {
@@ -847,12 +853,14 @@ const loadStudents = async (loadAppointments = true) => {
 
     // Load billing addresses for students via API
     logger.debug('📋 Loading billing addresses for students')
-    const billingResponse = await $fetch('/api/admin/get-billing-addresses', {
-      method: 'POST',
-      body: { studentIds }
-    }) as any
-
-    const companyBillingAddresses = billingResponse?.data || []
+    let companyBillingAddresses: any[] = []
+    if (studentIds.length > 0) {
+      const billingResponse = await $fetch('/api/admin/get-billing-addresses', {
+        method: 'POST',
+        body: { studentIds }
+      }) as any
+      companyBillingAddresses = billingResponse?.data || []
+    }
     logger.debug('📋 Billing addresses result:', { count: companyBillingAddresses.length })
 
     if (companyBillingAddresses && companyBillingAddresses.length > 0) {

@@ -608,6 +608,11 @@ const onLocationSearch = async () => {
   error.value = null
   
   try {
+    // Lazy-initialize Places if Maps has loaded since mount (handles loading=async race condition)
+    if (typeof window !== 'undefined' && window.google && window.google.maps && !placesLibrary) {
+      await initializeGooglePlaces()
+    }
+
     // ✅ PRÜFE OB NEUE API BEREITS ALS BLOCKIERT MARKIERT IST
     if (placesLibrary && placesLibrary.AutocompleteSuggestion && !newApiBlocked) {
       try {
@@ -968,9 +973,16 @@ watch(() => props.modelValue, (newValue) => {
 // === LIFECYCLE ===
 
 onMounted(async () => {
-  // Initialize Google Maps
-  if (typeof window !== 'undefined' && window.google) {
+  // Initialize Google Maps (if already loaded)
+  if (typeof window !== 'undefined' && window.google && window.google.maps) {
     await initializeGooglePlaces()
+  } else if (typeof window !== 'undefined') {
+    // Maps script loads asynchronously — initialize Places once it's ready
+    const onMapsLoaded = async () => {
+      await initializeGooglePlaces()
+      window.removeEventListener('google-maps-loaded', onMapsLoaded)
+    }
+    window.addEventListener('google-maps-loaded', onMapsLoaded)
   }
   
   // Load initial data

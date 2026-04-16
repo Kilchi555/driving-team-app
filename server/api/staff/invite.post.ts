@@ -122,6 +122,38 @@ export default defineEventHandler(async (event) => {
     const sanitizedLastName = sanitizeString(lastName, 100)
     const sanitizedPhone = phone ? sanitizeString(phone, 20) : null
 
+    // Check: existiert die Email bereits als User im selben Tenant?
+    const { data: existingUser } = await serviceSupabase
+      .from('users')
+      .select('id, role')
+      .eq('email', email.toLowerCase().trim())
+      .eq('tenant_id', userProfile.tenant_id)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (existingUser) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: `Diese E-Mail-Adresse ist bereits als ${existingUser.role === 'admin' ? 'Admin' : existingUser.role === 'staff' ? 'Fahrlehrer' : 'Benutzer'} in Ihrem Betrieb registriert.`
+      })
+    }
+
+    // Check: existiert bereits eine offene Einladung für diese Email?
+    const { data: existingInvite } = await serviceSupabase
+      .from('staff_invitations')
+      .select('id, status')
+      .eq('email', email.toLowerCase().trim())
+      .eq('tenant_id', userProfile.tenant_id)
+      .eq('status', 'pending')
+      .maybeSingle()
+
+    if (existingInvite) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Für diese E-Mail-Adresse existiert bereits eine offene Einladung.'
+      })
+    }
+
     // Generate invitation token
     const token = generateToken()
     const expiresAt = new Date()

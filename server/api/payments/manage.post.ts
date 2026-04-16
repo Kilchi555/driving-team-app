@@ -4,7 +4,7 @@ import { logger } from '~/utils/logger'
 import { getHeader } from 'h3'
 
 interface ManagePaymentsBody {
-  action: 'create' | 'mark-completed' | 'delete' | 'load-user' | 'load-appointment'
+  action: 'create' | 'mark-completed' | 'delete' | 'load-user' | 'load-appointment' | 'switch-to-invoice'
   paymentId?: string
   appointmentId?: string
   userId?: string
@@ -160,6 +160,46 @@ export default defineEventHandler(async (event) => {
         success: true,
         data: data || []
       }
+    }
+
+    // ========== SWITCH TO INVOICE ==========
+    if (action === 'switch-to-invoice') {
+      if (!body.paymentId) throw new Error('Payment ID required')
+
+      const { data: payment } = await supabaseAdmin
+        .from('payments')
+        .select('id, tenant_id, payment_method, payment_status')
+        .eq('id', body.paymentId)
+        .single()
+
+      if (!payment) throw new Error('Payment not found')
+
+      const { data: dbUser } = await supabaseAdmin
+        .from('users')
+        .select('tenant_id, role')
+        .eq('auth_user_id', user.id)
+        .single()
+
+      if (!dbUser || (payment.tenant_id && dbUser.tenant_id !== payment.tenant_id)) throw new Error('Unauthorized: tenant mismatch')
+      if (!['admin', 'staff'].includes(dbUser.role)) throw new Error('Unauthorized: role')
+
+      logger.debug('📄 Switching payment to invoice:', body.paymentId)
+
+      const { data: updated, error: updateErr } = await supabaseAdmin
+        .from('payments')
+        .update({
+          payment_method: 'invoice',
+          payment_status: 'pending',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', body.paymentId)
+        .select()
+        .single()
+
+      if (updateErr) throw new Error(updateErr.message)
+
+      logger.debug('✅ Payment switched to invoice')
+      return { success: true, data: updated }
     }
 
     throw new Error('Unknown action: ' + action)

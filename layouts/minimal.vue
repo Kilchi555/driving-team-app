@@ -1,6 +1,6 @@
 <!-- layouts/minimal.vue -->
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-white">
     <slot />
   </div>
 </template>
