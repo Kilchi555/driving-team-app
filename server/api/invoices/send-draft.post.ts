@@ -322,10 +322,10 @@ export default defineEventHandler(async (event) => {
       .update({
         invoice_id: invoice.id,
         payment_status: 'invoiced',
+        payment_method: 'invoice',
         updated_at: now,
       })
       .in('id', draft.payment_ids)
-      .eq('tenant_id', staffUser.tenant_id)
 
     if (paymentUpdateError) {
       console.error('⚠️ Fehler beim Setzen von payment_status=invoiced:', paymentUpdateError.message)

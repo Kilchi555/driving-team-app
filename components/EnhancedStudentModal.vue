@@ -582,7 +582,7 @@
                   Bar bezahlen
                 </button>
                 <button
-                  v-if="selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p?.payment_status === 'pending' && p?.payment_method !== 'invoice' })"
+                  v-if="selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p?.payment_status === 'pending' && !isInvoicedPayment(p) })"
                   class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md"
                   :style="{ background: primaryGradient }"
                   @click="handleBulkInvoice"
@@ -604,19 +604,19 @@
                     ? 'border-l-orange-300 bg-orange-50 cursor-pointer hover:shadow-md'
                     : payment.payment_status === 'completed'
                     ? 'border-l-green-300 bg-gray-50 opacity-60 cursor-not-allowed'
-                    : (payment.payment_method === 'invoice' && payment.payment_status !== 'completed')
+                    : (isInvoicedPayment(payment))
                     ? 'border-l-blue-400 bg-blue-50'
                     : 'hover:shadow-md cursor-pointer',
-                  selectedPayments.includes(payment.id) && payment.appointment?.status !== 'cancelled' && payment.payment_status !== 'completed' && payment.payment_status !== 'invoiced' && !(payment.payment_method === 'invoice' && payment.payment_status !== 'completed')
+                  selectedPayments.includes(payment.id) && payment.appointment?.status !== 'cancelled' && !isInvoicedPayment(payment) && payment.payment_status !== 'completed'
                     ? 'ring-2 ring-offset-0'
                     : ''
                 ]"
                 :style="{
-                  ...(payment.appointment?.status !== 'cancelled' && payment.payment_status !== 'completed' && payment.payment_status !== 'invoiced' && !(payment.payment_method === 'invoice' && payment.payment_status !== 'completed') ? { 
+                  ...(payment.appointment?.status !== 'cancelled' && !isInvoicedPayment(payment) && payment.payment_status !== 'completed' ? { 
                     borderLeftColor: primaryColor,
                     backgroundColor: selectedPayments.includes(payment.id) ? primaryColor + '20' : primaryColor + '08'
                   } : {}),
-                  ...(selectedPayments.includes(payment.id) && payment.appointment?.status !== 'cancelled' && payment.payment_status !== 'completed' && payment.payment_status !== 'invoiced' && !(payment.payment_method === 'invoice' && payment.payment_status !== 'completed') ? {
+                  ...(selectedPayments.includes(payment.id) && payment.appointment?.status !== 'cancelled' && !isInvoicedPayment(payment) && payment.payment_status !== 'completed' ? {
                     '--tw-ring-color': primaryColor
                   } : {})
                 }"
@@ -659,8 +659,7 @@
                         payment.appointment?.status === 'cancelled' && payment.payment_status === 'completed' ? 'bg-gray-100 text-gray-700' :
                         payment.appointment?.status === 'cancelled' && payment.payment_status === 'pending' ? 'bg-orange-100 text-orange-700' :
                         payment.payment_status === 'completed' ? 'bg-green-100 text-green-700' :
-                        payment.payment_status === 'invoiced' ? 'bg-blue-100 text-blue-700' :
-                        (payment.payment_method === 'invoice' && payment.payment_status !== 'completed') ? 'bg-blue-100 text-blue-700' :
+                        isInvoicedPayment(payment) ? 'bg-blue-100 text-blue-700' :
                         payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                         payment.payment_status === 'failed' ? 'bg-red-100 text-red-700' :
                         payment.payment_status === 'refunded' ? 'bg-blue-100 text-blue-700' :
@@ -672,8 +671,7 @@
                              payment.appointment?.status === 'cancelled' && payment.payment_status === 'pending' ? 'Abgesagt · Unbezahlt' :
                              payment.appointment?.status === 'cancelled' && payment.payment_status === 'failed' ? 'Abgesagt · Fehlgeschlagen' :
                              payment.payment_status === 'completed' ? 'Bezahlt' :
-                             payment.payment_status === 'invoiced' ? 'Verrechnet' :
-                             (payment.payment_method === 'invoice' && payment.payment_status !== 'completed') ? 'Verrechnet' :
+                             isInvoicedPayment(payment) ? 'Verrechnet' :
                              payment.payment_status === 'pending' ? 'Unbezahlt' :
                              payment.payment_status === 'failed' ? 'Fehlgeschlagen' :
                              payment.payment_status === 'refunded' ? 'Rückvergütet' :
@@ -832,7 +830,7 @@
                     </span>
                   </div>
                   <!-- Action-Buttons für verrechnete Zahlungen -->
-                  <div v-if="payment.payment_method === 'invoice' && payment.payment_status !== 'completed'" class="flex items-center gap-2 mt-1" @click.stop>
+                  <div v-if="isInvoicedPayment(payment)" class="flex items-center gap-2 mt-1" @click.stop>
                     <button
                       v-if="payment.invoice_id"
                       @click.stop="handleViewInvoice(payment)"
@@ -1925,6 +1923,13 @@ const totalSelectedAmount = computed(() => {
 })
 
 // Handle click on payment card
+// A payment is "invoiced" if it was sent as a Rechnung (covers both
+// payment_method='invoice' set by switch-to-invoice, and payment_status='invoiced'
+// set by send-draft when invoice was sent for any payment method)
+const isInvoicedPayment = (payment: any) =>
+  (payment.payment_method === 'invoice' || payment.payment_status === 'invoiced') &&
+  payment.payment_status !== 'completed'
+
 const handlePaymentCardClick = (payment: any) => {
   // If cancelled, allow selection if there's a charge to collect
   if (payment.appointment?.status === 'cancelled') {
@@ -1951,7 +1956,7 @@ const handlePaymentCardClick = (payment: any) => {
     logger.debug('🔒 Payment is completed, cannot select')
   }
   // If invoiced, ignore click (use action buttons instead)
-  else if (payment.payment_method === 'invoice' && payment.payment_status !== 'completed') {
+  else if (isInvoicedPayment(payment)) {
     logger.debug('🔒 Payment is invoiced, use action buttons')
   }
   // Otherwise, toggle selection
