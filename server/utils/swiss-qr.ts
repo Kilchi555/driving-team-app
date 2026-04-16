@@ -24,6 +24,11 @@ function pad(str: string) {
   return (str || '').trim()
 }
 
+// IBAN must have no spaces in QR data (SPS 2.2)
+function cleanIban(iban: string) {
+  return (iban || '').replace(/\s+/g, '')
+}
+
 export function buildSwissQRData(p: SwissQRParams): string {
   const amount = (p.amount_rappen / 100).toFixed(2)
   const currency = p.currency || 'CHF'
@@ -46,7 +51,7 @@ export function buildSwissQRData(p: SwissQRParams): string {
     '0200',
     '1',
     // Account (1 field)
-    pad(p.qr_iban),
+    cleanIban(p.qr_iban),
     // Creditor (7 fields) – type K
     'K',
     pad(p.creditor_name),
