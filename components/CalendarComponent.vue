@@ -1906,28 +1906,14 @@ eventClick: (clickInfo) => {
   }
 },
 
-// Ziehen/Auswählen von Zeitbereich
-select: (arg) => {
-  try {
-    // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted?
-    if (!calendar.value) {
-      logger.debug('⚠️ Calendar not mounted, skipping select')
-      return
-    }
-    
-    isModalVisible.value = true
-    modalMode.value = 'create'
-    modalEventData.value = {
-      title: '',
-      start: arg.start,
-      end: arg.end,
-      allDay: arg.allDay
-    }
-    
-    logger.debug('✅ Time range selection handled successfully')
-  } catch (error) {
-    console.error('❌ Error handling time range selection:', error)
-    // ✅ Fehler nicht weiterwerfen, nur loggen
+// Ziehen/Auswählen von Zeitbereich – bewusst deaktiviert:
+// select() feuert auf Desktop VOR dateClick und überschreibt modalEventData mit einem
+// rohen Date-Objekt statt einem String → EventModal crasht auf .includes() → stale Datum.
+// dateClick übernimmt die Termin-Erstellung komplett und korrekt.
+select: (_arg) => {
+  // Auswahl sofort aufheben, damit kein blauer Markierungsbereich erscheint
+  if (calendar.value) {
+    calendar.value.getApi().unselect()
   }
 },
   eventClassNames: (arg) => {
