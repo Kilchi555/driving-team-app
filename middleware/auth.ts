@@ -24,6 +24,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     '/login',
     '/register',
     '/reset-password',
+    '/password-reset',
     '/partner',
     '/payment',
   ]
