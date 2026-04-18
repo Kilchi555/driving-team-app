@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Nothelferkurs Zürich | CHF 120.- | 10 Stunden | Obligatorisch | Driving Team</Title>
-      <Meta name="description" content="Nothelferkurs Zürich ✓ CHF 120.- inkl. Nothelferausweis ✓ 10 Stunden ✓ Zürich-Altstetten ✓ Obligatorisch für jeden Führerschein ✓ Ab 14 Jahren ✓ 6 Jahre gültig. Jetzt buchen!" />
+      <Title>Nothelferkurs Zürich | CHF 120.- | 10 Stunden | Driving Team</Title>
+      <Meta name="description" content="Nothelferkurs Zürich ✓ CHF 120.- inkl. Ausweis ✓ 10 Stunden ✓ Zürich-Altstetten ✓ Obligatorisch für Führerschein ✓ Ab 14 Jahren ✓ 6 Jahre gültig. Jetzt buchen!" />
       <Meta name="keywords" content="Nothelferkurs Zürich, Nothelferkurs Zürich buchen, Nothelferkurs Zürich-Altstetten, Nothelferkurs Kosten Zürich, Erste Hilfe Kurs Zürich Führerschein, Nothelfer Zürich, Nothelferkurs Preis Zürich" />
       <Meta property="og:title" content="Nothelferkurs Zürich | CHF 120.- inkl. Ausweis | Driving Team" />
       <Meta property="og:description" content="Nothelferkurs in Zürich-Altstetten. CHF 120.- inkl. Nothelferausweis. 10 Stunden. Obligatorisch für alle Fahrzeugkategorien. Flexible Termine, sofort buchbar." />

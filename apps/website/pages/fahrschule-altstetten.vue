@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Altstetten | Direkt beim Bahnhof Altstetten</Title>
-      <Meta name="description" content="Fahrschule Altstetten – Driving Team ✓ Unser Hauptstandort an der Baslerstrasse 145 ✓ Auto, Motorrad, Anhänger ✓ 85% Erfolgsquote ✓ ab CHF 95.- ✓ Flexible Zeiten" />
+      <Meta name="description" content="Fahrschule Altstetten ✓ Hauptstandort Baslerstrasse 145 ✓ Auto, Motorrad, Anhänger ✓ 85% Erfolgsquote ✓ ab CHF 95.- ✓ Flexible Zeiten. Jetzt buchen!" />
       <Meta name="keywords" content="Fahrschule Altstetten, Fahrstunden Altstetten, Auto Fahrschule Altstetten, Fahrlehrer Altstetten, Fahrschule Zürich Altstetten" />
       <Meta property="og:title" content="Fahrschule Altstetten – Driving Team | Baslerstrasse 145" />
       <Meta property="og:description" content="Deine Fahrschule direkt in Zürich-Altstetten. Auto, Motorrad & Anhänger ab CHF 95.-. Buche jetzt flexibel online." />

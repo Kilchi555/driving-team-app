@@ -111,7 +111,7 @@
                 <p class="text-sm text-gray-500 mt-2 italic">Mindestalter: Ab 18 Jahren darf man den Lernfahrausweis bestellen und die Bootsprüfung absolvieren. In Begleitung darf ein Motorboot bereits ab 12 Jahren gefahren werden.</p>
                 <div class="mt-3 flex flex-wrap gap-2">
                   <a href="https://www.zh.ch/de/mobilitaet/schifffahrt/schiffsfuehrerpruefung.html" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Anmeldung Zürich</a>
-                  <a href="https://www.sz.ch/verwaltung/baudepartement/verkehrsamt/schifffahrt/schiffsfuehrer_in.html/8756-8758-8802-9276-9293-9327-9350" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Anmeldung Schwyz</a>
+                  <a href="https://www.sz.ch/verwaltung/baudepartement/verkehrsamt/schifffahrt/schiffsfuehrer.html/8756-8758-8802-9276-9293-12546-12556" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Anmeldung Schwyz</a>
                   <a href="https://www.sg.ch/content/dam/sgch/verkehr/strassenverkehr/formulare-und-merkblätter/verkehrszulassung-führer---formulare-und-gesuche/Gesuch%20um%20Erteilung%20eines%20Lernfahr-%20bzw.%20Führerausweises.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Anmeldung St.Gallen</a>
                 </div>
             </div>
@@ -282,7 +282,7 @@
           <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Uster</a>
           <a href="/fahrschule-spreitenbach/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Aargau</a>
           <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Dietikon</a>
-          <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Reichenburg</a>
+          <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Reichenburg</a>
           <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule St.Gallen</a>
         </div>
       </div>

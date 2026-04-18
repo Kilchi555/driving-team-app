@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Lachen SZ | Auto, Anhänger & Lastwagen</Title>
-      <Meta name="description" content="Fahrschule Lachen SZ ✓ ab CHF 95.-/Lektion ✓ Auto, Motorrad, Anhänger, Lastwagen, Bus ✓ Flexible Zeiten & Treffpunkte ✓ Kanton Schwyz ✓ 85% Erfolgsquote. Jetzt anmelden!" />
+      <Meta name="description" content="Fahrschule Lachen SZ ✓ ab CHF 95.-/Lektion ✓ Auto, Motorrad, Anhänger, Lastwagen, Bus ✓ 85% Erfolgsquote ✓ Kanton Schwyz. Jetzt anmelden!" />
       <Meta name="keywords" content="Fahrschule Lachen, Fahrschule Lachen SZ, Fahrstunden Lachen, Führerschein Lachen, Auto Fahrschule Lachen, Motorrad Fahrschule Lachen, Fahrlehrer Lachen SZ" />
       <Meta property="og:title" content="Fahrschule Lachen SZ | ab CHF 95.- | Auto, Motorrad & mehr | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung in Lachen SZ. Auto, Motorrad, Lastwagen & Kurse. Ab CHF 95.-/Lektion. Flexible Zeiten & Treffpunkte im Kanton Schwyz." />
@@ -162,7 +162,7 @@
             <p class="font-semibold text-gray-900 text-sm">Motorrad Grundkurs</p>
             <p class="text-xs text-primary-600">Lachen</p>
           </a>
-          <a href="/fahrschule-pfaeffikon/" class="flex flex-col items-center gap-2 p-4 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
+          <a href="/fahrschule-pfaeffikon-sz/" class="flex flex-col items-center gap-2 p-4 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
             <span class="text-2xl">📍</span>
             <p class="font-semibold text-gray-900 text-sm">Fahrschule</p>
             <p class="text-xs text-primary-600">Pfäffikon SZ</p>

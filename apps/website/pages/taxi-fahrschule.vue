@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Taxi Fahrschule Zürich | BPT Ausbildung Code 121/122 | Driving Team</Title>
-      <Meta name="description" content="Taxi Fahrschule Zürich ✓ BPT zertifizierte Ausbildung Code 121/122 ✓ Prüfungsvorbereitung StVA Zürich ✓ Kat. B Erweiterung auf Taxi ✓ Flexible Termine. Jetzt anmelden!" />
+      <Meta name="description" content="Taxi Fahrschule Zürich ✓ BPT Ausbildung Code 121/122 ✓ Prüfung StVA Zürich ✓ Kat. B Erweiterung auf Taxi ✓ Flexible Termine. Jetzt anmelden!" />
       <Meta property="og:title" content="Taxi Fahrschule Zürich | BPT Ausbildung Code 121/122 | Driving Team" />
       <Meta property="og:description" content="BPT zertifizierte Taxi Fahrschule in Zürich – Ausbildung Code 121/122 in 5 Schritten zur Taxiprüfung" />
       <Meta property="og:url" content="https://drivingteam.ch/taxi-fahrschule/" />
@@ -352,7 +352,7 @@
           <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Uster</a>
           <a href="/fahrschule-spreitenbach/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Aargau</a>
           <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Dietikon</a>
-          <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Reichenburg</a>
+          <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Reichenburg</a>
           <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule St.Gallen</a>
         </div>
       </div>

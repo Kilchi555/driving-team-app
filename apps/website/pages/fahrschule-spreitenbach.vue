@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Spreitenbach | Auto & Anhänger | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Spreitenbach – Auto und Anhänger Fahrstunden im Limmattal & Knonaueramt. Eidg. diplomierte Fahrlehrer, flexible Treffpunkte, 85% Erfolgsquote. Jetzt buchen!" />
+      <Meta name="description" content="Fahrschule Spreitenbach ✓ Auto & Anhänger im Limmattal & Knonaueramt ✓ Eidg. diplom. Fahrlehrer ✓ 85% Erfolgsquote ✓ Flexible Treffpunkte. Jetzt buchen!" />
       <Meta property="og:title" content="Fahrschule Spreitenbach | Auto & Anhänger | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung in Spreitenbach und Umgebung. Auto, Anhänger. StVA Wettingen. 85% Erfolgsquote." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-spreitenbach/" />

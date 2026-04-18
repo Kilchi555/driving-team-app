@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Standorte | Zürich, Lachen, Uster, St.Gallen | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Standorte in der Schweiz - Zürich, Lachen, Pfäffikon, Uster, St.Gallen, Dietikon, Aargau, Reichenburg. Alle Kategorien, flexible Zeiten. Jetzt Termin buchen!" />
+      <Meta name="description" content="Fahrschule Standorte Schweiz – Zürich, Lachen, Pfäffikon, Uster, St.Gallen, Dietikon & Aargau. Alle Kategorien, flexible Zeiten. Jetzt Termin buchen!" />
       <Meta property="og:title" content="Fahrschule Standorte - 8 Locations in der Schweiz" />
       <Meta property="og:description" content="Besuche einen unserer 8 Fahrschule Standorte in Zürich, Lachen, Pfäffikon, Uster und mehr." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-standorte/" />
@@ -85,7 +85,7 @@
               <p><span class="font-semibold">Öffnungszeiten:</span> Mo-Sa 8:00 - 18:00</p>
               <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad, Anhänger, Motorboot, Lastwagen, Bus</p>
             </div>
-            <a href="/fahrschule-pfaeffikon/" class="block w-full text-center bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition" aria-label="Mehr zu Fahrschule Pfäffikon/SZ">
+            <a href="/fahrschule-pfaeffikon-sz/" class="block w-full text-center bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition" aria-label="Mehr zu Fahrschule Pfäffikon/SZ">
               Fahrschule Pfäffikon/SZ
             </a>
           </div>
@@ -180,7 +180,7 @@
               <p><span class="font-semibold">Öffnungszeiten:</span> Mo-Sa 8:00 - 18:00</p>
               <p><span class="font-semibold">Kategorien:</span> Auto, Taxi</p>
             </div>
-            <a href="/fahrschule-reichenburg/" class="block w-full text-center bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700 transition" aria-label="Mehr zu Fahrschule Reichenburg">
+            <a href="/fahrschule-lachen/" class="block w-full text-center bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700 transition" aria-label="Mehr zu Fahrschule Reichenburg">
               Fahrschule Reichenburg
             </a>
           </div>
@@ -204,7 +204,7 @@
     <!-- Standorte Aargau & Pfäffikon SZ -->
     <section class="section-container pb-8">
       <div class="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
-        <a href="/fahrschule-aargau/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Aargau</a>
+        <a href="/fahrschule-spreitenbach/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Aargau</a>
         <a href="/fahrschule-pfaeffikon-sz/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Pfäffikon SZ</a>
       </div>
     </section>

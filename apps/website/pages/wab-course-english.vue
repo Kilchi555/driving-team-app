@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>WAB Course English – Zürich & Schwyz | Driving Team</Title>
-      <Meta name="description" content="WAB refresher course in English for new drivers in Switzerland. Mandatory within 12 months of passing your category B driving test. Two locations: Pfäffikon ZH (CHF 490) and Tuggen SZ (CHF 490). Register directly online." />
+      <Meta name="description" content="WAB refresher course in English ✓ Mandatory within 12 months of cat. B test ✓ CHF 490 ✓ Pfäffikon ZH & Tuggen SZ. Book online!" />
       <Meta name="keywords" content="WAB course English, WAB Kurs English Switzerland, WAB refresher course English, advanced driving training English Switzerland, Pfäffikon ZH, Tuggen SZ" />
       <Meta property="og:title" content="WAB Course in English – Switzerland | Pfäffikon ZH & Tuggen SZ | Driving Team" />
       <Meta property="og:description" content="Mandatory WAB refresher course in English. Two locations in Zurich and Schwyz canton. Register online now. CHF 490 per course." />
@@ -91,7 +91,7 @@
             loading="lazy"
           ></iframe>
         </div>
-        <p class="text-center text-sm text-gray-400 mt-4">Powered by <a href="https://wabenglish.ch" target="_blank" rel="noopener noreferrer" class="hover:underline">wabenglish.ch</a></p>
+        <p class="text-center text-sm text-gray-400 mt-4">Powered by <a href="https://www.wabenglish.ch" target="_blank" rel="noopener noreferrer" class="hover:underline">wabenglish.ch</a></p>
       </div>
     </section>
 
@@ -300,7 +300,7 @@
         <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Lachen</a>
         <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Uster</a>
         <a href="/fahrschule-spreitenbach/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Aargau</a>
-        <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
+        <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
         <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
         <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
       </div>
@@ -410,5 +410,8 @@ const jsonLdScripts = [
     })
   }
 ]
-useHead({ script: jsonLdScripts })
+useHead({
+  htmlAttrs: { lang: 'en' },
+  script: jsonLdScripts
+})
 </script>

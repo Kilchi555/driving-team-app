@@ -15,6 +15,21 @@ function formatDate(dateStr: string): string {
   }
 }
 
+function formatAppointmentDateTime(dateStr?: string | null): string {
+  if (!dateStr) return ''
+  let timeStr = dateStr
+  if (timeStr.includes(' ') && !timeStr.includes('T')) timeStr = timeStr.replace(' ', 'T')
+  if (timeStr.includes('+00') && !timeStr.includes('+00:00')) timeStr = timeStr.replace('+00', '+00:00')
+  if (!timeStr.includes('+') && !timeStr.includes('Z')) timeStr += '+00:00'
+  const utcDate = new Date(timeStr)
+  if (isNaN(utcDate.getTime())) return dateStr
+  const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+  const localDate = new Date(localDateStr)
+  const datePart = localDate.toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+  const timePart = localDate.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+  return `${datePart}, ${timePart}`
+}
+
 // Parse hex color to RGB components
 function hexToRgb(hex: string): [number, number, number] {
   const clean = hex.replace('#', '')
@@ -31,6 +46,8 @@ export interface InvoicePdfData {
   tenantZip?: string
   tenantCity?: string
   tenantEmail?: string
+  tenantLogoBase64?: string | null   // base64 PNG/JPEG ohne data:-Prefix
+  tenantLogoFormat?: 'png' | 'jpeg'
   customerName: string
   billingStreet?: string
   billingZip?: string
@@ -78,35 +95,49 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       .fill(`rgb(${Math.min(pr + 30, 255)}, ${Math.min(pg + 30, 255)}, ${Math.min(pb + 30, 255)})`)
     doc.restore()
 
-    // "RECHNUNG" title
-    doc.fontSize(28).fillColor('white').font('Helvetica-Bold')
-      .text('RECHNUNG', margin, 30, { characterSpacing: 4 })
+    // Logo (oben links im Header, falls vorhanden)
+    if (data.tenantLogoBase64) {
+      try {
+        const logoBuffer = Buffer.from(data.tenantLogoBase64, 'base64')
+        doc.image(logoBuffer, margin, 12, { height: 40, fit: [160, 40] })
+      } catch { /* Logo optional */ }
+    }
 
-    doc.fontSize(10).fillColor('rgba(255,255,255,0.7)').font('Helvetica')
-      .text(data.tenantName, margin, 66)
+    // "RECHNUNG" title (nur wenn kein Logo, sonst darunter)
+    const titleY = data.tenantLogoBase64 ? 56 : 30
+    if (!data.tenantLogoBase64) {
+      doc.fontSize(28).fillColor('white').font('Helvetica-Bold')
+        .text('RECHNUNG', margin, titleY, { characterSpacing: 4 })
+    }
 
-    // Invoice number right side
+    doc.fontSize(10).fillColor('rgba(255,255,255,0.75)').font('Helvetica')
+      .text(data.tenantName, margin, data.tenantLogoBase64 ? 58 : 66)
+
+    // Invoice number + total (rechts)
     doc.fontSize(11).fillColor('rgba(255,255,255,0.65)').font('Helvetica')
       .text(data.invoiceNumber, 0, 28, { width: W - margin, align: 'right' })
-
     doc.fontSize(22).fillColor('white').font('Helvetica-Bold')
       .text(formatChf(data.totalRappen), 0, 50, { width: W - margin, align: 'right' })
 
     // ── Dark meta strip ──────────────────────────────────────────────────────
     doc.rect(0, 100, W, 36).fill('#1e293b')
 
-    const metaItems = [
-      ['Rechnungsdatum', formatDate(data.invoiceDate)],
+    const metaItems: string[][] = [
+      [formatDate(data.invoiceDate)],
       ['Fällig am', formatDate(data.dueDate)],
       ...(data.tenantEmail ? [['Kontakt', data.tenantEmail]] : []),
     ]
+    // Erste Spalte ohne Label (nur Datum)
+    const metaLabels = ['Rechnungsdatum', 'Fällig am', 'Kontakt']
+    const metaValues = [formatDate(data.invoiceDate), formatDate(data.dueDate), data.tenantEmail || ''].filter((_, i) => i < (data.tenantEmail ? 3 : 2))
+    const metaLabelsFinal = metaLabels.slice(0, data.tenantEmail ? 3 : 2)
 
-    metaItems.forEach(([label, value], i) => {
+    metaLabelsFinal.forEach((label, i) => {
       const x = margin + i * 170
       doc.fontSize(8).fillColor('rgba(255,255,255,0.5)').font('Helvetica')
         .text(label.toUpperCase(), x, 108, { characterSpacing: 0.5 })
       doc.fontSize(9).fillColor('white').font('Helvetica-Bold')
-        .text(value, x, 119)
+        .text(metaValues[i], x, 119)
     })
 
     // ── Address area ─────────────────────────────────────────────────────────
@@ -115,7 +146,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     // Sender small line
     const senderParts = [data.tenantName, data.tenantStreet, [data.tenantZip, data.tenantCity].filter(Boolean).join(' ')].filter(Boolean)
     doc.fontSize(7).fillColor('#94a3b8').font('Helvetica')
-      .text(senderParts.join(' · '), margin, addrTop, { width: 220 })
+      .text(senderParts.join(' · '), margin, addrTop, { width: 300 })
 
     // Recipient block
     doc.rect(margin, addrTop + 12, 210, 78).fill('#f8fafc').stroke('#e2e8f0')
@@ -138,8 +169,12 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
     // ── Items table ──────────────────────────────────────────────────────────
     const tableTop = addrTop + 105
-    const colPos = [margin, 330, 410, 490]
-    const tableWidth = W - margin * 2
+    // Spalten so dass alles innerhalb von margin..W-margin (50..545) bleibt
+    const tableRight = W - margin   // 545
+    const colPos  = [margin, 300, 385, 455]   // Startpositionen
+    const colWidths = [242, 77, 63, tableRight - colPos[3] - 8]  // last col passt genau rein
+
+    const tableWidth = tableRight - margin  // 495
 
     // Table header
     doc.rect(margin, tableTop, tableWidth, 24).fill(primary)
@@ -147,48 +182,47 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
     const headers = ['POSITION', 'ANZ.', 'EINZELPREIS', 'TOTAL']
     const headerAligns: Array<'left' | 'center' | 'right'> = ['left', 'center', 'right', 'right']
-    const colWidths = [280, 50, 80, 85]
     headers.forEach((h, i) => {
       doc.text(h, colPos[i] + 8, tableTop + 8, { width: colWidths[i], align: headerAligns[i], characterSpacing: 0.5 })
     })
 
     let rowY = tableTop + 24
     data.items.forEach((item, idx) => {
-      const hasDate = !!item.appointment_date
-      const rowH = hasDate ? 30 : 22
+      const formattedDate = formatAppointmentDateTime(item.appointment_date)
+      const hasDate = !!formattedDate
+      const rowH = hasDate ? 32 : 22
       const bg = idx % 2 === 0 ? 'white' : '#f8fafc'
 
       doc.rect(margin, rowY, tableWidth, rowH).fill(bg)
 
       doc.fontSize(9).fillColor('#1e293b').font('Helvetica-Bold')
-        .text(item.product_name, colPos[0] + 8, rowY + 5, { width: 268, ellipsis: true })
+        .text(item.product_name, colPos[0] + 8, rowY + 5, { width: colWidths[0], ellipsis: true })
 
       if (hasDate) {
         doc.fontSize(7.5).fillColor('#94a3b8').font('Helvetica')
-          .text(item.appointment_date!, colPos[0] + 8, rowY + 17, { width: 268 })
+          .text(formattedDate, colPos[0] + 8, rowY + 18, { width: colWidths[0] })
       }
 
       const vCenter = rowY + (rowH - 9) / 2
       doc.fontSize(9).fillColor('#64748b').font('Helvetica')
-        .text(String(item.quantity), colPos[1] + 8, vCenter, { width: 34, align: 'center' })
-        .text(formatChf(item.unit_price_rappen), colPos[2] + 8, vCenter, { width: 72, align: 'right' })
+        .text(String(item.quantity), colPos[1] + 8, vCenter, { width: colWidths[1], align: 'center' })
+        .text(formatChf(item.unit_price_rappen), colPos[2] + 8, vCenter, { width: colWidths[2], align: 'right' })
 
       doc.fillColor('#1e293b').font('Helvetica-Bold')
-        .text(formatChf(item.total_price_rappen), colPos[3] + 8, vCenter, { width: 69, align: 'right' })
+        .text(formatChf(item.total_price_rappen), colPos[3] + 8, vCenter, { width: colWidths[3], align: 'right' })
 
-      // Bottom border
       doc.moveTo(margin, rowY + rowH).lineTo(margin + tableWidth, rowY + rowH)
         .strokeColor('#e2e8f0').lineWidth(0.5).stroke()
 
       rowY += rowH
     })
 
-    // Total row
+    // Total row — komplett innerhalb der Tabelle
     doc.rect(margin, rowY, tableWidth, 34).fill(primary)
     doc.fontSize(10).fillColor('rgba(255,255,255,0.8)').font('Helvetica')
-      .text('Gesamtbetrag', colPos[0] + 8, rowY + 11, { width: 390, align: 'right' })
+      .text('Gesamtbetrag', margin + 8, rowY + 11, { width: tableWidth - colWidths[3] - 24, align: 'right' })
     doc.fontSize(14).fillColor('white').font('Helvetica-Bold')
-      .text(formatChf(data.totalRappen), colPos[3] + 8, rowY + 8, { width: 69, align: 'right' })
+      .text(formatChf(data.totalRappen), colPos[3] + 8, rowY + 8, { width: colWidths[3], align: 'right' })
 
     rowY += 34
 
@@ -214,25 +248,19 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       if (base64Match) {
         const qrBuffer = Buffer.from(base64Match[1], 'base64')
 
-        // Dashed separator
         doc.moveTo(margin, rowY).lineTo(margin + tableWidth, rowY)
           .strokeColor('#cbd5e1').lineWidth(1).dash(5, { space: 4 }).stroke()
         doc.undash()
-
         rowY += 12
 
-        // Section label
         doc.fontSize(7.5).fillColor('#94a3b8').font('Helvetica-Bold')
           .text('SWISS QR-RECHNUNG', margin, rowY, { characterSpacing: 1.5 })
-
         rowY += 14
 
-        // QR code box
         const qrSize = 95
         doc.rect(margin, rowY, qrSize + 16, qrSize + 16).fill('white').strokeColor('#e2e8f0').lineWidth(1).stroke()
         doc.image(qrBuffer, margin + 8, rowY + 8, { width: qrSize, height: qrSize })
 
-        // QR details
         const qrTextX = margin + qrSize + 30
         const qrTextW = W - margin - qrTextX
 
@@ -262,7 +290,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     doc.rect(0, H - 40, W, 40).fill('#f8fafc')
     doc.moveTo(0, H - 40).lineTo(W, H - 40).strokeColor('#e2e8f0').lineWidth(0.5).stroke()
     doc.fontSize(8).fillColor('#94a3b8').font('Helvetica')
-      .text(`${data.tenantName} · powered by Simy · ${data.invoiceNumber}`, 0, H - 26, { width: W, align: 'center' })
+      .text(`${data.tenantName} · ${data.invoiceNumber}`, 0, H - 26, { width: W, align: 'center' })
 
     doc.end()
   })

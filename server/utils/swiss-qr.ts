@@ -16,8 +16,8 @@ export interface SwissQRParams {
   debtor_city: string
   amount_rappen: number
   currency?: string
-  reference?: string       // Pre-computed SCOR reference (RF…) or leave empty to auto-generate
-  invoice_number?: string  // Used to auto-generate SCOR if reference is not provided
+  reference?: string       // Pre-computed reference (RF… or 26-digit QRR) or leave empty to auto-generate
+  invoice_number?: string  // Used to auto-generate reference if not provided
   additional_info?: string
 }
 
@@ -31,9 +31,42 @@ function cleanIban(iban: string) {
 }
 
 /**
+ * Swiss QR-IBAN detection: QR-IID is in range 30000–31999
+ * (positions 5–9 of the IBAN after the 4-char country+check prefix)
+ */
+export function isQrIban(iban: string): boolean {
+  const clean = cleanIban(iban).toUpperCase()
+  if (!clean.startsWith('CH')) return false
+  const qrIid = parseInt(clean.slice(4, 9), 10)
+  return qrIid >= 30000 && qrIid <= 31999
+}
+
+/**
+ * Mod10 recursive (Luhn-like) check digit — used for QRR references
+ */
+function mod10Recursive(digits: string): number {
+  const table = [0, 9, 4, 6, 8, 2, 7, 1, 3, 5]
+  let n = 0
+  for (const d of digits) {
+    n = table[(n + parseInt(d, 10)) % 10]
+  }
+  return (10 - n) % 10
+}
+
+/**
+ * Generates a 26-digit QRR reference from an invoice number.
+ * Suitable for use with QR-IBANs.
+ */
+export function generateQRR(invoiceNumber: string): string {
+  const digits = invoiceNumber.replace(/\D/g, '').slice(0, 25).padStart(25, '0')
+  const check = mod10Recursive(digits)
+  return digits + check
+}
+
+/**
  * Generates an ISO 11649 Creditor Reference (SCOR) from any string, e.g. invoice number.
  * Format: RF<2 check digits><alphanumeric reference>
- * Banking apps display it grouped in 4s: RF18 RE20 2600 05
+ * Suitable for use with regular IBANs (not QR-IBANs).
  */
 export function generateSCOR(invoiceNumber: string): string {
   const cleaned = invoiceNumber.replace(/[^A-Z0-9]/gi, '').toUpperCase()
@@ -54,18 +87,34 @@ export function generateSCOR(invoiceNumber: string): string {
   return 'RF' + checkDigits + cleaned
 }
 
+/**
+ * Auto-selects the right reference type based on IBAN:
+ * - QR-IBAN → QRR (26-digit numeric)
+ * - Regular IBAN → SCOR (RF...)
+ */
+export function generateReference(invoiceNumber: string, iban: string): { ref: string; refType: 'QRR' | 'SCOR' | 'NON' } {
+  if (!invoiceNumber) return { ref: '', refType: 'NON' }
+  if (isQrIban(iban)) {
+    return { ref: generateQRR(invoiceNumber), refType: 'QRR' }
+  }
+  const ref = generateSCOR(invoiceNumber)
+  return { ref, refType: ref ? 'SCOR' : 'NON' }
+}
+
 export function buildSwissQRData(p: SwissQRParams): string {
   const amount = (p.amount_rappen / 100).toFixed(2)
   const currency = p.currency || 'CHF'
 
-  // Use provided SCOR reference, auto-generate from invoice_number, or fall back to NON
   let ref = pad(p.reference || '')
-  let refType = 'NON'
+  let refType: 'QRR' | 'SCOR' | 'NON' = 'NON'
+
   if (!ref && p.invoice_number) {
-    ref = generateSCOR(p.invoice_number)
-  }
-  if (ref.startsWith('RF')) {
-    refType = 'SCOR'
+    const generated = generateReference(p.invoice_number, p.qr_iban)
+    ref = generated.ref
+    refType = generated.refType
+  } else if (ref) {
+    if (/^\d{26}$/.test(ref)) refType = 'QRR'
+    else if (ref.startsWith('RF')) refType = 'SCOR'
   }
 
   // Both creditor and debtor use type 'K' (combined address) for robustness.

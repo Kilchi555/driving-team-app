@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrstunden Preise | Kostenrechner | Fahrschule Driving Team</Title>
-      <Meta name="description" content="Alle Preise unserer Fahrschule auf einen Blick. Berechne deine voraussichtlichen Fahrstunden-Kosten mit unserem Kostenrechner und lass dir eine unverbindliche Offerte zukommen." />
+      <Meta name="description" content="Alle Preise unserer Fahrschule auf einen Blick ✓ Kostenrechner für Fahrstunden ✓ Unverbindliche Offerte. Auto, Motorrad, Kurse – transparent & fair." />
       <Meta property="og:title" content="Fahrschule Preise – Transparente Übersicht | Driving Team" />
       <Meta property="og:description" content="Alle Preise auf einen Blick. Auto, Motorrad, Motorboot, VKU, Nothelfer und mehr. Driving Team Zürich & Lachen." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-preise/" />

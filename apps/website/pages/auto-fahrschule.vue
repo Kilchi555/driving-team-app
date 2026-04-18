@@ -161,6 +161,9 @@
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-gray-600 mb-2">Die ersten Fahrstunden mit deinem Fahrlehrer</p>
                 <p class="text-sm text-gray-600">Wir empfehlen dir dringend, die ersten Autofahrstunden auf jeden Fall bei einem Fahrlehrer oder einer Fahrlehrerin zu absolvieren. Falsch erlernte Automatismen lassen sich später nur mit erhöhtem Zeit- und Kostenaufwand korrigieren. Wenn du deinen Lernfahrausweis mit 17, 18 oder 19 Jahren beantragt hast, darfst du frühestens ein Jahr nach Gültigkeitsbeginn deines Lernfahrausweises zur Autofahrprüfung antreten.</p>
+                <div class="mt-3">
+                  <a href="/fahrstunden-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="Fahrstunden Zürich – Preise und Buchung">🎯 Fahrstunden Zürich</a>
+                </div>
             </div>
           </details>
 

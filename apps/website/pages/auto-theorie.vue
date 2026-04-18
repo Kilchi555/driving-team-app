@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Auto Theorieprüfung | Jetzt für Theoriestunden anmelden | Driving Team</Title>
-      <Meta name="description" content="Auto Theorieprüfung vorbereiten mit der Fahrschule Driving Team. Praxisorientierte Lektionen. CHF 85.- pro 45 Minuten. Zürich-Altstetten und Lachen/SZ. Jetzt online anmelden!" />
+      <Meta name="description" content="Auto Theorieprüfung mit Driving Team ✓ CHF 85.- pro 45 Min. ✓ Praxisorientierte Lektionen ✓ Zürich-Altstetten & Lachen SZ. Jetzt online anmelden!" />
       <Meta property="og:title" content="Auto Theorie – Vorbereitung auf die Theorieprüfung | Driving Team" />
       <Meta property="og:description" content="Auto Theorieprüfung optimal vorbereiten. CHF 85.- pro 45 Minuten. Standorte Zürich & Lachen." />
       <Meta property="og:url" content="https://drivingteam.ch/auto-theorie/" />
@@ -218,10 +218,10 @@
         <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Lachen</a>
         <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Uster</a>
         <a href="/fahrschule-spreitenbach/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Spreitenbach</a>
-        <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
+        <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
         <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
         <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
-        <a href="/fahrschule-pfaeffikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Pfäffikon/SZ</a>
+        <a href="/fahrschule-pfaeffikon-sz/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Pfäffikon/SZ</a>
 
       </div>
     </section>

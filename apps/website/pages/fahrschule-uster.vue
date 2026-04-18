@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Uster – Pascal | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Uster ✓ Fahrlehrer Pascal ✓ Zürcher Oberland ✓ Prüfung Hinwil oder Bassersdorf ✓ Auto & Motorrad ✓ Deutsch & Englisch ✓ Ab CHF 95.-/Lektion. Jetzt anmelden!" />
+      <Meta name="description" content="Fahrschule Uster ✓ Fahrlehrer Pascal ✓ Zürcher Oberland ✓ Prüfung Hinwil/Bassersdorf ✓ Auto & Motorrad ✓ Ab CHF 95.-/Lektion. Jetzt anmelden!" />
       <Meta property="og:title" content="Fahrschule Uster – Pascal | Driving Team" />
       <Meta property="og:description" content="Fahrschule Uster ✓ Fahrlehrer Pascal ✓ Zürcher Oberland ✓ Prüfung Hinwil oder Bassersdorf ✓ Auto & Motorrad ✓ Deutsch & Englisch ✓ Ab CHF 95.-/Lektion" />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-uster/" />

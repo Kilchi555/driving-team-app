@@ -89,7 +89,7 @@
           </div>
         </a>
 
-        <a v-if="exclude !== 'reichenburg'" href="/fahrschule-reichenburg/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
+        <a v-if="exclude !== 'reichenburg'" href="/fahrschule-lachen/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
           <div class="h-32 bg-gradient-to-br from-primary-50 to-primary-100 overflow-hidden">
             <img src="/images/locations/reichenburg-hero.webp" alt="Fahrschule Reichenburg" loading="lazy" class="w-full h-full object-cover" />
           </div>

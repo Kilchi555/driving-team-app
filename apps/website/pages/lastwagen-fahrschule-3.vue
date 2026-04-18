@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>LKW Fahrschule Kategorie C3 | CZV Grundkurs | Driving Team</Title>
+      <Title>LKW Fahrschule Kategorie C / C1 / CE & CZV Kurse | Driving Team</Title>
       <Meta name="description" content="LKW Fahrschule Kategorie C3 beim Driving Team. CZV Grundkurs und berufliche Weiterbildung für Berufschauffeure. Zürich und Lachen. Kontaktiere uns!" />
       <Meta property="og:title" content="LKW Fahrschule Kategorie C3 – CZV Grundkurs | Driving Team" />
       <Meta property="og:description" content="LKW Fahrschule Kategorie C3 inkl. CZV Grundkurs. Berufliche Weiterbildung in Zürich & Lachen." />
@@ -40,7 +40,7 @@
         <a href="/czv-grundkurs/" class="bg-white border-2 border-gray-200 rounded-lg p-8 hover:shadow-lg hover:border-primary-400 transition">
           <p class="text-4xl mb-4">🎓</p>
           <h3 class="heading-sm mb-2">CZV Grundkurs</h3>
-          <p class="text-gray-600">Obligatorischer Grundkurs für Berufschauffeure (140 Stunden). Qualifikationsnachweis (95).</p>
+          <p class="text-gray-600">Obligatorischer Grundkurs für Berufschauffeure.</p>
           <p class="text-primary-600 font-semibold mt-2">Mehr erfahren →</p>
         </a>
         <a href="/czv-weiterbildung/" class="bg-white border-2 border-gray-200 rounded-lg p-8 hover:shadow-lg hover:border-primary-400 transition">
@@ -52,7 +52,7 @@
         <a href="/lastwagen-theorie/" class="bg-white border-2 border-gray-200 rounded-lg p-8 hover:shadow-lg hover:border-primary-400 transition">
           <p class="text-4xl mb-4">📚</p>
           <h3 class="heading-sm mb-2">LKW Theorie</h3>
-          <p class="text-gray-600">Theorievorbereitung für Kat. C. Gruppen- und Einzelkurse. Ab CHF 800.- für Grundkurs.</p>
+          <p class="text-gray-600">Theorievorbereitung für Kat. C. Gruppen- und Einzelkurse. Ab CHF 800.- bei Gruppenkurse.</p>
           <p class="text-primary-600 font-semibold mt-2">Mehr erfahren →</p>
         </a>
       </div>

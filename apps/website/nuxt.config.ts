@@ -76,13 +76,16 @@ export default defineNuxtConfig({
     head: {
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1',
-      htmlAttrs: { lang: 'de' },
+      htmlAttrs: { lang: 'de-CH' },
       meta: [
         { name: 'description', content: 'Fahrschule Driving Team - Auto, Motorrad, Taxi & Lastwagen Fahrausbildung in Zürich' },
         { name: 'keywords', content: 'Fahrschule Zürich, Auto Fahrschule, Motorrad Fahrschule, Führerschein, Fahrausbildung' },
         { name: 'theme-color', content: '#1e40af' },
         { name: 'robots', content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' },
         { name: 'google-site-verification', content: 'r7qHQJaWARXloFYAxKyfU6tdVkGgmSRSVWeL-JwHBK8' },
+        { name: 'geo.region', content: 'CH-ZH' },
+        { name: 'geo.placename', content: 'Zürich' },
+        { name: 'language', content: 'de-CH' },
         { property: 'og:image', content: 'https://drivingteam.ch/images/og-image.webp' },
         { property: 'og:image:width', content: '1200' },
         { property: 'og:image:height', content: '630' },
@@ -94,6 +97,8 @@ export default defineNuxtConfig({
         { name: 'twitter:image', content: 'https://drivingteam.ch/images/og-image.webp' },
       ],
       link: [
+        { rel: 'alternate', hreflang: 'de-CH', href: 'https://drivingteam.ch/' },
+        { rel: 'alternate', hreflang: 'x-default', href: 'https://drivingteam.ch/' },
         { rel: 'icon', type: 'image/png', href: '/favicon.png' },
         { rel: 'apple-touch-icon', href: '/favicon.png' },
         { rel: 'preload', as: 'image', href: '/images/categories/auto-fahrschule.webp', fetchpriority: 'high' },

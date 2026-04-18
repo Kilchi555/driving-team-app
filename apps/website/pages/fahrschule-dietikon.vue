@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Dietikon – Skender | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Dietikon ✓ Fahrlehrer Skender ✓ Treffpunkt Bahnhof Dietikon ✓ Prüfung Albisgütli / Regensdorf ✓ Deutsch, Englisch & Albanisch ✓ Ab CHF 95.-/Lektion. Jetzt anmelden!" />
+      <Meta name="description" content="Fahrschule Dietikon ✓ Fahrlehrer Skender ✓ Treffpunkt Bahnhof Dietikon ✓ Prüfung Albisgütli/Regensdorf ✓ DE/EN/AL ✓ Ab CHF 95.-/Lektion. Jetzt anmelden!" />
       <Meta property="og:title" content="Fahrschule Dietikon – Skender | Driving Team" />
       <Meta property="og:description" content="Fahrschule Dietikon ✓ Fahrlehrer Skender ✓ Treffpunkt Bahnhof Dietikon ✓ Prüfung Albisgütli / Regensdorf ✓ Deutsch, Englisch & Albanisch ✓ Ab CHF 95.-" />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-dietikon/" />

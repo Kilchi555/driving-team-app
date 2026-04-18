@@ -104,10 +104,14 @@
                 <!-- Read mode -->
                 <div v-if="props.mode === 'view' || !editingAddress" class="space-y-0.5">
                   <template v-if="props.mode === 'view'">
-                    <p class="text-sm font-semibold text-gray-800">{{ props.viewInvoice?.billing_contact_person || props.viewInvoice?.billing_company_name }}</p>
-                    <p v-if="props.viewInvoice?.billing_street" class="text-xs text-gray-500">{{ props.viewInvoice.billing_street }}</p>
+                    <p v-if="props.viewInvoice?.billing_company_name" class="text-sm font-semibold text-gray-800">{{ props.viewInvoice.billing_company_name }}</p>
+                    <p class="text-sm font-semibold text-gray-800">{{ props.viewInvoice?.billing_contact_person }}</p>
+                    <p v-if="props.viewInvoice?.billing_street" class="text-xs text-gray-500">
+                      {{ props.viewInvoice.billing_street }}{{ (props.viewInvoice as any)?.billing_street_number ? ' ' + (props.viewInvoice as any).billing_street_number : '' }}
+                    </p>
                     <p v-if="props.viewInvoice?.billing_zip || props.viewInvoice?.billing_city" class="text-xs text-gray-500">{{ props.viewInvoice?.billing_zip }} {{ props.viewInvoice?.billing_city }}</p>
                     <p v-if="props.viewInvoice?.billing_email" class="text-xs break-all" :style="{ color: primaryColor }">{{ props.viewInvoice.billing_email }}</p>
+                    <p v-if="!props.viewInvoice?.billing_contact_person && !props.viewInvoice?.billing_company_name" class="text-xs text-orange-400 italic">Keine Rechnungsadresse</p>
                   </template>
                   <template v-else>
                     <p v-if="localBilling.company_name" class="text-xs font-semibold text-gray-500">{{ localBilling.company_name }}</p>
@@ -165,11 +169,11 @@
                         </svg>
                         <div>
                           <p class="text-sm font-semibold text-gray-800">{{ item.product_name }}</p>
-                          <p v-if="item.product_description || item.appointment_date" class="text-xs text-gray-400 mt-0.5">
-                            <span v-if="item.appointment_date">{{ item.appointment_date }}</span>
-                            <span v-if="item.appointment_date && item.appointment_duration_minutes"> · </span>
+                          <p v-if="item.product_description || item.appointment_date || item.appointment_start_time" class="text-xs text-gray-400 mt-0.5">
+                            <span v-if="item.appointment_start_time || item.appointment_date">{{ formatAppointmentDate(item.appointment_start_time || item.appointment_date) }}</span>
+                            <span v-if="(item.appointment_start_time || item.appointment_date) && item.appointment_duration_minutes"> · </span>
                             <span v-if="item.appointment_duration_minutes">{{ item.appointment_duration_minutes }} min</span>
-                            <span v-if="item.product_description && (item.appointment_date || item.appointment_duration_minutes)"> · </span>
+                            <span v-if="item.product_description && (item.appointment_start_time || item.appointment_date || item.appointment_duration_minutes)"> · </span>
                             <span v-if="item.product_description">{{ item.product_description }}</span>
                           </p>
                         </div>
@@ -270,7 +274,7 @@
                         <p v-if="draft?.creditor_zip" class="text-xs text-gray-500">{{ draft?.creditor_zip }} {{ draft?.creditor_city }}</p>
                       </div>
                       <div v-if="scorRef">
-                        <p class="text-xs text-gray-400">Referenz (SCOR)</p>
+                        <p class="text-xs text-gray-400">Referenz</p>
                         <p class="text-xs font-mono font-semibold text-gray-700">{{ scorRef }}</p>
                       </div>
                       <div>
@@ -281,28 +285,20 @@
                   </div>
                 </div>
               </div>
-
-              <!-- QR-IBAN nicht konfiguriert -->
-              <div v-else class="border-t border-dashed border-gray-200 px-5 py-3">
-                <p class="text-xs text-gray-400 flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  QR-IBAN in den Einstellungen hinterlegen um einen Swiss QR-Code auf der Rechnung anzuzeigen.
-                </p>
-              </div>
             </div>
           </div>
 
           <!-- Note -->
           <div class="mx-3 sm:mx-4 mb-4 mt-3">
-            <label class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Notiz (erscheint auf der Rechnung)</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Notiz</label>
             <textarea
               v-model="localNote"
               rows="2"
               placeholder="z.B. Danke für die gute Zusammenarbeit!"
+              :readonly="props.mode === 'view'"
               class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:border-transparent resize-none"
-              :style="{ '--tw-ring-color': primaryColor }"
+              :class="{ 'bg-gray-50 text-gray-500 cursor-default': props.mode === 'view' }"
+              :style="props.mode !== 'view' ? { '--tw-ring-color': primaryColor } : {}"
             />
           </div>
         </div>
@@ -318,17 +314,35 @@
           <div class="flex gap-3">
             <button
               @click="close"
-              :disabled="isSending"
+              :disabled="isSending || isResending"
               class="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
               {{ props.mode === 'view' ? 'Schliessen' : 'Später' }}
             </button>
+            <!-- Erneut senden (nur im view-Modus) -->
+            <button
+              v-if="props.mode === 'view'"
+              @click="resendInvoice"
+              :disabled="isResending"
+              class="flex-1 px-5 py-2.5 rounded-xl border text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              :style="{ borderColor: primaryColor, color: primaryColor }"
+            >
+              <svg v-if="isResending" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {{ isResending ? 'Wird gesendet…' : 'Erneut senden' }}
+            </button>
+            <!-- Rechnung senden (nur im draft-Modus) -->
             <button
               v-if="props.mode !== 'view'"
               @click="sendInvoice"
-              :disabled="isSending || !draft"
-              class="flex-1 px-5 py-2.5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:brightness-110"
-              :style="{ background: primaryGradient }"
+              :disabled="isSending || !draft || !isBillingComplete"
+              class="flex-1 px-5 py-2.5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:brightness-110 disabled:shadow-none disabled:hover:brightness-100"
+              :style="isBillingComplete ? { background: primaryGradient } : { background: '#9ca3af' }"
             >
               <svg v-if="isSending" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
@@ -355,6 +369,7 @@ interface InvoiceDraftItem {
   product_name: string
   product_description?: string | null
   appointment_date?: string | null
+  appointment_start_time?: string | null
   appointment_id?: string | null
   appointment_duration_minutes?: number | null
   payment_id: string
@@ -377,7 +392,9 @@ interface InvoiceDraft {
   billing_type: string
   billing_first_name?: string
   billing_last_name?: string
+  billing_company_name?: string
   billing_street?: string
+  billing_street_nr?: string
   billing_zip?: string
   billing_city?: string
   billing_country: string
@@ -406,6 +423,7 @@ const props = defineProps<{
   draft: InvoiceDraft | null
   mode?: 'edit' | 'view'
   viewInvoice?: {
+    id?: string
     invoice_number: string
     invoice_date: string
     due_date: string
@@ -422,7 +440,8 @@ const props = defineProps<{
     vat_rate: number
     vat_amount_rappen: number
     discount_amount_rappen: number
-    invoice_items: { product_name: string; product_description?: string; appointment_date?: string; appointment_duration_minutes?: number; quantity: number; unit_price_rappen: number; total_price_rappen: number; lesson_price_rappen?: number; admin_fee_rappen?: number; products_price_rappen?: number; discount_amount_rappen?: number; voucher_discount_rappen?: number; credit_used_rappen?: number }[]
+    notes?: string | null
+    invoice_items: { product_name: string; product_description?: string; appointment_date?: string; appointment_start_time?: string; appointment_duration_minutes?: number; quantity: number; unit_price_rappen: number; total_price_rappen: number; lesson_price_rappen?: number; admin_fee_rappen?: number; products_price_rappen?: number; discount_amount_rappen?: number; voucher_discount_rappen?: number; credit_used_rappen?: number }[]
   } | null
 }>()
 
@@ -451,6 +470,7 @@ const primaryGradient = computed(() => {
 })
 
 const isSending = ref(false)
+const isResending = ref(false)
 const error = ref<string | null>(null)
 const localDueDate = ref('')
 const localNote = ref('')
@@ -480,6 +500,15 @@ const billingErrors = ref({
   email: false,
 })
 
+const isBillingComplete = computed(() =>
+  !!localBilling.value.first_name.trim() &&
+  !!localBilling.value.last_name.trim() &&
+  !!localBilling.value.street.trim() &&
+  !!localBilling.value.zip.trim() &&
+  !!localBilling.value.city.trim() &&
+  !!localBilling.value.email.trim()
+)
+
 watch(() => props.draft, (d) => {
   if (d) {
     localDueDate.value = d.due_date
@@ -490,16 +519,22 @@ watch(() => props.draft, (d) => {
     expandedItems.value = []
     qrDataUrl.value = null
     localBilling.value = {
-      company_name: (d as any).billing_company_name || '',
-      first_name: d.billing_first_name || '',
-      last_name: d.billing_last_name || '',
+      company_name: d.billing_company_name || (d as any).billing_company_name || '',
+      first_name: d.billing_first_name || ((d as any).billing_contact_person?.split(' ')[0] || ''),
+      last_name: d.billing_last_name || ((d as any).billing_contact_person?.split(' ').slice(1).join(' ') || ''),
       street: d.billing_street || '',
-      street_nr: '',
+      street_nr: d.billing_street_nr || (d as any).billing_street_nr || '',
       zip: d.billing_zip || '',
       city: d.billing_city || '',
       email: d.billing_email || '',
     }
     if (d.qr_iban) loadQRCode(d)
+  }
+}, { immediate: true })
+
+watch(() => props.viewInvoice, (v) => {
+  if (v) {
+    localNote.value = v.notes || ''
   }
 }, { immediate: true })
 
@@ -545,10 +580,30 @@ const computedTotal = computed(() => {
   return (props.draft?.subtotal_rappen || 0) - totalDiscounts.value - totalCredits.value + (props.draft?.vat_amount_rappen || 0)
 })
 
-// ISO 11649 SCOR reference derived from invoice number preview (for display in modal)
+// Payment reference for display — QRR for QR-IBAN, SCOR for regular IBAN
 const scorRef = computed(() => {
   const num = props.draft?.invoice_number_preview
+  const iban = props.draft?.qr_iban || ''
   if (!num) return ''
+
+  // QR-IBAN detection: QR-IID in range 30000–31999 (positions 5–9 of IBAN)
+  const cleanIban = iban.replace(/\s/g, '').toUpperCase()
+  const qrIid = parseInt(cleanIban.slice(4, 9), 10)
+  const isQrIban = cleanIban.startsWith('CH') && qrIid >= 30000 && qrIid <= 31999
+
+  if (isQrIban) {
+    // QRR: 26-digit numeric with mod10 recursive check digit
+    const digits = num.replace(/\D/g, '').slice(0, 25).padStart(25, '0')
+    const table = [0, 9, 4, 6, 8, 2, 7, 1, 3, 5]
+    let n = 0
+    for (const d of digits) n = table[(n + parseInt(d, 10)) % 10]
+    const check = (10 - n) % 10
+    const ref = digits + check
+    // Format in groups of 5 for display (standard QRR display format)
+    return ref.match(/.{1,5}/g)?.join(' ') || ref
+  }
+
+  // SCOR (ISO 11649) for regular IBANs
   const cleaned = num.replace(/[^A-Z0-9]/gi, '').toUpperCase()
   if (!cleaned) return ''
   const numeric = (cleaned + 'RF00').split('').map((c: string) => {
@@ -556,11 +611,8 @@ const scorRef = computed(() => {
     return code >= 65 && code <= 90 ? (code - 55).toString() : c
   }).join('')
   let remainder = 0
-  for (const ch of numeric) {
-    remainder = (remainder * 10 + parseInt(ch, 10)) % 97
-  }
+  for (const ch of numeric) remainder = (remainder * 10 + parseInt(ch, 10)) % 97
   const ref = 'RF' + String(98 - remainder).padStart(2, '0') + cleaned
-  // Format in groups of 4 for display
   return ref.match(/.{1,4}/g)?.join(' ') || ref
 })
 
@@ -577,6 +629,21 @@ function chf(rappen: number) {
 function formatDate(iso?: string) {
   if (!iso) return '–'
   return new Date(iso).toLocaleDateString('de-CH')
+}
+
+function formatAppointmentDate(dateStr?: string | null): string {
+  if (!dateStr) return ''
+  let timeStr = dateStr
+  if (timeStr.includes(' ') && !timeStr.includes('T')) timeStr = timeStr.replace(' ', 'T')
+  if (timeStr.includes('+00') && !timeStr.includes('+00:00')) timeStr = timeStr.replace('+00', '+00:00')
+  if (!timeStr.includes('+') && !timeStr.includes('Z')) timeStr += '+00:00'
+  const utcDate = new Date(timeStr)
+  if (isNaN(utcDate.getTime())) return dateStr
+  const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+  const localDate = new Date(localDateStr)
+  const dateFormatted = localDate.toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+  const timeFormatted = localDate.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+  return `${dateFormatted}, ${timeFormatted}`
 }
 
 function close() {
@@ -597,7 +664,7 @@ async function sendInvoice() {
   }
   if (Object.values(billingErrors.value).some(Boolean)) {
     // Open billing edit section if not already open
-    editingBilling.value = true
+    editingAddress.value = true
     return
   }
 
@@ -639,6 +706,25 @@ async function sendInvoice() {
     error.value = err?.data?.statusMessage || err?.message || 'Fehler beim Senden der Rechnung'
   } finally {
     isSending.value = false
+  }
+}
+
+async function resendInvoice() {
+  const invoiceId = props.viewInvoice?.id
+  if (!invoiceId || isResending.value) return
+  isResending.value = true
+  error.value = null
+  try {
+    const result = await $fetch<{ success: boolean; invoiceNumber?: string; sentTo?: string; error?: string }>(
+      '/api/invoices/resend',
+      { method: 'POST', body: { invoiceId } }
+    )
+    if (!result.success) throw new Error(result.error || 'Fehler beim Versenden')
+    emit('update:modelValue', false)
+  } catch (err: any) {
+    error.value = err?.data?.statusMessage || err?.message || 'Fehler beim erneuten Senden'
+  } finally {
+    isResending.value = false
   }
 }
 </script>

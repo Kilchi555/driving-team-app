@@ -117,6 +117,16 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Student not found' })
   }
 
+  // Billing-Adresse aus company_billing_addresses laden (neueste aktive)
+  const { data: savedBilling } = await supabase
+    .from('company_billing_addresses')
+    .select('company_name, contact_person, email, street, street_number, zip, city, country')
+    .eq('user_id', student.id)
+    .eq('is_active', true)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
   // Tenant-Daten für Rechnungsnummer-Prefix + QR-IBAN
   const { data: tenant } = await supabase
     .from('tenants')
@@ -149,14 +159,17 @@ export default defineEventHandler(async (event) => {
     due_date: dueDate.toISOString().split('T')[0],
 
     // Empfänger
-    billing_type: 'individual' as const,
-    billing_email: student.email,
-    billing_first_name: student.first_name,
-    billing_last_name: student.last_name,
-    billing_street: [student.street, student.street_nr].filter(Boolean).join(' ') || '',
-    billing_zip: student.zip || '',
-    billing_city: student.city || '',
-    billing_country: 'CH',
+    // Rechnungsadresse: gespeicherte company_billing_address bevorzugen, Fallback auf Schülerdaten
+    billing_type: savedBilling?.company_name ? 'company' as const : 'individual' as const,
+    billing_email: savedBilling?.email || student.email,
+    billing_first_name: savedBilling ? (savedBilling.contact_person?.split(' ')[0] || '') : student.first_name,
+    billing_last_name: savedBilling ? (savedBilling.contact_person?.split(' ').slice(1).join(' ') || '') : student.last_name,
+    billing_company_name: savedBilling?.company_name || '',
+    billing_street: savedBilling?.street || student.street || '',
+    billing_street_nr: savedBilling?.street_number || student.street_nr || '',
+    billing_zip: savedBilling?.zip || student.zip || '',
+    billing_city: savedBilling?.city || student.city || '',
+    billing_country: savedBilling?.country || 'CH',
 
     // Beträge
     subtotal_rappen: subtotal,
@@ -177,14 +190,15 @@ export default defineEventHandler(async (event) => {
       const eventTypeMap: Record<string, string> = {
         lesson: 'Fahrstunde', exam: 'Prüfung', theory: 'Theorieunterricht', vku: 'VKU', haltbar: 'Haltbarkeitsprüfung'
       }
-      const label = apt?.event_type_code ? (eventTypeMap[apt.event_type_code] || apt.event_type_code) : (apt?.title || 'Fahrstunde')
+      const label = apt?.event_type_code ? (eventTypeMap[apt.event_type_code] || apt.event_type_code) : null
       return {
         payment_id: p.id,
         appointment_id: p.appointment_id,
-        product_name: apt?.title || label,
+        product_name: label || apt?.title || 'Fahrstunde',
         product_description: apt?.type ? `Kat. ${apt.type}` : null,
         appointment_title: apt?.title || null,
-        appointment_date: apt?.start_time ? new Date(apt.start_time).toISOString().split('T')[0] : null,
+        appointment_date: apt?.start_time || null,
+        appointment_start_time: apt?.start_time || null,
         appointment_duration_minutes: apt?.duration_minutes || null,
         quantity: 1,
         unit_price_rappen: p.total_amount_rappen,

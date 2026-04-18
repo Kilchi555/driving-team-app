@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Bootsfahrschule Zürich | Motorboot ab CHF 120.- | Zürichsee | Driving Team</Title>
+      <Title>Motorboot Fahrstunden Zürich | ab CHF 120.- | Driving Team</Title>
       <Meta name="description" content="Bootsfahrschule am Zürichsee ✓ ab CHF 120.-/Lektion ✓ Fahrstunden auch abends & samstags ✓ Erfahrener Fahrlehrer Marc ✓ Flexible Treffpunkte. Jetzt anmelden!" />
       <Meta name="keywords" content="Bootsfahrschule Zürich, Motorboot Fahrstunden Zürich, Bootsführerschein Zürich, Motorboot Zürichsee, Bootsfahrlehrer Zürich, Motorbootführerschein Zürichsee" />
       <Meta property="og:title" content="Bootsfahrschule Zürich – Motorboot am Zürichsee | Driving Team" />

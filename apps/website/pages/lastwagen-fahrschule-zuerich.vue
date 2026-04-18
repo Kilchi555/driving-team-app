@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Lastwagen Fahrschule Zürich | C1/C/CE Prüfung im Albisgütli | Driving Team</Title>
-      <Meta name="description" content="Lastwagen Fahrschule Zürich ✓ C1, C & CE ✓ Prüfung StVA Albisgütli ✓ CZV Grundkurs ✓ ab CHF 170.-/Lektion ✓ Treffpunkt Wädenswil ✓ Erfahrene Fahrlehrer. Jetzt anmelden!" />
+      <Title>Lastwagen Fahrschule Zürich | C1, C & CE | Driving Team</Title>
+      <Meta name="description" content="Lastwagen Fahrschule Zürich ✓ C1, C & CE ✓ Prüfung StVA Albisgütli ✓ CZV Grundkurs ✓ ab CHF 170.-/Lektion ✓ Erfahrene Fahrlehrer. Jetzt anmelden!" />
       <Meta name="keywords" content="Lastwagen Fahrschule Zürich, LKW Fahrschule Zürich, Lastwagen Führerschein Zürich, Kategorie C Zürich, C1 Zürich, CE Zürich, StVA Regensdorf LKW Prüfung, LKW Fahrstunden Zürich" />
       <Meta property="og:title" content="Lastwagen Fahrschule Zürich | C1/C/CE | Driving Team" />
       <Meta property="og:description" content="Professionelle LKW Fahrschule in Zürich-Altstetten. C1, C & CE Prüfung am Stva Albisgütli. CZV Grundkurs inklusive." />

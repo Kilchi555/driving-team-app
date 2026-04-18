@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Taxi Fahrschule Zürich | BPT Ausbildung Code 121/122 | Driving Team</Title>
-      <Meta name="description" content="Taxi Fahrschule Zürich ✓ BPT Ausbildung Code 121 & 122 ✓ Zürich-Altstetten ✓ Ab CHF 100.-/Lektion ✓ Professionelle Fahrlehrer ✓ Für Personentransport-Zulassung. Jetzt anmelden!" />
+      <Meta name="description" content="Taxi Fahrschule Zürich ✓ BPT Code 121/122 ✓ Zürich-Altstetten ✓ Ab CHF 100.-/Lektion ✓ Für Personentransport-Zulassung. Jetzt anmelden!" />
       <Meta name="keywords" content="Taxi Fahrschule Zürich, BPT Ausbildung Zürich, Taxi Führerschein Zürich, Code 121 Zürich, Code 122 Zürich, Personentransport Zürich, Taxi Kurs Zürich" />
       <Meta property="og:title" content="Taxi Fahrschule Zürich – BPT Ausbildung Code 121/122 | Driving Team" />
       <Meta property="og:description" content="BPT Ausbildung (Code 121/122) in Zürich-Altstetten. Ab CHF 100.-/Lektion. Professionelle Fahrlehrer. Für Taxi- und Personentransport-Zulassung." />
