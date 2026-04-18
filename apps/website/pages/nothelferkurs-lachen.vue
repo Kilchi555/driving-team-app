@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Nothelferkurs Lachen SZ | CHF 120.- | Obligatorisch | Driving Team</Title>
-      <Meta name="description" content="Nothelferkurs Lachen SZ ✓ CHF 120.- inkl. Nothelferausweis ✓ 10 Stunden ✓ Standort Lachen am Zürichsee ✓ Obligatorisch für jeden Führerschein ✓ 6 Jahre gültig. Jetzt buchen!" />
+      <Meta name="description" content="Nothelferkurs Lachen SZ ✓ CHF 120.- inkl. Ausweis ✓ 10 Stunden ✓ Am Zürichsee ✓ Obligatorisch für Führerschein ✓ 6 Jahre gültig. Jetzt buchen!" />
       <Meta name="keywords" content="Nothelferkurs Lachen, Nothelferkurs Lachen SZ, Nothelferkurs Zürichsee, Erste Hilfe Kurs Lachen Führerschein, Nothelfer Lachen, Nothelferkurs Schwyz" />
       <Meta property="og:title" content="Nothelferkurs Lachen SZ | CHF 120.- inkl. Ausweis | Driving Team" />
       <Meta property="og:description" content="Nothelferkurs in Lachen SZ am Zürichsee. CHF 120.- inkl. Nothelferausweis. 10 Stunden. Obligatorisch für alle Fahrzeugkategorien. Flexible Termine, sofort buchbar." />

@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>VKU Kurs Zürich ✓ CHF 190.- | Pflicht vor Fahrprüfung</Title>
-      <Meta name="description" content="VKU Kurs Zürich ✓ CHF 190.- inkl. Dokumentation ✓ 8 Stunden (2×4h) ✓ Obligatorisch vor Fahrprüfung ✓ Zürich-Altstetten Baslerstrasse ✓ Flexible Termine. Jetzt online anmelden!" />
+      <Meta name="description" content="VKU Kurs Zürich ✓ CHF 190.- inkl. Dokumentation ✓ 8 Stunden (2×4h) ✓ Obligatorisch vor Fahrprüfung ✓ Zürich-Altstetten. Jetzt online anmelden!" />
       <Meta name="keywords" content="VKU Kurs Zürich, Verkehrskundeunterricht Zürich, VKU Zürich, VKU Kurs buchen Zürich, Verkehrskunde Kurs Zürich, VKU Fahrschule Zürich" />
       <Meta property="og:title" content="VKU Kurs Zürich | Verkehrskundeunterricht CHF 190.- | Obligatorisch | Driving Team" />
       <Meta property="og:description" content="VKU Kurs in Zürich-Altstetten. CHF 190.- inkl. Dokumentation & Kursbestätigung. 8 Stunden (2×4h). Obligatorisch für Auto & Motorrad Führerschein. Flexible Termine." />
@@ -227,7 +227,7 @@
         <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Lachen</a>
         <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Uster</a>
         <a href="/fahrschule-spreitenbach/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Spreitenbach</a>
-        <a href="/fahrschule-reichenburg/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
+        <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Reichenburg</a>
         <a href="/fahrschule-stgallen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule St.Gallen</a>
         <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Dietikon</a>
       </div>

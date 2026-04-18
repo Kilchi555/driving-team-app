@@ -587,7 +587,7 @@
                   class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-all hover:shadow-md"
                   @click="handleBulkMarkAsPaid"
                 >
-                  Bar bezahlt (Verrechnet)
+                  Bar bezahlen
                 </button>
                 <button
                   v-if="selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p?.payment_status === 'pending' && !isInvoicedPayment(p) })"
@@ -670,6 +670,7 @@
                         payment.appointment?.status === 'cancelled' && payment.payment_status === 'pending' ? 'bg-orange-100 text-orange-700' :
                         payment.payment_status === 'completed' ? 'bg-green-100 text-green-700' :
                         isInvoicedPayment(payment) ? 'bg-blue-100 text-blue-700' :
+                        payment.payment_status === 'pending' && payment.payment_method === 'invoice' ? 'bg-orange-100 text-orange-700' :
                         payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                         payment.payment_status === 'failed' ? 'bg-red-100 text-red-700' :
                         payment.payment_status === 'refunded' ? 'bg-blue-100 text-blue-700' :
@@ -682,6 +683,7 @@
                              payment.appointment?.status === 'cancelled' && payment.payment_status === 'failed' ? 'Abgesagt · Fehlgeschlagen' :
                              payment.payment_status === 'completed' ? 'Bezahlt' :
                              isInvoicedPayment(payment) ? 'Verrechnet' :
+                             payment.payment_status === 'pending' && payment.payment_method === 'invoice' ? 'Offen' :
                              payment.payment_status === 'pending' ? 'Unbezahlt' :
                              payment.payment_status === 'failed' ? 'Fehlgeschlagen' :
                              payment.payment_status === 'refunded' ? 'Rückvergütet' :
@@ -1918,11 +1920,11 @@ const totalSelectedAmount = computed(() => {
 })
 
 // Handle click on payment card
-// A payment is "invoiced" if it was sent as a Rechnung (covers both
-// payment_method='invoice' set by switch-to-invoice, and payment_status='invoiced'
-// set by send-draft when invoice was sent for any payment method)
+// A payment is "invoiced" if an invoice has actually been created/sent.
+// payment_method='invoice' alone does NOT mean invoiced – the invoice must
+// have been sent (payment_status='invoiced') or an invoice_id must be set.
 const isInvoicedPayment = (payment: any) =>
-  (payment.payment_method === 'invoice' || payment.payment_status === 'invoiced') &&
+  (payment.payment_status === 'invoiced' || payment.invoice_id) &&
   payment.payment_status !== 'completed'
 
 const handlePaymentCardClick = (payment: any) => {
@@ -1950,13 +1952,22 @@ const handlePaymentCardClick = (payment: any) => {
   else if (payment.payment_status === 'completed') {
     logger.debug('🔒 Payment is completed, cannot select')
   }
-  // If invoiced, allow selection for bulk "Bar bezahlt"
-  else if (isInvoicedPayment(payment)) {
-    togglePaymentSelection(payment.id)
-  }
-  // Otherwise, toggle selection
+  // If invoiced or open: toggle — but enforce single-group selection
   else {
-    togglePaymentSelection(payment.id)
+    const clickedGroup = isInvoicedPayment(payment) ? 'invoiced' : 'open'
+    const firstSelected = selectedPayments.value.length > 0
+      ? payments.value.find(p => p.id === selectedPayments.value[0])
+      : null
+    const currentGroup = firstSelected
+      ? (isInvoicedPayment(firstSelected) ? 'invoiced' : 'open')
+      : null
+
+    if (currentGroup !== null && currentGroup !== clickedGroup) {
+      // Different group — clear and start fresh with this payment
+      selectedPayments.value = [payment.id]
+    } else {
+      togglePaymentSelection(payment.id)
+    }
   }
 }
 
@@ -2662,7 +2673,7 @@ const deleteDocumentFile = async (requirement: DocumentRequirement, side: 'front
   
   if (!doc) return
   
-  const success = await deleteDocument(doc.id)
+  const success = await deleteDocument(doc.id, selectedStudent.value.id)
   if (success) {
     // Reload documents to update UI
     await loadDocuments(selectedStudent.value.id)

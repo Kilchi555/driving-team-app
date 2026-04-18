@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Kaltbrunn / Uznach SG – Marc & Peter | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Kaltbrunn / Uznach SG ✓ 8+ Jahre Erfahrung ✓ Fahrlehrer Marc & Peter ✓ Prüfung Strassenverkehrsamt Kaltbrunn ✓ Uznaberg, Uznach, Ricken ✓ Deutsch & Englisch." />
+      <Meta name="description" content="Fahrschule Kaltbrunn / Uznach SG ✓ Fahrlehrer Marc & Peter ✓ Prüfung StVA Kaltbrunn ✓ Region Uznaberg, Uznach, Ricken ✓ Deutsch & Englisch." />
       <Meta property="og:title" content="Fahrschule Kaltbrunn / Uznach SG – Marc & Peter | Driving Team" />
       <Meta property="og:description" content="Fahrschule Kaltbrunn / Uznach SG ✓ 8+ Jahre Erfahrung ✓ Fahrlehrer Marc & Peter ✓ Prüfung Strassenverkehrsamt Kaltbrunn ✓ Uznaberg, Uznach, Ricken ✓ D" />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-stgallen/" />

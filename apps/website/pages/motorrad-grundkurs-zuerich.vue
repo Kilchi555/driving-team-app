@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Motorrad Grundkurs Zürich ✓ CHF 499.- | Max. 5 Pers.</Title>
-      <Meta name="description" content="Motorrad Grundkurs Zürich ✓ CHF 499.- Komplettpreis ✓ 12 Stunden (3×4h) ✓ Max. 5 Teilnehmer ✓ Fahrschul-Motorrad verfügbar ✓ Obligatorisch für A1/A35kW/A. Jetzt buchen!" />
+      <Meta name="description" content="Motorrad Grundkurs Zürich ✓ CHF 499.- ✓ 12 Stunden (3×4h) ✓ Max. 5 Teilnehmer ✓ Fahrschul-Motorrad verfügbar ✓ Kat. A1/A2/A. Jetzt buchen!" />
       <Meta name="keywords" content="Motorrad Grundkurs Zürich, Motorrad Grundkurs buchen Zürich, PGS Kurs Zürich, Motorrad Kurs Zürich, Motorrad Fahrkurs Zürich, Grundkurs Motorrad Zürich" />
       <Meta property="og:title" content="Motorrad Grundkurs Zürich | CHF 499.- | A1, A35kW, A | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs in Zürich-Altstetten. CHF 499.- Komplettpreis. 12 Stunden (3×4h). Max. 5 Teilnehmer. Fahrschul-Motorrad verfügbar. Obligatorisch für alle A-Kategorien." />
@@ -167,6 +167,11 @@
     <section class="section-container py-12">
       <h2 class="text-xl font-bold text-center mb-8 text-gray-900">Weitere Angebote in Zürich & Umgebung</h2>
       <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
+        <a href="/motorrad-grundkurs-altstetten/" class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-primary-300 transition group">
+          <div class="text-2xl mb-2">📍</div>
+          <p class="font-semibold text-gray-900 group-hover:text-primary-700 text-sm">Motorrad Grundkurs Altstetten</p>
+          <p class="text-xs text-gray-500 mt-1">CHF 499.- · Zürich-Altstetten</p>
+        </a>
         <a href="/motorrad-fahrschule/" class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-primary-300 transition group">
           <div class="text-2xl mb-2">🏍️</div>
           <p class="font-semibold text-gray-900 group-hover:text-primary-700 text-sm">Motorrad Fahrschule</p>

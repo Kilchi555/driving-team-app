@@ -18,6 +18,21 @@ function _formatChf(rappen: number) {
   return `CHF ${(rappen / 100).toFixed(2)}`
 }
 
+function _formatAppointmentDate(dateStr?: string | null): string {
+  if (!dateStr) return ''
+  let timeStr = dateStr
+  if (timeStr.includes(' ') && !timeStr.includes('T')) timeStr = timeStr.replace(' ', 'T')
+  if (timeStr.includes('+00') && !timeStr.includes('+00:00')) timeStr = timeStr.replace('+00', '+00:00')
+  if (!timeStr.includes('+') && !timeStr.includes('Z')) timeStr += '+00:00'
+  const utcDate = new Date(timeStr)
+  if (isNaN(utcDate.getTime())) return dateStr
+  const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+  const localDate = new Date(localDateStr)
+  const dateFormatted = localDate.toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+  const timeFormatted = localDate.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+  return `${dateFormatted}, ${timeFormatted}`
+}
+
 function _formatDate(dateStr: string) {
   try { return new Date(dateStr).toLocaleDateString('de-CH') } catch { return dateStr }
 }
@@ -44,7 +59,7 @@ function generateInvoiceEmail(data: {
     <tr>
       <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;">
         <strong style="color:#1e293b;font-size:14px;">${item.product_name}</strong>
-        ${item.appointment_date ? `<br><span style="color:#94a3b8;font-size:12px;">${item.appointment_date}</span>` : ''}
+        ${item.appointment_date ? `<br><span style="color:#94a3b8;font-size:12px;">${_formatAppointmentDate(item.appointment_date)}</span>` : ''}
       </td>
       <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8;font-size:13px;">${item.quantity}</td>
       <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:right;color:#64748b;font-size:13px;">${_formatChf(item.unit_price_rappen)}</td>
@@ -225,7 +240,7 @@ export default defineEventHandler(async (event) => {
   // Tenant laden (für Rechnungsnummer + Admin-Mail + Farben)
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
-    .select('id, name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color')
+    .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_square_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city')
     .eq('id', staffUser.tenant_id)
     .single()
 
@@ -265,6 +280,8 @@ export default defineEventHandler(async (event) => {
       invoice_date: draft.invoice_date,
       due_date: draft.due_date,
       billing_type: draft.billing_type || 'individual',
+      billing_contact_person: [draft.billing_first_name, draft.billing_last_name].filter(Boolean).join(' ') || null,
+      billing_company_name: (draft as any).billing_company_name || null,
       billing_email: draft.billing_email,
       billing_street: draft.billing_street || null,
       billing_zip: draft.billing_zip || null,
@@ -337,12 +354,57 @@ export default defineEventHandler(async (event) => {
   const studentName = draft.student?.name || 'Schüler'
   const studentEmail = draft.billing_email
 
+  // Billing-Adresse in company_billing_addresses speichern/aktualisieren (non-blocking)
+  if (draft.user_id) {
+    const contactPerson = [draft.billing_first_name, draft.billing_last_name].filter(Boolean).join(' ')
+    const billingStreetParts = (draft.billing_street || '').trim().split(/\s+/)
+    // Letztes Token als Hausnummer falls vorhanden (z.B. "Musterstrasse 12" → street="Musterstrasse", nr="12")
+    const hasNumber = billingStreetParts.length > 1 && /^\d/.test(billingStreetParts[billingStreetParts.length - 1])
+    const streetName = hasNumber ? billingStreetParts.slice(0, -1).join(' ') : draft.billing_street || ''
+    const streetNumber = hasNumber ? billingStreetParts[billingStreetParts.length - 1] : ''
+
+    const billingPayload = {
+      user_id: draft.user_id,
+      tenant_id: staffUser.tenant_id,
+      company_name: (draft as any).billing_company_name || `${draft.billing_first_name || ''} ${draft.billing_last_name || ''}`.trim(),
+      contact_person: contactPerson || studentName,
+      email: draft.billing_email || '',
+      street: streetName,
+      street_number: streetNumber || null,
+      zip: draft.billing_zip || '',
+      city: draft.billing_city || '',
+      country: draft.billing_country || 'Schweiz',
+      is_active: true,
+      updated_at: now,
+    }
+
+    // Vorhandene aktive Adresse suchen und updaten, sonst neu einfügen
+    const { data: existing } = await supabase
+      .from('company_billing_addresses')
+      .select('id')
+      .eq('user_id', draft.user_id)
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle()
+
+    if (existing) {
+      await supabase
+        .from('company_billing_addresses')
+        .update(billingPayload)
+        .eq('id', existing.id)
+    } else {
+      await supabase
+        .from('company_billing_addresses')
+        .insert({ ...billingPayload, created_by: staffUser.id })
+    }
+  }
+
   // QR-Code generieren wenn QR-IBAN vorhanden
   let qrCodeDataUrl: string | null = null
   if ((draft as any).qr_iban) {
     try {
-      const { generateSwissQRBase64, generateSCOR } = await import('~/server/utils/swiss-qr')
-      const scorRef = generateSCOR(invoiceNumber)
+      const { generateSwissQRBase64, generateReference } = await import('~/server/utils/swiss-qr')
+      const { ref: paymentRef, refType } = generateReference(invoiceNumber, (draft as any).qr_iban)
       qrCodeDataUrl = await generateSwissQRBase64({
         qr_iban: (draft as any).qr_iban,
         creditor_name: (draft as any).creditor_name || tenantData.name || '',
@@ -355,10 +417,11 @@ export default defineEventHandler(async (event) => {
         debtor_zip: draft.billing_zip || '',
         debtor_city: draft.billing_city || '',
         amount_rappen: draft.total_amount_rappen,
-        reference: scorRef,
+        reference: paymentRef,
         additional_info: `Rechnung ${invoiceNumber}`,
       })
-      ;(draft as any).scor_reference = scorRef
+      ;(draft as any).scor_reference = paymentRef
+      ;(draft as any).ref_type = refType
     } catch { /* QR optional – Fehler ignorieren */ }
   }
 
@@ -384,15 +447,37 @@ export default defineEventHandler(async (event) => {
       // PDF generieren und als Anhang beifügen
       let pdfAttachments: any[] = []
       try {
+        // Logo aus base64 data URL extrahieren
+        const logoDataUrl: string | null = (tenantData as any).logo_square_url || null
+        let tenantLogoBase64: string | null = null
+        let tenantLogoFormat: 'png' | 'jpeg' = 'png'
+        if (logoDataUrl?.startsWith('data:image/')) {
+          const match = logoDataUrl.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/)
+          if (match) {
+            tenantLogoFormat = match[1] === 'jpg' ? 'jpeg' : match[1] as 'png' | 'jpeg'
+            tenantLogoBase64 = match[2]
+          }
+        }
+
+        const legalName = (tenantData as any).legal_company_name || tenantData.name
+        const tenantStreet = [
+          (draft as any).creditor_street?.trim() || (tenantData as any).invoice_street?.trim(),
+          (draft as any).creditor_street_nr?.trim() || (tenantData as any).invoice_street_nr?.trim(),
+        ].filter(Boolean).join(' ')
+        const tenantZip = (draft as any).creditor_zip || (tenantData as any).invoice_zip || ''
+        const tenantCity = (draft as any).creditor_city || (tenantData as any).invoice_city || ''
+
         const pdfBuffer = await generateInvoicePdf({
           invoiceNumber,
           invoiceDate: draft.invoice_date,
           dueDate: draft.due_date,
-          tenantName: tenantData.name,
-          tenantStreet: (draft as any).creditor_street,
-          tenantZip: (draft as any).creditor_zip,
-          tenantCity: (draft as any).creditor_city,
+          tenantName: legalName,
+          tenantStreet,
+          tenantZip,
+          tenantCity,
           tenantEmail: tenantData.contact_email,
+          tenantLogoBase64,
+          tenantLogoFormat,
           customerName: studentName,
           billingStreet: draft.billing_street,
           billingZip: draft.billing_zip,
@@ -403,7 +488,7 @@ export default defineEventHandler(async (event) => {
           totalRappen: draft.total_amount_rappen,
           qrCodeDataUrl,
           qrIban: (draft as any).qr_iban || null,
-          creditorName: (draft as any).creditor_name || tenantData.name,
+          creditorName: (draft as any).creditor_name || legalName,
           primaryColor: tenantData.primary_color || '#1E40AF',
           secondaryColor: tenantData.secondary_color || '#64748B',
         })

@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Pfäffikon SZ | Auto & Motorrad | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Pfäffikon SZ – Auto, Motorrad & Anhänger Fahrstunden im Bezirk Höfe. StVA Pfäffikon SZ, flexible Treffpunkte, eidg. diplomierte Fahrlehrer. Jetzt buchen!" />
+      <Meta name="description" content="Fahrschule Pfäffikon SZ ✓ Auto, Motorrad & Anhänger im Bezirk Höfe ✓ StVA Pfäffikon SZ ✓ Eidg. diplom. Fahrlehrer ✓ Flexible Treffpunkte. Jetzt buchen!" />
       <Meta name="keywords" content="Fahrschule Pfäffikon SZ, Fahrstunden Pfäffikon SZ, Fahrlehrer Pfäffikon SZ, Autofahrschule Pfäffikon, Motorrad Fahrschule Pfäffikon SZ" />
       <Meta property="og:title" content="Fahrschule Pfäffikon SZ | Auto & Motorrad | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung in Pfäffikon SZ. Auto, Motorrad, Anhänger. StVA Pfäffikon SZ. Bezirk Höfe & Ausserschwyz." />

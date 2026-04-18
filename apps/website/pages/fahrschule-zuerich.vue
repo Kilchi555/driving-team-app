@@ -27,8 +27,8 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
-          <h1 class="heading-lg text-white mb-6">Fahrschule Driving Team – Standort Zürich</h1>
-          <p class="hidden xs:block text-xl text-white mb-8">Unser Hauptstandort. Professionelle Fahrschule für Auto, Motorrad und Anhänger. Unterricht auch auf Englisch & Albanisch verfügbar.</p>
+          <h1 class="heading-lg text-white mb-6">Fahrschule Zürich – Driving Team</h1>
+          <p class="hidden xs:block text-xl text-white mb-8">Deine Fahrschule in Zürich. Professionelle Fahrstunden für Auto, Motorrad und Anhänger ab CHF 95.-. Unterricht auch auf Englisch & Albanisch verfügbar.</p>
           <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
@@ -40,14 +40,14 @@
     <section class="py-12 md:py-16 bg-gradient-to-b from-primary-50 to-white">
       <div class="max-w-3xl mx-auto px-4 text-center">
         <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-6">
-          Unser Hauptstandort in Zürich-Altstetten
+          Ihre Fahrschule Zürich – Hauptstandort Altstetten
         </h2>
         <div class="space-y-4 text-gray-700">
           <p class="text-lg leading-relaxed">
-            Zürich-Altstetten ist das Zentrum der Fahrschule <strong>Driving Team</strong>. Hier führen wir alle Kurse durch – von Nothelferkursen bis zu Verkehrskunde und Motorrad-Grundkursen – und hier starten Ihre Fahrstunden.
+            Wer in Zürich die Fahrprüfung ablegen möchte, ist bei der <strong>Fahrschule Zürich</strong> Driving Team genau richtig. Von unserem Hauptstandort in Zürich-Altstetten aus führen wir alle Kurse durch – von Nothelferkursen über Verkehrskundeunterricht bis zu Motorrad-Grundkursen – und hier starten Ihre Fahrstunden.
           </p>
           <p class="text-lg leading-relaxed">
-            <strong>Zentral gelegen</strong> • <strong>Flexible Zeiten</strong> • <strong>Professionelle Instruktoren</strong> • <strong>Ab CHF 95.–/Lektion</strong>
+            <strong>Zentral in Zürich</strong> • <strong>Flexible Zeiten</strong> • <strong>Professionelle Instruktoren</strong> • <strong>Ab CHF 95.–/Lektion</strong>
           </p>
         </div>
       </div>

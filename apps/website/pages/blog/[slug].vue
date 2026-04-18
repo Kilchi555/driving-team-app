@@ -213,15 +213,21 @@ const { data: article } = await useAsyncData(`blog-${slug}`, async () => {
   return all.find(a => a.slug === slug || a.path === `/blog/${slug}`) ?? null
 })
 
-// SSR-safe SEO meta – runs server-side, visible to crawlers without JS
+// SSR-safe SEO meta – direct string values after awaited useAsyncData for correct prerender output
+const seoTitle = article.value
+  ? `${article.value.title} | Driving Team Fahrschule`
+  : 'Blog | Driving Team Fahrschule'
+const seoDescription = article.value?.description ?? ''
+const seoOgImage = `https://drivingteam.ch${article.value?.ogImage ?? '/images/og-image.webp'}`
+
 useSeoMeta({
-  title: () => article.value ? `${article.value.title} | Blog | Driving Team Fahrschule` : 'Blog | Driving Team Fahrschule',
-  description: () => article.value?.description ?? '',
-  ogTitle: () => article.value?.title ?? '',
-  ogDescription: () => article.value?.description ?? '',
+  title: seoTitle,
+  description: seoDescription,
+  ogTitle: article.value?.title ?? '',
+  ogDescription: seoDescription,
   ogUrl: `https://drivingteam.ch/blog/${slug}/`,
   ogType: 'article',
-  ogImage: () => `https://drivingteam.ch${article.value?.ogImage ?? '/images/og-image.webp'}`,
+  ogImage: seoOgImage,
   robots: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1',
 })
 
@@ -230,9 +236,9 @@ useHead({
     { rel: 'canonical', href: `https://drivingteam.ch/blog/${slug}/` },
   ],
   meta: [
-    { property: 'article:published_time', content: () => article.value?.date ?? '' },
-    { property: 'article:modified_time', content: () => article.value?.dateModified ?? article.value?.date ?? '' },
-    { name: 'keywords', content: () => article.value?.keywords ?? '' },
+    { property: 'article:published_time', content: article.value?.date ?? '' },
+    { property: 'article:modified_time', content: article.value?.dateModified ?? article.value?.date ?? '' },
+    { name: 'keywords', content: article.value?.keywords ?? '' },
   ],
 })
 

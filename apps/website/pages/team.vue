@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrlehrer & Team Zürich | Driving Team Fahrschule</Title>
-      <Meta name="description" content="Lerne das Team der Fahrschule Driving Team kennen – erfahrene Fahrlehrer:innen in Zürich und Lachen. Marc, Nicole, Pascal, Skender, André, Peter, Samir und Rahel." />
+      <Meta name="description" content="Lerne das Team der Fahrschule Driving Team kennen – erfahrene Fahrlehrer in Zürich und Lachen. Marc, Nicole, Pascal, Skender, André, Peter und mehr." />
       <Meta property="og:title" content="Unser Team – Erfahrene Fahrlehrer:innen | Driving Team" />
       <Meta property="og:description" content="Lerne unsere Fahrlehrer:innen in Zürich und Lachen kennen. Professionell, engagiert, erfolgreich." />
       <Meta property="og:url" content="https://drivingteam.ch/team/" />

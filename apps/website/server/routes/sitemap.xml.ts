@@ -116,19 +116,13 @@ export default defineEventHandler((event) => {
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://drivingteam.ch/fahrschule-aargau/</loc>
+    <loc>https://drivingteam.ch/fahrschule-spreitenbach/</loc>
     <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://drivingteam.ch/fahrschule-reichenburg/</loc>
-    <lastmod>2026-04-03</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://drivingteam.ch/fahrschule-pfaeffikon/</loc>
+    <loc>https://drivingteam.ch/fahrschule-pfaeffikon-sz/</loc>
     <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -197,9 +191,15 @@ export default defineEventHandler((event) => {
   <!-- ===== MOTORRAD ===== -->
   <url>
     <loc>https://drivingteam.ch/motorrad-grundkurs/</loc>
-    <lastmod>2026-03-01</lastmod>
+    <lastmod>2026-04-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/motorrad-grundkurs-altstetten/</loc>
+    <lastmod>2026-04-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/motorrad-grundkurs-zuerich/</loc>
@@ -241,7 +241,7 @@ export default defineEventHandler((event) => {
   <!-- ===== VKU ===== -->
   <url>
     <loc>https://drivingteam.ch/vku-kurse/</loc>
-    <lastmod>2026-03-01</lastmod>
+    <lastmod>2026-04-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -261,7 +261,7 @@ export default defineEventHandler((event) => {
   <!-- ===== WAB ===== -->
   <url>
     <loc>https://drivingteam.ch/wab-kurse/</loc>
-    <lastmod>2026-03-01</lastmod>
+    <lastmod>2026-04-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -339,12 +339,6 @@ export default defineEventHandler((event) => {
   </url>
   <url>
     <loc>https://drivingteam.ch/anhaenger-kurs/</loc>
-    <lastmod>2026-03-01</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://drivingteam.ch/lastwagen-fahrschule-3/</loc>
     <lastmod>2026-03-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>

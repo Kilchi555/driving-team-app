@@ -175,7 +175,7 @@
               Wie erfolgt der Nachweis der CZV Weiterbildung?
               <span class="text-primary-500 group-open:rotate-180 transition text-sm ml-4 shrink-0">▼</span>
             </summary>
-            <p class="text-gray-600 mt-3 text-sm">Nach jedem absolvierten Kurstag stellt die Weiterbildungsstätte eine <strong>Kursbestätigung via SARI</strong> aus. Diese wird bei der asa registriert. Sobald du 5 Kurstage nachgewiesen hast, kannst du auf <a href="https://www.cambus.ch" target="_blank" class="text-primary-600 hover:underline">www.cambus.ch</a> den neuen Fähigkeitsausweis bestellen.</p>
+            <p class="text-gray-600 mt-3 text-sm">Nach jedem absolvierten Kurstag stellt die Weiterbildungsstätte eine <strong>Kursbestätigung via SARI</strong> aus. Diese wird bei der asa registriert. Sobald du 5 Kurstage nachgewiesen hast, kannst du auf <a href="https://cambus.ch" target="_blank" class="text-primary-600 hover:underline">www.cambus.ch</a> den neuen Fähigkeitsausweis bestellen.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
@@ -191,7 +191,7 @@
               Wo kann ich meinen aktuellen Weiterbildungsstand abfragen?
               <span class="text-primary-500 group-open:rotate-180 transition text-sm ml-4 shrink-0">▼</span>
             </summary>
-            <p class="text-gray-600 mt-3 text-sm">Du kannst deinen persönlichen Weiterbildungsstand jederzeit online über das Infoportal der asa abfragen: <a href="https://www.cambus.ch" target="_blank" class="text-primary-600 hover:underline">www.cambus.ch</a> → «Kennen Sie den Stand Ihrer CZV-Weiterbildung».</p>
+            <p class="text-gray-600 mt-3 text-sm">Du kannst deinen persönlichen Weiterbildungsstand jederzeit online über das Infoportal der asa abfragen: <a href="https://cambus.ch" target="_blank" class="text-primary-600 hover:underline">www.cambus.ch</a> → «Kennen Sie den Stand Ihrer CZV-Weiterbildung».</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
@@ -207,7 +207,7 @@
               Was passiert, wenn mein Fähigkeitsausweis ausläuft und ich noch nicht 5 Kurse habe?
               <span class="text-primary-500 group-open:rotate-180 transition text-sm ml-4 shrink-0">▼</span>
             </summary>
-            <p class="text-gray-600 mt-3 text-sm">Auf Gesuch hin kann die zuständige Behörde den Ausweis <strong>einmalig für höchstens einen Monat</strong> verlängern. Das Gesuch kann frühestens einen Monat vor Ablauf auf <a href="https://www.cambus.ch" target="_blank" class="text-primary-600 hover:underline">www.cambus.ch</a> eingereicht werden. Ist der Ausweis bereits abgelaufen, absolvierst du einfach die fehlenden Kurse und bestellst danach die neue Karte.</p>
+            <p class="text-gray-600 mt-3 text-sm">Auf Gesuch hin kann die zuständige Behörde den Ausweis <strong>einmalig für höchstens einen Monat</strong> verlängern. Das Gesuch kann frühestens einen Monat vor Ablauf auf <a href="https://cambus.ch" target="_blank" class="text-primary-600 hover:underline">www.cambus.ch</a> eingereicht werden. Ist der Ausweis bereits abgelaufen, absolvierst du einfach die fehlenden Kurse und bestellst danach die neue Karte.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">

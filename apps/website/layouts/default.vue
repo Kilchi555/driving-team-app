@@ -5,7 +5,7 @@
       <nav class="w-full px-4 lg:px-8 py-5 flex items-center justify-between">
         <!-- Logo -->
         <NuxtLink to="/" class="flex items-center gap-2 group flex-shrink-0" @click="handleLogoClick">
-          <NuxtImg src="/images/logo.webp" alt="Driving Team Logo" width="340" height="57" class="h-8 xl:h-12 w-auto object-contain" loading="eager" :modifiers="{ quality: 85 }" />
+          <NuxtImg src="/images/logo.webp" alt="Driving Team Logo" width="340" height="57" class="h-8 xl:h-12 w-auto object-contain" loading="eager" fetchpriority="high" :modifiers="{ quality: 85 }" />
         </NuxtLink>
 
         <!-- Hamburger / Close Button -->
@@ -33,7 +33,6 @@
               <a href="/fahrschule-stgallen/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule St.Gallen</a>
               <a href="/fahrschule-dietikon/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Dietikon</a>
               <a href="/fahrschule-spreitenbach/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Aargau</a>
-              <a href="/fahrschule-reichenburg/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Reichenburg</a>
             </div>
           </div>
 
@@ -178,7 +177,7 @@
           </div>
 
           <!-- Einzelne Links -->
-          <a href="/uber-uns/" class="px-4 py-2 text-gray-700 font-medium hover:text-primary-600 transition hover:bg-gray-50 rounded-lg">Über uns</a>
+          <a href="/team/" class="px-4 py-2 text-gray-700 font-medium hover:text-primary-600 transition hover:bg-gray-50 rounded-lg">Über uns</a>
           <a href="/fahrschule-preise/" class="px-4 py-2 text-gray-700 font-medium hover:text-primary-600 transition hover:bg-gray-50 rounded-lg">Preise</a>
           <a href="/blog/" class="px-4 py-2 text-gray-700 font-medium hover:text-primary-600 transition hover:bg-gray-50 rounded-lg">Blog</a>
         </div>
@@ -219,7 +218,6 @@
             <a href="/fahrschule-stgallen/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 St.Gallen</a>
             <a href="/fahrschule-dietikon/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Dietikon</a>
             <a href="/fahrschule-spreitenbach/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Aargau</a>
-            <a href="/fahrschule-reichenburg/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Reichenburg</a>
           </div>
 
           <!-- Kategorie -->
@@ -415,7 +413,6 @@
               <li><a href="/fahrschule-pfaeffikon-sz/" class="hover:text-white transition">Fahrschule Pfäffikon SZ</a></li>
               <li><a href="/fahrschule-uster/" class="hover:text-white transition">Fahrschule Uster</a></li>
               <li><a href="/fahrschule-spreitenbach/" class="hover:text-white transition">Fahrschule Aargau</a></li>
-              <li><a href="/fahrschule-reichenburg/" class="hover:text-white transition">Fahrschule Reichenburg</a></li>
               <li><a href="/fahrschule-stgallen/" class="hover:text-white transition">Fahrschule St.Gallen</a></li>
               <li><a href="/fahrschule-dietikon/" class="hover:text-white transition">Fahrschule Dietikon</a></li>
             </ul>
@@ -453,7 +450,7 @@
             <h3 class="font-bold text-lg mb-5">Links</h3>
             <ul class="space-y-2 text-sm text-gray-300">
               <li><a href="/kontakt/" class="hover:text-white transition">Kontakt</a></li>
-              <li><a href="/uber-uns/" class="hover:text-white transition">Team</a></li>
+              <li><a href="/team/" class="hover:text-white transition">Team</a></li>
               <li><a href="/faq/" class="hover:text-white transition">FAQ</a></li>
               <li><a href="/fahrschule-preise/" class="hover:text-white transition">Preise</a></li>
               <li><a href="/agb/" class="hover:text-white transition">AGB</a></li>

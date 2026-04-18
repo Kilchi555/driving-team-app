@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Auto Fahrschule Zürich | Kategorie B ab CHF 95.- | Driving Team</Title>
-      <Meta name="description" content="Auto Fahrschule Zürich ✓ Kategorie B Fahrstunden ab CHF 95.- ✓ 85% Erfolgsquote ✓ Prüfungszentrum Albisgütli ✓ Flexible Zeiten ✓ Professionelle Fahrlehrer. Jetzt online buchen!" />
+      <Meta name="description" content="Auto Fahrschule Zürich ✓ Kat. B ab CHF 95.- ✓ 85% Erfolgsquote ✓ Prüfungszentrum Albisgütli ✓ Flexible Zeiten ✓ Professionelle Fahrlehrer. Jetzt buchen!" />
       <Meta name="keywords" content="Auto Fahrschule Zürich, Auto Fahrstunden Zürich, Kategorie B Zürich, Fahrschule Zürich Auto, Autofahrschule Zürich, Führerschein Zürich, Fahrprüfung Albisgütli, Fahrstunden Zürich-Altstetten" />
       <Meta property="og:title" content="Auto Fahrschule Zürich | Kategorie B | Driving Team" />
       <Meta property="og:description" content="Professionelle Auto Fahrschule in Zürich. Kategorie B ab CHF 95.-/Lektion. 85% Erfolgsquote. Prüfungsgebiet Albisgütli. Flexible Zeiten. Jetzt buchen!" />
