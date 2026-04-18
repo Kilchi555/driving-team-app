@@ -3,20 +3,38 @@
 // Queues onboarding reminder EMAILS for pending students.
 //
 // Schedule: daily at 08:00 UTC
-// Reminders sent at day 3, 7, and 14 after creation.
+//
+// Reminder schedule (based on student creation date):
+//  - Created before FREQUENT_REMINDER_CUTOFF: day 3, 7, 14
+//  - Created on/after FREQUENT_REMINDER_CUTOFF: every 3 days
+//    (day 3, 6, 9, 12, ... up to token expiry, max 30 days)
 //
 // Strategy:
 //  - Primary channel: EMAIL (free, branded)
 //  - Fallback: SMS if no email on record
-//
-// Only applies to students created on or after CUTOFF_DATE.
 // ============================================================
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader, getQuery } from 'h3'
 
-const REMINDER_DAYS = [3, 7, 14]
+// Users created on/after this date get reminders every 3 days
+const FREQUENT_REMINDER_CUTOFF = new Date('2026-04-17T00:00:00.000Z')
+
+const LEGACY_REMINDER_DAYS = [3, 7, 14]
+const FREQUENT_INTERVAL_DAYS = 3
+const FREQUENT_MAX_DAYS = 30
+
+function getReminderDays(createdAt: Date): number[] {
+  if (createdAt >= FREQUENT_REMINDER_CUTOFF) {
+    const days: number[] = []
+    for (let d = FREQUENT_INTERVAL_DAYS; d <= FREQUENT_MAX_DAYS; d += FREQUENT_INTERVAL_DAYS) {
+      days.push(d)
+    }
+    return days
+  }
+  return LEGACY_REMINDER_DAYS
+}
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -108,6 +126,7 @@ export default defineEventHandler(async (event) => {
 
     const createdAt = new Date(student.created_at)
     const daysSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+    const reminderDays = getReminderDays(createdAt)
 
     const tenant = tenantMap.get(student.tenant_id)
     const tenantName = tenant?.name || 'Ihre Fahrschule'
@@ -117,7 +136,7 @@ export default defineEventHandler(async (event) => {
     const primaryColor = tenant?.primary_color || '#2563eb'
     const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
 
-    for (const reminderDay of REMINDER_DAYS) {
+    for (const reminderDay of reminderDays) {
       // In test mode: use the specified reminder_day (default 3); skip window check
       const effectiveDay = testStudentId ? testReminderDay! : reminderDay
       if (!testStudentId && (daysSinceCreation < reminderDay || daysSinceCreation >= reminderDay + 1)) continue
@@ -129,7 +148,7 @@ export default defineEventHandler(async (event) => {
         continue
       }
 
-      const reminderNumber = REMINDER_DAYS.indexOf(reminderDay) + 1
+      const reminderNumber = reminderDays.indexOf(reminderDay) + 1
       const contextData = {
         stage: 'onboarding_reminder',
         student_id: student.id,
@@ -140,17 +159,19 @@ export default defineEventHandler(async (event) => {
 
       if (student.email) {
         // ── EMAIL (primary) ──────────────────────────────────
+        const isLastReminder = reminderDay === reminderDays[reminderDays.length - 1]
+
         const subject = reminderNumber === 1
           ? `Deine Registrierung bei ${tenantName} wartet auf dich`
-          : reminderNumber === 2
-            ? `Noch nicht registriert? Dein Link ist noch aktiv`
-            : `Letzte Erinnerung: Dein Registrierungslink läuft bald ab`
+          : isLastReminder
+            ? `Letzte Erinnerung: Dein Registrierungslink läuft bald ab`
+            : `Noch nicht registriert? Dein Link ist noch aktiv`
 
         const bodyText = reminderNumber === 1
           ? `Hallo ${student.first_name},<br><br>du hast dich für die <strong>${tenantName}</strong> interessiert — aber deine Registrierung ist noch nicht abgeschlossen.<br><br>Die Registrierung ist <strong>kostenlos und unverbindlich</strong>. Klicke auf den Button um fortzufahren:`
-          : reminderNumber === 2
-            ? `Hallo ${student.first_name},<br><br>dein Registrierungslink ist noch aktiv. Die Anmeldung ist <strong>kostenlos und unverbindlich</strong> — schliesse sie jetzt ab, es dauert nur 2 Minuten:`
-            : `Hallo ${student.first_name},<br><br>das ist deine letzte Erinnerung. Dein persönlicher Registrierungslink läuft bald ab. Die Anmeldung ist <strong>kostenlos und unverbindlich</strong>:`
+          : isLastReminder
+            ? `Hallo ${student.first_name},<br><br>das ist deine letzte Erinnerung. Dein persönlicher Registrierungslink läuft bald ab. Die Anmeldung ist <strong>kostenlos und unverbindlich</strong>:`
+            : `Hallo ${student.first_name},<br><br>dein Registrierungslink ist noch aktiv. Die Anmeldung ist <strong>kostenlos und unverbindlich</strong> — schliesse sie jetzt ab, es dauert nur 2 Minuten:`
 
         const logoHtml = logoUrl
           ? `<div style="margin-bottom:20px;text-align:center"><img src="${logoUrl}" alt="${tenantName}" style="height:40px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></div>`
@@ -205,9 +226,9 @@ export default defineEventHandler(async (event) => {
         // ── SMS fallback (no email) ──────────────────────────
         const smsBody = reminderNumber === 1
           ? `Hallo ${student.first_name}, bitte vervollständige deine Registrierung bei ${tenantName}:\n\n${onboardingUrl}\n\nNach der Registrierung: ${loginLink}`
-          : reminderNumber === 2
-            ? `Hallo ${student.first_name}, du hast deine Registrierung bei ${tenantName} noch nicht abgeschlossen:\n\n${onboardingUrl}`
-            : `Hallo ${student.first_name}, letzte Erinnerung – dein Link läuft bald ab:\n\n${onboardingUrl}`
+          : isLastReminder
+            ? `Hallo ${student.first_name}, letzte Erinnerung – dein Link läuft bald ab:\n\n${onboardingUrl}`
+            : `Hallo ${student.first_name}, du hast deine Registrierung bei ${tenantName} noch nicht abgeschlossen:\n\n${onboardingUrl}`
 
         toInsert.push({
           tenant_id:       student.tenant_id,

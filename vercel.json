@@ -64,6 +64,10 @@
     {
       "path": "/api/cron/send-admin-payment-report",
       "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/send-staff-payment-report",
+      "schedule": "10 6 * * 1"
     }
   ],
   "rewrites": [
