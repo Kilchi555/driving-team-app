@@ -161,7 +161,7 @@ export default defineEventHandler(async (event) => {
     const { data: staffUser } = await supabase
       .from('users')
       .select('tenant_id, first_name, last_name, email')
-      .eq('id', authUser.id)
+      .eq('auth_user_id', authUser.id)
       .single()
 
     if (!staffUser || staffUser.tenant_id !== invoice.tenant_id) {
