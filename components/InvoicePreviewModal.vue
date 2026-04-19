@@ -220,6 +220,10 @@
                   <span>Zwischensumme</span>
                   <span>{{ chf(props.mode === 'view' ? (props.viewInvoice?.subtotal_rappen || 0) : (draft?.subtotal_rappen || 0)) }}</span>
                 </div>
+                <div v-if="props.mode === 'view' && (props.viewInvoice?.discount_amount_rappen || 0) > 0" class="flex justify-between text-sm text-green-600">
+                  <span>Rabatt</span>
+                  <span>−{{ chf(props.viewInvoice?.discount_amount_rappen || 0) }}</span>
+                </div>
                 <div v-if="(props.mode === 'view' ? (props.viewInvoice?.vat_rate || 0) : (draft?.vat_rate || 0)) > 0" class="flex justify-between text-sm text-gray-600">
                   <span>MwSt {{ props.mode === 'view' ? props.viewInvoice?.vat_rate : draft?.vat_rate }}%</span>
                   <span>{{ chf(props.mode === 'view' ? (props.viewInvoice?.vat_amount_rappen || 0) : (draft?.vat_amount_rappen || 0)) }}</span>
