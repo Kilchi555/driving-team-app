@@ -35,7 +35,20 @@ function buildResendEmail(data: {
   invoiceNumber: string
   invoiceDate: string
   dueDate: string
-  items: { product_name: string; appointment_date?: string | null; appointment_start_time?: string | null; quantity: number; unit_price_rappen: number; total_price_rappen: number }[]
+  items: {
+    product_name: string
+    appointment_date?: string | null
+    appointment_start_time?: string | null
+    quantity: number
+    unit_price_rappen: number
+    total_price_rappen: number
+    lesson_price_rappen?: number
+    admin_fee_rappen?: number
+    products_price_rappen?: number
+    discount_amount_rappen?: number
+    voucher_discount_rappen?: number
+    credit_used_rappen?: number
+  }[]
   subtotalRappen: number
   discountRappen?: number
   totalRappen: number
@@ -51,16 +64,34 @@ function buildResendEmail(data: {
 
   const rows = data.items.map(item => {
     const dateStr = item.appointment_start_time || item.appointment_date
+    const hasBreakdown = (item.lesson_price_rappen || 0) > 0 || (item.admin_fee_rappen || 0) > 0 ||
+      (item.products_price_rappen || 0) > 0 || (item.discount_amount_rappen || 0) > 0 ||
+      (item.voucher_discount_rappen || 0) > 0 || (item.credit_used_rappen || 0) > 0
+
+    const breakdownRows = hasBreakdown ? `
+      <tr>
+        <td colspan="4" style="padding:0 16px 10px;border-bottom:1px solid #f1f5f9;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            ${(item.lesson_price_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">Fahrstunde</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(item.lesson_price_rappen || 0)}</td></tr>` : ''}
+            ${(item.admin_fee_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">Admin-Gebühr</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(item.admin_fee_rappen || 0)}</td></tr>` : ''}
+            ${(item.products_price_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">Material / Produkte</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(item.products_price_rappen || 0)}</td></tr>` : ''}
+            ${(item.discount_amount_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#16a34a;">Rabatt</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;color:#16a34a;">−${_formatChf(item.discount_amount_rappen || 0)}</td></tr>` : ''}
+            ${(item.voucher_discount_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#16a34a;">Gutschein</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;color:#16a34a;">−${_formatChf(item.voucher_discount_rappen || 0)}</td></tr>` : ''}
+            ${(item.credit_used_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#2563eb;">Guthaben verwendet</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;color:#2563eb;">−${_formatChf(item.credit_used_rappen || 0)}</td></tr>` : ''}
+          </table>
+        </td>
+      </tr>` : ''
+
     return `
     <tr>
-      <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;">
+      <td style="padding:12px 16px ${hasBreakdown ? '4px' : ''};border-bottom:${hasBreakdown ? 'none' : '1px solid #f1f5f9'};">
         <strong style="color:#1e293b;font-size:14px;">${item.product_name}</strong>
         ${dateStr ? `<br><span style="color:#94a3b8;font-size:12px;">${_formatAppointmentDate(dateStr)}</span>` : ''}
       </td>
-      <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8;font-size:13px;">${item.quantity}</td>
-      <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:right;color:#64748b;font-size:13px;">${_formatChf(item.unit_price_rappen)}</td>
-      <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:700;color:#1e293b;font-size:13px;">${_formatChf(item.total_price_rappen)}</td>
-    </tr>`
+      <td style="padding:12px 16px ${hasBreakdown ? '4px' : ''};border-bottom:${hasBreakdown ? 'none' : '1px solid #f1f5f9'};text-align:center;color:#94a3b8;font-size:13px;">${item.quantity}</td>
+      <td style="padding:12px 16px ${hasBreakdown ? '4px' : ''};border-bottom:${hasBreakdown ? 'none' : '1px solid #f1f5f9'};text-align:right;color:#64748b;font-size:13px;">${_formatChf(item.unit_price_rappen)}</td>
+      <td style="padding:12px 16px ${hasBreakdown ? '4px' : ''};border-bottom:${hasBreakdown ? 'none' : '1px solid #f1f5f9'};text-align:right;font-weight:700;color:#1e293b;font-size:13px;">${_formatChf(item.total_price_rappen)}</td>
+    </tr>${breakdownRows}`
   }).join('')
 
   const qrSection = data.qrCodeDataUrl && data.qrIban ? `
@@ -206,6 +237,24 @@ export default defineEventHandler(async (event) => {
       }
     })
 
+    // Payment-Breakdown-Daten nachladen (Rabatt, Guthaben etc. pro Position)
+    const paymentBreakdown: Record<string, any> = {}
+    if (appointmentIds.length > 0) {
+      const { data: payments } = await supabase
+        .from('payments')
+        .select('appointment_id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, voucher_discount_rappen, credit_used_rappen')
+        .eq('invoice_id', invoiceId)
+        .in('appointment_id', appointmentIds)
+      if (payments) for (const p of payments) {
+        if (p.appointment_id) paymentBreakdown[p.appointment_id] = p
+      }
+    }
+
+    const enrichedItems = items.map((item: any) => {
+      const bd = item.appointment_id ? paymentBreakdown[item.appointment_id] : null
+      return bd ? { ...item, ...bd } : item
+    })
+
     const tenantName = (tenant as any)?.name || ''
     const staffName = `${staffUser.first_name || ''} ${staffUser.last_name || ''}`.trim()
     const customerName = invoice.billing_contact_person ||
@@ -247,7 +296,7 @@ export default defineEventHandler(async (event) => {
       invoiceNumber: invoice.invoice_number,
       invoiceDate: invoice.invoice_date,
       dueDate: invoice.due_date,
-      items,
+      items: enrichedItems,
       subtotalRappen: invoice.subtotal_rappen || invoice.total_amount_rappen,
       discountRappen: invoice.discount_amount_rappen || 0,
       totalRappen: invoice.total_amount_rappen,
@@ -290,12 +339,18 @@ export default defineEventHandler(async (event) => {
         billingZip: invoice.billing_zip || '',
         billingCity: invoice.billing_city || '',
         billingEmail,
-        items: items.map((i: any) => ({
+        items: enrichedItems.map((i: any) => ({
           product_name: i.product_name,
           appointment_date: i.appointment_start_time || i.appointment_date,
           quantity: i.quantity,
           unit_price_rappen: i.unit_price_rappen,
           total_price_rappen: i.total_price_rappen,
+          lesson_price_rappen: i.lesson_price_rappen || 0,
+          admin_fee_rappen: i.admin_fee_rappen || 0,
+          products_price_rappen: i.products_price_rappen || 0,
+          discount_amount_rappen: i.discount_amount_rappen || 0,
+          voucher_discount_rappen: i.voucher_discount_rappen || 0,
+          credit_used_rappen: i.credit_used_rappen || 0,
         })),
         subtotalRappen: invoice.subtotal_rappen || invoice.total_amount_rappen,
         discountRappen: invoice.discount_amount_rappen || 0,

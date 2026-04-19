@@ -42,7 +42,19 @@ function generateInvoiceEmail(data: {
   invoiceNumber: string
   invoiceDate: string
   dueDate: string
-  items: { product_name: string; appointment_date?: string | null; quantity: number; unit_price_rappen: number; total_price_rappen: number }[]
+  items: {
+    product_name: string
+    appointment_date?: string | null
+    quantity: number
+    unit_price_rappen: number
+    total_price_rappen: number
+    lesson_price_rappen?: number
+    admin_fee_rappen?: number
+    products_price_rappen?: number
+    discount_amount_rappen?: number
+    voucher_discount_rappen?: number
+    credit_used_rappen?: number
+  }[]
   subtotalRappen: number
   discountRappen?: number
   totalRappen: number
@@ -57,16 +69,36 @@ function generateInvoiceEmail(data: {
   const brandColor = data.primaryColor || '#1E40AF'
   const brandColorLight = brandColor + '15'
 
-  const rows = data.items.map(item => `
+  const rows = data.items.map(item => {
+    const hasBreakdown = (item.lesson_price_rappen || 0) > 0 || (item.admin_fee_rappen || 0) > 0 ||
+      (item.products_price_rappen || 0) > 0 || (item.discount_amount_rappen || 0) > 0 ||
+      (item.voucher_discount_rappen || 0) > 0 || (item.credit_used_rappen || 0) > 0
+
+    const breakdownRows = hasBreakdown ? `
+      <tr>
+        <td colspan="4" style="padding:0 16px 10px;border-bottom:1px solid #f1f5f9;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            ${(item.lesson_price_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">Fahrstunde</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(item.lesson_price_rappen || 0)}</td></tr>` : ''}
+            ${(item.admin_fee_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">Admin-Gebühr</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(item.admin_fee_rappen || 0)}</td></tr>` : ''}
+            ${(item.products_price_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">Material / Produkte</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(item.products_price_rappen || 0)}</td></tr>` : ''}
+            ${(item.discount_amount_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#16a34a;">Rabatt</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;color:#16a34a;">−${_formatChf(item.discount_amount_rappen || 0)}</td></tr>` : ''}
+            ${(item.voucher_discount_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#16a34a;">Gutschein</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;color:#16a34a;">−${_formatChf(item.voucher_discount_rappen || 0)}</td></tr>` : ''}
+            ${(item.credit_used_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#2563eb;">Guthaben verwendet</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;color:#2563eb;">−${_formatChf(item.credit_used_rappen || 0)}</td></tr>` : ''}
+          </table>
+        </td>
+      </tr>` : ''
+
+    return `
     <tr>
-      <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;">
+      <td style="padding:12px 16px ${hasBreakdown ? '4px' : ''};border-bottom:${hasBreakdown ? 'none' : '1px solid #f1f5f9'};">
         <strong style="color:#1e293b;font-size:14px;">${item.product_name}</strong>
         ${item.appointment_date ? `<br><span style="color:#94a3b8;font-size:12px;">${_formatAppointmentDate(item.appointment_date)}</span>` : ''}
       </td>
-      <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:center;color:#94a3b8;font-size:13px;">${item.quantity}</td>
-      <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:right;color:#64748b;font-size:13px;">${_formatChf(item.unit_price_rappen)}</td>
-      <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:700;color:#1e293b;font-size:13px;">${_formatChf(item.total_price_rappen)}</td>
-    </tr>`).join('')
+      <td style="padding:12px 16px ${hasBreakdown ? '4px' : ''};border-bottom:${hasBreakdown ? 'none' : '1px solid #f1f5f9'};text-align:center;color:#94a3b8;font-size:13px;">${item.quantity}</td>
+      <td style="padding:12px 16px ${hasBreakdown ? '4px' : ''};border-bottom:${hasBreakdown ? 'none' : '1px solid #f1f5f9'};text-align:right;color:#64748b;font-size:13px;">${_formatChf(item.unit_price_rappen)}</td>
+      <td style="padding:12px 16px ${hasBreakdown ? '4px' : ''};border-bottom:${hasBreakdown ? 'none' : '1px solid #f1f5f9'};text-align:right;font-weight:700;color:#1e293b;font-size:13px;">${_formatChf(item.total_price_rappen)}</td>
+    </tr>${breakdownRows}`
+  }).join('')
 
   return `<!DOCTYPE html>
 <html lang="de">
