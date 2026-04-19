@@ -77,21 +77,62 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Zahlungs-Breakdown per appointment_id laden (für Rabatt, Guthaben, Preisaufschlüsselung)
+  let paymentBreakdown: Record<string, {
+    lesson_price_rappen: number
+    admin_fee_rappen: number
+    products_price_rappen: number
+    discount_amount_rappen: number
+    voucher_discount_rappen: number
+    credit_used_rappen: number
+  }> = {}
+  if (appointmentIds.length > 0) {
+    const { data: payments } = await supabase
+      .from('payments')
+      .select('appointment_id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, voucher_discount_rappen, credit_used_rappen')
+      .eq('invoice_id', payment.invoice_id)
+      .in('appointment_id', appointmentIds)
+    if (payments) {
+      for (const p of payments) {
+        if (p.appointment_id) {
+          paymentBreakdown[p.appointment_id] = {
+            lesson_price_rappen: p.lesson_price_rappen || 0,
+            admin_fee_rappen: p.admin_fee_rappen || 0,
+            products_price_rappen: p.products_price_rappen || 0,
+            discount_amount_rappen: p.discount_amount_rappen || 0,
+            voucher_discount_rappen: (p as any).voucher_discount_rappen || 0,
+            credit_used_rappen: p.credit_used_rappen || 0,
+          }
+        }
+      }
+    }
+  }
+
   const eventTypeMap: Record<string, string> = {
     lesson: 'Fahrstunde', exam: 'Prüfung', theory: 'Theorieunterricht', vku: 'VKU', haltbar: 'Haltbarkeitsprüfung'
   }
 
-  // start_time und event type in invoice_items einbetten
+  // start_time, event type und payment breakdown in invoice_items einbetten
   const enrichedItems = (invoice.invoice_items as any[]).map((item: any) => {
     const aptData = item.appointment_id ? appointmentEventTypes[item.appointment_id] : null
     const eventTypeCode = aptData?.event_type_code
     const eventLabel = eventTypeCode ? (eventTypeMap[eventTypeCode] || eventTypeCode) : null
     const category = aptData?.type ? `Kat. ${aptData.type}` : null
+    const breakdown = item.appointment_id ? (paymentBreakdown[item.appointment_id] || null) : null
     return {
       ...item,
       appointment_start_time: item.appointment_id ? (appointmentStartTimes[item.appointment_id] || null) : null,
       product_name: eventLabel || item.product_name,
       product_description: category || item.product_description,
+      // Breakdown aus Zahlungsdaten (für aufgeklappte Preisdetails)
+      ...(breakdown ? {
+        lesson_price_rappen: breakdown.lesson_price_rappen,
+        admin_fee_rappen: breakdown.admin_fee_rappen,
+        products_price_rappen: breakdown.products_price_rappen,
+        discount_amount_rappen: breakdown.discount_amount_rappen,
+        voucher_discount_rappen: breakdown.voucher_discount_rappen,
+        credit_used_rappen: breakdown.credit_used_rappen,
+      } : {}),
     }
   })
 
