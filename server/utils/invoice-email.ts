@@ -28,6 +28,8 @@ export function formatAppointmentDateEmail(dateStr: string): string {
 export interface InvoiceEmailItem {
   product_name: string
   appointment_date?: string | null
+  appointment_duration_minutes?: number | null
+  product_description?: string | null
   quantity: number
   unit_price_rappen: number
   total_price_rappen: number
@@ -89,11 +91,19 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
 
     const border = hasBreakdown ? 'none' : '1px solid #f1f5f9'
     const pb = hasBreakdown ? '4px' : '12px'
+    const durationStr = item.appointment_duration_minutes ? `${item.appointment_duration_minutes} Min.` : ''
+    const typeStr = item.product_description || ''
+    const metaParts = [
+      dateStr ? formatAppointmentDateEmail(dateStr) : '',
+      typeStr,
+      durationStr,
+    ].filter(Boolean)
+    const metaLine = metaParts.length > 0 ? `<br><span style="color:#94a3b8;font-size:11px;">${metaParts.join(' · ')}</span>` : ''
     return `
     <tr>
       <td class="col-desc" style="padding:12px 12px ${pb};border-bottom:${border};">
         <strong style="color:#1e293b;font-size:14px;">${item.product_name}</strong>
-        ${dateStr ? `<br><span style="color:#94a3b8;font-size:12px;">${formatAppointmentDateEmail(dateStr)}</span>` : ''}
+        ${metaLine}
       </td>
       <td class="col-anz" style="padding:12px 8px ${pb};border-bottom:${border};text-align:center;color:#94a3b8;font-size:13px;">${item.quantity}</td>
       <td class="col-ep" style="padding:12px 8px ${pb};border-bottom:${border};text-align:right;color:#64748b;font-size:13px;">${formatChfEmail(item.unit_price_rappen)}</td>
@@ -109,9 +119,6 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
         <td style="padding-right:16px;vertical-align:top;">
           <div style="background:white;border:1px solid #e2e8f0;border-radius:8px;padding:8px;display:inline-block;">
             <img src="${data.qrCodeDataUrl}" alt="QR" width="100" height="100" style="display:block;" />
-            <div style="text-align:center;margin-top:5px;">
-              <span style="display:inline-block;background:#FF0000;border-radius:3px;width:20px;height:20px;line-height:20px;text-align:center;color:white;font-weight:900;font-size:14px;">+</span>
-            </div>
           </div>
         </td>
         <td style="vertical-align:top;">
@@ -156,15 +163,14 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
       .inv-num { font-size:18px !important; }
       .total-amt { font-size:22px !important; }
       .meta-band { padding:10px 16px !important; }
-      .meta-col { display:block !important; width:100% !important; padding:2px 0 !important; }
-      .meta-col:not(:last-child) { margin-bottom:6px !important; }
+      .meta-col { width:50% !important; }
+      .meta-col:nth-child(2) { text-align:right !important; }
       .meta-col-last { display:none !important; }
       .body-wrap { padding:20px 14px !important; }
       .footer-wrap { padding:14px 16px !important; }
-      .col-anz, .col-ep { display:none !important; }
+      .col-anz, .col-ep, .th-anz, .th-ep { width:0 !important; max-width:0 !important; overflow:hidden !important; padding:0 !important; font-size:0 !important; border:0 !important; }
       .col-desc { width:65% !important; }
       .col-total { width:35% !important; }
-      .th-anz, .th-ep { display:none !important; }
       .bd-row td { padding-left:8px !important; }
     }
   </style>

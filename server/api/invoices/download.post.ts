@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
   if (appointmentIds.length > 0) {
     const { data: apts } = await supabase
       .from('appointments')
-      .select('id, start_time, event_type_code, type')
+      .select('id, start_time, event_type_code, type, duration_minutes, staff:users!staff_id(first_name)')
       .in('id', appointmentIds)
     if (apts) for (const apt of apts) appointmentMap[apt.id] = apt
   }
@@ -66,7 +66,16 @@ export default defineEventHandler(async (event) => {
   const items = (rawItems || []).map((item: any) => {
     const apt = item.appointment_id ? appointmentMap[item.appointment_id] : null
     const eventLabel = apt?.event_type_code ? (eventTypeMap[apt.event_type_code] || apt.event_type_code) : null
-    return { ...item, product_name: eventLabel || item.product_name, appointment_start_time: apt?.start_time || null }
+    const staffFirstName = (apt?.staff as any)?.first_name || null
+    const baseLabel = eventLabel || item.product_name
+    const productName = staffFirstName ? `${baseLabel} mit ${staffFirstName}` : baseLabel
+    return {
+      ...item,
+      product_name: productName,
+      appointment_start_time: apt?.start_time || null,
+      appointment_duration_minutes: apt?.duration_minutes ?? item.appointment_duration_minutes ?? null,
+      product_description: apt?.type ? `Kat. ${apt.type}` : (item.product_description || null),
+    }
   })
 
   // Payment-Breakdown (Rabatt, Guthaben etc.) pro Position
@@ -172,6 +181,8 @@ export default defineEventHandler(async (event) => {
     items: finalItems.map((i: any) => ({
       product_name: i.product_name,
       appointment_date: i.appointment_start_time || i.appointment_date,
+      appointment_duration_minutes: i.appointment_duration_minutes ?? null,
+      product_description: i.product_description || null,
       quantity: i.quantity,
       unit_price_rappen: i.unit_price_rappen,
       total_price_rappen: i.total_price_rappen,
