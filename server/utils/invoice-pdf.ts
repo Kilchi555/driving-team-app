@@ -59,6 +59,12 @@ export interface InvoicePdfData {
     quantity: number
     unit_price_rappen: number
     total_price_rappen: number
+    lesson_price_rappen?: number
+    admin_fee_rappen?: number
+    products_price_rappen?: number
+    discount_amount_rappen?: number
+    voucher_discount_rappen?: number
+    credit_used_rappen?: number
   }[]
   subtotalRappen: number
   discountRappen?: number
@@ -193,10 +199,28 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     data.items.forEach((item, idx) => {
       const formattedDate = formatAppointmentDateTime(item.appointment_date)
       const hasDate = !!formattedDate
+
+      // Breakdown berechnen
+      const breakdown: { label: string; amount: number; color: string }[] = []
+      if ((item.lesson_price_rappen || 0) > 0)
+        breakdown.push({ label: 'Fahrstunde', amount: item.lesson_price_rappen!, color: '#64748b' })
+      if ((item.admin_fee_rappen || 0) > 0)
+        breakdown.push({ label: 'Admin-Gebühr', amount: item.admin_fee_rappen!, color: '#64748b' })
+      if ((item.products_price_rappen || 0) > 0)
+        breakdown.push({ label: 'Material / Produkte', amount: item.products_price_rappen!, color: '#64748b' })
+      if ((item.discount_amount_rappen || 0) > 0)
+        breakdown.push({ label: 'Rabatt', amount: -(item.discount_amount_rappen!), color: '#16a34a' })
+      if ((item.voucher_discount_rappen || 0) > 0)
+        breakdown.push({ label: 'Gutschein', amount: -(item.voucher_discount_rappen!), color: '#16a34a' })
+      if ((item.credit_used_rappen || 0) > 0)
+        breakdown.push({ label: 'Guthaben verwendet', amount: -(item.credit_used_rappen!), color: '#2563eb' })
+
       const rowH = hasDate ? 32 : 22
+      const breakdownH = breakdown.length > 0 ? breakdown.length * 14 + 4 : 0
+      const totalRowH = rowH + breakdownH
       const bg = idx % 2 === 0 ? 'white' : '#f8fafc'
 
-      doc.rect(margin, rowY, tableWidth, rowH).fill(bg)
+      doc.rect(margin, rowY, tableWidth, totalRowH).fill(bg)
 
       doc.fontSize(9).fillColor('#1e293b').font('Helvetica-Bold')
         .text(item.product_name, colPos[0] + 8, rowY + 5, { width: colWidths[0], ellipsis: true })
@@ -214,10 +238,24 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       doc.fillColor('#1e293b').font('Helvetica-Bold')
         .text(formatChf(item.total_price_rappen), colPos[3] + 8, vCenter, { width: colWidths[3], align: 'right' })
 
-      doc.moveTo(margin, rowY + rowH).lineTo(margin + tableWidth, rowY + rowH)
+      // Breakdown-Zeilen
+      if (breakdown.length > 0) {
+        let bdY = rowY + rowH
+        breakdown.forEach(bd => {
+          const sign = bd.amount < 0 ? '−' : ''
+          const absAmt = Math.abs(bd.amount)
+          doc.fontSize(7.5).fillColor(bd.color).font('Helvetica')
+            .text(bd.label, colPos[0] + 20, bdY + 2, { width: colWidths[0] })
+          doc.font('Helvetica-Bold')
+            .text(`${sign}${formatChf(absAmt)}`, colPos[3] + 8, bdY + 2, { width: colWidths[3], align: 'right' })
+          bdY += 14
+        })
+      }
+
+      doc.moveTo(margin, rowY + totalRowH).lineTo(margin + tableWidth, rowY + totalRowH)
         .strokeColor('#e2e8f0').lineWidth(0.5).stroke()
 
-      rowY += rowH
+      rowY += totalRowH
     })
 
     // Subtotal row (only if discount exists)
