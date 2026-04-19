@@ -330,21 +330,20 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
           doc.fontSize(7.5).fillColor('#94a3b8').font('Helvetica').text('Empfänger', qrTextX, qrY)
           doc.fontSize(8).fillColor('#1e293b').font('Helvetica-Bold')
             .text(data.creditorName || data.tenantName, qrTextX, qrY + 10, { width: qrTextW })
-          qrY += 25
-        }
-        // Adresse neben QR-Code
-        const addrParts = [
-          data.tenantStreet,
-          [data.tenantZip, data.tenantCity].filter(Boolean).join(' '),
-        ].filter(Boolean)
-        if (addrParts.length > 0) {
-          doc.fontSize(7.5).fillColor('#94a3b8').font('Helvetica').text('Adresse', qrTextX, qrY)
-          doc.fontSize(8).fillColor('#1e293b').font('Helvetica')
-            .text(addrParts.join(', '), qrTextX, qrY + 10, { width: qrTextW })
+          // Adresse direkt darunter ohne Titel
+          const addrParts = [
+            data.tenantStreet,
+            [data.tenantZip, data.tenantCity].filter(Boolean).join(' '),
+          ].filter(Boolean)
+          if (addrParts.length > 0) {
+            doc.fontSize(8).fillColor('#1e293b').font('Helvetica')
+              .text(addrParts.join(', '), qrTextX, qrY + 21, { width: qrTextW })
+            qrY += 12
+          }
           qrY += 25
         }
         doc.fontSize(7.5).fillColor('#94a3b8').font('Helvetica').text('Zahlbetrag', qrTextX, qrY)
-        doc.fontSize(16).fillColor(primary).font('Helvetica-Bold')
+        doc.fontSize(12).fillColor(primary).font('Helvetica-Bold')
           .text(formatChf(data.totalRappen), qrTextX, qrY + 10)
       }
     }
