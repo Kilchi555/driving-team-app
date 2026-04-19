@@ -311,6 +311,12 @@
             </svg>
             {{ error }}
           </div>
+          <div v-if="successMessage" class="mb-3 rounded-xl bg-green-50 border border-green-200 px-4 py-2.5 text-sm text-green-700 flex items-center gap-2">
+            <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+            {{ successMessage }}
+          </div>
           <div class="flex gap-3">
             <button
               @click="close"
@@ -472,6 +478,7 @@ const primaryGradient = computed(() => {
 const isSending = ref(false)
 const isResending = ref(false)
 const error = ref<string | null>(null)
+const successMessage = ref<string | null>(null)
 const localDueDate = ref('')
 const localNote = ref('')
 const editingAddress = ref(false)
@@ -670,6 +677,7 @@ async function sendInvoice() {
 
   isSending.value = true
   error.value = null
+  successMessage.value = null
 
   try {
     const payload = {
@@ -701,7 +709,8 @@ async function sendInvoice() {
       invoice_number: result.invoice_number,
       total_amount_rappen: result.total_amount_rappen,
     })
-    emit('update:modelValue', false)
+    successMessage.value = `Rechnung ${result.invoice_number} wurde erfolgreich versendet.`
+    setTimeout(() => emit('update:modelValue', false), 2500)
   } catch (err: any) {
     error.value = err?.data?.statusMessage || err?.message || 'Fehler beim Senden der Rechnung'
   } finally {
@@ -714,13 +723,16 @@ async function resendInvoice() {
   if (!invoiceId || isResending.value) return
   isResending.value = true
   error.value = null
+  successMessage.value = null
   try {
     const result = await $fetch<{ success: boolean; invoiceNumber?: string; sentTo?: string; error?: string }>(
       '/api/invoices/resend',
       { method: 'POST', body: { invoiceId } }
     )
     if (!result.success) throw new Error(result.error || 'Fehler beim Versenden')
-    emit('update:modelValue', false)
+    const sentTo = result.sentTo ? ` an ${result.sentTo}` : ''
+    successMessage.value = `Rechnung erfolgreich versendet${sentTo}.`
+    setTimeout(() => emit('update:modelValue', false), 2500)
   } catch (err: any) {
     error.value = err?.data?.statusMessage || err?.message || 'Fehler beim erneuten Senden'
   } finally {
