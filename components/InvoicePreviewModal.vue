@@ -194,10 +194,18 @@
                       <span class="text-xs text-gray-500 pl-5">Admin-Gebühr</span>
                       <span class="text-xs font-medium text-gray-700">{{ chf(item.admin_fee_rappen || 0) }}</span>
                     </div>
-                    <div v-if="(item.products_price_rappen || 0) > 0" class="flex justify-between items-center">
-                      <span class="text-xs text-gray-500 pl-5">Material / Produkte</span>
-                      <span class="text-xs font-medium text-gray-700">{{ chf(item.products_price_rappen || 0) }}</span>
-                    </div>
+                    <template v-if="(item.products_price_rappen || 0) > 0">
+                      <template v-if="item.product_details && item.product_details.length > 0">
+                        <div v-for="pd in item.product_details" :key="pd.name" class="flex justify-between items-center">
+                          <span class="text-xs text-gray-500 pl-5">{{ pd.name }}</span>
+                          <span class="text-xs font-medium text-gray-700">{{ chf(pd.price_rappen) }}</span>
+                        </div>
+                      </template>
+                      <div v-else class="flex justify-between items-center">
+                        <span class="text-xs text-gray-500 pl-5">Material / Produkte</span>
+                        <span class="text-xs font-medium text-gray-700">{{ chf(item.products_price_rappen || 0) }}</span>
+                      </div>
+                    </template>
                     <div v-if="(item.discount_amount_rappen || 0) > 0" class="flex justify-between items-center">
                       <span class="text-xs text-green-600 pl-5">Rabatt</span>
                       <span class="text-xs font-medium text-green-600">−{{ chf(item.discount_amount_rappen || 0) }}</span>
@@ -447,7 +455,7 @@ const props = defineProps<{
     vat_amount_rappen: number
     discount_amount_rappen: number
     notes?: string | null
-    invoice_items: { product_name: string; product_description?: string; appointment_date?: string; appointment_start_time?: string; appointment_duration_minutes?: number; quantity: number; unit_price_rappen: number; total_price_rappen: number; lesson_price_rappen?: number; admin_fee_rappen?: number; products_price_rappen?: number; discount_amount_rappen?: number; voucher_discount_rappen?: number; credit_used_rappen?: number }[]
+    invoice_items: { product_name: string; product_description?: string; appointment_date?: string; appointment_start_time?: string; appointment_duration_minutes?: number; quantity: number; unit_price_rappen: number; total_price_rappen: number; lesson_price_rappen?: number; admin_fee_rappen?: number; products_price_rappen?: number; discount_amount_rappen?: number; voucher_discount_rappen?: number; credit_used_rappen?: number; product_details?: { name: string; price_rappen: number }[] }[]
   } | null
 }>()
 

@@ -87,6 +87,7 @@ export interface InvoicePdfData {
     discount_amount_rappen?: number
     voucher_discount_rappen?: number
     credit_used_rappen?: number
+    product_details?: { name: string; price_rappen: number }[]
   }[]
   subtotalRappen: number
   discountRappen?: number
@@ -232,8 +233,15 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
         breakdown.push({ label: 'Fahrstunde', amount: item.lesson_price_rappen!, color: '#64748b' })
       if ((item.admin_fee_rappen || 0) > 0)
         breakdown.push({ label: 'Admin-Gebühr', amount: item.admin_fee_rappen!, color: '#64748b' })
-      if ((item.products_price_rappen || 0) > 0)
-        breakdown.push({ label: 'Material / Produkte', amount: item.products_price_rappen!, color: '#64748b' })
+      if ((item.products_price_rappen || 0) > 0) {
+        if (item.product_details && item.product_details.length > 0) {
+          for (const pd of item.product_details) {
+            breakdown.push({ label: pd.name, amount: pd.price_rappen, color: '#64748b' })
+          }
+        } else {
+          breakdown.push({ label: 'Material / Produkte', amount: item.products_price_rappen!, color: '#64748b' })
+        }
+      }
       if ((item.discount_amount_rappen || 0) > 0)
         breakdown.push({ label: 'Rabatt', amount: - (item.discount_amount_rappen!), color: '#16a34a' })
       if ((item.voucher_discount_rappen || 0) > 0)

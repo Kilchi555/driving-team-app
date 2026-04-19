@@ -48,6 +48,7 @@ function buildResendEmail(data: {
     discount_amount_rappen?: number
     voucher_discount_rappen?: number
     credit_used_rappen?: number
+    product_details?: { name: string; price_rappen: number }[]
   }[]
   subtotalRappen: number
   discountRappen?: number
@@ -74,7 +75,11 @@ function buildResendEmail(data: {
           <table width="100%" cellpadding="0" cellspacing="0">
             ${(item.lesson_price_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">Fahrstunde</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(item.lesson_price_rappen || 0)}</td></tr>` : ''}
             ${(item.admin_fee_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">Admin-Gebühr</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(item.admin_fee_rappen || 0)}</td></tr>` : ''}
-            ${(item.products_price_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">Material / Produkte</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(item.products_price_rappen || 0)}</td></tr>` : ''}
+            ${(item.products_price_rappen || 0) > 0
+              ? (item.product_details && item.product_details.length > 0
+                ? item.product_details.map((pd: any) => `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">${pd.name}</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(pd.price_rappen)}</td></tr>`).join('')
+                : `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">Material / Produkte</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(item.products_price_rappen || 0)}</td></tr>`)
+              : ''}
             ${(item.discount_amount_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#16a34a;">Rabatt</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;color:#16a34a;">−${_formatChf(item.discount_amount_rappen || 0)}</td></tr>` : ''}
             ${(item.voucher_discount_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#16a34a;">Gutschein</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;color:#16a34a;">−${_formatChf(item.voucher_discount_rappen || 0)}</td></tr>` : ''}
             ${(item.credit_used_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#2563eb;">Guthaben verwendet</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;color:#2563eb;">−${_formatChf(item.credit_used_rappen || 0)}</td></tr>` : ''}
@@ -255,6 +260,29 @@ export default defineEventHandler(async (event) => {
       return bd ? { ...item, ...bd } : item
     })
 
+    // Produkte pro Termin laden
+    const aptIdsWithProducts = appointmentIds.filter(id =>
+      paymentBreakdown[id] && (paymentBreakdown[id].products_price_rappen || 0) > 0
+    )
+    const productsByApt: Record<string, { name: string; price_rappen: number }[]> = {}
+    if (aptIdsWithProducts.length > 0) {
+      const { data: productSales } = await supabase
+        .from('product_sales')
+        .select('appointment_id, total_price_rappen, products(name)')
+        .in('appointment_id', aptIdsWithProducts)
+      if (productSales) {
+        for (const ps of productSales as any[]) {
+          if (!productsByApt[ps.appointment_id]) productsByApt[ps.appointment_id] = []
+          productsByApt[ps.appointment_id].push({ name: ps.products?.name || 'Produkt', price_rappen: ps.total_price_rappen || 0 })
+        }
+      }
+    }
+    const finalItems = enrichedItems.map((item: any) =>
+      item.appointment_id && productsByApt[item.appointment_id]
+        ? { ...item, product_details: productsByApt[item.appointment_id] }
+        : { ...item, product_details: item.product_details || [] }
+    )
+
     const tenantName = (tenant as any)?.name || ''
     const staffName = `${staffUser.first_name || ''} ${staffUser.last_name || ''}`.trim()
     const customerName = invoice.billing_contact_person ||
@@ -296,7 +324,7 @@ export default defineEventHandler(async (event) => {
       invoiceNumber: invoice.invoice_number,
       invoiceDate: invoice.invoice_date,
       dueDate: invoice.due_date,
-      items: enrichedItems,
+      items: finalItems,
       subtotalRappen: invoice.subtotal_rappen || invoice.total_amount_rappen,
       discountRappen: invoice.discount_amount_rappen || 0,
       totalRappen: invoice.total_amount_rappen,
@@ -339,7 +367,7 @@ export default defineEventHandler(async (event) => {
         billingZip: invoice.billing_zip || '',
         billingCity: invoice.billing_city || '',
         billingEmail,
-        items: enrichedItems.map((i: any) => ({
+        items: finalItems.map((i: any) => ({
           product_name: i.product_name,
           appointment_date: i.appointment_start_time || i.appointment_date,
           quantity: i.quantity,
@@ -351,6 +379,7 @@ export default defineEventHandler(async (event) => {
           discount_amount_rappen: i.discount_amount_rappen || 0,
           voucher_discount_rappen: i.voucher_discount_rappen || 0,
           credit_used_rappen: i.credit_used_rappen || 0,
+          product_details: i.product_details || [],
         })),
         subtotalRappen: invoice.subtotal_rappen || invoice.total_amount_rappen,
         discountRappen: invoice.discount_amount_rappen || 0,
