@@ -271,10 +271,10 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
     // Total row — komplett innerhalb der Tabelle
     doc.rect(margin, rowY, tableWidth, 34).fill(primary)
-    doc.fontSize(10).fillColor('rgba(255,255,255,0.8)').font('Helvetica')
+    doc.fillOpacity(0.8).fontSize(10).fillColor('white').font('Helvetica')
       .text('Gesamtbetrag', margin + 8, rowY + 11, { width: tableWidth - colWidths[3] - 24, align: 'right' })
-    doc.fontSize(14).fillColor('white').font('Helvetica-Bold')
-      .text(formatChf(data.totalRappen), colPos[3] + 8, rowY + 8, { width: colWidths[3], align: 'right' })
+    doc.fillOpacity(1).fontSize(11).fillColor('white').font('Helvetica-Bold')
+      .text(formatChf(data.totalRappen), colPos[3] + 8, rowY + 11, { width: colWidths[3], align: 'right' })
 
     rowY += 34
 
