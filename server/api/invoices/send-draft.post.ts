@@ -283,7 +283,7 @@ export default defineEventHandler(async (event) => {
   // Tenant laden (für Rechnungsnummer + Admin-Mail + Farben)
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
-    .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_square_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city')
+    .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city')
     .eq('id', staffUser.tenant_id)
     .single()
 
@@ -493,7 +493,7 @@ export default defineEventHandler(async (event) => {
       let pdfAttachments: any[] = []
       try {
         // Logo aus base64 data URL extrahieren
-        const logoDataUrl: string | null = (tenantData as any).logo_square_url || null
+        const logoDataUrl: string | null = (tenantData as any).logo_wide_url || null
         let tenantLogoBase64: string | null = null
         let tenantLogoFormat: 'png' | 'jpeg' = 'png'
         if (logoDataUrl?.startsWith('data:image/')) {
