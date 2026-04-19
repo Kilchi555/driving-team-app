@@ -6,6 +6,16 @@
         </div>
         <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <button
+            @click="showCamtModal = true"
+            class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          >
+            <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <span class="hidden sm:inline">CAMT Import</span>
+            <span class="sm:hidden">CAMT</span>
+          </button>
+          <button
             @click="showCreateModal = true"
             class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
@@ -440,6 +450,11 @@
           </div>
 
     <!-- Modals -->
+    <CamtImportModal
+      v-model="showCamtModal"
+      @done="refreshData"
+    />
+
     <InvoiceCreateModal
       v-if="showCreateModal"
       @close="showCreateModal = false"
@@ -470,6 +485,7 @@ import { useInvoices } from '~/composables/useInvoices'
 import { useAuthStore } from '~/stores/auth'
 import InvoiceCreateModal from '~/components/admin/InvoiceCreateModal.vue'
 import InvoiceDetailModal from '~/components/admin/InvoiceDetailModal.vue'
+import CamtImportModal from '~/components/admin/CamtImportModal.vue'
 import type { InvoiceStatus, PaymentStatus, InvoiceFilters } from '~/types/invoice'
 
 // Page meta
@@ -542,6 +558,7 @@ const {
 // State
 const showCreateModal = ref(false)
 const showDetailModal = ref(false)
+const showCamtModal = ref(false)
 const selectedInvoiceId = ref<string>('')
 const selectedInvoiceWithItems = ref<any>(null)
 const shouldStartInEditMode = ref(false)
