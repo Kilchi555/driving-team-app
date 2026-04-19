@@ -30,21 +30,28 @@ function formatAppointmentDateTime(dateStr?: string | null): string {
   return `${datePart}, ${timePart}`
 }
 
-// Gibt die skalierte Breite/Höhe zurück wenn ein Bild auf maxW×maxH gefittet wird
-function getImageFitWidth(buffer: Buffer, maxW: number, maxH: number): number {
+// Gibt die tatsächliche Bildgrösse zurück (PNG + JPEG)
+function getImageDimensions(buffer: Buffer): { width: number; height: number } | null {
   try {
-    // PNG: Breite/Höhe stehen bei Byte-Offset 16–23
+    // PNG: Breite/Höhe bei Byte-Offset 16–23
     if (buffer[0] === 0x89 && buffer[1] === 0x50) {
-      const imgW = buffer.readUInt32BE(16)
-      const imgH = buffer.readUInt32BE(20)
-      if (imgW > 0 && imgH > 0) {
-        const scale = Math.min(maxW / imgW, maxH / imgH)
-        return Math.round(imgW * scale)
+      return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) }
+    }
+    // JPEG: SOF-Marker suchen (FF C0 / FF C1 / FF C2)
+    if (buffer[0] === 0xFF && buffer[1] === 0xD8) {
+      let offset = 2
+      while (offset < buffer.length - 8) {
+        if (buffer[offset] !== 0xFF) break
+        const marker = buffer[offset + 1]
+        const segLen = buffer.readUInt16BE(offset + 2)
+        if (marker === 0xC0 || marker === 0xC1 || marker === 0xC2) {
+          return { width: buffer.readUInt16BE(offset + 7), height: buffer.readUInt16BE(offset + 5) }
+        }
+        offset += 2 + segLen
       }
     }
-    // JPEG: Fallback auf maxW
   } catch { /* ignore */ }
-  return maxW
+  return null
 }
 function hexToRgb(hex: string): [number, number, number] {
   const clean = hex.replace('#', '')
@@ -121,9 +128,17 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     if (data.tenantLogoBase64) {
       try {
         const logoBuffer = Buffer.from(data.tenantLogoBase64, 'base64')
-        const logoFitW = getImageFitWidth(logoBuffer, 160, 40)
-        doc.roundedRect(margin - 6, 8, logoFitW + 12, 52, 5).fill('white')
-        doc.image(logoBuffer, margin, 14, { height: 40, fit: [160, 40] })
+        const dims = getImageDimensions(logoBuffer)
+        let logoW = 160
+        let logoH = 40
+        if (dims && dims.width > 0 && dims.height > 0) {
+          const scale = Math.min(160 / dims.width, 40 / dims.height)
+          logoW = Math.round(dims.width * scale)
+          logoH = Math.round(dims.height * scale)
+        }
+        const logoY = Math.round(14 + (40 - logoH) / 2)
+        doc.roundedRect(margin - 6, 8, logoW + 12, 52, 5).fill('white')
+        doc.image(logoBuffer, margin, logoY, { width: logoW, height: logoH })
       } catch { /* Logo optional */ }
     }
 
