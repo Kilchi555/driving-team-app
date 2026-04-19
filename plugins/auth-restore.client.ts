@@ -4,6 +4,7 @@ import { defineNuxtPlugin } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
 import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
+import { isPublicOnlyPath } from '~/utils/public-paths'
 
 function isAffiliateDashboardPath(): boolean {
   if (typeof window === 'undefined') return false
@@ -56,6 +57,8 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     if (!authStore.user) {
       if (isAffiliateDashboardPath()) {
         logger.debug('🔄 Affiliate-Dashboard: kein Cookie-/current-user Restore ohne Supabase-Session')
+      } else if (isPublicOnlyPath(window.location.pathname)) {
+        logger.debug('⏭️ Public page – skipping /api/auth/current-user call')
       } else {
         logger.debug('🔄 No user in store, checking via API...')
         
