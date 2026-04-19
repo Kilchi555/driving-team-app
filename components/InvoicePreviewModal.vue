@@ -694,7 +694,19 @@ async function openPdf() {
       body: { invoiceId },
     })
     if (result?.pdfUrl) {
-      window.open(result.pdfUrl, '_blank')
+      // Browser blockieren data:-URLs in window.open() → Blob-URL erstellen
+      const res = await fetch(result.pdfUrl)
+      const blob = await res.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const win = window.open(blobUrl, '_blank')
+      if (!win) {
+        // Fallback: als Download
+        const a = document.createElement('a')
+        a.href = blobUrl
+        a.download = `Rechnung-${props.viewInvoice?.invoice_number || invoiceId}.pdf`
+        a.click()
+      }
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000)
     }
   } catch (err: any) {
     error.value = err?.data?.statusMessage || err?.message || 'Fehler beim Laden des PDFs'
