@@ -1,5 +1,6 @@
 // server/api/invoices/mark-paid.post.ts
-// Markiert eine verrechnete Zahlung als bar bezahlt
+// Markiert eine verrechnete Zahlung als BAR BEZAHLT (Staff + Admin)
+// Achtung: Rechnung auf 'paid' setzen darf nur der Admin via mark-invoice-paid
 
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
@@ -25,11 +26,12 @@ export default defineEventHandler(async (event) => {
 
   const now = new Date().toISOString()
 
-  // Zahlung auf completed setzen (kein tenant_id Filter – payment_id ist bereits eindeutig)
+  // Zahlung auf completed + cash setzen
   const { data: payment, error: paymentError } = await supabase
     .from('payments')
     .update({
       payment_status: 'completed',
+      payment_method: 'cash',
       paid_at: now,
       updated_at: now,
     })
@@ -41,8 +43,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: paymentError?.message || 'Fehler beim Aktualisieren der Zahlung' })
   }
 
-  // Falls Rechnung vorhanden: prüfen ob alle Zahlungen der Rechnung bezahlt sind
-  if (payment.invoice_id) {
+  // Nur Admin darf Rechnung automatisch auf 'paid' setzen
+  if (payment.invoice_id && staffUser.role === 'admin') {
     const { data: invoicePayments } = await supabase
       .from('payments')
       .select('id, payment_status')
