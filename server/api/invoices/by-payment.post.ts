@@ -108,6 +108,24 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // product_sales pro Termin laden (für tatsächliche Produktnamen)
+  let productsByAppointment: Record<string, { name: string; price_rappen: number }[]> = {}
+  const aptIdsWithProducts = appointmentIds.filter(id =>
+    paymentBreakdown[id] && (paymentBreakdown[id].products_price_rappen || 0) > 0
+  )
+  if (aptIdsWithProducts.length > 0) {
+    const { data: productSales } = await supabase
+      .from('product_sales')
+      .select('appointment_id, total_price_rappen, products(name)')
+      .in('appointment_id', aptIdsWithProducts)
+    if (productSales) {
+      for (const ps of productSales as any[]) {
+        if (!productsByAppointment[ps.appointment_id]) productsByAppointment[ps.appointment_id] = []
+        productsByAppointment[ps.appointment_id].push({ name: ps.products?.name || 'Produkt', price_rappen: ps.total_price_rappen || 0 })
+      }
+    }
+  }
+
   const eventTypeMap: Record<string, string> = {
     lesson: 'Fahrstunde', exam: 'Prüfung', theory: 'Theorieunterricht', vku: 'VKU', haltbar: 'Haltbarkeitsprüfung'
   }
@@ -133,6 +151,7 @@ export default defineEventHandler(async (event) => {
         voucher_discount_rappen: breakdown.voucher_discount_rappen,
         credit_used_rappen: breakdown.credit_used_rappen,
       } : {}),
+      product_details: item.appointment_id ? (productsByAppointment[item.appointment_id] || []) : [],
     }
   })
 

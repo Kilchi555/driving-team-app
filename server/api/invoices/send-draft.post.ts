@@ -54,6 +54,7 @@ function generateInvoiceEmail(data: {
     discount_amount_rappen?: number
     voucher_discount_rappen?: number
     credit_used_rappen?: number
+    product_details?: { name: string; price_rappen: number }[]
   }[]
   subtotalRappen: number
   discountRappen?: number
@@ -80,7 +81,11 @@ function generateInvoiceEmail(data: {
           <table width="100%" cellpadding="0" cellspacing="0">
             ${(item.lesson_price_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">Fahrstunde</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(item.lesson_price_rappen || 0)}</td></tr>` : ''}
             ${(item.admin_fee_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">Admin-Gebühr</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(item.admin_fee_rappen || 0)}</td></tr>` : ''}
-            ${(item.products_price_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">Material / Produkte</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(item.products_price_rappen || 0)}</td></tr>` : ''}
+            ${(item.products_price_rappen || 0) > 0
+              ? (item.product_details && item.product_details.length > 0
+                ? item.product_details.map((pd: any) => `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">${pd.name}</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(pd.price_rappen)}</td></tr>`).join('')
+                : `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">Material / Produkte</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${_formatChf(item.products_price_rappen || 0)}</td></tr>`)
+              : ''}
             ${(item.discount_amount_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#16a34a;">Rabatt</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;color:#16a34a;">−${_formatChf(item.discount_amount_rappen || 0)}</td></tr>` : ''}
             ${(item.voucher_discount_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#16a34a;">Gutschein</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;color:#16a34a;">−${_formatChf(item.voucher_discount_rappen || 0)}</td></tr>` : ''}
             ${(item.credit_used_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#2563eb;">Guthaben verwendet</td><td style="padding:2px 0;text-align:right;font-size:11px;font-weight:700;color:#2563eb;">−${_formatChf(item.credit_used_rappen || 0)}</td></tr>` : ''}

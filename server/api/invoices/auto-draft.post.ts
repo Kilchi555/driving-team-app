@@ -221,6 +221,7 @@ export default defineEventHandler(async (event) => {
         discount_amount_rappen: p.discount_amount_rappen || 0,
         credit_used_rappen: p.credit_used_rappen || 0,
         voucher_discount_rappen: (p as any).voucher_discount_rappen || 0,
+        product_details: [] as { name: string; price_rappen: number }[],
       }
     }),
 
@@ -238,6 +239,29 @@ export default defineEventHandler(async (event) => {
     creditor_zip: tenant?.invoice_zip || '',
     creditor_city: tenant?.invoice_city || '',
     qr_iban: tenant?.qr_iban || null,
+  }
+
+  // Produkte pro Termin laden und in Draft-Items einbetten
+  const aptIdsWithProducts = openPayments
+    .filter(p => (p.products_price_rappen || 0) > 0 && p.appointment_id)
+    .map(p => p.appointment_id)
+  if (aptIdsWithProducts.length > 0) {
+    const { data: productSales } = await supabase
+      .from('product_sales')
+      .select('appointment_id, total_price_rappen, products(name)')
+      .in('appointment_id', aptIdsWithProducts)
+    if (productSales) {
+      const byApt: Record<string, { name: string; price_rappen: number }[]> = {}
+      for (const ps of productSales as any[]) {
+        if (!byApt[ps.appointment_id]) byApt[ps.appointment_id] = []
+        byApt[ps.appointment_id].push({ name: ps.products?.name || 'Produkt', price_rappen: ps.total_price_rappen || 0 })
+      }
+      draft.items = draft.items.map((item: any) =>
+        item.appointment_id && byApt[item.appointment_id]
+          ? { ...item, product_details: byApt[item.appointment_id] }
+          : item
+      )
+    }
   }
 
   return { hasOpenItems: true, draft }
