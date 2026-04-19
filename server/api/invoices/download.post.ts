@@ -200,6 +200,7 @@ export default defineEventHandler(async (event) => {
     totalRappen: invoice.total_amount_rappen,
     qrCodeDataUrl,
     qrIban,
+    scorRef: (invoice as any).payment_reference || null,
     creditorName: (tenant as any)?.legal_company_name || (tenant as any)?.name || '',
     primaryColor: (tenant as any)?.primary_color || '#1E40AF',
     secondaryColor: (tenant as any)?.secondary_color || '#64748B',

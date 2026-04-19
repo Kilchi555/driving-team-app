@@ -328,6 +328,7 @@ export default defineEventHandler(async (event) => {
           totalRappen: draft.total_amount_rappen,
           qrCodeDataUrl,
           qrIban: (draft as any).qr_iban || null,
+          scorRef: (draft as any).scor_reference || null,
           creditorName: (draft as any).creditor_name || legalName,
           primaryColor: tenantData.primary_color || '#1E40AF',
           secondaryColor: tenantData.secondary_color || '#64748B',
