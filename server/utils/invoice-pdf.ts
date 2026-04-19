@@ -61,6 +61,7 @@ export interface InvoicePdfData {
     total_price_rappen: number
   }[]
   subtotalRappen: number
+  discountRappen?: number
   totalRappen: number
   qrCodeDataUrl?: string | null
   qrIban?: string | null
@@ -99,6 +100,8 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     if (data.tenantLogoBase64) {
       try {
         const logoBuffer = Buffer.from(data.tenantLogoBase64, 'base64')
+        // White background pill so logo is clearly visible on colored header
+        doc.roundedRect(margin - 6, 8, 172, 48, 5).fill('white')
         doc.image(logoBuffer, margin, 12, { height: 40, fit: [160, 40] })
       } catch { /* Logo optional */ }
     }
@@ -134,7 +137,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
     metaLabelsFinal.forEach((label, i) => {
       const x = margin + i * 170
-      doc.fontSize(8).fillColor('rgba(255,255,255,0.5)').font('Helvetica')
+      doc.fontSize(8).fillColor('rgba(255,255,255,0.75)').font('Helvetica')
         .text(label.toUpperCase(), x, 108, { characterSpacing: 0.5 })
       doc.fontSize(9).fillColor('white').font('Helvetica-Bold')
         .text(metaValues[i], x, 119)
@@ -172,7 +175,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     // Spalten so dass alles innerhalb von margin..W-margin (50..545) bleibt
     const tableRight = W - margin   // 545
     const colPos  = [margin, 300, 385, 455]   // Startpositionen
-    const colWidths = [242, 77, 63, tableRight - colPos[3] - 8]  // last col passt genau rein
+    const colWidths = [242, 77, 63, tableRight - colPos[3] - 16]  // last col with right padding
 
     const tableWidth = tableRight - margin  // 495
 
@@ -216,6 +219,29 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
       rowY += rowH
     })
+
+    // Subtotal row (only if discount exists)
+    const discountRappen = data.discountRappen || 0
+    if (discountRappen > 0) {
+      doc.rect(margin, rowY, tableWidth, 24).fill('#f8fafc')
+      doc.fontSize(9).fillColor('#64748b').font('Helvetica')
+        .text('Zwischensumme', margin + 8, rowY + 7, { width: tableWidth - colWidths[3] - 24, align: 'right' })
+      doc.fillColor('#1e293b').font('Helvetica-Bold')
+        .text(formatChf(data.subtotalRappen), colPos[3] + 8, rowY + 7, { width: colWidths[3], align: 'right' })
+      doc.moveTo(margin, rowY + 24).lineTo(margin + tableWidth, rowY + 24)
+        .strokeColor('#e2e8f0').lineWidth(0.5).stroke()
+      rowY += 24
+
+      // Discount row
+      doc.rect(margin, rowY, tableWidth, 24).fill('#f0fdf4')
+      doc.fontSize(9).fillColor('#16a34a').font('Helvetica')
+        .text('Rabatt', margin + 8, rowY + 7, { width: tableWidth - colWidths[3] - 24, align: 'right' })
+      doc.font('Helvetica-Bold')
+        .text(`−${formatChf(discountRappen)}`, colPos[3] + 8, rowY + 7, { width: colWidths[3], align: 'right' })
+      doc.moveTo(margin, rowY + 24).lineTo(margin + tableWidth, rowY + 24)
+        .strokeColor('#e2e8f0').lineWidth(0.5).stroke()
+      rowY += 24
+    }
 
     // Total row — komplett innerhalb der Tabelle
     doc.rect(margin, rowY, tableWidth, 34).fill(primary)

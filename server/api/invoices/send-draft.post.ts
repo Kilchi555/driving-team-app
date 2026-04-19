@@ -43,6 +43,8 @@ function generateInvoiceEmail(data: {
   invoiceDate: string
   dueDate: string
   items: { product_name: string; appointment_date?: string | null; quantity: number; unit_price_rappen: number; total_price_rappen: number }[]
+  subtotalRappen: number
+  discountRappen?: number
   totalRappen: number
   tenantName: string
   staffName: string
@@ -107,7 +109,7 @@ function generateInvoiceEmail(data: {
       </td></tr>
 
       <!-- Body -->
-      <tr><td style="background:white;padding:32px 40px;">
+      <tr><td style="background:white;padding:32px 20px;">
 
         <p style="margin:0 0 6px;color:#64748b;font-size:15px;">Hallo <strong style="color:#1e293b;">${data.customerName}</strong>,</p>
         <p style="margin:0 0 28px;color:#64748b;font-size:14px;line-height:1.6;">anbei erhalten Sie Ihre Rechnung für die absolvierten Fahrstunden. Bitte überweisen Sie den Betrag fristgerecht.</p>
@@ -119,14 +121,23 @@ function generateInvoiceEmail(data: {
               <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;">Position</th>
               <th style="padding:10px 16px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;width:50px;">Anz.</th>
               <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;width:100px;">Einzelpreis</th>
-              <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;width:100px;">Total</th>
+              <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;width:100px;padding-right:16px;">Total</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
           <tfoot>
+            ${(data.discountRappen || 0) > 0 ? `
+            <tr style="background:#f0fdf4;">
+              <td colspan="3" style="padding:10px 16px;text-align:right;font-size:13px;color:#16a34a;">Zwischensumme</td>
+              <td style="padding:10px 16px;text-align:right;font-size:13px;color:#16a34a;">${_formatChf(data.subtotalRappen)}</td>
+            </tr>
+            <tr style="background:#f0fdf4;">
+              <td colspan="3" style="padding:6px 16px 10px;text-align:right;font-size:13px;font-weight:700;color:#16a34a;">Rabatt</td>
+              <td style="padding:6px 16px 10px;text-align:right;font-size:13px;font-weight:700;color:#16a34a;">−${_formatChf(data.discountRappen || 0)}</td>
+            </tr>` : ''}
             <tr style="background:${brandColor};">
               <td colspan="3" style="padding:16px;text-align:right;font-weight:700;font-size:14px;color:rgba(255,255,255,0.85);">Gesamtbetrag CHF</td>
-              <td style="padding:16px;text-align:right;font-weight:900;font-size:20px;color:white;">${_formatChf(data.totalRappen).replace('CHF ', '')}</td>
+              <td style="padding:16px;text-align:right;font-weight:900;font-size:20px;color:white;padding-right:16px;">${_formatChf(data.totalRappen).replace('CHF ', '')}</td>
             </tr>
           </tfoot>
         </table>
@@ -434,6 +445,8 @@ export default defineEventHandler(async (event) => {
         invoiceDate: draft.invoice_date,
         dueDate: draft.due_date,
         items: draft.items,
+        subtotalRappen: draft.subtotal_rappen || draft.total_amount_rappen,
+        discountRappen: draft.discount_amount_rappen || 0,
         totalRappen: draft.total_amount_rappen,
         tenantName: tenantData.name,
         staffName: `${staffUser.first_name} ${staffUser.last_name}`.trim(),
@@ -485,6 +498,7 @@ export default defineEventHandler(async (event) => {
           billingEmail: studentEmail,
           items: draft.items,
           subtotalRappen: draft.subtotal_rappen || draft.total_amount_rappen,
+          discountRappen: draft.discount_amount_rappen || 0,
           totalRappen: draft.total_amount_rappen,
           qrCodeDataUrl,
           qrIban: (draft as any).qr_iban || null,

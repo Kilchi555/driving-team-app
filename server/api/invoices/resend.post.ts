@@ -36,6 +36,8 @@ function buildResendEmail(data: {
   invoiceDate: string
   dueDate: string
   items: { product_name: string; appointment_date?: string | null; appointment_start_time?: string | null; quantity: number; unit_price_rappen: number; total_price_rappen: number }[]
+  subtotalRappen: number
+  discountRappen?: number
   totalRappen: number
   tenantName: string
   staffName: string
@@ -109,6 +111,15 @@ function buildResendEmail(data: {
             <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.05em;">TOTAL</th>
           </tr>
           ${rows}
+          ${(data.discountRappen || 0) > 0 ? `
+          <tr style="background:#f0fdf4;">
+            <td colspan="3" style="padding:10px 16px;font-size:13px;color:#16a34a;">Zwischensumme</td>
+            <td style="padding:10px 16px;text-align:right;font-size:13px;color:#16a34a;">${_formatChf(data.subtotalRappen)}</td>
+          </tr>
+          <tr style="background:#f0fdf4;">
+            <td colspan="3" style="padding:6px 16px 10px;font-size:13px;font-weight:700;color:#16a34a;">Rabatt</td>
+            <td style="padding:6px 16px 10px;text-align:right;font-size:13px;font-weight:700;color:#16a34a;">−${_formatChf(data.discountRappen || 0)}</td>
+          </tr>` : ''}
           <tr style="background:#f8fafc;">
             <td colspan="3" style="padding:14px 16px;font-weight:700;color:#1e293b;font-size:15px;">Gesamtbetrag</td>
             <td style="padding:14px 16px;text-align:right;font-weight:800;color:${brandColor};font-size:16px;">${_formatChf(data.totalRappen)}</td>
@@ -237,6 +248,8 @@ export default defineEventHandler(async (event) => {
       invoiceDate: invoice.invoice_date,
       dueDate: invoice.due_date,
       items,
+      subtotalRappen: invoice.subtotal_rappen || invoice.total_amount_rappen,
+      discountRappen: invoice.discount_amount_rappen || 0,
       totalRappen: invoice.total_amount_rappen,
       tenantName,
       staffName,
@@ -285,6 +298,7 @@ export default defineEventHandler(async (event) => {
           total_price_rappen: i.total_price_rappen,
         })),
         subtotalRappen: invoice.subtotal_rappen || invoice.total_amount_rappen,
+        discountRappen: invoice.discount_amount_rappen || 0,
         totalRappen: invoice.total_amount_rappen,
         qrCodeDataUrl,
         qrIban,
