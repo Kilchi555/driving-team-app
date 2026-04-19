@@ -106,7 +106,8 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     if (data.tenantLogoBase64) {
       try {
         const logoBuffer = Buffer.from(data.tenantLogoBase64, 'base64')
-        doc.image(logoBuffer, margin, 14, { height: 52, fit: [160, 52] })
+        doc.roundedRect(margin - 6, 8, 172, 52, 5).fill('white')
+        doc.image(logoBuffer, margin, 14, { height: 40, fit: [160, 40] })
       } catch { /* Logo optional */ }
     }
 
@@ -117,9 +118,9 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     }
 
     // Invoice number + total (rechts)
-    doc.fontSize(11).fillColor('rgba(255,255,255,0.65)').font('Helvetica')
+    doc.fillOpacity(0.65).fontSize(11).fillColor('white').font('Helvetica')
       .text(data.invoiceNumber, 0, 28, { width: W - margin, align: 'right' })
-    doc.fontSize(22).fillColor('white').font('Helvetica-Bold')
+    doc.fillOpacity(1).fontSize(14).fillColor('white').font('Helvetica-Bold')
       .text(formatChf(data.totalRappen), 0, 50, { width: W - margin, align: 'right' })
 
     // ── Dark meta strip ──────────────────────────────────────────────────────
@@ -203,9 +204,9 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       if ((item.products_price_rappen || 0) > 0)
         breakdown.push({ label: 'Material / Produkte', amount: item.products_price_rappen!, color: '#64748b' })
       if ((item.discount_amount_rappen || 0) > 0)
-        breakdown.push({ label: 'Rabatt', amount: -(item.discount_amount_rappen!), color: '#16a34a' })
+        breakdown.push({ label: 'Rabatt', amount: - (item.discount_amount_rappen!), color: '#16a34a' })
       if ((item.voucher_discount_rappen || 0) > 0)
-        breakdown.push({ label: 'Gutschein', amount: -(item.voucher_discount_rappen!), color: '#16a34a' })
+        breakdown.push({ label: 'Gutschein', amount: - (item.voucher_discount_rappen!), color: '#16a34a' })
       if ((item.credit_used_rappen || 0) > 0)
         breakdown.push({ label: 'Guthaben verwendet', amount: -(item.credit_used_rappen!), color: '#2563eb' })
 
@@ -315,6 +316,17 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
             .text(data.creditorName || data.tenantName, qrTextX, qrY + 10, { width: qrTextW })
           qrY += 25
         }
+        // Adresse neben QR-Code
+        const addrParts = [
+          data.tenantStreet,
+          [data.tenantZip, data.tenantCity].filter(Boolean).join(' '),
+        ].filter(Boolean)
+        if (addrParts.length > 0) {
+          doc.fontSize(7.5).fillColor('#94a3b8').font('Helvetica').text('Adresse', qrTextX, qrY)
+          doc.fontSize(8).fillColor('#1e293b').font('Helvetica')
+            .text(addrParts.join(', '), qrTextX, qrY + 10, { width: qrTextW })
+          qrY += 25
+        }
         doc.fontSize(7.5).fillColor('#94a3b8').font('Helvetica').text('Zahlbetrag', qrTextX, qrY)
         doc.fontSize(16).fillColor(primary).font('Helvetica-Bold')
           .text(formatChf(data.totalRappen), qrTextX, qrY + 10)
@@ -325,7 +337,10 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     doc.rect(0, H - 40, W, 40).fill('#f8fafc')
     doc.moveTo(0, H - 40).lineTo(W, H - 40).strokeColor('#e2e8f0').lineWidth(0.5).stroke()
     doc.fontSize(8).fillColor('#94a3b8').font('Helvetica')
-      .text(`${data.tenantName} · ${data.invoiceNumber}`, 0, H - 26, { width: W, align: 'center' })
+      .text(`${data.tenantName} · ${data.invoiceNumber}`, 0, H - 30, { width: W, align: 'center' })
+    doc.fillOpacity(0.5).fontSize(7).fillColor('#94a3b8').font('Helvetica')
+      .text('powered by Simy.ch', 0, H - 18, { width: W, align: 'center' })
+    doc.fillOpacity(1)
 
     doc.end()
   })

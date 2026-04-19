@@ -710,7 +710,7 @@ async function sendInvoice() {
       total_amount_rappen: result.total_amount_rappen,
     })
     successMessage.value = `Rechnung ${result.invoice_number} wurde erfolgreich versendet.`
-    setTimeout(() => emit('update:modelValue', false), 2500)
+    setTimeout(() => { successMessage.value = null }, 3000)
   } catch (err: any) {
     error.value = err?.data?.statusMessage || err?.message || 'Fehler beim Senden der Rechnung'
   } finally {
@@ -732,7 +732,7 @@ async function resendInvoice() {
     if (!result.success) throw new Error(result.error || 'Fehler beim Versenden')
     const sentTo = result.sentTo ? ` an ${result.sentTo}` : ''
     successMessage.value = `Rechnung erfolgreich versendet${sentTo}.`
-    setTimeout(() => emit('update:modelValue', false), 2500)
+    setTimeout(() => { successMessage.value = null }, 3000)
   } catch (err: any) {
     error.value = err?.data?.statusMessage || err?.message || 'Fehler beim erneuten Senden'
   } finally {
