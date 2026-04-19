@@ -75,7 +75,7 @@ export default defineEventHandler(async (event) => {
     // First, get tenant by slug
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('id, name, slug, primary_color, secondary_color, accent_color')
+      .select('id, name, slug, primary_color, secondary_color, accent_color, logo_url, logo_wide_url')
       .eq('slug', slug)
       .eq('is_active', true)
       .single()
