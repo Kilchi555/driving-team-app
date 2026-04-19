@@ -30,7 +30,22 @@ function formatAppointmentDateTime(dateStr?: string | null): string {
   return `${datePart}, ${timePart}`
 }
 
-// Parse hex color to RGB components
+// Gibt die skalierte Breite/Höhe zurück wenn ein Bild auf maxW×maxH gefittet wird
+function getImageFitWidth(buffer: Buffer, maxW: number, maxH: number): number {
+  try {
+    // PNG: Breite/Höhe stehen bei Byte-Offset 16–23
+    if (buffer[0] === 0x89 && buffer[1] === 0x50) {
+      const imgW = buffer.readUInt32BE(16)
+      const imgH = buffer.readUInt32BE(20)
+      if (imgW > 0 && imgH > 0) {
+        const scale = Math.min(maxW / imgW, maxH / imgH)
+        return Math.round(imgW * scale)
+      }
+    }
+    // JPEG: Fallback auf maxW
+  } catch { /* ignore */ }
+  return maxW
+}
 function hexToRgb(hex: string): [number, number, number] {
   const clean = hex.replace('#', '')
   const num = parseInt(clean, 16)
@@ -106,7 +121,8 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     if (data.tenantLogoBase64) {
       try {
         const logoBuffer = Buffer.from(data.tenantLogoBase64, 'base64')
-        doc.roundedRect(margin - 6, 8, 172, 52, 5).fill('white')
+        const logoFitW = getImageFitWidth(logoBuffer, 160, 40)
+        doc.roundedRect(margin - 6, 8, logoFitW + 12, 52, 5).fill('white')
         doc.image(logoBuffer, margin, 14, { height: 40, fit: [160, 40] })
       } catch { /* Logo optional */ }
     }
