@@ -78,6 +78,8 @@ export interface InvoicePdfData {
   items: {
     product_name: string
     appointment_date?: string | null
+    appointment_duration_minutes?: number | null
+    product_description?: string | null
     quantity: number
     unit_price_rappen: number
     total_price_rappen: number
@@ -145,7 +147,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
         } else {
           // Fallback: fit erhält Seitenverhältnis, kein explizites height
           doc.roundedRect(margin - 6, 8, 172, 52, 5).fill('white')
-          doc.image(logoBuffer, margin, 14, { fit: [160, 40], align: 'left', valign: 'center' })
+          doc.image(logoBuffer, margin, 14, { fit: [160, 40], valign: 'center' })
         }
       } catch { /* Logo optional */ }
     }
@@ -231,8 +233,12 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
     let rowY = tableTop + 24
     data.items.forEach((item, idx) => {
-      const formattedDate = formatAppointmentDateTime(item.appointment_date)
-      const hasDate = !!formattedDate
+      const formattedDate = formatAppointmentDateTime((item as any).appointment_start_time || item.appointment_date)
+      const durationStr = item.appointment_duration_minutes ? `${item.appointment_duration_minutes} Min.` : ''
+      const typeStr = item.product_description || ''
+      const metaParts = [formattedDate, typeStr, durationStr].filter(Boolean)
+      const metaLine = metaParts.join(' · ')
+      const hasDate = metaLine.length > 0
 
       // Breakdown berechnen
       const breakdown: { label: string; amount: number; color: string }[] = []
@@ -268,7 +274,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
       if (hasDate) {
         doc.fontSize(7.5).fillColor('#94a3b8').font('Helvetica')
-          .text(formattedDate, colPos[0] + 8, rowY + 18, { width: colWidths[0] })
+          .text(metaLine, colPos[0] + 8, rowY + 18, { width: colWidths[0] })
       }
 
       const vCenter = rowY + (rowH - 9) / 2

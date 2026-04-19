@@ -50,7 +50,8 @@ export default defineEventHandler(async (event) => {
       start_time,
       duration_minutes,
       type,
-      event_type_code
+      event_type_code,
+      staff:users!staff_id (first_name)
     )
   `
 
@@ -199,10 +200,12 @@ export default defineEventHandler(async (event) => {
         lesson: 'Fahrstunde', exam: 'Prüfung', theory: 'Theorieunterricht', vku: 'VKU', haltbar: 'Haltbarkeitsprüfung'
       }
       const label = apt?.event_type_code ? (eventTypeMap[apt.event_type_code] || apt.event_type_code) : null
+      const staffFirstName = apt?.staff?.first_name || null
+      const productName = staffFirstName ? `${label || apt?.title || 'Fahrstunde'} mit ${staffFirstName}` : (label || apt?.title || 'Fahrstunde')
       return {
         payment_id: p.id,
         appointment_id: p.appointment_id,
-        product_name: label || apt?.title || 'Fahrstunde',
+        product_name: productName,
         product_description: apt?.type ? `Kat. ${apt.type}` : null,
         appointment_title: apt?.title || null,
         appointment_date: apt?.start_time || null,
