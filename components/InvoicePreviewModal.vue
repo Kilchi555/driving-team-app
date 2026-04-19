@@ -326,12 +326,30 @@
             {{ successMessage }}
           </div>
           <div class="flex gap-3">
+            <!-- Im view-Modus: PDF anzeigen statt Schliessen -->
             <button
+              v-if="props.mode === 'view'"
+              @click="openPdf"
+              :disabled="isLoadingPdf"
+              class="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              <svg v-if="isLoadingPdf" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {{ isLoadingPdf ? 'Lädt…' : 'PDF anzeigen' }}
+            </button>
+            <!-- Im draft-Modus: Später / Schliessen -->
+            <button
+              v-else
               @click="close"
-              :disabled="isSending || isResending"
+              :disabled="isSending"
               class="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
-              {{ props.mode === 'view' ? 'Schliessen' : 'Später' }}
+              Später
             </button>
             <!-- Erneut senden (nur im view-Modus) -->
             <button
@@ -485,6 +503,7 @@ const primaryGradient = computed(() => {
 
 const isSending = ref(false)
 const isResending = ref(false)
+const isLoadingPdf = ref(false)
 const error = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 const localDueDate = ref('')
@@ -663,6 +682,25 @@ function formatAppointmentDate(dateStr?: string | null): string {
 
 function close() {
   if (!isSending.value) emit('update:modelValue', false)
+}
+
+async function openPdf() {
+  const invoiceId = props.viewInvoice?.id
+  if (!invoiceId) return
+  isLoadingPdf.value = true
+  try {
+    const result = await $fetch<{ success: boolean; pdfUrl?: string }>('/api/invoices/download', {
+      method: 'POST',
+      body: { invoiceId },
+    })
+    if (result?.pdfUrl) {
+      window.open(result.pdfUrl, '_blank')
+    }
+  } catch (err: any) {
+    error.value = err?.data?.statusMessage || err?.message || 'Fehler beim Laden des PDFs'
+  } finally {
+    isLoadingPdf.value = false
+  }
 }
 
 async function sendInvoice() {
