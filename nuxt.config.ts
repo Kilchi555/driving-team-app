@@ -90,6 +90,22 @@ export default defineNuxtConfig({
   
   // --- Vite Configuration ---
   vite: {
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            // FullCalendar → eigener Chunk, wird nur auf Admin/Kalender-Seiten geladen
+            if (id.includes('@fullcalendar')) return 'fullcalendar'
+            // Wallee → eigener Chunk
+            if (id.includes('wallee') || id.includes('@wallee')) return 'wallee'
+            // Supabase → eigener Chunk
+            if (id.includes('@supabase')) return 'supabase'
+            // PDFKit → eigener Chunk (nur server-seitig, aber schadet nicht)
+            if (id.includes('pdfkit') || id.includes('qrcode')) return 'pdf-tools'
+          }
+        }
+      }
+    },
     server: {
       watch: {
         usePolling: true,
@@ -141,6 +157,13 @@ export default defineNuxtConfig({
   experimental: {
     // Suspense explizit aktivieren
     payloadExtraction: false
+  },
+
+  // Route-level optimisations
+  routeRules: {
+    // Public booking + courses pages: cache API responses at CDN edge for 60s
+    '/api/booking/get-booking-init': { headers: { 'cache-control': 'public, max-age=60, s-maxage=60' } },
+    '/api/courses/public': { headers: { 'cache-control': 'public, max-age=60, s-maxage=60' } },
   },
   
   // Vue-spezifische Konfiguration

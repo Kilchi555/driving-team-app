@@ -15,12 +15,19 @@
 import { defineNuxtPlugin } from '#app'
 import { logger } from '~/utils/logger'
 import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
+import { isPublicOnlyPath } from '~/utils/public-paths'
 
 const SUPABASE_SESSION_KEY = 'supabase-session-cache'
 
 export default defineNuxtPlugin(async (nuxtApp) => {
   // Only run on client - check both process.client and !process.server
   if (process.client && !process.server) {
+    // Skip entirely on public pages – no auth needed, saves 500ms delay + API calls
+    if (typeof window !== 'undefined' && isPublicOnlyPath(window.location.pathname)) {
+      logger.debug('⏭️ Auth interceptor skipped on public page')
+      return
+    }
+
     logger.debug('🔄 Auth Interceptor starting on client')
     
     // Wait a bit for auth to be restored
