@@ -25,6 +25,7 @@ export default defineEventHandler(async (event) => {
       creditor_city: body.creditor_city || '',
       debtor_name: body.debtor_name || '',
       debtor_street: body.debtor_street || '',
+      debtor_street_nr: body.debtor_street_nr || '',
       debtor_zip: body.debtor_zip || '',
       debtor_city: body.debtor_city || '',
       amount_rappen: body.amount_rappen || 0,

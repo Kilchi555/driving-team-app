@@ -147,6 +147,7 @@ export default defineEventHandler(async (event) => {
           creditor_city: (tenant as any)?.invoice_city || '',
           debtor_name: customerName,
           debtor_street: invoice.billing_street || '',
+          debtor_street_nr: (invoice as any).billing_street_number || '',
           debtor_zip: invoice.billing_zip || '',
           debtor_city: invoice.billing_city || '',
           amount_rappen: invoice.total_amount_rappen,
