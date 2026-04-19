@@ -220,10 +220,6 @@
                   <span>Zwischensumme</span>
                   <span>{{ chf(props.mode === 'view' ? (props.viewInvoice?.subtotal_rappen || 0) : (draft?.subtotal_rappen || 0)) }}</span>
                 </div>
-                <div v-if="props.mode !== 'view' && totalCredits > 0" class="flex justify-between text-sm text-blue-600">
-                  <span>Guthaben</span>
-                  <span>−{{ chf(totalCredits) }}</span>
-                </div>
                 <div v-if="(props.mode === 'view' ? (props.viewInvoice?.vat_rate || 0) : (draft?.vat_rate || 0)) > 0" class="flex justify-between text-sm text-gray-600">
                   <span>MwSt {{ props.mode === 'view' ? props.viewInvoice?.vat_rate : draft?.vat_rate }}%</span>
                   <span>{{ chf(props.mode === 'view' ? (props.viewInvoice?.vat_amount_rappen || 0) : (draft?.vat_amount_rappen || 0)) }}</span>
@@ -569,7 +565,7 @@ const totalCredits = computed(() => {
 })
 
 const computedTotal = computed(() => {
-  return (props.draft?.subtotal_rappen || 0) - totalDiscounts.value - totalCredits.value + (props.draft?.vat_amount_rappen || 0)
+  return (props.draft?.total_amount_rappen || 0) || ((props.draft?.subtotal_rappen || 0) + (props.draft?.vat_amount_rappen || 0))
 })
 
 // Payment reference for display — QRR for QR-IBAN, SCOR for regular IBAN
