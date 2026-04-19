@@ -37,7 +37,7 @@ function generateAdminInvoiceNotification(data: {
       <tr><td style="padding:10px 14px;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;">Schüler</td><td style="padding:10px 14px;font-weight:600;color:#1e293b;border-bottom:1px solid #e2e8f0;">${data.studentName}</td></tr>
       <tr><td style="padding:10px 14px;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;">E-Mail gesendet an</td><td style="padding:10px 14px;color:#1e293b;border-bottom:1px solid #e2e8f0;">${data.studentEmail}</td></tr>
       <tr><td style="padding:10px 14px;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;">Positionen</td><td style="padding:10px 14px;color:#1e293b;border-bottom:1px solid #e2e8f0;">${data.itemCount} Fahrstunde${data.itemCount !== 1 ? 'n' : ''}</td></tr>
-      <tr><td style="padding:10px 14px;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;">Betrag</td><td style="padding:10px 14px;font-weight:800;color:#6000BD;font-size:15px;border-bottom:1px solid #e2e8f0;">${_formatChf(data.totalRappen)}</td></tr>
+      <tr><td style="padding:10px 14px;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;">Betrag</td><td style="padding:10px 14px;font-weight:800;color:#6000BD;font-size:15px;border-bottom:1px solid #e2e8f0;">CHF ${(data.totalRappen / 100).toFixed(2)}</td></tr>
       <tr><td style="padding:10px 14px;color:#64748b;font-size:13px;">Erstellt von</td><td style="padding:10px 14px;color:#1e293b;">${data.staffName}</td></tr>
     </table>
     <p style="color:#94a3b8;font-size:12px;margin:0;">Diese Benachrichtigung wurde automatisch von Simy generiert.</p>
@@ -250,6 +250,7 @@ export default defineEventHandler(async (event) => {
         creditor_city: (draft as any).creditor_city || '',
         debtor_name: studentName,
         debtor_street: draft.billing_street || '',
+        debtor_street_nr: (draft as any).billing_street_number || (draft as any).billing_street_nr || '',
         debtor_zip: draft.billing_zip || '',
         debtor_city: draft.billing_city || '',
         amount_rappen: draft.total_amount_rappen,

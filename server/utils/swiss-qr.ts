@@ -12,6 +12,7 @@ export interface SwissQRParams {
   creditor_city: string
   debtor_name: string
   debtor_street: string
+  debtor_street_nr?: string   // optional – wird mit debtor_street kombiniert
   debtor_zip: string
   debtor_city: string
   amount_rappen: number
@@ -117,12 +118,11 @@ export function buildSwissQRData(p: SwissQRParams): string {
     else if (ref.startsWith('RF')) refType = 'SCOR'
   }
 
-  // Both creditor and debtor use type 'K' (combined address) for robustness.
-  const creditorAddrLine1 = [pad(p.creditor_street), pad(p.creditor_street_nr)].filter(Boolean).join(' ')
+  // SPS 2.2 (ab 2024): Typ 'S' (strukturierte Adresse) – Strasse und Nr. in getrennten Feldern
   const creditorAddrLine2 = [pad(p.creditor_zip), pad(p.creditor_city)].filter(Boolean).join(' ')
 
-  const debtorAddrLine1 = pad(p.debtor_street)
-  const debtorAddrLine2 = [pad(p.debtor_zip), pad(p.debtor_city)].filter(Boolean).join(' ')
+  // Debtor: nur einbetten wenn Name + PLZ + Ort vorhanden (SPS 2.2 – unspecified = alle 7 Felder leer)
+  const hasDebtor = !!(pad(p.debtor_name) && pad(p.debtor_zip) && pad(p.debtor_city))
 
   const lines = [
     // Header (3 fields)
@@ -131,27 +131,27 @@ export function buildSwissQRData(p: SwissQRParams): string {
     '1',
     // Account (1 field)
     cleanIban(p.qr_iban),
-    // Creditor (7 fields) – type K
-    'K',
+    // Creditor (7 fields) – Typ S: Strasse | Nr. | PLZ | Ort | leer | leer | Land
+    'S',
     pad(p.creditor_name),
-    creditorAddrLine1,
-    creditorAddrLine2,
-    '',   // must be empty for type K
-    '',   // must be empty for type K
+    pad(p.creditor_street),
+    pad(p.creditor_street_nr),
+    pad(p.creditor_zip),
+    pad(p.creditor_city),
     'CH',
     // Ultimate Creditor – exactly 7 empty fields (mandatory per SPS 2.2)
     '', '', '', '', '', '', '',
     // Amount (2 fields)
     amount,
     currency,
-    // Debtor (7 fields) – type K
-    'K',
-    pad(p.debtor_name),
-    debtorAddrLine1,
-    debtorAddrLine2,
-    '',   // must be empty for type K
-    '',   // must be empty for type K
-    'CH',
+    // Debtor (7 fields) – Typ S, oder leer wenn Adresse unvollständig
+    hasDebtor ? 'S' : '',
+    hasDebtor ? pad(p.debtor_name) : '',
+    hasDebtor ? pad(p.debtor_street) : '',
+    hasDebtor ? pad(p.debtor_street_nr || '') : '',
+    hasDebtor ? pad(p.debtor_zip) : '',
+    hasDebtor ? pad(p.debtor_city) : '',
+    hasDebtor ? 'CH' : '',
     // Reference (2 fields)
     refType,
     ref,
