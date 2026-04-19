@@ -220,14 +220,6 @@
                   <span>Zwischensumme</span>
                   <span>{{ chf(props.mode === 'view' ? (props.viewInvoice?.subtotal_rappen || 0) : (draft?.subtotal_rappen || 0)) }}</span>
                 </div>
-                <div v-if="props.mode !== 'view' && totalDiscounts > 0" class="flex justify-between text-sm text-green-600">
-                  <span>Rabatte / Gutscheine</span>
-                  <span>−{{ chf(totalDiscounts) }}</span>
-                </div>
-                <div v-if="props.mode === 'view' && (props.viewInvoice?.discount_amount_rappen || 0) > 0" class="flex justify-between text-sm text-green-600">
-                  <span>Rabatte</span>
-                  <span>−{{ chf(props.viewInvoice?.discount_amount_rappen || 0) }}</span>
-                </div>
                 <div v-if="props.mode !== 'view' && totalCredits > 0" class="flex justify-between text-sm text-blue-600">
                   <span>Guthaben</span>
                   <span>−{{ chf(totalCredits) }}</span>
