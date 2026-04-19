@@ -14,7 +14,38 @@
         <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 truncate">Fahrstunde buchen</h1>
       </div>
 
-      <!-- Loading State -->
+      <!-- Initial Loading Overlay – shown while SSR hydrates or client-side fetch completes -->
+      <div
+        v-if="isInitializing"
+        class="fixed inset-0 z-50 flex flex-col items-center justify-center"
+        :style="{ backgroundColor: currentTenant ? getBrandPrimary() + '12' : '#f8fafc' }"
+      >
+        <!-- Logo (visible as soon as tenant is known from SSR) -->
+        <div class="mb-8">
+          <img
+            v-if="currentTenant?.logo_wide_url || currentTenant?.logo_url"
+            :src="currentTenant.logo_wide_url || currentTenant.logo_url"
+            alt="Logo"
+            class="h-16 object-contain drop-shadow-md"
+          />
+          <div
+            v-else
+            class="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg"
+            :style="{ backgroundColor: getBrandPrimary() }"
+          >
+            {{ currentTenant?.name?.charAt(0) || '…' }}
+          </div>
+        </div>
+
+        <!-- Spinner -->
+        <div
+          class="w-10 h-10 rounded-full border-4 border-gray-200 animate-spin"
+          :style="{ borderTopColor: getBrandPrimary() }"
+        ></div>
+        <p class="mt-4 text-sm text-gray-500">Buchungsseite wird geladen…</p>
+      </div>
+
+      <!-- Loading State (slot/data loading within the page) -->
       <div v-if="isLoading" class="flex justify-center items-center py-12">
         <div 
           class="animate-spin rounded-full h-12 w-12 border-b-2" 
@@ -1276,6 +1307,20 @@ const availableStaff = ref<any[]>([])
 const isLoadingLocations = ref(false)
 const isLoadingTimeSlots = ref(false)
 const tenantSettings = ref<any>({})
+
+// SSR pre-fetch: tenant + categories + locationsCount in one roundtrip before JS hydration
+const slug = computed(() => route.params.slug as string)
+const isInitializing = ref(true)
+const { data: initData } = await useAsyncData(
+  () => `booking-init-${slug.value}`,
+  () => $fetch<{ success: boolean; data: any }>('/api/booking/get-booking-init', { query: { slug: slug.value } }),
+  { watch: [slug] }
+)
+if (initData.value?.success) {
+  currentTenant.value = initData.value.data.tenant
+  categories.value = initData.value.data.categories || []
+  locationsCount.value = initData.value.data.locationsCount ?? 0
+}
 
 // New flow state
 const currentStep = ref(0)
@@ -3914,20 +3959,22 @@ onMounted(async () => {
       logger.debug('⚠️ No referrer parameter found')
     }
     
-    const slug = route.params.slug as string
-
     // Fire-and-forget: features always default to true for guests, no need to block render
     loadFeatures().catch(() => {})
 
     // Single combined call: tenant + categories + locationsCount (no sequential waterfall)
-    if (slug) {
-      await loadBookingInit(slug)
+    if (slug.value) {
+      // Only fetch if SSR didn't populate data (e.g. navigated to a different slug client-side)
+      if (!currentTenant.value) {
+        await loadBookingInit(slug.value)
+      }
     }
+    isInitializing.value = false
 
     // Nur Tenant laden wenn Online-Buchung aktiviert ist
     if (isOnlineBookingEnabled.value) {
-      if (slug) {
-        logger.debug('✅ Tenant and categories loaded from init:', slug)
+      if (slug.value) {
+        logger.debug('✅ Tenant and categories loaded from init:', slug.value)
         logger.debug('✅ Categories loaded:', categories.value.length)
         
         // Check for pre-fill parameters (from returning customer)
