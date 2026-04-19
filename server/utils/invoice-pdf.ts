@@ -106,21 +106,15 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     if (data.tenantLogoBase64) {
       try {
         const logoBuffer = Buffer.from(data.tenantLogoBase64, 'base64')
-        // White background pill so logo is clearly visible on colored header
-        doc.roundedRect(margin - 6, 8, 172, 48, 5).fill('white')
-        doc.image(logoBuffer, margin, 12, { height: 40, fit: [160, 40] })
+        doc.image(logoBuffer, margin, 14, { height: 52, fit: [160, 52] })
       } catch { /* Logo optional */ }
     }
 
-    // "RECHNUNG" title (nur wenn kein Logo, sonst darunter)
-    const titleY = data.tenantLogoBase64 ? 56 : 30
+    // "RECHNUNG" title (nur wenn kein Logo)
     if (!data.tenantLogoBase64) {
       doc.fontSize(28).fillColor('white').font('Helvetica-Bold')
-        .text('RECHNUNG', margin, titleY, { characterSpacing: 4 })
+        .text('RECHNUNG', margin, 30, { characterSpacing: 4 })
     }
-
-    doc.fontSize(10).fillColor('rgba(255,255,255,0.75)').font('Helvetica')
-      .text(data.tenantName, margin, data.tenantLogoBase64 ? 58 : 66)
 
     // Invoice number + total (rechts)
     doc.fontSize(11).fillColor('rgba(255,255,255,0.65)').font('Helvetica')
@@ -143,9 +137,9 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
     metaLabelsFinal.forEach((label, i) => {
       const x = margin + i * 170
-      doc.fontSize(8).fillColor('rgba(255,255,255,0.75)').font('Helvetica')
+      doc.fillOpacity(0.75).fontSize(8).fillColor('white').font('Helvetica')
         .text(label.toUpperCase(), x, 108, { characterSpacing: 0.5 })
-      doc.fontSize(9).fillColor('white').font('Helvetica-Bold')
+      doc.fillOpacity(1).fontSize(9).fillColor('white').font('Helvetica-Bold')
         .text(metaValues[i], x, 119)
     })
 
@@ -242,12 +236,12 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       if (breakdown.length > 0) {
         let bdY = rowY + rowH
         breakdown.forEach(bd => {
-          const sign = bd.amount < 0 ? '−' : ''
+          const prefix = bd.amount < 0 ? '-' : ''
           const absAmt = Math.abs(bd.amount)
           doc.fontSize(7.5).fillColor(bd.color).font('Helvetica')
             .text(bd.label, colPos[0] + 20, bdY + 2, { width: colWidths[0] })
           doc.font('Helvetica-Bold')
-            .text(`${sign}${formatChf(absAmt)}`, colPos[3] + 8, bdY + 2, { width: colWidths[3], align: 'right' })
+            .text(`${prefix}${formatChf(absAmt)}`, colPos[3] + 8, bdY + 2, { width: colWidths[3], align: 'right' })
           bdY += 14
         })
       }
@@ -257,29 +251,6 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
       rowY += totalRowH
     })
-
-    // Subtotal row (only if discount exists)
-    const discountRappen = data.discountRappen || 0
-    if (discountRappen > 0) {
-      doc.rect(margin, rowY, tableWidth, 24).fill('#f8fafc')
-      doc.fontSize(9).fillColor('#64748b').font('Helvetica')
-        .text('Zwischensumme', margin + 8, rowY + 7, { width: tableWidth - colWidths[3] - 24, align: 'right' })
-      doc.fillColor('#1e293b').font('Helvetica-Bold')
-        .text(formatChf(data.subtotalRappen), colPos[3] + 8, rowY + 7, { width: colWidths[3], align: 'right' })
-      doc.moveTo(margin, rowY + 24).lineTo(margin + tableWidth, rowY + 24)
-        .strokeColor('#e2e8f0').lineWidth(0.5).stroke()
-      rowY += 24
-
-      // Discount row
-      doc.rect(margin, rowY, tableWidth, 24).fill('#f0fdf4')
-      doc.fontSize(9).fillColor('#16a34a').font('Helvetica')
-        .text('Rabatt', margin + 8, rowY + 7, { width: tableWidth - colWidths[3] - 24, align: 'right' })
-      doc.font('Helvetica-Bold')
-        .text(`−${formatChf(discountRappen)}`, colPos[3] + 8, rowY + 7, { width: colWidths[3], align: 'right' })
-      doc.moveTo(margin, rowY + 24).lineTo(margin + tableWidth, rowY + 24)
-        .strokeColor('#e2e8f0').lineWidth(0.5).stroke()
-      rowY += 24
-    }
 
     // Total row — komplett innerhalb der Tabelle
     doc.rect(margin, rowY, tableWidth, 34).fill(primary)
@@ -329,7 +300,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
         const qrTextW = W - margin - qrTextX
 
         doc.fontSize(8.5).fillColor('#64748b').font('Helvetica')
-          .text('Per Banking-App oder TWINT scannen und direkt bezahlen.', qrTextX, rowY, { width: qrTextW })
+          .text('Per Banking-App scannen und direkt bezahlen.', qrTextX, rowY, { width: qrTextW })
 
         let qrY = rowY + 18
         if (data.qrIban) {
