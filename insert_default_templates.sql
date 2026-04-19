@@ -14,7 +14,7 @@ Mit freundlichen Grüßen
 Ihr Driving Team'),
 
 (NULL, 'push', 'first', 'de', NULL, 
-'Terminbestätigung erforderlich: {{appointment_date}} um {{appointment_time}} Uhr. Bitte bestätigen Sie hier: {{confirmation_link}}'),
+'Terminbestätigung: {{appointment_date}} um {{appointment_time}} Uhr. Bitte bestätigen Sie hier: {{confirmation_link}}'),
 
 (NULL, 'sms', 'first', 'de', NULL, 
 'Hallo {{student_name}}, bitte bestätigen Sie Ihren Termin am {{appointment_date}} um {{appointment_time}} Uhr. {{confirmation_link}}'),
