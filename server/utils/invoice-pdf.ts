@@ -345,7 +345,6 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
         const qrLeft   = mm(67)           // QR-Code links ab Seitenrand
         const qrTop    = slipY + mm(17)   // QR-Code oben
         const qrSize   = mm(46)           // 46×46mm = 130.4pt
-        const crossS   = mm(7)            // Schweizer Kreuz 7×7mm
 
         // Weisser Hintergrund für Schein
         doc.rect(0, slipY, W, slipH).fill('white')
@@ -400,14 +399,6 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
         // QR-Code
         doc.image(qrBuffer, qrLeft, qrTop, { width: qrSize, height: qrSize })
 
-        // Schweizer Kreuz (weisses Quadrat + schwarzes Kreuz) im QR-Code-Zentrum
-        const cx = qrLeft + (qrSize - crossS) / 2
-        const cy = qrTop + (qrSize - crossS) / 2
-        doc.rect(cx, cy, crossS, crossS).fill('white')
-        // Kreuz-Balken (horizontal + vertikal)
-        const barW = crossS * 0.6; const barH = crossS * 0.15
-        doc.rect(cx + (crossS - barW) / 2, cy + (crossS - barH) / 2, barW, barH).fill('#000')
-        doc.rect(cx + (crossS - barH) / 2, cy + (crossS - barW) / 2, barH, barW).fill('#000')
 
         // Betrag
         let zy = qrTop + qrSize + mm(5)
