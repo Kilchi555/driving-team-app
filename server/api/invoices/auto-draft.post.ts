@@ -145,12 +145,20 @@ export default defineEventHandler(async (event) => {
   dueDate.setDate(dueDate.getDate() + 30)
 
   // Draft-Objekt zusammenstellen
-  const subtotal = openPayments.reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0)
+  // BRUTTO-Subtotal: Zahlung-Nettobeträge + alle Abzüge zurückgerechnet (für korrekten Rechnungsaufbau)
+  const getGrossAmount = (p: any) =>
+    (p.total_amount_rappen || 0) +
+    (p.discount_amount_rappen || 0) +
+    ((p as any).voucher_discount_rappen || 0) +
+    (p.credit_used_rappen || 0)
+
+  const subtotal = openPayments.reduce((sum, p) => sum + getGrossAmount(p), 0)  // Brutto
   const totalDiscounts = openPayments.reduce((sum, p) => sum + (p.discount_amount_rappen || 0) + ((p as any).voucher_discount_rappen || 0), 0)
   const totalCredits = openPayments.reduce((sum, p) => sum + (p.credit_used_rappen || 0), 0)
   const vatRate = 0 // Fahrschulen sind in CH meist von MwSt befreit; anpassbar
   const vatAmount = Math.round(subtotal * vatRate)
-  const total = subtotal + vatAmount
+  // Nettobetrag = Brutto - Rabatte - Guthaben + MwSt
+  const total = subtotal - totalDiscounts - totalCredits + vatAmount
 
   const draft = {
     // Rechnungsinformationen
@@ -175,7 +183,7 @@ export default defineEventHandler(async (event) => {
     subtotal_rappen: subtotal,
     vat_rate: vatRate * 100,
     vat_amount_rappen: vatAmount,
-    discount_amount_rappen: totalDiscounts,
+    discount_amount_rappen: totalDiscounts + totalCredits, // Kombiniert für DB-Trigger: total = subtotal - discount
     credit_used_rappen: totalCredits,
     total_amount_rappen: total,
 
@@ -201,8 +209,8 @@ export default defineEventHandler(async (event) => {
         appointment_start_time: apt?.start_time || null,
         appointment_duration_minutes: apt?.duration_minutes || null,
         quantity: 1,
-        unit_price_rappen: p.total_amount_rappen,
-        total_price_rappen: p.total_amount_rappen,
+        unit_price_rappen: getGrossAmount(p),
+        total_price_rappen: getGrossAmount(p),
         vat_rate: vatRate * 100,
         vat_amount_rappen: Math.round(p.total_amount_rappen * vatRate),
         sort_order: i,
