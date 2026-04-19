@@ -130,16 +130,23 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       try {
         const logoBuffer = Buffer.from(data.tenantLogoBase64, 'base64')
         const dims = getImageDimensions(logoBuffer)
-        let logoW = 160
-        let logoH = 40
+        let logoW = 0
+        let logoH = 0
         if (dims && dims.width > 0 && dims.height > 0) {
           const scale = Math.min(160 / dims.width, 40 / dims.height)
           logoW = Math.round(dims.width * scale)
           logoH = Math.round(dims.height * scale)
         }
-        const logoY = Math.round(14 + (40 - logoH) / 2)
-        doc.roundedRect(margin - 6, 8, logoW + 12, 52, 5).fill('white')
-        doc.image(logoBuffer, margin, logoY, { width: logoW, height: logoH })
+        if (logoW > 0 && logoH > 0) {
+          // Exakte Dimensionen bekannt → kein Stretching
+          const logoY = Math.round(14 + (40 - logoH) / 2)
+          doc.roundedRect(margin - 6, 8, logoW + 12, 52, 5).fill('white')
+          doc.image(logoBuffer, margin, logoY, { width: logoW, height: logoH })
+        } else {
+          // Fallback: fit erhält Seitenverhältnis, kein explizites height
+          doc.roundedRect(margin - 6, 8, 172, 52, 5).fill('white')
+          doc.image(logoBuffer, margin, 14, { fit: [160, 40], align: 'left', valign: 'center' })
+        }
       } catch { /* Logo optional */ }
     }
 
@@ -208,7 +215,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     // Spalten so dass alles innerhalb von margin..W-margin (50..545) bleibt
     const tableRight = W - margin   // 545
     const colPos  = [margin, 300, 385, 455]   // Startpositionen
-    const colWidths = [242, 77, 63, tableRight - colPos[3] - 16]  // last col with right padding
+    const colWidths = [242, 77, 63, tableRight - colPos[3] - 24]  // last col with right padding
 
     const tableWidth = tableRight - margin  // 495
 
