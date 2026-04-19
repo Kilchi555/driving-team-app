@@ -24,7 +24,34 @@
       </div>
     </div>
 
-    <!-- Loading State -->
+    <!-- Initial Loading Overlay -->
+    <div
+      v-if="isInitializing"
+      class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-50"
+    >
+      <div class="mb-8">
+        <img
+          v-if="tenantBranding && (tenant?.logo_wide_url || tenant?.logo_url)"
+          :src="tenant.logo_wide_url || tenant.logo_url"
+          alt="Logo"
+          class="h-16 object-contain drop-shadow-md"
+        />
+        <div
+          v-else
+          class="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg"
+          :style="{ backgroundColor: tenantBranding?.primary_color || '#10B981' }"
+        >
+          {{ tenant?.name?.charAt(0) || '…' }}
+        </div>
+      </div>
+      <div
+        class="w-10 h-10 rounded-full border-4 border-gray-200 animate-spin"
+        :style="{ borderTopColor: tenantBranding?.primary_color || '#10B981' }"
+      ></div>
+      <p class="mt-4 text-sm text-gray-500">Kurse werden geladen…</p>
+    </div>
+
+    <!-- Loading State (within-page) -->
     <div v-if="isLoading" class="flex items-center justify-center py-20">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
     </div>
@@ -181,7 +208,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-// Removed: import { getSupabase } - now using secure API
 import { logger } from '~/utils/logger'
 import { useUIStore } from '~/stores/ui'
 import CourseEnrollmentModal from '~/components/customer/CourseEnrollmentModal.vue'
@@ -196,7 +222,8 @@ const router = useRouter()
 const slug = computed(() => route.params.slug as string)
 
 // State
-const isLoading = ref(true)
+const isLoading = ref(false)
+const isInitializing = ref(true)
 const error = ref<string | null>(null)
 const tenant = ref<any>(null)
 const tenantBranding = ref<any>(null)
@@ -205,6 +232,21 @@ const selectedCategory = ref('')
 const selectedLocation = ref('')
 const selectedCourse = ref<any>(null)
 const showEnrollmentModal = ref(false)
+
+// SSR pre-fetch so tenant + courses are available before JS hydration
+const { data: initData } = await useAsyncData(
+  () => `courses-init-${slug.value}`,
+  () => $fetch<any>('/api/courses/public', { query: { slug: slug.value } }),
+  { watch: [slug] }
+)
+if (initData.value?.success && initData.value.tenant) {
+  tenant.value = initData.value.tenant
+  tenantBranding.value = {
+    primary_color: initData.value.tenant.primary_color || '#10B981',
+    secondary_color: initData.value.tenant.secondary_color,
+    accent_color: initData.value.tenant.accent_color
+  }
+}
 
 // Computed
 const tenantId = computed(() => tenant.value?.id || '')
@@ -485,7 +527,7 @@ onMounted(async () => {
     logger.error('Error:', e)
     error.value = 'Ein Fehler ist aufgetreten'
   } finally {
-    isLoading.value = false
+    isInitializing.value = false
   }
 })
 </script>
