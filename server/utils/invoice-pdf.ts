@@ -96,6 +96,7 @@ export interface InvoicePdfData {
   totalRappen: number
   qrCodeDataUrl?: string | null
   qrIban?: string | null
+  scorRef?: string | null
   creditorName?: string
   note?: string
   primaryColor?: string
@@ -330,57 +331,137 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
     rowY += 50
 
-    // ── Swiss QR-Rechnung ────────────────────────────────────────────────────
+    // ── Swiss QR-Rechnung – Standard Einzahlungsschein (SPS 2.2) ────────────
     if (data.qrCodeDataUrl) {
       const base64Match = data.qrCodeDataUrl.match(/^data:image\/\w+;base64,(.+)$/)
       if (base64Match) {
         const qrBuffer = Buffer.from(base64Match[1], 'base64')
 
-        doc.moveTo(margin, rowY).lineTo(margin + tableWidth, rowY)
-          .strokeColor('#cbd5e1').lineWidth(1).dash(5, { space: 4 }).stroke()
-        doc.undash()
-        rowY += 12
+        // Dimensionen nach SPS 2.2 (1mm = 2.8346pt)
+        const mm = (v: number) => v * 2.8346
+        const slipH    = mm(105)          // 297.6pt
+        const slipY    = H - slipH        // Beginn des Einzahlungsscheins
+        const rcptW    = mm(62)           // Empfangsschein-Breite 62mm = 175.7pt
+        const qrLeft   = mm(67)           // QR-Code links ab Seitenrand
+        const qrTop    = slipY + mm(17)   // QR-Code oben
+        const qrSize   = mm(46)           // 46×46mm = 130.4pt
+        const crossS   = mm(7)            // Schweizer Kreuz 7×7mm
 
-        doc.fontSize(7.5).fillColor('#94a3b8').font('Helvetica-Bold')
-          .text('SWISS QR-RECHNUNG', margin, rowY, { characterSpacing: 1.5 })
-        rowY += 14
+        // Weisser Hintergrund für Schein
+        doc.rect(0, slipY, W, slipH).fill('white')
 
-        const qrSize = 95
-        doc.rect(margin, rowY, qrSize + 16, qrSize + 16).fill('white').strokeColor('#e2e8f0').lineWidth(1).stroke()
-        doc.image(qrBuffer, margin + 8, rowY + 8, { width: qrSize, height: qrSize })
+        // Trennlinie oben (Schere-Symbol + gestrichelt)
+        doc.moveTo(0, slipY).lineTo(W, slipY)
+          .strokeColor('#000').lineWidth(0.5).dash(4, { space: 3 }).stroke().undash()
+        // Vertikale Trennlinie Empfangsschein / Zahlteil
+        doc.moveTo(rcptW, slipY).lineTo(rcptW, H)
+          .strokeColor('#000').lineWidth(0.5).dash(4, { space: 3 }).stroke().undash()
 
-        const qrTextX = margin + qrSize + 30
-        const qrTextW = W - margin - qrTextX
+        // ── EMPFANGSSCHEIN (links) ───────────────────────────────────────────
+        const r = { x: mm(5), y: slipY + mm(5), w: rcptW - mm(10) }
+        doc.fontSize(6).font('Helvetica-Bold').fillColor('#000')
+          .text('Empfangsschein', r.x, r.y, { width: r.w })
 
-        doc.fontSize(8.5).fillColor('#64748b').font('Helvetica')
-          .text('Per Banking-App scannen und direkt bezahlen.', qrTextX, rowY, { width: qrTextW })
+        let ry = r.y + mm(7)
+        doc.fontSize(6).font('Helvetica-Bold').fillColor('#000').text('Konto / Zahlbar an', r.x, ry)
+        ry += mm(3)
+        doc.fontSize(6).font('Helvetica').fillColor('#000')
+          .text(data.qrIban || '', r.x, ry, { width: r.w })
+        ry += mm(3)
+        doc.text(data.creditorName || data.tenantName, r.x, ry, { width: r.w })
+        ry += mm(3)
+        if (data.tenantStreet) { doc.text(`${data.tenantStreet}${data.tenantZip ? ', ' + data.tenantZip + ' ' + (data.tenantCity || '') : ''}`, r.x, ry, { width: r.w }); ry += mm(3) }
 
-        let qrY = rowY + 18
-        if (data.qrIban) {
-          doc.fontSize(7.5).fillColor('#94a3b8').font('Helvetica').text('QR-IBAN', qrTextX, qrY)
-          doc.fontSize(8).fillColor('#1e293b').font('Helvetica-Bold')
-            .text(data.qrIban, qrTextX, qrY + 10, { width: qrTextW })
-          qrY += 25
+        ry += mm(2)
+        doc.fontSize(6).font('Helvetica-Bold').fillColor('#000').text('Referenznummer', r.x, ry)
+        ry += mm(3)
+        // Referenz in Gruppen à 5 Ziffern formatieren
+        const refRaw = (data as any).scorRef || ''
+        const refFormatted = refRaw.replace(/(\d{2})(\d{5})(\d{5})(\d{5})(\d{5})(\d{5})/, '$1 $2 $3 $4 $5 $6')
+        doc.fontSize(6).font('Helvetica').text(refFormatted || refRaw, r.x, ry, { width: r.w })
+
+        // Betrag unten im Empfangsschein
+        ry = slipY + mm(68)
+        doc.fontSize(6).font('Helvetica-Bold').fillColor('#000').text('Währung', r.x, ry)
+        doc.text('Betrag', r.x + mm(12), ry)
+        ry += mm(3)
+        doc.fontSize(8).font('Helvetica').text('CHF', r.x, ry)
+        doc.text((data.totalRappen / 100).toFixed(2), r.x + mm(12), ry)
+
+        // Annahmestelle
+        doc.fontSize(6).font('Helvetica-Bold').fillColor('#000')
+          .text('Annahmestelle', r.x, slipY + mm(95), { width: r.w, align: 'right' })
+
+        // ── ZAHLTEIL (rechts) ────────────────────────────────────────────────
+        const zx = rcptW + mm(5)
+        doc.fontSize(8).font('Helvetica-Bold').fillColor('#000')
+          .text('Zahlteil', zx, slipY + mm(5))
+
+        // QR-Code
+        doc.image(qrBuffer, qrLeft, qrTop, { width: qrSize, height: qrSize })
+
+        // Schweizer Kreuz (weisses Quadrat + schwarzes Kreuz) im QR-Code-Zentrum
+        const cx = qrLeft + (qrSize - crossS) / 2
+        const cy = qrTop + (qrSize - crossS) / 2
+        doc.rect(cx, cy, crossS, crossS).fill('white')
+        // Kreuz-Balken (horizontal + vertikal)
+        const barW = crossS * 0.6; const barH = crossS * 0.15
+        doc.rect(cx + (crossS - barW) / 2, cy + (crossS - barH) / 2, barW, barH).fill('#000')
+        doc.rect(cx + (crossS - barH) / 2, cy + (crossS - barW) / 2, barH, barW).fill('#000')
+
+        // Betrag
+        let zy = qrTop + qrSize + mm(5)
+        doc.fontSize(6).font('Helvetica-Bold').fillColor('#000')
+          .text('Währung', zx, zy)
+        doc.text('Betrag', zx + mm(12), zy)
+        zy += mm(3)
+        doc.fontSize(10).font('Helvetica').text('CHF', zx, zy)
+        doc.text((data.totalRappen / 100).toFixed(2), zx + mm(12), zy)
+
+        // Zahlbar an
+        const infoX = qrLeft + qrSize + mm(5)
+        const infoW = W - infoX - mm(5)
+        let iy = slipY + mm(5)
+        doc.fontSize(6).font('Helvetica-Bold').fillColor('#000').text('Zahlbar an', infoX, iy)
+        iy += mm(3)
+        doc.fontSize(7).font('Helvetica')
+          .text(data.qrIban || '', infoX, iy, { width: infoW })
+        iy += mm(3.5)
+        doc.text(data.creditorName || data.tenantName, infoX, iy, { width: infoW })
+        iy += mm(3.5)
+        if (data.tenantStreet) {
+          doc.text(data.tenantStreet, infoX, iy, { width: infoW }); iy += mm(3.5)
         }
-        if (data.creditorName || data.tenantName) {
-          doc.fontSize(7.5).fillColor('#94a3b8').font('Helvetica').text('Empfänger', qrTextX, qrY)
-          doc.fontSize(8).fillColor('#1e293b').font('Helvetica-Bold')
-            .text(data.creditorName || data.tenantName, qrTextX, qrY + 10, { width: qrTextW })
-          // Adresse direkt darunter ohne Titel
-          const addrParts = [
-            data.tenantStreet,
-            [data.tenantZip, data.tenantCity].filter(Boolean).join(' '),
-          ].filter(Boolean)
-          if (addrParts.length > 0) {
-            doc.fontSize(8).fillColor('#1e293b').font('Helvetica')
-              .text(addrParts.join(', '), qrTextX, qrY + 21, { width: qrTextW })
-            qrY += 12
+        if (data.tenantZip || data.tenantCity) {
+          doc.text(`${data.tenantZip || ''} ${data.tenantCity || ''}`.trim(), infoX, iy, { width: infoW }); iy += mm(3.5)
+        }
+        doc.text('CH', infoX, iy, { width: infoW }); iy += mm(5)
+
+        // Referenznummer
+        doc.fontSize(6).font('Helvetica-Bold').fillColor('#000').text('Referenznummer', infoX, iy)
+        iy += mm(3)
+        doc.fontSize(7).font('Helvetica').text(refFormatted || refRaw, infoX, iy, { width: infoW })
+        iy += mm(5)
+
+        // Zusätzliche Informationen
+        if (data.invoiceNumber) {
+          doc.fontSize(6).font('Helvetica-Bold').fillColor('#000').text('Zusätzliche Informationen', infoX, iy)
+          iy += mm(3)
+          doc.fontSize(7).font('Helvetica').text(`Rechnung ${data.invoiceNumber}`, infoX, iy, { width: infoW })
+          iy += mm(5)
+        }
+
+        // Zahlbar durch (Debtor)
+        if (data.customerName) {
+          doc.fontSize(6).font('Helvetica-Bold').fillColor('#000').text('Zahlbar durch', infoX, iy)
+          iy += mm(3)
+          doc.fontSize(7).font('Helvetica').text(data.customerName, infoX, iy, { width: infoW })
+          iy += mm(3.5)
+          if (data.billingStreet) { doc.text(data.billingStreet, infoX, iy, { width: infoW }); iy += mm(3.5) }
+          if (data.billingZip || data.billingCity) {
+            doc.text(`${data.billingZip || ''} ${data.billingCity || ''}`.trim(), infoX, iy, { width: infoW })
           }
-          qrY += 25
         }
-        doc.fontSize(7.5).fillColor('#94a3b8').font('Helvetica').text('Zahlbetrag', qrTextX, qrY)
-        doc.fontSize(12).fillColor(primary).font('Helvetica-Bold')
-          .text(formatChf(data.totalRappen), qrTextX, qrY + 10)
       }
     }
 
