@@ -158,10 +158,9 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
     @media (max-width:480px) {
       .outer { padding:12px 4px !important; }
       .header { padding:20px 16px !important; border-radius:12px 12px 0 0 !important; }
-      .header-l, .header-r { display:block !important; width:100% !important; text-align:left !important; }
-      .header-r { margin-top:8px !important; }
-      .inv-num { font-size:18px !important; }
-      .total-amt { font-size:22px !important; }
+      .inv-num { font-size:17px !important; }
+      .total-lbl { font-size:10px !important; }
+      .total-amt { font-size:20px !important; }
       .meta-band { padding:10px 16px !important; }
       .meta-col { width:50% !important; }
       .meta-col:nth-child(2) { text-align:right !important; }
@@ -187,7 +186,7 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
         <p class="inv-num" style="margin:0;font-size:22px;font-weight:800;color:white;font-family:monospace;">${data.invoiceNumber}</p>
       </div>
       <div class="header-r">
-        <p style="margin:0 0 2px;font-size:11px;color:rgba(255,255,255,0.65);">Gesamtbetrag</p>
+        <p style="margin:0 0 2px;font-size:11px;color:rgba(255,255,255,0.65);" class="total-lbl">Gesamtbetrag</p>
         <p class="total-amt" style="margin:0;font-size:26px;font-weight:800;color:white;">${formatChfEmail(data.totalRappen)}</p>
       </div>
     </div>
