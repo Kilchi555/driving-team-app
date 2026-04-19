@@ -61,6 +61,7 @@ export default defineNuxtConfig({
     experimental: {
       wasm: process.env.NODE_ENV === 'production'
     },
+    // @ts-expect-error workerThreads is a valid Nitro option not yet in types
     workerThreads: false,
     externals: {
       external: ['puppeteer-core', '@sparticuz/chromium']
@@ -259,7 +260,6 @@ export default defineNuxtConfig({
       { code: 'fr', iso: 'fr-CH', file: 'fr.json', name: 'Français' },
       { code: 'it', iso: 'it-CH', file: 'it.json', name: 'Italiano' }
     ],
-    lazy: true,
     langDir: 'locales',
     defaultLocale: 'de',
     strategy: 'no_prefix',
