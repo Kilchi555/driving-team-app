@@ -166,8 +166,10 @@
             <h3 class="text-xl font-black mb-2">Rimorkio BE</h3>
             <p class="text-gray-600 text-sm mb-4">Kategoria BE ju lejon të tërhiqni rimorkio dhe karavane. Kusht: tashmë keni patentën B.</p>
             <ul class="space-y-2 text-sm text-gray-700 mb-6">
+              <li class="flex gap-2"><span class="text-orange-500 font-bold">✓</span> Ab CHF 120.- / 45 min</li>
               <li class="flex gap-2"><span class="text-orange-500 font-bold">✓</span> Rimorkio deri 750 kg dhe mbi 750 kg</li>
-              <li class="flex gap-2"><span class="text-orange-500 font-bold">✓</span> Ideal për karavane dhe barkat</li>
+              <li class="flex gap-2"><span class="text-orange-500 font-bold">✓</span> Ideal për karavane dhe barka</li>
+              <li class="flex gap-2"><span class="text-orange-500 font-bold">✓</span> Nuk nevojitet provim teorik</li>
               <li class="flex gap-2"><span class="text-orange-500 font-bold">✓</span> Mësim në shqip me Skenderin</li>
             </ul>
             <a href="https://www.simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="inline-block w-full text-center bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-xl transition text-sm">Rezervo Kat. BE</a>
@@ -179,8 +181,9 @@
             <h3 class="text-xl font-black mb-2">Taksi BPT 121 &amp; 122</h3>
             <p class="text-gray-600 text-sm mb-4">Patenta profesionale e taksistit. Skenderi ka përvojë të gjerë në trajnimin e shoferëve të taksive.</p>
             <ul class="space-y-2 text-sm text-gray-700 mb-6">
-              <li class="flex gap-2"><span class="text-yellow-600 font-bold">✓</span> BPT 121 (Kat. B) dhe 122 (Van)</li>
-              <li class="flex gap-2"><span class="text-yellow-600 font-bold">✓</span> Trajnim profesional</li>
+              <li class="flex gap-2"><span class="text-yellow-600 font-bold">✓</span> BPT 121 (Taxi/transport pasagjerësh)</li>
+              <li class="flex gap-2"><span class="text-yellow-600 font-bold">✓</span> BPT 122 (transport nxënësish, ambulancë)</li>
+              <li class="flex gap-2"><span class="text-yellow-600 font-bold">✓</span> Mosha minimale 21 vjeç, Kat. B min. 1 vit</li>
               <li class="flex gap-2"><span class="text-yellow-600 font-bold">✓</span> Konsultim personal me shqip</li>
             </ul>
             <a href="/taxi-fahrschule/" class="inline-block w-full text-center bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-xl transition text-sm">Më shumë rreth Taksit</a>
@@ -311,7 +314,7 @@
         <!-- Rimorkio BE -->
         <div v-show="activeTab === 'be'" class="space-y-6 max-w-4xl mx-auto">
           <div class="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm text-orange-800 mb-6">
-            <strong>Kushti:</strong> Duhet tashmë të keni patentën B të vlefshme për të filluar kursin BE.
+            <strong>Kushti:</strong> Duhet tashmë të keni patentën B të vlefshme. Nuk nevojiten provim teorik i ri dhe as kurs i ri Nothelferkurs – patenta B mjafton. Leja e mësimit BE mund të kërkohet nga mosha 17 vjeç.
           </div>
 
           <details class="bg-white rounded-lg border-l-4 border-orange-500 shadow-sm group">
@@ -323,7 +326,7 @@
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-              <p class="text-sm text-gray-600">Paraqisni kërkesën për lejen e mësimit BE në Strassenverkehrsamt. Duhet të keni patentën B tashmë. Mosha minimale: 18 vjeç.</p>
+              <p class="text-sm text-gray-600">Paraqisni kërkesën për lejen e mësimit BE në Strassenverkehrsamt bashkë me ID/Pasaportë dhe patentën B. Leja e mësimit BE dërgohет me postë dhe është e vlefshme <strong>24 muaj</strong>. Mosha minimale: <strong>17 vjeç</strong> (me shoqërues) ose <strong>18 vjeç</strong> (i pavarur).</p>
               <div class="mt-3 flex flex-wrap gap-2">
                 <a href="/documents/lernfahrgesuche/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-orange-100 text-orange-700 px-3 py-1 rounded-full hover:bg-orange-200 transition">Formulari Zürich (PDF)</a>
                 <a href="/documents/lernfahrgesuche/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-orange-100 text-orange-700 px-3 py-1 rounded-full hover:bg-orange-200 transition">Formulari Aargau (PDF)</a>
@@ -365,19 +368,19 @@
         <!-- Taksi BPT -->
         <div v-show="activeTab === 'taxi'" class="space-y-6 max-w-4xl mx-auto">
           <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm text-yellow-800 mb-6">
-            <strong>Kushti:</strong> Duhet të keni patentën B të vlefshme dhe të paktën 21 vjeç për kursin BPT.
+            <strong>Kushti:</strong> Duhet të keni patentën B të vlefshme <strong>të paktën 1 vit</strong> (jo provizore, jo më e vjetër se 15 vjet) dhe të paktën <strong>21 vjeç</strong> për kursin BPT.
           </div>
 
           <details class="bg-white rounded-lg border-l-4 border-yellow-500 shadow-sm group">
             <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-yellow-500 text-white font-bold text-sm md:text-lg">1</div></div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="text-base md:text-lg lg:text-xl font-bold">Patenta B + kushtet fillestare</h3>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Lernfahrgesuch Taksi + kushtet fillestare</h3>
                 <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-              <p class="text-sm text-gray-600">Keni nevojë për patentën B të vlefshme (jo provizore), moshën minimale 21 vjeç dhe dëshmi të gjuhës (gjermanisht B1 ose shqip sipas kantonit). Konsultohuni me Skenderin për kërkesat e sakta.</p>
+              <p class="text-sm text-gray-600">Plotësoni formularin e Lernfahrgesuch BPT dhe paraqiseni personalisht në Strassenverkehrsamt ose Einwohnerkontrolle bashkë me foto pasaportë dhe ID/Pasaportë. Kushtet: patenta B <strong>të paktën 1 vit</strong> e vlefshme, jo më e vjetër se 15 vjet, mosha minimale <strong>21 vjeç</strong>. Sehtest (testi i syve) bëhet po atje.</p>
             </div>
           </details>
 
@@ -411,12 +414,13 @@
             <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
               <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-yellow-500 text-white font-bold text-sm md:text-lg">4</div></div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="text-base md:text-lg lg:text-xl font-bold">Provimi teorik BPT</h3>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Teoria BPT – ARV 2 (vetëm BPT 121)</h3>
                 <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-              <p class="text-sm text-gray-600">Provimi teorik BPT mbulon rregullat e posaçme për shoferët profesionalë, sigurimin dhe ligjet e taksi-shërbimit. Skenderi ju përgatit me materiale studimi.</p>
+              <p class="text-sm text-gray-600"><strong>BPT 121</strong> (transport pasagjerësh që paguajnë): Kërkohet provimi teorik <strong>ARV 2</strong> (rregullat e kohës së drejtimit dhe pushimit). Skenderi ju përgatit me materiale studimi.</p>
+              <p class="text-sm text-gray-600 mt-2"><strong>BPT 122</strong> (transport nxënësish, personash me aftësi të kufizuara, ambulancë): Nuk kërkohet provimi ARV 2 – kaloni direkt tek hapi 5.</p>
             </div>
           </details>
 
@@ -453,7 +457,7 @@
             Sa kushton patenta B në Zvicër?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Kostoja totale e patentës B është mesatarisht <strong>CHF 3'500–3'600</strong>. Kjo përfshin: Nothelferkurs (~CHF 120), Sehtest (~CHF 50), lejen e mësimit (CHF 80), provimin teorik (CHF 40), kursin VKU (CHF 200–300), orët e vozitjes (mesatarisht 15–20 × CHF 95–120), provimin praktik (CHF 130) dhe kursin WAB (CHF 350).</p>
+          <p class="text-gray-600 mt-4">Kostoja totale e patentës B është mesatarisht <strong>CHF 3'500–3'600</strong>. Kjo përfshin: Nothelferkurs (~CHF 100), Sehtest (~CHF 50), lejen e mësimit (CHF 80), provimin teorik (CHF 40), kursin VKU (CHF 200–300), orët e vozitjes (mesatarisht 15–20 × CHF 95–120), provimin praktik (CHF 130) dhe kursin WAB (CHF 350).</p>
         </details>
 
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -601,7 +605,9 @@ useHead({
             {
               '@type': 'Offer',
               itemOffered: { '@type': 'Service', name: 'Rimorkio BE' },
-              description: 'Trajnim për Kategoria BE – rimorkio dhe karavane',
+              price: '120.00',
+              priceCurrency: 'CHF',
+              description: 'Trajnim për Kategoria BE – rimorkio dhe karavane, nuk nevojitet provim teorik',
             },
             {
               '@type': 'Offer',
