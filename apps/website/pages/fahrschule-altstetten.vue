@@ -221,7 +221,10 @@ const jsonLdScripts = [
       "addressCountry": "CH"
     },
     "geo": { "@type": "GeoCoordinates", "latitude": 47.3905, "longitude": 8.4877 },
-    "openingHours": "Mo-Fr 08:00-19:00",
+    "openingHoursSpecification": [
+      { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "07:00", "closes": "17:00" },
+      { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Saturday"], "opens": "07:00", "closes": "16:00" }
+    ],
     "image": "https://drivingteam.ch/images/locations/zuerich-hero.webp",
     "priceRange": "CHF 95-200",
     "sameAs": ["https://drivingteam.ch"]
@@ -242,7 +245,7 @@ const jsonLdScripts = [
       {
         "@type": "Question",
         "name": "Wo genau befindet sich eure Fahrschule in Altstetten?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Baslerstrasse 145, 8048 Zürich-Altstetten. Erreichbar mit S-Bahn (Bahnhof Altstetten, 5 Min.), Tram 2 (Farbhof) oder Bus 80." }
+        "acceptedAnswer": { "@type": "Answer", "text": "Baslerstrasse 145, 8048 Zürich-Altstetten. Erreichbar mit S-Bahn (Bahnhof Altstetten, 5 Min.), Tram 2 (Haltestelle Lindenplatz) oder Bus 80." }
       },
       {
         "@type": "Question",
