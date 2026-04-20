@@ -25,7 +25,7 @@
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Kategorie A1 · ab 16 Jahren</p>
           <h1 class="heading-lg text-white mb-6">Motorrad A1 Führerschein Schweiz</h1>
-          <p class="hidden xs:block text-xl text-white mb-8">Mit 16 Jahren legal auf dem Motorrad: Die Kategorie A1 ist der günstigste und schnellste Einstieg ins Motorradfahren in der Schweiz. Bis 125cc, max. 11 kW Leistung.</p>
+          <p class="text-base xs:text-xl text-white mb-8">Mit 16 Jahren legal auf dem Motorrad: Die Kategorie A1 ist der günstigste und schnellste Einstieg ins Motorradfahren in der Schweiz. Bis 125cc, max. 11 kW Leistung.</p>
           <a href="https://www.simy.ch/booking/availability/driving-team?service=A" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Fahrstunden buchen
           </a>

@@ -228,8 +228,14 @@ useSeoMeta({
   ogUrl: `https://drivingteam.ch/blog/${slug}/`,
   ogType: 'article',
   ogImage: seoOgImage,
-  robots: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1',
+  robots: article.value
+    ? 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1'
+    : 'noindex, nofollow',
 })
+
+if (!article.value) {
+  throw createError({ statusCode: 404, statusMessage: 'Blog article not found' })
+}
 
 useHead({
   link: [

@@ -20,7 +20,7 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Motorrad Weiterbildung</h1>
-          <p class="hidden xs:block text-xl text-orange-100 mb-8">In unseren Motorrad Weiterbildungen geht es darum, dich zu einer sichereren Motorradfahrerin oder einem sichereren Motorradfahrer zu machen. Unsere Motorradkurse werden von erfahrenen Motorrad-Fahrlehrern durchgeführt.</p>
+          <p class="text-base xs:text-xl text-orange-100 mb-8">In unseren Motorrad Weiterbildungen geht es darum, dich zu einer sichereren Motorradfahrerin oder einem sichereren Motorradfahrer zu machen. Unsere Motorradkurse werden von erfahrenen Motorrad-Fahrlehrern durchgeführt.</p>
           <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-orange-600 hover:bg-orange-50 text-lg inline-block">
             ✨ Jetzt anmelden
           </a>

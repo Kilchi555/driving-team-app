@@ -10,6 +10,66 @@
       ],
       "destination": "https://drivingteam.ch/:path*",
       "permanent": true
+    },
+    {
+      "source": "/blog/undefined",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/blog/undefined/",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/drivers-license-converting",
+      "destination": "https://drivingteam.ch/blog/drivers-license-convert/",
+      "permanent": true
+    },
+    {
+      "source": "/drivers-license-converting/",
+      "destination": "https://drivingteam.ch/blog/drivers-license-convert/",
+      "permanent": true
+    },
+    {
+      "source": "/blog-minderung-pruefungsangst",
+      "destination": "https://drivingteam.ch/blog/pruefungsangst-fahrpruefung/",
+      "permanent": true
+    },
+    {
+      "source": "/blog-minderung-pruefungsangst/",
+      "destination": "https://drivingteam.ch/blog/pruefungsangst-fahrpruefung/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschueler-respekt-geduld",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschueler-respekt-geduld/",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/wp-content/:path*",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/wp-includes/:path*",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/wp-admin/:path*",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/wp-login.php",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
     }
   ],
   "headers": [

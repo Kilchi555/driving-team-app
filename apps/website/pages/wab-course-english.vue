@@ -31,8 +31,8 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">WAB Course in English</h1>
-          <p class="hidden xs:block text-xl text-white mb-4">The mandatory WAB refresher course for new drivers in Switzerland — now available in English. Two locations: Pfäffikon ZH and Tuggen SZ.</p>
-          <p class="hidden xs:block text-white mb-8">Complete your WAB course within 12 months of passing your category B driving test to keep your licence valid.</p>
+          <p class="text-base xs:text-xl text-white mb-4">The mandatory WAB refresher course for new drivers in Switzerland — now available in English. Two locations: Pfäffikon ZH and Tuggen SZ.</p>
+          <p class="text-base xs:text-xl text-white mb-8">Complete your WAB course within 12 months of passing your category B driving test to keep your licence valid.</p>
           <div class="flex flex-col sm:flex-row gap-4">
             <a href="#register" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
               ✨ Register Now ↓

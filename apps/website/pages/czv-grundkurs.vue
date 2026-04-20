@@ -22,7 +22,7 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">CZV Grundkurs</h1>
-          <p class="hidden xs:block text-xl text-white mb-8">Der obligatorische Grundkurs für Berufsfahrer:innen der Kategorien C1/C/CE (Lastwagen) und D1/D (Bus). Erhalte den Fähigkeitsausweis.</p>
+          <p class="text-base xs:text-xl text-white mb-8">Der obligatorische Grundkurs für Berufsfahrer:innen der Kategorien C1/C/CE (Lastwagen) und D1/D (Bus). Erhalte den Fähigkeitsausweis.</p>
           <button @click="openModal()" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✉️ Kurs anfragen
           </button>
