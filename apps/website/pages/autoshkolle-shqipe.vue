@@ -37,9 +37,15 @@
           <h1 class="heading-lg text-white mb-4">Autoshkollë Shqipe Zürich</h1>
           <p class="text-base xs:text-xl text-white mb-2">Mëso të drejtosh me <strong>Skender Ismajlin</strong> – instruktor i certifikuar me përvojë që nga viti 2011.</p>
           <p class="text-base xs:text-xl text-white mb-8">Mësimet zhvillohen në Spreitenbach, Limmattal, Zürich-Altstetten dhe Wettingen/AG. Kategoria B Automatik, Rimorkio BE dhe Taksi BPT.</p>
-          <a href="https://www.simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-            ✨ Rezervo tani
-          </a>
+          <div class="flex flex-wrap gap-4">
+            <a href="https://www.simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+              ✨ Rezervo tani
+            </a>
+            <a href="tel:+41763746791" class="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-white font-bold py-3 px-6 rounded-xl transition text-lg">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+              Thirr Skenderin
+            </a>
+          </div>
         </div>
       </div>
     </section>
@@ -50,7 +56,14 @@
         <div class="max-w-4xl mx-auto">
           <div class="bg-gradient-to-br from-primary-50 to-primary-100 rounded-2xl p-8 md:p-12 flex flex-col md:flex-row gap-8 items-center">
             <div class="flex-shrink-0 text-center">
-              <div class="w-28 h-28 rounded-full bg-primary-600 flex items-center justify-center text-white text-4xl font-black mx-auto mb-4">SI</div>
+              <img
+                :src="`/_vercel/image?url=%2Fimages%2Fteam%2Fskender.webp&w=224&q=80`"
+                alt="Skender Ismajli – Instruktor i vozitjes"
+                width="112"
+                height="112"
+                class="w-28 h-28 rounded-full object-cover mx-auto mb-4 shadow-lg"
+                loading="lazy"
+              />
               <div class="flex justify-center gap-1 mb-1">
                 <span v-for="i in 5" :key="i" class="text-yellow-400 text-xl">★</span>
               </div>
@@ -73,6 +86,12 @@
                 <span>Zürich-Altstetten</span>
                 <span>·</span>
                 <span>Wettingen/AG</span>
+              </div>
+              <div class="mt-5">
+                <a href="tel:+41763746791" class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 px-5 rounded-xl transition text-sm">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                  076 374 67 91
+                </a>
               </div>
             </div>
           </div>
