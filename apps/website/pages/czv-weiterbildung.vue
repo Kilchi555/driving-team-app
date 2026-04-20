@@ -22,8 +22,8 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">CZV Weiterbildungskurse</h1>
-          <p class="hidden xs:block text-xl text-orange-100 mb-4">Für die Erneuerung des Fähigkeitsausweises musst du 5 Tage Weiterbildung innerhalb von 5 Jahren nachweisen. Die CZV-Ziele sind:</p>
-          <ul class="hidden xs:block text-orange-100 space-y-2 mb-8 list-disc pl-6">
+          <p class="text-base xs:text-xl text-orange-100 mb-4">Für die Erneuerung des Fähigkeitsausweises musst du 5 Tage Weiterbildung innerhalb von 5 Jahren nachweisen. Die CZV-Ziele sind:</p>
+          <ul class="text-base xs:text-xl text-orange-100 space-y-2 mb-8 list-disc pl-6">
             <li>Verbesserung der Verkehrssicherheit</li>
             <li>Aufwertung des Chauffeurberufs</li>
             <li>Umweltverträgliche und energieeffiziente Verwendung des Fahrzeugs</li>

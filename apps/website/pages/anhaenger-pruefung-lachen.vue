@@ -25,8 +25,8 @@
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Kategorie BE · Lachen SZ</p>
           <h1 class="heading-lg text-white mb-6">Anhängerprüfung Lachen SZ</h1>
-          <p class="hidden xs:block text-xl text-white mb-4">Prüfungsort Pfäffikon SZ. Wir trainieren dich ab Lachen auf die Prüfungsrouten – mit unserem Anhänger und Zugfahrzeug, kein eigenes Fahrzeug nötig.</p>
-          <p class="hidden xs:block text-white mb-8">Kein Nothelferkurs, keine Theorieprüfung – nur 4–8 Fahrstunden bis zur Prüfung.</p>
+          <p class="text-base xs:text-xl text-white mb-4">Prüfungsort Pfäffikon SZ. Wir trainieren dich ab Lachen auf die Prüfungsrouten – mit unserem Anhänger und Zugfahrzeug, kein eigenes Fahrzeug nötig.</p>
+          <p class="text-base xs:text-xl text-white mb-8">Kein Nothelferkurs, keine Theorieprüfung – nur 4–8 Fahrstunden bis zur Prüfung.</p>
           <a href="https://www.simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>

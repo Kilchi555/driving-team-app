@@ -28,7 +28,7 @@
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
           <h1 class="heading-lg text-white mb-6">Fahrschule Zürich – Driving Team</h1>
-          <p class="hidden xs:block text-xl text-white mb-8">Deine Fahrschule in Zürich. Professionelle Fahrstunden für Auto, Motorrad und Anhänger ab CHF 95.-. Unterricht auch auf Englisch & Albanisch verfügbar.</p>
+          <p class="text-base xs:text-xl text-white mb-8">Deine Fahrschule in Zürich. Professionelle Fahrstunden für Auto, Motorrad und Anhänger ab CHF 95.-. Unterricht auch auf Englisch & Albanisch verfügbar.</p>
           <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>

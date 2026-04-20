@@ -24,8 +24,8 @@
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Driving Team × Transportschule AG</p>
           <h1 class="heading-lg text-white mb-4">Schleuderkurs Zürich</h1>
-          <p class="hidden xs:block text-xl text-white mb-3">Der obligatorische WAB Kurs für alle Neulenker – innerhalb von 12 Monaten nach der Fahrprüfung Pflicht für Kategorie A und B.</p>
-          <p class="hidden xs:block text-white mb-8">Praktisches Fahrsicherheitstraining in Pfäffikon ZH: Notbremsung, Ausweichmanöver, Kurvenfahren, Schleuder-Kontrolle – auf dem Übungsplatz der Transportschule AG.</p>
+          <p class="text-base xs:text-xl text-white mb-3">Der obligatorische WAB Kurs für alle Neulenker – innerhalb von 12 Monaten nach der Fahrprüfung Pflicht für Kategorie A und B.</p>
+          <p class="text-base xs:text-xl text-white mb-8">Praktisches Fahrsicherheitstraining in Pfäffikon ZH: Notbremsung, Ausweichmanöver, Kurvenfahren, Schleuder-Kontrolle – auf dem Übungsplatz der Transportschule AG.</p>
           <div class="flex flex-col xs:flex-row gap-3">
             <a href="#anmelden" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
               ✨ Jetzt anmelden

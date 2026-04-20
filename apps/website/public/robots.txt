@@ -6,6 +6,7 @@ Disallow: /wp-json/
 Disallow: /wp-login.php
 Disallow: /wp-includes/
 Disallow: /wp-admin/
+Disallow: /wp-content/
 Disallow: /node_modules/
 Disallow: /api/
 Disallow: /admin/
