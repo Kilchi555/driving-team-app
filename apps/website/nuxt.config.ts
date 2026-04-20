@@ -200,9 +200,8 @@ export default defineNuxtConfig({
     '/fahrlehrer-zuerich': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
     '/fahrlehrer-zuerich/': { redirect: { to: '/fahrschule-zuerich/', statusCode: 301 } },
 
-    // VKU (alte Namen)
-    '/vku-kurs': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
-    '/vku-kurs/': { redirect: { to: '/vku-kurse/', statusCode: 301 } },
+    // VKU (alte Namen) → vercel.json (EEXIST symlink conflict)
+    // '/vku-kurs' und '/vku-kurs/' in vercel.json definiert
     '/verkehrskunde-kurs-zuerich': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
     '/verkehrskunde-kurs-zuerich/': { redirect: { to: '/vku-kurs-zuerich/', statusCode: 301 } },
     '/verkehrskunde-kurs-lachen': { redirect: { to: '/vku-kurs-lachen/', statusCode: 301 } },
