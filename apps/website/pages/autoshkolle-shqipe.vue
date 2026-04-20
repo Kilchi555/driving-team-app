@@ -533,13 +533,37 @@ useHead({
         name: 'Driving Team Autoshkollë Shqipe Zürich',
         description: 'Autoshkollë shqipe në Zürich dhe Limmattal me instruktor Skender Ismajli. Kategoria B Automatik, Rimorkio BE, Taksi BPT. Që nga viti 2011.',
         url: 'https://drivingteam.ch/autoshkolle-shqipe/',
-        telephone: '+41 44 586 09 32',
+        telephone: '+41763746791',
         image: 'https://drivingteam.ch/images/categories/auto-fahrschule-hero.webp',
+        logo: 'https://drivingteam.ch/images/logo.webp',
         priceRange: 'Ab CHF 95.-',
         currenciesAccepted: 'CHF',
         paymentAccepted: 'Cash, Credit Card, Bank Transfer',
         inLanguage: ['sq', 'de'],
         areaServed: ['Spreitenbach', 'Zürich-Altstetten', 'Dietikon', 'Schlieren', 'Wettingen', 'Limmattal'],
+        geo: {
+          '@type': 'GeoCoordinates',
+          latitude: 47.4164,
+          longitude: 8.3628,
+        },
+        openingHoursSpecification: [
+          {
+            '@type': 'OpeningHoursSpecification',
+            dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+            opens: '07:00',
+            closes: '19:00',
+          },
+          {
+            '@type': 'OpeningHoursSpecification',
+            dayOfWeek: ['Saturday'],
+            opens: '07:00',
+            closes: '16:00',
+          },
+        ],
+        sameAs: [
+          'https://www.instagram.com/drivingteamzuerich/',
+          'https://www.facebook.com/drivingteamzuerich/',
+        ],
         address: {
           '@type': 'PostalAddress',
           addressLocality: 'Spreitenbach',
@@ -592,6 +616,43 @@ useHead({
       type: 'application/ld+json',
       innerHTML: JSON.stringify({
         '@context': 'https://schema.org',
+        '@type': 'Person',
+        name: 'Skender Ismajli',
+        jobTitle: 'Fahrlehrer / Instruktor i vozitjes',
+        description: 'Zertifizierter Fahrlehrer seit 2011. Spezialisierung: Kategorie B Automatik, Anhänger BE, Taxi BPT. Unterrichtet auf Albanisch.',
+        image: 'https://drivingteam.ch/images/team/skender.webp',
+        telephone: '+41763746791',
+        knowsLanguage: ['sq', 'de'],
+        worksFor: {
+          '@type': 'Organization',
+          name: 'Driving Team Fahrschule',
+          url: 'https://drivingteam.ch',
+        },
+        workLocation: {
+          '@type': 'Place',
+          name: 'Spreitenbach / Limmattal / Zürich-Altstetten',
+          address: {
+            '@type': 'PostalAddress',
+            addressLocality: 'Spreitenbach',
+            addressRegion: 'AG',
+            addressCountry: 'CH',
+          },
+        },
+        hasOccupation: {
+          '@type': 'Occupation',
+          name: 'Fahrlehrer',
+          occupationLocation: {
+            '@type': 'City',
+            name: 'Zürich',
+          },
+          skills: 'Kategorie B Automatik, Anhänger BE, Taxi BPT, Albanisch',
+        },
+      }),
+    },
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
         '@type': 'FAQPage',
         mainEntity: [
           {
@@ -632,6 +693,14 @@ useHead({
             acceptedAnswer: {
               '@type': 'Answer',
               text: 'Rezervimi bëhet lehtë online nëpërmjet sistemit tonë të rezervimit. Klikoni butonin "Rezervo tani" dhe zgjidhni orarin që ju konvenon.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'A ofron Driving Team edhe patentën e rimorkios (BE)?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Po! Skenderi ofron trajnimin për Kategoria BE (Rimorkio/Anhänger). Kjo kategori ju lejon të tërhiqni rimorkio, karavane dhe barka deri 3.5 tonë. Kushti i vetëm: duhet tashmë të keni patentën B të vlefshme.',
             },
           },
         ],
