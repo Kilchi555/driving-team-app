@@ -23,11 +23,22 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container">
         <div class="max-w-3xl">
-          <h1 class="heading-lg text-white mb-6">VKU Kurs Zürich</h1>
+          <h1 class="heading-lg text-white mb-4">VKU Kurs Zürich</h1>
+          <!-- Fact Badges -->
+          <div class="flex flex-wrap gap-2 mb-4">
+            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">⚡ Pflicht vor Fahrprüfung</span>
+            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">💰 <strong>CHF 190.–</strong></span>
+            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">🕐 2×4h = 8 Stunden</span>
+          </div>
           <p class="text-xl text-white mb-8">Im total achtstündigen VKU Kurs wirst Du ausführlich auf den Alltag im Strassenverkehr vorbereitet. Der Abschluss dieses VKU Kurs ist obligatorisch und Voraussetzung für die Anmeldung an die Praktische Führerprüfung.</p>
-          <a href="https://www.simy.ch/customer/courses/driving-team/?category=VKU&location=Z%C3%BCrich" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-            ✨ Jetzt Kurs anmelden
-          </a>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <a href="https://www.simy.ch/customer/courses/driving-team/?category=VKU&location=Z%C3%BCrich" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+              ✨ Jetzt VKU Platz sichern
+            </a>
+            <a href="https://www.simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
+              🚗 Gleich Fahrstunde buchen
+            </a>
+          </div>
         </div>
       </div>
     </section>
