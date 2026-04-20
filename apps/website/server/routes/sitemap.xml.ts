@@ -318,6 +318,22 @@ export default defineEventHandler((event) => {
     <priority>0.6</priority>
   </url>
 
+  <!-- ===== MENTAL COACHING ===== -->
+  <url>
+    <loc>https://drivingteam.ch/pruefungsangst-fahrpruefung/</loc>
+    <lastmod>2026-04-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- ===== ALBANISCHE SEITE ===== -->
+  <url>
+    <loc>https://drivingteam.ch/autoshkolle-shqipe/</loc>
+    <lastmod>2026-04-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
   <!-- ===== SPEZIELLE KURSE ===== -->
   <url>
     <loc>https://drivingteam.ch/nothelferkurs/</loc>
