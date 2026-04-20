@@ -20,10 +20,16 @@
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
-          <h1 class="heading-lg text-white mb-6">Auto Fahrschule Kategorie B</h1>
-          <p class="text-base xs:text-xl text-white mb-8">Träumst du davon, die Freiheit auf vier Rädern zu erleben? Dann bist du bei unserer Auto Fahrschule genau richtig! Wir wissen, dass der Weg zum Auto Führerschein der Kategorie B nicht nur sicher, sondern auch angenehm sein sollte.</p>
+          <h1 class="heading-lg text-white mb-4">Auto Fahrschule Kategorie B</h1>
+          <!-- Trust Badges -->
+          <div class="flex flex-wrap gap-2 mb-4">
+            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">✅ 85 % Erfolgsquote</span>
+            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">💰 ab CHF 95.– / Lektion</span>
+            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">📅 Online buchbar</span>
+          </div>
+          <p class="text-base xs:text-xl text-white mb-8">Professionelle Auto-Fahrschule in Zürich & Lachen. Flexible Zeiten, erfahrene Fahrlehrer und hohe Erfolgsquote – vom Lernfahrausweis bis zur Prüfung.</p>
           <a href="https://www.simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-            ✨ Jetzt Termin buchen
+            ✨ Erste Fahrstunde buchen (Kat. B)
           </a>
         </div>
       </div>

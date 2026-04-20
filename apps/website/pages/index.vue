@@ -45,6 +45,26 @@
             Professionelle Fahrschule in Zürich & Lachen. Ab CHF 95.-/Lektion mit 85% Erfolgsquote.
           </p>
         </div>
+        <!-- Trust Bar + Booking CTA -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6 px-4">
+          <p class="text-xs sm:text-sm text-gray-400 flex items-center gap-2 flex-wrap justify-center">
+            <span>Ab CHF 95.–/Lektion</span>
+            <span class="text-gray-300">·</span>
+            <span>85 % Erfolgsquote</span>
+            <span class="text-gray-300">·</span>
+            <span>★ 4.8 Google</span>
+            <span class="text-gray-300">·</span>
+            <span>Online-Buchung</span>
+          </p>
+          <a
+            href="https://www.simy.ch/booking/availability/driving-team"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="flex-shrink-0 inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-2.5 px-5 rounded-xl hover:bg-primary-700 active:scale-95 transition shadow-md text-sm"
+          >
+            📅 Online Termin buchen
+          </a>
+        </div>
         <div class="w-full max-w-7xl">
           <h2 class="sr-only">Fahrschule in Zürich für alle Kategorien</h2>
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 lg:gap-8 px-2 md:px-4">
@@ -179,12 +199,12 @@
         </div>
 
         <!-- Button zu Kursen -->
-        <div class="text-center mt-10">
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mt-10">
           <a
             href="#kurse"
-            class="inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-primary-700 transition shadow-lg text-lg mb-4"
+            class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-lg hover:bg-gray-50 transition text-sm"
           >
-            Alle Kurse unserer Fahrschule ↓
+            Alle Kurse ansehen ↓
           </a>
         </div>
       </div>

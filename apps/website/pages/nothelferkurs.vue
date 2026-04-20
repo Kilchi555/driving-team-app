@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Nothelferkurs Zürich | CHF 120.- | Schnell & Sicher</Title>
-      <Meta name="description" content="Nothelferkurs Zürich ✓ CHF 120.- inkl. Nothelferausweis ✓ 10 Stunden ✓ Zürich-Altstetten & Lachen ✓ Obligatorisch für Führerschein. Jetzt buchen!" />
+      <Title>Nothelferkurs Zürich & Lachen | ab CHF 99.- | Pflicht für Führerschein</Title>
+      <Meta name="description" content="Nothelferkurs ✓ Lachen ab CHF 99.- ✓ Zürich CHF 120.- ✓ 10 Stunden ✓ inkl. Nothelferausweis ✓ Obligatorisch für alle Kategorien. Jetzt Platz sichern!" />
       <Meta property="og:title" content="Nothelferkurs Zürich – CHF 99.- | Obligatorisch für Führerschein | Driving Team" />
       <Meta property="og:description" content="Nothelferkurs in Zürich-Altstetten & Lachen. CHF 99.- inkl. Nothelferausweis. 10 Stunden. Obligatorisch für alle Fahrzeugkategorien. Jetzt anmelden!" />
       <Meta property="og:url" content="https://drivingteam.ch/nothelferkurs/" />
@@ -21,37 +21,53 @@
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
-          <h1 class="heading-lg text-white mb-6">Nothelferkurs Zürich</h1>
-          <p class=" mb-8">Helfen ist wichtig, DU bist wichtig. Jeder Mensch ist dazu in der Lage ein Leben zu retten – sei es auf der Strasse bei einem Autounfall oder im privaten Umfeld. In 10 Stunden zum Nothelferausweis!</p>
-        
+          <h1 class="heading-lg text-white mb-3">Nothelferkurs Zürich & Lachen</h1>
+          <p class="text-base xs:text-xl text-white mb-4">In 10 Stunden zum Nothelferausweis – obligatorisch für alle Fahrzeugkategorien.</p>
+          <!-- Preis-Badges -->
+          <div class="flex flex-wrap gap-2 mb-6">
+            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">📍 Lachen ab <strong>CHF 99.–</strong></span>
+            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">📍 Zürich <strong>CHF 120.–</strong></span>
+            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">🕐 10 Stunden</span>
+          </div>
+          <!-- CTAs -->
+          <div class="flex flex-col sm:flex-row gap-3">
+            <a href="#kursbuchen" class="btn-primary bg-white text-red-600 hover:bg-red-50 text-lg">
+              📅 Jetzt Platz sichern
+            </a>
+            <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-red-600 text-lg">
+              📞 +41 44 431 00 33
+            </a>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- Booking Section -->
-    <section class="section-container py-20">
-      <h2 class="heading-md mb-8 text-center">Jetzt Nothelferkurs buchen</h2>
-      <p class="text-center text-gray-600 mb-10 max-w-2xl mx-auto">Wähle deinen gewünschten Kursanbieter aus und melde dich direkt an. Die Buchung ist unkompliziert und schnell!</p>
+    <section id="kursbuchen" class="section-container py-20">
+      <h2 class="heading-md mb-4 text-center">Jetzt Nothelferkurs buchen</h2>
+      <p class="text-center text-gray-600 mb-10 max-w-2xl mx-auto">Wähle deinen Standort und melde dich direkt an. Buchung in unter 2 Minuten abgeschlossen.</p>
       
       <!-- Provider Selection Links -->
       <div class="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
         <NuxtLink
           to="/nothelferkurs-buchen/nothelfer/"
-          class="block bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-lg hover:border-red-400 transition cursor-pointer"
+          class="block bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-lg hover:border-red-400 transition cursor-pointer group"
         >
-          <p class="text-4xl mb-4">🏥</p>
-          <h3 class="font-bold text-xl text-gray-900 mb-3">Nothelfer am Bahnhof</h3>
-          <p class="text-gray-600 text-sm mb-4">Flexible Kurse mit professionellen Instruktoren</p>
-          <span class="text-red-600 font-semibold">Jetzt buchen →</span>
+          <p class="text-4xl mb-3">📍</p>
+          <h3 class="font-bold text-xl text-gray-900 mb-1">Nothelfer am Bahnhof</h3>
+          <p class="text-2xl font-black text-red-600 mb-1">CHF 120.–</p>
+          <p class="text-gray-500 text-sm mb-4">Zürich-Altstetten · inkl. Ausweis</p>
+          <span class="inline-flex items-center gap-1 text-red-600 font-semibold group-hover:gap-2 transition-all">Jetzt buchen →</span>
         </NuxtLink>
         <NuxtLink
           to="/nothelferkurs-buchen/flying/"
-          class="block bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-lg hover:border-red-400 transition cursor-pointer"
+          class="block bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-lg hover:border-red-400 transition cursor-pointer group"
         >
-          <p class="text-4xl mb-4">✈️</p>
-          <h3 class="font-bold text-xl text-gray-900 mb-3">Flying-Instructor</h3>
-          <p class="text-gray-600 text-sm mb-4">Spezialisiert auf Nothelferkurse mit Engagement</p>
-          <span class="text-red-600 font-semibold">Jetzt buchen →</span>
+          <p class="text-4xl mb-3">✈️</p>
+          <h3 class="font-bold text-xl text-gray-900 mb-1">Flying-Instructor</h3>
+          <p class="text-2xl font-black text-red-600 mb-1">CHF 99.–</p>
+          <p class="text-gray-500 text-sm mb-4">Lachen SZ & Zürich · inkl. Ausweis</p>
+          <span class="inline-flex items-center gap-1 text-red-600 font-semibold group-hover:gap-2 transition-all">Jetzt buchen →</span>
         </NuxtLink>
       </div>
     </section>
@@ -108,8 +124,9 @@
         <div class="bg-gray-50 rounded-lg p-6 text-center">
           <p class="text-3xl mb-2">💰</p>
           <h3 class="font-bold text-gray-900 mb-2">Preis</h3>
-          <p class="text-2xl font-bold text-red-600">CHF 99.-</p>
-          <p class="text-gray-600 text-sm">inkl. Nothelferausweis</p>
+          <p class="text-xl font-bold text-red-600">ab CHF 99.–</p>
+          <p class="text-gray-500 text-xs mt-1">Lachen: CHF 99.– / Zürich: CHF 120.–</p>
+          <p class="text-gray-600 text-sm mt-1">inkl. Nothelferausweis</p>
         </div>
         <div class="bg-gray-50 rounded-lg p-6 text-center">
           <p class="text-3xl mb-2">📍</p>
