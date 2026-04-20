@@ -1852,16 +1852,6 @@
       "permanent": true
     },
     {
-      "source": "/pruefungsangst-fahrpruefung",
-      "destination": "https://drivingteam.ch/blog/pruefungsangst-fahrpruefung/",
-      "permanent": true
-    },
-    {
-      "source": "/pruefungsangst-fahrpruefung/",
-      "destination": "https://drivingteam.ch/blog/pruefungsangst-fahrpruefung/",
-      "permanent": true
-    },
-    {
       "source": "/wie-man-sich-auf-die-theoriepruefung-in-zuerich-vorbereitet",
       "destination": "https://drivingteam.ch/blog/",
       "permanent": true
