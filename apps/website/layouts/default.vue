@@ -6,8 +6,8 @@
         <!-- Logo -->
         <NuxtLink to="/" class="flex items-center gap-2 group flex-shrink-0" @click="handleLogoClick">
           <img
-            :src="`/_vercel/image?url=%2Fimages%2Flogo.webp&w=340&q=70`"
-            :srcset="`/_vercel/image?url=%2Fimages%2Flogo.webp&w=200&q=70 1x, /_vercel/image?url=%2Fimages%2Flogo.webp&w=340&q=70 2x`"
+            src="/images/logo.webp"
+            srcset="/images/logo.webp 1x"
             width="200"
             height="34"
             alt="Driving Team Logo"
@@ -526,8 +526,7 @@ useHead({
     {
       rel: 'preload',
       as: 'image',
-      href: '/_vercel/image?url=%2Fimages%2Flogo.webp&w=200&q=70',
-      imagesrcset: '/_vercel/image?url=%2Fimages%2Flogo.webp&w=200&q=70 1x, /_vercel/image?url=%2Fimages%2Flogo.webp&w=340&q=70 2x',
+      href: '/images/logo.webp',
     },
   ],
 })
