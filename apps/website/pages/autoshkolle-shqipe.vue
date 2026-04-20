@@ -170,44 +170,46 @@
       </div>
     </section>
 
-    <!-- Rruga drejt patentës B -->
+    <!-- Rruga drejt patentës -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
-        <h2 class="text-xl md:text-3xl lg:text-4xl font-bold mb-12 text-center">Rruga drejt patentës B – 7 hapa</h2>
-        <div class="space-y-6 max-w-4xl mx-auto">
+        <h2 class="text-xl md:text-3xl lg:text-4xl font-bold mb-8 text-center">Rruga drejt patentës – hap pas hapi</h2>
 
+        <!-- Tabs -->
+        <div class="flex justify-center mb-10">
+          <div class="bg-white rounded-xl shadow-sm p-1 flex gap-1 flex-wrap justify-center">
+            <button @click="activeTab = 'b'" :class="activeTab === 'b' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'" class="px-5 py-2.5 rounded-lg font-semibold text-sm transition">🚗 Kategoria B</button>
+            <button @click="activeTab = 'be'" :class="activeTab === 'be' ? 'bg-orange-500 text-white' : 'text-gray-600 hover:bg-gray-100'" class="px-5 py-2.5 rounded-lg font-semibold text-sm transition">🚛 Rimorkio BE</button>
+            <button @click="activeTab = 'taxi'" :class="activeTab === 'taxi' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:bg-gray-100'" class="px-5 py-2.5 rounded-lg font-semibold text-sm transition">🚕 Taksi BPT</button>
+          </div>
+        </div>
+
+        <!-- Kategoria B -->
+        <div v-show="activeTab === 'b'" class="space-y-6 max-w-4xl mx-auto">
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
             <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
-              <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">1</div>
-              </div>
+              <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">1</div></div>
               <div class="flex-1 flex items-center justify-between">
                 <h3 class="text-base md:text-lg lg:text-xl font-bold">Kursi i ndihmës së parë (Nothelferkurs)</h3>
                 <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-              <p class="text-gray-600 mb-2">Hapi i parë: Kursi i detyrueshëm i ndihmës së parë</p>
-              <p class="text-sm text-gray-600">Para se të filloni me orët e vozitjes, duhet të kryeni kursin e ndihmës së parë (Nothelferkurs). Ky kurs zgjat një ditë dhe mëson teknikat bazë të shpëtimit. Certifikata është e vlefshme 6 vjet.</p>
-              <div class="mt-3">
-                <a href="/nothelferkurs/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">Regjistrohu për Nothelferkurs</a>
-              </div>
+              <p class="text-sm text-gray-600">Kursi i detyrueshëm i ndihmës së parë – zgjat një ditë, certifikata është e vlefshme 6 vjet. Nëse tashmë keni patentën e motoçikletës apo një kategori tjetër, kursi nuk duhet përsëritur.</p>
+              <div class="mt-3"><a href="/nothelferkurs/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">Regjistrohu për Nothelferkurs</a></div>
             </div>
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
             <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
-              <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">2</div>
-              </div>
+              <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">2</div></div>
               <div class="flex-1 flex items-center justify-between">
                 <h3 class="text-base md:text-lg lg:text-xl font-bold">Kërkesa për lejen e mësimit (Lernfahrgesuch)</h3>
                 <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-              <p class="text-gray-600 mb-2">Paraqisni kërkesën në Zyrën e Trafiqit (Strassenverkehrsamt)</p>
-              <p class="text-sm text-gray-600">Plotësoni formularin e Lernfahrgesuch dhe paraqiteni në Strassenverkehrsamt bashkë me certifikatën e Nothelferkursit, një foto pasaportë dhe ID/Pasaportën tuaj. Mosha minimale: 17 vjeç. Kërkesa mund të bëhet dy muaj para ditëlindjes së 17-të.</p>
+              <p class="text-sm text-gray-600">Paraqisni formularin e Lernfahrgesuch në Strassenverkehrsamt bashkë me certifikatën e Nothelferkursit, foto pasaportë dhe ID/Pasaportë. Mosha minimale: 17 vjeç. Testi i syve (Sehtest) kryhet po atje.</p>
               <div class="mt-3 flex flex-wrap gap-2">
                 <a href="/documents/lernfahrgesuche/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">Formulari Zürich (PDF)</a>
                 <a href="/documents/lernfahrgesuche/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">Formulari Aargau (PDF)</a>
@@ -217,91 +219,206 @@
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
             <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
-              <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">3</div>
-              </div>
+              <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">3</div></div>
               <div class="flex-1 flex items-center justify-between">
                 <h3 class="text-base md:text-lg lg:text-xl font-bold">Provimi teorik</h3>
                 <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-              <p class="text-sm text-gray-600">Pasi të merrni konfirmimin me PIN-kodin tuaj, mund të regjistroheni për provimin teorik. Studioni me librin e teorisë dhe aplikacionin e mësimit. Pas kalimit të provimit teorik, merrni lejen e mësimit (Lernfahrausweis) e vlefshme 24 muaj.</p>
+              <p class="text-sm text-gray-600">Pasi merrni konfirmimin me PIN-kod, regjistrohuni për provimin teorik. Studioni me librin e teorisë dhe aplikacionin e mësimit. Pas kalimit merrni lejen e mësimit (Lernfahrausweis) e vlefshme 24 muaj.</p>
             </div>
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
             <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
-              <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">4</div>
-              </div>
+              <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">4</div></div>
               <div class="flex-1 flex items-center justify-between">
                 <h3 class="text-base md:text-lg lg:text-xl font-bold">Kursi i edukimit rrugor VKU</h3>
                 <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-              <p class="text-sm text-gray-600">Kursi VKU (Verkehrskunde) zgjat 8 orë (2 × 4 orë). Është i detyrueshëm dhe duhet kryer para provimit praktik. Skenderi dhe ekipi i Driving Team ju rekomandojnë ta bëni sa më shpejt që të mundet.</p>
-              <div class="mt-3">
-                <a href="/vku-kurs-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">VKU Zürich</a>
-              </div>
+              <p class="text-sm text-gray-600">Kursi VKU zgjat 8 orë (2 × 4 orë) dhe është i detyrueshëm para provimit praktik. Rekomandohet ta bëni sa më shpejt të filloni mësimet praktike.</p>
+              <div class="mt-3"><a href="/vku-kurs-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">VKU Zürich</a></div>
             </div>
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
             <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
-              <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">5</div>
-              </div>
+              <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">5</div></div>
               <div class="flex-1 flex items-center justify-between">
                 <h3 class="text-base md:text-lg lg:text-xl font-bold">Orët e praktikës me Skenderin</h3>
                 <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-              <p class="text-sm text-gray-600">Orët e vozitjes me Skenderin zhvillohen plotësisht në gjuhën shqipe. Skenderi shpjegon me qetësi dhe durim – ju mësoni shpejt dhe pa stres. Mesatarisht nevojiten 15–20 orë. Mësimet e para bëhen gjithmonë me instruktor.</p>
+              <p class="text-sm text-gray-600">Mësimet zhvillohen plotësisht në gjuhën shqipe. Skenderi shpjegon me qetësi dhe durim. Mesatarisht nevojiten 15–20 orë. Mësimet e para bëhen gjithmonë me instruktor.</p>
             </div>
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
             <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
-              <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">6</div>
-              </div>
+              <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">6</div></div>
               <div class="flex-1 flex items-center justify-between">
                 <h3 class="text-base md:text-lg lg:text-xl font-bold">Provimi praktik i vozitjes</h3>
                 <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-              <p class="text-sm text-gray-600">Skenderi ju përgatit me kujdes për provimin praktik. Shkalla jonë e suksesit prej 85% flet vetë. Pas kalimit të provimit merrni patentën provizore për 3 vjet.</p>
+              <p class="text-sm text-gray-600">Skenderi ju përgatit me kujdes për provimin praktik. Shkalla jonë e suksesit prej 85% flet vetë. Pas kalimit merrni patentën provizore për 3 vjet.</p>
             </div>
           </details>
 
           <details class="bg-white rounded-lg border-l-4 border-primary-600 shadow-sm group">
             <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
-              <div class="flex-shrink-0">
-                <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">7</div>
-              </div>
+              <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">7</div></div>
               <div class="flex-1 flex items-center justify-between">
                 <h3 class="text-base md:text-lg lg:text-xl font-bold">Kursi WAB (pas patentës)</h3>
                 <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-              <p class="text-sm text-gray-600">Brenda 12 muajve pas provimit duhet të kryeni kursin e detyrueshëm WAB (2 ditë kursi). Pas 3 viteve periudhë prove, mund të kërkoni patentën e përhershme.</p>
-              <div class="mt-3">
-                <a href="/wab-kurse-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">WAB Kurs Zürich</a>
+              <p class="text-sm text-gray-600">Brenda 12 muajve pas provimit duhet të kryeni kursin WAB (2 ditë). Pas 3 viteve periudhë prove kërkoni patentën e përhershme.</p>
+              <div class="mt-3"><a href="/wab-kurse-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">WAB Kurs Zürich</a></div>
+            </div>
+          </details>
+
+          <div class="text-center mt-10">
+            <a href="https://www.simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">✨ Rezervo Kat. B tani</a>
+          </div>
+        </div>
+
+        <!-- Rimorkio BE -->
+        <div v-show="activeTab === 'be'" class="space-y-6 max-w-4xl mx-auto">
+          <div class="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm text-orange-800 mb-6">
+            <strong>Kushti:</strong> Duhet tashmë të keni patentën B të vlefshme për të filluar kursin BE.
+          </div>
+
+          <details class="bg-white rounded-lg border-l-4 border-orange-500 shadow-sm group">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
+              <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-orange-500 text-white font-bold text-sm md:text-lg">1</div></div>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Kërkesa për lejen e mësimit BE</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
+              <p class="text-sm text-gray-600">Paraqisni kërkesën për lejen e mësimit BE në Strassenverkehrsamt. Duhet të keni patentën B tashmë. Mosha minimale: 18 vjeç.</p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <a href="/documents/lernfahrgesuche/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-orange-100 text-orange-700 px-3 py-1 rounded-full hover:bg-orange-200 transition">Formulari Zürich (PDF)</a>
+                <a href="/documents/lernfahrgesuche/Gesuch-LFA-AG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-orange-100 text-orange-700 px-3 py-1 rounded-full hover:bg-orange-200 transition">Formulari Aargau (PDF)</a>
               </div>
             </div>
           </details>
+
+          <details class="bg-white rounded-lg border-l-4 border-orange-500 shadow-sm group">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
+              <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-orange-500 text-white font-bold text-sm md:text-lg">2</div></div>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Orët e praktikës BE me Skenderin</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
+              <p class="text-sm text-gray-600">Skenderi ju mëson teknikat e tërheqjes së rimorkios: kyçja dhe çkyçja, frenimi, parkimi dhe manovrat me rimorkio. Zakonisht mjaftojnë 3–8 orë mësimi varësisht nga eksperienca.</p>
+            </div>
+          </details>
+
+          <details class="bg-white rounded-lg border-l-4 border-orange-500 shadow-sm group">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
+              <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-orange-500 text-white font-bold text-sm md:text-lg">3</div></div>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Provimi praktik BE</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
+              <p class="text-sm text-gray-600">Provimi praktik BE testohet sipas standardit zyrtar të Strassenverkehrsamt. Pas kalimit merrni patentën BE menjëherë – nuk ka periudhë prove shtesë nëse tashmë keni patentën B.</p>
+            </div>
+          </details>
+
+          <div class="text-center mt-10">
+            <a href="https://www.simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="inline-block bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-8 rounded-xl transition text-lg">✨ Rezervo Rimorkio BE tani</a>
+          </div>
         </div>
 
-        <div class="text-center mt-12">
-          <a href="https://www.simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
-            ✨ Rezervo orën e parë tani
-          </a>
+        <!-- Taksi BPT -->
+        <div v-show="activeTab === 'taxi'" class="space-y-6 max-w-4xl mx-auto">
+          <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm text-yellow-800 mb-6">
+            <strong>Kushti:</strong> Duhet të keni patentën B të vlefshme dhe të paktën 21 vjeç për kursin BPT.
+          </div>
+
+          <details class="bg-white rounded-lg border-l-4 border-yellow-500 shadow-sm group">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
+              <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-yellow-500 text-white font-bold text-sm md:text-lg">1</div></div>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Patenta B + kushtet fillestare</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
+              <p class="text-sm text-gray-600">Keni nevojë për patentën B të vlefshme (jo provizore), moshën minimale 21 vjeç dhe dëshmi të gjuhës (gjermanisht B1 ose shqip sipas kantonit). Konsultohuni me Skenderin për kërkesat e sakta.</p>
+            </div>
+          </details>
+
+          <details class="bg-white rounded-lg border-l-4 border-yellow-500 shadow-sm group">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
+              <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-yellow-500 text-white font-bold text-sm md:text-lg">2</div></div>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Kontrolli mjekësor (Medizinische Untersuchung)</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
+              <p class="text-sm text-gray-600">Për lejen profesionale BPT kërkohet një ekzaminim mjekësor i veçantë (Vertrauensarzt). Skenderi ju këshillon se ku dhe si ta bëni këtë kontroll.</p>
+            </div>
+          </details>
+
+          <details class="bg-white rounded-lg border-l-4 border-yellow-500 shadow-sm group">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
+              <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-yellow-500 text-white font-bold text-sm md:text-lg">3</div></div>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Orët e praktikës BPT me Skenderin</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
+              <p class="text-sm text-gray-600">Skenderi ka mbi 14 vite përvojë në trajnimin e shoferëve profesionalë. Ju mëson teknikat e nevojshme për provimin BPT 121 (Kat. B) ose BPT 122 (Van deri 3.5 tonë). Mësimet zhvillohen shqip.</p>
+            </div>
+          </details>
+
+          <details class="bg-white rounded-lg border-l-4 border-yellow-500 shadow-sm group">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
+              <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-yellow-500 text-white font-bold text-sm md:text-lg">4</div></div>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Provimi teorik BPT</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
+              <p class="text-sm text-gray-600">Provimi teorik BPT mbulon rregullat e posaçme për shoferët profesionalë, sigurimin dhe ligjet e taksi-shërbimit. Skenderi ju përgatit me materiale studimi.</p>
+            </div>
+          </details>
+
+          <details class="bg-white rounded-lg border-l-4 border-yellow-500 shadow-sm group">
+            <summary class="flex items-start gap-4 md:gap-6 p-4 md:p-8 cursor-pointer list-none select-none">
+              <div class="flex-shrink-0"><div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-yellow-500 text-white font-bold text-sm md:text-lg">5</div></div>
+              <div class="flex-1 flex items-center justify-between">
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Provimi praktik BPT dhe leja profesionale</h3>
+                <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
+              </div>
+            </summary>
+            <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
+              <p class="text-sm text-gray-600">Pas kalimit të provimit praktik dhe teorik merrni lejen profesionale BPT. Me këtë mund të punoni ligjërisht si shofer taksie ose shërbimi transporti në Zvicër.</p>
+            </div>
+          </details>
+
+          <div class="text-center mt-10">
+            <a href="/taxi-fahrschule/" class="inline-block bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-8 rounded-xl transition text-lg">Më shumë rreth Taksit BPT</a>
+          </div>
         </div>
+
       </div>
     </section>
 
@@ -385,6 +502,8 @@
 </template>
 
 <script setup lang="ts">
+const activeTab = ref<'b' | 'be' | 'taxi'>('b')
+
 useHead({
   script: [
     {
