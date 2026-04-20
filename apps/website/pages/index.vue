@@ -47,22 +47,14 @@
         </div>
         <!-- Trust Bar + Booking CTA -->
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6 px-4">
-          <p class="text-xs sm:text-sm text-gray-400 flex items-center gap-2 flex-wrap justify-center">
-            <span>Ab CHF 95.–/Lektion</span>
-            <span class="text-gray-300">·</span>
-            <span>85 % Erfolgsquote</span>
-            <span class="text-gray-300">·</span>
-            <span>★ 4.8 Google</span>
-            <span class="text-gray-300">·</span>
-            <span>Online-Buchung</span>
-          </p>
+          
           <a
             href="https://www.simy.ch/booking/availability/driving-team"
             target="_blank"
             rel="noopener noreferrer"
             class="flex-shrink-0 inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-2.5 px-5 rounded-xl hover:bg-primary-700 active:scale-95 transition shadow-md text-sm"
           >
-            📅 Online Termin buchen
+            Online Termin buchen
           </a>
         </div>
         <div class="w-full max-w-7xl">
@@ -71,7 +63,7 @@
             <!-- Auto -->
             <a href="/auto-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
               <div class="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-700 group-hover:from-primary-600 group-hover:to-primary-800 transition-all duration-500"></div>
-              <NuxtImg src="/images/categories/auto-fahrschule.webp" width="360" height="241" alt="Auto Fahrschule Zürich - Kategorie B Fahrstunden und Prüfungsvorbereitung mit Driving Team in Zürich-Altstetten" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="eager" fetchpriority="high" sizes="(max-width:1023px) calc(50vw - 16px), calc(25vw - 32px)" densities="1" :modifiers="{ quality: 30 }" />
+              <img src="/images/categories/auto-fahrschule.webp" width="360" height="241" alt="Auto Fahrschule Zürich - Kategorie B Fahrstunden und Prüfungsvorbereitung mit Driving Team in Zürich-Altstetten" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="eager" fetchpriority="high" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -87,7 +79,7 @@
             <!-- Motorrad -->
             <a href="/motorrad-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.1s">
               <div class="absolute inset-0 bg-gradient-to-br from-red-500 to-red-700 group-hover:from-red-600 group-hover:to-red-800 transition-all duration-500"></div>
-              <NuxtImg src="/images/categories/motorrad-fahrschule.webp" width="360" height="238" alt="Motorrad Fahrschule Zürich - Kategorie A1, A35kW und A Fahrstunden mit erfahrenen Fahrlehrern" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="eager" fetchpriority="high" sizes="(max-width:1023px) calc(50vw - 16px), calc(25vw - 32px)" densities="1" :modifiers="{ quality: 30 }" />
+              <img src="/images/categories/motorrad-fahrschule.webp" width="360" height="238" alt="Motorrad Fahrschule Zürich - Kategorie A1, A35kW und A Fahrstunden mit erfahrenen Fahrlehrern" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="eager" fetchpriority="high" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-8 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
@@ -202,7 +194,7 @@
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mt-10">
           <a
             href="#kurse"
-            class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-lg hover:bg-gray-50 transition text-sm"
+            class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-lg hover:bg-gray-50 transition text-sm mb-4"
           >
             Alle Kurse ansehen ↓
           </a>
@@ -287,7 +279,7 @@
             <!-- Motorrad Grundkurs -->
             <a href="/motorrad-grundkurs/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.2s">
               <div class="absolute inset-0 bg-gradient-to-br from-orange-500 to-orange-700 group-hover:from-orange-600 group-hover:to-orange-800 transition-all duration-500"></div>
-              <NuxtImg src="/images/courses/motorrad-grundkurs.webp" width="320" height="188" alt="Motorrad Grundkurs" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" densities="1" :modifiers="{ quality: 30 }" />
+              <img src="/images/courses/motorrad-grundkurs.webp" width="320" height="188" alt="Motorrad Grundkurs" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
