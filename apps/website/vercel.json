@@ -12,16 +12,6 @@
       "permanent": true
     },
     {
-      "source": "/autoshkolle-shqipe",
-      "destination": "https://drivingteam.ch/auto-fahrschule/",
-      "permanent": true
-    },
-    {
-      "source": "/autoshkolle-shqipe/",
-      "destination": "https://drivingteam.ch/auto-fahrschule/",
-      "permanent": true
-    },
-    {
       "source": "/blog/undefined",
       "destination": "https://drivingteam.ch/blog/",
       "permanent": true
