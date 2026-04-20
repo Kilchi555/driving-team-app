@@ -100,6 +100,16 @@
       "source": "/sq/fahrstunden-preise/",
       "destination": "https://drivingteam.ch/fahrschule-preise/",
       "permanent": true
+    },
+    {
+      "source": "/vku-kurs",
+      "destination": "https://drivingteam.ch/vku-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/vku-kurs/",
+      "destination": "https://drivingteam.ch/vku-kurse/",
+      "permanent": true
     }
   ],
   "headers": [
