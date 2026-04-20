@@ -17,16 +17,16 @@
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img
-        :src="`/_vercel/image?url=%2Fimages%2Fcategories%2Fauto-fahrschule-hero.webp&w=828&q=60`"
-        :srcset="`/_vercel/image?url=%2Fimages%2Fcategories%2Fauto-fahrschule-hero.webp&w=640&q=55 640w, /_vercel/image?url=%2Fimages%2Fcategories%2Fauto-fahrschule-hero.webp&w=828&q=60 828w, /_vercel/image?url=%2Fimages%2Fcategories%2Fauto-fahrschule-hero.webp&w=1080&q=60 1080w`"
-        sizes="100vw"
+      <NuxtImg
+        src="/images/categories/auto-fahrschule-hero.webp"
         alt="Autoshkollë Shqipe Zürich – Driving Team"
         class="absolute inset-0 w-full h-full object-cover opacity-100"
         loading="eager"
         fetchpriority="high"
         width="828"
         height="550"
+        sizes="100vw"
+        :modifiers="{ quality: 60 }"
       />
       <div class="absolute inset-0 bg-black/50"></div>
       <div class="section-container relative z-10">
@@ -57,7 +57,7 @@
           <div class="bg-gradient-to-br from-primary-50 to-primary-100 rounded-2xl p-8 md:p-12 flex flex-col md:flex-row gap-8 items-center">
             <div class="flex-shrink-0 text-center">
               <img
-                :src="`/_vercel/image?url=%2Fimages%2Fteam%2Fskender.webp&w=224&q=80`"
+                src="/images/team/skender.webp"
                 alt="Skender Ismajli – Instruktor i vozitjes"
                 width="112"
                 height="112"
