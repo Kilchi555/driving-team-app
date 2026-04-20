@@ -221,6 +221,20 @@
 
     <ReviewsSection category="default" />
 
+    <!-- Mental Coach Teaser -->
+    <section class="section-container py-10">
+      <div class="max-w-3xl mx-auto bg-gradient-to-r from-primary-50 to-blue-50 border border-primary-100 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-5">
+        <img src="/images/team/pascal.webp" alt="Pascal Kilchenmann – Fahrlehrer & Mental Coach" width="80" height="80" loading="lazy" class="w-16 h-16 rounded-full object-cover flex-shrink-0 shadow-md" />
+        <div class="flex-1 text-center sm:text-left">
+          <p class="font-bold text-gray-900 mb-1">Prüfungsangst? Pascal ist Fahrlehrer <em>und</em> Dipl. Mentaltrainer.</p>
+          <p class="text-gray-600 text-sm">Nervosität vor der Prüfung ist lösbar – mit der richtigen mentalen Vorbereitung direkt in der Fahrstunde.</p>
+        </div>
+        <a href="/pruefungsangst-fahrpruefung/" class="flex-shrink-0 inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-2.5 px-5 rounded-xl hover:bg-primary-700 transition text-sm whitespace-nowrap">
+          🧠 Mehr erfahren
+        </a>
+      </div>
+    </section>
+
 
     <PriceSection category="auto" />
 
