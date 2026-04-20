@@ -5,7 +5,16 @@
       <nav class="w-full px-4 lg:px-8 py-5 flex items-center justify-between">
         <!-- Logo -->
         <NuxtLink to="/" class="flex items-center gap-2 group flex-shrink-0" @click="handleLogoClick">
-          <img src="/_vercel/image?url=%2Fimages%2Flogo.webp&w=340&q=70" srcset="/_vercel/image?url=%2Fimages%2Flogo.webp&w=200&q=70 1x, /_vercel/image?url=%2Fimages%2Flogo.webp&w=340&q=70 2x" width="200" height="34" alt="Driving Team Logo" class="h-8 xl:h-12 w-auto object-contain" loading="eager" fetchpriority="high" />
+          <img
+            :src="`/_vercel/image?url=%2Fimages%2Flogo.webp&w=340&q=70`"
+            :srcset="`/_vercel/image?url=%2Fimages%2Flogo.webp&w=200&q=70 1x, /_vercel/image?url=%2Fimages%2Flogo.webp&w=340&q=70 2x`"
+            width="200"
+            height="34"
+            alt="Driving Team Logo"
+            class="h-8 xl:h-12 w-auto object-contain"
+            loading="eager"
+            fetchpriority="high"
+          />
         </NuxtLink>
 
         <!-- Hamburger / Close Button -->
