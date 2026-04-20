@@ -29,7 +29,9 @@
           </p>
 
           <a
-            href="/shop?tenant=driving-team"
+            href="https://www.simy.ch/shop?tenant=driving-team"
+            target="_blank"
+            rel="noopener noreferrer"
             class="inline-flex items-center gap-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white font-bold px-8 py-4 rounded-xl text-base md:text-lg hover:from-primary-700 hover:to-primary-800 hover:shadow-xl active:scale-95 transition-all duration-200"
           >
             🎁 Gutschein jetzt erstellen
