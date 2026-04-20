@@ -17,7 +17,7 @@
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/courses/motorrad-grundkurs-hero.webp" alt="Motorrad Grundkurs – Sicheres Fahren auf zwei Rädern lernen mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <img src="/_vercel/image?url=%2Fimages%2Fcourses%2Fmotorrad-grundkurs-hero.webp&w=828&q=60" srcset="/_vercel/image?url=%2Fimages%2Fcourses%2Fmotorrad-grundkurs-hero.webp&w=640&q=55 640w, /_vercel/image?url=%2Fimages%2Fcourses%2Fmotorrad-grundkurs-hero.webp&w=828&q=60 828w, /_vercel/image?url=%2Fimages%2Fcourses%2Fmotorrad-grundkurs-hero.webp&w=1080&q=60 1080w" sizes="100vw" alt="Motorrad Grundkurs – Sicheres Fahren auf zwei Rädern lernen mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" loading="eager" fetchpriority="high" width="828" height="550" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
