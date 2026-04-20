@@ -190,9 +190,16 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
     }
 
     // 6. Load ALL criteria for this tenant (incl. global categories with tenant_id = null)
-    const { data: criteria, error: criteriaError } = await supabaseAdmin
-      .from('evaluation_criteria')
-      .select(`
+    // Filter by category_id using already tenant-scoped categories — avoids unsupported cross-table .or() filter
+    const categoryIds = (categories || []).map((c: any) => c.id)
+
+    let criteria: any[] = []
+    let criteriaError: any = null
+
+    if (categoryIds.length > 0) {
+      const { data, error } = await supabaseAdmin
+        .from('evaluation_criteria')
+        .select(`
         id, 
         name, 
         educational_content, 
@@ -202,9 +209,12 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
         always_visible,
         evaluation_categories!inner(id, name, display_order, color, tenant_id)
       `)
-      .or(`evaluation_categories.tenant_id.eq.${tenantId},evaluation_categories.tenant_id.is.null`)
-      .eq('is_active', true)
-      .order('display_order')
+        .in('category_id', categoryIds)
+        .eq('is_active', true)
+        .order('display_order')
+      criteria = data || []
+      criteriaError = error
+    }
 
     if (criteriaError) {
       logger.error('❌ Error fetching criteria:', criteriaError)
