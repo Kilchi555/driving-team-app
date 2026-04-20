@@ -191,9 +191,8 @@ export default defineNuxtConfig({
     '/auto-theoriepruefung-2-2-2': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
     '/auto-theoriepruefung-2-2-2/': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
 
-    // Albanische Seite (alte SEO-Seite)
-    '/autoshkolle-shqipe': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
-    '/autoshkolle-shqipe/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
+    // Albanische Seite → vercel.json redirect (routeRules caused EEXIST symlink conflict)
+    // '/autoshkolle-shqipe' und '/autoshkolle-shqipe/' in vercel.json definiert
 
     // Standortspezifische Anhänger-Seite
     // Redirect entfernt – /anhaenger-fahrschule-zuerich/ hat jetzt eine eigene Seite
