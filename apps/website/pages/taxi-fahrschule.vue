@@ -70,7 +70,7 @@
             </li>
           </ul>
           <div class="mt-6 p-4 bg-primary-50 rounded-lg">
-            <p class="text-sm text-primary-800">Achtung: Für die Taxi-Ausbildung brauchst du mindestens 1 Jahr Fahrerfahrung mit dem Auto-Führerschein. Dein Auto-Führerschein darf nicht älter als 15 Jahre sein.</p>
+            <p class="text-sm text-primary-800">Achtung: Für die Taxi-Ausbildung brauchst du mindestens 1 Jahr Fahrerfahrung mit dem Auto-Führerschein. Ausserdem ist ein Gesundheitscheck (ärztliche Untersuchung) erforderlich.</p>
           </div>
         </div>
       </div>

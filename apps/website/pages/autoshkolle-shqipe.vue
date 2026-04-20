@@ -368,7 +368,7 @@
         <!-- Taksi BPT -->
         <div v-show="activeTab === 'taxi'" class="space-y-6 max-w-4xl mx-auto">
           <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm text-yellow-800 mb-6">
-            <strong>Kushti:</strong> Duhet të keni patentën B të vlefshme <strong>të paktën 1 vit</strong> (jo provizore, jo më e vjetër se 15 vjet) dhe të paktën <strong>21 vjeç</strong> për kursin BPT.
+            <strong>Kushti:</strong> Duhet të keni patentën B të vlefshme <strong>të paktën 1 vit</strong> (jo provizore) dhe të paktën <strong>21 vjeç</strong> për kursin BPT.
           </div>
 
           <details class="bg-white rounded-lg border-l-4 border-yellow-500 shadow-sm group">
@@ -380,7 +380,7 @@
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-              <p class="text-sm text-gray-600">Plotësoni formularin e Lernfahrgesuch BPT dhe paraqiseni personalisht në Strassenverkehrsamt ose Einwohnerkontrolle bashkë me foto pasaportë dhe ID/Pasaportë. Kushtet: patenta B <strong>të paktën 1 vit</strong> e vlefshme, jo më e vjetër se 15 vjet, mosha minimale <strong>21 vjeç</strong>. Sehtest (testi i syve) bëhet po atje.</p>
+              <p class="text-sm text-gray-600">Plotësoni formularin e Lernfahrgesuch BPT dhe paraqiseni personalisht në Strassenverkehrsamt ose Einwohnerkontrolle bashkë me foto pasaportë dhe ID/Pasaportë. Kushtet: patenta B <strong>të paktën 1 vit</strong> e vlefshme (jo provizore), mosha minimale <strong>21 vjeç</strong>. Sehtest (testi i syve) bëhet po atje.</p>
             </div>
           </details>
 
