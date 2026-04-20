@@ -70,6 +70,36 @@
       "source": "/wp-login.php",
       "destination": "https://drivingteam.ch/",
       "permanent": true
+    },
+    {
+      "source": "/fahrstunden-preise",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrstunden-preise/",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrstunden-preise",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrstunden-preise/",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrstunden-preise",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrstunden-preise/",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
     }
   ],
   "headers": [

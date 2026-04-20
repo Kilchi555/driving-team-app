@@ -182,8 +182,7 @@ export default defineNuxtConfig({
     // Auto
     '/fahrstunden-aktion': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
     '/fahrstunden-aktion/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
-    '/fahrstunden-preise': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
-    '/fahrstunden-preise/': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+    // '/fahrstunden-preise' → vercel.json (EEXIST symlink conflict)
     '/auto-theoriepruefung': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
     '/auto-theoriepruefung/': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
     '/auto-theoriepruefung-2-2': { redirect: { to: '/auto-theorie/', statusCode: 301 } },
@@ -750,8 +749,7 @@ export default defineNuxtConfig({
     '/it/lastwagen-fahrschule/': { redirect: { to: '/lastwagen-fahrschule/', statusCode: 301 } },
     '/it/bus-fahrschule': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
     '/it/bus-fahrschule/': { redirect: { to: '/bus-fahrschule/', statusCode: 301 } },
-    '/it/fahrstunden-preise': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
-    '/it/fahrstunden-preise/': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+    // '/it/fahrstunden-preise' → vercel.json
     '/it/weg-zur-motorbootpruefung': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
     '/it/weg-zur-motorbootpruefung/': { redirect: { to: '/motorboot-fahrschule/', statusCode: 301 } },
     '/it/anhaenger-kurs': { redirect: { to: '/anhaenger-kurs/', statusCode: 301 } },
@@ -787,8 +785,7 @@ export default defineNuxtConfig({
     '/sq/autoshkolle-shqipe/': { redirect: { to: '/auto-fahrschule/', statusCode: 301 } },
     '/sq/erste-hilfe-kurs': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
     '/sq/erste-hilfe-kurs/': { redirect: { to: '/nothelferkurs/', statusCode: 301 } },
-    '/sq/fahrstunden-preise': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
-    '/sq/fahrstunden-preise/': { redirect: { to: '/fahrschule-preise/', statusCode: 301 } },
+    // '/sq/fahrstunden-preise' → vercel.json
     '/sq/anhaenger-fahrschule-lachen': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
     '/sq/anhaenger-fahrschule-lachen/': { redirect: { to: '/anhaenger-fahrschule/', statusCode: 301 } },
     '/sq/kontakt': { redirect: { to: '/kontakt/', statusCode: 301 } },
