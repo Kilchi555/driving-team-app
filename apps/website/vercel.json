@@ -110,25 +110,2859 @@
       "source": "/vku-kurs/",
       "destination": "https://drivingteam.ch/vku-kurse/",
       "permanent": true
+    },
+    {
+      "source": "/fahrschule-reichenburg",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-reichenburg/",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/uber-uns",
+      "destination": "https://drivingteam.ch/team/",
+      "permanent": true
+    },
+    {
+      "source": "/uber-uns/",
+      "destination": "https://drivingteam.ch/team/",
+      "permanent": true
+    },
+    {
+      "source": "/ueber-uns",
+      "destination": "https://drivingteam.ch/team/",
+      "permanent": true
+    },
+    {
+      "source": "/ueber-uns/",
+      "destination": "https://drivingteam.ch/team/",
+      "permanent": true
+    },
+    {
+      "source": "/gtc",
+      "destination": "https://drivingteam.ch/agb/",
+      "permanent": true
+    },
+    {
+      "source": "/gtc/",
+      "destination": "https://drivingteam.ch/agb/",
+      "permanent": true
+    },
+    {
+      "source": "/dienstleistungen",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/dienstleistungen/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/lernpool",
+      "destination": "https://drivingteam.ch/faq/",
+      "permanent": true
+    },
+    {
+      "source": "/lernpool/",
+      "destination": "https://drivingteam.ch/faq/",
+      "permanent": true
+    },
+    {
+      "source": "/kategorien",
+      "destination": "https://drivingteam.ch/fahrschule-kategorien/",
+      "permanent": true
+    },
+    {
+      "source": "/kategorien/",
+      "destination": "https://drivingteam.ch/fahrschule-kategorien/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrstunden-aktion",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrstunden-aktion/",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-theoriepruefung",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-theoriepruefung/",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-theoriepruefung-2-2",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-theoriepruefung-2-2/",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-theoriepruefung-2-2-2",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-theoriepruefung-2-2-2/",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrlehrer-zuerich",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrlehrer-zuerich/",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/verkehrskunde-kurs-zuerich",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/verkehrskunde-kurs-zuerich/",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/verkehrskunde-kurs-lachen",
+      "destination": "https://drivingteam.ch/vku-kurs-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/verkehrskunde-kurs-lachen/",
+      "destination": "https://drivingteam.ch/vku-kurs-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/verkehrskunde-kurs-dietikon",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/verkehrskunde-kurs-dietikon/",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/motorboot",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/motorboot/",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-motorbootpruefung",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-motorbootpruefung/",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/erste-hilfe-kurs",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/erste-hilfe-kurs/",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/nothelferkurse",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/nothelferkurse/",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/2023/09/26/fahrschueler-respekt-geduld",
+      "destination": "https://drivingteam.ch/blog/fahrschueler-respekt-strasse/",
+      "permanent": true
+    },
+    {
+      "source": "/2023/09/26/fahrschueler-respekt-geduld/",
+      "destination": "https://drivingteam.ch/blog/fahrschueler-respekt-strasse/",
+      "permanent": true
+    },
+    {
+      "source": "/road-awareness-courses",
+      "destination": "https://drivingteam.ch/wab-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/road-awareness-courses/",
+      "destination": "https://drivingteam.ch/wab-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/en",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-autopruefung",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-autopruefung/",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/der-weg-zur-autopruefung",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/der-weg-zur-autopruefung/",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-buspruefung",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-buspruefung/",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/wegweiser-lastwagen",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/wegweiser-lastwagen/",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-aargau",
+      "destination": "https://drivingteam.ch/fahrschule-spreitenbach/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-aargau/",
+      "destination": "https://drivingteam.ch/fahrschule-spreitenbach/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-aargau",
+      "destination": "https://drivingteam.ch/fahrschule-spreitenbach/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-aargau/",
+      "destination": "https://drivingteam.ch/fahrschule-spreitenbach/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-pfaeffikon",
+      "destination": "https://drivingteam.ch/fahrschule-pfaeffikon-sz/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-pfaeffikon/",
+      "destination": "https://drivingteam.ch/fahrschule-pfaeffikon-sz/",
+      "permanent": true
+    },
+    {
+      "source": "/en/auto-fahrschule-st.gallen",
+      "destination": "https://drivingteam.ch/fahrschule-stgallen/",
+      "permanent": true
+    },
+    {
+      "source": "/en/auto-fahrschule-st.gallen/",
+      "destination": "https://drivingteam.ch/fahrschule-stgallen/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-anhangerprufung",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-anhangerprufung/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/it/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/motorboot-wegweiser",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/motorboot-wegweiser/",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/anhaenger-fahrschule-zurich",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/anhaenger-fahrschule-zurich/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/anhaenger-fahrschule-zurich",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/anhaenger-fahrschule-zurich/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/vku-zurich",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/vku-zurich/",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/vku-zurich",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/vku-zurich/",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrlehrer-reichenburg",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrlehrer-reichenburg/",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrlehrer-reichenburg",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrlehrer-reichenburg/",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/en/motorboot-wegweiser",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/motorboot-wegweiser/",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/motorboot-wegweiser",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/motorboot-wegweiser/",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/auto-fahrschule-st.gallen",
+      "destination": "https://drivingteam.ch/fahrschule-stgallen/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/auto-fahrschule-st.gallen/",
+      "destination": "https://drivingteam.ch/fahrschule-stgallen/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-wil",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-wil/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/author/drivingteam",
+      "destination": "https://drivingteam.ch/team/",
+      "permanent": true
+    },
+    {
+      "source": "/author/drivingteam/",
+      "destination": "https://drivingteam.ch/team/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-stgallen",
+      "destination": "https://drivingteam.ch/fahrschule-stgallen/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-stgallen/",
+      "destination": "https://drivingteam.ch/fahrschule-stgallen/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrstunden-lachen",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrstunden-lachen/",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-lastwagenpruefung",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-lastwagenpruefung/",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/weg-zur-buspruefung",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/weg-zur-buspruefung/",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-taxipruefung",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-taxipruefung/",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/weg-zur-taxipruefung",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/weg-zur-taxipruefung/",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-motorradpruefung",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-motorradpruefung/",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/2023/09/25/drivers-license-converting",
+      "destination": "https://drivingteam.ch/blog/drivers-license-convert/",
+      "permanent": true
+    },
+    {
+      "source": "/2023/09/25/drivers-license-converting/",
+      "destination": "https://drivingteam.ch/blog/drivers-license-convert/",
+      "permanent": true
+    },
+    {
+      "source": "/2023/09/27/verkehrskunde-vku-kurs/feed",
+      "destination": "https://drivingteam.ch/vku-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/2023/09/27/verkehrskunde-vku-kurs/feed/",
+      "destination": "https://drivingteam.ch/vku-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/2023/09/20/blog-minderung-pruefungsangst/",
+      "destination": "https://drivingteam.ch/blog/pruefungsangst-fahrpruefung/",
+      "permanent": true
+    },
+    {
+      "source": "/scuola-guida-italiano",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/scuola-guida-italiano/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/scuola-guida-italiano",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/scuola-guida-italiano/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/anhaenger-fahrstunden-lachen",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/anhaenger-fahrstunden-lachen/",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/anmeldung-fahrlehrerweiterbildung",
+      "destination": "https://drivingteam.ch/fahrlehrerweiterbildung/",
+      "permanent": true
+    },
+    {
+      "source": "/anmeldung-fahrlehrerweiterbildung/",
+      "destination": "https://drivingteam.ch/fahrlehrerweiterbildung/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/scuola-guida-italiano",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/scuola-guida-italiano/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/weg-zur-motorradpruefung",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/weg-zur-motorradpruefung/",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/der-weg-zur-autopruefung",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/der-weg-zur-autopruefung/",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/anhaenger-fahrschule-lachen",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/anhaenger-fahrschule-lachen/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/vku-lachen",
+      "destination": "https://drivingteam.ch/vku-kurs-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/it/vku-lachen/",
+      "destination": "https://drivingteam.ch/vku-kurs-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/italiano",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/italiano/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/datatables",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/datatables/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/marker-listing",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/marker-listing/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/maps",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/maps/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-zuerich-2",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-zuerich-2/",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/motorbootpruefung",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/motorbootpruefung/",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-uster",
+      "destination": "https://drivingteam.ch/fahrschule-uster/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-uster/",
+      "destination": "https://drivingteam.ch/fahrschule-uster/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-lachen",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-lachen/",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/drivingteamlachen",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/drivingteamlachen/",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/anhaenger-fahrstunden-zurich",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/anhaenger-fahrstunden-zurich/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/lastwagen-fahrstunden",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/lastwagen-fahrstunden/",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/wegzurlastwagenprufung",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/wegzurlastwagenprufung/",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/taxi-fahrstunden",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/taxi-fahrstunden/",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/grundkurs-zuerich",
+      "destination": "https://drivingteam.ch/motorrad-grundkurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/grundkurs-zuerich/",
+      "destination": "https://drivingteam.ch/motorrad-grundkurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/grundkurs-lachen",
+      "destination": "https://drivingteam.ch/motorrad-grundkurs-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/grundkurs-lachen/",
+      "destination": "https://drivingteam.ch/motorrad-grundkurs-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrstunden-zurich",
+      "destination": "https://drivingteam.ch/fahrstunden-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrstunden-zurich/",
+      "destination": "https://drivingteam.ch/fahrstunden-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/driving-lessons",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/driving-lessons/",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/chauffeurweiterbildung",
+      "destination": "https://drivingteam.ch/czv-weiterbildung/",
+      "permanent": true
+    },
+    {
+      "source": "/chauffeurweiterbildung/",
+      "destination": "https://drivingteam.ch/czv-weiterbildung/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-motorboot-theorie",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-motorboot-theorie/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/2023/09/27/verkehrskunde-vku-kurs",
+      "destination": "https://drivingteam.ch/blog/vku-kurs-verkehrskunde-sicherheit/",
+      "permanent": true
+    },
+    {
+      "source": "/2023/09/27/verkehrskunde-vku-kurs/",
+      "destination": "https://drivingteam.ch/blog/vku-kurs-verkehrskunde-sicherheit/",
+      "permanent": true
+    },
+    {
+      "source": "/lern-pool",
+      "destination": "https://drivingteam.ch/faq/",
+      "permanent": true
+    },
+    {
+      "source": "/lern-pool/",
+      "destination": "https://drivingteam.ch/faq/",
+      "permanent": true
+    },
+    {
+      "source": "/search/search_term_string/feed/rss2",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/search/search_term_string/feed/rss2/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/feed",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/feed/",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/comments/feed",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/comments/feed/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/author/kilchi/feed",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/author/kilchi/feed/",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/drivers-license-converting/feed",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/drivers-license-converting/feed/",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/blog-minderung-pruefungsangst/feed",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/blog-minderung-pruefungsangst/feed/",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/category/uncategorized",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/category/uncategorized/",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/en/dienstleistungen",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/dienstleistungen/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrschule-frauenfeld",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrschule-frauenfeld/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrstunden-aktion",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrstunden-aktion/",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrstunden-aktion",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrstunden-aktion/",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-frauenfeld",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-frauenfeld/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-winterthur",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-winterthur/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/it/weiterbildungen",
+      "destination": "https://drivingteam.ch/weiterbildungen/",
+      "permanent": true
+    },
+    {
+      "source": "/it/weiterbildungen/",
+      "destination": "https://drivingteam.ch/weiterbildungen/",
+      "permanent": true
+    },
+    {
+      "source": "/it/Fahrschule",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/it/Fahrschule/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/it/elementor-7",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/it/elementor-7/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/bpt",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/bpt/",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/danke-kontakt",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/danke-kontakt/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/danke-weiterbildung",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/danke-weiterbildung/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/thank-you-driving-lessons",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/thank-you-driving-lessons/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-theoriepruefung-2",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-theoriepruefung-2/",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/sq",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/it/scuola-guida-italiano",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/it/scuola-guida-italiano/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/theory-lessons",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/theory-lessons/",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/driving-school",
+      "destination": "https://drivingteam.ch/driving-school-zurich/",
+      "permanent": true
+    },
+    {
+      "source": "/driving-school/",
+      "destination": "https://drivingteam.ch/driving-school-zurich/",
+      "permanent": true
+    },
+    {
+      "source": "/theoriepruefung-vorbereitung",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/theoriepruefung-vorbereitung/",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/verkehrskunde-vku-kurs",
+      "destination": "https://drivingteam.ch/vku-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/verkehrskunde-vku-kurs/",
+      "destination": "https://drivingteam.ch/vku-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-kloten",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-kloten/",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/elementor-7",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/elementor-7/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/bpt",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/bpt/",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/kategorie-a",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/kategorie-a/",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/kategorie-b",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/kategorie-b/",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/kategorie-be",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/kategorie-be/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/kategorie-c",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/kategorie-c/",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/kategorie-d",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/kategorie-d/",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-gratis-probelektion",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-gratis-probelektion/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-auto-fs-lachen",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-auto-fs-lachen/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-auto-fs-zh",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-auto-fs-zh/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-grundkurs-einsiedeln",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-grundkurs-einsiedeln/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-grundkurs-zurich",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-grundkurs-zurich/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-grundkurs-lachen",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-grundkurs-lachen/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-auto-theorie",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-auto-theorie/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-anhaenger-kurs",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-anhaenger-kurs/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-anhaenger-fahrstunden",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-anhaenger-fahrstunden/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-anhanger-fahrstunden-lachen",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-anhanger-fahrstunden-lachen/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-vku-dietikon",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-vku-dietikon/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-vku-lachen",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-vku-lachen/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-vku-zurich",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-vku-zurich/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-motorboot-fahrstunden",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-motorboot-fahrstunden/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-lastwagen-theorie",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-lastwagen-theorie/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-lastwagen-fahrstunden",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-lastwagen-fahrstunden/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-taxi-theorie-lektionen",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-taxi-theorie-lektionen/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-taxi-fahrstunden",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-taxi-fahrstunden/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-weiterbildung",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-weiterbildung/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-kontakt",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/danke-kontakt/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/thank-you-driving-lessons",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/thank-you-driving-lessons/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/thank-you-theory",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/thank-you-theory/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/kontrollfahrt-2",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
+    },
+    {
+      "source": "/kontrollfahrt-2/",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-wil",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-wil/",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-winterthur",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-winterthur/",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-frauenfeld",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-frauenfeld/",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/weiterbildung",
+      "destination": "https://drivingteam.ch/weiterbildungen/",
+      "permanent": true
+    },
+    {
+      "source": "/nothelfer",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/taxi",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/anhaenger",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/vku",
+      "destination": "https://drivingteam.ch/vku-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-wil",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-wil/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-kloten",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-kloten/",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrschule-wil",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrschule-wil/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/kontrollfahrt",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
+    },
+    {
+      "source": "/en/kontrollfahrt/",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/kontrollfahrt",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/kontrollfahrt/",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
+    },
+    {
+      "source": "/it/kontrollfahrt",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
+    },
+    {
+      "source": "/it/kontrollfahrt/",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
+    },
+    {
+      "source": "/en/danke-auto-theorie",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/danke-auto-theorie/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/danke-auto-theorie",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/danke-auto-theorie/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/it/danke-auto-theorie",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/it/danke-auto-theorie/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/wab-course-english",
+      "destination": "https://drivingteam.ch/wab-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/en/wab-course-english/",
+      "destination": "https://drivingteam.ch/wab-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/it/wab-course-english",
+      "destination": "https://drivingteam.ch/wab-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/it/wab-course-english/",
+      "destination": "https://drivingteam.ch/wab-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/wab-course-english",
+      "destination": "https://drivingteam.ch/wab-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/wab-course-english/",
+      "destination": "https://drivingteam.ch/wab-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/vku-zurich",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/vku-zurich/",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/vku-lachen",
+      "destination": "https://drivingteam.ch/vku-kurs-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/vku-lachen/",
+      "destination": "https://drivingteam.ch/vku-kurs-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/bustheorie",
+      "destination": "https://drivingteam.ch/bus-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/bustheorie/",
+      "destination": "https://drivingteam.ch/bus-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/carbustheorie",
+      "destination": "https://drivingteam.ch/bus-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/carbustheorie/",
+      "destination": "https://drivingteam.ch/bus-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/motorrad-fahrstunden",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/motorrad-fahrstunden/",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/anhaenger-fahrschule-lachen",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/anhaenger-fahrschule-lachen/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrlehrer-weiterbildung",
+      "destination": "https://drivingteam.ch/fahrlehrerweiterbildung/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrlehrer-weiterbildung/",
+      "destination": "https://drivingteam.ch/fahrlehrerweiterbildung/",
+      "permanent": true
+    },
+    {
+      "source": "/en/wab-kurse-zuerich",
+      "destination": "https://drivingteam.ch/wab-kurse-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/wab-kurse-zuerich/",
+      "destination": "https://drivingteam.ch/wab-kurse-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/motorrad",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/taxi-fahrschule-aargau",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrlehrer-reichenburg",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrlehrer-reichenburg/",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/taxi-fahrschule-schwyz",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/taxi-fahrschule-schwyz/",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/drivers-license-convert",
+      "destination": "https://drivingteam.ch/blog/drivers-license-convert/",
+      "permanent": true
+    },
+    {
+      "source": "/drivers-license-convert/",
+      "destination": "https://drivingteam.ch/blog/drivers-license-convert/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-st.gallen",
+      "destination": "https://drivingteam.ch/fahrschule-stgallen/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-st.gallen/",
+      "destination": "https://drivingteam.ch/fahrschule-stgallen/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-anhaengerpruefung",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/weg-zur-anhaengerpruefung/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/nothelfer/",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/pruefungsangst-fahrpruefung",
+      "destination": "https://drivingteam.ch/blog/pruefungsangst-fahrpruefung/",
+      "permanent": true
+    },
+    {
+      "source": "/pruefungsangst-fahrpruefung/",
+      "destination": "https://drivingteam.ch/blog/pruefungsangst-fahrpruefung/",
+      "permanent": true
+    },
+    {
+      "source": "/wie-man-sich-auf-die-theoriepruefung-in-zuerich-vorbereitet",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/wie-man-sich-auf-die-theoriepruefung-in-zuerich-vorbereitet/",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschueler-und-der-respekt",
+      "destination": "https://drivingteam.ch/blog/fahrschueler-respekt-strasse/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschueler-und-der-respekt/",
+      "destination": "https://drivingteam.ch/blog/fahrschueler-respekt-strasse/",
+      "permanent": true
+    },
+    {
+      "source": "/en/anhaenger-fahrschule-lachen",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/anhaenger-fahrschule-lachen/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-dietikon",
+      "destination": "https://drivingteam.ch/fahrschule-dietikon/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-dietikon/",
+      "destination": "https://drivingteam.ch/fahrschule-dietikon/",
+      "permanent": true
+    },
+    {
+      "source": "/en/czv-weiterbildung",
+      "destination": "https://drivingteam.ch/czv-weiterbildung/",
+      "permanent": true
+    },
+    {
+      "source": "/en/czv-weiterbildung/",
+      "destination": "https://drivingteam.ch/czv-weiterbildung/",
+      "permanent": true
+    },
+    {
+      "source": "/en/vku-kurs-zuerich",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/vku-kurs-zuerich/",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/verkehrskunde-kurs-dietikon",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/verkehrskunde-kurs-dietikon/",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-zuerich",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/wab-kurse-schwyz",
+      "destination": "https://drivingteam.ch/wab-kurse-schwyz/",
+      "permanent": true
+    },
+    {
+      "source": "/en/wab-kurse-schwyz/",
+      "destination": "https://drivingteam.ch/wab-kurse-schwyz/",
+      "permanent": true
+    },
+    {
+      "source": "/en/motorrad-fahrschule",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/motorrad-fahrschule/",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/motorrad-grundkurs-zuerich",
+      "destination": "https://drivingteam.ch/motorrad-grundkurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/motorrad-grundkurs-zuerich/",
+      "destination": "https://drivingteam.ch/motorrad-grundkurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/lastwagen-fahrschule",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/lastwagen-fahrschule/",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/bus-fahrschule",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/bus-fahrschule/",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/anhaenger-fahrschule-zuerich",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/anhaenger-fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/vku-kurs-lachen",
+      "destination": "https://drivingteam.ch/vku-kurs-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/en/vku-kurs-lachen/",
+      "destination": "https://drivingteam.ch/vku-kurs-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/en/taxi-fahrschule-zuerich",
+      "destination": "https://drivingteam.ch/taxi-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/taxi-fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/taxi-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/bootsfahrschule",
+      "destination": "https://drivingteam.ch/bootsfahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/bootsfahrschule/",
+      "destination": "https://drivingteam.ch/bootsfahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/erste-hilfe-kurs",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/en/erste-hilfe-kurs/",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/en/anhaenger-kurs",
+      "destination": "https://drivingteam.ch/anhaenger-kurs/",
+      "permanent": true
+    },
+    {
+      "source": "/en/anhaenger-kurs/",
+      "destination": "https://drivingteam.ch/anhaenger-kurs/",
+      "permanent": true
+    },
+    {
+      "source": "/en/nothelferkurs",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/en/nothelferkurs/",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrlehrer-kloten",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrlehrer-kloten/",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-uster",
+      "destination": "https://drivingteam.ch/fahrschule-uster/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-uster/",
+      "destination": "https://drivingteam.ch/fahrschule-uster/",
+      "permanent": true
+    },
+    {
+      "source": "/it/czv-weiterbildung",
+      "destination": "https://drivingteam.ch/czv-weiterbildung/",
+      "permanent": true
+    },
+    {
+      "source": "/it/czv-weiterbildung/",
+      "destination": "https://drivingteam.ch/czv-weiterbildung/",
+      "permanent": true
+    },
+    {
+      "source": "/it/auto-fahrschule-stgallen",
+      "destination": "https://drivingteam.ch/fahrschule-stgallen/",
+      "permanent": true
+    },
+    {
+      "source": "/it/auto-fahrschule-stgallen/",
+      "destination": "https://drivingteam.ch/fahrschule-stgallen/",
+      "permanent": true
+    },
+    {
+      "source": "/it/nothelferkurs",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/it/nothelferkurs/",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/it/lastwagen-fahrschule",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/lastwagen-fahrschule/",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/bus-fahrschule",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/bus-fahrschule/",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/weg-zur-motorbootpruefung",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/weg-zur-motorbootpruefung/",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/anhaenger-kurs",
+      "destination": "https://drivingteam.ch/anhaenger-kurs/",
+      "permanent": true
+    },
+    {
+      "source": "/it/anhaenger-kurs/",
+      "destination": "https://drivingteam.ch/anhaenger-kurs/",
+      "permanent": true
+    },
+    {
+      "source": "/it/taxi-theorie",
+      "destination": "https://drivingteam.ch/taxi-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/it/taxi-theorie/",
+      "destination": "https://drivingteam.ch/taxi-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/it/bootsfahrschule",
+      "destination": "https://drivingteam.ch/bootsfahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/bootsfahrschule/",
+      "destination": "https://drivingteam.ch/bootsfahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/verkehrskunde-kurs-dietikon",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/it/verkehrskunde-kurs-dietikon/",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-lachen",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-lachen/",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrlehrer-kloten",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrlehrer-kloten/",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/it/vku-kurs-zuerich",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/it/vku-kurs-zuerich/",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-winterthur",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-winterthur/",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-frauenfeld",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-frauenfeld/",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/nothelferkurs",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/nothelferkurs/",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrlehrer-kloten",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrlehrer-kloten/",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/anhaenger-fahrschule",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/anhaenger-fahrschule/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/weg-zur-motorbootpruefung",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/weg-zur-motorbootpruefung/",
+      "destination": "https://drivingteam.ch/motorboot-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/autoshkolle-shqipe",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/autoshkolle-shqipe/",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/erste-hilfe-kurs",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/erste-hilfe-kurs/",
+      "destination": "https://drivingteam.ch/nothelferkurs/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/anhaenger-fahrschule-lachen",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/anhaenger-fahrschule-lachen/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/kontakt",
+      "destination": "https://drivingteam.ch/kontakt/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/kontakt/",
+      "destination": "https://drivingteam.ch/kontakt/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/wab-kurse-schwyz",
+      "destination": "https://drivingteam.ch/wab-kurse-schwyz/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/wab-kurse-schwyz/",
+      "destination": "https://drivingteam.ch/wab-kurse-schwyz/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/vku-kurs-zuerich",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/vku-kurs-zuerich/",
+      "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrschule-zuerich",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/taxi-fahrschule-aargau",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/taxi-fahrschule-aargau/",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrschule-lachen",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrschule-lachen/",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrlehrer-kloten",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrlehrer-kloten/",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-lachen",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-lachen/",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-aargau",
+      "destination": "https://drivingteam.ch/fahrschule-spreitenbach/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrschule-aargau/",
+      "destination": "https://drivingteam.ch/fahrschule-spreitenbach/",
+      "permanent": true
+    },
+    {
+      "source": "/en/taxi-theorie",
+      "destination": "https://drivingteam.ch/taxi-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/en/taxi-theorie/",
+      "destination": "https://drivingteam.ch/taxi-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/en/lastwagen-theorie",
+      "destination": "https://drivingteam.ch/lastwagen-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/en/lastwagen-theorie/",
+      "destination": "https://drivingteam.ch/lastwagen-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/en/motorrad-grundkurs-lachen",
+      "destination": "https://drivingteam.ch/motorrad-grundkurs-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/en/motorrad-grundkurs-lachen/",
+      "destination": "https://drivingteam.ch/motorrad-grundkurs-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/en/auto-fahrschule-stgallen",
+      "destination": "https://drivingteam.ch/fahrschule-stgallen/",
+      "permanent": true
+    },
+    {
+      "source": "/en/auto-fahrschule-stgallen/",
+      "destination": "https://drivingteam.ch/fahrschule-stgallen/",
+      "permanent": true
+    },
+    {
+      "source": "/en/anhaenger-fahrschule",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/anhaenger-fahrschule/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/auto-theoriepruefung",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/en/auto-theoriepruefung/",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/en/auto-theoriepruefung-2-2",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/en/auto-theoriepruefung-2-2/",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/en/datenschutz",
+      "destination": "https://drivingteam.ch/datenschutz/",
+      "permanent": true
+    },
+    {
+      "source": "/en/datenschutz/",
+      "destination": "https://drivingteam.ch/datenschutz/",
+      "permanent": true
+    },
+    {
+      "source": "/en/danke-vku-zurich",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/danke-vku-zurich/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/danke-auto-fs-lachen",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/danke-auto-fs-lachen/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/danke-grundkurs-einsiedeln",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/danke-grundkurs-einsiedeln/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/danke-lastwagen-fahrstunden",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/danke-lastwagen-fahrstunden/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-dietikon",
+      "destination": "https://drivingteam.ch/fahrschule-dietikon/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-dietikon/",
+      "destination": "https://drivingteam.ch/fahrschule-dietikon/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-aargau",
+      "destination": "https://drivingteam.ch/fahrschule-spreitenbach/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-aargau/",
+      "destination": "https://drivingteam.ch/fahrschule-spreitenbach/",
+      "permanent": true
+    },
+    {
+      "source": "/it/lastwagen-theorie",
+      "destination": "https://drivingteam.ch/lastwagen-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/it/lastwagen-theorie/",
+      "destination": "https://drivingteam.ch/lastwagen-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/it/motorrad-grundkurs-lachen",
+      "destination": "https://drivingteam.ch/motorrad-grundkurs-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/it/motorrad-grundkurs-lachen/",
+      "destination": "https://drivingteam.ch/motorrad-grundkurs-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/it/motorboot-theorie",
+      "destination": "https://drivingteam.ch/motorboot-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/it/motorboot-theorie/",
+      "destination": "https://drivingteam.ch/motorboot-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-kloten/",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/it/danke-auto-fs-lachen",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/it/danke-auto-fs-lachen/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrschule-dietikon",
+      "destination": "https://drivingteam.ch/fahrschule-dietikon/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrschule-dietikon/",
+      "destination": "https://drivingteam.ch/fahrschule-dietikon/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/motorrad-fahrschule",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/motorrad-fahrschule/",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/auto-fahrschule-stgallen",
+      "destination": "https://drivingteam.ch/fahrschule-stgallen/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/auto-fahrschule-stgallen/",
+      "destination": "https://drivingteam.ch/fahrschule-stgallen/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/auto-theorie",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/auto-theorie/",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/auto-theoriepruefung-2-2",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/auto-theoriepruefung-2-2/",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/faq",
+      "destination": "https://drivingteam.ch/faq/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/faq/",
+      "destination": "https://drivingteam.ch/faq/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/danke-auto-fs-lachen",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/danke-auto-fs-lachen/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/danke-motorboot-fahrstunden",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/danke-motorboot-fahrstunden/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/category/uncategorized/feed",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/category/uncategorized/feed/",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/auto/verkehrskunde-vku",
+      "destination": "https://drivingteam.ch/vku-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/auto/verkehrskunde-vku/",
+      "destination": "https://drivingteam.ch/vku-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschueler-respekt-geduld",
+      "destination": "https://drivingteam.ch/blog/fahrschueler-respekt-strasse/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschueler-respekt-geduld/",
+      "destination": "https://drivingteam.ch/blog/fahrschueler-respekt-strasse/",
+      "permanent": true
+    },
+    {
+      "source": "/en/taxi-fahrschule",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/taxi-fahrschule/",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/auto-theorie",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/en/auto-theorie/",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/en/bustheorie",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/bustheorie/",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/weiterbildung",
+      "destination": "https://drivingteam.ch/weiterbildungen/",
+      "permanent": true
+    },
+    {
+      "source": "/en/weiterbildung/",
+      "destination": "https://drivingteam.ch/weiterbildungen/",
+      "permanent": true
+    },
+    {
+      "source": "/en/kategorie-d",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/kategorie-d/",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/en/danke-anhaenger-kurs",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/danke-anhaenger-kurs/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/danke-auto-fs-zh",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/en/danke-auto-fs-zh/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/it/datenschutz",
+      "destination": "https://drivingteam.ch/datenschutz/",
+      "permanent": true
+    },
+    {
+      "source": "/it/datenschutz/",
+      "destination": "https://drivingteam.ch/datenschutz/",
+      "permanent": true
+    },
+    {
+      "source": "/it/kategorie-d",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/kategorie-d/",
+      "destination": "https://drivingteam.ch/bus-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/wab-kurse-zuerich",
+      "destination": "https://drivingteam.ch/wab-kurse-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/it/wab-kurse-zuerich/",
+      "destination": "https://drivingteam.ch/wab-kurse-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/it/wab-kurse-schwyz",
+      "destination": "https://drivingteam.ch/wab-kurse-schwyz/",
+      "permanent": true
+    },
+    {
+      "source": "/it/wab-kurse-schwyz/",
+      "destination": "https://drivingteam.ch/wab-kurse-schwyz/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrstunden-aktion",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrstunden-aktion/",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/taxi-fahrschule-aargau",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/taxi-fahrschule-aargau/",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-reichenburg",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-reichenburg/",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/it/auto-theoriepruefung",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/it/auto-theoriepruefung/",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-uster",
+      "destination": "https://drivingteam.ch/fahrschule-uster/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrschule-uster/",
+      "destination": "https://drivingteam.ch/fahrschule-uster/",
+      "permanent": true
+    },
+    {
+      "source": "/it/blog",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/it/blog/",
+      "destination": "https://drivingteam.ch/blog/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/taxi-fahrschule",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/taxi-fahrschule/",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/taxi-theorie",
+      "destination": "https://drivingteam.ch/taxi-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/taxi-theorie/",
+      "destination": "https://drivingteam.ch/taxi-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/vku-kurse",
+      "destination": "https://drivingteam.ch/vku-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/vku-kurse/",
+      "destination": "https://drivingteam.ch/vku-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrschule-aargau",
+      "destination": "https://drivingteam.ch/fahrschule-spreitenbach/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrschule-aargau/",
+      "destination": "https://drivingteam.ch/fahrschule-spreitenbach/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/kategorie-be",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/kategorie-be/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/Fahrschule",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/Fahrschule/",
+      "destination": "https://drivingteam.ch/fahrschule-standorte/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/datenschutz",
+      "destination": "https://drivingteam.ch/datenschutz/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/datenschutz/",
+      "destination": "https://drivingteam.ch/datenschutz/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/danke-taxi-theorie-lektionen",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/danke-taxi-theorie-lektionen/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
     }
   ],
   "headers": [
     {
       "source": "/_nuxt/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/images/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/((?!_nuxt|images|favicon).*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
       ]
     }
   ]
