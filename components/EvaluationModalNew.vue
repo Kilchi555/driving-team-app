@@ -408,20 +408,23 @@ const getCriteriaRating = (criteriaId: string) => {
 
 const saveEvaluations = async () => {
   isSaving.value = true
-  
+
   try {
-    const notesToInsert = selectedCriteriaOrder.value.map(criteriaId => ({
-      appointment_id: props.appointment.id,
+    const evaluations = selectedCriteriaOrder.value.map(criteriaId => ({
       evaluation_criteria_id: criteriaId,
-      criteria_rating: criteriaRatings.value[criteriaId] || 0,
-      criteria_note: criteriaNotes.value[criteriaId] || ''
+      rating: criteriaRatings.value[criteriaId] || 0,
+      notes: criteriaNotes.value[criteriaId] || ''
     }))
 
-    const { error: insertError } = await supabase
-      .from('notes')
-      .upsert(notesToInsert, { onConflict: 'appointment_id,evaluation_criteria_id' })
+    const response = await $fetch('/api/staff/save-criteria-evaluations', {
+      method: 'POST',
+      body: {
+        appointment_id: props.appointment.id,
+        evaluations
+      }
+    }) as any
 
-    if (insertError) throw insertError
+    if (!response?.success) throw new Error(response?.message || 'Fehler beim Speichern')
 
     emit('saved')
   } catch (err: any) {

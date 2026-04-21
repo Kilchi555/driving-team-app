@@ -83,13 +83,8 @@ export default defineEventHandler(async (event) => {
       .limit(10)
 
     // ============ 6. GET FAQ FROM APPOINTMENTS/NOTES ============
-    // We'll generate FAQ from common patterns or stored FAQs
-    const { data: faqData } = await supabase
-      .from('notes')
-      .select('id, content')
-      .eq('tenant_id', tenant_id)
-      .like('content', '%FAQ%')
-      .limit(5)
+    // NOTE: notes table has no 'content' column – FAQ data not stored there
+    const faqData: any[] = []
 
     // ============ 7. GET APPOINTMENT STATISTICS ============
     const { data: allAppointments, count: appointmentCount } = await supabase
