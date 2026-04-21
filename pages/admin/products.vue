@@ -531,7 +531,7 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { definePageMeta, navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import ProductStatisticsModal from '~/components/admin/ProductStatisticsModal.vue'
@@ -590,6 +590,14 @@ const formData = ref({
   is_credit_product: false,  // ✅ NEW
   credit_amount: 0,  // ✅ NEW
   show_in_shop: false
+})
+
+// Auto-set show_in_shop based on category (mirrors migration logic)
+const SHOP_CATEGORIES = ['Gutschein', 'Lehrmittel', 'Zubehör', 'Bücher']
+watch(() => formData.value.category, (newCategory) => {
+  if (SHOP_CATEGORIES.includes(newCategory) || formData.value.is_voucher || formData.value.allow_custom_amount) {
+    formData.value.show_in_shop = true
+  }
 })
 
 // Computed

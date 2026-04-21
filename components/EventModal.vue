@@ -5550,6 +5550,22 @@ watch(() => props.isVisible, async (newVisible) => {
       eventData: props.eventData,
       isNewAppointment: props.eventData?.isNewAppointment
     })
+
+    // ✅ Reload available products every time modal opens (catches newly added products)
+    try {
+      const freshProducts = await eventModalApi.getProducts()
+      if (freshProducts && Array.isArray(freshProducts)) {
+        availableProducts.value = freshProducts.map((product: any) => ({
+          id: product.id,
+          name: product.name,
+          price: product.price_rappen / 100,
+          description: product.description
+        }))
+        logger.debug('✅ Products reloaded on modal open:', availableProducts.value.length)
+      }
+    } catch (err) {
+      logger.warn('⚠️ Could not reload products on modal open:', err)
+    }
     
     // ✅ Load tenant name for SMS/Email via secure API
     try {
