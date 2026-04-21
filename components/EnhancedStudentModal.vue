@@ -313,16 +313,16 @@
                 </div>
                 
                 <!-- Allgemeine Notes (ohne Evaluation) -->
-                <div v-if="lesson.notes && lesson.notes.filter((n: any) => !n.evaluation_criteria_id && n.note_text).length > 0" class="mt-3 pt-3 border-t border-gray-300">
+                <div v-if="lesson.notes && lesson.notes.filter((n: any) => !n.evaluation_criteria_id && n.staff_note).length > 0" class="mt-3 pt-3 border-t border-gray-300">
                   <h6 class="text-xs font-semibold text-gray-700 mb-2">Notizen:</h6>
                   <div class="space-y-1">
                     <div 
-                      v-for="note in lesson.notes.filter((n: any) => !n.evaluation_criteria_id && n.note_text)" 
+                      v-for="note in lesson.notes.filter((n: any) => !n.evaluation_criteria_id && n.staff_note)" 
                       :key="note.id"
                       class="rounded p-2 text-sm text-gray-700"
                       :style="{ backgroundColor: primaryColor + '08' }"
                     >
-                      {{ note.note_text }}
+                      {{ note.staff_note }}
                     </div>
                   </div>
                 </div>

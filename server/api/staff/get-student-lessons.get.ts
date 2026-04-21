@@ -94,9 +94,9 @@ export default defineEventHandler(async (event) => {
       } else if (notesData) {
         logger.debug('📝 Loaded', notesData.length, 'notes')
 
-        // Get unique criteria IDs from notes that have evaluations
+        // Get unique criteria IDs from notes that have evaluation_criteria_id set (regardless of rating)
         const criteriaIds = [...new Set(notesData
-          .filter(n => n.evaluation_criteria_id && n.criteria_rating)
+          .filter(n => n.evaluation_criteria_id)
           .map(n => n.evaluation_criteria_id))]
 
         logger.debug('🔍 Found', criteriaIds.length, 'unique criteria IDs with ratings')
@@ -119,16 +119,15 @@ export default defineEventHandler(async (event) => {
           }
         }
 
-        // Group notes by appointment_id and attach criteria
+        // Group notes by appointment_id – include all notes with evaluation_criteria_id
+        // (rating may be 0/null for note-only entries; consistent with get-learning-progress)
         notesData.forEach(note => {
-          // Only include notes that have both evaluation_criteria_id and criteria_rating
-          if (note.evaluation_criteria_id && note.criteria_rating) {
+          if (note.evaluation_criteria_id) {
             if (!evaluationsMap[note.appointment_id]) {
               evaluationsMap[note.appointment_id] = []
             }
             evaluationsMap[note.appointment_id].push({
               ...note,
-              // Attach criteria details
               evaluation_criteria: criteriaMap[note.evaluation_criteria_id] || null
             })
           }
