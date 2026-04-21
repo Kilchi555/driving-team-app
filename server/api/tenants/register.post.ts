@@ -34,7 +34,9 @@ interface TenantRegistrationData {
   instagram_url?: string
   facebook_url?: string
   selected_categories?: string   // comma-separated codes, e.g. "B,BE,A"
+  selected_category_ids?: string // comma-separated UUIDs of template categories to copy
   working_days_template?: string // JSON string
+  locations_json?: string        // JSON array of LocationEntry objects
 }
 
 interface RegistrationResponse {
@@ -107,7 +109,9 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       instagram_url: '',
       facebook_url: '',
       selected_categories: '',
-      working_days_template: ''
+      selected_category_ids: '',
+      working_days_template: '',
+      locations_json: ''
     }
 
     let logoFile: File | null = null
@@ -325,10 +329,45 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
 
     // 6. Standard-Kategorien und Templates kopieren (optional)
     try {
-      await copyDefaultDataToTenant(tenantId)
+      const selectedIds = data.selected_category_ids
+        ? data.selected_category_ids.split(',').map(id => id.trim()).filter(Boolean)
+        : undefined
+      await copyDefaultDataToTenant(tenantId, data.business_type, selectedIds)
       logger.debug('✅ Default data copied to tenant')
     } catch (defaultDataError) {
       console.warn('⚠️ Default data copy failed:', defaultDataError)
+    }
+
+    // 7. Standorte erstellen (falls vorhanden)
+    if (data.locations_json?.trim()) {
+      try {
+        const locations = JSON.parse(data.locations_json)
+        if (Array.isArray(locations) && locations.length > 0) {
+          const now = new Date().toISOString()
+          const locationRows = locations
+            .filter((l: any) => l.name?.trim())
+            .map((l: any, idx: number) => ({
+              tenant_id: tenantId,
+              name: l.name.trim(),
+              address: l.address?.trim() || null,
+              city: l.city?.trim() || null,
+              zip: l.zip?.trim() || null,
+              phone: l.phone?.trim() || null,
+              email: l.email?.trim() || null,
+              is_active: true,
+              display_order: idx + 1,
+              created_at: now,
+              updated_at: now,
+            }))
+          if (locationRows.length > 0) {
+            const { error: locErr } = await supabase.from('locations').insert(locationRows)
+            if (locErr) logger.warn('⚠️ Location creation failed (non-critical):', locErr)
+            else logger.debug(`✅ Created ${locationRows.length} location(s)`)
+          }
+        }
+      } catch (locParseErr) {
+        logger.warn('⚠️ locations_json parse error (non-critical):', locParseErr)
+      }
     }
 
     logger.debug('🎉 Tenant registration completed successfully:', newTenant.slug)
@@ -669,60 +708,193 @@ async function generateCustomerNumber(supabase: any): Promise<string> {
 }
 
 /**
- * Kopiert ALLE Template-Kategorien (tenant_id IS NULL) in den neuen Tenant.
+ * Kopiert alle branchenspezifischen Template-Daten in den neuen Tenant:
+ * - Kategorien (gefiltert nach business_type + optional selectedCategoryIds)
+ * - Event Types (gefiltert nach business_type)
+ * - Evaluation Categories, Criteria, Scale
+ * - Cancellation Policies + Reasons
+ * - Payment Methods
  *
- * Kein Filter nach Codes – der Tenant bekommt alle Kategorien aus den Templates.
- * Unterkategorien bekommen ihre parent_category_id auf die neuen Tenant-IDs umgebogen.
+ * NICHT kopiert: Locations (Admin gibt manuell ein), Pricing Rules (Admin setzt frei)
  */
-async function copyDefaultDataToTenant(tenantId: string): Promise<void> {
+async function copyDefaultDataToTenant(
+  tenantId: string,
+  businessType = 'driving_school',
+  selectedCategoryIds?: string[]
+): Promise<void> {
   const supabase = getSupabaseAdmin()
+  const now = new Date().toISOString()
 
+  // ── 1. Categories ──────────────────────────────────────────────────────────
   try {
-    const { data: allTemplates, error: fetchError } = await supabase
+    let query = supabase
       .from('categories')
       .select('*')
       .is('tenant_id', null)
       .eq('is_active', true)
 
+    // Filter by business_type if column exists (graceful fallback)
+    query = query.or(`business_type.eq.${businessType},business_type.is.null`)
+
+    const { data: allTemplates, error: fetchError } = await query
+
     if (fetchError || !allTemplates?.length) {
       logger.warn('⚠️ No template categories found (tenant_id IS NULL)')
-      return
+    } else {
+      // Optionally filter by user-selected IDs
+      const templates = selectedCategoryIds?.length
+        ? allTemplates.filter(c => !c.parent_category_id || selectedCategoryIds.includes(c.id))
+        : allTemplates
+
+      const idMap = new Map<string, string>()
+      for (const cat of allTemplates) idMap.set(cat.id, crypto.randomUUID())
+
+      const parentCats = templates.filter(c => !c.parent_category_id)
+      const leafCats   = templates.filter(c =>  c.parent_category_id)
+
+      if (parentCats.length > 0) {
+        await supabase.from('categories').insert(
+          parentCats.map(cat => ({ ...cat, id: idMap.get(cat.id)!, tenant_id: tenantId, parent_category_id: null, created_at: now, updated_at: now }))
+        )
+        logger.debug(`✅ Copied ${parentCats.length} parent categories`)
+      }
+      if (leafCats.length > 0) {
+        await supabase.from('categories').insert(
+          leafCats.map(cat => ({
+            ...cat,
+            id: idMap.get(cat.id)!,
+            tenant_id: tenantId,
+            parent_category_id: cat.parent_category_id ? (idMap.get(cat.parent_category_id) ?? null) : null,
+            created_at: now,
+            updated_at: now,
+          }))
+        )
+        logger.debug(`✅ Copied ${leafCats.length} leaf categories`)
+      }
     }
+  } catch (err) { logger.warn('⚠️ Category copy failed:', err) }
 
-    // ID-Mapping: alte Template-ID → neue Tenant-UUID
-    const idMap = new Map<string, string>()
-    for (const cat of allTemplates) {
-      idMap.set(cat.id, crypto.randomUUID())
-    }
+  // ── 2. Event Types ─────────────────────────────────────────────────────────
+  try {
+    const { data: etTemplates, error: etErr } = await supabase
+      .from('event_types')
+      .select('*')
+      .is('tenant_id', null)
+      .or(`business_type.eq.${businessType},business_type.is.null`)
 
-    const now = new Date().toISOString()
-
-    // Hauptkategorien zuerst (parent_category_id IS NULL)
-    const parentCats = allTemplates.filter(c => !c.parent_category_id)
-    const leafCats   = allTemplates.filter(c =>  c.parent_category_id)
-
-    if (parentCats.length > 0) {
-      await supabase.from('categories').insert(
-        parentCats.map(cat => ({ ...cat, id: idMap.get(cat.id)!, tenant_id: tenantId, parent_category_id: null, created_at: now, updated_at: now }))
+    if (!etErr && etTemplates?.length) {
+      const { error: etInsertErr } = await supabase.from('event_types').insert(
+        etTemplates.map(et => ({ ...et, id: crypto.randomUUID(), tenant_id: tenantId, created_at: now, updated_at: now }))
       )
-      logger.debug(`✅ Copied ${parentCats.length} parent categories`)
+      if (etInsertErr) logger.warn('⚠️ Event types insert failed:', etInsertErr)
+      else logger.debug(`✅ Copied ${etTemplates.length} event types`)
     }
+  } catch (err) { logger.warn('⚠️ Event type copy failed:', err) }
 
-    if (leafCats.length > 0) {
-      await supabase.from('categories').insert(
-        leafCats.map(cat => ({
-          ...cat,
-          id: idMap.get(cat.id)!,
-          tenant_id: tenantId,
-          parent_category_id: cat.parent_category_id ? (idMap.get(cat.parent_category_id) ?? null) : null,
-          created_at: now,
-          updated_at: now,
-        }))
+  // ── 3. Evaluation Categories ───────────────────────────────────────────────
+  try {
+    const { data: evalCats, error: ecErr } = await supabase
+      .from('evaluation_categories')
+      .select('*')
+      .is('tenant_id', null)
+
+    if (!ecErr && evalCats?.length) {
+      const ecIdMap = new Map<string, string>()
+      for (const ec of evalCats) ecIdMap.set(ec.id, crypto.randomUUID())
+
+      await supabase.from('evaluation_categories').insert(
+        evalCats.map(ec => ({ ...ec, id: ecIdMap.get(ec.id)!, tenant_id: tenantId, created_at: now, updated_at: now }))
       )
-      logger.debug(`✅ Copied ${leafCats.length} leaf categories`)
-    }
+      logger.debug(`✅ Copied ${evalCats.length} evaluation categories`)
 
-  } catch (error) {
-    console.warn('⚠️ Error copying default data:', error)
-  }
+      // ── 3a. Evaluation Criteria ──────────────────────────────────────────
+      const { data: criteria, error: criErr } = await supabase
+        .from('evaluation_criteria')
+        .select('*')
+        .in('category_id', evalCats.map(ec => ec.id))
+
+      if (!criErr && criteria?.length) {
+        const criIdMap = new Map<string, string>()
+        for (const c of criteria) criIdMap.set(c.id, crypto.randomUUID())
+
+        await supabase.from('evaluation_criteria').insert(
+          criteria.map(c => ({
+            ...c,
+            id: criIdMap.get(c.id)!,
+            tenant_id: tenantId,
+            category_id: ecIdMap.get(c.category_id) ?? c.category_id,
+            created_at: now,
+            updated_at: now,
+          }))
+        )
+        logger.debug(`✅ Copied ${criteria.length} evaluation criteria`)
+      }
+
+      // ── 3b. Evaluation Scale ─────────────────────────────────────────────
+      const { data: scale, error: scErr } = await supabase
+        .from('evaluation_scale')
+        .select('*')
+        .is('tenant_id', null)
+
+      if (!scErr && scale?.length) {
+        await supabase.from('evaluation_scale').insert(
+          scale.map(s => ({ ...s, id: crypto.randomUUID(), tenant_id: tenantId, created_at: now, updated_at: now }))
+        )
+        logger.debug(`✅ Copied ${scale.length} evaluation scale entries`)
+      }
+    }
+  } catch (err) { logger.warn('⚠️ Evaluation copy failed:', err) }
+
+  // ── 4. Cancellation Policies ───────────────────────────────────────────────
+  try {
+    const { data: policies, error: polErr } = await supabase
+      .from('cancellation_policies')
+      .select('*')
+      .is('tenant_id', null)
+
+    if (!polErr && policies?.length) {
+      const polIdMap = new Map<string, string>()
+      for (const p of policies) polIdMap.set(p.id, crypto.randomUUID())
+
+      await supabase.from('cancellation_policies').insert(
+        policies.map(p => ({ ...p, id: polIdMap.get(p.id)!, tenant_id: tenantId, created_at: now, updated_at: now }))
+      )
+      logger.debug(`✅ Copied ${policies.length} cancellation policies`)
+
+      // ── 4a. Cancellation Reasons ───────────────────────────────────────
+      const { data: reasons, error: reasErr } = await supabase
+        .from('cancellation_reasons')
+        .select('*')
+        .is('tenant_id', null)
+
+      if (!reasErr && reasons?.length) {
+        await supabase.from('cancellation_reasons').insert(
+          reasons.map(r => ({
+            ...r,
+            id: crypto.randomUUID(),
+            tenant_id: tenantId,
+            policy_id: r.policy_id ? (polIdMap.get(r.policy_id) ?? r.policy_id) : null,
+            created_at: now,
+            updated_at: now,
+          }))
+        )
+        logger.debug(`✅ Copied ${reasons.length} cancellation reasons`)
+      }
+    }
+  } catch (err) { logger.warn('⚠️ Cancellation copy failed:', err) }
+
+  // ── 5. Payment Methods ─────────────────────────────────────────────────────
+  try {
+    const { data: payMethods, error: pmErr } = await supabase
+      .from('payment_methods')
+      .select('*')
+      .is('tenant_id', null)
+
+    if (!pmErr && payMethods?.length) {
+      await supabase.from('payment_methods').insert(
+        payMethods.map(pm => ({ ...pm, id: crypto.randomUUID(), tenant_id: tenantId, created_at: now, updated_at: now }))
+      )
+      logger.debug(`✅ Copied ${payMethods.length} payment methods`)
+    }
+  } catch (err) { logger.warn('⚠️ Payment methods copy failed:', err) }
 }
