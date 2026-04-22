@@ -619,8 +619,8 @@
         <!-- ═══ STEP 5: Mitarbeiter einladen ═══ -->
         <div v-if="currentStep === 5" class="space-y-5">
           <div>
-            <h2 class="text-base font-semibold text-gray-900 mb-0.5">Fahrlehrer einladen</h2>
-            <p class="text-sm text-gray-500">Optional – kann jederzeit auch später erledigt werden.</p>
+            <h2 class="text-base font-semibold text-gray-900 mb-0.5">Fahrlehrer hinzufügen</h2>
+            <p class="text-sm text-gray-500">Mindestens 1 Fahrlehrer – weitere können jederzeit hinzugefügt werden.</p>
           </div>
 
           <div class="flex items-start gap-3 bg-blue-50 rounded-xl p-3.5 text-sm text-blue-700">
@@ -680,6 +680,14 @@
             </svg>
             Weiteren Fahrlehrer hinzufügen
           </button>
+
+          <p v-if="!staffList.some(s => s.first_name.trim() && s.last_name.trim())"
+            class="flex items-center gap-1.5 text-xs text-red-500 font-medium">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/>
+            </svg>
+            Bitte mindestens einen Fahrlehrer mit Vor- und Nachname erfassen.
+          </p>
         </div>
 
         <!-- ═══ STEP 6: Bestätigung ═══ -->
@@ -1144,6 +1152,8 @@ const canProceed = computed(() => {
                 adminForm.value.email && adminForm.value.password &&
                 adminForm.value.passwordConfirm && passwordValid.value &&
                 !passwordMismatch.value && hibpStatus.value !== 'pwned' && hibpStatus.value !== 'checking')
+    case 5:
+      return staffList.value.some(s => s.first_name.trim() && s.last_name.trim())
     default:
       return true
   }
