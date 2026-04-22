@@ -727,49 +727,92 @@ async function copyDefaultDataToTenant(
 
   // ── 1. Categories ──────────────────────────────────────────────────────────
   try {
-    let query = supabase
+    const { data: allTemplates, error: fetchError } = await supabase
       .from('categories')
-      .select('*')
+      .select('id, code, name, description, color, is_active, exam_duration_minutes, lesson_duration_minutes, theory_durations, document_requirements, parent_category_id, icon_svg')
       .is('tenant_id', null)
       .eq('is_active', true)
-
-    // Filter by business_type if column exists (graceful fallback)
-    query = query.or(`business_type.eq.${businessType},business_type.is.null`)
-
-    const { data: allTemplates, error: fetchError } = await query
+      .order('code', { ascending: true })
 
     if (fetchError || !allTemplates?.length) {
-      logger.warn('⚠️ No template categories found (tenant_id IS NULL)')
+      logger.warn('⚠️ No template categories found')
     } else {
-      // Optionally filter by user-selected IDs
-      const templates = selectedCategoryIds?.length
-        ? allTemplates.filter(c => !c.parent_category_id || selectedCategoryIds.includes(c.id))
-        : allTemplates
+      // Filter to selected IDs if provided (always include parents of selected children)
+      const templateIds = new Set(allTemplates.map(c => c.id))
 
-      const idMap = new Map<string, string>()
-      for (const cat of allTemplates) idMap.set(cat.id, crypto.randomUUID())
+      // Only include rows whose parent_category_id points to another template (or is null)
+      const validTemplates = allTemplates.filter(c =>
+        !c.parent_category_id || templateIds.has(c.parent_category_id)
+      )
 
-      const parentCats = templates.filter(c => !c.parent_category_id)
-      const leafCats   = templates.filter(c =>  c.parent_category_id)
+      const filtered = selectedCategoryIds?.length
+        ? validTemplates.filter(c =>
+            !c.parent_category_id || selectedCategoryIds.includes(String(c.id))
+          )
+        : validTemplates
+
+      const parentCats = filtered.filter(c => !c.parent_category_id)
+      const leafCats   = filtered.filter(c =>  c.parent_category_id)
+
+      // Insert parents and capture new auto-generated IDs
+      const oldToNewId = new Map<number, number>()
 
       if (parentCats.length > 0) {
-        await supabase.from('categories').insert(
-          parentCats.map(cat => ({ ...cat, id: idMap.get(cat.id)!, tenant_id: tenantId, parent_category_id: null, created_at: now, updated_at: now }))
-        )
-        logger.debug(`✅ Copied ${parentCats.length} parent categories`)
+        const { data: insertedParents, error: pErr } = await supabase
+          .from('categories')
+          .insert(
+            parentCats.map(cat => ({
+              tenant_id: tenantId,
+              code: cat.code,
+              name: cat.name,
+              description: cat.description,
+              color: cat.color,
+              is_active: cat.is_active,
+              exam_duration_minutes: cat.exam_duration_minutes,
+              lesson_duration_minutes: cat.lesson_duration_minutes,
+              theory_durations: cat.theory_durations,
+              document_requirements: cat.document_requirements,
+              icon_svg: cat.icon_svg,
+              parent_category_id: null,
+              created_at: now,
+              updated_at: now,
+            }))
+          )
+          .select('id')
+
+        if (pErr) { logger.warn('⚠️ Parent category insert error:', pErr) }
+        else if (insertedParents) {
+          parentCats.forEach((cat, i) => {
+            if (insertedParents[i]) oldToNewId.set(cat.id, insertedParents[i].id)
+          })
+          logger.debug(`✅ Copied ${parentCats.length} parent categories`)
+        }
       }
+
+      // Insert leaf categories with mapped parent IDs
       if (leafCats.length > 0) {
-        await supabase.from('categories').insert(
-          leafCats.map(cat => ({
-            ...cat,
-            id: idMap.get(cat.id)!,
-            tenant_id: tenantId,
-            parent_category_id: cat.parent_category_id ? (idMap.get(cat.parent_category_id) ?? null) : null,
-            created_at: now,
-            updated_at: now,
-          }))
-        )
-        logger.debug(`✅ Copied ${leafCats.length} leaf categories`)
+        const { error: lErr } = await supabase
+          .from('categories')
+          .insert(
+            leafCats.map(cat => ({
+              tenant_id: tenantId,
+              code: cat.code,
+              name: cat.name,
+              description: cat.description,
+              color: cat.color,
+              is_active: cat.is_active,
+              exam_duration_minutes: cat.exam_duration_minutes,
+              lesson_duration_minutes: cat.lesson_duration_minutes,
+              theory_durations: cat.theory_durations,
+              document_requirements: cat.document_requirements,
+              icon_svg: cat.icon_svg,
+              parent_category_id: cat.parent_category_id ? (oldToNewId.get(cat.parent_category_id) ?? null) : null,
+              created_at: now,
+              updated_at: now,
+            }))
+          )
+        if (lErr) logger.warn('⚠️ Leaf category insert error:', lErr)
+        else logger.debug(`✅ Copied ${leafCats.length} leaf categories`)
       }
     }
   } catch (err) { logger.warn('⚠️ Category copy failed:', err) }
