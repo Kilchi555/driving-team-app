@@ -332,8 +332,8 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
                       </svg>
                       <span v-else class="w-3 h-3 flex-shrink-0 rounded-sm border-2 border-current opacity-40"></span>
-                      {{ child.name }}
-                      <span v-if="child.code" class="opacity-60 font-mono">· {{ child.code }}</span>
+                      {{ childDisplayName(child, cat) }}
+                      <span v-if="childDisplayCode(child, cat)" class="opacity-60 font-mono">· {{ childDisplayCode(child, cat) }}</span>
                     </button>
                   </div>
                 </div>
@@ -1020,6 +1020,27 @@ const selectAllCategories = () => {
 
 const deselectAllCategories = () => {
   selectedCategoryIds.value = new Set<number>()
+}
+
+// Strip the parent category's name/code prefix from the child's display name
+// and hide the code badge if it's redundant (same as name, or same as parent code)
+const childDisplayName = (child: TemplateCategory, parent: TemplateCategory): string => {
+  let name = child.name
+  if (parent.name && name.toLowerCase().startsWith(parent.name.toLowerCase())) {
+    name = name.slice(parent.name.length).trim()
+  } else if (parent.code && name.toLowerCase().startsWith(parent.code.toLowerCase())) {
+    name = name.slice(parent.code.length).trim()
+  }
+  return name || child.name
+}
+
+const childDisplayCode = (child: TemplateCategory, parent: TemplateCategory): string | null => {
+  if (!child.code) return null
+  if (child.code === child.name) return null
+  if (child.code === parent.code) return null
+  const stripped = childDisplayName(child, parent)
+  if (child.code.toLowerCase() === stripped.toLowerCase()) return null
+  return child.code
 }
 
 // ─── Locations ─────────────────────────────────────────────────────────────
