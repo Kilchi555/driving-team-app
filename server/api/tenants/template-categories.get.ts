@@ -22,9 +22,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: `Fehler beim Laden der Kategorien: ${error.message}` })
   }
 
-  // Build tree: only use templates as parents (ignore cross-tenant parent references)
+  // Build tree: only categories with NULL parent_category_id are roots.
+  // Categories with a parent_category_id that doesn't resolve to a template category are orphans
+  // (cross-tenant parent reference) and are excluded from the tree entirely.
   const templateIds = new Set((categories || []).map(c => c.id))
-  const parents = (categories || []).filter(c => !c.parent_category_id || !templateIds.has(c.parent_category_id))
+  const parents = (categories || []).filter(c => !c.parent_category_id)
   const children = (categories || []).filter(c => !!c.parent_category_id && templateIds.has(c.parent_category_id))
 
   const tree = parents.map(p => ({
