@@ -183,12 +183,10 @@
                   :checked="selectedCategoryIds.has(cat.id)"
                   @change="toggleCategory(cat.id)"
                   class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
-                <span v-if="cat.icon" class="text-lg">{{ cat.icon }}</span>
-                <div class="flex-1 min-w-0">
-                  <span class="font-medium text-gray-900 text-sm">{{ cat.name }}</span>
-                  <span v-if="cat.code" class="ml-2 text-xs text-gray-400 font-mono">{{ cat.code }}</span>
-                </div>
-                <div v-if="cat.color" class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: cat.color }"></div>
+                <span v-if="cat.icon_svg" class="w-8 h-5 flex-shrink-0" v-html="cat.icon_svg"></span>
+                <span class="font-medium text-gray-900 text-sm">{{ cat.name }}</span>
+                <span v-if="cat.code" class="ml-2 text-xs text-gray-400 font-mono">{{ cat.code }}</span>
+                <div v-if="cat.color" class="w-3 h-3 rounded-full flex-shrink-0 ml-auto" :style="{ backgroundColor: cat.color }"></div>
               </label>
 
               <!-- Child categories -->
@@ -752,21 +750,21 @@ const formData = ref({
 
 // ─── Categories ────────────────────────────────────────────────────────────
 interface TemplateCategory {
-  id: string
+  id: number
   name: string
   code?: string
-  icon?: string
   color?: string
+  icon_svg?: string
   business_type?: string
   children?: TemplateCategory[]
 }
 
 const templateCategories = ref<TemplateCategory[]>([])
-const selectedCategoryIds = ref(new Set<string>())
+const selectedCategoryIds = ref(new Set<number>())
 const categoriesLoading = ref(false)
 
 const allTemplateCategoryIds = computed(() => {
-  const ids: string[] = []
+  const ids: number[] = []
   for (const cat of templateCategories.value) {
     ids.push(cat.id)
     for (const child of cat.children || []) ids.push(child.id)
@@ -783,7 +781,7 @@ const loadTemplateCategories = async () => {
     })
     templateCategories.value = res.categories || []
     // Pre-select all
-    selectedCategoryIds.value = new Set(allTemplateCategoryIds.value)
+    selectedCategoryIds.value = new Set<number>(allTemplateCategoryIds.value)
   } catch {
     templateCategories.value = []
   } finally {
@@ -791,19 +789,18 @@ const loadTemplateCategories = async () => {
   }
 }
 
-const toggleCategory = (id: string) => {
+const toggleCategory = (id: number) => {
   if (selectedCategoryIds.value.has(id)) selectedCategoryIds.value.delete(id)
   else selectedCategoryIds.value.add(id)
-  // Trigger reactivity
   selectedCategoryIds.value = new Set(selectedCategoryIds.value)
 }
 
 const selectAllCategories = () => {
-  selectedCategoryIds.value = new Set(allTemplateCategoryIds.value)
+  selectedCategoryIds.value = new Set<number>(allTemplateCategoryIds.value)
 }
 
 const deselectAllCategories = () => {
-  selectedCategoryIds.value = new Set()
+  selectedCategoryIds.value = new Set<number>()
 }
 
 // ─── Locations ─────────────────────────────────────────────────────────────
@@ -1137,7 +1134,7 @@ const loadFromStorage = () => {
     logoPreview.value         = d.logoPreview || null
     if (d.staffList)    staffList.value    = d.staffList
     if (d.locationsList) locationsList.value = d.locationsList
-    if (d.selectedCategoryIds) selectedCategoryIds.value = new Set(d.selectedCategoryIds)
+    if (d.selectedCategoryIds) selectedCategoryIds.value = new Set<number>(d.selectedCategoryIds)
     if (adminSameAsCompany.value) applyAdminFromCompany()
   } catch { /* ignore */ }
 }
