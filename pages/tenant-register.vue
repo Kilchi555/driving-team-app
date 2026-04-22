@@ -983,15 +983,16 @@ const parentCategoryIds = computed(() =>
 )
 
 const loadTemplateCategories = async () => {
-  if (categoriesLoading.value || templateCategories.value.length > 0) return
+  if (categoriesLoading.value) return
+  if (templateCategories.value.length > 0) return // already loaded, keep user's selection
   categoriesLoading.value = true
   try {
     const res = await $fetch<{ categories: TemplateCategory[] }>('/api/tenants/template-categories', {
       query: { business_type: formData.value.business_type }
     })
     templateCategories.value = res.categories || []
-    // Pre-select only parent categories; children must be chosen explicitly
-    selectedCategoryIds.value = new Set<number>(parentCategoryIds.value)
+    // Always start with nothing selected – user picks explicitly
+    selectedCategoryIds.value = new Set<number>()
   } catch {
     templateCategories.value = []
   } finally {
@@ -1334,7 +1335,6 @@ const saveToStorage = () => {
     logoPreview: logoPreview.value,
     staffList: staffList.value,
     locationsList: locationsList.value,
-    selectedCategoryIds: Array.from(selectedCategoryIds.value),
   }))
 }
 
@@ -1352,7 +1352,6 @@ const loadFromStorage = () => {
     logoPreview.value         = d.logoPreview || null
     if (d.staffList)    staffList.value    = d.staffList
     if (d.locationsList) locationsList.value = d.locationsList
-    if (d.selectedCategoryIds) selectedCategoryIds.value = new Set<number>(d.selectedCategoryIds)
     if (adminSameAsCompany.value) applyAdminFromCompany()
   } catch { /* ignore */ }
 }
