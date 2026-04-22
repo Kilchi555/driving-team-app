@@ -5,11 +5,13 @@
       <nav class="w-full px-4 lg:px-8 py-5 flex items-center justify-between">
         <!-- Logo -->
         <NuxtLink to="/" class="flex items-center gap-2 group flex-shrink-0" @click="handleLogoClick">
-          <img
+          <NuxtImg
             src="/images/logo.webp"
-            srcset="/images/logo.webp 1x"
             width="200"
             height="34"
+            sizes="200px"
+            format="webp"
+            quality="80"
             alt="Driving Team Logo"
             class="h-8 xl:h-12 w-auto object-contain"
             loading="eager"
