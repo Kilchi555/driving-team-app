@@ -723,7 +723,7 @@
             <div class="rounded-2xl bg-blue-50 border border-blue-100 p-4">
               <p class="text-xs font-bold text-blue-400 uppercase tracking-wide mb-2.5">Kategorien</p>
               <div class="flex items-baseline gap-1.5">
-                <span class="text-2xl font-bold text-blue-700">{{ selectedCategoryIds.size }}</span>
+                <span class="text-2xl font-bold text-blue-700">{{ effectiveCategoryCount }}</span>
                 <span class="text-sm text-blue-500">ausgewählt</span>
               </div>
             </div>
@@ -806,7 +806,7 @@
             <div class="divide-y divide-gray-100">
               <div v-for="item in [
                 { done: true, label: 'Fahrschule registriert' },
-                { done: true, label: `${selectedCategoryIds.size} Kategorien konfiguriert` },
+                { done: true, label: `${effectiveCategoryCount} Kategorien konfiguriert` },
                 { done: true, label: `${validLocations.length} Standort(e) angelegt` },
                 { done: true, label: 'Termintypen & Bewertungsvorlagen importiert' },
                 { done: (staffInviteResults?.length ?? 0) > 0, label: `Fahrlehrer eingeladen (${staffInviteResults?.length ?? 0})` },
@@ -982,6 +982,20 @@ const allTemplateCategoryIds = computed(() => {
 const parentCategoryIds = computed(() =>
   templateCategories.value.map(c => c.id)
 )
+
+// Count only "leaf" selections: children count as-is, parents only count if they have no selected children
+const effectiveCategoryCount = computed(() => {
+  let count = 0
+  for (const cat of templateCategories.value) {
+    const selectedChildren = (cat.children || []).filter(c => selectedCategoryIds.value.has(c.id))
+    if (selectedChildren.length > 0) {
+      count += selectedChildren.length
+    } else if (selectedCategoryIds.value.has(cat.id)) {
+      count += 1
+    }
+  }
+  return count
+})
 
 const loadTemplateCategories = async () => {
   if (categoriesLoading.value) return
