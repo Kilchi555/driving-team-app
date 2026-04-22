@@ -763,8 +763,9 @@
             <input v-model="acceptTerms" type="checkbox" required
               class="mt-0.5 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer flex-shrink-0">
             <span class="text-sm text-gray-600">
-              Ich akzeptiere die <a href="#" class="text-blue-600 hover:underline font-medium">Nutzungsbedingungen</a>
-              und die <a href="#" class="text-blue-600 hover:underline font-medium">Datenschutzerklärung</a>.
+              Ich akzeptiere die <NuxtLink to="/agb" target="_blank" class="text-blue-600 hover:underline font-medium">Nutzungsbedingungen</NuxtLink>
+              und die <NuxtLink to="/datenschutz" target="_blank" class="text-blue-600 hover:underline font-medium">Datenschutzerklärung</NuxtLink>
+              (inkl. <NuxtLink to="/avv" target="_blank" class="text-blue-600 hover:underline font-medium">AVV</NuxtLink>).
             </span>
           </div>
         </div>

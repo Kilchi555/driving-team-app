@@ -384,9 +384,20 @@
     <!-- ── Footer ────────────────────────────────────────────────────────────── -->
     <footer class="border-t border-gray-100 py-8 px-6 text-center">
       <img src="/simy-logo.png" alt="Simy" class="h-7 mx-auto mb-4 opacity-40" />
-      <p class="text-xs text-gray-400">
+      <p class="text-xs text-gray-400 mb-4">
         Alle Preise in CHF exkl. MwSt. · Zahlungsabwicklung via Stripe · Jederzeit kündbar
       </p>
+      <button
+        @click="openBillingPortal"
+        :disabled="portalLoading"
+        class="inline-flex items-center gap-2 text-xs text-gray-500 hover:text-purple-700 transition-colors disabled:opacity-50"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+        </svg>
+        {{ portalLoading ? 'Öffne Portal…' : 'Zahlungsmethode / Rechnungen verwalten (Stripe Portal)' }}
+      </button>
     </footer>
   </div>
 </template>
@@ -470,6 +481,27 @@ const startCheckout = async () => {
     error.value = err?.data?.statusMessage || 'Checkout konnte nicht gestartet werden.'
   } finally {
     loading.value = false
+  }
+}
+
+const portalLoading = ref(false)
+const openBillingPortal = async () => {
+  portalLoading.value = true
+  error.value = null
+  try {
+    const { getSupabase } = await import('~/utils/supabase')
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    const res = await $fetch<{ url: string }>('/api/stripe/customer-portal', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (res?.url) window.location.href = res.url
+  } catch (err: any) {
+    error.value = err?.data?.statusMessage || 'Billing-Portal konnte nicht geöffnet werden.'
+  } finally {
+    portalLoading.value = false
   }
 }
 

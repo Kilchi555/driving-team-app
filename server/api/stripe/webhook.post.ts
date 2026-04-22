@@ -62,6 +62,18 @@ export default defineEventHandler(async (event) => {
         if (invoice.subscription) {
           const sub = await stripe.subscriptions.retrieve(invoice.subscription as string)
           await handleSubscriptionUpsert(supabase, stripe, sub)
+          // Clear any past_due flag
+          const tenantId = await getTenantIdByCustomer(supabase, sub.customer as string)
+          if (tenantId) {
+            await supabase
+              .from('tenant_settings')
+              .upsert({
+                tenant_id: tenantId,
+                category: 'billing',
+                setting_key: 'subscription_status',
+                setting_value: JSON.stringify({ status: 'active' }),
+              }, { onConflict: 'tenant_id,setting_key' })
+          }
         }
         break
       }
@@ -71,8 +83,36 @@ export default defineEventHandler(async (event) => {
         if (invoice.customer) {
           const tenantId = await getTenantIdByCustomer(supabase, invoice.customer as string)
           if (tenantId) {
-            console.warn(`⚠️ Payment failed for tenant ${tenantId}`)
+            // Mark tenant as past_due in tenant_settings so the UI can show a warning
+            await supabase
+              .from('tenant_settings')
+              .upsert({
+                tenant_id: tenantId,
+                category: 'billing',
+                setting_key: 'subscription_status',
+                setting_value: JSON.stringify({ status: 'past_due', failed_at: new Date().toISOString() }),
+              }, { onConflict: 'tenant_id,setting_key' })
+            console.warn(`⚠️ Payment failed for tenant ${tenantId} – marked as past_due`)
           }
+        }
+        break
+      }
+
+      case 'customer.subscription.trial_will_end': {
+        // Fires 3 days before a Stripe-managed trial ends.
+        // We use our own trial system but handle this for future Stripe trial support.
+        const sub = stripeEvent.data.object as Stripe.Subscription
+        const tenantId = await getTenantIdByCustomer(supabase, sub.customer as string)
+        if (tenantId) {
+          await supabase
+            .from('tenant_settings')
+            .upsert({
+              tenant_id: tenantId,
+              category: 'billing',
+              setting_key: 'subscription_status',
+              setting_value: JSON.stringify({ status: 'trial_ending_soon' }),
+            }, { onConflict: 'tenant_id,setting_key' })
+          console.log(`📅 Trial ending soon for tenant ${tenantId}`)
         }
         break
       }

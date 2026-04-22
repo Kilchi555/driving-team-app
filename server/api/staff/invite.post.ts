@@ -117,6 +117,47 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // ✅ SEAT LIMIT CHECK: Verify tenant has room for another staff member
+    const { data: tenantSub } = await serviceSupabase
+      .from('tenants')
+      .select('subscription_plan, addon_seats, is_trial')
+      .eq('id', userProfile.tenant_id)
+      .single()
+
+    if (tenantSub) {
+      const { getPlanById } = await import('~/utils/planFeatures')
+      const planDef = getPlanById(tenantSub.subscription_plan || 'trial')
+      const includedSeats = planDef?.includedSeats ?? null  // null = unlimited
+
+      if (includedSeats !== null) {
+        const totalAllowedSeats = includedSeats + (tenantSub.addon_seats || 0)
+
+        // Count active staff + admins
+        const { count: activeStaff } = await serviceSupabase
+          .from('users')
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', userProfile.tenant_id)
+          .in('role', ['staff', 'admin'])
+          .eq('is_active', true)
+
+        // Count pending invitations (they'll use a seat once accepted)
+        const { count: pendingInvites } = await serviceSupabase
+          .from('staff_invitations')
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', userProfile.tenant_id)
+          .eq('status', 'pending')
+
+        const usedSeats = (activeStaff || 0) + (pendingInvites || 0)
+
+        if (usedSeats >= totalAllowedSeats) {
+          throw createError({
+            statusCode: 402,
+            statusMessage: `Seat-Limit erreicht (${usedSeats}/${totalAllowedSeats}). Bitte buchen Sie einen zusätzlichen Fahrlehrer-Seat unter /upgrade.`
+          })
+        }
+      }
+    }
+
     // ✅ LAYER 4: XSS Protection - Sanitize all string inputs
     const sanitizedFirstName = sanitizeString(firstName, 100)
     const sanitizedLastName = sanitizeString(lastName, 100)
