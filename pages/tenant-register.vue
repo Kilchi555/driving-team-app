@@ -185,12 +185,12 @@
           <div class="flex items-start justify-between gap-4">
             <div>
               <h2 class="text-base font-semibold text-gray-900 mb-0.5">Welche Kategorien bietest du an?</h2>
-              <p class="text-sm text-gray-500">Alle Fahrschul-Kategorien sind vorausgewählt. Deaktiviere was du nicht anbietest.</p>
+              <p class="text-sm text-gray-500">Wähle die Hauptkategorien – danach erscheinen die Unterkategorien zur Auswahl.</p>
             </div>
             <div v-if="!categoriesLoading && templateCategories.length > 0"
               class="flex-shrink-0 flex items-center gap-1 bg-blue-50 rounded-xl px-3 py-1.5">
-              <span class="text-sm font-bold text-blue-700">{{ selectedCategoryIds.size }}</span>
-              <span class="text-xs text-blue-500">/ {{ allTemplateCategoryIds.length }}</span>
+              <span class="text-sm font-bold text-blue-700">{{ templateCategories.filter(c => selectedCategoryIds.has(c.id)).length }}</span>
+              <span class="text-xs text-blue-500">/ {{ templateCategories.length }}</span>
             </div>
           </div>
 
@@ -274,42 +274,70 @@
                   {{ cat.code }}
                 </span>
 
-                <!-- Children count hint -->
-                <p v-if="cat.children?.length" class="mt-2 text-xs text-gray-400">
+                <!-- Children hint (only if NOT yet selected) -->
+                <p v-if="cat.children?.length && !selectedCategoryIds.has(cat.id)" class="mt-2 text-xs text-gray-400">
                   +{{ cat.children.length }} Unterkategorien
+                </p>
+                <!-- Children selected count (if selected) -->
+                <p v-else-if="cat.children?.length && selectedCategoryIds.has(cat.id)" class="mt-2 text-xs font-medium"
+                  :style="{ color: cat.color || '#3b82f6' }">
+                  {{ cat.children.filter(c => selectedCategoryIds.has(c.id)).length }}/{{ cat.children.length }} Subs
                 </p>
               </button>
             </div>
 
-            <!-- Child categories (per parent, visible if parent selected) -->
-            <template v-for="cat in templateCategories" :key="'children-' + cat.id">
-              <div v-if="cat.children?.length" class="space-y-2">
-                <div class="flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full flex-shrink-0" :style="{ backgroundColor: cat.color || '#6b7280' }"></span>
-                  <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Unterkategorien {{ cat.code }}</p>
+            <!-- Sub-categories: shown inline below grid, one block per selected parent with children -->
+            <template v-for="cat in templateCategories" :key="'subs-' + cat.id">
+              <transition
+                enter-active-class="transition-all duration-300 ease-out"
+                enter-from-class="opacity-0 -translate-y-2"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition-all duration-200 ease-in"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 -translate-y-2"
+              >
+                <div v-if="cat.children?.length && selectedCategoryIds.has(cat.id)"
+                  class="rounded-2xl border-2 overflow-hidden"
+                  :style="{ borderColor: (cat.color || '#3b82f6') + '40' }">
+                  <!-- Header -->
+                  <div class="flex items-center justify-between px-4 py-2.5"
+                    :style="{ backgroundColor: (cat.color || '#3b82f6') + '10' }">
+                    <div class="flex items-center gap-2">
+                      <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ backgroundColor: cat.color || '#3b82f6' }"></span>
+                      <p class="text-xs font-bold uppercase tracking-wide" :style="{ color: cat.color || '#3b82f6' }">
+                        {{ cat.code }} – Unterkategorien wählen
+                      </p>
+                    </div>
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full text-white"
+                      :style="{ backgroundColor: cat.color || '#3b82f6' }">
+                      {{ cat.children.filter(c => selectedCategoryIds.has(c.id)).length }}/{{ cat.children.length }}
+                    </span>
+                  </div>
+                  <!-- Child pills -->
+                  <div class="flex flex-wrap gap-2 p-4">
+                    <button
+                      v-for="child in cat.children"
+                      :key="child.id"
+                      type="button"
+                      @click="toggleCategory(child.id)"
+                      class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 text-xs font-semibold transition-all duration-150 focus:outline-none"
+                      :class="selectedCategoryIds.has(child.id)
+                        ? 'text-white border-transparent shadow-sm'
+                        : 'bg-white text-gray-600 hover:border-gray-300'"
+                      :style="selectedCategoryIds.has(child.id)
+                        ? { backgroundColor: child.color || cat.color || '#3b82f6', borderColor: child.color || cat.color || '#3b82f6' }
+                        : { borderColor: (cat.color || '#3b82f6') + '40' }"
+                    >
+                      <svg v-if="selectedCategoryIds.has(child.id)" class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      <span v-else class="w-3 h-3 flex-shrink-0 rounded-sm border-2 border-current opacity-40"></span>
+                      {{ child.name }}
+                      <span v-if="child.code" class="opacity-60 font-mono">· {{ child.code }}</span>
+                    </button>
+                  </div>
                 </div>
-                <div class="flex flex-wrap gap-2 pl-4">
-                  <button
-                    v-for="child in cat.children"
-                    :key="child.id"
-                    type="button"
-                    @click="toggleCategory(child.id)"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 text-xs font-semibold transition-all duration-150 focus:outline-none"
-                    :class="selectedCategoryIds.has(child.id)
-                      ? 'text-white border-transparent shadow-sm'
-                      : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'"
-                    :style="selectedCategoryIds.has(child.id)
-                      ? { backgroundColor: child.color || cat.color || '#3b82f6', borderColor: child.color || cat.color || '#3b82f6' }
-                      : {}"
-                  >
-                    <svg v-if="selectedCategoryIds.has(child.id)" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                    </svg>
-                    {{ child.name }}
-                    <span v-if="child.code" class="opacity-70 font-mono">· {{ child.code }}</span>
-                  </button>
-                </div>
-              </div>
+              </transition>
             </template>
           </div>
         </div>
@@ -950,6 +978,10 @@ const allTemplateCategoryIds = computed(() => {
   return ids
 })
 
+const parentCategoryIds = computed(() =>
+  templateCategories.value.map(c => c.id)
+)
+
 const loadTemplateCategories = async () => {
   if (categoriesLoading.value || templateCategories.value.length > 0) return
   categoriesLoading.value = true
@@ -958,8 +990,8 @@ const loadTemplateCategories = async () => {
       query: { business_type: formData.value.business_type }
     })
     templateCategories.value = res.categories || []
-    // Pre-select all
-    selectedCategoryIds.value = new Set<number>(allTemplateCategoryIds.value)
+    // Pre-select only parent categories; children must be chosen explicitly
+    selectedCategoryIds.value = new Set<number>(parentCategoryIds.value)
   } catch {
     templateCategories.value = []
   } finally {
@@ -968,8 +1000,16 @@ const loadTemplateCategories = async () => {
 }
 
 const toggleCategory = (id: number) => {
-  if (selectedCategoryIds.value.has(id)) selectedCategoryIds.value.delete(id)
-  else selectedCategoryIds.value.add(id)
+  if (selectedCategoryIds.value.has(id)) {
+    selectedCategoryIds.value.delete(id)
+    // Deselecting a parent also removes all its children
+    const parent = templateCategories.value.find(c => c.id === id)
+    if (parent?.children) {
+      for (const child of parent.children) selectedCategoryIds.value.delete(child.id)
+    }
+  } else {
+    selectedCategoryIds.value.add(id)
+  }
   selectedCategoryIds.value = new Set(selectedCategoryIds.value)
 }
 
