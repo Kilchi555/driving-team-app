@@ -326,7 +326,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
                       </svg>
                       <span v-else class="w-3 h-3 flex-shrink-0 rounded-sm border-2 border-current opacity-40"></span>
-                      {{ child.code || child.name }}
+                      {{ 'Kategorie ' + (child.code || child.name) }}
                     </button>
                   </div>
                 </div>
