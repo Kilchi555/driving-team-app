@@ -185,12 +185,6 @@
           <div class="flex items-start justify-between gap-4">
             <div>
               <h2 class="text-base font-semibold text-gray-900 mb-0.5">Welche Kategorien bietest du an?</h2>
-              <p class="text-sm text-gray-500">Wähle die Hauptkategorien – danach erscheinen die Unterkategorien zur Auswahl.</p>
-            </div>
-            <div v-if="!categoriesLoading && templateCategories.length > 0"
-              class="flex-shrink-0 flex items-center gap-1 bg-blue-50 rounded-xl px-3 py-1.5">
-              <span class="text-sm font-bold text-blue-700">{{ templateCategories.filter(c => selectedCategoryIds.has(c.id)).length }}</span>
-              <span class="text-xs text-blue-500">/ {{ templateCategories.length }}</span>
             </div>
           </div>
 
@@ -332,8 +326,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
                       </svg>
                       <span v-else class="w-3 h-3 flex-shrink-0 rounded-sm border-2 border-current opacity-40"></span>
-                      {{ childDisplayName(child, cat) }}
-                      <span v-if="childDisplayCode(child, cat)" class="opacity-60 font-mono">· {{ childDisplayCode(child, cat) }}</span>
+                      {{ child.code || child.name }}
                     </button>
                   </div>
                 </div>
@@ -1020,27 +1013,6 @@ const selectAllCategories = () => {
 
 const deselectAllCategories = () => {
   selectedCategoryIds.value = new Set<number>()
-}
-
-// Strip the parent category's name/code prefix from the child's display name
-// and hide the code badge if it's redundant (same as name, or same as parent code)
-const childDisplayName = (child: TemplateCategory, parent: TemplateCategory): string => {
-  let name = child.name
-  if (parent.name && name.toLowerCase().startsWith(parent.name.toLowerCase())) {
-    name = name.slice(parent.name.length).trim()
-  } else if (parent.code && name.toLowerCase().startsWith(parent.code.toLowerCase())) {
-    name = name.slice(parent.code.length).trim()
-  }
-  return name || child.name
-}
-
-const childDisplayCode = (child: TemplateCategory, parent: TemplateCategory): string | null => {
-  if (!child.code) return null
-  if (child.code === child.name) return null
-  if (child.code === parent.code) return null
-  const stripped = childDisplayName(child, parent)
-  if (child.code.toLowerCase() === stripped.toLowerCase()) return null
-  return child.code
 }
 
 // ─── Locations ─────────────────────────────────────────────────────────────
