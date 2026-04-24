@@ -1,12 +1,13 @@
 <template>
-  <div class="min-h-screen bg-white font-sans">
+  <div class="min-h-screen bg-white font-sans" :style="brandCssVars">
 
     <!-- ── Nav ──────────────────────────────────────────────────────────────── -->
-    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-purple-100">
+    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b" style="border-color: rgba(var(--brand-rgb), 0.12)">
       <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <img src="/simy-logo.png" alt="Simy" class="h-8" />
+        <img :src="logoPreview || '/simy-logo.png'" alt="Simy" class="h-8 max-w-[140px] object-contain" />
         <a href="/login"
-          class="text-sm font-medium text-purple-700 hover:text-purple-900 transition-colors">
+          class="text-sm font-medium transition-colors hover:opacity-80"
+          style="color: var(--brand-primary);">
           Einloggen →
         </a>
       </div>
@@ -16,9 +17,9 @@
     <section class="relative overflow-hidden pt-20 pb-16 px-6">
       <!-- Background gradient blobs -->
       <div class="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full opacity-20"
-        style="background: radial-gradient(circle, #6000BD, transparent)"></div>
+        style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
       <div class="absolute -bottom-20 -left-20 w-[400px] h-[400px] rounded-full opacity-10"
-        style="background: radial-gradient(circle, #BEA3FF, transparent)"></div>
+        style="background: radial-gradient(circle, var(--brand-accent), transparent)"></div>
 
       <div class="relative max-w-3xl mx-auto text-center">
         <!-- Trial / Status Banner -->
@@ -33,7 +34,7 @@
 
         <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight text-gray-900 mb-6 leading-tight">
           Deine Fahrschule.<br>
-          <span style="background: linear-gradient(135deg, #6000BD, #BEA3FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Auf Autopilot.
           </span>
         </h1>
@@ -49,7 +50,7 @@
     <!-- ── Plan Selector ────────────────────────────────────────────────────── -->
     <section class="px-6 pb-6">
       <div class="max-w-5xl mx-auto">
-        <p class="text-xs font-bold uppercase tracking-widest text-purple-400 text-center mb-8">
+        <p class="text-xs font-bold uppercase tracking-widest text-center mb-8" style="color: var(--brand-primary); opacity: 0.6;">
           1 — Plan wählen
         </p>
         <div class="grid md:grid-cols-3 gap-5">
@@ -62,26 +63,28 @@
               selectedPlan === plan.id
                 ? plan.highlighted
                   ? 'border-transparent text-white shadow-2xl'
-                  : 'border-purple-500 bg-purple-50 shadow-xl'
-                : 'border-gray-100 bg-white shadow-sm hover:shadow-lg hover:border-purple-200',
+                  : 'shadow-xl'
+                : 'border-gray-100 bg-white shadow-sm hover:shadow-lg',
             ]"
             :style="selectedPlan === plan.id && plan.highlighted
-              ? 'background: linear-gradient(145deg, #6000BD, #8B2FE8); box-shadow: 0 25px 50px rgba(96,0,189,0.35);'
-              : ''"
+              ? { background: `linear-gradient(145deg, var(--brand-primary), var(--brand-secondary))`, boxShadow: `0 25px 50px rgba(var(--brand-rgb), 0.35)`, borderColor: 'transparent' }
+              : selectedPlan === plan.id
+                ? { borderColor: primaryColor, background: `rgba(var(--brand-rgb), 0.05)` }
+                : { borderColor: '' }"
           >
             <!-- Popular badge -->
             <div v-if="plan.highlighted"
               class="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wide"
               :style="selectedPlan === plan.id
-                ? 'background: #BEA3FF; color: #3D007A;'
-                : 'background: linear-gradient(135deg, #6000BD, #BEA3FF); color: white;'">
+                ? { background: `rgba(255,255,255,0.25)`, color: 'white' }
+                : { background: `linear-gradient(135deg, var(--brand-primary), var(--brand-accent))`, color: 'white' }">
               ✦ Am Beliebtesten
             </div>
 
             <!-- Checkmark -->
             <div v-if="selectedPlan === plan.id"
               class="absolute top-5 right-5 w-6 h-6 rounded-full flex items-center justify-center"
-              :style="plan.highlighted ? 'background: rgba(255,255,255,0.2)' : 'background: #6000BD'">
+              :style="plan.highlighted ? 'background: rgba(255,255,255,0.2)' : `background: var(--brand-primary)`">
               <svg class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
               </svg>
@@ -89,11 +92,12 @@
 
             <!-- Header -->
             <p :class="['text-xs font-bold uppercase tracking-widest mb-1',
-              selectedPlan === plan.id && plan.highlighted ? 'text-purple-200' : 'text-purple-500']">
+              selectedPlan === plan.id && plan.highlighted ? 'text-white/70' : '']"
+              :style="!(selectedPlan === plan.id && plan.highlighted) ? { color: primaryColor } : {}">
               {{ plan.name }}
             </p>
             <p :class="['text-sm mb-5',
-              selectedPlan === plan.id && plan.highlighted ? 'text-purple-100' : 'text-gray-400']">
+              selectedPlan === plan.id && plan.highlighted ? 'text-white/60' : 'text-gray-400']">
               {{ plan.tagline }}
             </p>
 
@@ -103,10 +107,11 @@
                 selectedPlan === plan.id && plan.highlighted ? 'text-white' : 'text-gray-900']">
                 <span v-if="pricesLoading" class="inline-block w-20 h-10 rounded-lg animate-pulse"
                   :style="plan.highlighted ? 'background:rgba(255,255,255,0.15)' : 'background:#f3f4f6'"></span>
+                <span v-else-if="!pricesAvailable" class="text-2xl text-gray-400">Auf Anfrage</span>
                 <span v-else>{{ formatChf(planPriceAmount(plan.id)) }}</span>
               </span>
-              <span :class="['text-sm ml-1',
-                selectedPlan === plan.id && plan.highlighted ? 'text-purple-200' : 'text-gray-400']">
+              <span v-if="pricesAvailable" :class="['text-sm ml-1',
+                selectedPlan === plan.id && plan.highlighted ? 'text-white/60' : 'text-gray-400']">
                 /Monat
               </span>
             </div>
@@ -116,11 +121,11 @@
               <li v-for="feature in plan.features" :key="feature"
                 class="flex items-start gap-2.5 text-sm">
                 <svg class="w-4 h-4 mt-0.5 shrink-0 flex-none"
-                  :style="selectedPlan === plan.id && plan.highlighted ? 'color:#BEA3FF' : 'color:#6000BD'"
+                  :style="selectedPlan === plan.id && plan.highlighted ? 'color: rgba(255,255,255,0.8)' : 'color: var(--brand-primary)'"
                   fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                 </svg>
-                <span :class="selectedPlan === plan.id && plan.highlighted ? 'text-purple-50' : 'text-gray-600'">
+                <span :class="selectedPlan === plan.id && plan.highlighted ? 'text-white/90' : 'text-gray-600'">
                   {{ feature }}
                 </span>
               </li>
@@ -129,8 +134,8 @@
             <!-- Seats badge -->
             <div class="text-xs font-medium rounded-xl px-3 py-2 text-center"
               :style="selectedPlan === plan.id && plan.highlighted
-                ? 'background: rgba(255,255,255,0.12); color: #E9D5FF;'
-                : 'background: #F5F3FF; color: #6000BD;'">
+                ? 'background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.85);'
+                : `background: rgba(var(--brand-rgb), 0.08); color: var(--brand-primary);`">
               {{ plan.includedSeats === null ? '∞ Fahrlehrer inkl.' : `${plan.includedSeats} Fahrlehrer inkl.` }}
             </div>
           </div>
@@ -141,22 +146,23 @@
     <!-- ── Add-ons ───────────────────────────────────────────────────────────── -->
     <section class="px-6 py-10">
       <div class="max-w-5xl mx-auto">
-        <p class="text-xs font-bold uppercase tracking-widest text-purple-400 text-center mb-8">
+        <p class="text-xs font-bold uppercase tracking-widest text-center mb-8" style="color: var(--brand-primary); opacity: 0.6;">
           2 — Add-ons (optional)
         </p>
         <div class="grid md:grid-cols-3 gap-4">
 
           <!-- Fahrlehrer Seats -->
           <div :class="['rounded-2xl border-2 p-5 transition-all bg-white',
-            addonSeats > 0 ? 'border-purple-400 shadow-lg shadow-purple-100' : 'border-gray-100 shadow-sm']">
+            addonSeats > 0 ? 'shadow-lg' : 'border-gray-100 shadow-sm']"
+            :style="addonSeats > 0 ? { borderColor: primaryColor, boxShadow: `0 10px 25px rgba(var(--brand-rgb), 0.12)` } : {}">
             <div class="flex items-start justify-between mb-4">
               <div>
                 <p class="font-bold text-gray-900 text-sm">Fahrlehrer Seat</p>
                 <p class="text-xs text-gray-400 mt-0.5">Zusätzlicher Account</p>
               </div>
               <span class="text-xs font-bold px-2.5 py-1 rounded-lg"
-                style="background:#F5F3FF; color:#6000BD;">
-                {{ pricesLoading ? '…' : formatChf(addonPriceAmount('seats')) }}/Seat
+                style="background: rgba(var(--brand-rgb), 0.08); color: var(--brand-primary);">
+                {{ pricesLoading ? '…' : pricesAvailable ? formatChf(addonPriceAmount('seats')) : '–' }}/Seat
               </span>
             </div>
             <div v-if="selectedPlan === 'enterprise'" class="text-xs text-gray-400 italic text-center py-2">
@@ -164,38 +170,43 @@
             </div>
             <div v-else class="flex items-center justify-center gap-4">
               <button @click="addonSeats = Math.max(0, addonSeats - 1)"
-                class="w-9 h-9 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-500 font-bold hover:border-purple-400 hover:text-purple-600 transition-all text-lg">−</button>
-              <span class="text-2xl font-black w-8 text-center" style="color:#6000BD">{{ addonSeats }}</span>
+                class="w-9 h-9 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-500 font-bold transition-all text-lg hover:border-current"
+                :style="{ '--hover-color': primaryColor }"
+                @mouseenter="(e) => { (e.currentTarget as HTMLElement).style.borderColor = primaryColor; (e.currentTarget as HTMLElement).style.color = primaryColor }"
+                @mouseleave="(e) => { (e.currentTarget as HTMLElement).style.borderColor = ''; (e.currentTarget as HTMLElement).style.color = '' }">−</button>
+              <span class="text-2xl font-black w-8 text-center" style="color: var(--brand-primary)">{{ addonSeats }}</span>
               <button @click="addonSeats++"
                 class="w-9 h-9 rounded-full border-2 flex items-center justify-center font-bold transition-all text-lg text-white"
-                style="background:#6000BD; border-color:#6000BD;">+</button>
+                :style="{ background: primaryColor, borderColor: primaryColor }">+</button>
             </div>
           </div>
 
           <!-- Kursbuchungsseite -->
           <div @click="toggleCourses"
             :class="['rounded-2xl border-2 p-5 transition-all bg-white cursor-pointer',
-              addonCourses ? 'border-purple-400 shadow-lg shadow-purple-100'
+              addonCourses ? 'shadow-lg'
               : planIncludesCourses ? 'border-gray-100 opacity-60'
-              : 'border-gray-100 shadow-sm hover:border-purple-200']">
+              : 'border-gray-100 shadow-sm']"
+            :style="addonCourses ? { borderColor: primaryColor, boxShadow: `0 10px 25px rgba(var(--brand-rgb), 0.12)` } : {}">
             <div class="flex items-start justify-between mb-4">
               <div>
                 <p class="font-bold text-gray-900 text-sm">Kursbuchungsseite</p>
                 <p class="text-xs text-gray-400 mt-0.5">Online-Buchung für Schüler</p>
               </div>
               <span class="text-xs font-bold px-2.5 py-1 rounded-lg"
-                style="background:#F5F3FF; color:#6000BD;">
-                {{ pricesLoading ? '…' : formatChf(addonPriceAmount('courses')) }}/Mt.
+                style="background: rgba(var(--brand-rgb), 0.08); color: var(--brand-primary);">
+                {{ pricesLoading ? '…' : pricesAvailable ? formatChf(addonPriceAmount('courses')) : '–' }}/Mt.
               </span>
             </div>
-            <div v-if="planIncludesCourses" class="text-xs text-center py-1 font-medium" style="color:#6000BD">
+            <div v-if="planIncludesCourses" class="text-xs text-center py-1 font-medium" style="color: var(--brand-primary)">
               ✓ Im {{ selectedPlanDef?.name }}-Plan inkl.
             </div>
             <div v-else class="flex items-center justify-center">
               <div class="flex items-center gap-2.5 text-sm font-medium"
-                :class="addonCourses ? 'text-purple-700' : 'text-gray-400'">
+                :class="addonCourses ? '' : 'text-gray-400'"
+                :style="addonCourses ? { color: primaryColor } : {}">
                 <div class="w-5 h-5 rounded border-2 flex items-center justify-center transition-all"
-                  :style="addonCourses ? 'background:#6000BD; border-color:#6000BD' : 'border-color:#D1D5DB'">
+                  :style="addonCourses ? `background: var(--brand-primary); border-color: var(--brand-primary)` : 'border-color:#D1D5DB'">
                   <svg v-if="addonCourses" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                   </svg>
@@ -208,27 +219,29 @@
           <!-- Affiliate -->
           <div @click="toggleAffiliate"
             :class="['rounded-2xl border-2 p-5 transition-all bg-white cursor-pointer',
-              addonAffiliate ? 'border-purple-400 shadow-lg shadow-purple-100'
+              addonAffiliate ? 'shadow-lg'
               : planIncludesAffiliate ? 'border-gray-100 opacity-60'
-              : 'border-gray-100 shadow-sm hover:border-purple-200']">
+              : 'border-gray-100 shadow-sm']"
+            :style="addonAffiliate ? { borderColor: primaryColor, boxShadow: `0 10px 25px rgba(var(--brand-rgb), 0.12)` } : {}">
             <div class="flex items-start justify-between mb-4">
               <div>
                 <p class="font-bold text-gray-900 text-sm">Affiliate-System</p>
                 <p class="text-xs text-gray-400 mt-0.5">Empfehlungen & Partner</p>
               </div>
               <span class="text-xs font-bold px-2.5 py-1 rounded-lg"
-                style="background:#F5F3FF; color:#6000BD;">
-                {{ pricesLoading ? '…' : formatChf(addonPriceAmount('affiliate')) }}/Mt.
+                style="background: rgba(var(--brand-rgb), 0.08); color: var(--brand-primary);">
+                {{ pricesLoading ? '…' : pricesAvailable ? formatChf(addonPriceAmount('affiliate')) : '–' }}/Mt.
               </span>
             </div>
-            <div v-if="planIncludesAffiliate" class="text-xs text-center py-1 font-medium" style="color:#6000BD">
+            <div v-if="planIncludesAffiliate" class="text-xs text-center py-1 font-medium" style="color: var(--brand-primary)">
               ✓ Im Enterprise-Plan inkl.
             </div>
             <div v-else class="flex items-center justify-center">
               <div class="flex items-center gap-2.5 text-sm font-medium"
-                :class="addonAffiliate ? 'text-purple-700' : 'text-gray-400'">
+                :class="addonAffiliate ? '' : 'text-gray-400'"
+                :style="addonAffiliate ? { color: primaryColor } : {}">
                 <div class="w-5 h-5 rounded border-2 flex items-center justify-center transition-all"
-                  :style="addonAffiliate ? 'background:#6000BD; border-color:#6000BD' : 'border-color:#D1D5DB'">
+                  :style="addonAffiliate ? `background: var(--brand-primary); border-color: var(--brand-primary)` : 'border-color:#D1D5DB'">
                   <svg v-if="addonAffiliate" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                   </svg>
@@ -244,16 +257,16 @@
     <!-- ── Order Summary + CTA ───────────────────────────────────────────────── -->
     <section class="px-6 pb-16">
       <div class="max-w-md mx-auto">
-        <p class="text-xs font-bold uppercase tracking-widest text-purple-400 text-center mb-6">
+        <p class="text-xs font-bold uppercase tracking-widest text-center mb-6" style="color: var(--brand-primary); opacity: 0.6;">
           3 — Bestätigen
         </p>
 
-        <div class="rounded-3xl border border-purple-100 bg-white shadow-xl shadow-purple-100/50 overflow-hidden">
+        <div class="rounded-3xl border bg-white shadow-xl overflow-hidden" style="border-color: rgba(var(--brand-rgb), 0.15); box-shadow: 0 20px 40px rgba(var(--brand-rgb), 0.1)">
           <!-- Summary lines -->
           <div class="p-6 space-y-3 text-sm border-b border-gray-50">
             <div class="flex justify-between items-center">
               <span class="font-semibold text-gray-800">{{ selectedPlanDef?.name }}-Plan</span>
-              <span class="font-bold text-gray-900">{{ pricesLoading ? '…' : planPrice }}</span>
+              <span class="font-bold text-gray-900">{{ pricesLoading ? '…' : pricesAvailable ? planPrice : '–' }}</span>
             </div>
             <div v-if="addonSeats > 0 && selectedPlan !== 'enterprise'"
               class="flex justify-between items-center text-gray-500">
@@ -274,28 +287,33 @@
 
           <!-- Total -->
           <div class="px-6 py-4 flex justify-between items-center"
-            style="background: linear-gradient(135deg, #F5F3FF, #EDE9FE)">
+            style="background: linear-gradient(135deg, rgba(var(--brand-rgb), 0.06), rgba(var(--brand-rgb), 0.1))">
             <div>
-              <p class="text-xs text-purple-500 font-medium">Total pro Monat</p>
-              <p class="text-2xl font-black" style="color:#6000BD">
-                {{ pricesLoading ? '…' : totalPrice }}
+              <p class="text-xs font-medium" style="color: var(--brand-primary); opacity: 0.7">Total pro Monat</p>
+              <p class="text-2xl font-black" style="color: var(--brand-primary)">
+                {{ pricesLoading ? '…' : pricesAvailable ? totalPrice : '–' }}
               </p>
             </div>
-            <div class="text-right text-xs text-purple-400">
+            <div class="text-right text-xs text-gray-400">
               <p>Monatlich kündbar</p>
               <p>1 Mt. Kündigungsfrist</p>
             </div>
+          </div>
+
+          <!-- Prices not available banner -->
+          <div v-if="!pricesLoading && !pricesAvailable" class="px-6 py-3 text-xs text-center text-amber-700 bg-amber-50 border-t border-amber-100">
+            ⚠️ Preise konnten nicht geladen werden. Bitte kontaktiere uns unter info@simy.ch.
           </div>
 
           <!-- CTA -->
           <div class="p-6">
             <button
               @click="startCheckout"
-              :disabled="!!loading"
+              :disabled="!!loading || !pricesAvailable"
               class="w-full py-4 px-6 rounded-2xl font-bold text-base text-white transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
-              style="background: linear-gradient(135deg, #6000BD, #8B2FE8); box-shadow: 0 8px 24px rgba(96,0,189,0.35);"
-              onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 12px 32px rgba(96,0,189,0.45)'"
-              onmouseout="this.style.transform=''; this.style.boxShadow='0 8px 24px rgba(96,0,189,0.35)'"
+              :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))`, boxShadow: `0 8px 24px rgba(var(--brand-rgb), 0.35)` }"
+              @mouseenter="(e) => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = `0 12px 32px rgba(var(--brand-rgb), 0.45)` }"
+              @mouseleave="(e) => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px rgba(var(--brand-rgb), 0.35)` }"
             >
               <span v-if="loading" class="flex items-center gap-2">
                 <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
@@ -324,15 +342,15 @@
       <div class="max-w-4xl mx-auto">
         <div class="grid md:grid-cols-3 gap-6 text-center mb-12">
           <div>
-            <p class="text-4xl font-black" style="color:#6000BD">30</p>
+            <p class="text-4xl font-black" style="color: var(--brand-primary)">30</p>
             <p class="text-sm text-gray-500 mt-1">Tage gratis testen</p>
           </div>
           <div>
-            <p class="text-4xl font-black" style="color:#6000BD">3h</p>
+            <p class="text-4xl font-black" style="color: var(--brand-primary)">3h</p>
             <p class="text-sm text-gray-500 mt-1">Zeitersparnis pro Woche</p>
           </div>
           <div>
-            <p class="text-4xl font-black" style="color:#6000BD">0</p>
+            <p class="text-4xl font-black" style="color: var(--brand-primary)">0</p>
             <p class="text-sm text-gray-500 mt-1">Kreditkarte für Trial nötig</p>
           </div>
         </div>
@@ -343,28 +361,30 @@
     <section class="px-6 pb-20">
       <div class="max-w-5xl mx-auto">
         <h2 class="text-2xl font-bold text-gray-900 text-center mb-10">Was ist in jedem Plan?</h2>
-        <div class="rounded-3xl border border-purple-100 overflow-hidden shadow-sm">
-          <table class="w-full text-sm">
+        <div class="rounded-3xl border overflow-hidden shadow-sm" style="border-color: rgba(var(--brand-rgb), 0.12)">
+          <div class="overflow-x-auto">
+          <table class="w-full text-sm min-w-[500px]">
             <thead>
-              <tr style="background: linear-gradient(135deg, #F5F3FF, #EDE9FE)">
+              <tr style="background: linear-gradient(135deg, rgba(var(--brand-rgb), 0.06), rgba(var(--brand-rgb), 0.10))">
                 <th class="text-left py-4 px-6 font-semibold text-gray-500 w-1/2">Feature</th>
                 <th v-for="plan in plans" :key="plan.id"
                   class="text-center py-4 px-4 font-bold"
-                  :style="plan.highlighted ? 'color:#6000BD' : 'color:#374151'">
+                  :style="plan.highlighted ? 'color: var(--brand-primary)' : 'color:#374151'">
                   {{ plan.name }}
                 </th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(row, i) in comparisonRows" :key="row.label"
-                :class="['transition-colors', i % 2 === 0 ? 'bg-white' : 'bg-purple-50/30']">
+                :class="['transition-colors', i % 2 === 0 ? 'bg-white' : '']"
+                :style="i % 2 !== 0 ? { background: `rgba(var(--brand-rgb), 0.025)` } : {}">
                 <td class="py-3.5 px-6 text-gray-700 font-medium">{{ row.label }}</td>
                 <td v-for="plan in plans" :key="plan.id" class="text-center py-3.5 px-4">
                   <template v-if="typeof row.values[plan.id] === 'boolean'">
                     <span v-if="row.values[plan.id]"
                       class="inline-flex items-center justify-center w-6 h-6 rounded-full"
-                      style="background:#F5F3FF">
-                      <svg class="w-3.5 h-3.5" style="color:#6000BD" fill="currentColor" viewBox="0 0 20 20">
+                      style="background: rgba(var(--brand-rgb), 0.08)">
+                      <svg class="w-3.5 h-3.5" style="color: var(--brand-primary)" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                       </svg>
                     </span>
@@ -377,20 +397,24 @@
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- ── Footer ────────────────────────────────────────────────────────────── -->
     <footer class="border-t border-gray-100 py-8 px-6 text-center">
-      <img src="/simy-logo.png" alt="Simy" class="h-7 mx-auto mb-4 opacity-40" />
+      <img :src="logoPreview || '/simy-logo.png'" alt="Simy" class="h-7 mx-auto mb-4 opacity-40" />
       <p class="text-xs text-gray-400 mb-4">
         Alle Preise in CHF exkl. MwSt. · Zahlungsabwicklung via Stripe · Jederzeit kündbar
       </p>
       <button
         @click="openBillingPortal"
         :disabled="portalLoading"
-        class="inline-flex items-center gap-2 text-xs text-gray-500 hover:text-purple-700 transition-colors disabled:opacity-50"
+        class="inline-flex items-center gap-2 text-xs text-gray-500 transition-colors disabled:opacity-50 hover:opacity-80"
+        :style="{ '--hover-color': primaryColor }"
+        @mouseenter="(e) => (e.currentTarget as HTMLElement).style.color = primaryColor"
+        @mouseleave="(e) => (e.currentTarget as HTMLElement).style.color = ''"
       >
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -403,14 +427,56 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useFetch, useHead } from '#imports'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useLazyFetch, useHead, useRoute } from '#imports'
 import { PLANS } from '~/utils/planFeatures'
 import { useTrialFeatures } from '~/composables/useTrialFeatures'
 import type { PricingResponse } from '~/server/api/stripe/prices.get'
 
-
 definePageMeta({ layout: 'minimal' })
+
+// ─── Branding ─────────────────────────────────────────────────────────────────
+const DEFAULT_PRIMARY = '#6000BD'
+const DEFAULT_SECONDARY = '#8B2FE8'
+const DEFAULT_ACCENT = '#BEA3FF'
+
+const primaryColor = ref(DEFAULT_PRIMARY)
+const secondaryColor = ref(DEFAULT_SECONDARY)
+const accentColor = ref(DEFAULT_ACCENT)
+const logoPreview = ref<string | null>(null)
+
+function hexToRgb(hex: string) {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return { r, g, b }
+}
+
+const brandCssVars = computed(() => {
+  const rgb = hexToRgb(primaryColor.value)
+  const rgb2 = hexToRgb(secondaryColor.value)
+  return {
+    '--brand-primary': primaryColor.value,
+    '--brand-secondary': secondaryColor.value,
+    '--brand-accent': accentColor.value,
+    '--brand-rgb': `${rgb.r}, ${rgb.g}, ${rgb.b}`,
+    '--brand-2-rgb': `${rgb2.r}, ${rgb2.g}, ${rgb2.b}`,
+  }
+})
+
+const route = useRoute()
+
+onMounted(() => {
+  const q = route.query
+  if (q.primary_color) primaryColor.value = decodeURIComponent(String(q.primary_color))
+  if (q.secondary_color) secondaryColor.value = decodeURIComponent(String(q.secondary_color))
+  if (q.accent_color) accentColor.value = decodeURIComponent(String(q.accent_color))
+  const stored = sessionStorage.getItem('simy_preview_logo')
+  if (stored) {
+    logoPreview.value = stored
+    sessionStorage.removeItem('simy_preview_logo')
+  }
+})
 
 const { getTrialStatus } = useTrialFeatures()
 const trialStatus = computed(() => getTrialStatus())
@@ -423,7 +489,11 @@ const addonAffiliate = ref(false)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-const { data: pricing, pending: pricesLoading } = await useFetch<PricingResponse>('/api/stripe/prices')
+const { data: pricing, pending: pricesLoading, error: pricesError } = useLazyFetch<PricingResponse>('/api/stripe/prices')
+
+const pricesAvailable = computed(() =>
+  !pricesError.value && !!pricing.value && Object.keys(pricing.value.plans ?? {}).length > 0
+)
 
 const planPriceAmount = (planId: string): number =>
   pricing.value?.plans?.[planId]?.unitAmount ?? 0
