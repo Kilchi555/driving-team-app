@@ -13,7 +13,7 @@ export interface PricingResponse {
   addons: Record<string, PriceInfo>
 }
 
-export default defineEventHandler(async (): Promise<PricingResponse> => {
+async function fetchPrices(): Promise<PricingResponse> {
   const stripeSecret = process.env.STRIPE_SECRET_KEY
   if (!stripeSecret) {
     throw createError({ statusCode: 500, statusMessage: 'Stripe not configured' })
@@ -21,7 +21,6 @@ export default defineEventHandler(async (): Promise<PricingResponse> => {
 
   const stripe = new Stripe(stripeSecret, { apiVersion: '2025-08-27.basil' as any })
 
-  // Collect all price IDs we want to fetch
   const planPriceIds = PLANS
     .filter(p => p.priceEnvKey && process.env[p.priceEnvKey])
     .map(p => ({ key: p.id, priceId: process.env[p.priceEnvKey!]! }))
@@ -32,7 +31,6 @@ export default defineEventHandler(async (): Promise<PricingResponse> => {
 
   const allPriceIds = [...planPriceIds, ...addonPriceIds]
 
-  // Fetch all prices individually to avoid one failure breaking everything
   const results = await Promise.allSettled(
     allPriceIds.map(({ priceId }) => stripe.prices.retrieve(priceId))
   )
@@ -68,4 +66,14 @@ export default defineEventHandler(async (): Promise<PricingResponse> => {
   })
 
   return { plans, addons }
-})
+}
+
+// Cache prices for 5 minutes — they rarely change and each fetch hits Stripe 6 times
+export default defineCachedEventHandler(
+  () => fetchPrices(),
+  {
+    maxAge: 60 * 5,
+    name: 'stripe-prices',
+    getKey: () => 'prices',
+  }
+)
