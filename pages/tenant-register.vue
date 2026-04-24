@@ -1,13 +1,16 @@
 <!-- pages/tenant-register.vue -->
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 flex items-center justify-center p-3 sm:p-6">
+  <div class="min-h-screen flex items-center justify-center p-3 sm:p-6"
+    :style="{ background: pageBackground }">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden">
 
       <!-- Header -->
-      <div class="relative bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-6 sm:px-10 sm:py-8 overflow-hidden">
+      <div class="relative text-white px-6 py-6 sm:px-10 sm:py-8 overflow-hidden"
+        :style="{ background: `linear-gradient(135deg, ${formData.primary_color || '#3B82F6'}, ${formData.secondary_color || '#6366F1'})` }">
         <div class="relative z-10 flex items-center gap-4">
-          <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+            <img v-if="logoPreview" :src="logoPreview" alt="Logo" class="w-full h-full object-contain p-1" />
+            <svg v-else class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
             </svg>
           </div>
@@ -24,7 +27,8 @@
       <div v-if="currentStep < LOADING_STEP" class="px-6 sm:px-10 pt-5 pb-2 border-b border-gray-100">
         <div class="hidden sm:flex justify-between text-xs mb-2.5 px-0.5">
           <span v-for="(step, i) in steps" :key="i" class="flex-1 text-center truncate px-1 font-medium transition-colors"
-            :class="i < currentStep ? 'text-green-600' : i === currentStep ? 'text-blue-600' : 'text-gray-400'">
+            :class="i < currentStep ? 'text-green-600' : i === currentStep ? '' : 'text-gray-400'"
+            :style="i === currentStep ? { color: formData.primary_color || '#2563EB' } : {}">
             {{ step.title }}
           </span>
         </div>
@@ -33,10 +37,15 @@
             <div
               class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 flex-shrink-0 z-10"
               :class="[
-                index < currentStep  ? 'bg-green-500 text-white' :
-                index === currentStep ? 'bg-blue-600 text-white ring-4 ring-blue-100' :
+                index < currentStep  ? 'text-white' :
+                index === currentStep ? 'text-white ring-4' :
                                         'bg-gray-100 text-gray-400'
               ]"
+              :style="index < currentStep
+                ? { backgroundColor: formData.secondary_color || '#10B981' }
+                : index === currentStep
+                  ? { backgroundColor: formData.primary_color || '#3B82F6', '--tw-ring-color': (formData.primary_color || '#3B82F6') + '30' }
+                  : {}"
             >
               <svg v-if="index < currentStep" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
@@ -44,10 +53,11 @@
               <span v-else>{{ index + 1 }}</span>
             </div>
             <div v-if="index < steps.length - 1" class="flex-1 h-0.5 transition-all duration-500"
-              :class="index < currentStep ? 'bg-green-400' : 'bg-gray-200'"></div>
+              :class="index < currentStep ? '' : 'bg-gray-200'"
+              :style="index < currentStep ? { backgroundColor: formData.secondary_color || '#10B981' } : {}"></div>
           </template>
         </div>
-        <p class="sm:hidden text-xs text-center text-blue-600 font-medium mt-2">
+        <p class="sm:hidden text-xs text-center font-medium mt-2" :style="{ color: formData.primary_color || '#2563EB' }">
           Schritt {{ currentStep + 1 }}/{{ steps.length }} – {{ steps[currentStep]?.title }}
         </p>
       </div>
@@ -429,6 +439,20 @@
             <p class="text-sm text-gray-500">Alles optional – kann jederzeit in den Einstellungen angepasst werden.</p>
           </div>
 
+          <!-- Color preview hint (shown when colors were pre-selected) -->
+          <div v-if="formData.primary_color !== '#3B82F6' || formData.secondary_color !== '#10B981'"
+            class="flex items-center gap-3 rounded-xl px-4 py-3 border"
+            :style="{ background: (formData.primary_color || '#3B82F6') + '0D', borderColor: (formData.primary_color || '#3B82F6') + '35' }">
+            <div class="flex gap-1.5 flex-shrink-0">
+              <span class="w-4 h-4 rounded-full shadow-sm" :style="{ background: formData.primary_color }"></span>
+              <span class="w-4 h-4 rounded-full shadow-sm" :style="{ background: formData.secondary_color }"></span>
+              <span class="w-4 h-4 rounded-full shadow-sm" :style="{ background: formData.accent_color }"></span>
+            </div>
+            <p class="text-xs font-medium" :style="{ color: formData.primary_color }">
+              Deine Farben aus der Vorschau wurden übernommen – passe sie hier bei Bedarf an.
+            </p>
+          </div>
+
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <!-- Logo Upload -->
             <div>
@@ -773,8 +797,9 @@
         <!-- Loading State -->
         <div v-if="currentStep === LOADING_STEP" class="flex flex-col items-center justify-center py-16 gap-4">
           <div class="relative w-16 h-16">
-            <div class="absolute inset-0 rounded-full border-4 border-blue-100"></div>
-            <div class="absolute inset-0 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
+            <div class="absolute inset-0 rounded-full border-4 border-gray-100"></div>
+            <div class="absolute inset-0 rounded-full border-4 border-t-transparent animate-spin"
+              :style="{ borderColor: `${formData.primary_color || '#3B82F6'} transparent transparent transparent` }"></div>
           </div>
           <div class="text-center">
             <h2 class="text-lg font-semibold text-gray-900 mb-1">Fahrschule wird eingerichtet…</h2>
@@ -857,7 +882,8 @@
           </div>
 
           <button @click="goToLogin"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm">
+            class="w-full text-white font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm hover:opacity-90"
+            :style="{ background: `linear-gradient(135deg, ${formData.primary_color || '#3B82F6'}, ${formData.secondary_color || '#6366F1'})` }">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
             </svg>
@@ -889,14 +915,16 @@
           <div v-else class="flex-shrink-0 w-0"></div>
 
           <button v-if="currentStep < 6" @click="nextStep" type="button" :disabled="!canProceed"
-            class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold text-sm transition-all">
+            class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white font-bold text-sm transition-all disabled:bg-gray-200 disabled:text-gray-400"
+            :style="canProceed ? { background: `linear-gradient(135deg, ${formData.primary_color || '#2563EB'}, ${formData.secondary_color || '#4F46E5'})` } : {}">
             Weiter
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
             </svg>
           </button>
           <button v-else-if="currentStep === 6" @click="submitRegistration" type="button" :disabled="!canSubmit"
-            class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-gray-300 disabled:to-gray-300 disabled:text-gray-400 text-white font-bold text-sm transition-all shadow-sm">
+            class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl disabled:from-gray-300 disabled:to-gray-300 disabled:text-gray-400 text-white font-bold text-sm transition-all shadow-sm"
+            :style="canSubmit ? { background: 'linear-gradient(135deg, #10B981, #059669)' } : {}">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
             </svg>
@@ -910,7 +938,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { navigateTo } from '#app'
+import { navigateTo, useRoute } from '#app'
 
 definePageMeta({ layout: false })
 
@@ -1376,7 +1404,38 @@ const loadFromStorage = () => {
 
 watch([formData, adminForm, adminSameAsCompany, currentStep, locationsList, staffList], saveToStorage, { deep: true })
 
+const route = useRoute()
+
+// ─── Page Background ────────────────────────────────────────────────────────
+function darkenHex(hex: string, amount: number): string {
+  const h = hex.replace('#', '')
+  const r = Math.round(parseInt(h.slice(0, 2), 16) * (1 - amount))
+  const g = Math.round(parseInt(h.slice(2, 4), 16) * (1 - amount))
+  const b = Math.round(parseInt(h.slice(4, 6), 16) * (1 - amount))
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+}
+
+const pageBackground = computed(() => {
+  const p = formData.value.primary_color || '#3B82F6'
+  const s = formData.value.secondary_color || '#6366F1'
+  const a = formData.value.accent_color || '#8B5CF6'
+  return `linear-gradient(135deg, ${darkenHex(p, 0.78)}, ${darkenHex(s, 0.72)} 55%, ${darkenHex(a, 0.82)})`
+})
+
 onMounted(async () => {
+  // Pre-populate brand colors from URL query params (set by the index page color picker)
+  const q = route.query
+  if (q.primary_color && typeof q.primary_color === 'string') formData.value.primary_color = q.primary_color
+  if (q.secondary_color && typeof q.secondary_color === 'string') formData.value.secondary_color = q.secondary_color
+  if (q.accent_color && typeof q.accent_color === 'string') formData.value.accent_color = q.accent_color
+
+  // Pre-populate logo from sessionStorage (set by the index page logo upload)
+  const savedLogo = sessionStorage.getItem('simy_preview_logo')
+  if (savedLogo) {
+    logoPreview.value = savedLogo
+    sessionStorage.removeItem('simy_preview_logo')
+  }
+
   loadFromStorage()
   if (adminSameAsCompany.value) applyAdminFromCompany()
   // Pre-load categories if already past step 0
