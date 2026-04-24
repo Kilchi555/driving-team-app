@@ -12,7 +12,8 @@
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
       <Link rel="canonical" href="https://drivingteam.ch/autoshkolle-shqipe/" />
       <Link rel="alternate" hreflang="sq" href="https://drivingteam.ch/autoshkolle-shqipe/" />
-      <Link rel="alternate" hreflang="de" href="https://drivingteam.ch/auto-fahrschule/" />
+      <Link rel="alternate" hreflang="de-CH" href="https://drivingteam.ch/auto-fahrschule/" />
+      <Link rel="alternate" hreflang="x-default" href="https://drivingteam.ch/auto-fahrschule/" />
     </Head>
 
     <!-- Hero Section -->
@@ -528,6 +529,7 @@
 const activeTab = ref<'b' | 'be' | 'taxi'>('b')
 
 useHead({
+  htmlAttrs: { lang: 'sq' },
   script: [
     {
       type: 'application/ld+json',

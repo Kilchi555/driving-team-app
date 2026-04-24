@@ -7,6 +7,9 @@
       <Meta property="og:description" content="Auto Fahrschule in Zürich für Kategorie B Ausbildung" />
       <Meta property="og:url" content="https://drivingteam.ch/auto-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/auto-fahrschule/" />
+      <Link rel="alternate" hreflang="de-CH" href="https://drivingteam.ch/auto-fahrschule/" />
+      <Link rel="alternate" hreflang="sq" href="https://drivingteam.ch/autoshkolle-shqipe/" />
+      <Link rel="alternate" hreflang="x-default" href="https://drivingteam.ch/auto-fahrschule/" />
 
           <Meta property="og:image" content="https://drivingteam.ch/images/categories/auto-fahrschule-hero.webp" />
       <Meta property="og:image:width" content="1200" />
@@ -351,6 +354,9 @@
           </a>
           <a href="/auto-fahrschule-zuerich/" class="inline-block border-2 border-green-600 text-green-600 px-6 py-2 rounded hover:bg-green-50 transition" aria-label="Auto Fahrschule Zürich – Prüfungsgebiet Albisgütli">
             📍 Auto Fahrschule Zürich
+          </a>
+          <a href="/autoshkolle-shqipe/" class="inline-block border-2 border-red-500 text-red-500 px-6 py-2 rounded hover:bg-red-50 transition" aria-label="Autoshkollë Shqipe Zürich – Mëso me Skenderin">
+            🇦🇱 Autoshkollë Shqipe
           </a>
         </div>
         <div class="mt-8 pt-6 border-t border-gray-200">
