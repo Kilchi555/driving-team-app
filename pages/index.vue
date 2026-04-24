@@ -362,6 +362,160 @@
       </div>
     </section>
 
+    <!-- ── Email Demo ─────────────────────────────────────────────────────────── -->
+    <section id="email-demo" class="py-20 px-6" :style="{ background: `linear-gradient(160deg, rgba(var(--brand-rgb), 0.04) 0%, rgba(var(--brand-2-rgb), 0.06) 100%)` }">
+      <div class="max-w-6xl mx-auto">
+
+        <!-- Header -->
+        <div class="text-center mb-12">
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Live Demo</p>
+          <h2 class="text-4xl font-extrabold text-gray-900 mb-4">So kommuniziert Simy mit deinen Schülern</h2>
+          <p class="text-lg text-gray-500 max-w-xl mx-auto">Gib deinen Schulnamen ein – und sieh sofort, wie die E-Mails deiner Fahrschule aussehen werden.</p>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-8 items-start">
+
+          <!-- LEFT: Controls -->
+          <div class="space-y-6">
+
+            <!-- School name input -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
+              <label class="block text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Name deiner Fahrschule</label>
+              <input
+                v-model="schoolNameDemo"
+                type="text"
+                placeholder="z.B. Fahrschule Müller GmbH"
+                class="w-full px-4 py-3 rounded-xl border-2 text-gray-900 font-medium text-sm transition-all outline-none"
+                :style="{ borderColor: `rgba(var(--brand-rgb), 0.2)` }"
+                @focus="(e) => (e.target as HTMLInputElement).style.borderColor = primaryColor"
+                @blur="(e) => (e.target as HTMLInputElement).style.borderColor = `rgba(var(--brand-rgb), 0.2)`"
+              />
+              <p class="text-xs text-gray-400 mt-2">Der Name erscheint live in der E-Mail-Vorschau →</p>
+            </div>
+
+            <!-- Template Tabs -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
+              <label class="block text-xs font-bold uppercase tracking-widest mb-4" style="color: var(--brand-primary);">E-Mail Vorlage wählen</label>
+              <div class="space-y-2.5">
+                <button
+                  v-for="tab in [
+                    { id: 'reminder', icon: '📅', label: 'Lektionserinnerung', desc: '24h vor jeder Stunde automatisch versendet' },
+                    { id: 'invoice', icon: '🧾', label: 'Rechnung', desc: 'Nach jeder Lektion mit Zahlungslink' },
+                    { id: 'welcome', icon: '🎉', label: 'Willkommen', desc: 'Sobald ein neuer Schüler erfasst wird' },
+                  ]"
+                  :key="tab.id"
+                  @click="activeTemplate = (tab.id as 'reminder' | 'invoice' | 'welcome')"
+                  class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 transition-all text-left"
+                  :style="activeTemplate === tab.id
+                    ? { borderColor: primaryColor, background: `rgba(var(--brand-rgb), 0.05)` }
+                    : { borderColor: 'transparent', background: '#f9fafb' }"
+                >
+                  <span class="text-xl flex-shrink-0">{{ tab.icon }}</span>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold" :style="activeTemplate === tab.id ? { color: primaryColor } : { color: '#374151' }">{{ tab.label }}</p>
+                    <p class="text-xs text-gray-400 truncate">{{ tab.desc }}</p>
+                  </div>
+                  <svg v-if="activeTemplate === tab.id" class="w-4 h-4 flex-shrink-0" :style="{ color: primaryColor }" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Send to inbox -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
+              <label class="block text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Diese E-Mail an mich senden</label>
+
+              <!-- Success state -->
+              <div v-if="demoSent" class="rounded-xl p-5 text-center" :style="{ background: `rgba(var(--brand-rgb), 0.06)`, border: `1px solid rgba(var(--brand-rgb), 0.15)` }">
+                <p class="text-3xl mb-2">📬</p>
+                <p class="font-bold text-gray-900 text-sm mb-1">Check dein Postfach!</p>
+                <p class="text-xs text-gray-500 mb-4">Die Demo-E-Mail ist unterwegs an <strong>{{ demoEmail }}</strong></p>
+                <a :href="registerUrl" @click="saveLogoToSession"
+                  class="inline-block px-5 py-2.5 rounded-xl text-white text-sm font-bold transition-all hover:opacity-90"
+                  :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))` }">
+                  Bereit für echte Emails? Jetzt registrieren →
+                </a>
+              </div>
+
+              <!-- Input state -->
+              <div v-else class="space-y-3">
+                <input
+                  v-model="demoEmail"
+                  type="email"
+                  placeholder="deine@email.ch"
+                  class="w-full px-4 py-3 rounded-xl border-2 text-gray-900 text-sm transition-all outline-none"
+                  :style="{ borderColor: `rgba(var(--brand-rgb), 0.2)` }"
+                  @focus="(e) => (e.target as HTMLInputElement).style.borderColor = primaryColor"
+                  @blur="(e) => (e.target as HTMLInputElement).style.borderColor = `rgba(var(--brand-rgb), 0.2)`"
+                  @keyup.enter="sendDemoEmail"
+                />
+                <p v-if="demoError" class="text-xs text-red-500">{{ demoError }}</p>
+                <button
+                  @click="sendDemoEmail"
+                  :disabled="!demoEmail || sendingDemo"
+                  class="w-full py-3 px-5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                  :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))` }"
+                >
+                  <svg v-if="sendingDemo" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  <span>{{ sendingDemo ? 'Wird gesendet…' : 'Demo-E-Mail zusenden →' }}</span>
+                </button>
+                <p class="text-xs text-gray-400 text-center">Kein Spam. Nur diese eine Demo-E-Mail.</p>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- RIGHT: Live Email Preview -->
+          <div class="sticky top-24">
+            <div class="rounded-2xl overflow-hidden shadow-2xl border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.15)` }">
+              <!-- Fake email client top bar -->
+              <div class="bg-gray-800 px-4 py-3 flex items-center gap-3">
+                <div class="flex gap-1.5">
+                  <span class="w-3 h-3 rounded-full bg-red-400"></span>
+                  <span class="w-3 h-3 rounded-full bg-amber-400"></span>
+                  <span class="w-3 h-3 rounded-full bg-green-400"></span>
+                </div>
+                <div class="flex-1 bg-gray-700 rounded-md px-3 py-1.5 text-xs text-gray-400 truncate">
+                  <span class="text-gray-500 mr-2">Von:</span>
+                  <span class="text-gray-300">{{ schoolNameDemo || 'Fahrschule Muster AG' }} via Simy</span>
+                </div>
+              </div>
+              <!-- Subject line -->
+              <div class="bg-white px-5 py-3 border-b border-gray-100 flex items-center gap-3">
+                <span class="text-lg flex-shrink-0">{{ activeTemplate === 'reminder' ? '📅' : activeTemplate === 'invoice' ? '🧾' : '🎉' }}</span>
+                <span class="text-sm font-semibold text-gray-700 truncate">
+                  <template v-if="activeTemplate === 'reminder'">Erinnerung: Deine Fahrstunde morgen um 09:00 Uhr</template>
+                  <template v-else-if="activeTemplate === 'invoice'">Deine Rechnung: CHF 295.– fällig bis 15.05.2025</template>
+                  <template v-else>Willkommen bei {{ schoolNameDemo || 'Fahrschule Muster AG' }}!</template>
+                </span>
+              </div>
+              <!-- Email body iframe -->
+              <div class="bg-gray-50 overflow-hidden">
+                <iframe
+                  :srcdoc="demoEmailHtml"
+                  class="w-full border-0 block"
+                  style="height: 500px; pointer-events: none;"
+                  sandbox="allow-same-origin"
+                  title="E-Mail Vorschau"
+                ></iframe>
+              </div>
+            </div>
+            <!-- Hint -->
+            <p class="text-center text-xs text-gray-400 mt-3">
+              Farben folgen deiner Auswahl im
+              <button @click="showColorPicker = true; if(showAutoPopup) showAutoPopup = false" class="font-semibold underline underline-offset-2 transition-colors hover:opacity-80" style="color: var(--brand-primary);">Branding-Tool</button>
+              oben
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
     <!-- ── Personas ───────────────────────────────────────────────────────────── -->
     <section class="py-20 px-6 bg-white">
       <div class="max-w-5xl mx-auto">
@@ -1146,4 +1300,208 @@ const faqs = reactive([
   { q: 'Kann ich von einem Plan upgraden?', a: 'Ja, jederzeit. Dein Upgrade wird sofort aktiv und anteilig verrechnet. Du verlierst keine Daten.', open: false },
   { q: 'Sind meine Daten sicher?', a: 'Ja. Simy betreibt alle Daten auf Schweizer Servern, ist DSGVO-konform und verwendet Ende-zu-Ende-Verschlüsselung für sensible Daten.', open: false },
 ])
+
+// ─── Interactive Email Demo ───────────────────────────────────────────────────
+const schoolNameDemo = ref('Fahrschule Muster AG')
+const demoEmail = ref('')
+const activeTemplate = ref<'reminder' | 'invoice' | 'welcome'>('reminder')
+const sendingDemo = ref(false)
+const demoSent = ref(false)
+const demoError = ref('')
+
+function getDemoReminderHtml(school: string, primary: string): string {
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f3f4f6;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.10);">
+        <tr><td style="background:${primary};padding:36px 30px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 6px 0;letter-spacing:1px;text-transform:uppercase;">Lektionserinnerung</p>
+          <h1 style="color:#fff;margin:0;font-size:26px;font-weight:700;">${school}</h1>
+        </td></tr>
+        <tr><td style="padding:32px 30px;">
+          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 16px 0;">Hallo <strong>Anna</strong>,</p>
+          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 24px 0;">
+            Wir möchten dich an deine Fahrstunde <strong>morgen</strong> erinnern:
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:8px;margin-bottom:24px;">
+            <tr><td style="padding:20px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="color:#6b7280;font-size:14px;padding:6px 0;width:40%;">📅 Datum</td>
+                  <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">Morgen, 09:00 Uhr</td>
+                </tr>
+                <tr>
+                  <td style="color:#6b7280;font-size:14px;padding:6px 0;">👤 Fahrlehrer</td>
+                  <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">Thomas Meier</td>
+                </tr>
+                <tr>
+                  <td style="color:#6b7280;font-size:14px;padding:6px 0;">📍 Treffpunkt</td>
+                  <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">Bahnhof Uster, Gleis 1</td>
+                </tr>
+                <tr>
+                  <td style="color:#6b7280;font-size:14px;padding:6px 0;">⏱ Dauer</td>
+                  <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">90 Minuten</td>
+                </tr>
+              </table>
+            </td></tr>
+          </table>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+            <tr><td align="center">
+              <a href="#" style="display:inline-block;background:${primary};color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:15px;font-weight:700;">
+                Termin bestätigen →
+              </a>
+            </td></tr>
+          </table>
+          <p style="color:#9ca3af;font-size:13px;line-height:1.6;margin:0;">
+            Diese Erinnerung wurde automatisch von Simy erstellt und versendet – ohne dass dein Fahrlehrer einen Finger rühren musste.
+          </p>
+        </td></tr>
+        <tr><td style="background:#f9fafb;padding:20px 30px;text-align:center;border-top:1px solid #e5e7eb;">
+          <p style="color:#9ca3af;font-size:12px;margin:0;">${school} · Powered by <strong style="color:${primary}">Simy</strong></p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+}
+
+function getDemoInvoiceHtml(school: string, primary: string): string {
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f3f4f6;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.10);">
+        <tr><td style="background:${primary};padding:36px 30px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 6px 0;letter-spacing:1px;text-transform:uppercase;">Rechnung</p>
+          <h1 style="color:#fff;margin:0;font-size:26px;font-weight:700;">${school}</h1>
+        </td></tr>
+        <tr><td style="padding:32px 30px;">
+          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 16px 0;">Hallo <strong>Anna</strong>,</p>
+          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 24px 0;">
+            Vielen Dank für deine Fahrstunde. Hier ist deine Rechnung:
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:8px;margin-bottom:8px;">
+            <tr><td style="padding:16px 24px 8px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="color:#374151;font-size:14px;padding:8px 0;border-bottom:1px solid #e5e7eb;">Fahrstunde (90 Min.)</td>
+                  <td align="right" style="color:#374151;font-size:14px;padding:8px 0;border-bottom:1px solid #e5e7eb;">CHF 115.–</td>
+                </tr>
+                <tr>
+                  <td style="color:#374151;font-size:14px;padding:8px 0;border-bottom:1px solid #e5e7eb;">VKU-Kurs Grundkurs</td>
+                  <td align="right" style="color:#374151;font-size:14px;padding:8px 0;border-bottom:1px solid #e5e7eb;">CHF 180.–</td>
+                </tr>
+                <tr>
+                  <td style="color:#111827;font-size:15px;font-weight:700;padding:12px 0 8px 0;">Total</td>
+                  <td align="right" style="color:${primary};font-size:18px;font-weight:800;padding:12px 0 8px 0;">CHF 295.–</td>
+                </tr>
+              </table>
+            </td></tr>
+          </table>
+          <p style="color:#6b7280;font-size:13px;margin:0 0 24px 0;text-align:right;">Fällig bis: 15.05.2025</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+            <tr><td align="center">
+              <a href="#" style="display:inline-block;background:${primary};color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:15px;font-weight:700;">
+                Jetzt mit TWINT bezahlen →
+              </a>
+            </td></tr>
+          </table>
+          <p style="color:#9ca3af;font-size:13px;line-height:1.6;margin:0;">
+            Diese Rechnung wurde automatisch nach der Fahrstunde erstellt und versendet – du hast dafür keinen Aufwand.
+          </p>
+        </td></tr>
+        <tr><td style="background:#f9fafb;padding:20px 30px;text-align:center;border-top:1px solid #e5e7eb;">
+          <p style="color:#9ca3af;font-size:12px;margin:0;">${school} · Powered by <strong style="color:${primary}">Simy</strong></p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+}
+
+function getDemoWelcomeHtml(school: string, primary: string): string {
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f3f4f6;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.10);">
+        <tr><td style="background:${primary};padding:36px 30px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 6px 0;letter-spacing:1px;text-transform:uppercase;">Willkommen</p>
+          <h1 style="color:#fff;margin:0;font-size:26px;font-weight:700;">Willkommen bei ${school}!</h1>
+        </td></tr>
+        <tr><td style="padding:32px 30px;">
+          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 16px 0;">Hallo <strong>Anna</strong>,</p>
+          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 24px 0;">
+            Schön, dass du dich für uns entschieden hast! Alles was du brauchst – dein persönliches Schüler-Dashboard, Termine buchen und Zahlungen erledigen – findest du hier:
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:8px;margin-bottom:24px;">
+            <tr><td style="padding:20px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="color:#6b7280;font-size:14px;padding:6px 0;width:40%;">✅ Konto erstellen</td>
+                  <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">Klick auf den Button unten</td>
+                </tr>
+                <tr>
+                  <td style="color:#6b7280;font-size:14px;padding:6px 0;">📅 Erste Stunde buchen</td>
+                  <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">Direkt im Dashboard</td>
+                </tr>
+                <tr>
+                  <td style="color:#6b7280;font-size:14px;padding:6px 0;">💳 Zahlung</td>
+                  <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">TWINT, Karte oder Rechnung</td>
+                </tr>
+              </table>
+            </td></tr>
+          </table>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+            <tr><td align="center">
+              <a href="#" style="display:inline-block;background:${primary};color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:15px;font-weight:700;">
+                Konto aktivieren →
+              </a>
+            </td></tr>
+          </table>
+          <p style="color:#9ca3af;font-size:13px;line-height:1.6;margin:0;">
+            Dieser Link ist 14 Tage gültig. Fragen? Melde dich jederzeit bei uns.
+          </p>
+        </td></tr>
+        <tr><td style="background:#f9fafb;padding:20px 30px;text-align:center;border-top:1px solid #e5e7eb;">
+          <p style="color:#9ca3af;font-size:12px;margin:0;">${school} · Powered by <strong style="color:${primary}">Simy</strong></p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+}
+
+const demoEmailHtml = computed(() => {
+  const school = schoolNameDemo.value.trim() || 'Fahrschule Muster AG'
+  const primary = primaryColor.value
+  const secondary = secondaryColor.value
+  if (activeTemplate.value === 'reminder') return getDemoReminderHtml(school, primary)
+  if (activeTemplate.value === 'invoice') return getDemoInvoiceHtml(school, primary)
+  return getDemoWelcomeHtml(school, primary)
+})
+
+async function sendDemoEmail() {
+  if (!demoEmail.value || sendingDemo.value || demoSent.value) return
+  sendingDemo.value = true
+  demoError.value = ''
+  try {
+    await $fetch('/api/demo/send-demo-email', {
+      method: 'POST',
+      body: {
+        email: demoEmail.value,
+        schoolName: schoolNameDemo.value.trim() || 'Fahrschule Muster AG',
+        templateType: activeTemplate.value,
+        primaryColor: primaryColor.value,
+        secondaryColor: secondaryColor.value,
+      },
+    })
+    demoSent.value = true
+  } catch (err: any) {
+    demoError.value = err?.data?.statusMessage || 'Fehler beim Senden. Bitte nochmals versuchen.'
+  } finally {
+    sendingDemo.value = false
+  }
+}
 </script>
