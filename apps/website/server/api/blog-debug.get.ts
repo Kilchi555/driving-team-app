@@ -1,22 +1,16 @@
-import { readdir, readFile } from 'node:fs/promises'
-import { join } from 'node:path'
-
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
   try {
-    // Try reading the content blog directory to find actual paths
-    const contentDir = join(process.cwd(), 'content', 'blog')
-    const files = await readdir(contentDir)
-    
-    // Also try querying via the nitro storage
-    const storage = useStorage('content')
-    const keys = await storage.getKeys('blog')
-    
-    return { 
-      files,
-      storageKeys: keys,
-      cwd: process.cwd()
+    const all = await queryCollection(event, 'blog').select('title', 'slug', 'path').all()
+    const byPath = await queryCollection(event, 'blog').path('/blog/pruefungsangst-fahrpruefung').first()
+    const bySlug = await queryCollection(event, 'blog').where('slug', '=', 'pruefungsangst-fahrpruefung').first()
+    return {
+      count: all.length,
+      slugs: all.map(a => ({ slug: a.slug, path: a.path })),
+      byPath,
+      bySlug,
+      cwd: process.cwd(),
     }
   } catch (err: any) {
-    return { error: err.message, cwd: process.cwd() }
+    return { error: err.message, stack: err.stack?.slice(0, 500), cwd: process.cwd() }
   }
 })
