@@ -113,9 +113,11 @@ export default defineNuxtConfig({
       wasm: true,
     },
     prerender: {
-      crawlLinks: true,
+      crawlLinks: false,
       failOnError: false,
       routes: [
+        '/',
+        '/blog/',
         '/blog/fuehrerschein-kosten-schweiz/',
         '/blog/bf17-begleitetes-fahren-schweiz/',
         '/blog/fuehrerschein-kategorien-schweiz/',
