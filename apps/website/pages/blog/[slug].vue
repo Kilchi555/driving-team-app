@@ -207,11 +207,9 @@
 const route = useRoute()
 const slug = route.params.slug as string
 
-const { data: article } = await useAsyncData(`blog-${slug}`, async () => {
-  const all = await queryCollection('blog').all()
-  // Match by frontmatter slug first, fall back to path suffix for reliability
-  return all.find(a => a.slug === slug || a.path === `/blog/${slug}`) ?? null
-})
+const { data: article } = await useAsyncData(`blog-${slug}`, () =>
+  queryCollection('blog').path(`/blog/${slug}`).first()
+)
 
 // SSR-safe SEO meta – direct string values after awaited useAsyncData for correct prerender output
 const seoTitle = article.value
@@ -248,7 +246,7 @@ useHead({
   ],
 })
 
-const { data: allArticles } = await useAsyncData('blog-all-for-related', () =>
+const { data: allArticles } = await useAsyncData(`blog-related-${slug}`, () =>
   queryCollection('blog').select('title', 'slug', 'date', 'category').all()
 )
 
