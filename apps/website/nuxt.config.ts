@@ -2,6 +2,11 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-03-24',
   modules: ['@nuxtjs/tailwindcss', '@nuxt/content', '@nuxt/image', '@vercel/analytics/nuxt'],
 
+  // Use Node.js native SQLite (no native binaries needed → works in Vercel Lambda)
+  content: {
+    experimental: { sqliteConnector: 'native' },
+  },
+
   runtimeConfig: {
     // Server-only (nicht im Browser sichtbar)
     // Nutzt den bestehenden VITE_GOOGLE_MAPS_API_KEY – Places API muss aktiviert sein
