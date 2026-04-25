@@ -242,6 +242,9 @@
     <PriceSection category="auto" />
 
 
+    <!-- Lead Magnet -->
+    <LeadMagnetForm category="auto" />
+
     <!-- FAQ Section -->
     <section class="section-container">
       <h2 class="heading-md mb-12 text-center">Häufig gestellte Fragen</h2>

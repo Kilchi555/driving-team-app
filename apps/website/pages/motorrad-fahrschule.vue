@@ -260,6 +260,9 @@
       </div>
     </section>
 
+    <!-- Lead Magnet -->
+    <LeadMagnetForm category="motorrad" />
+
     <!-- FAQ Section -->
     <section class="section-container">
       <h2 class="heading-md mb-12 text-center">Häufig gestellte Fragen</h2>

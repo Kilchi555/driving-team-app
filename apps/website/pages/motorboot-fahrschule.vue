@@ -162,6 +162,9 @@
 
     <ReviewsSection category="motorboot" />
 
+    <!-- Lead Magnet -->
+    <LeadMagnetForm category="motorboot" />
+
     <!-- FAQ -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">

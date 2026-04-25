@@ -216,6 +216,9 @@
 
     <ReviewsSection category="anhaenger" />
 
+    <!-- Lead Magnet -->
+    <LeadMagnetForm category="anhaenger" />
+
     <!-- FAQ Section -->
     <section class="section-container">
       <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-center">Häufige Fragen – Anhänger Fahrschule</h2>
