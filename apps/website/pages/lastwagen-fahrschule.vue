@@ -260,6 +260,9 @@
 
     <ReviewsSection category="lastwagen" />
 
+    <!-- Lead Magnet -->
+    <LeadMagnetForm category="lastwagen" />
+
     <!-- FAQ Section -->
     <section class="section-container">
       <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-center">Die häufigsten Fragen & Antworten</h2>
