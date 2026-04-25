@@ -92,45 +92,68 @@ function divider(): string {
   return `<hr style="border:none;border-top:1px solid #f3f4f6;margin:24px 0;">`
 }
 
-// ─── Category templates ───────────────────────────────────────────────────────
+// ─── Category templates (deep-researched, Fahrschule-verified content) ───────
 
 function buildAutoEmail(firstName: string): string {
   const color = '#1C64F2'
   const greeting = `<p style="margin:0 0 8px;font-size:17px;color:#111827;">Hallo <strong>${firstName}</strong>,</p>
-    <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">hier ist dein persönlicher <strong>7-Schritte-Plan</strong> für den Führerausweis Kategorie B – mit den wichtigsten Insider-Tipps, die dir Zeit und Geld sparen.</p>`
+    <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">hier sind die <strong>10 besten Insider-Tipps</strong> für deinen Führerausweis Kategorie B – recherchiert bei den Strassenverkehrsämtern Zürich, Schwyz und Aargau sowie führenden Schweizer Fahrschulen.</p>`
+
+  const neuBadge = `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef3c7;border-radius:8px;border-left:4px solid #f59e0b;margin-bottom:20px;">
+      <tr><td style="padding:12px 16px;">
+        <p style="margin:0;font-size:13px;color:#92400e;"><strong>🆕 Neu ab 1. Juli 2025:</strong> Fahrassistenzsysteme (FAS) werden jetzt sowohl in der <strong>Theorieprüfung als auch in der praktischen Prüfung</strong> geprüft! Lerne, wie ABS, ESP, Spurhalteassistent und Co. funktionieren – und wann du sie deaktivieren solltest.</p>
+      </td></tr>
+    </table>`
+
+  const theorieBox = `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0f9ff;border-radius:8px;border-left:4px solid ${color};margin-bottom:20px;">
+      <tr><td style="padding:16px 20px;">
+        <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:1px;">📚 4-Wochen Theorie-Lernplan</p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;color:#374151;">
+          <tr style="border-bottom:1px solid #bae6fd;"><td style="padding:5px 4px;font-weight:700;width:80px;">Woche 1</td><td style="padding:5px 4px;">Verkehrszeichen &amp; Signalisation (Reaktionsfragen üben!)</td></tr>
+          <tr style="border-bottom:1px solid #bae6fd;"><td style="padding:5px 4px;font-weight:700;">Woche 2</td><td style="padding:5px 4px;">Vortrittsregeln, Kreisel, Abbiegen</td></tr>
+          <tr style="border-bottom:1px solid #bae6fd;"><td style="padding:5px 4px;font-weight:700;">Woche 3</td><td style="padding:5px 4px;">Umwelt, Sicherheit, <strong>Fahrassistenzsysteme</strong></td></tr>
+          <tr><td style="padding:5px 4px;font-weight:700;">Woche 4</td><td style="padding:5px 4px;">Prüfungssimulationen mit offiz. ASTRA-App – mind. 2 komplette Durchläufe</td></tr>
+        </table>
+        <p style="margin:10px 0 0;font-size:12px;color:#6b7280;">Prüfung: 50 Fragen, 45 Min., du brauchst <strong>135 von 150 Punkten</strong> (= 45 von 50 Fragen). Keine Teilpunkte – alles oder nichts pro Frage!</p>
+      </td></tr>
+    </table>`
 
   const tips = [
-    tip('🩺', 'Nothelferkurs: frühzeitig machen', 'Der 10-stündige Kurs ist Pflicht und muss vor der Theorieprüfung abgeschlossen sein. Er ist 6 Jahre gültig – also so früh wie möglich erledigen, zum Beispiel schon mit 16 Jahren.', color),
-    tip('👁', 'Sehtest: gilt 24 Monate', 'Den Sehtest kannst du beim Optiker oder Augenarzt machen. Er ist 24 Monate gültig. Nicht vergessen: Ohne Sehtest kein Lernfahrausweis.', color),
-    tip('📖', 'Theorie: mit offiziellen Fragen üben', 'Über <strong>theorie24.ch</strong> übst du mit den echten StVA-Prüfungsfragen. Die Theorieprüfung beim Strassenverkehrsamt Zürich (Albisgütli) besteht aus 30 Fragen – max. 5 Fehler erlaubt.', color),
-    tip('🏫', 'VKU frühzeitig buchen – Plätze sind knapp!', 'Der Verkehrskundeunterricht (8 Stunden) ist Pflicht vor der Fahrprüfung. Wichtig: Du kannst ihn frühestens <strong>3 Monate nach Ausstellung des Lernfahrausweises</strong> absolvieren. Kurse sind oft ausgebucht – direkt nach Erhalt des LFA buchen!', color),
-    tip('🚗', 'Privat üben: 2–4× pro Woche', 'Wer regelmässig mit einer Begleitperson (mind. 23 J., Ausweis seit 3 J., nicht auf Probe) übt, braucht deutlich weniger kostenpflichtige Fahrlektionen. Das spart schnell CHF 500–1\'000.', color),
-    tip('⏱', 'Doppellektionen statt Einzellektionen', '90 Minuten sind pro Ausfahrt effizienter als 45 Minuten. Du lernst mehr pro Einheit und bezahlst weniger pro Stunde effektiver Fahrzeit.', color),
-    tip('🎓', 'WAB-Kurs innerhalb 12 Monate nicht vergessen', 'Nach bestandener Prüfung hast du 3 Jahre Probezeit – während dieser Zeit: <strong>0.0 Promille</strong>. Den eintägigen WAB-Kurs (Weiterausbildung) musst du innerhalb des <strong>ersten Jahres</strong> absolvieren, sonst riskierst du eine Busse.', color),
+    tip('🩺', 'Nothelferkurs früh abhaken (10h, gültig 6 Jahre)', 'Pflicht vor der Theorieprüfung. Tipp: Bereits ab 16 absolvieren – dann ist er bis zum Führerausweis noch gültig und spart dir den Re-Test. Angeboten beim SRK, Samariterverein oder Fahrschule.', color),
+    tip('👁', 'Sehtest: gilt nur 24 Monate', 'Beim Optiker oder Augenarzt. Kostet CHF 20–40. Vorsicht: Wenn er abläuft bevor du deinen LFA beantragst, musst du ihn wiederholen. Plane früh!', color),
+    tip('🏫', 'VKU sofort nach LFA-Erhalt buchen', 'Du kannst ihn frühestens 3 Monate nach LFA buchen – aber Plätze sind oft <strong>4–8 Wochen im Voraus ausgebucht</strong>. Buche direkt nach Erhalt des Lernfahrausweises. Ohne VKU keine Prüfungsanmeldung!', color),
+    tip('🚗', 'Privat üben spart CHF 500–1\'000', 'Begleitperson: mind. 23 J., Ausweis seit 3 J., nicht auf Probe, nüchtern (0.0‰). Ziel: 2–3× pro Woche fahren. Je mehr Privatübungen, desto weniger Fahrlektionen benötigst du.', color),
+    tip('🅿️', 'Insider: Parkplatz Albisgütli vorher üben', 'Die Prüfung startet beim StVA Zürich-Albisgütli. Viele Prüfungen beginnen oder enden mit einem Parkmanöver direkt auf dem Gelände. Fahr dort vorher hin und übe das Einparken – das beruhigt die Nerven massiv!', color),
+    tip('👟', 'Richtige Schuhe für die Prüfung', 'Klingt trivial, aber: <strong>Keine Flip-Flops, Heels oder Schuhe mit dicker Sohle</strong>. Bequeme Turnschuhe mit gutem Grip sind ideal. Du brauchst feines Gefühl auf Gas-, Brems- und Kupplungspedal.', color),
+    tip('⚡', 'Ein Fehler = noch nicht verloren!', 'Viele Prüflinge brechen mental ein nach dem ersten Fehler. Falsch! Kleine Fehler sind erlaubt. Entscheidend ist: Wie reagierst du? Ruhig weiterfahren, Konzentration behalten. Nur <strong>grobe Sicherheitsverstösse</strong> führen zum sofortigen Abbruch.', color),
+    tip('📏', '2-Sekunden-Abstand & Rettungsgasse', '<strong>2-Sekunden-Abstand:</strong> Wenn der Vordermann an einem fixen Punkt vorbeifährt, zähl "21, 22" – erst dann solltest du selbst dort sein. <strong>Rettungsgasse:</strong> Bei stockendem Verkehr auf der Autobahn sofort bilden (Pflicht seit 2021, wird in Prüfung bewertet!).', color),
+    tip('⏱', 'Doppellektionen sind effizienter', '90 Minuten erlauben mehr Übungssequenzen als 2× 45 Min. Du zahlst weniger pro effektiver Fahrminute und baust schneller Routine auf. Empfehlung: grundsätzlich Doppellektionen buchen.', color),
+    tip('🎓', 'WAB-Kurs: innerhalb 12 Monate nach Prüfung', 'Nach bestandener Prüfung: 3 Jahre Probezeit mit <strong>0.0 Promille</strong>. WAB-Kurs (1 Tag) muss innerhalb des <strong>ersten Jahres</strong> absolviert werden – sonst droht Busse bei Polizeikontrolle. Danach läuft der definitive Ausweis von selbst zu.', color),
   ]
 
   const costBox = `${divider()}
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#eff6ff;border-radius:8px;border-left:4px solid ${color};margin-bottom:0;">
       <tr><td style="padding:16px 20px;">
-        <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:1px;">💰 Kostenüberblick Kat. B</p>
+        <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:1px;">💰 Realistischer Kostenüberblick 2026</p>
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;color:#374151;">
           <tr><td style="padding:3px 0;">Nothelferkurs (10h)</td><td align="right" style="font-weight:600;">CHF 99.–</td></tr>
           <tr><td style="padding:3px 0;">VKU Zürich (8h)</td><td align="right" style="font-weight:600;">CHF 190.–</td></tr>
-          <tr><td style="padding:3px 0;">StVA-Gebühren (Sehtest, LFA, Theorie, Prüfung)</td><td align="right" style="font-weight:600;">ca. CHF 380.–</td></tr>
+          <tr><td style="padding:3px 0;">StVA-Gebühren gesamt</td><td align="right" style="font-weight:600;">ca. CHF 380.–</td></tr>
           <tr><td style="padding:3px 0;">Fahrstunden (Ø 20 × CHF 95.–)</td><td align="right" style="font-weight:600;">ca. CHF 1\'900.–</td></tr>
-          <tr style="border-top:1px solid #bfdbfe;"><td style="padding:8px 0 3px;font-weight:700;color:#1e3a8a;">Gesamtkosten (typisch)</td><td align="right" style="padding:8px 0 3px;font-weight:700;color:${color};font-size:15px;">CHF 2\'500–3\'500.–</td></tr>
+          <tr style="border-top:1px solid #bfdbfe;"><td style="padding:8px 0 3px;font-weight:700;color:#1e3a8a;">Realistisch gesamt</td><td align="right" style="padding:8px 0 3px;font-weight:700;color:${color};font-size:15px;">CHF 2\'500–3\'500.–</td></tr>
         </table>
+        <p style="margin:8px 0 0;font-size:12px;color:#6b7280;">💡 Mit regelmässigen Privatübungen kannst du die Fahrstunden auf 12–15 reduzieren → spart CHF 700–1\'000.</p>
       </td></tr>
     </table>`
 
-  const body = greeting + tips.join('') + costBox + ctaButton(BOOKING_URL, 'Jetzt erste Fahrstunde buchen', color)
+  const body = greeting + neuBadge + theorieBox + tips.join('') + costBox + ctaButton(BOOKING_URL, 'Jetzt erste Fahrstunde buchen', color)
   return emailWrapper(color, '🚗', 'Dein kostenloser Ratgeber', body)
 }
 
 function buildMotorradEmail(firstName: string): string {
   const color = '#DC2626'
   const greeting = `<p style="margin:0 0 8px;font-size:17px;color:#111827;">Hallo <strong>${firstName}</strong>,</p>
-    <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">hier ist dein persönlicher <strong>Motorrad-Führerschein Guide</strong> – mit dem kompletten Ablauf, den Prüfungs-Übungen und Tipps von erfahrenen Fahrlehrern.</p>`
+    <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">hier ist dein <strong>kompletter Motorrad-Guide</strong> – von Kategorien über Grundkurs bis zu den 7 Prüfungsübungen mit konkreten Profi-Tipps von erfahrenen Fahrlehrern.</p>`
 
   const kategorien = `
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef2f2;border-radius:8px;border-left:4px solid ${color};margin-bottom:20px;">
@@ -138,116 +161,161 @@ function buildMotorradEmail(firstName: string): string {
         <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:1px;">🏍️ Die 3 Kategorien im Vergleich</p>
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;color:#374151;">
           <tr style="border-bottom:1px solid #fecaca;">
-            <td style="padding:6px 4px;font-weight:700;">A1</td>
-            <td style="padding:6px 4px;">Ab 16 Jahren · bis 125 ccm / 11 kW · Grundkurs 12h</td>
+            <td style="padding:6px 4px;font-weight:700;width:40px;">A1</td>
+            <td style="padding:6px 4px;">Ab 16 J. · bis 125 ccm / 11 kW · Grundkurs 12h</td>
           </tr>
           <tr style="border-bottom:1px solid #fecaca;">
             <td style="padding:6px 4px;font-weight:700;">A2</td>
-            <td style="padding:6px 4px;">Ab 18 Jahren · bis 35 kW · Grundkurs 12h</td>
+            <td style="padding:6px 4px;">Ab 18 J. · bis 35 kW · Grundkurs 12h</td>
           </tr>
           <tr>
             <td style="padding:6px 4px;font-weight:700;">A</td>
-            <td style="padding:6px 4px;">Ab 20 J. (nach 2 J. A2) · unbeschränkt · kein neuer Grundkurs</td>
+            <td style="padding:6px 4px;">Ab 20 J. (nach 2 J. A2) · unbeschränkt · <strong>kein neuer Grundkurs nötig!</strong></td>
           </tr>
         </table>
-        <p style="margin:10px 0 0;font-size:12px;color:#6b7280;">💡 Tipp: Mit A1 ab 16 starten → nach 2 Jahren auf A2 → nach weiteren 2 Jahren auf A unbeschränkt. Jedes Mal ohne neue Theorieprüfung!</p>
+        <p style="margin:10px 0 0;font-size:12px;color:#6b7280;">💡 Strategie: A1 ab 16 → A2 ab 18 → A ab 20 ohne neue Grundkurs-Kosten. Günstigster Weg zum grossen Motorrad!</p>
+      </td></tr>
+    </table>`
+
+  const grundkursBox = `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef2f2;border-radius:8px;border-left:4px solid ${color};margin-bottom:20px;">
+      <tr><td style="padding:16px 20px;">
+        <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:1px;">📅 Grundkurs (PGS): 3 Tage × 4h = 12h Pflicht</p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;color:#374151;">
+          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">Tag 1</td><td style="padding:6px 4px;">Kupplung, Gas, Bremse, Slalom, Acht, Anhalten</td></tr>
+          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">Tag 2</td><td style="padding:6px 4px;">Notbremsung, Ausweichmanöver, Kurventechnik, Gewichtsverlagerung</td></tr>
+          <tr><td style="padding:6px 4px;font-weight:700;">Tag 3</td><td style="padding:6px 4px;">Strassenverkehr, Gruppenfahren, Überholen, Schräglagentraining</td></tr>
+        </table>
+        <p style="margin:10px 0 0;font-size:12px;color:#991b1b;font-weight:600;">⚠️ Alle 12h müssen innerhalb von 4 Monaten nach LFA-Ausstellung abgeschlossen sein!</p>
+      </td></tr>
+    </table>`
+
+  const uebungenBox = `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fff5f5;border-radius:8px;border-left:4px solid ${color};margin-bottom:20px;">
+      <tr><td style="padding:16px 20px;">
+        <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:1px;">🎯 Die 7 Prüfungsübungen – mit Profi-Tipps</p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:12px;color:#374151;">
+          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;width:160px;">1. Anhalten &amp; Wegfahren</td><td style="padding:6px 4px;">Linken Fuss auf Boden · Blicksystematik vor Wegfahren einhalten · Nicht zu schnell!</td></tr>
+          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">2. Gerader Slalom</td><td style="padding:6px 4px;"><strong>Blick nach vorne, nicht auf die Pylonen!</strong> A1: 2.5m Abstand · A: 3.0m</td></tr>
+          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">3. Kletterübung</td><td style="padding:6px 4px;">Beide Füsse am Boden beim Vorfahren · Mit Gas &amp; Kupplung aufs Böckchen · Blick voraus</td></tr>
+          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">4. Versetzter Slalom</td><td style="padding:6px 4px;"><strong>Augen fahren der Spur voraus</strong> · Blick zum nächsten Drehpunkt, nicht vor das Vorderrad</td></tr>
+          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">5. Spurgasse</td><td style="padding:6px 4px;">Ziel: <strong>20–22 Sekunden</strong> durch die Gasse · Mit Schleifpunkt der Kupplung arbeiten · Keine Bremse!</td></tr>
+          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">6. Acht fahren</td><td style="padding:6px 4px;"><strong>Blick halber Kreis voraus</strong> · Nicht auf den Boden schauen · Am maximalen Lenkeinschlag fahren</td></tr>
+          <tr><td style="padding:6px 4px;font-weight:700;">7. Not-Vollbremsung</td><td style="padding:6px 4px;">Auf <strong>50 km/h</strong> beschleunigen · <strong>Erst auf Bremspunkt, dann abrupt bremsen!</strong> Ohne ABS: Vorderbremse sofort dosieren</td></tr>
+        </table>
       </td></tr>
     </table>`
 
   const tips = [
-    tip('📋', 'Ablauf: 5 Schritte zum Motorrad-Ausweis', '<strong>1.</strong> Nothelferkurs (10h, gültig 6J) · <strong>2.</strong> Sehtest · <strong>3.</strong> Theorieprüfung + Lernfahrausweis · <strong>4.</strong> Grundkurs (12h, 3 Module, innerhalb 4 Monate!) · <strong>5.</strong> Praktische Prüfung', color),
-    tip('🏋️', 'Der Grundkurs: Was dich erwartet', 'Modul 1: Anfahren, Bremsen, Slalom, Achtfahren. Modul 2: Notbremsung, Ausweichen, Kurventechnik. Modul 3: Gruppenfahren, Überholen, Schräglagentraining. <strong>Wichtig:</strong> Alle 12h müssen innerhalb der ersten 4 Monate nach LFA-Ausstellung abgeschlossen sein!', color),
-    tip('🎯', 'Die 8 Pflichtübungen der Prüfung', '<strong>Acht fahren · Kreisfahren · Langsamfahren · Stop-and-Go · Ausweichen ohne Bremsen · Ausweichen mit Bremsen · Notbremsung aus 50 km/h · Slalom</strong> – alle müssen sicher sitzen.', color),
-    tip('⚠️', 'Die 3 häufigsten Prüfungsfehler', '<strong>1. Fehlende Blicktechnik:</strong> Immer weit vorausschauen, nicht auf den Boden! <strong>2. Schulterblick vergessen:</strong> Vor jedem Spurwechsel und Abbiegen. <strong>3. Zu früh bremsen:</strong> Bei der Notbremsung erst auf Markierung, dann voll auf die Bremse.', color),
-    tip('🦺', 'Schutzausrüstung Checkliste', 'Für den Grundkurs und Prüfung ist vollständige Ausrüstung Pflicht: <strong>Helm (ECE 22-06) · Motorradjacke mit Protektoren · Handschuhe · Motorradhose · Stiefel</strong>. Leihausrüstung ist bei uns auf Anfrage möglich.', color),
-    tip('💰', 'Kosten im Überblick', 'Grundkurs: CHF 480–600 · StVA-Gebühren: CHF 150–220 · Fahrstunden (optional, CHF 95/Lekt.) · Gesamtkosten A1: ca. <strong>CHF 800–1\'500</strong>, A2/A: ca. <strong>CHF 1\'200–2\'000</strong>', color),
+    tip('🔍', 'Motorrad-Check vor der Prüfung', 'Der Experte macht einen technischen Check! Kontrolliere: <strong>Reifenprofil ≥ 1,6 mm</strong> · Luftdruck korrekt · Kein Riss im Reifen · Alle Lichter &amp; Blinker funktionieren · Spiegel links &amp; rechts · Vollen Tank · Sozius-Sitz montiert · Fahrzeugausweis dabei', color),
+    tip('🦺', 'Schutzausrüstung: abriebfestes Material mit Protektoren Pflicht', 'Für Grundkurs und Prüfung: <strong>ECE-Helm mit Visier</strong> · Motorradjacke (CE-Protektoren Schultern + Ellbogen) · Motorradhose · Handschuhe · Motorradstiefel. Keine Sportschuhe!', color),
+    tip('👁', 'Die häufigsten Prüfungsfehler', '<strong>1. Schulterblick vergessen</strong> vor Spur- und Richtungswechsel – der Klassiker. <strong>2. Blick vor das Vorderrad</strong> statt weit vorausschauen. <strong>3. Zu früh bremsen</strong> bei Notbremsung. <strong>4. Zu schnell</strong> durch Slalom und Spurgasse.', color),
+    tip('🆕', 'Neu ab Juli 2025: FAS auch bei Motorrad', 'Fahrassistenzsysteme (ABS, Traktionskontrolle, Kurven-ABS) werden seit dem 1. Juli 2025 <strong>auch in der Motorrad-Theorieprüfung</strong> geprüft. Lerne besonders: Wann deaktiviere ich was?', color),
+    tip('💰', 'Kosten im Überblick', 'Grundkurs (12h): CHF 480–620 · Fahrstunden optional: CHF 95/Lekt. · StVA (LFA + Prüfung): CHF 150–200 · Ges. A1: <strong>ca. CHF 800–1\'400</strong> · A2/A: <strong>ca. CHF 1\'200–2\'000</strong>', color),
   ]
 
-  const body = greeting + kategorien + tips.join('') + ctaButton(BOOKING_URL, 'Grundkurs buchen', color)
+  const body = greeting + kategorien + grundkursBox + uebungenBox + tips.join('') + ctaButton(BOOKING_URL, 'Grundkurs buchen', color)
   return emailWrapper(color, '🏍️', 'Dein kostenloser Motorrad-Guide', body)
 }
 
 function buildLastwagenEmail(firstName: string): string {
   const color = '#D97706'
   const greeting = `<p style="margin:0 0 8px;font-size:17px;color:#111827;">Hallo <strong>${firstName}</strong>,</p>
-    <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">hier ist dein vollständiger <strong>Lastwagen-Führerschein Guide</strong> – Kategorie C und der Fähigkeitsausweis CZV einfach erklärt.</p>`
+    <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">hier ist dein vollständiger <strong>Lastwagen-Guide für die Schweiz</strong> – Kategorie C, CZV-Fähigkeitsausweis, digitaler Fahrtenschreiber und Lenk- und Ruhezeiten, alles auf den Punkt.</p>`
 
   const kategorien = `
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fffbeb;border-radius:8px;border-left:4px solid ${color};margin-bottom:20px;">
       <tr><td style="padding:16px 20px;">
-        <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;">🚛 C1 oder C – was brauchst du?</p>
+        <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;">🚛 Welche Kategorie brauchst du?</p>
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;color:#374151;">
           <tr style="border-bottom:1px solid #fcd34d;">
-            <td style="padding:8px 4px;font-weight:700;width:80px;">Kat. C1</td>
-            <td style="padding:8px 4px;">3\'500–7\'500 kg · Ab 18 Jahren · Grosse Lieferwagen, kleinere Feuerwehrfahrzeuge · Ideal für Handwerksbetriebe &amp; Lieferdienste</td>
+            <td style="padding:8px 4px;font-weight:700;width:70px;">Kat. C1</td>
+            <td style="padding:8px 4px;">3\'500–7\'500 kg · Ab 18 J. · Lieferwagen, Sanitätsfahrzeuge · ideal für Handwerk &amp; Lieferdienste</td>
+          </tr>
+          <tr style="border-bottom:1px solid #fcd34d;">
+            <td style="padding:8px 4px;font-weight:700;">Kat. C</td>
+            <td style="padding:8px 4px;">Über 7\'500 kg · Ab 21 J. · Professioneller Gütertransport · <strong>CZV-Fähigkeitsausweis obligatorisch</strong></td>
           </tr>
           <tr>
-            <td style="padding:8px 4px;font-weight:700;">Kat. C</td>
-            <td style="padding:8px 4px;">Über 7\'500 kg · Ab 21 Jahren · Professioneller Gütertransport · <strong>CZV-Fähigkeitsausweis obligatorisch</strong></td>
+            <td style="padding:8px 4px;font-weight:700;">Kat. CE</td>
+            <td style="padding:8px 4px;">C + Anhänger (&gt; 750 kg) · Sattelzüge, grosse Gespanne · ca. CHF 3\'000 Aufpreis</td>
           </tr>
         </table>
       </td></tr>
     </table>`
 
+  const ablaufBox = `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fffbeb;border-radius:8px;border-left:4px solid ${color};margin-bottom:20px;">
+      <tr><td style="padding:16px 20px;">
+        <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;">📋 Ablauf Kat. C – der grosse Unterschied zum Auto</p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;color:#374151;">
+          <tr style="border-bottom:1px solid #fcd34d;"><td style="padding:5px 4px;font-weight:700;width:30px;">1.</td><td style="padding:5px 4px;">Ärztliche Untersuchung (vertrauensärztlich) – <strong>oft vergessen, aber obligatorisch!</strong></td></tr>
+          <tr style="border-bottom:1px solid #fcd34d;"><td style="padding:5px 4px;font-weight:700;">2.</td><td style="padding:5px 4px;">Lernfahrausweis Kat. C beantragen (gültig <strong>24 Monate</strong>)</td></tr>
+          <tr style="border-bottom:1px solid #fcd34d;"><td style="padding:5px 4px;font-weight:700;">3.</td><td style="padding:5px 4px;"><strong>Fahrstunden können SOFORT beginnen</strong> – parallel zur Theorie! Nicht erst nach Theorieprüfung warten.</td></tr>
+          <tr style="border-bottom:1px solid #fcd34d;"><td style="padding:5px 4px;font-weight:700;">4.</td><td style="padding:5px 4px;">Zusatz-Theorieprüfung C: <strong>40 Fragen, 60 Min.</strong> (C1: 30 Fragen)</td></tr>
+          <tr style="border-bottom:1px solid #fcd34d;"><td style="padding:5px 4px;font-weight:700;">5.</td><td style="padding:5px 4px;">CZV-Prüfungen (5 Teile, nur für Berufschauffeure)</td></tr>
+          <tr><td style="padding:5px 4px;font-weight:700;">6.</td><td style="padding:5px 4px;">Praktische Prüfung beim StVA – <strong>90 Minuten</strong> (doppelt so lang wie beim Auto!)</td></tr>
+        </table>
+      </td></tr>
+    </table>`
+
   const tips = [
-    tip('📋', 'Ablauf: So kommst du zum Kat. C Ausweis', '<strong>1.</strong> Nothelferkurs · <strong>2.</strong> Sehtest · <strong>3.</strong> Theorieprüfung (Basis + Zusatz C) · <strong>4.</strong> Fahrstunden (mind. 3 Doppellektionen) · <strong>5.</strong> CZV-Prüfungen (5 Teile) · <strong>6.</strong> Praktische Prüfung beim StVA', color),
-    tip('🎓', 'CZV: Die 5 Prüfungsteile erklärt', '<strong>1. Schriftliche CZV-Theorieprüfung</strong> (40 Fragen, 60 Min.) · <strong>2 + 3. Zwei E-Prüfungen</strong> (je 5 Drag&amp;Drop-Fragen, 45 Min.) · <strong>4. Mündliche Prüfung</strong> (30 Min., Alltagssituationen) · <strong>5. Praktische CZV-Prüfung</strong> (30 Min., manuelle Aufgabe). Alle 5 Teile müssen bestanden werden!', color),
-    tip('🔄', 'Fähigkeitsausweis: Alle 5 Jahre erneuern', 'Der CZV-Fähigkeitsausweis ist <strong>5 Jahre gültig</strong>. Für die Verlängerung: 35 Weiterbildungsstunden (= 5 Tage à 7h) innerhalb von 5 Jahren. Wer die Pflicht nicht erfüllt, darf keine gewerblichen Transporte mehr durchführen!', color),
-    tip('📟', 'Digitaler Fahrtenschreiber – Pflicht für Berufschauffeure', 'Alle Lastwagen über 3\'500 kg im gewerblichen Einsatz benötigen einen <strong>digitalen Fahrtenschreiber</strong>. Fahrerkarte beantragen beim StVA. Lenk- und Ruhezeiten nach ARV 1 einhalten (max. 9h Lenkzeit/Tag, 45h/Woche).', color),
-    tip('⏰', 'Lenk- und Ruhezeiten (ARV 1) – Wichtigstes Kurz-Summary', 'Max. <strong>9h Lenkzeit täglich</strong> (2x/Woche max. 10h) · Nach 4.5h Fahrt: <strong>45 Min. Pause</strong> (oder 15+30 Min.) · Mind. <strong>11h tägliche Ruhezeit</strong> · Verstösse werden mit Bussen geahndet!', color),
-    tip('💰', 'Kosten im Überblick', 'Fahrstunden: CHF 150–200/Doppellektion · CZV-Grundausbildung: CHF 1\'200–2\'000 · StVA-Gebühren: CHF 300–500 · Gesamtkosten Kat. C: ca. <strong>CHF 3\'000–6\'000</strong>', color),
+    tip('🎓', 'CZV: Die 5 Prüfungsteile im Detail', '<strong>1. Schriftl. CZV-Theorie</strong> (40 Fragen, 60 Min.) · <strong>2+3. Zwei E-Prüfungen</strong> je 45 Min., Drag&amp;Drop-Aufgaben · <strong>4. Mündliche Prüfung</strong> 30 Min. über Alltagssituationen · <strong>5. Praktische CZV-Prüfung</strong> 30 Min., manuelle Aufgabe. <strong>Alle 5 müssen bestanden werden!</strong>', color),
+    tip('🔄', 'CZV-Fähigkeitsausweis: alle 5 Jahre erneuern', 'Der Ausweis ist <strong>5 Jahre gültig</strong>. Verlängerung: 35 Weiterbildungsstunden (= 5 Tage à 7h). Wer die Pflicht versäumt, darf keine gewerblichen Transporte mehr durchführen – sofortiger Verdienstausfall!', color),
+    tip('📟', 'Digitaler Fahrtenschreiber: das musst du wissen', 'Alle LKW &gt;3\'500 kg im gewerblichen Einsatz: digitaler Tachograph Pflicht. <strong>Fahrerkarte</strong> beim StVA beantragen (braucht FAK-Führerausweis). <strong>NEU ab 1. Jan. 2025:</strong> Aufzeichnungen der letzten <strong>56 Tage</strong> müssen bei Kontrollen vorlegt werden (früher 28 Tage).', color),
+    tip('⏰', 'Lenk- &amp; Ruhezeiten (ARV 1) – dein tägliches Regelwerk', 'Max. <strong>9h Lenkzeit täglich</strong> (2× pro Woche max. 10h) · Nach 4,5h Fahrt: <strong>45 Min. Pause</strong> (oder 15+30 Min.) · Mind. <strong>11h tägliche Ruhezeit</strong> · Max. 56h Lenkzeit pro Woche. <strong>Verstösse → saftige Bussen für Fahrer UND Arbeitgeber!</strong>', color),
+    tip('💰', 'Reale Kostenübersicht 2026', 'Fahrstunden C: CHF 170/45 Min. · Theoriekurs: CHF 800–1\'360 · CZV-Grundausbildung: CHF 1\'200–2\'000 · StVA: CHF 300–500 · Gesamt Kat. C: <strong>ca. CHF 3\'500–6\'500</strong> · Mit CE nochmals +CHF 3\'000', color),
   ]
 
-  const body = greeting + kategorien + tips.join('') + ctaButton(BOOKING_URL, 'Jetzt beraten lassen', color)
+  const body = greeting + kategorien + ablaufBox + tips.join('') + ctaButton(BOOKING_URL, 'Jetzt beraten lassen', color)
   return emailWrapper(color, '🚛', 'Dein kostenloser Lastwagen-Guide', body)
 }
 
 function buildAnhaengerEmail(firstName: string): string {
   const color = '#059669'
   const greeting = `<p style="margin:0 0 8px;font-size:17px;color:#111827;">Hallo <strong>${firstName}</strong>,</p>
-    <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">hier ist dein <strong>Anhänger (Kat. BE) Guide</strong> – mit der wichtigen 750 kg-Regel und allem was du für die Prüfung wissen musst.</p>`
+    <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">hier ist dein <strong>Anhänger (Kat. BE) Guide</strong> – mit der 750 kg-Regel, den Prüfungs-Manövern und dem einzigen wirklichen Rückwärts-Trick, der wirklich funktioniert.</p>`
 
   const ruleBox = `
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0fdf4;border-radius:8px;border-left:4px solid ${color};margin-bottom:20px;">
       <tr><td style="padding:16px 20px;">
         <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#065f46;text-transform:uppercase;letter-spacing:1px;">⚖️ Brauchst du wirklich das BE?</p>
-        <p style="margin:0 0 8px;font-size:13px;color:#374151;">Mit Kategorie B darfst du bereits Anhänger bis <strong>750 kg zGG</strong> (Gesamtgewicht) ziehen. Erst darüber braucht es das BE.</p>
+        <p style="margin:0 0 8px;font-size:13px;color:#374151;">Mit Kategorie B darfst du bereits Anhänger bis <strong>750 kg zGG</strong> ziehen – ODER wenn Zugfahrzeug + Anhänger zusammen unter 3\'500 kg bleiben. Erst darüber braucht es das BE.</p>
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;color:#374151;">
-          <tr style="border-bottom:1px solid #a7f3d0;">
-            <td style="padding:6px 4px;">🚤 Kleines Schlauchboot (Boot + Anhänger)</td>
-            <td style="padding:6px 4px;text-align:right;color:#059669;font-weight:600;">Oft kein BE nötig</td>
-          </tr>
-          <tr style="border-bottom:1px solid #a7f3d0;">
-            <td style="padding:6px 4px;">⛵ Motorboot (600 kg Boot + 250 kg Anhänger)</td>
-            <td style="padding:6px 4px;text-align:right;color:#dc2626;font-weight:600;">BE erforderlich</td>
-          </tr>
-          <tr style="border-bottom:1px solid #a7f3d0;">
-            <td style="padding:6px 4px;">🏕️ Wohnwagen (fast immer über 750 kg)</td>
-            <td style="padding:6px 4px;text-align:right;color:#dc2626;font-weight:600;">BE erforderlich</td>
-          </tr>
-          <tr style="border-bottom:1px solid #a7f3d0;">
-            <td style="padding:6px 4px;">🐴 Pferdeanhänger (mind. 1\'000 kg)</td>
-            <td style="padding:6px 4px;text-align:right;color:#dc2626;font-weight:600;">BE erforderlich</td>
-          </tr>
-          <tr>
-            <td style="padding:6px 4px;">🔧 Kleiner Arbeitsanhänger (400 kg)</td>
-            <td style="padding:6px 4px;text-align:right;color:#059669;font-weight:600;">Kein BE nötig</td>
-          </tr>
+          <tr style="border-bottom:1px solid #a7f3d0;"><td style="padding:6px 4px;">Fahrradanhänger (50–100 kg)</td><td style="padding:6px 4px;text-align:right;color:#059669;font-weight:600;">✅ Kein BE nötig</td></tr>
+          <tr style="border-bottom:1px solid #a7f3d0;"><td style="padding:6px 4px;">Kleiner Gartenabfall-Hänger (&lt;750 kg)</td><td style="padding:6px 4px;text-align:right;color:#059669;font-weight:600;">✅ Kein BE nötig</td></tr>
+          <tr style="border-bottom:1px solid #a7f3d0;"><td style="padding:6px 4px;">Wohnwagen (meist 1\'000–2\'500 kg)</td><td style="padding:6px 4px;text-align:right;color:#dc2626;font-weight:600;">❌ BE erforderlich</td></tr>
+          <tr style="border-bottom:1px solid #a7f3d0;"><td style="padding:6px 4px;">Pferdeanhänger (oft 1\'800–3\'500 kg)</td><td style="padding:6px 4px;text-align:right;color:#dc2626;font-weight:600;">❌ BE erforderlich</td></tr>
+          <tr><td style="padding:6px 4px;">Bootsanhänger mit schwerem Boot</td><td style="padding:6px 4px;text-align:right;color:#dc2626;font-weight:600;">❌ Oft BE erforderlich</td></tr>
         </table>
-        <p style="margin:10px 0 0;font-size:12px;color:#6b7280;">Im Zweifel: Schau auf den Fahrzeugausweis des Anhängers. Massgebend ist das <strong>zulässige Gesamtgewicht (zGG)</strong>, nicht das tatsächliche Beladungsgewicht!</p>
+        <p style="margin:10px 0 0;font-size:12px;color:#065f46;font-weight:600;">💡 Prüfe immer: Fahrzeugausweis deines Autos → Abschnitt 4 → erlaubte Anhängelast!</p>
+      </td></tr>
+    </table>`
+
+  const manoevrBox = `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0fdf4;border-radius:8px;border-left:4px solid ${color};margin-bottom:20px;">
+      <tr><td style="padding:16px 20px;">
+        <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#065f46;text-transform:uppercase;letter-spacing:1px;">🔧 Prüfungs-Manöver (alle rückwärts!)</p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;color:#374151;">
+          <tr style="border-bottom:1px solid #a7f3d0;"><td style="padding:6px 4px;font-weight:700;width:220px;">Rückwärts gerade</td><td style="padding:6px 4px;">Schritttempo, kleine Korrekturen, immer Spiegel kontrollieren</td></tr>
+          <tr style="border-bottom:1px solid #a7f3d0;"><td style="padding:6px 4px;font-weight:700;">Rückwärts in Kurve</td><td style="padding:6px 4px;">Lenkrad unten anfassen (6-Uhr-Position) → der Trick!</td></tr>
+          <tr style="border-bottom:1px solid #a7f3d0;"><td style="padding:6px 4px;font-weight:700;">Seitliches Versetzen</td><td style="padding:6px 4px;">Mind. 1 Fahrzeugbreite seitlich verschieben</td></tr>
+          <tr style="border-bottom:1px solid #a7f3d0;"><td style="padding:6px 4px;font-weight:700;">Rückwärts zur Rampe</td><td style="padding:6px 4px;">Präzise an Verladerampe heranfahren</td></tr>
+          <tr><td style="padding:6px 4px;font-weight:700;">An-/Abkuppeln</td><td style="padding:6px 4px;">Vollständiger Sicherheitscheck: Licht, Bremsen, Stützlast</td></tr>
+        </table>
       </td></tr>
     </table>`
 
   const tips = [
-    tip('📏', 'Wichtige Verhältnisregel: Zug vs. Anhänger', 'Der Anhänger darf <strong>maximal so schwer sein wie das Zugfahrzeug</strong> (bei neueren Autos bis 110% des Leergewichts). Prüfe im Fahrzeugausweis: Abschnitt 4 – erlaubtes Anhängegewicht. Achtung: Hersteller-Anhängelast ≠ gesetzliche Grenze!', color),
-    tip('🔧', 'Was bei der Prüfung geprüft wird', '<strong>1. Ankuppeln &amp; Abkuppeln</strong> des Anhängers korrekt und sicher · <strong>2. Rückwärtsfahren</strong> (in Parklücke einfahren – der Schwierigkeitsgrad!) · <strong>3. Breit-Fahrt</strong> auf der Strasse · <strong>4. Sicherheitschecks</strong>: Licht, Bremsen, Stützlast, Überladungskontrolle', color),
-    tip('⏱', 'Kurze Ausbildung: 3–5 Doppellektionen', 'Wer bereits Kategorie B besitzt, braucht für BE keine vollständige Fahrausbildung von vorne. Typisch sind <strong>3–5 Doppellektionen</strong> (à 90 Min.) plus die Prüfungsfahrt. Das spart viel Zeit und Geld!', color),
-    tip('🎯', 'Prüfungstipps: Rückwärtsfahren meistern', 'Das Rückwärtsfahren ist die grösste Herausforderung – der Anhänger lenkt umgekehrt. Tipp: <strong>Kleine, ruhige Lenkbewegungen</strong> und weit genug zurückschauen. Im Grundkurs werden diese Manöver intensiv geübt.', color),
-    tip('💡', 'Bonus: Stützlast nicht vergessen', 'Die Stützlast (Gewicht auf der Anhängerkupplung) muss zwischen dem Minimum (mind. 25 kg) und dem erlaubten Maximum liegen. Zu wenig Stützlast → Schlingern. Zu viel → Überlastung der Kupplung.', color),
-    tip('💰', 'Kosten im Überblick', 'Fahrstunden (3–5 Doppellektionen × CHF 190.–): ca. CHF 570–950 · StVA-Prüfungsgebühr: ca. CHF 120–160 · Gesamtkosten BE: ca. <strong>CHF 700–1\'200</strong>', color),
+    tip('🤯', 'Der Game-Changer beim Rückwärtsfahren', 'Greife das Lenkrad mit einer Hand ganz <strong>unten (6-Uhr-Position)</strong>. Willst du, dass der Anhänger nach links fährt? Hand nach links. Nach rechts? Hand nach rechts. Diese Methode synchronisiert deine Intuition mit der Physik – absoluter Gamechanger!', color),
+    tip('⚠️', 'Den Jackknife-Effekt vermeiden', 'Wenn der Winkel zwischen Auto und Anhänger über 90° geht, kann man den Hänger nicht mehr retten → Jackknife. Sofortige Lösung: <strong>Vorwärtsfahren und neu ausrichten</strong>. Deshalb immer bei kleinen Lenkbewegungen bleiben und langsam fahren!', color),
+    tip('🔊', 'Fenster runter, Radio aus', 'Beim Manövrieren: Seitenfenster öffnen für bessere Geräusch-Wahrnehmung und Kommunikation mit dem Einweiser. Radio aus – volle Konzentration! In der Schweiz ist eine <strong>Hilfsperson bei eingeschränkter Rücksicht Pflicht</strong> (z.B. Planenanhänger).', color),
+    tip('🔩', 'An-/Abkuppeln: vollständiger Sicherheitscheck', '<strong>1.</strong> Steckverbindung (7-polig) einstecken · <strong>2.</strong> Beleuchtung testen (Bremslicht, Blinker, Rückfahrlicht) · <strong>3.</strong> Stützlast kontrollieren (25–75 kg für die meisten Anhänger) · <strong>4.</strong> Sicherungskette befestigen · <strong>5.</strong> Bremsprobe machen', color),
+    tip('📏', 'Stützlast: der unterschätzte Faktor', 'Zu wenig Stützlast (unter 25 kg) → Anhänger schlingert gefährlich auf der Autobahn. Zu viel → Überlastung der Kupplung und Hinterachse des Autos. Optimum: <strong>ca. 60–80% der max. erlaubten Stützlast</strong>. Bei jedem Beladen neu kontrollieren!', color),
+    tip('💰', 'Kosten im Überblick', 'Fahrstunden (Ø 6 Doppellektionen × CHF 190): ca. CHF 1\'140 · StVA: ca. CHF 150–200 · Gesamt: ca. <strong>CHF 950–1\'500</strong>. Mit Eigenübungen: bis zu <strong>CHF 500 sparen</strong>!', color),
   ]
 
-  const body = greeting + ruleBox + tips.join('') + ctaButton(BOOKING_URL, 'Jetzt BE-Kurs buchen', color)
+  const body = greeting + ruleBox + manoevrBox + tips.join('') + ctaButton(BOOKING_URL, 'Jetzt BE-Kurs buchen', color)
   return emailWrapper(color, '🚐', 'Dein kostenloser Anhänger-Guide', body)
 }
 
@@ -319,31 +387,31 @@ const TEMPLATES: Record<LeadMagnetCategory, {
   auto: {
     emoji: '🚗',
     label: 'Auto (Kat. B)',
-    subject: (firstName: string) => `🚗 ${firstName}, dein 7-Schritte-Plan zum Führerausweis`,
+    subject: (firstName: string) => `🚗 ${firstName}, deine 10 Insider-Tipps für den Führerausweis`,
     build: buildAutoEmail,
   },
   motorrad: {
     emoji: '🏍️',
     label: 'Motorrad',
-    subject: (firstName: string) => `🏍️ ${firstName}, dein kostenloser Motorrad-Führerschein Guide`,
+    subject: (firstName: string) => `🏍️ ${firstName}, dein kompletter Motorrad-Guide + Prüfungsübungen`,
     build: buildMotorradEmail,
   },
   lastwagen: {
     emoji: '🚛',
     label: 'Lastwagen (Kat. C)',
-    subject: (firstName: string) => `🚛 ${firstName}, alles zum Lastwagen-Ausweis & CZV`,
+    subject: (firstName: string) => `🚛 ${firstName}, Kat. C, CZV & Fahrtenschreiber – alles erklärt`,
     build: buildLastwagenEmail,
   },
   anhaenger: {
     emoji: '🚐',
     label: 'Anhänger (Kat. BE)',
-    subject: (firstName: string) => `🚐 ${firstName}, brauchst du wirklich das BE? (+ Prüfungstipps)`,
+    subject: (firstName: string) => `🚐 ${firstName}, der Rückwärts-Trick + alles zum BE-Ausweis`,
     build: buildAnhaengerEmail,
   },
   motorboot: {
     emoji: '⛵',
     label: 'Motorboot',
-    subject: (firstName: string) => `⛵ ${firstName}, dein Motorboot-Führerschein Guide für die Schweiz`,
+    subject: (firstName: string) => `⛵ ${firstName}, dein Motorboot-Guide: Theorie, Praxis & Bootsausweis`,
     build: buildMotorbootEmail,
   },
 }
