@@ -79,6 +79,13 @@
       </div>
     </section>
 
+    <section class="py-10 bg-white text-center">
+      <div class="section-container">
+        <p class="text-gray-600 mb-4 text-sm">Neugierig was deine Lastwagen Fahrausbildung kosten wird?</p>
+        <PriceCalculator title="Kostenrechner Lastwagen Fahrschule" />
+      </div>
+    </section>
+
     <!-- Process Steps -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">

@@ -92,6 +92,13 @@
       </div>
     </section>
 
+    <section class="py-10 bg-white text-center">
+      <div class="section-container">
+        <p class="text-gray-600 mb-4 text-sm">Neugierig was deine Bus Fahrausbildung kosten wird?</p>
+        <PriceCalculator title="Kostenrechner Bus Fahrschule" />
+      </div>
+    </section>
+
     <cta-section />
 
     <!-- Process Steps -->

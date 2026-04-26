@@ -67,6 +67,13 @@
       :extras="['Unterricht auch in <strong>Englisch</strong> möglich!']"
     />
 
+    <section class="py-10 bg-gray-50 text-center">
+      <div class="section-container">
+        <p class="text-gray-600 mb-4 text-sm">Neugierig was deine Fahrausbildung kosten wird?</p>
+        <PriceCalculator title="Kostenrechner Fahrschule Pfäffikon SZ" />
+      </div>
+    </section>
+
     <!-- 4. Instructors -->
     <InstructorProfileSection :instructors="instructors" />
 

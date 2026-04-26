@@ -66,6 +66,13 @@
       </div>
     </section>
 
+    <section class="py-10 bg-white text-center">
+      <div class="section-container">
+        <p class="text-gray-600 mb-4 text-sm">Neugierig was deine Motorboot Fahrausbildung kosten wird?</p>
+        <PriceCalculator title="Kostenrechner Motorboot Fahrschule" />
+      </div>
+    </section>
+
     <cta-section title="Jetzt mit der Motorboot Fahrschule starten!" :hideCourseButton="true" />
 
     <!-- Process Steps -->

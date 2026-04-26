@@ -411,7 +411,14 @@
               <li>
                 <a :href="`mailto:${BUSINESS.email}`" class="hover:text-white transition">{{ BUSINESS.email }}</a>
               </li>
-              <li class="text-gray-400">{{ BUSINESS.hoursDisplay }}</li>
+              <li>
+                <span class="text-gray-500 text-xs uppercase tracking-wide">Büro</span>
+                <p class="text-gray-400">{{ BUSINESS.officeHoursDisplay }}</p>
+              </li>
+              <li>
+                <span class="text-gray-500 text-xs uppercase tracking-wide">Fahrstunden</span>
+                <p class="text-gray-400">{{ BUSINESS.hoursDisplay }}</p>
+              </li>
             </ul>
           </div>
 

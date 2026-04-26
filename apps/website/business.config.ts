@@ -60,13 +60,19 @@ interface Location {
   geo: { lat: number; lng: number }
   phone: string
   phoneFormatted: string
-  /** ⚠️  Muss mit GBP-Öffnungszeiten übereinstimmen */
+  /** ⚠️  Muss mit GBP-Öffnungszeiten übereinstimmen (Fahrstunden-Zeiten) */
   hours: {
     weekdays: { open: string; close: string }
     saturday: { open: string; close: string } | null
     sunday: null
   }
   hoursDisplay: string
+  /** Büro-Erreichbarkeit (telefonisch / Empfang) – separat von Fahrstunden */
+  officeHours: {
+    weekdays: { open: string; close: string }
+    saturday: { open: string; close: string } | null
+  }
+  officeHoursDisplay: string
   priceRange: string
   /** ⚠️  Aus Google Maps – periodisch aktualisieren */
   rating: { value: number; count: number; max: number }
@@ -102,7 +108,13 @@ export const LOCATION_ZUERICH: Location = {
     saturday: { open: '07:00', close: '16:00' },
     sunday: null,
   },
-  hoursDisplay: 'Mo–Fr 07:00–17:00 · Sa 07:00–16:00',
+  hoursDisplay: 'Mo–Fr 07:00–19:00 · Sa 07:00–16:00',
+
+  officeHours: {
+    weekdays: { open: '09:00', close: '17:00' },
+    saturday: null,
+  },
+  officeHoursDisplay: 'Mo–Fr 09:00–12:00 · 13:00–17:00',
 
   priceRange: 'CHF 95–200',
 
@@ -152,6 +164,12 @@ export const LOCATION_LACHEN: Location = {
   },
   hoursDisplay: 'Mo–Fr 07:00–19:00 · Sa 07:00–16:00',
 
+  officeHours: {
+    weekdays: { open: '09:00', close: '17:00' },
+    saturday: null,
+  },
+  officeHoursDisplay: 'Mo–Fr 09:00–12:00 · 13:00–17:00',
+
   priceRange: 'CHF 95–200',
 
   rating: { value: 5.0, count: 256, max: 5 },
@@ -197,6 +215,12 @@ export const LOCATION_PFAEFFIKON: Location = {
     sunday: null,
   },
   hoursDisplay: 'Mo–Fr 07:00–20:00 · Sa 08:00–17:00',
+
+  officeHours: {
+    weekdays: { open: '09:00', close: '17:00' },
+    saturday: null,
+  },
+  officeHoursDisplay: 'Mo–Fr 09:00–12:00 · 13:00–17:00',
 
   priceRange: 'CHF 95–170',
 
@@ -247,6 +271,12 @@ export const LOCATION_SPREITENBACH: Location = {
   },
   hoursDisplay: 'Mo–Fr 07:00–19:00 · Sa 07:00–16:00',
 
+  officeHours: {
+    weekdays: { open: '09:00', close: '17:00' },
+    saturday: null,
+  },
+  officeHoursDisplay: 'Mo–Fr 09:00–12:00 · 13:00–17:00',
+
   priceRange: 'CHF 95–200',
 
   rating: { value: 5.0, count: 9, max: 5 },
@@ -289,6 +319,12 @@ export const LOCATION_USTER: Location = {
   },
   hoursDisplay: 'Mo–Fr 07:00–19:00 · Sa 07:00–16:00',
 
+  officeHours: {
+    weekdays: { open: '09:00', close: '17:00' },
+    saturday: null,
+  },
+  officeHoursDisplay: 'Mo–Fr 09:00–12:00 · 13:00–17:00',
+
   priceRange: 'CHF 95–200',
 
   rating: { value: 5.0, count: 25, max: 5 },
@@ -329,6 +365,8 @@ export const BUSINESS = {
   geo: LOCATION_ZUERICH.geo,
   hours: LOCATION_ZUERICH.hours,
   hoursDisplay: LOCATION_ZUERICH.hoursDisplay,
+  officeHours: LOCATION_ZUERICH.officeHours,
+  officeHoursDisplay: LOCATION_ZUERICH.officeHoursDisplay,
   priceRange: LOCATION_ZUERICH.priceRange,
   rating: LOCATION_ZUERICH.rating,
 }
@@ -387,6 +425,12 @@ export function buildHomepageSchema() {
       telephone: loc.phone,
       email: BRAND.email,
       availableLanguage: ['German', 'English'],
+      hoursAvailable: {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+        opens: loc.officeHours.weekdays.open,
+        closes: loc.officeHours.weekdays.close,
+      },
     },
     sameAs: Object.values(BRAND.social),
   }

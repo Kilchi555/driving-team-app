@@ -247,6 +247,9 @@
                 </span>
               </li>
             </ul>
+            <div class="mt-6">
+              <PriceCalculator title="Kostenrechner Fahrausbildung" />
+            </div>
           </div>
         </div>
         <h2 class="sr-only">Unsere Fahrschule führt folgende Kurse durch</h2>

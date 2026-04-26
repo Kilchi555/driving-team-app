@@ -63,6 +63,13 @@
       </div>
     </section>
 
+    <section class="py-10 bg-white text-center">
+      <div class="section-container">
+        <p class="text-gray-600 mb-4 text-sm">Neugierig was deine Anhänger Fahrausbildung kosten wird?</p>
+        <PriceCalculator title="Kostenrechner Anhänger Fahrschule" />
+      </div>
+    </section>
+
     <cta-section />
 
     <!-- Ausbildungsablauf -->
