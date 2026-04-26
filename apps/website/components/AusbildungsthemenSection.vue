@@ -10,13 +10,19 @@
           v-for="(topic, i) in topics"
           :key="i"
           ref="cardRefs"
-          class="rounded-xl p-6 border border-gray-100 transition-all duration-400"
+          class="group rounded-xl p-6 border border-gray-100 transition-all duration-400"
           :class="activeIndex === i
-            ? 'bg-[#017cb3] border-transparent shadow-[0_8px_24px_rgba(1,124,179,0.35)] [&_h3]:text-white [&_p]:text-white'
-            : 'bg-gray-50 hover:bg-[#017cb3] hover:border-transparent hover:shadow-[0_8px_24px_rgba(1,124,179,0.35)] hover:-translate-y-0.5 hover:[&_h3]:text-white hover:[&_p]:text-white lg:hover:bg-[#017cb3]'"
+            ? 'bg-[#017cb3] border-transparent shadow-[0_8px_24px_rgba(1,124,179,0.35)]'
+            : 'bg-gray-50 hover:bg-[#017cb3] hover:border-transparent hover:shadow-[0_8px_24px_rgba(1,124,179,0.35)] hover:-translate-y-0.5 lg:hover:bg-[#017cb3]'"
         >
-          <h3 class="font-bold mb-2 text-gray-900 transition-colors duration-400">{{ topic.icon }} {{ topic.title }}</h3>
-          <p class="text-sm text-gray-500 transition-colors duration-400">{{ topic.text }}</p>
+          <h3
+            class="font-bold mb-2 transition-colors duration-400"
+            :class="activeIndex === i ? 'text-white' : 'text-gray-900 group-hover:text-white'"
+          >{{ topic.icon }} {{ topic.title }}</h3>
+          <p
+            class="text-sm transition-colors duration-400"
+            :class="activeIndex === i ? 'text-white' : 'text-gray-500 group-hover:text-white'"
+          >{{ topic.text }}</p>
         </div>
       </div>
     </div>

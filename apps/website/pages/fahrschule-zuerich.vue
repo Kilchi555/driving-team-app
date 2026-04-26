@@ -60,6 +60,13 @@
       :extras="['Unterricht auch in <strong>Englisch &amp; Albanisch</strong> möglich!']"
     />
 
+    <section class="py-10 bg-gray-50 text-center">
+      <div class="section-container">
+        <p class="text-gray-600 mb-4 text-sm">Neugierig was deine Fahrausbildung kosten wird?</p>
+        <PriceCalculator title="Kostenrechner Fahrschule Zürich" />
+      </div>
+    </section>
+
     <!-- 2.5. Instructors (weiß mit gradient) — Unser Team -->
     <InstructorProfileSection :instructors="instructors" />
 

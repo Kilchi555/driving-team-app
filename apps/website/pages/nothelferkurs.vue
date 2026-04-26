@@ -34,9 +34,6 @@
             <a href="#kursbuchen" class="btn-primary bg-white text-red-600 hover:bg-red-50 text-lg">
               📅 Jetzt Platz sichern
             </a>
-            <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-red-600 text-lg">
-              📞 +41 44 431 00 33
-            </a>
           </div>
         </div>
       </div>
@@ -269,9 +266,7 @@
           <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-red-600 hover:bg-red-50 text-lg">
             📅 Jetzt Kurs anmelden
           </a>
-          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-red-600 text-lg">
-            📞 +41 44 431 00 33
-          </a>
+       
         </div>
       </div>
     </section>

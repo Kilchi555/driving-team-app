@@ -76,6 +76,13 @@
       </div>
     </section>
 
+    <section class="py-10 bg-white text-center">
+      <div class="section-container">
+        <p class="text-gray-600 mb-4 text-sm">Neugierig was deine Taxi Fahrausbildung kosten wird?</p>
+        <PriceCalculator title="Kostenrechner Taxi Fahrschule" />
+      </div>
+    </section>
+
     <CtaSection title="Jetzt mit der Taxi Fahrschule starten!" :hideCourseButton="true" />
 
     <!-- Process Steps -->
