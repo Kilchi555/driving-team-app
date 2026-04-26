@@ -101,38 +101,26 @@ function divider(): string {
 function buildAutoEmail(firstName: string): string {
   const color = '#1C64F2'
   const greeting = `<p style="margin:0 0 8px;font-size:17px;color:#111827;">Hallo <strong>${firstName}</strong>,</p>
-    <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">hier sind die <strong>10 besten Insider-Tipps</strong> für deinen Führerausweis Kategorie B – recherchiert bei den Strassenverkehrsämtern Zürich, Schwyz und Aargau sowie führenden Schweizer Fahrschulen.</p>`
+    <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">hier sind die <strong>10 besten Insider-Tipps</strong> für deinen Führerausweis Kategorie B.</p>`
 
   const neuBadge = `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef3c7;border-radius:8px;border-left:4px solid #f59e0b;margin-bottom:20px;">
       <tr><td style="padding:12px 16px;">
-        <p style="margin:0;font-size:13px;color:#92400e;"><strong>🆕 Neu ab 1. Juli 2025:</strong> Fahrassistenzsysteme (FAS) werden jetzt sowohl in der <strong>Theorieprüfung als auch in der praktischen Prüfung</strong> geprüft! Lerne, wie ABS, ESP, Spurhalteassistent und Co. funktionieren – und wann du sie deaktivieren solltest.</p>
-      </td></tr>
-    </table>`
-
-  const theorieBox = `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0f9ff;border-radius:8px;border-left:4px solid ${color};margin-bottom:20px;">
-      <tr><td style="padding:16px 20px;">
-        <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:1px;">📚 4-Wochen Theorie-Lernplan</p>
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;color:#374151;">
-          <tr style="border-bottom:1px solid #bae6fd;"><td style="padding:5px 4px;font-weight:700;width:80px;">Woche 1</td><td style="padding:5px 4px;">Verkehrszeichen &amp; Signalisation (Reaktionsfragen üben!)</td></tr>
-          <tr style="border-bottom:1px solid #bae6fd;"><td style="padding:5px 4px;font-weight:700;">Woche 2</td><td style="padding:5px 4px;">Vortrittsregeln, Kreisel, Abbiegen</td></tr>
-          <tr style="border-bottom:1px solid #bae6fd;"><td style="padding:5px 4px;font-weight:700;">Woche 3</td><td style="padding:5px 4px;">Umwelt, Sicherheit, <strong>Fahrassistenzsysteme</strong></td></tr>
-          <tr><td style="padding:5px 4px;font-weight:700;">Woche 4</td><td style="padding:5px 4px;">Prüfungssimulationen mit offiz. ASTRA-App – mind. 2 komplette Durchläufe</td></tr>
-        </table>
-        <p style="margin:10px 0 0;font-size:12px;color:#6b7280;">Prüfung: 50 Fragen, 45 Min., du brauchst <strong>135 von 150 Punkten</strong> (= 45 von 50 Fragen). Keine Teilpunkte – alles oder nichts pro Frage!</p>
+        <p style="margin:0;font-size:13px;color:#92400e;"><strong>🆕 Seit 1. Juli 2025:</strong> Fahrassistenzsysteme (FAS) werden sowohl in der <strong>Theorieprüfung als auch in der praktischen Prüfung</strong> geprüft! Auf dieser Homepage kannst du die wichtigsten Facts dazu nachlesen: <a href="https://www.smartrider.ch/" style="color:#92400e;font-weight:700;">smartrider.ch</a></p>
       </td></tr>
     </table>`
 
   const tips = [
+    tip('📚', 'Theorie wirklich verstehen – nicht auswendig lernen', 'Die meisten Fahrschüler:innen lernen die Theorie mehrheitlich auswendig und sind dann überrascht, wenn sie diese in den Fahrstunden nicht umsetzen können. Schau, dass du die Verkehrsregeln wirklich <strong>verstanden</strong> hast! Frag dich immer: Warum ist die richtige Antwort richtig? Welche Regeln stecken dahinter? So kannst du deutlich Zeit und Geld in der praktischen Fahrausbildung sparen.', color),
     tip('🩺', 'Nothelferkurs früh abhaken (10h, gültig 6 Jahre)', 'Pflicht vor der Theorieprüfung. Tipp: Bereits ab 16 absolvieren – dann ist er bis zum Führerausweis noch gültig und spart dir den Re-Test. Angeboten beim SRK, Samariterverein oder Fahrschule.', color),
     tip('👁', 'Sehtest: gilt nur 24 Monate', 'Beim Optiker oder Augenarzt. Kostet CHF 20–40. Vorsicht: Wenn er abläuft bevor du deinen LFA beantragst, musst du ihn wiederholen. Plane früh!', color),
-    tip('🏫', 'VKU sofort nach LFA-Erhalt buchen', 'Du kannst ihn frühestens 3 Monate nach LFA buchen – aber Plätze sind oft <strong>4–8 Wochen im Voraus ausgebucht</strong>. Buche direkt nach Erhalt des Lernfahrausweises. Ohne VKU keine Prüfungsanmeldung!', color),
-    tip('🚗', 'Privat üben spart CHF 500–1\'000', 'Begleitperson: mind. 23 J., Ausweis seit 3 J., nicht auf Probe, nüchtern (0.0‰). Ziel: 2–3× pro Woche fahren. Je mehr Privatübungen, desto weniger Fahrlektionen benötigst du.', color),
-    tip('🅿️', 'Insider: Parkplatz Albisgütli vorher üben', 'Die Prüfung startet beim StVA Zürich-Albisgütli. Viele Prüfungen beginnen oder enden mit einem Parkmanöver direkt auf dem Gelände. Fahr dort vorher hin und übe das Einparken – das beruhigt die Nerven massiv!', color),
-    tip('👟', 'Richtige Schuhe für die Prüfung', 'Klingt trivial, aber: <strong>Keine Flip-Flops, Heels oder Schuhe mit dicker Sohle</strong>. Bequeme Turnschuhe mit gutem Grip sind ideal. Du brauchst feines Gefühl auf Gas-, Brems- und Kupplungspedal.', color),
-    tip('⚡', 'Ein Fehler = noch nicht verloren!', 'Viele Prüflinge brechen mental ein nach dem ersten Fehler. Falsch! Kleine Fehler sind erlaubt. Entscheidend ist: Wie reagierst du? Ruhig weiterfahren, Konzentration behalten. Nur <strong>grobe Sicherheitsverstösse</strong> führen zum sofortigen Abbruch.', color),
-    tip('📏', '2-Sekunden-Abstand & Rettungsgasse', '<strong>2-Sekunden-Abstand:</strong> Wenn der Vordermann an einem fixen Punkt vorbeifährt, zähl "21, 22" – erst dann solltest du selbst dort sein. <strong>Rettungsgasse:</strong> Bei stockendem Verkehr auf der Autobahn sofort bilden (Pflicht seit 2021, wird in Prüfung bewertet!).', color),
+    tip('🏫', 'VKU sofort nach LFA-Erhalt buchen', 'Du kannst ihn frühestens nach Erhalt des Lernfahrausweises buchen – aber Plätze sind oft <strong>4–8 Wochen im Voraus ausgebucht</strong>. Ohne VKU keine Prüfungsanmeldung! Nimm nicht den billigsten: ein guter VKU spart dir Fahrstunden. Unserer Meinung nach sollte ein VKU mindestens CHF 150.– kosten.', color),
+    tip('🚗', 'Privat üben spart CHF 500–1\'000', 'Begleitperson: mind. 23 J., Ausweis seit 3 J., nicht auf Probe, nüchtern (0.0‰). Ziel: 2–3× pro Woche fahren. Wichtig: In den Privatfahrten <strong>exakt gleich fahren wie beim Fahrlehrer gelernt</strong> – sonst brauchst du wieder mehr Stunden zum Umlernen oder fällst wegen falsch Gelerntem durch.', color),
+    tip('🅿️', 'Insider: Strassenverkehrsamt-Gelände vorher besichtigen', 'Alle Fahrprüfungen beginnen und enden am gleichen Ort – beim Strassenverkehrsamt deiner Wahl. Fahr dort vorher hin und übe das Ein- und Ausparken – das beruhigt die Nerven massiv und garantiert dir einen soliden Start und ein sicheres Ende der Fahrprüfung.', color),
+    tip('👟', 'Richtige Schuhe beim Fahren', 'Klingt trivial, aber: <strong>Keine Flip-Flops, Heels oder Schuhe mit dicker Sohle</strong>. Bequeme Turnschuhe mit gutem Grip sind ideal. Du brauchst feines Gefühl auf Gas-, Brems- und Kupplungspedal.', color),
+    tip('⚡', 'Ein Fehler = noch nicht verloren!', 'Viele Fahrschüler:innen brechen mental ein nach dem ersten Fehler. 2–3 kleine Fehler sind erlaubt. Entscheidend ist: Wie reagierst du? Ruhig weiterfahren, Konzentration behalten. Nur grobe Sicherheitsverstösse führen zur negativen Prüfung – und auch dort kann der Verkehrsexperte noch ein Auge zudrücken. <strong>Glaube bis am Schluss daran!</strong> Erst wenn das Fahrzeug wieder parkiert und gesichert ist, ist die Prüfung fertig – eine selbstkritische Beurteilung kann eine knapp negative Prüfung noch ins Positive drehen.', color),
+    tip('📏', '2-Sekunden-Abstand', '<strong>2-Sekunden-Abstand:</strong> Wenn der Vordermann an einem fixen Punkt vorbeifährt, zähl "21, 22" – erst dann solltest du selbst dort sein.', color),
     tip('⏱', 'Doppellektionen sind effizienter', '90 Minuten erlauben mehr Übungssequenzen als 2× 45 Min. Du zahlst weniger pro effektiver Fahrminute und baust schneller Routine auf. Empfehlung: grundsätzlich Doppellektionen buchen.', color),
-    tip('🎓', 'WAB-Kurs: innerhalb 12 Monate nach Prüfung', 'Nach bestandener Prüfung: 3 Jahre Probezeit mit <strong>0.0 Promille</strong>. WAB-Kurs (1 Tag) muss innerhalb des <strong>ersten Jahres</strong> absolviert werden – sonst droht Busse bei Polizeikontrolle. Danach läuft der definitive Ausweis von selbst zu.', color),
+    tip('🎓', 'WAB-Kurs: innerhalb 12 Monate nach Prüfung', 'Nach bestandener Prüfung: 3 Jahre Probezeit mit <strong>0.0 Promille</strong>. WAB-Kurs (1 Tag) muss innerhalb des <strong>ersten Jahres</strong> absolviert werden – sonst droht Busse bei Polizeikontrolle. Wenn möglich: vor der Wintersaison absolvieren – das gibt dir Sicherheit bei rutschigen Strassen.', color),
   ]
 
   const costBox = `${divider()}
@@ -150,7 +138,7 @@ function buildAutoEmail(firstName: string): string {
       </td></tr>
     </table>`
 
-  const body = greeting + neuBadge + theorieBox + tips.join('') + costBox + ctaButton(BOOKING_URL, 'Jetzt erste Fahrstunde buchen', color)
+  const body = greeting + neuBadge + tips.join('') + costBox + ctaButton(BOOKING_URL, 'Jetzt erste Fahrstunde buchen', color)
   return emailWrapper(color, '🚗', 'Dein kostenloser Ratgeber', body)
 }
 

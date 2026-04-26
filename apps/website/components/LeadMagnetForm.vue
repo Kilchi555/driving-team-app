@@ -139,8 +139,8 @@ const CONFIG: Record<LeadMagnetCategory, {
   },
   motorrad: {
     headline: 'Dein Motorrad-Führerschein Guide',
-    description: 'Stufenausbildung, Grundkurs-Aufbau, die 8 Pflichtübungen der Prüfung und die häufigsten Fehler – kompakt erklärt.',
-    benefits: ['A1 → A2 → A erklärt', '8 Prüfungsübungen', 'Grundkurs-Aufbau', 'Schutzausrüstung'],
+    description: 'Step by Step Ausbildung, Grundkurs-Aufbau, die 4 Pflichtübungen der Prüfung und die häufigsten Fehler – kompakt erklärt.',
+    benefits: ['A1 → A35kW → A erklärt', '4 Prüfungsübungen', 'Grundkurs-Aufbau', 'Schutzausrüstung'],
     ctaLabel: 'Kostenlosen Guide senden',
     bg: 'bg-gradient-to-br from-primary-600 to-primary-700',
     button: 'bg-primary-600 hover:bg-primary-700 focus:ring-primary-500',
@@ -158,7 +158,7 @@ const CONFIG: Record<LeadMagnetCategory, {
   anhaenger: {
     headline: 'Dein Anhänger (Kat. BE) Guide',
     description: 'Die 750 kg-Regel erklärt, Prüfungsinhalt, Rückwärtsfahren-Tipps und wann du das BE wirklich brauchst.',
-    benefits: ['750 kg-Regel klar', 'Prüfungsinhalt', 'Rückwärtsfahren-Tipps', 'Nur 3–5 Lektionen'],
+    benefits: ['750 kg-Regel klar', 'Prüfungsinhalt', 'Rückwärtsfahren-Tipps', 'Nur 3–5 Doppellektionen'],
     ctaLabel: 'Kostenlosen Guide senden',
     bg: 'bg-gradient-to-br from-primary-600 to-primary-700',
     button: 'bg-primary-600 hover:bg-primary-700 focus:ring-primary-500',
