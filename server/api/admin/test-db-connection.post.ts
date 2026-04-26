@@ -10,6 +10,11 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
+  // ✅ Security: disabled in production
+  if (process.env.NODE_ENV === 'production') {
+    throw createError({ statusCode: 404, statusMessage: 'Not found' })
+  }
+
   try {
     logger.info('🔌 Testing Supabase connection...')
     

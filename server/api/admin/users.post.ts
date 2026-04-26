@@ -3,8 +3,28 @@
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+
+// Allowed columns per update action to prevent mass assignment
+const ADMIN_UPDATE_WHITELIST = ['first_name', 'last_name', 'email', 'phone', 'is_active', 'role'] as const
+const STAFF_UPDATE_WHITELIST = ['first_name', 'last_name', 'email', 'phone', 'is_active'] as const
+
+function pickFields<T extends object>(data: T, allowed: readonly string[]): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(data).filter(([k]) => allowed.includes(k))
+  ) as Partial<T>
+}
 
 export default defineEventHandler(async (event) => {
+  // ✅ Auth check — must be authenticated admin
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
+  if (!['admin', 'super_admin'].includes(authUser.role || '')) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden: Admin role required' })
+  }
+
   const body = await readBody(event)
   const { 
     action,
@@ -14,6 +34,11 @@ export default defineEventHandler(async (event) => {
     role,
     search_term
   } = body
+
+  // ✅ Tenant isolation — non-super_admin can only access their own tenant
+  if (authUser.role !== 'super_admin' && tenant_id && tenant_id !== authUser.tenant_id) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden: Tenant mismatch' })
+  }
 
   const supabase = createClient(
     process.env.SUPABASE_URL || '',
@@ -47,10 +72,11 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'update-admin') {
-      // Update admin user
+      // Update admin user — whitelist fields to prevent mass assignment
+      const safeData = pickFields(user_data || {}, ADMIN_UPDATE_WHITELIST)
       const { data, error } = await supabase
         .from('users')
-        .update(user_data)
+        .update(safeData)
         .eq('id', user_id)
         .select()
         .single()
@@ -96,10 +122,11 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'update-staff') {
-      // Update staff user
+      // Update staff user — whitelist fields to prevent mass assignment
+      const safeData = pickFields(user_data || {}, STAFF_UPDATE_WHITELIST)
       const { data, error } = await supabase
         .from('users')
-        .update(user_data)
+        .update(safeData)
         .eq('id', user_id)
         .select()
         .single()

@@ -1,7 +1,13 @@
+import { createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
 
 export default defineEventHandler(async (event) => {
+  // ✅ Security: disabled in production
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') {
+    throw createError({ statusCode: 404, statusMessage: 'Not found' })
+  }
+
   const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
   const vercelEnv = process.env.VERCEL_ENV
 
@@ -20,7 +26,6 @@ export default defineEventHandler(async (event) => {
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-  // Test RPC directly
   const { data, error } = await supabase.rpc('increment_page_view', {
     p_page: '/test-debug',
     p_date: new Date().toISOString().split('T')[0],
