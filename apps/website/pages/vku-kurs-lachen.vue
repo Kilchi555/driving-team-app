@@ -78,6 +78,9 @@
       </div>
     </section>
 
+    <!-- Reviews -->
+    <ReviewsSection category="lachen" />
+
     <!-- 4. Praktische Informationen -->
     <section class="section-container py-16">
       <h2 class="heading-md mb-10 text-center">Praktische Informationen</h2>
@@ -103,9 +106,6 @@
 
     <!-- 5. Map Section -->
     <LazyStandortMapSection locationKey="lachen" />
-
-    <!-- 6. Reviews Section -->
-    <ReviewsSection category="lachen" />
 
     <!-- 7. Why Section -->
     <WarumSection category="lachen" />

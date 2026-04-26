@@ -18,7 +18,7 @@ export async function getPaymentProviderConfig(tenantId: string): Promise<Paymen
   // ✅ SECURITY: Only load non-sensitive IDs from database
   const { data: tenant, error } = await supabase
     .from('tenants')
-    .select('wallee_space_id, wallee_user_id, wallee_onboarding_status')
+    .select('wallee_space_id, wallee_user_id, wallee_onboarding_status, wallee_enabled')
     .eq('id', tenantId)
     .single()
 
@@ -26,11 +26,13 @@ export async function getPaymentProviderConfig(tenantId: string): Promise<Paymen
     throw new Error(`Failed to load payment provider config for tenant ${tenantId}: ${error?.message}`)
   }
 
-  // ✅ Guard: online payments require completed Wallee onboarding
-  if (tenant.wallee_onboarding_status !== 'active') {
+  // ✅ Guard: online payments require wallee_enabled = true (set by tenant toggle)
+  //    wallee_enabled can only be true after onboarding_status = 'active'
+  if (!tenant.wallee_enabled) {
     const statusMessage: Record<string, string> = {
       not_started: 'Online-Zahlungen sind noch nicht eingerichtet. Bitte richte zuerst dein Wallee-Konto ein (Einstellungen → Zahlungen).',
       pending:     'Dein Antrag für Online-Zahlungen wird gerade bearbeitet. Wir melden uns sobald dein Konto aktiviert ist.',
+      active:      'Online-Zahlungen sind vorübergehend deaktiviert. Du kannst sie in den Einstellungen wieder einschalten.',
     }
     const msg = statusMessage[tenant.wallee_onboarding_status as string]
       || 'Online-Zahlungen sind nicht verfügbar.'

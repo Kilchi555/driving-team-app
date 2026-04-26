@@ -139,6 +139,9 @@
       :extras="['Unterricht auch in <strong>Englisch &amp; Albanisch</strong> möglich!']"
     />
 
+    <!-- ====== REVIEWS ====== -->
+    <ReviewsSection category="zuerich" />
+
     <!-- ====== PRÜFUNGSGEBIET ALBISGÜTLI ====== -->
     <section id="pruefungsgebiet" class="py-16 bg-gray-50">
       <div class="section-container">
@@ -408,9 +411,6 @@
     <div class="bg-gray-50">
       <LazyStandortMapSection location-key="zuerich" />
     </div>
-
-    <!-- ====== REVIEWS ====== -->
-    <ReviewsSection category="zuerich" />
 
     <!-- ====== CTA ====== -->
     <section class="py-20 bg-gradient-to-r from-primary-600 to-primary-800 text-white">

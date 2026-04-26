@@ -41,6 +41,9 @@
     <!-- Benefits Section -->
     <WhyWeBenefitsSection :benefits="lastwageBenefits" />
 
+    <!-- Reviews -->
+    <ReviewsSection category="lastwagen" />
+
     <!-- Voraussetzungen -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
@@ -264,8 +267,6 @@
         </div>
       </div>
     </section>
-
-    <ReviewsSection category="lastwagen" />
 
     <!-- Lead Magnet -->
     <LeadMagnetForm category="lastwagen" />

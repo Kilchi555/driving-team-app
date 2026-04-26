@@ -92,6 +92,9 @@
       </div>
     </section>
 
+    <!-- Reviews -->
+    <ReviewsSection category="zuerich" />
+
     <!-- 4. Praktische Details (Zeit, Ort, Preis) -->
     <section class="section-container py-16">
       <h2 class="heading-md mb-10 text-center">Praktische Informationen</h2>
@@ -122,9 +125,6 @@
 
     <!-- 5. Map Section (Standort zeigen) -->
     <LazyStandortMapSection locationKey="zuerich" />
-
-    <!-- 6. Reviews Section (Soziale Beweis) -->
-    <ReviewsSection category="zuerich" />
 
     <!-- 7. Why Section (Überzeugung) -->
     <WarumSection category="zuerich" />

@@ -32,6 +32,9 @@
     <!-- Benefits Section -->
     <WhyWeBenefitsSection :benefits="motorradBenefits" />
 
+    <!-- Reviews -->
+    <ReviewsSection category="motorrad" />
+
     <!-- Voraussetzungen -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
@@ -225,8 +228,6 @@
       </div>
     </section>
 
-    <ReviewsSection category="motorrad" />
-
     <PriceSection category="motorrad" />
 
     <CtaSection title="Jetzt mit der Motorrad Fahrschule starten!" />
@@ -383,7 +384,6 @@
     <!-- CTA Section -->
     <CtaSection title="Jetzt mit der Motorrad Fahrschule starten!" />
     
-    <ReviewsSection category="default" />
     <GutscheinSection />
     <StandorteSection />
     

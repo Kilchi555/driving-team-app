@@ -207,6 +207,9 @@
       </div>
     </section>
 
+    <!-- Reviews -->
+    <ReviewsSection category="motorrad" />
+
     <!-- ====== PRÜFUNG ALBISGÜTLI ====== -->
     <section class="py-16 bg-gray-50">
       <div class="section-container">
@@ -478,9 +481,6 @@
     <div class="bg-gray-50">
       <LazyStandortMapSection location-key="zuerich" />
     </div>
-
-    <!-- ====== REVIEWS ====== -->
-    <ReviewsSection category="motorrad" />
 
     <!-- ====== CTA ====== -->
     <section class="py-20 bg-gradient-to-r from-red-600 to-red-800 text-white">

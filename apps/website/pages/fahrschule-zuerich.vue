@@ -60,6 +60,9 @@
       :extras="['Unterricht auch in <strong>Englisch &amp; Albanisch</strong> möglich!']"
     />
 
+      <!-- 3. Reviews (grau-50) — Was sagen andere -->
+      <ReviewsSection category="zuerich" />
+
     <section class="py-10 bg-gray-50 text-center">
       <div class="section-container">
         <p class="text-gray-600 mb-4 text-sm">Neugierig was deine Fahrausbildung kosten wird?</p>
@@ -67,19 +70,17 @@
       </div>
     </section>
 
-    <!-- 2.5. Instructors (weiß mit gradient) — Unser Team -->
+    <!-- 3.5. Instructors (weiß mit gradient) — Unser Team -->
     <InstructorProfileSection :instructors="instructors" />
 
-    <!-- 3. Standort Map (grau-50) — Wo genau -->
+    <!-- 4. Standort Map (grau-50) — Wo genau -->
     <div class="bg-gray-50">
       <LazyStandortMapSection location-key="zuerich" />
     </div>
 
-    <!-- 4. Themen (weiß) — Was lernst du -->
+    <!-- 5. Themen (weiß) — Was lernst du -->
     <AusbildungsthemenSection location="Zürich" />
 
-    <!-- 5. Reviews (grau-50) — Was sagen andere -->
-    <ReviewsSection category="zuerich" />
 
     <!-- 6. CTA (primary) & Preise — Jetzt buchen -->
     <CtaSection title="Jetzt in Zürich-Altstetten starten!" />

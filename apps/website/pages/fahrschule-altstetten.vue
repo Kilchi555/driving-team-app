@@ -88,6 +88,9 @@
       :extras="['Unterricht auch in <strong>Englisch &amp; Albanisch</strong> möglich!']"
     />
 
+    <!-- Reviews -->
+    <ReviewsSection category="zuerich" />
+
     <!-- Instructors -->
     <InstructorProfileSection :instructors="instructors" />
 
@@ -129,11 +132,7 @@
       </div>
     </section>
 
-    <!-- Reviews -->
-    <ReviewsSection category="zuerich" />
-
     <!-- CTA -->
-    <CtaSection title="Jetzt in Altstetten starten!" />
 
     <PriceSection />
 
