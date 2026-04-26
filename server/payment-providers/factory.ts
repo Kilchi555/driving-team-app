@@ -6,6 +6,7 @@ import { WalleeProvider } from './wallee-provider'
 import { StripeProvider } from './stripe-provider'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { createError } from 'h3'
 
 /**
  * Lädt die Payment Provider Konfiguration für einen Tenant aus der Datenbank
@@ -17,12 +18,23 @@ export async function getPaymentProviderConfig(tenantId: string): Promise<Paymen
   // ✅ SECURITY: Only load non-sensitive IDs from database
   const { data: tenant, error } = await supabase
     .from('tenants')
-    .select('wallee_space_id, wallee_user_id')
+    .select('wallee_space_id, wallee_user_id, wallee_onboarding_status')
     .eq('id', tenantId)
     .single()
 
   if (error || !tenant) {
     throw new Error(`Failed to load payment provider config for tenant ${tenantId}: ${error?.message}`)
+  }
+
+  // ✅ Guard: online payments require completed Wallee onboarding
+  if (tenant.wallee_onboarding_status !== 'active') {
+    const statusMessage: Record<string, string> = {
+      not_started: 'Online-Zahlungen sind noch nicht eingerichtet. Bitte richte zuerst dein Wallee-Konto ein (Einstellungen → Zahlungen).',
+      pending:     'Dein Antrag für Online-Zahlungen wird gerade bearbeitet. Wir melden uns sobald dein Konto aktiviert ist.',
+    }
+    const msg = statusMessage[tenant.wallee_onboarding_status as string]
+      || 'Online-Zahlungen sind nicht verfügbar.'
+    throw createError({ statusCode: 402, statusMessage: msg })
   }
 
   // ✅ SECURITY: API Secret ALWAYS comes from environment variable (never from DB)
@@ -31,12 +43,11 @@ export async function getPaymentProviderConfig(tenantId: string): Promise<Paymen
     throw new Error('WALLEE_SECRET_KEY environment variable is required')
   }
 
-  // Default zu Wallee
-  const spaceId = tenant.wallee_space_id || parseInt(process.env.WALLEE_SPACE_ID || '82592')
-  const userId = tenant.wallee_user_id || parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
+  const spaceId = tenant.wallee_space_id
+  const userId  = tenant.wallee_user_id
 
   if (!spaceId || !userId) {
-    throw new Error('Wallee credentials not configured for tenant')
+    throw new Error('Wallee credentials (space_id / user_id) not configured for tenant')
   }
 
   return {

@@ -38,6 +38,9 @@
                   Benutzer
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Online-Zahlung
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Erstellt
                 </th>
                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -81,6 +84,22 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {{ tenant.user_count || 0 }}
                 </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span :class="[
+                    'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
+                    tenant.wallee_onboarding_status === 'active'  ? 'bg-green-100 text-green-800' :
+                    tenant.wallee_onboarding_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                                    'bg-gray-100 text-gray-600'
+                  ]">
+                    {{ tenant.wallee_onboarding_status === 'active' ? '✅ Aktiv' :
+                       tenant.wallee_onboarding_status === 'pending' ? '⏳ Ausstehend' : '—' }}
+                  </span>
+                  <button v-if="tenant.wallee_onboarding_status === 'pending'"
+                          @click="openWalleeActivation(tenant)"
+                          class="ml-2 text-xs text-blue-600 hover:underline">
+                    Aktivieren
+                  </button>
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {{ formatDate(tenant.created_at) }}
                 </td>
@@ -112,6 +131,49 @@
           </svg>
           <h3 class="mt-2 text-sm font-medium text-gray-900">Keine Tenants</h3>
           <p class="mt-1 text-sm text-gray-500">Erstelle deinen ersten Tenant.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wallee Activation Modal -->
+    <div v-if="showWalleeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-6 border w-11/12 md:w-1/2 lg:w-1/3 shadow-lg rounded-md bg-white">
+        <h3 class="text-lg font-semibold text-gray-900 mb-1">Online-Zahlungen aktivieren</h3>
+        <p class="text-sm text-gray-500 mb-4">Tenant: <strong>{{ walleeTenant?.name }}</strong></p>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Wallee Space ID *</label>
+            <input v-model="walleeForm.space_id" type="number" placeholder="z.B. 82592"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Wallee User ID *</label>
+            <input v-model="walleeForm.user_id" type="number" placeholder="z.B. 140525"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div v-if="walleeTenant?.wallee_uid_number" class="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+            <p><span class="text-gray-500">UID:</span> <strong>{{ walleeTenant.wallee_uid_number }}</strong></p>
+            <p><span class="text-gray-500">IBAN:</span> <strong>{{ walleeTenant.wallee_iban }}</strong></p>
+            <p v-if="walleeTenant.wallee_handelsregister_url">
+              <a :href="walleeTenant.wallee_handelsregister_url" target="_blank" class="text-blue-600 hover:underline text-xs">
+                📄 Handelsregister-PDF öffnen
+              </a>
+            </p>
+            <p v-if="walleeTenant.wallee_application_notes" class="text-gray-600 text-xs italic">{{ walleeTenant.wallee_application_notes }}</p>
+          </div>
+          <p v-if="walleeError" class="text-sm text-red-600">{{ walleeError }}</p>
+        </div>
+
+        <div class="flex gap-3 mt-6">
+          <button @click="activateWallee" :disabled="walleeLoading"
+                  class="flex-1 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50">
+            {{ walleeLoading ? 'Wird aktiviert...' : '✅ Aktivieren' }}
+          </button>
+          <button @click="showWalleeModal = false"
+                  class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">
+            Abbrechen
+          </button>
         </div>
       </div>
     </div>
@@ -255,6 +317,40 @@ const statusOptions = [
 ]
 
 // Functions
+const showWalleeModal = ref(false)
+const walleeTenant   = ref<any>(null)
+const walleeError    = ref('')
+const walleeLoading  = ref(false)
+const walleeForm     = ref({ space_id: '', user_id: '' })
+
+const openWalleeActivation = (tenant: any) => {
+  walleeTenant.value = tenant
+  walleeForm.value   = { space_id: '', user_id: '' }
+  walleeError.value  = ''
+  showWalleeModal.value = true
+}
+
+const activateWallee = async () => {
+  walleeError.value   = ''
+  walleeLoading.value = true
+  try {
+    await $fetch('/api/admin/wallee-activate', {
+      method: 'POST',
+      body: {
+        tenant_id:       walleeTenant.value.id,
+        wallee_space_id: walleeForm.value.space_id,
+        wallee_user_id:  walleeForm.value.user_id,
+      },
+    })
+    showWalleeModal.value = false
+    await loadTenants()
+  } catch (err: any) {
+    walleeError.value = err?.data?.statusMessage || 'Fehler beim Aktivieren'
+  } finally {
+    walleeLoading.value = false
+  }
+}
+
 const loadTenants = async () => {
   try {
     const result = await $fetch(API)

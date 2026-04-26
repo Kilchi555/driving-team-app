@@ -1236,7 +1236,10 @@
 
         <!-- Payments Tab -->
         <div v-show="activeTab === 'payments'" class="space-y-6">
-          
+
+          <!-- ─── Online-Zahlungen Onboarding ─────────────────────────────── -->
+          <WalleeOnboardingWidget />
+
           <!-- Automatic Payment Collection Settings -->
           <div class="bg-white rounded-lg shadow-sm border p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Automatische Abbuchung</h2>
