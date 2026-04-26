@@ -1,6 +1,7 @@
 // api/admin/manage.post.ts
-import { defineEventHandler, readBody } from 'h3'
+import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -14,36 +15,43 @@ interface AdminRequest {
 
 export default defineEventHandler(async (event) => {
   try {
+    // ✅ Auth check — must be authenticated
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) {
+      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    }
+    const userId = authUser.db_user_id as string
+
     const body = await readBody<AdminRequest>(event)
     const { action } = body
 
     // EVALUATION SYSTEM
     if (action === 'get-evaluation-categories') {
-      return await getEvaluationCategories(body, session.user.id)
+      return await getEvaluationCategories(body, userId)
     }
     if (action === 'get-evaluation-criteria') {
-      return await getEvaluationCriteria(body, session.user.id)
+      return await getEvaluationCriteria(body, userId)
     }
     if (action === 'get-evaluation-scale') {
-      return await getEvaluationScale(body, session.user.id)
+      return await getEvaluationScale(body, userId)
     }
     if (action === 'create-evaluation-category') {
-      return await createEvaluationCategory(body, session.user.id)
+      return await createEvaluationCategory(body, userId)
     }
     if (action === 'update-evaluation-category') {
-      return await updateEvaluationCategory(body, session.user.id)
+      return await updateEvaluationCategory(body, userId)
     }
     if (action === 'delete-evaluation-category') {
-      return await deleteEvaluationCategory(body, session.user.id)
+      return await deleteEvaluationCategory(body, userId)
     }
     if (action === 'create-evaluation-criterion') {
-      return await createEvaluationCriterion(body, session.user.id)
+      return await createEvaluationCriterion(body, userId)
     }
     if (action === 'update-evaluation-criterion') {
-      return await updateEvaluationCriterion(body, session.user.id)
+      return await updateEvaluationCriterion(body, userId)
     }
     if (action === 'delete-evaluation-criterion') {
-      return await deleteEvaluationCriterion(body, session.user.id)
+      return await deleteEvaluationCriterion(body, userId)
     }
 
     throw new Error('Invalid action')

@@ -65,11 +65,27 @@ export default defineEventHandler(async (event) => {
   let transactionId: string | undefined
   
   try {
-    // ============ LAYER 0: OPTIONAL SIGNATURE CHECK ============
-    // Note: Real security comes from Wallee API verification in Layer 3
-    // The signature header is optional - if present, we validate it
-    const body = await readBody(event) as WalleeWebhookPayload
-    const signature = event.headers['x-wallee-signature'] as string
+    // ============ LAYER 0: SIGNATURE CHECK ============
+    // ✅ Security: if WALLEE_WEBHOOK_SECRET is configured, verify HMAC signature
+    const rawBody = await readRawBody(event) || ''
+    const body = JSON.parse(rawBody) as WalleeWebhookPayload
+    const signature = event.headers['x-wallee-signature'] as string | undefined
+    const webhookSecret = process.env.WALLEE_WEBHOOK_SECRET
+
+    if (webhookSecret) {
+      if (!signature) {
+        logger.warn('❌ Webhook rejected: missing x-wallee-signature header')
+        throw createError({ statusCode: 401, statusMessage: 'Missing webhook signature' })
+      }
+      const { createHmac, timingSafeEqual } = await import('crypto')
+      const expected = createHmac('sha256', webhookSecret).update(rawBody).digest('hex')
+      const sigBuf = Buffer.from(signature)
+      const expBuf = Buffer.from(expected)
+      if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
+        logger.warn('❌ Webhook rejected: invalid HMAC signature')
+        throw createError({ statusCode: 401, statusMessage: 'Invalid webhook signature' })
+      }
+    }
     
     // 🔍 DEBUG: Log the entire payload to understand structure
     logger.info('🔔 WEBHOOK PAYLOAD RECEIVED:', JSON.stringify(body, null, 2))

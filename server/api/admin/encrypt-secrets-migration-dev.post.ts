@@ -13,6 +13,10 @@ import { encryptAllPlaintextSecrets, checkEncryptionStatus } from '~/server/util
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
+  // ✅ Security: disabled in production
+  if (process.env.NODE_ENV === 'production') {
+    throw createError({ statusCode: 404, statusMessage: 'Not found' })
+  }
   try {
     // ✅ SIMPLE AUTHENTICATION - Just check for secret key in header
     const secretKey = getHeader(event, 'x-migration-secret')

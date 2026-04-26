@@ -142,10 +142,10 @@ Planst du mehr als nur den Auto-Führerschein? Hier eine Übersicht der Zusatzko
 
 | Kategorie | Typische Ausbildungskosten |
 |-----------|---------------------------|
-| Motorrad (A/A2/A1) | CHF 1'500–2'500 (exkl. Grundkurs) |
-| Anhänger BE | Ab CHF 600.– |
-| Motorboot | Ab CHF 800.– |
-| Lastwagen C | CHF 3'000–6'000 |
+| Motorrad (A/A2/A1) | CHF 1'000–2'000 (exkl. Grundkurs) |
+| Anhänger BE | Ab CHF 900.– |
+| Motorboot | Ab CHF 2000.– |
+| Lastwagen C | CHF 4'000–6'000 |
 | Bus D | CHF 5'000–9'000 |
 
 ---

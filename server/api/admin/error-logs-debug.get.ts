@@ -1,7 +1,12 @@
 import { defineEventHandler, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 
+// ✅ Security: this debug endpoint is disabled in production
 export default defineEventHandler(async (event) => {
+  if (process.env.NODE_ENV === 'production') {
+    throw createError({ statusCode: 404, statusMessage: 'Not found' })
+  }
+
   try {
     const supabaseUrl = process.env.SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
