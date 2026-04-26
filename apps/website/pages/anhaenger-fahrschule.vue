@@ -33,6 +33,9 @@
     <!-- Benefits Section -->
     <WhyWeBenefitsSection :benefits="anhaengerBenefits" />
 
+    <!-- Reviews -->
+    <ReviewsSection category="anhaenger" />
+
     <!-- Voraussetzungen -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
@@ -220,8 +223,6 @@
         </div>
       </div>
     </section>
-
-    <ReviewsSection category="anhaenger" />
 
     <!-- Lead Magnet -->
     <LeadMagnetForm category="anhaenger" />

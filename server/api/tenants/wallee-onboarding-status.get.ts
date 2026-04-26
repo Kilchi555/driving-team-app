@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('tenants')
-    .select('wallee_onboarding_status, wallee_applied_at')
+    .select('wallee_onboarding_status, wallee_enabled, wallee_applied_at')
     .eq('id', authUser.tenant_id as string)
     .single()
 
@@ -18,6 +18,7 @@ export default defineEventHandler(async (event) => {
 
   return {
     status:    data.wallee_onboarding_status ?? 'not_started',
+    enabled:   data.wallee_enabled ?? false,
     appliedAt: data.wallee_applied_at ?? null,
   }
 })

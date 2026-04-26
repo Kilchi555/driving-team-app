@@ -41,6 +41,9 @@
     <!-- Benefits Section -->
     <WhyWeBenefitsSection :benefits="autoBenefits" />
 
+    <!-- Reviews -->
+    <ReviewsSection category="default" />
+
     <!-- Voraussetzungen -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
@@ -228,8 +231,6 @@
         </div>
       </div>
     </section>
-
-    <ReviewsSection category="default" />
 
     <!-- Mental Coach Teaser -->
     <section class="section-container py-10">

@@ -15,7 +15,7 @@
     </div>
 
     <!-- not_started -->
-    <template v-if="status === 'not_started'">
+    <template v-if="onboardingStatus === 'not_started'">
       <p class="text-sm text-gray-600 mb-4">
         Mit Online-Zahlungen können deine Kunden direkt bei der Buchung per Kreditkarte, TWINT oder anderen Methoden bezahlen.
         Für die Aktivierung benötigen wir einmalig einige Firmeninformationen.
@@ -91,7 +91,7 @@
     </template>
 
     <!-- pending -->
-    <template v-else-if="status === 'pending'">
+    <template v-else-if="onboardingStatus === 'pending'">
       <p class="text-sm text-gray-600 mb-3">
         Dein Antrag ist eingegangen und wird aktuell bearbeitet.
         Wir melden uns innerhalb von <strong>2–5 Werktagen</strong> per E-Mail.
@@ -104,14 +104,42 @@
       </p>
     </template>
 
-    <!-- active -->
-    <template v-else-if="status === 'active'">
-      <p class="text-sm text-gray-600">
-        Online-Zahlungen sind aktiv. Deine Kunden können per Kreditkarte, TWINT und weiteren Methoden bezahlen.
-      </p>
-      <div class="mt-3 flex gap-4 text-sm">
+    <!-- active (onboarding done) → show enable/disable toggle -->
+    <template v-else-if="onboardingStatus === 'active'">
+      <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+        <div>
+          <p class="text-sm font-medium text-gray-900">Online-Zahlungen einschalten</p>
+          <p class="text-xs text-gray-500 mt-0.5">
+            {{ walleeEnabled
+              ? 'Aktiv — Kunden können per Karte, TWINT usw. bezahlen.'
+              : 'Deaktiviert — nur Bar/Rechnung sichtbar.' }}
+          </p>
+        </div>
+        <button
+          @click="toggleWallee"
+          :disabled="toggleLoading"
+          :class="[
+            'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50',
+            walleeEnabled ? 'bg-blue-600' : 'bg-gray-200'
+          ]"
+          role="switch"
+          :aria-checked="walleeEnabled"
+        >
+          <span
+            :class="[
+              'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+              walleeEnabled ? 'translate-x-5' : 'translate-x-0'
+            ]"
+          />
+        </button>
+      </div>
+
+      <p v-if="toggleError" class="mt-2 text-sm text-red-600">{{ toggleError }}</p>
+      <p v-if="toggleSuccess" class="mt-2 text-sm text-green-600">{{ toggleSuccess }}</p>
+
+      <div class="mt-4 flex gap-4 text-sm">
         <a href="https://app-wallee.com" target="_blank"
-           class="text-blue-600 hover:underline">Wallee Dashboard öffnen →</a>
+           class="text-blue-600 hover:underline">Wallee Dashboard →</a>
       </div>
     </template>
   </div>
@@ -120,11 +148,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 
-const status = ref<'not_started' | 'pending' | 'active'>('not_started')
-const showForm = ref(false)
-const loading  = ref(false)
-const errorMsg = ref('')
-const pdfFile  = ref<File | null>(null)
+const onboardingStatus = ref<'not_started' | 'pending' | 'active'>('not_started')
+const walleeEnabled    = ref(false)
+const showForm         = ref(false)
+const loading          = ref(false)
+const errorMsg         = ref('')
+const pdfFile          = ref<File | null>(null)
+const toggleLoading    = ref(false)
+const toggleError      = ref('')
+const toggleSuccess    = ref('')
 
 const form = ref({
   company_name: '',
@@ -135,32 +167,26 @@ const form = ref({
 })
 
 const statusConfig = computed(() => {
-  const configs = {
-    not_started: {
-      icon: '💳', iconBg: 'bg-gray-100',
-      label: 'Nicht eingerichtet',
-      badgeClass: 'bg-gray-100 text-gray-600',
-    },
-    pending: {
-      icon: '⏳', iconBg: 'bg-yellow-100',
-      label: 'Antrag eingereicht',
-      badgeClass: 'bg-yellow-100 text-yellow-700',
-    },
-    active: {
-      icon: '✅', iconBg: 'bg-green-100',
-      label: 'Aktiv',
-      badgeClass: 'bg-green-100 text-green-700',
-    },
+  if (onboardingStatus.value === 'active') {
+    return walleeEnabled.value
+      ? { icon: '✅', iconBg: 'bg-green-100', label: 'Aktiv',          badgeClass: 'bg-green-100 text-green-700' }
+      : { icon: '⏸️', iconBg: 'bg-gray-100',  label: 'Pausiert',       badgeClass: 'bg-gray-100 text-gray-600' }
   }
-  return configs[status.value]
+  const configs = {
+    not_started: { icon: '💳', iconBg: 'bg-gray-100',   label: 'Nicht eingerichtet',  badgeClass: 'bg-gray-100 text-gray-600' },
+    pending:     { icon: '⏳', iconBg: 'bg-yellow-100', label: 'Antrag eingereicht',  badgeClass: 'bg-yellow-100 text-yellow-700' },
+    active:      { icon: '✅', iconBg: 'bg-green-100',  label: 'Aktiv',               badgeClass: 'bg-green-100 text-green-700' },
+  }
+  return configs[onboardingStatus.value]
 })
 
 onMounted(async () => {
   try {
-    const res = await $fetch<{ status: string }>('/api/tenants/wallee-onboarding-status')
-    status.value = (res.status as any) || 'not_started'
+    const res = await $fetch<{ status: string; enabled: boolean }>('/api/tenants/wallee-onboarding-status')
+    onboardingStatus.value = (res.status as any) || 'not_started'
+    walleeEnabled.value    = res.enabled ?? false
   } catch {
-    // keep default
+    // keep defaults
   }
 })
 
@@ -182,12 +208,29 @@ const submitRequest = async () => {
     if (pdfFile.value) fd.append('handelsregister', pdfFile.value)
 
     await $fetch('/api/tenants/wallee-onboarding-request', { method: 'POST', body: fd })
-    status.value  = 'pending'
+    onboardingStatus.value = 'pending'
     showForm.value = false
   } catch (err: any) {
     errorMsg.value = err?.data?.statusMessage || 'Fehler beim Einreichen des Antrags'
   } finally {
     loading.value = false
+  }
+}
+
+const toggleWallee = async () => {
+  toggleLoading.value = true
+  toggleError.value   = ''
+  toggleSuccess.value = ''
+  const newVal = !walleeEnabled.value
+  try {
+    await $fetch('/api/tenants/wallee-toggle', { method: 'POST', body: { enabled: newVal } })
+    walleeEnabled.value    = newVal
+    toggleSuccess.value    = newVal ? 'Online-Zahlungen aktiviert.' : 'Online-Zahlungen deaktiviert.'
+    setTimeout(() => { toggleSuccess.value = '' }, 3000)
+  } catch (err: any) {
+    toggleError.value = err?.data?.statusMessage || 'Fehler beim Umschalten'
+  } finally {
+    toggleLoading.value = false
   }
 }
 </script>

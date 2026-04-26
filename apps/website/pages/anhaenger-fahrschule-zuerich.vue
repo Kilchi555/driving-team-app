@@ -167,6 +167,9 @@
       </div>
     </section>
 
+    <!-- Reviews -->
+    <ReviewsSection category="anhaenger" />
+
     <!-- ====== ABLAUF ====== -->
     <section class="py-16 bg-gray-50">
       <div class="section-container">
@@ -312,9 +315,6 @@
     <div class="bg-gray-50">
       <LazyStandortMapSection location-key="zuerich" />
     </div>
-
-    <!-- ====== REVIEWS ====== -->
-    <ReviewsSection category="anhaenger" />
 
     <!-- ====== FAQ ====== -->
     <section class="py-16 bg-white">

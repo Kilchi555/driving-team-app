@@ -216,6 +216,9 @@
     <!-- Facts Section -->
     <StatsSection />
 
+    <ReviewsSection />
+
+
     <!-- Courses Section -->
     <section class="py-20 bg-white scroll-mt-20">
       <div class="max-w-7xl mx-auto px-4">
@@ -456,9 +459,6 @@
         </div>
       </div>
     </section>
-
-    <ReviewsSection />
-
     <!-- FAQ Section -->
     <section class="section-container py-20">
       <h2 class="text-3xl text-center mb-16">Die häufigsten <b>Fragen & Antworten</b> bezüglich der Fahrschule Driving Team</h2>

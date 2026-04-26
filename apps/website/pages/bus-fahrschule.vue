@@ -31,6 +31,9 @@
     <!-- Benefits Section -->
     <WhyWeBenefitsSection :benefits="busBenefits" />
 
+    <!-- Reviews -->
+    <ReviewsSection category="default" />
+
     <!-- Obligatorische Fahrstunden -->
     <section class="section-container">
       <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-8">Obligatorische Fahrstunden für den Busführerschein</h2>
@@ -336,7 +339,6 @@
       </div>
     </section>
     
-    <ReviewsSection category="default" />
     <GutscheinSection />
     <PriceSection category="bus" />
     <CtaSection title="Jetzt mit der Bus Fahrschule starten!" :hideCourseButton="true" />

@@ -33,6 +33,9 @@
     <!-- Benefits Section -->
     <WhyWeBenefitsSection :benefits="taxiBenefits" />
 
+    <!-- Reviews -->
+    <ReviewsSection category="default" />
+
     <!-- Intro -->
     <section class="section-container">
       <div class="max-w-3xl mx-auto">
@@ -381,7 +384,6 @@
       </div>
     </section>
     
-    <ReviewsSection category="default" />
     <GutscheinSection />
     <PriceSection category="taxi" />
     <CtaSection title="Jetzt mit der Taxi Fahrschule starten!" :hideCourseButton="true" />

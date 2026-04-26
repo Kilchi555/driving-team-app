@@ -31,6 +31,9 @@
     <!-- Benefits Section -->
     <WhyWeBenefitsSection :benefits="motorbootBenefits" />
 
+    <!-- Reviews -->
+    <ReviewsSection category="motorboot" />
+
     <!-- Voraussetzungen -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
@@ -166,8 +169,6 @@
         </div>
       </div>
     </section>
-
-    <ReviewsSection category="motorboot" />
 
     <!-- Lead Magnet -->
     <LeadMagnetForm category="motorboot" />

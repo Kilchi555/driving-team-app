@@ -99,6 +99,11 @@
                           class="ml-2 text-xs text-blue-600 hover:underline">
                     Aktivieren
                   </button>
+                  <button v-else-if="tenant.wallee_onboarding_status === 'active'"
+                          @click="openWalleeActivation(tenant)"
+                          class="ml-2 text-xs text-gray-500 hover:underline">
+                    Verwalten
+                  </button>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {{ formatDate(tenant.created_at) }}
@@ -138,8 +143,35 @@
     <!-- Wallee Activation Modal -->
     <div v-if="showWalleeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
       <div class="relative top-20 mx-auto p-6 border w-11/12 md:w-1/2 lg:w-1/3 shadow-lg rounded-md bg-white">
-        <h3 class="text-lg font-semibold text-gray-900 mb-1">Online-Zahlungen aktivieren</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-1">
+          {{ walleeTenant?.wallee_onboarding_status === 'active' ? 'Wallee verwalten' : 'Online-Zahlungen aktivieren' }}
+        </h3>
         <p class="text-sm text-gray-500 mb-4">Tenant: <strong>{{ walleeTenant?.name }}</strong></p>
+
+        <!-- Already active: show toggle + option to update credentials -->
+        <template v-if="walleeTenant?.wallee_onboarding_status === 'active'">
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg mb-4">
+            <div>
+              <p class="text-sm font-medium text-gray-900">Online-Zahlungen</p>
+              <p class="text-xs text-gray-500 mt-0.5">{{ walleeTenant?.wallee_enabled ? 'Aktiv' : 'Pausiert' }}</p>
+            </div>
+            <button
+              @click="toggleWalleeAdmin"
+              :disabled="walleeLoading"
+              :class="[
+                'relative inline-flex h-6 w-11 rounded-full border-2 border-transparent transition-colors duration-200 disabled:opacity-50',
+                walleeTenant?.wallee_enabled ? 'bg-blue-600' : 'bg-gray-200'
+              ]"
+            >
+              <span :class="['inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200', walleeTenant?.wallee_enabled ? 'translate-x-5' : 'translate-x-0']" />
+            </button>
+          </div>
+          <p class="text-xs text-gray-500 mb-4">
+            Wallee Space ID: <strong>{{ walleeTenant?.wallee_space_id }}</strong> &nbsp;|&nbsp;
+            User ID: <strong>{{ walleeTenant?.wallee_user_id }}</strong>
+          </p>
+          <p class="text-xs text-gray-400 mb-4">Um Credentials zu ändern, Space ID + User ID neu eingeben und erneut aktivieren.</p>
+        </template>
 
         <div class="space-y-4">
           <div>
@@ -346,6 +378,32 @@ const activateWallee = async () => {
     await loadTenants()
   } catch (err: any) {
     walleeError.value = err?.data?.statusMessage || 'Fehler beim Aktivieren'
+  } finally {
+    walleeLoading.value = false
+  }
+}
+
+const toggleWalleeAdmin = async () => {
+  if (!walleeTenant.value) return
+  walleeLoading.value = true
+  walleeError.value   = ''
+  const newVal = !walleeTenant.value.wallee_enabled
+  try {
+    await $fetch('/api/admin/wallee-activate', {
+      method: 'POST',
+      body: {
+        tenant_id: walleeTenant.value.id,
+        deactivate: !newVal,
+        ...(newVal ? {
+          wallee_space_id: walleeTenant.value.wallee_space_id,
+          wallee_user_id:  walleeTenant.value.wallee_user_id,
+        } : {}),
+      },
+    })
+    walleeTenant.value = { ...walleeTenant.value, wallee_enabled: newVal }
+    await loadTenants()
+  } catch (err: any) {
+    walleeError.value = err?.data?.statusMessage || 'Fehler beim Umschalten'
   } finally {
     walleeLoading.value = false
   }

@@ -253,6 +253,9 @@
       :extras="['Fahrstunden in Englisch & Albanisch verfügbar!']"
     />
 
+    <!-- Reviews - Social Proof VOR Booking CTA! -->
+    <ReviewsSection category="zuerich" />
+
     <!-- Team -->
     <InstructorProfileSection :instructors="instructors" />
 
@@ -428,9 +431,6 @@
 
     <!-- Warum Section - Fahrstunden Zürich Keywords -->
     <WarumSection category="fahrstunden-zuerich" />
-
-    <!-- Reviews - Social Proof VOR Booking CTA! -->
-    <ReviewsSection category="zuerich" />
 
     <!-- Booking CTA - Nach Social Proof für höhere Conversion -->
     <section class="py-20 bg-gradient-to-r from-primary-600 to-primary-800 text-white">

@@ -139,6 +139,8 @@
       </div>
     </section>
 
+    <ReviewsSection category="default" />
+
     <cta-section />
 
     <!-- Kategorien -->
@@ -445,8 +447,6 @@
 
       </div>
     </section>
-
-    <ReviewsSection category="default" />
 
     <!-- FAQ -->
     <section class="section-container py-16">
