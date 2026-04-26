@@ -2,7 +2,11 @@
 // Lead-Magnet subscription: sends a category-specific tips email and notifies the team.
 // Rate-limited to 5 submissions per IP per hour.
 
+import { createClient } from '@supabase/supabase-js'
 import { formatResendFrom } from '~/server/utils/format-resend-from'
+import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+
+const TENANT_ID = '64259d68-195a-4c68-8875-f1b44d962830'
 
 export type LeadMagnetCategory = 'auto' | 'motorrad' | 'lastwagen' | 'anhaenger' | 'motorboot'
 
@@ -446,6 +450,25 @@ export default defineEventHandler(async (event) => {
 
   const name = firstName.trim()
   const tmpl = TEMPLATES[category]
+
+  // ─── Save lead to database (non-blocking — email still sends on DB error) ──
+  try {
+    const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
+    if (supabaseUrl && supabaseServiceKey) {
+      const supabase = createClient(supabaseUrl, supabaseServiceKey)
+      const { error: dbError } = await supabase.from('website_leads').insert({
+        tenant_id: TENANT_ID,
+        first_name: name,
+        email: email.trim().toLowerCase(),
+        category,
+        source: 'lead_magnet',
+        ip_hash: ip === 'unknown' ? null : ip,
+      })
+      if (dbError) console.error('⚠️ Lead DB insert error:', dbError.message)
+    }
+  } catch (dbErr: any) {
+    console.error('⚠️ Lead DB error (non-fatal):', dbErr.message)
+  }
 
   try {
     const { Resend } = await import('resend')
