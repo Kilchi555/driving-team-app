@@ -27,25 +27,28 @@
       <div v-if="currentStep < LOADING_STEP" class="px-6 sm:px-10 pt-5 pb-2 border-b border-gray-100">
         <div class="hidden sm:flex justify-between text-xs mb-2.5 px-0.5">
           <span v-for="(step, i) in steps" :key="i" class="flex-1 text-center truncate px-1 font-medium transition-colors"
-            :class="i < currentStep ? 'text-green-600' : i === currentStep ? '' : 'text-gray-400'"
-            :style="i === currentStep ? { color: formData.primary_color || '#2563EB' } : {}">
+            :class="[i < currentStep ? 'text-green-600 cursor-pointer hover:opacity-70' : i === currentStep ? '' : 'text-gray-400']"
+            :style="i === currentStep ? { color: formData.primary_color || '#2563EB' } : {}"
+            @click="i < currentStep ? currentStep = i : undefined">
             {{ step.title }}
           </span>
         </div>
         <div class="flex items-center">
           <template v-for="(step, index) in steps" :key="index">
             <div
+              @click="index < currentStep ? currentStep = index : undefined"
               class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 flex-shrink-0 z-10"
               :class="[
-                index < currentStep  ? 'text-white' :
+                index < currentStep  ? 'text-white cursor-pointer hover:opacity-80' :
                 index === currentStep ? 'text-white ring-4' :
-                                        'bg-gray-100 text-gray-400'
+                                        'bg-gray-100 text-gray-400 cursor-not-allowed'
               ]"
               :style="index < currentStep
                 ? { backgroundColor: formData.secondary_color || '#10B981' }
                 : index === currentStep
                   ? { backgroundColor: formData.primary_color || '#3B82F6', '--tw-ring-color': (formData.primary_color || '#3B82F6') + '30' }
                   : {}"
+              :title="index < currentStep ? `Zurück zu: ${step.title}` : undefined"
             >
               <svg v-if="index < currentStep" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
@@ -88,16 +91,30 @@
                   <input v-model="formData.slug" type="text" required placeholder="meine-fahrschule"
                     pattern="[a-z0-9\-]+"
                     class="flex-1 px-4 py-2.5 bg-gray-50 focus:bg-white outline-none text-sm"
-                    @input="sanitizeSlug(); onSlugInput()">
+                    @input="sanitizeSlug(); onSlugInput()"
+                    @blur="finalizeSlug">
                 </div>
                 <p class="text-xs text-gray-400 mt-1">Nur Kleinbuchstaben, Zahlen und Bindestriche</p>
+                <!-- Slug availability feedback -->
+                <p v-if="slugCheck === 'checking'" class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                  <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                  Wird geprüft…
+                </p>
+                <p v-else-if="slugCheck === 'available'" class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                  simy.ch/{{ formData.slug }} ist verfügbar
+                </p>
+                <p v-else-if="slugCheck === 'taken'" class="text-xs text-red-500 mt-1 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                  Diese URL ist bereits vergeben – bitte eine andere wählen
+                </p>
               </div>
             </div>
           </div>
 
           <div>
-            <h2 class="text-base font-semibold text-gray-900 mb-1">Kontaktperson</h2>
-            <p class="text-sm text-gray-500 mb-4">Wird für Rechnungen und Benachrichtigungen verwendet.</p>
+            <h2 class="text-base font-semibold text-gray-900 mb-1">Kontaktperson & Login</h2>
+            <p class="text-sm text-gray-500 mb-4">Kontaktdaten für Rechnungen – und dein persönlicher Admin-Login.</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Vorname *</label>
@@ -110,14 +127,46 @@
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">E-Mail *</label>
-                <input v-model="formData.contact_email" type="email" required placeholder="info@fahrschule.ch"
+                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">E-Mail (Kontakt)</label>
+                <input v-model="formData.contact_email" type="email" placeholder="info@fahrschule.ch"
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
               </div>
               <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Telefon *</label>
                 <input v-model="formData.contact_phone" type="tel" required placeholder="+41 44 123 45 67"
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
+              </div>
+              <!-- Admin Login Email – früh validieren -->
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+                  E-Mail für Admin-Login *
+                  <span class="normal-case font-normal text-gray-400 ml-1">– wird dein persönlicher Login</span>
+                </label>
+                <input
+                  v-model="adminEmailEarly"
+                  type="email"
+                  required
+                  placeholder="dein@login.ch"
+                  @blur="checkAdminEmail(adminEmailEarly)"
+                  @input="emailCheck = 'idle'"
+                  :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
+                    emailCheck === 'taken'     ? 'border-red-300 focus:ring-red-400' :
+                    emailCheck === 'available' ? 'border-green-300 focus:ring-green-400' :
+                    'border-gray-200 focus:ring-blue-500']"
+                >
+                <p v-if="emailCheck === 'checking'" class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                  <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                  Wird geprüft…
+                </p>
+                <p v-else-if="emailCheck === 'available'" class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                  E-Mail ist verfügbar
+                </p>
+                <p v-else-if="emailCheck === 'taken'" class="text-xs text-red-500 mt-1 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                  Diese E-Mail ist bereits registriert –
+                  <a href="/login" class="underline">Einloggen</a>
+                </p>
               </div>
             </div>
           </div>
@@ -402,16 +451,6 @@
                       class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-colors">
                   </div>
                 </div>
-                <div>
-                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Telefon</label>
-                  <input v-model="loc.phone" type="tel" placeholder="+41 44 123 45 67"
-                    class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-colors">
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">E-Mail</label>
-                  <input v-model="loc.email" type="email" placeholder="standort@firma.ch"
-                    class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-colors">
-                </div>
               </div>
             </div>
           </div>
@@ -528,17 +567,15 @@
             </div>
 
             <div>
-              <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">Zahlungsdaten (für Rechnungen)</p>
+              <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">Zahlungsdaten (für QR-Rechnungen)</p>
               <div class="space-y-3">
                 <div>
-                  <label class="block text-xs text-gray-500 mb-1">IBAN</label>
-                  <input v-model="formData.iban" type="text" placeholder="CH56 0483 5012 3456 7800 9"
+                  <label class="block text-xs text-gray-500 mb-1">QR-IBAN <span class="text-gray-400 font-normal">(optional)</span></label>
+                  <input v-model="formData.qr_iban" type="text" placeholder="CH04 3000 1234 5678 9012 3"
                     class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white text-sm transition-colors font-mono">
-                </div>
-                <div>
-                  <label class="block text-xs text-gray-500 mb-1">Bank</label>
-                  <input v-model="formData.bank_name" type="text" placeholder="z.B. Raiffeisen, ZKB, UBS"
-                    class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white text-sm transition-colors">
+                  <p class="text-xs text-gray-400 mt-1.5 leading-relaxed">
+                    Die QR-IBAN findest du in deinem E-Banking (unterscheidet sich von der normalen IBAN). Ohne QR-IBAN wird kein QR-Einzahlungsschein auf Rechnungen gedruckt — kann jederzeit unter Einstellungen → Rechnungen nachgetragen werden.
+                  </p>
                 </div>
               </div>
             </div>
@@ -581,61 +618,65 @@
             <div>
               <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">E-Mail *</label>
               <input v-model="adminForm.email" type="email" required
-                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
+                @blur="checkAdminEmail(adminForm.email)"
+                @input="emailCheck = 'idle'"
+                :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
+                  emailCheck === 'taken'     ? 'border-red-300 focus:ring-red-400' :
+                  emailCheck === 'available' ? 'border-green-300 focus:ring-green-400' :
+                  'border-gray-200 focus:ring-blue-500']">
+              <p v-if="emailCheck === 'taken'" class="text-xs text-red-500 mt-1">Diese E-Mail ist bereits registriert</p>
+              <p v-else-if="emailCheck === 'available'" class="text-xs text-green-600 mt-1">E-Mail ist verfügbar</p>
             </div>
             <div>
               <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Telefon</label>
               <input v-model="adminForm.phone" type="tel"
                 class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Geburtsdatum</label>
-              <input v-model="adminForm.birthdate" type="date"
-                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
-            </div>
-            <div></div>
-            <div>
-              <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Passwort *</label>
-              <input v-model="adminForm.password" type="password" required minlength="12" autocomplete="new-password" name="new-password"
-                :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
-                  adminForm.password && !passwordValid ? 'border-red-300 focus:ring-red-500' :
-                  adminForm.password && passwordValid ? 'border-green-300 focus:ring-green-500' :
-                  'border-gray-200 focus:ring-blue-500']"
-                placeholder="Mindestens 12 Zeichen">
-              <div v-if="zxcvbnScore !== null" class="mt-2">
-                <div class="flex gap-1 h-1">
-                  <div v-for="i in 4" :key="i" class="flex-1 rounded-full transition-colors duration-300"
-                    :class="i <= zxcvbnScore ? [
-                      zxcvbnScore <= 1 ? 'bg-red-500' :
-                      zxcvbnScore === 2 ? 'bg-yellow-400' :
-                      zxcvbnScore === 3 ? 'bg-blue-400' : 'bg-green-500'
-                    ] : 'bg-gray-200'"
-                  />
+            <!-- Passwörter: immer nebeneinander, auch auf Mobile -->
+            <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Passwort *</label>
+                <input v-model="adminForm.password" type="password" required minlength="12" autocomplete="new-password" name="new-password"
+                  :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
+                    adminForm.password && !passwordValid ? 'border-red-300 focus:ring-red-500' :
+                    adminForm.password && passwordValid ? 'border-green-300 focus:ring-green-500' :
+                    'border-gray-200 focus:ring-blue-500']"
+                  placeholder="Mindestens 12 Zeichen">
+                <div v-if="zxcvbnScore !== null" class="mt-2">
+                  <div class="flex gap-1 h-1">
+                    <div v-for="i in 4" :key="i" class="flex-1 rounded-full transition-colors duration-300"
+                      :class="i <= zxcvbnScore ? [
+                        zxcvbnScore <= 1 ? 'bg-red-500' :
+                        zxcvbnScore === 2 ? 'bg-yellow-400' :
+                        zxcvbnScore === 3 ? 'bg-blue-400' : 'bg-green-500'
+                      ] : 'bg-gray-200'"
+                    />
+                  </div>
+                  <p class="text-xs mt-1 font-medium" :class="
+                    zxcvbnScore <= 1 ? 'text-red-500' :
+                    zxcvbnScore === 2 ? 'text-yellow-600' :
+                    zxcvbnScore === 3 ? 'text-blue-600' : 'text-green-600'
+                  ">
+                    {{ ['Sehr schwach', 'Schwach', 'Akzeptabel', 'Stark', 'Sehr stark'][zxcvbnScore] }}
+                    <span v-if="zxcvbnScore < 2"> – zu leicht erratbar</span>
+                  </p>
                 </div>
-                <p class="text-xs mt-1 font-medium" :class="
-                  zxcvbnScore <= 1 ? 'text-red-500' :
-                  zxcvbnScore === 2 ? 'text-yellow-600' :
-                  zxcvbnScore === 3 ? 'text-blue-600' : 'text-green-600'
-                ">
-                  {{ ['Sehr schwach', 'Schwach', 'Akzeptabel', 'Stark', 'Sehr stark'][zxcvbnScore] }}
-                  <span v-if="zxcvbnScore < 2"> – zu leicht erratbar</span>
-                </p>
+                <p v-if="hibpStatus === 'checking'" class="text-xs text-gray-400 mt-1">Sicherheitsprüfung…</p>
+                <p v-else-if="hibpStatus === 'pwned'" class="text-xs text-red-600 mt-1">Dieses Passwort ist in {{ hibpCount }} Datenlecks bekannt – bitte ein anderes wählen.</p>
+                <p v-else-if="hibpStatus === 'safe'" class="text-xs text-green-600 mt-1">Nicht in bekannten Datenlecks gefunden</p>
+                <p v-if="passwordError" class="text-xs text-red-600 mt-1">{{ passwordError }}</p>
               </div>
-              <p v-if="hibpStatus === 'checking'" class="text-xs text-gray-400 mt-1">Sicherheitsprüfung…</p>
-              <p v-else-if="hibpStatus === 'pwned'" class="text-xs text-red-600 mt-1">Dieses Passwort ist in {{ hibpCount }} Datenlecks bekannt – bitte ein anderes wählen.</p>
-              <p v-else-if="hibpStatus === 'safe'" class="text-xs text-green-600 mt-1">Nicht in bekannten Datenlecks gefunden</p>
-              <p v-if="passwordError" class="text-xs text-red-600 mt-1">{{ passwordError }}</p>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Passwort bestätigen *</label>
-              <input v-model="adminForm.passwordConfirm" type="password" required minlength="12" autocomplete="new-password" name="confirm-password"
-                :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
-                  adminForm.passwordConfirm && passwordMismatch ? 'border-red-300 focus:ring-red-500' :
-                  adminForm.passwordConfirm && !passwordMismatch && passwordValid ? 'border-green-300 focus:ring-green-500' :
-                  'border-gray-200 focus:ring-blue-500']"
-                placeholder="Passwort wiederholen">
-              <p v-if="passwordMismatch" class="text-xs text-red-600 mt-1">Passwörter stimmen nicht überein.</p>
-              <p v-else-if="adminForm.passwordConfirm && !passwordMismatch && passwordValid" class="text-xs text-green-600 mt-1">Passwörter stimmen überein</p>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Passwort bestätigen *</label>
+                <input v-model="adminForm.passwordConfirm" type="password" required minlength="12" autocomplete="new-password" name="confirm-password"
+                  :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
+                    adminForm.passwordConfirm && passwordMismatch ? 'border-red-300 focus:ring-red-500' :
+                    adminForm.passwordConfirm && !passwordMismatch && passwordValid ? 'border-green-300 focus:ring-green-500' :
+                    'border-gray-200 focus:ring-blue-500']"
+                  placeholder="Passwort wiederholen">
+                <p v-if="passwordMismatch" class="text-xs text-red-600 mt-1">Passwörter stimmen nicht überein.</p>
+                <p v-else-if="adminForm.passwordConfirm && !passwordMismatch && passwordValid" class="text-xs text-green-600 mt-1">Passwörter stimmen überein</p>
+              </div>
             </div>
           </div>
         </div>
@@ -978,8 +1019,7 @@ const formData = ref({
   website_url: '',
   staff_count: '',
   language: 'de',
-  iban: '',
-  bank_name: '',
+  qr_iban: '',
   instagram_url: '',
   facebook_url: '',
 })
@@ -1014,6 +1054,8 @@ const parentCategoryIds = computed(() =>
 
 // Count only "leaf" selections: children count as-is, parents only count if they have no selected children
 const effectiveCategoryCount = computed(() => {
+  // Fallback to raw selected count if templateCategories not yet loaded
+  if (templateCategories.value.length === 0) return selectedCategoryIds.value.size
   let count = 0
   for (const cat of templateCategories.value) {
     const selectedChildren = (cat.children || []).filter(c => selectedCategoryIds.value.has(c.id))
@@ -1131,11 +1173,16 @@ const adminForm = ref({
   last_name: '',
   email: '',
   phone: '',
-  birthdate: '',
   password: '',
   passwordConfirm: ''
 })
 const adminSameAsCompany = ref(false)
+
+// adminEmailEarly: entered on step 0 for early validation; synced to adminForm.email
+const adminEmailEarly = ref('')
+watch(adminEmailEarly, (val) => {
+  adminForm.value.email = val
+})
 
 // ─── Password Strength ─────────────────────────────────────────────────────
 const passwordMismatch = computed(() => adminForm.value.password !== adminForm.value.passwordConfirm)
@@ -1185,7 +1232,9 @@ const canProceed = computed(() => {
       return !!(formData.value.name && formData.value.legal_company_name && formData.value.slug &&
                 formData.value.contact_person_first_name && formData.value.contact_person_last_name &&
                 formData.value.contact_email && formData.value.contact_phone &&
-                formData.value.street && formData.value.streetNr && formData.value.zip && formData.value.city)
+                formData.value.street && formData.value.streetNr && formData.value.zip && formData.value.city) &&
+             slugCheck.value !== 'taken' && emailCheck.value !== 'taken' &&
+             !!adminEmailEarly.value && adminEmailEarly.value.includes('@')
     case 1:
       return true // Categories are optional (all pre-selected by default)
     case 2:
@@ -1194,7 +1243,8 @@ const canProceed = computed(() => {
       return !!(adminForm.value.first_name && adminForm.value.last_name &&
                 adminForm.value.email && adminForm.value.password &&
                 adminForm.value.passwordConfirm && passwordValid.value &&
-                !passwordMismatch.value && hibpStatus.value !== 'pwned' && hibpStatus.value !== 'checking')
+                !passwordMismatch.value && hibpStatus.value !== 'pwned' && hibpStatus.value !== 'checking' &&
+                emailCheck.value !== 'taken')
     case 5:
       return staffList.value.some(s => s.first_name.trim() && s.last_name.trim())
     default:
@@ -1223,16 +1273,61 @@ const previousStep = () => {
   if (currentStep.value > 0) currentStep.value--
 }
 
+// ─── Availability Checks ───────────────────────────────────────────────────
+type CheckState = 'idle' | 'checking' | 'available' | 'taken' | 'error'
+
+const slugCheck  = ref<CheckState>('idle')
+const emailCheck = ref<CheckState>('idle')
+
+let slugDebounce:  ReturnType<typeof setTimeout> | null = null
+let emailDebounce: ReturnType<typeof setTimeout> | null = null
+
+const checkSlug = (val: string) => {
+  if (slugDebounce) clearTimeout(slugDebounce)
+  const slug = val.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/--+/g, '-').replace(/^-|-$/g, '')
+  if (slug.length < 3) { slugCheck.value = 'idle'; return }
+  slugCheck.value = 'checking'
+  slugDebounce = setTimeout(async () => {
+    try {
+      const res = await $fetch<{ slug: { available: boolean } }>('/api/tenants/check-availability', { query: { slug } })
+      slugCheck.value = res.slug.available ? 'available' : 'taken'
+    } catch { slugCheck.value = 'error' }
+  }, 500)
+}
+
+const checkAdminEmail = (val: string) => {
+  if (emailDebounce) clearTimeout(emailDebounce)
+  const email = val.trim()
+  if (!email.includes('@') || email.length < 5) { emailCheck.value = 'idle'; return }
+  emailCheck.value = 'checking'
+  emailDebounce = setTimeout(async () => {
+    try {
+      const res = await $fetch<{ email: { available: boolean } }>('/api/tenants/check-availability', { query: { email } })
+      emailCheck.value = res.email.available ? 'available' : 'taken'
+    } catch { emailCheck.value = 'error' }
+  }, 600)
+}
+
 // ─── Form Helpers ─────────────────────────────────────────────────────────
 const sanitizeSlug = () => {
+  // Strip invalid chars and double-dashes, but allow trailing hyphen while typing
   formData.value.slug = formData.value.slug
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, '')
     .replace(/--+/g, '-')
-    .replace(/^-|-$/g, '')
+    .replace(/^-/, '') // only strip leading hyphen
 }
 
-const onSlugInput = () => { userEditedSlug.value = true }
+const finalizeSlug = () => {
+  // On blur: also strip trailing hyphen
+  formData.value.slug = formData.value.slug.replace(/-$/, '')
+  if (formData.value.slug) checkSlug(formData.value.slug)
+}
+
+const onSlugInput = () => {
+  userEditedSlug.value = true
+  checkSlug(formData.value.slug)
+}
 
 const handleLogoSelect = (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
@@ -1257,13 +1352,11 @@ const applyAdminFromCompany = () => {
     adminForm.value.last_name  = formData.value.contact_person_last_name
     adminForm.value.email      = formData.value.contact_email
     adminForm.value.phone      = formData.value.contact_phone
-    adminForm.value.birthdate  = formData.value.admin_birthdate || ''
   } else {
     adminForm.value.first_name = ''
     adminForm.value.last_name  = ''
     adminForm.value.email      = ''
     adminForm.value.phone      = ''
-    adminForm.value.birthdate  = ''
   }
 }
 
@@ -1306,20 +1399,42 @@ const submitRegistration = async () => {
     createdCustomerNumber.value = response.tenant.customer_number
 
     // 2. Create admin user (dedicated endpoint)
-    const adminRes = await $fetch('/api/tenants/create-admin', {
-      method: 'POST',
-      body: {
-        email:      adminForm.value.email,
-        password:   adminForm.value.password,
-        first_name: adminForm.value.first_name,
-        last_name:  adminForm.value.last_name,
-        phone:      adminForm.value.phone,
-        birthdate:  adminForm.value.birthdate,
-        tenant_id:  response.tenant.id,
+    let adminRes: any
+    try {
+      adminRes = await $fetch('/api/tenants/create-admin', {
+        method: 'POST',
+        body: {
+          email:      adminForm.value.email,
+          password:   adminForm.value.password,
+          first_name: adminForm.value.first_name,
+          last_name:  adminForm.value.last_name,
+          phone:      adminForm.value.phone,
+          tenant_id:  response.tenant.id,
+        }
+      }) as any
+    } catch (adminErr: any) {
+      // Rollback: Tenant löschen, damit der Slug wieder verwendbar ist
+      try {
+        await $fetch('/api/tenants/rollback-registration', {
+          method: 'POST',
+          body: { tenant_id: response.tenant.id }
+        })
+      } catch (rollbackErr) {
+        console.warn('Rollback failed:', rollbackErr)
       }
-    }) as any
+      throw new Error('Admin-Konto konnte nicht erstellt werden: ' + (adminErr.data?.statusMessage || adminErr.message || ''))
+    }
 
     if (!adminRes.success) {
+      // Rollback: Tenant löschen, damit der Slug wieder verwendbar ist
+      try {
+        await $fetch('/api/tenants/rollback-registration', {
+          method: 'POST',
+          body: { tenant_id: response.tenant.id }
+        })
+      } catch (rollbackErr) {
+        console.warn('Rollback failed:', rollbackErr)
+      }
       throw new Error('Admin-Konto konnte nicht erstellt werden: ' + (adminRes.message || ''))
     }
 
@@ -1375,12 +1490,14 @@ const saveToStorage = () => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     formData: formData.value,
     adminForm: adminForm.value,
+    adminEmailEarly: adminEmailEarly.value,
     adminSameAsCompany: adminSameAsCompany.value,
     currentStep: currentStep.value,
     userEditedSlug: userEditedSlug.value,
     logoPreview: logoPreview.value,
     staffList: staffList.value,
     locationsList: locationsList.value,
+    selectedCategoryIds: Array.from(selectedCategoryIds.value),
   }))
 }
 
@@ -1392,17 +1509,19 @@ const loadFromStorage = () => {
     const d = JSON.parse(saved)
     formData.value            = { ...formData.value, ...d.formData }
     adminForm.value           = { ...adminForm.value, ...d.adminForm }
+    adminEmailEarly.value     = d.adminEmailEarly || d.adminForm?.email || ''
     adminSameAsCompany.value  = d.adminSameAsCompany || false
     currentStep.value         = d.currentStep || 0
     userEditedSlug.value      = d.userEditedSlug || false
     logoPreview.value         = d.logoPreview || null
     if (d.staffList)    staffList.value    = d.staffList
     if (d.locationsList) locationsList.value = d.locationsList
+    if (Array.isArray(d.selectedCategoryIds)) selectedCategoryIds.value = new Set<number>(d.selectedCategoryIds)
     if (adminSameAsCompany.value) applyAdminFromCompany()
   } catch { /* ignore */ }
 }
 
-watch([formData, adminForm, adminSameAsCompany, currentStep, locationsList, staffList], saveToStorage, { deep: true })
+watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, staffList, selectedCategoryIds], saveToStorage, { deep: true })
 
 const route = useRoute()
 

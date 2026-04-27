@@ -54,6 +54,16 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Fetch the tenant admin to use as invited_by (admin is created before staff invitations)
+  const { data: adminUser } = await supabase
+    .from('users')
+    .select('id')
+    .eq('tenant_id', tenant_id)
+    .eq('role', 'admin')
+    .limit(1)
+    .maybeSingle()
+  const invitedBy: string | null = adminUser?.id ?? null
+
   const tenantName  = tenant.name
   const senderName  = tenant.twilio_from_sender || tenantName
 
@@ -132,7 +142,7 @@ export default defineEventHandler(async (event) => {
         email:      inviteEmail,
         phone:      phone,
         invitation_token: token,
-        invited_by: null, // Onboarding-Flow ohne Auth-User
+        invited_by: invitedBy,
         expires_at: expiresAt.toISOString(),
         status: 'pending'
       })
