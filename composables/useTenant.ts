@@ -192,6 +192,7 @@ export const useTenant = () => {
   const tenantPrimaryColor = computed(() => currentTenant.value?.primary_color || '#3B82F6')
   const tenantSecondaryColor = computed(() => currentTenant.value?.secondary_color || '#10B981')
   const tenantBusinessType = computed(() => currentTenant.value?.business_type || 'driving_school')
+  const walleeEnabled = computed(() => (currentTenant.value as any)?.wallee_enabled ?? true) // default true = show until loaded
   
   return {
     // State
@@ -209,6 +210,7 @@ export const useTenant = () => {
     tenantPrimaryColor,
     tenantSecondaryColor,
     tenantBusinessType,
+    walleeEnabled,
     
     // Methods
     detectTenantFromUrl,

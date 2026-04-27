@@ -255,9 +255,10 @@
             <div v-if="payment.payment_status === 'pending' && (!isAppointmentCancelled(payment) || (isAppointmentCancelled(payment) && getCancellationChargePercentage(payment) > 0))" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               <!-- Jetzt bezahlen Button -->
               <button @click="payIndividual(payment)"
-                      :disabled="processingPaymentIds.has(payment.id)"
+                      :disabled="processingPaymentIds.has(payment.id) || !walleeEnabled"
+                      :title="!walleeEnabled ? 'Online-Zahlung aktuell nicht verfügbar' : ''"
                       class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base">
-                {{ processingPaymentIds.has(payment.id) ? 'Verarbeitung...' : 'Jetzt bezahlen' }}
+                {{ !walleeEnabled ? 'Online-Zahlung nicht verfügbar' : processingPaymentIds.has(payment.id) ? 'Verarbeitung...' : 'Jetzt bezahlen' }}
               </button>
             </div>
           </div>
@@ -292,6 +293,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { navigateTo } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
+import { useWalleeStatus } from '~/composables/useWalleeStatus'
 import { storeToRefs } from 'pinia'
 import { useCustomerPayments } from '~/composables/useCustomerPayments'
 import CustomerCancellationModal from '~/components/customer/CustomerCancellationModal.vue'
@@ -329,6 +331,7 @@ const isProcessingPayment = ref(false)
 const isProcessingReceipt = ref(false)
 const isConvertingToOnline = ref(false) // Used in payIndividual to show processing state
 const processingPaymentIds = ref<Set<string>>(new Set()) // Track which payments are being processed
+const { walleeEnabled, loadWalleeStatus } = useWalleeStatus()
 const statusFilter = ref('all')
 const methodFilter = ref('all')
 const showDetailsModal = ref(false)
@@ -1233,6 +1236,7 @@ watch(() => userProfile.value?.id, async (newId, oldId) => {
 // Lifecycle
 onMounted(async () => {
   logger.debug('🔥 Customer Payments mounted')
+  loadWalleeStatus()
   
   if (!isClient.value) {
     console.warn('⚠️ User is not a client, redirecting to login...')
