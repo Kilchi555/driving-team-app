@@ -36,6 +36,7 @@ interface TenantRegistrationData {
   selected_category_ids?: string // comma-separated UUIDs of template categories to copy
   working_days_template?: string // JSON string
   locations_json?: string        // JSON array of LocationEntry objects
+  pricing_json?: string          // JSON array of PricingItem objects
 }
 
 interface RegistrationResponse {
@@ -109,7 +110,8 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       selected_categories: '',
       selected_category_ids: '',
       working_days_template: '',
-      locations_json: ''
+      locations_json: '',
+      pricing_json: ''
     }
 
     let logoFile: File | null = null
@@ -367,6 +369,40 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         }
       } catch (locParseErr) {
         logger.warn('⚠️ locations_json parse error (non-critical):', locParseErr)
+      }
+    }
+
+    // 8. Preisregeln erstellen (falls vorhanden)
+    if (data.pricing_json?.trim()) {
+      try {
+        const pricingItems = JSON.parse(data.pricing_json)
+        if (Array.isArray(pricingItems) && pricingItems.length > 0) {
+          const now = new Date().toISOString()
+          const pricingRows = pricingItems
+            .filter((p: any) => p.rule_type && p.price_chf > 0 && p.duration_minutes > 0)
+            .map((p: any) => ({
+              tenant_id: tenantId,
+              rule_type: p.rule_type,
+              rule_name: p.label,
+              category_code: p.rule_type.toUpperCase(),
+              price_per_minute_rappen: Math.round((p.price_chf * 100) / p.duration_minutes),
+              base_duration_minutes: p.duration_minutes,
+              admin_fee_rappen: 0,
+              admin_fee_applies_from: 999,
+              is_active: true,
+              valid_from: now,
+              valid_until: null,
+              created_at: now,
+              updated_at: now,
+            }))
+          if (pricingRows.length > 0) {
+            const { error: priceErr } = await supabase.from('pricing_rules').insert(pricingRows)
+            if (priceErr) logger.warn('⚠️ Pricing rules creation failed (non-critical):', priceErr)
+            else logger.debug(`✅ Created ${pricingRows.length} pricing rule(s)`)
+          }
+        }
+      } catch (priceParseErr) {
+        logger.warn('⚠️ pricing_json parse error (non-critical):', priceParseErr)
       }
     }
 

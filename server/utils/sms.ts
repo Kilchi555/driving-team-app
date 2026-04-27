@@ -25,10 +25,36 @@ interface SendSMSOptions {
   senderName?: string  // Optional: Alphanumeric sender ID (Tenant name)
 }
 
+/**
+ * Normalizes a phone number to E.164 format (+41xxxxxxxxx).
+ * Handles Swiss local format (07x...), 0041..., and already-normalized +41... numbers.
+ * Returns null if the number cannot be normalized.
+ */
+export function normalizePhoneNumber(phone: string): string | null {
+  if (!phone) return null
+  // Strip all whitespace, dashes, parentheses
+  const stripped = phone.replace(/[\s\-().]/g, '')
+  // Already in E.164
+  if (/^\+\d{7,15}$/.test(stripped)) return stripped
+  // Swiss 0041... → +41...
+  if (stripped.startsWith('0041')) return '+' + stripped.slice(2)
+  // Swiss local 07x... (10 digits) → +417x...
+  if (/^0[0-9]{9}$/.test(stripped)) return '+41' + stripped.slice(1)
+  // Bare number without leading 0 but 9 digits (e.g. 797157027) → +41...
+  if (/^[1-9]\d{8}$/.test(stripped)) return '+41' + stripped
+  return null
+}
+
 export async function sendSMS({ to, message, senderName }: SendSMSOptions) {
+  // Normalize phone number to E.164 format required by Twilio
+  const normalizedTo = normalizePhoneNumber(to)
+  if (!normalizedTo) {
+    throw new Error(`Invalid phone number: ${to}`)
+  }
+
   // In development: log instead of sending real SMS
   if (process.env.NODE_ENV === 'development') {
-    logger.debug(`[DEV] SMS would be sent to ${to}: ${message}`)
+    logger.debug(`[DEV] SMS would be sent to ${normalizedTo}: ${message}`)
     return { success: true, messageSid: 'dev-mock-sid' }
   }
 
@@ -78,7 +104,7 @@ export async function sendSMS({ to, message, senderName }: SendSMSOptions) {
     const result = await client.messages.create({
       body: message,
       from: from,
-      to
+      to: normalizedTo
     })
 
     logger.debug('✅ SMS sent successfully:', result.sid)

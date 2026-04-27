@@ -102,6 +102,28 @@ export default defineEventHandler(async (event) => {
 
   console.log(`✅ Admin user created for tenant ${tenant_id}: ${email}`)
 
+  // Auto-create default working hours Mon–Sat 08:00–18:00 for the new admin
+  if (userRow?.id) {
+    try {
+      const DEFAULT_DAYS = [1, 2, 3, 4, 5, 6] // 1=Mon … 6=Sat
+      const workingHoursRows = DEFAULT_DAYS.map(day => ({
+        staff_id: userRow.id,
+        tenant_id,
+        day_of_week: day,
+        start_time: '08:00:00',
+        end_time:   '18:00:00',
+        is_active: true,
+      }))
+      const { error: whErr } = await supabase
+        .from('staff_working_hours')
+        .upsert(workingHoursRows, { onConflict: 'staff_id,day_of_week' })
+      if (whErr) console.warn('⚠️ Default working hours insert failed (non-critical):', whErr.message)
+      else console.log('✅ Default working hours Mo–Sa created for admin:', userRow.id)
+    } catch (whEx: any) {
+      console.warn('⚠️ Default working hours exception (non-critical):', whEx.message)
+    }
+  }
+
   return {
     success: true,
     user: userRow
