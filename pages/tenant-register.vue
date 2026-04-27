@@ -398,32 +398,41 @@
         <div v-if="currentStep === 2" class="space-y-5">
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-0.5">Was kostet eine Fahrstunde bei dir?</h2>
-            <p class="text-sm text-gray-500">Diese Preise werden als Standardwerte für neue Lektionen übernommen – jederzeit anpassbar.</p>
+            <p class="text-sm text-gray-500">Preis & Dauer pro Kategorie – als Standardwert für neue Lektionen, jederzeit anpassbar.</p>
           </div>
 
-          <div class="space-y-3">
-            <div v-for="(item, idx) in pricingItems" :key="idx"
-              class="rounded-xl border border-gray-200 bg-white p-4">
-              <p class="text-sm font-semibold text-gray-800 mb-3">{{ item.label }}</p>
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs font-medium text-gray-500 mb-1">Preis (CHF)</label>
-                  <div class="relative">
-                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">CHF</span>
+          <div class="space-y-4">
+            <div v-for="cat in effectiveCategoryList" :key="cat.id"
+              class="rounded-xl border border-gray-200 bg-white overflow-hidden">
+              <!-- Category header -->
+              <div class="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-100">
+                <span v-if="cat.color" class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ background: cat.color }"></span>
+                <p class="text-sm font-bold text-gray-800">{{ cat.name }}</p>
+                <span v-if="cat.code" class="text-xs text-gray-400 font-mono ml-auto">{{ cat.code }}</span>
+              </div>
+              <!-- 3 price rows -->
+              <div class="divide-y divide-gray-50">
+                <div v-for="type in [
+                  { key: 'driving', label: 'Fahrstunde' },
+                  { key: 'exam',    label: 'Prüfung' },
+                  { key: 'theory',  label: 'Theorie' },
+                ]" :key="type.key" class="flex items-center gap-3 px-4 py-2.5">
+                  <span class="text-xs font-medium text-gray-500 w-20 flex-shrink-0">{{ type.label }}</span>
+                  <div class="flex items-center gap-1 flex-1">
+                    <span class="text-xs text-gray-400">CHF</span>
                     <input
-                      v-model.number="item.price_chf"
+                      v-model.number="ensurePricing(cat.id)[type.key as keyof CategoryPricing].price_chf"
                       type="number" min="0" step="5"
-                      class="w-full pl-12 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      class="w-20 px-2 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400"
                     />
                   </div>
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-gray-500 mb-1">Dauer (Min.)</label>
-                  <select
-                    v-model.number="item.duration_minutes"
-                    class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    <option v-for="d in [30,45,60,75,90,120]" :key="d" :value="d">{{ d }} Min.</option>
-                  </select>
+                  <div class="flex items-center gap-1">
+                    <select
+                      v-model.number="ensurePricing(cat.id)[type.key as keyof CategoryPricing].duration_minutes"
+                      class="px-2 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                      <option v-for="d in [30,45,60,75,90,120]" :key="d" :value="d">{{ d }} Min.</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -832,12 +841,16 @@
             </div>
 
             <!-- Preise -->
-            <div class="rounded-2xl bg-violet-50 border border-violet-100 p-4">
+            <div class="rounded-2xl bg-violet-50 border border-violet-100 p-4 sm:col-span-2">
               <p class="text-xs font-bold text-violet-400 uppercase tracking-wide mb-2.5">Preise</p>
-              <div class="space-y-1">
-                <div v-for="item in pricingItems" :key="item.rule_type" class="flex justify-between text-sm">
-                  <span class="text-gray-600">{{ item.label }}</span>
-                  <span class="font-semibold text-gray-900">CHF {{ item.price_chf }} / {{ item.duration_minutes }} Min.</span>
+              <div class="space-y-2">
+                <div v-for="cat in effectiveCategoryList" :key="cat.id">
+                  <p class="text-xs font-semibold text-gray-600 mb-1">{{ cat.name }}</p>
+                  <div class="grid grid-cols-3 gap-1 text-xs">
+                    <span class="text-gray-500">Fahrstunde: <strong>CHF {{ pricingByCategory[cat.id]?.driving?.price_chf ?? 95 }}</strong> / {{ pricingByCategory[cat.id]?.driving?.duration_minutes ?? 45 }} Min.</span>
+                    <span class="text-gray-500">Prüfung: <strong>CHF {{ pricingByCategory[cat.id]?.exam?.price_chf ?? 160 }}</strong> / {{ pricingByCategory[cat.id]?.exam?.duration_minutes ?? 60 }} Min.</span>
+                    <span class="text-gray-500">Theorie: <strong>CHF {{ pricingByCategory[cat.id]?.theory?.price_chf ?? 85 }}</strong> / {{ pricingByCategory[cat.id]?.theory?.duration_minutes ?? 45 }} Min.</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1091,18 +1104,36 @@ const templateCategories = ref<TemplateCategory[]>([])
 const selectedCategoryIds = ref(new Set<number>())
 
 // ─── Pricing ────────────────────────────────────────────────────────────────
-interface PricingItem {
-  label: string
-  rule_type: string
-  price_chf: number
-  duration_minutes: number
+interface CategoryPricing {
+  driving:  { price_chf: number; duration_minutes: number }
+  exam:     { price_chf: number; duration_minutes: number }
+  theory:   { price_chf: number; duration_minutes: number }
 }
-const pricingItems = ref<PricingItem[]>([
-  { label: 'Fahrlektion', rule_type: 'driving',  price_chf: 95,  duration_minutes: 45 },
-  { label: 'Prüfung',     rule_type: 'exam',     price_chf: 160, duration_minutes: 60 },
-  { label: 'Theorie',     rule_type: 'theory',   price_chf: 85,  duration_minutes: 45 },
-  { label: 'Beratung',    rule_type: 'advisory', price_chf: 120, duration_minutes: 60 },
-])
+const pricingByCategory = ref<Record<number, CategoryPricing>>({})
+
+const effectiveCategoryList = computed((): TemplateCategory[] => {
+  const result: TemplateCategory[] = []
+  for (const cat of templateCategories.value) {
+    const selectedChildren = (cat.children || []).filter(c => selectedCategoryIds.value.has(c.id))
+    if (selectedChildren.length > 0) {
+      result.push(...selectedChildren)
+    } else if (selectedCategoryIds.value.has(cat.id)) {
+      result.push(cat)
+    }
+  }
+  return result
+})
+
+function ensurePricing(catId: number): CategoryPricing {
+  if (!pricingByCategory.value[catId]) {
+    pricingByCategory.value[catId] = {
+      driving: { price_chf: 95,  duration_minutes: 45 },
+      exam:    { price_chf: 160, duration_minutes: 60 },
+      theory:  { price_chf: 85,  duration_minutes: 45 },
+    }
+  }
+  return pricingByCategory.value[catId]
+}
 const categoriesLoading = ref(false)
 
 const allTemplateCategoryIds = computed(() => {
@@ -1457,8 +1488,22 @@ const submitRegistration = async () => {
       fd.append('selected_category_ids', Array.from(selectedCategoryIds.value).join(','))
     }
 
-    // Pricing rules
-    fd.append('pricing_json', JSON.stringify(pricingItems.value))
+    // Pricing rules: 3 per category (driving/exam/theory)
+    const pricingData: any[] = []
+    for (const cat of effectiveCategoryList.value) {
+      const p = pricingByCategory.value[cat.id]
+      const code = cat.code || cat.name.toUpperCase().replace(/\s+/g, '_')
+      const types = [
+        { key: 'driving', label: `${cat.name} – Fahrstunde`, rule_type: 'base_price' },
+        { key: 'exam',    label: `${cat.name} – Prüfung`,    rule_type: 'exam' },
+        { key: 'theory',  label: `${cat.name} – Theorie`,    rule_type: 'theory' },
+      ] as const
+      for (const t of types) {
+        const entry = p?.[t.key] ?? (t.key === 'driving' ? { price_chf: 95, duration_minutes: 45 } : t.key === 'exam' ? { price_chf: 160, duration_minutes: 60 } : { price_chf: 85, duration_minutes: 45 })
+        pricingData.push({ label: t.label, rule_type: t.rule_type, category_code: code, price_chf: entry.price_chf, duration_minutes: entry.duration_minutes })
+      }
+    }
+    fd.append('pricing_json', JSON.stringify(pricingData))
 
     // Locations as JSON
     const locs = validLocations.value
@@ -1578,7 +1623,7 @@ const saveToStorage = () => {
     staffList: staffList.value,
     locationsList: locationsList.value,
     selectedCategoryIds: Array.from(selectedCategoryIds.value),
-    pricingItems: pricingItems.value,
+    pricingItems: pricingByCategory.value,
   }))
 }
 
@@ -1598,12 +1643,12 @@ const loadFromStorage = () => {
     if (d.staffList)    staffList.value    = d.staffList
     if (d.locationsList) locationsList.value = d.locationsList
     if (Array.isArray(d.selectedCategoryIds)) selectedCategoryIds.value = new Set<number>(d.selectedCategoryIds)
-    if (Array.isArray(d.pricingItems) && d.pricingItems.length > 0) pricingItems.value = d.pricingItems
+    if (d.pricingItems && typeof d.pricingItems === 'object') pricingByCategory.value = d.pricingItems
     if (adminSameAsCompany.value) applyAdminFromCompany()
   } catch { /* ignore */ }
 }
 
-watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, staffList, selectedCategoryIds, pricingItems], saveToStorage, { deep: true })
+watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, staffList, selectedCategoryIds, pricingByCategory], saveToStorage, { deep: true })
 
 const route = useRoute()
 

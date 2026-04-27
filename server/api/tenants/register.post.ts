@@ -384,7 +384,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
               tenant_id: tenantId,
               rule_type: p.rule_type,
               rule_name: p.label,
-              category_code: p.rule_type.toUpperCase(),
+              category_code: p.category_code || p.rule_type.toUpperCase(),
               price_per_minute_rappen: Math.round((p.price_chf * 100) / p.duration_minutes),
               base_duration_minutes: p.duration_minutes,
               admin_fee_rappen: 0,
