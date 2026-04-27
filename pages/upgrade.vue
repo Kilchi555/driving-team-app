@@ -534,8 +534,14 @@ const startCheckout = async () => {
   loading.value = true
   error.value = null
   try {
+    const { getSupabase } = await import('~/utils/supabase')
+    const supabase = getSupabase()
+    const { data: { session: authSession } } = await supabase.auth.getSession()
+    const token = authSession?.access_token
+
     const session = await $fetch<{ id: string; url: string }>('/api/stripe/create-checkout-session', {
       method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: {
         plan: selectedPlan.value,
         addons: {

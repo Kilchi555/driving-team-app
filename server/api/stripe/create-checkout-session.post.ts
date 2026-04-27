@@ -57,7 +57,7 @@ export default defineEventHandler(async (event) => {
         if (tenantId) {
           const { data: tenant } = await supabase
             .from('tenants')
-            .select('stripe_customer_id, name, email')
+            .select('stripe_customer_id, name, contact_email')
             .eq('id', tenantId)
             .single()
 
@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
           } else if (tenant) {
             const customer = await stripe.customers.create({
               name: tenant.name || undefined,
-              email: tenant.email || undefined,
+              email: tenant.contact_email || undefined,
               metadata: { tenant_id: tenantId },
             })
             stripeCustomerId = customer.id
