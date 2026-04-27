@@ -394,8 +394,46 @@
           </div>
         </div>
 
-        <!-- ═══ STEP 2: Standorte ═══ -->
+        <!-- ═══ STEP 2: Preise ═══ -->
         <div v-if="currentStep === 2" class="space-y-5">
+          <div>
+            <h2 class="text-base font-semibold text-gray-900 mb-0.5">Was kostet eine Fahrstunde bei dir?</h2>
+            <p class="text-sm text-gray-500">Diese Preise werden als Standardwerte für neue Lektionen übernommen – jederzeit anpassbar.</p>
+          </div>
+
+          <div class="space-y-3">
+            <div v-for="(item, idx) in pricingItems" :key="idx"
+              class="rounded-xl border border-gray-200 bg-white p-4">
+              <p class="text-sm font-semibold text-gray-800 mb-3">{{ item.label }}</p>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Preis (CHF)</label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">CHF</span>
+                    <input
+                      v-model.number="item.price_chf"
+                      type="number" min="0" step="5"
+                      class="w-full pl-12 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Dauer (Min.)</label>
+                  <select
+                    v-model.number="item.duration_minutes"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <option v-for="d in [30,45,60,75,90,120]" :key="d" :value="d">{{ d }} Min.</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="text-xs text-gray-400 text-center">Alle Preise können nach dem Login jederzeit angepasst werden.</p>
+        </div>
+
+        <!-- ═══ STEP 3: Standorte ═══ -->
+        <div v-if="currentStep === 3" class="space-y-5">
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-0.5">Wo bietest du deine Fahrstunden an?</h2>
             <p class="text-sm text-gray-500">Mindestens ein Standort – als Treffpunkt für deine Fahrstunden.</p>
@@ -471,8 +509,8 @@
           </p>
         </div>
 
-        <!-- ═══ STEP 3: Branding ═══ -->
-        <div v-if="currentStep === 3" class="space-y-8">
+        <!-- ═══ STEP 4: Branding ═══ -->
+        <div v-if="currentStep === 4" class="space-y-8">
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-0.5">Design, Zahlungen & Social Media</h2>
             <p class="text-sm text-gray-500">Alles optional – kann jederzeit in den Einstellungen angepasst werden.</p>
@@ -582,8 +620,8 @@
           </div>
         </div>
 
-        <!-- ═══ STEP 4: Admin-Konto ═══ -->
-        <div v-if="currentStep === 4" class="space-y-6">
+        <!-- ═══ STEP 5: Admin-Konto ═══ -->
+        <div v-if="currentStep === 5" class="space-y-6">
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-0.5">Admin-Konto erstellen</h2>
             <p class="text-sm text-gray-500">Dein persönlicher Login-Zugang zur Fahrschule.</p>
@@ -681,8 +719,8 @@
           </div>
         </div>
 
-        <!-- ═══ STEP 5: Mitarbeiter einladen ═══ -->
-        <div v-if="currentStep === 5" class="space-y-5">
+        <!-- ═══ STEP 6: Mitarbeiter einladen ═══ -->
+        <div v-if="currentStep === 6" class="space-y-5">
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-0.5">Fahrlehrer hinzufügen</h2>
             <p class="text-sm text-gray-500">Mindestens 1 Fahrlehrer – weitere können jederzeit hinzugefügt werden.</p>
@@ -755,8 +793,8 @@
           </p>
         </div>
 
-        <!-- ═══ STEP 6: Bestätigung ═══ -->
-        <div v-if="currentStep === 6" class="space-y-5">
+        <!-- ═══ STEP 7: Bestätigung ═══ -->
+        <div v-if="currentStep === 7" class="space-y-5">
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-0.5">Alles bereit?</h2>
             <p class="text-sm text-gray-500">Überprüfe deine Angaben vor der Registrierung.</p>
@@ -790,6 +828,17 @@
               <div class="flex items-baseline gap-1.5">
                 <span class="text-2xl font-bold text-blue-700">{{ effectiveCategoryCount }}</span>
                 <span class="text-sm text-blue-500">ausgewählt</span>
+              </div>
+            </div>
+
+            <!-- Preise -->
+            <div class="rounded-2xl bg-violet-50 border border-violet-100 p-4">
+              <p class="text-xs font-bold text-violet-400 uppercase tracking-wide mb-2.5">Preise</p>
+              <div class="space-y-1">
+                <div v-for="item in pricingItems" :key="item.rule_type" class="flex justify-between text-sm">
+                  <span class="text-gray-600">{{ item.label }}</span>
+                  <span class="font-semibold text-gray-900">CHF {{ item.price_chf }} / {{ item.duration_minutes }} Min.</span>
+                </div>
               </div>
             </div>
 
@@ -875,7 +924,9 @@
                 { done: true, label: 'Fahrschule registriert' },
                 { done: true, label: `${effectiveCategoryCount} Kategorien konfiguriert` },
                 { done: true, label: `${validLocations.length} Standort(e) angelegt` },
+                { done: true, label: 'Preise & Dauern konfiguriert' },
                 { done: true, label: 'Termintypen & Bewertungsvorlagen importiert' },
+                { done: true, label: 'Verfügbarkeit Mo–Sa 08:00–18:00 eingerichtet' },
                 { done: (staffInviteResults?.length ?? 0) > 0, label: `Fahrlehrer eingeladen (${staffInviteResults?.length ?? 0})` },
               ]" :key="item.label"
               class="flex items-center gap-3 px-4 py-2.5">
@@ -890,7 +941,7 @@
               <div class="px-4 py-2 bg-amber-50">
                 <p class="text-xs font-semibold text-amber-600 mb-2">Nach dem Login noch offen:</p>
                 <div class="space-y-1.5">
-                  <div v-for="label in ['Preisregeln pro Kategorie definieren', 'Verfügbarkeit & Arbeitszeiten einrichten', 'Erste Fahrstunde buchen']"
+                  <div v-for="label in ['Erste Fahrstunde buchen']"
                     :key="label" class="flex items-center gap-2 text-sm text-amber-800">
                     <div class="w-4 h-4 rounded-full border-2 border-amber-400 flex-shrink-0"></div>
                     {{ label }}
@@ -955,7 +1006,7 @@
           </button>
           <div v-else class="flex-shrink-0 w-0"></div>
 
-          <button v-if="currentStep < 6" @click="nextStep" type="button" :disabled="!canProceed"
+          <button v-if="currentStep < 7" @click="nextStep" type="button" :disabled="!canProceed"
             class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white font-bold text-sm transition-all disabled:bg-gray-200 disabled:text-gray-400"
             :style="canProceed ? { background: `linear-gradient(135deg, ${formData.primary_color || '#2563EB'}, ${formData.secondary_color || '#4F46E5'})` } : {}">
             Weiter
@@ -963,7 +1014,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
             </svg>
           </button>
-          <button v-else-if="currentStep === 6" @click="submitRegistration" type="button" :disabled="!canSubmit"
+          <button v-else-if="currentStep === 7" @click="submitRegistration" type="button" :disabled="!canSubmit"
             class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl disabled:from-gray-300 disabled:to-gray-300 disabled:text-gray-400 text-white font-bold text-sm transition-all shadow-sm"
             :style="canSubmit ? { background: 'linear-gradient(135deg, #10B981, #059669)' } : {}">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -983,13 +1034,14 @@ import { navigateTo, useRoute } from '#app'
 
 definePageMeta({ layout: false })
 
-const LOADING_STEP = 7
-const SUCCESS_STEP = 8
+const LOADING_STEP = 8
+const SUCCESS_STEP = 9
 
 // ─── Steps ─────────────────────────────────────────────────────────────────
 const steps = [
   { title: 'Grunddaten' },
   { title: 'Kategorien' },
+  { title: 'Preise' },
   { title: 'Standorte' },
   { title: 'Branding' },
   { title: 'Admin' },
@@ -1037,6 +1089,20 @@ interface TemplateCategory {
 
 const templateCategories = ref<TemplateCategory[]>([])
 const selectedCategoryIds = ref(new Set<number>())
+
+// ─── Pricing ────────────────────────────────────────────────────────────────
+interface PricingItem {
+  label: string
+  rule_type: string
+  price_chf: number
+  duration_minutes: number
+}
+const pricingItems = ref<PricingItem[]>([
+  { label: 'Fahrlektion', rule_type: 'driving',  price_chf: 95,  duration_minutes: 45 },
+  { label: 'Prüfung',     rule_type: 'exam',     price_chf: 160, duration_minutes: 60 },
+  { label: 'Theorie',     rule_type: 'theory',   price_chf: 85,  duration_minutes: 45 },
+  { label: 'Beratung',    rule_type: 'advisory', price_chf: 120, duration_minutes: 60 },
+])
 const categoriesLoading = ref(false)
 
 const allTemplateCategoryIds = computed(() => {
@@ -1077,8 +1143,11 @@ const loadTemplateCategories = async () => {
       query: { business_type: formData.value.business_type }
     })
     templateCategories.value = res.categories || []
-    // Always start with nothing selected – user picks explicitly
-    selectedCategoryIds.value = new Set<number>()
+    // Auto-select all categories by default so the count is never 0
+    const allIds = templateCategories.value.flatMap(c =>
+      c.children?.length ? c.children.map(ch => ch.id) : [c.id]
+    )
+    selectedCategoryIds.value = new Set<number>(allIds)
   } catch {
     templateCategories.value = []
   } finally {
@@ -1238,14 +1307,16 @@ const canProceed = computed(() => {
     case 1:
       return true // Categories are optional (all pre-selected by default)
     case 2:
+      return true // Prices are optional (defaults pre-filled)
+    case 3:
       return hasValidLocation.value
-    case 4:
+    case 5:
       return !!(adminForm.value.first_name && adminForm.value.last_name &&
                 adminForm.value.email && adminForm.value.password &&
                 adminForm.value.passwordConfirm && passwordValid.value &&
                 !passwordMismatch.value && hibpStatus.value !== 'pwned' && hibpStatus.value !== 'checking' &&
                 emailCheck.value !== 'taken')
-    case 5:
+    case 6:
       return staffList.value.some(s => s.first_name.trim() && s.last_name.trim())
     default:
       return true
@@ -1262,10 +1333,10 @@ const tenantUrl = computed(() =>
 
 // ─── Navigation ───────────────────────────────────────────────────────────
 const nextStep = () => {
-  if (!canProceed.value || currentStep.value >= 6) return
+  if (!canProceed.value || currentStep.value >= 7) return
   const next = currentStep.value + 1
   if (next === 1) loadTemplateCategories()
-  if (next === 2) prefillFirstLocation()
+  if (next === 3) prefillFirstLocation()
   currentStep.value = next
 }
 
@@ -1379,6 +1450,9 @@ const submitRegistration = async () => {
     if (selectedCategoryIds.value.size > 0) {
       fd.append('selected_category_ids', Array.from(selectedCategoryIds.value).join(','))
     }
+
+    // Pricing rules
+    fd.append('pricing_json', JSON.stringify(pricingItems.value))
 
     // Locations as JSON
     const locs = validLocations.value
@@ -1498,6 +1572,7 @@ const saveToStorage = () => {
     staffList: staffList.value,
     locationsList: locationsList.value,
     selectedCategoryIds: Array.from(selectedCategoryIds.value),
+    pricingItems: pricingItems.value,
   }))
 }
 
@@ -1517,11 +1592,12 @@ const loadFromStorage = () => {
     if (d.staffList)    staffList.value    = d.staffList
     if (d.locationsList) locationsList.value = d.locationsList
     if (Array.isArray(d.selectedCategoryIds)) selectedCategoryIds.value = new Set<number>(d.selectedCategoryIds)
+    if (Array.isArray(d.pricingItems) && d.pricingItems.length > 0) pricingItems.value = d.pricingItems
     if (adminSameAsCompany.value) applyAdminFromCompany()
   } catch { /* ignore */ }
 }
 
-watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, staffList, selectedCategoryIds], saveToStorage, { deep: true })
+watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, staffList, selectedCategoryIds, pricingItems], saveToStorage, { deep: true })
 
 const route = useRoute()
 
