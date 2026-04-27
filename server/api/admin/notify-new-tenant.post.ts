@@ -93,21 +93,24 @@ export default defineEventHandler(async (event) => {
     }
 
     // Log notification attempt
-    await supabase
-      .from('admin_notifications')
-      .insert({
-        notification_type: 'new_tenant_registration',
-        tenant_id: tenantId,
-        recipients: notifications.map(n => n.admin_email),
-        sent_at: new Date().toISOString(),
-        details: {
-          tenant_name: tenantName,
-          contact_email: contactEmail,
-          customer_number: customerNumber,
-          notifications: notifications
-        }
-      })
-      .catch(err => logger.warn('⚠️ Could not log notification:', err))
+    try {
+      await supabase
+        .from('admin_notifications')
+        .insert({
+          notification_type: 'new_tenant_registration',
+          tenant_id: tenantId,
+          recipients: notifications.map(n => n.admin_email),
+          sent_at: new Date().toISOString(),
+          details: {
+            tenant_name: tenantName,
+            contact_email: contactEmail,
+            customer_number: customerNumber,
+            notifications: notifications
+          }
+        })
+    } catch (logErr) {
+      logger.warn('⚠️ Could not log notification:', logErr)
+    }
 
     const sentCount = notifications.filter(n => n.status === 'sent').length
 

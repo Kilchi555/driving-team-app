@@ -27,9 +27,9 @@
           <div class="grid sm:grid-cols-2 gap-4">
             <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
               <p class="text-xs font-bold text-blue-500 uppercase tracking-wide mb-2">Auftragsverarbeiter</p>
-              <p class="font-semibold text-gray-900">Driving Team Zürich GmbH</p>
-              <p class="text-gray-600">Baslerstrasse 145, 8048 Zürich</p>
-              <p class="text-gray-600">support@simy.ch</p>
+              <p class="font-semibold text-gray-900">Simy IT Systems, Pascal Kilchenmann</p>
+              <p class="text-gray-600">Weiherweg 2, 8610 Uster</p>
+              <p class="text-gray-600">info@simy.ch</p>
               <p class="text-xs text-blue-600 mt-2">(im Folgenden: «Simy»)</p>
             </div>
             <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
@@ -181,7 +181,7 @@
 
         <!-- Footer -->
         <div class="pt-6 border-t border-gray-100 text-xs text-gray-400">
-          <p>Driving Team Zürich GmbH · Baslerstrasse 145 · 8048 Zürich · Schweiz</p>
+          <p>Simy IT Systems, Pascal Kilchenmann · Weiherweg 2 · 8610 Uster · Schweiz</p>
           <p class="mt-1">Stand: 1. April 2026 · Version 1.0</p>
           <div class="flex gap-4 mt-3">
             <NuxtLink to="/agb" class="text-blue-500 hover:underline">AGB</NuxtLink>
