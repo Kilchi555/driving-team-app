@@ -11,7 +11,14 @@
             </svg>
           </div>
           <h1 class="text-2xl font-bold mb-1">Abonnement aktiviert!</h1>
-          <p class="text-blue-100 text-sm">Dein neues Abo ist jetzt aktiv. Viel Erfolg mit Simy!</p>
+          <p v-if="isWalleeSetup" class="text-blue-100 text-sm">
+            Du hast <strong>7 Tage</strong>, um dein Wallee-Konto einzurichten — erst dann wird abgerechnet.
+          </p>
+          <p v-else class="text-blue-100 text-sm">Dein neues Abo ist jetzt aktiv. Viel Erfolg mit Simy!</p>
+        </div>
+        <div v-if="isWalleeSetup" class="px-8 py-5 bg-amber-50 border-b border-amber-100 text-sm text-amber-800">
+          <p class="font-semibold mb-1">💳 Nächster Schritt: Wallee-Konto einrichten</p>
+          <p class="text-xs text-amber-700">Bitte fülle das Formular aus, damit wir dein Wallee-Konto aktivieren können. Die Abrechnung startet erst nach der Aktivierung.</p>
         </div>
         <div class="px-8 py-6 text-center">
           <p class="text-sm text-gray-400 mb-5">Weiterleitung in {{ stripeCountdown }} Sekunden…</p>
@@ -19,7 +26,7 @@
             @click="redirectToAdminDashboard"
             class="w-full py-3 rounded-2xl font-semibold text-sm text-white bg-blue-600 hover:bg-blue-700 transition-colors"
           >
-            Zum Dashboard
+            {{ isWalleeSetup ? 'Wallee jetzt einrichten →' : 'Zum Dashboard' }}
           </button>
         </div>
       </div>
@@ -237,13 +244,14 @@ let statusCheckInterval: NodeJS.Timeout | null = null
 const transactionId = (route.query.transactionId || route.query.transaction_id) as string | undefined
 const paymentId = route.query.paymentId as string | undefined
 const stripeSessionId = route.query.session_id as string | undefined
+const isWalleeSetup = route.query.wallee_setup === '1'
 
 // ── Stripe subscription success ────────────────────────────────────────────
 const isStripeSuccess = computed(() => !!stripeSessionId)
-const stripeCountdown = ref(5)
+const stripeCountdown = ref(isWalleeSetup ? 8 : 5)
 
 const redirectToAdminDashboard = () => {
-  window.location.href = '/admin'
+  window.location.href = isWalleeSetup ? '/admin/profile?tab=payments' : '/admin'
 }
 
 if (process.client && stripeSessionId) {

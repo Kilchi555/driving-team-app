@@ -46,6 +46,31 @@ export default defineEventHandler(async (event) => {
 
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
 
+  // ── End Stripe trial immediately if tenant has an active trial subscription ──
+  try {
+    const stripeSecret = process.env.STRIPE_SECRET_KEY
+    if (stripeSecret) {
+      const { data: tenantForStripe } = await supabase
+        .from('tenants')
+        .select('stripe_customer_id, stripe_subscription_id')
+        .eq('id', tenant_id)
+        .single()
+
+      const subId = tenantForStripe?.stripe_subscription_id
+      if (subId) {
+        const Stripe = (await import('stripe')).default
+        const stripe = new Stripe(stripeSecret, { apiVersion: '2025-08-27.basil' as any })
+        const sub = await stripe.subscriptions.retrieve(subId)
+        if (sub.status === 'trialing') {
+          await stripe.subscriptions.update(subId, { trial_end: 'now' })
+          console.log(`✅ Stripe trial ended for tenant ${tenant_id} (sub ${subId})`)
+        }
+      }
+    }
+  } catch (stripeErr: any) {
+    console.error('⚠️ Could not end Stripe trial (non-fatal):', stripeErr.message)
+  }
+
   // Notify tenant by email
   try {
     const { data: tenant } = await supabase

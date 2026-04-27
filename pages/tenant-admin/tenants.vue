@@ -202,6 +202,11 @@
                   class="flex-1 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50">
             {{ walleeLoading ? 'Wird aktiviert...' : '✅ Aktivieren' }}
           </button>
+          <button v-if="walleeTenant?.wallee_onboarding_status === 'pending'"
+                  @click="extendStripeTrial" :disabled="trialExtendLoading"
+                  class="px-4 py-2 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50">
+            {{ trialExtendLoading ? '…' : '⏱ +7 Tage' }}
+          </button>
           <button @click="showWalleeModal = false"
                   class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">
             Abbrechen
@@ -354,6 +359,7 @@ const walleeTenant   = ref<any>(null)
 const walleeError    = ref('')
 const walleeLoading  = ref(false)
 const walleeForm     = ref({ space_id: '', user_id: '' })
+const trialExtendLoading = ref(false)
 
 const openWalleeActivation = (tenant: any) => {
   walleeTenant.value = tenant
@@ -406,6 +412,23 @@ const toggleWalleeAdmin = async () => {
     walleeError.value = err?.data?.statusMessage || 'Fehler beim Umschalten'
   } finally {
     walleeLoading.value = false
+  }
+}
+
+const extendStripeTrial = async () => {
+  if (!walleeTenant.value) return
+  trialExtendLoading.value = true
+  walleeError.value = ''
+  try {
+    const result = await $fetch<{ message: string }>('/api/admin/extend-stripe-trial', {
+      method: 'POST',
+      body: { tenant_id: walleeTenant.value.id },
+    })
+    alert(`✅ ${result.message}`)
+  } catch (err: any) {
+    walleeError.value = err?.data?.statusMessage || 'Fehler beim Verlängern des Trials'
+  } finally {
+    trialExtendLoading.value = false
   }
 }
 

@@ -251,6 +251,51 @@
             </div>
           </div>
         </div>
+
+        <!-- Online-Zahlungen (Wallee) -->
+        <div @click="withWallee = !withWallee"
+          :class="['rounded-2xl border-2 p-5 transition-all bg-white cursor-pointer col-span-full',
+            withWallee ? 'shadow-lg' : 'border-gray-100 shadow-sm']"
+          :style="withWallee ? { borderColor: primaryColor, boxShadow: `0 10px 25px rgba(var(--brand-rgb), 0.12)` } : {}">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <p class="font-bold text-gray-900 text-sm">Online-Zahlungen für deine Kunden</p>
+              <p class="text-xs text-gray-400 mt-0.5">Kreditkarte, TWINT & mehr via Wallee · Inklusive im Plan</p>
+            </div>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-lg"
+              style="background: rgba(var(--brand-rgb), 0.08); color: var(--brand-primary);">
+              Inklusive
+            </span>
+          </div>
+          <div class="flex items-center justify-between">
+            <p class="text-xs text-gray-500 max-w-sm">
+              <span v-if="withWallee">
+                ✅ <strong>Mit Online-Zahlungen:</strong> Wir richten dein Wallee-Konto ein (2–5 Werktage).
+                Die Abrechnung startet sobald dein Konto aktiv ist — du hast 7 Tage Zeit für die Einrichtung.
+              </span>
+              <span v-else>
+                ℹ️ <strong>Ohne Online-Zahlungen:</strong> Nur Bar- und Rechnungszahlung.
+                Die Abrechnung startet sofort. Online-Zahlungen können später aktiviert werden.
+              </span>
+            </p>
+            <div class="flex items-center gap-2 ml-4 flex-shrink-0">
+              <span class="text-xs" :class="withWallee ? 'text-gray-400' : 'font-medium text-gray-700'">Ohne</span>
+              <button
+                type="button"
+                :class="['relative inline-flex h-6 w-11 rounded-full border-2 border-transparent transition-colors duration-200',
+                  withWallee ? 'bg-blue-600' : 'bg-gray-200']"
+                role="switch"
+                :aria-checked="withWallee"
+                @click.stop="withWallee = !withWallee"
+              >
+                <span :class="['inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200',
+                  withWallee ? 'translate-x-5' : 'translate-x-0']" />
+              </button>
+              <span class="text-xs" :class="withWallee ? 'font-medium' : 'text-gray-400'" :style="withWallee ? { color: primaryColor } : {}">Mit</span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -283,6 +328,16 @@
               <span>Affiliate-System</span>
               <span>{{ formatChf(addonPriceAmount('affiliate')) }}</span>
             </div>
+            <div class="flex justify-between items-center text-gray-500">
+              <span>Online-Zahlungen (Wallee)</span>
+              <span v-if="withWallee" class="text-green-600 font-medium">Inklusive · 7 Tage Einrichtungszeit</span>
+              <span v-else class="text-gray-400 italic">Nicht gewählt</span>
+            </div>
+          </div>
+
+          <!-- Wallee info banner -->
+          <div v-if="withWallee" class="px-6 py-3 text-xs text-blue-700 bg-blue-50 border-t border-blue-100">
+            💳 Abrechnung startet erst nach Wallee-Aktivierung (max. 7 Tage). Du erhältst nach dem Upgrade einen Link zur Einrichtung.
           </div>
 
           <!-- Total -->
@@ -486,6 +541,7 @@ const selectedPlan = ref<string>('starter')
 const addonSeats = ref(0)
 const addonCourses = ref(false)
 const addonAffiliate = ref(false)
+const withWallee = ref(true)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
@@ -549,6 +605,7 @@ const startCheckout = async () => {
           courses: addonCourses.value && !planIncludesCourses.value,
           affiliate: addonAffiliate.value && !planIncludesAffiliate.value,
         },
+        withWallee: withWallee.value,
       },
     })
     if (session?.url) { window.location.href = session.url; return }

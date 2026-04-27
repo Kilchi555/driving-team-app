@@ -151,7 +151,7 @@
         </div>
 
         <!-- Mobile cards -->
-        <div v-else class="sm:hidden space-y-3">
+        <div v-if="!loadingCategories && categoryRewards.length" class="sm:hidden space-y-3">
           <div v-for="row in categoryRewards" :key="row.id" class="border rounded-lg p-4 bg-gray-50">
             <div class="flex items-center justify-between mb-3">
               <span class="font-mono font-bold text-gray-900 bg-white border px-2 py-0.5 rounded text-sm">{{ row.driving_category }}</span>
@@ -295,7 +295,7 @@
         </div>
 
         <!-- Mobile cards -->
-        <div v-else class="sm:hidden space-y-3">
+        <div v-if="!loadingCategories && courseRewards.length" class="sm:hidden space-y-3">
           <div v-for="row in courseRewards" :key="row.id" class="border rounded-lg p-4 bg-gray-50">
             <div class="flex items-start justify-between mb-2">
               <div>

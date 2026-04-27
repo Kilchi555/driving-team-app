@@ -9,6 +9,7 @@ interface CheckoutBody {
     courses?: boolean
     affiliate?: boolean
   }
+  withWallee?: boolean
 }
 
 export default defineEventHandler(async (event) => {
@@ -20,6 +21,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<CheckoutBody>(event)
   const plan = body?.plan || 'starter'
   const addons = body?.addons || {}
+  const withWallee = body?.withWallee !== false // default: true
 
   const planDef = PLANS.find(p => p.id === plan)
   if (!planDef || !planDef.priceEnvKey) {
@@ -37,6 +39,7 @@ export default defineEventHandler(async (event) => {
   // ── Resolve Stripe Customer for this tenant ──────────────────────────────
   let stripeCustomerId: string | undefined
   let tenantId: string | undefined
+  let wallleeAlreadyActive = false
 
   const authHeader = getHeader(event, 'authorization')
   if (authHeader?.startsWith('Bearer ')) {
@@ -57,9 +60,11 @@ export default defineEventHandler(async (event) => {
         if (tenantId) {
           const { data: tenant } = await supabase
             .from('tenants')
-            .select('stripe_customer_id, name, contact_email')
+            .select('stripe_customer_id, name, contact_email, wallee_onboarding_status')
             .eq('id', tenantId)
             .single()
+
+          wallleeAlreadyActive = tenant?.wallee_onboarding_status === 'active'
 
           if (tenant?.stripe_customer_id) {
             stripeCustomerId = tenant.stripe_customer_id
@@ -109,20 +114,28 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Create Checkout Session ───────────────────────────────────────────────
+  // If tenant wants Wallee AND it's not yet active → 7-day billing pause
+  const needsWalleeTrial = withWallee && !wallleeAlreadyActive
+  const successUrl = withWallee
+    ? `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}&wallee_setup=1`
+    : `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`
+
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     customer: stripeCustomerId,
     line_items: lineItems,
     subscription_data: {
+      ...(needsWalleeTrial ? { trial_period_days: 7 } : {}),
       metadata: {
         plan,
         addon_seats: String(addons.seats || 0),
         addon_courses: String(!!addons.courses),
         addon_affiliate: String(!!addons.affiliate),
+        with_wallee: String(withWallee),
         ...(tenantId ? { tenant_id: tenantId } : {}),
       },
     },
-    success_url: `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+    success_url: successUrl,
     cancel_url: `${baseUrl}/upgrade`,
   })
 
