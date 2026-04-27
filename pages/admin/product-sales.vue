@@ -426,6 +426,7 @@ import { ref, computed, onMounted } from 'vue'
 import { navigateTo } from '#app'
 import { formatDateTime } from '~/utils/dateUtils'
 import { useAuthStore } from '~/stores/auth'
+import { getSupabase } from '~/utils/supabase'
 import ProductSaleModal from '~/components/ProductSaleModal.vue'
 
 definePageMeta({
@@ -540,7 +541,7 @@ const anonymousSales = computed(() => sales.value.filter(sale => sale.sale_type 
 const loadSales = async () => {
   isLoading.value = true
   try {
-    logger.debug('🔄 Loading product sales via API...')
+    console.log('🔄 Loading product sales via API...')
     
     // ✅ Use new secure API instead of direct DB queries
     const response = await $fetch('/api/admin/get-product-sales', {
@@ -555,13 +556,13 @@ const loadSales = async () => {
     // ✅ Set tenant info from API response
     if (response.tenant) {
       currentTenant.value = response.tenant
-      logger.debug('🔍 Current tenant:', response.tenant)
+      console.log('🔍 Current tenant:', response.tenant)
     }
 
     // ✅ All sales data from API (direct, anonymous, shop)
     sales.value = response.data || []
 
-    logger.debug('✅ All sales loaded from API:', {
+    console.log('✅ All sales loaded from API:', {
       total: sales.value.length,
       direct: sales.value.filter(s => s.sale_type === 'direct').length,
       anonymous: sales.value.filter(s => s.sale_type === 'anonymous').length,
@@ -571,7 +572,7 @@ const loadSales = async () => {
   } catch (error: any) {
     console.error('❌ Error loading sales:', error)
     if (error.code === 'PGRST200') {
-      logger.debug('ℹ️ No sales available or database structure differs')
+      console.log('ℹ️ No sales available or database structure differs')
       sales.value = []
     } else {
       alert(`❌ Error loading sales: ${error.message}`)
@@ -604,17 +605,17 @@ const handleSaleCompleted = () => {
 
 const viewSaleDetails = (sale: ProductSale) => {
   // TODO: Implementiere Verkaufsdetails-Modal
-  logger.debug('View sale details:', sale.id)
+  console.log('View sale details:', sale.id)
 }
 
 const editSale = (sale: ProductSale) => {
   // TODO: Implementiere Verkaufsbearbeitung
-  logger.debug('Edit sale:', sale.id)
+  console.log('Edit sale:', sale.id)
 }
 
 const duplicateSale = (sale: ProductSale) => {
   // TODO: Implementiere Verkauf duplizieren
-  logger.debug('Duplicate sale:', sale.id)
+  console.log('Duplicate sale:', sale.id)
 }
 
 const getStatusClass = (status: string) => {
@@ -720,7 +721,7 @@ const createAnonymousSale = async () => {
       anonymousCustomerNotes.value = ''
       anonymousPaymentMethod.value = 'cash'
       
-      logger.debug('✅ Anonymer Barverkauf erstellt:', saleData.id)
+      console.log('✅ Anonymer Barverkauf erstellt:', saleData.id)
     } else {
       // Bei Online-Zahlung: Erstelle eine spezielle anonyme Verkaufsseite
       showAnonymousSaleModal.value = false
@@ -736,7 +737,7 @@ const createAnonymousSale = async () => {
       anonymousCustomerNotes.value = ''
       anonymousPaymentMethod.value = 'cash'
       
-      logger.debug('✅ Anonymer Online-Verkauf erstellt:', saleData.id)
+      console.log('✅ Anonymer Online-Verkauf erstellt:', saleData.id)
     }
     
   } catch (error: any) {
@@ -750,7 +751,7 @@ const authStore = useAuthStore()
 
 // Lifecycle
 onMounted(async () => {
-  logger.debug('🔍 Product sales page mounted, checking auth...')
+  console.log('🔍 Product sales page mounted, checking auth...')
   
   // Warte kurz auf Auth-Initialisierung
   let attempts = 0
@@ -759,7 +760,7 @@ onMounted(async () => {
     attempts++
   }
   
-  logger.debug('🔍 Auth state:', {
+  console.log('🔍 Auth state:', {
     isInitialized: authStore.isInitialized,
     isLoggedIn: authStore.isLoggedIn,
     isAdmin: authStore.isAdmin,
@@ -768,17 +769,17 @@ onMounted(async () => {
   
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
-    logger.debug('❌ User not logged in, redirecting to dashboard')
+    console.log('❌ User not logged in, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
   // Prüfe ob User Admin ist
   if (!authStore.isAdmin) {
-    logger.debug('❌ User not admin, redirecting to dashboard')
+    console.log('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }
   
-  logger.debug('✅ Auth check passed, loading product sales...')
+  console.log('✅ Auth check passed, loading product sales...')
   
   // Original onMounted logic
   loadSales()

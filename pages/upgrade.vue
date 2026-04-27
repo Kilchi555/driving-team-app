@@ -271,7 +271,7 @@
             <p class="text-xs text-gray-500 max-w-sm">
               <span v-if="withWallee">
                 ✅ <strong>Mit Online-Zahlungen:</strong> Wir richten dein Wallee-Konto ein (2–5 Werktage).
-                Die Abrechnung startet sobald dein Konto aktiv ist — du hast 7 Tage Zeit für die Einrichtung.
+                Die Abrechnung startet sobald dein Konto aktiv ist.
               </span>
               <span v-else>
                 ℹ️ <strong>Ohne Online-Zahlungen:</strong> Nur Bar- und Rechnungszahlung.
@@ -362,9 +362,19 @@
 
           <!-- CTA -->
           <div class="p-6">
+            <!-- Not logged in: redirect to register -->
+            <a v-if="!isLoggedIn"
+              href="/tenant-register"
+              class="w-full py-4 px-6 rounded-2xl font-bold text-base text-white transition-all duration-200 flex items-center justify-center gap-2"
+              :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))`, boxShadow: `0 8px 24px rgba(var(--brand-rgb), 0.35)` }"
+            >
+              Kostenlos starten → Account erstellen
+            </a>
+            <!-- Logged in: Stripe Checkout -->
             <button
+              v-else
               @click="startCheckout"
-              :disabled="!!loading || !pricesAvailable"
+              :disabled="!!loading || !pricesAvailable || seatConflict"
               class="w-full py-4 px-6 rounded-2xl font-bold text-base text-white transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
               :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))`, boxShadow: `0 8px 24px rgba(var(--brand-rgb), 0.35)` }"
               @mouseenter="(e) => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = `0 12px 32px rgba(var(--brand-rgb), 0.45)` }"
@@ -379,8 +389,11 @@
               </span>
               <span v-else>Jetzt starten →</span>
             </button>
-            <p class="text-center text-xs text-gray-400 mt-3">
-              🔒 Sichere Zahlung via Stripe · 30 Tage Testphase
+            <p v-if="!isLoggedIn" class="text-center text-xs text-gray-400 mt-3">
+              Bereits ein Konto? <a href="/login" class="underline">Einloggen</a>
+            </p>
+            <p v-else class="text-center text-xs text-gray-400 mt-3">
+              🔒 Sichere Zahlung via Stripe · Monatlich kündbar
             </p>
           </div>
         </div>
@@ -388,6 +401,57 @@
         <div v-if="error"
           class="mt-4 bg-red-50 border border-red-200 rounded-2xl p-4 text-red-600 text-sm text-center">
           {{ error }}
+        </div>
+
+        <!-- Pre-fill hint for logged-in trial users -->
+        <div v-if="isLoggedIn && prefillHint" class="mt-4 bg-blue-50 border border-blue-100 rounded-2xl p-4 text-xs text-blue-700 space-y-1">
+          <p class="font-semibold text-blue-800 mb-1.5">Basierend auf deinem Trial erkannt:</p>
+          <p>👥 {{ prefillHint.staffCount }} aktive Fahrlehrer
+            <span v-if="selectedPlan !== 'enterprise'">
+              → {{ addonSeats > 0 ? `${addonSeats} Add-on Seat(s) vorgewählt` : 'im gewählten Plan inklusive' }}
+            </span>
+          </p>
+          <p v-if="prefillHint.courses">📚 Kursbuchungsseite wird bereits genutzt → Add-on vorgewählt</p>
+          <p v-if="prefillHint.affiliate">🤝 Affiliate-Programm wird bereits genutzt → Add-on vorgewählt</p>
+        </div>
+
+        <!-- Seat conflict: staff selection -->
+        <div v-if="isLoggedIn && staffList.length > 0 && staffList.length > totalSeats && selectedPlan !== 'enterprise'"
+          class="mt-4 rounded-2xl border border-amber-200 overflow-hidden">
+          <div class="bg-amber-50 px-4 py-3 flex items-start gap-2">
+            <svg class="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.008v.008H12v-.008z"/>
+            </svg>
+            <div>
+              <p class="text-xs font-bold text-amber-800">Du hast {{ staffList.length }} Fahrlehrer, aber nur {{ totalSeats }} Seat{{ totalSeats !== 1 ? 's' : '' }} gewählt.</p>
+              <p class="text-xs text-amber-700 mt-0.5">Wähle welche <strong>{{ totalSeats }}</strong> Fahrlehrer aktiv bleiben. Die anderen werden nach dem Upgrade deaktiviert.</p>
+            </div>
+          </div>
+          <div class="divide-y divide-gray-100 bg-white">
+            <label
+              v-for="staff in staffList"
+              :key="staff.id"
+              class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
+              :class="{ 'opacity-50': !keepActiveIds.has(staff.id) }"
+            >
+              <input
+                type="checkbox"
+                :checked="keepActiveIds.has(staff.id)"
+                @change="toggleKeepActive(staff.id)"
+                :disabled="staff.role === 'admin'"
+                class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+              >
+              <div class="flex-1 min-w-0">
+                <span class="text-sm font-medium text-gray-800">{{ staff.name }}</span>
+                <span v-if="staff.role === 'admin'" class="ml-2 text-xs text-indigo-500 font-medium">Admin (immer aktiv)</span>
+              </div>
+              <span v-if="keepActiveIds.has(staff.id)" class="text-xs text-green-600 font-medium">Aktiv</span>
+              <span v-else class="text-xs text-red-400 font-medium">Wird deaktiviert</span>
+            </label>
+          </div>
+          <div v-if="seatConflict" class="bg-red-50 px-4 py-2 text-xs text-red-600 font-medium">
+            ⚠️ Bitte deaktiviere {{ keepActiveIds.size - totalSeats }} weitere{{ keepActiveIds.size - totalSeats !== 1 ? 'n' : 'n' }} Fahrlehrer oder füge mehr Seats hinzu.
+          </div>
         </div>
       </div>
     </section>
@@ -536,6 +600,93 @@ onMounted(() => {
 const { getTrialStatus } = useTrialFeatures()
 const trialStatus = computed(() => getTrialStatus())
 
+interface StaffMember { id: string; name: string; role: string }
+
+const isLoggedIn = ref(false)
+const prefillHint = ref<{ staffCount: number; courses: boolean; affiliate: boolean } | null>(null)
+const staffList = ref<StaffMember[]>([])
+// IDs of staff to KEEP active — initialized with all staff
+const keepActiveIds = ref<Set<string>>(new Set())
+
+// Total seats available for the chosen plan + addons
+const totalSeats = computed(() => {
+  if (selectedPlan.value === 'enterprise') return Infinity
+  const planDef = PLANS.find(p => p.id === selectedPlan.value)
+  const included = planDef?.includedSeats ?? 1
+  return included + addonSeats.value
+})
+
+// Staff that will be deactivated (those NOT in keepActiveIds)
+const staffToDeactivate = computed(() =>
+  staffList.value.filter(s => !keepActiveIds.value.has(s.id))
+)
+
+// Whether the seat selection is valid (kept active ≤ totalSeats)
+const seatConflict = computed(() =>
+  staffList.value.length > 0 && keepActiveIds.value.size > totalSeats.value
+)
+
+const toggleKeepActive = (id: string) => {
+  const next = new Set(keepActiveIds.value)
+  if (next.has(id)) {
+    // Don't allow deselecting if already at minimum (can't deactivate all)
+    if (next.size <= 1) return
+    next.delete(id)
+  } else {
+    next.add(id)
+  }
+  keepActiveIds.value = next
+}
+
+// When seats change, auto-adjust: if too many kept, drop from end of list (non-admin first)
+watch(totalSeats, (seats) => {
+  if (seats === Infinity) {
+    keepActiveIds.value = new Set(staffList.value.map(s => s.id))
+    return
+  }
+  if (keepActiveIds.value.size > seats) {
+    // Remove non-admin staff from kept list until we fit
+    const staffByPriority = [...staffList.value].sort((a, b) =>
+      a.role === 'admin' ? -1 : b.role === 'admin' ? 1 : 0
+    )
+    const next = new Set(keepActiveIds.value)
+    for (const s of staffByPriority.slice().reverse()) {
+      if (next.size <= seats) break
+      if (s.role !== 'admin') next.delete(s.id)
+    }
+    keepActiveIds.value = next
+  }
+})
+
+onMounted(async () => {
+  try {
+    const { getSupabase } = await import('~/utils/supabase')
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    isLoggedIn.value = !!session?.user
+
+    if (session?.access_token) {
+      try {
+        const prefill = await $fetch<{ activeStaffCount: number; staffList: StaffMember[]; hasCourseSessions: boolean; hasAffiliateCodes: boolean }>(
+          '/api/tenants/upgrade-prefill',
+          { headers: { Authorization: `Bearer ${session.access_token}` } }
+        )
+        staffList.value = prefill.staffList || []
+        keepActiveIds.value = new Set(staffList.value.map(s => s.id))
+        prefillHint.value = {
+          staffCount: prefill.activeStaffCount,
+          courses:    prefill.hasCourseSessions,
+          affiliate:  prefill.hasAffiliateCodes,
+        }
+        // Pre-select add-ons based on current usage
+        if (prefill.hasCourseSessions)  addonCourses.value   = true
+        if (prefill.hasAffiliateCodes)  addonAffiliate.value = true
+        // addonSeats pre-fill happens when plan is selected (depends on includedSeats)
+      } catch { /* non-critical */ }
+    }
+  } catch { /* not critical */ }
+})
+
 const plans = PLANS
 const selectedPlan = ref<string>('starter')
 const addonSeats = ref(0)
@@ -580,7 +731,14 @@ const totalPrice = computed(() => {
 watch(selectedPlan, () => {
   if (planIncludesCourses.value) addonCourses.value = false
   if (planIncludesAffiliate.value) addonAffiliate.value = false
-  if (selectedPlan.value === 'enterprise') addonSeats.value = 0
+  if (selectedPlan.value === 'enterprise') {
+    addonSeats.value = 0
+  } else if (prefillHint.value) {
+    // Re-calculate required extra seats for the newly selected plan
+    const planDef = PLANS.find(p => p.id === selectedPlan.value)
+    const included = planDef?.includedSeats ?? 1
+    addonSeats.value = Math.max(0, prefillHint.value.staffCount - included)
+  }
 })
 
 const toggleCourses = () => { if (!planIncludesCourses.value) addonCourses.value = !addonCourses.value }
@@ -606,6 +764,7 @@ const startCheckout = async () => {
           affiliate: addonAffiliate.value && !planIncludesAffiliate.value,
         },
         withWallee: withWallee.value,
+        staffToDeactivate: staffToDeactivate.value.map(s => s.id),
       },
     })
     if (session?.url) { window.location.href = session.url; return }

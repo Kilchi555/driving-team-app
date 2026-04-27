@@ -5,11 +5,12 @@ import { PLANS, ADDONS, type SubscriptionPlan, type AddonKey } from '~/utils/pla
 interface CheckoutBody {
   plan: SubscriptionPlan
   addons?: {
-    seats?: number      // extra seats (per unit)
+    seats?: number
     courses?: boolean
     affiliate?: boolean
   }
   withWallee?: boolean
+  staffToDeactivate?: string[] // user IDs to deactivate after payment
 }
 
 export default defineEventHandler(async (event) => {
@@ -22,6 +23,7 @@ export default defineEventHandler(async (event) => {
   const plan = body?.plan || 'starter'
   const addons = body?.addons || {}
   const withWallee = body?.withWallee !== false // default: true
+  const staffToDeactivate = Array.isArray(body?.staffToDeactivate) ? body.staffToDeactivate : []
 
   const planDef = PLANS.find(p => p.id === plan)
   if (!planDef || !planDef.priceEnvKey) {
@@ -37,6 +39,7 @@ export default defineEventHandler(async (event) => {
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
 
   // ── Resolve Stripe Customer for this tenant ──────────────────────────────
+  // Accounts V2 requires a customer for Checkout. We always ensure one exists.
   let stripeCustomerId: string | undefined
   let tenantId: string | undefined
   let wallleeAlreadyActive = false
@@ -82,9 +85,18 @@ export default defineEventHandler(async (event) => {
           }
         }
       }
-    } catch {
-      // Non-fatal
+    } catch (err: any) {
+      console.error('⚠️ Could not resolve tenant customer:', err?.message)
     }
+  }
+
+  // Accounts V2: always requires a customer — create a transient one if none resolved
+  if (!stripeCustomerId) {
+    const transient = await stripe.customers.create({
+      description: 'Transient customer – Simy upgrade flow',
+      metadata: { ...(tenantId ? { tenant_id: tenantId } : {}), transient: 'true' },
+    })
+    stripeCustomerId = transient.id
   }
 
   // ── Build line_items ──────────────────────────────────────────────────────
@@ -132,6 +144,7 @@ export default defineEventHandler(async (event) => {
         addon_courses: String(!!addons.courses),
         addon_affiliate: String(!!addons.affiliate),
         with_wallee: String(withWallee),
+        ...(staffToDeactivate.length > 0 ? { staff_to_deactivate: staffToDeactivate.join(',') } : {}),
         ...(tenantId ? { tenant_id: tenantId } : {}),
       },
     },

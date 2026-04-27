@@ -3,8 +3,8 @@
 // ✅ No auth required (called during registration flow)
 // ✅ Rate limited + tenant_id verification
 
-import { getSupabaseAdmin } from '~/utils/supabase'
-import { logger } from '~/utils/logger'
+import { defineEventHandler, createError, getHeader, readBody } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
 
@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { email, password, first_name, last_name, phone, birthdate, tenant_id } = body || {}
+  const { email, password, first_name, last_name, phone, tenant_id } = body || {}
 
   if (!email || !password || !first_name || !last_name || !tenant_id) {
     throw createError({ statusCode: 400, statusMessage: 'Pflichtfelder fehlen: email, password, first_name, last_name, tenant_id' })
@@ -74,7 +74,7 @@ export default defineEventHandler(async (event) => {
   })
 
   if (authError || !authData?.user) {
-    logger.error('❌ Admin auth creation failed:', authError)
+    console.error('❌ Admin auth creation failed:', authError)
     throw createError({ statusCode: 500, statusMessage: `Auth-Erstellung fehlgeschlagen: ${authError?.message || 'Unbekannter Fehler'}` })
   }
 
@@ -88,23 +88,19 @@ export default defineEventHandler(async (event) => {
       first_name: sanitizeString(first_name, 100),
       last_name: sanitizeString(last_name, 100),
       phone: phone?.trim() || null,
-      birthdate: birthdate || null,
       role: 'tenant_admin',
       is_active: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     })
     .select('id, email, first_name, last_name, role')
     .single()
 
   if (userErr) {
-    // Rollback: delete the auth user
     await supabase.auth.admin.deleteUser(authData.user.id).catch(() => {})
-    logger.error('❌ Admin users row creation failed:', userErr)
+    console.error('❌ Admin users row creation failed:', userErr)
     throw createError({ statusCode: 500, statusMessage: `Benutzerprofil konnte nicht erstellt werden: ${userErr.message}` })
   }
 
-  logger.debug(`✅ Admin user created for tenant ${tenant_id}: ${email}`)
+  console.log(`✅ Admin user created for tenant ${tenant_id}: ${email}`)
 
   return {
     success: true,
