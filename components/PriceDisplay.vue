@@ -334,6 +334,7 @@
           <div class="space-y-3">
             <!-- Online Payment Button -->
             <button
+              v-if="walleeEnabled"
               @click="selectPaymentMethod('wallee')"
               :class="[
                 'w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center space-x-3',
@@ -605,6 +606,7 @@ import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { watch } from 'vue'
+import { useWalleeStatus } from '~/composables/useWalleeStatus'
 
 // ✅ Rundungsfunktion: Preise auf nächsten Franken runden
 const roundToNearestFranken = (rappen: number): number => {
@@ -676,6 +678,7 @@ const { loadPaymentMethods, activePaymentMethods, isLoading: isLoadingPaymentMet
 const { createBillingAddress } = useBillingAddresses()
 const authStore = useAuthStore()
 const supabase = getSupabase()
+const { walleeEnabled, loadWalleeStatus } = useWalleeStatus()
 
 // Computed Properties
 const isStaffUser = computed(() => {
@@ -864,6 +867,7 @@ const invoiceSaveMessage = ref<{ type: 'success' | 'error', text: string } | nul
 // Lifecycle
 onMounted(async () => {
   try {
+    loadWalleeStatus()
     logger.debug('🚀 PriceDisplay mounted, starting to load data...')
     
     await Promise.all([

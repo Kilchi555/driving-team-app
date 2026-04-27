@@ -54,6 +54,7 @@
                 class="absolute right-0 bottom-full mb-1 w-52 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-20"
               >
                 <button
+                  v-if="walleeEnabled"
                   type="button"
                   class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
                   @click="showActionsDropdown = false; showTopupModal = true"
@@ -421,6 +422,7 @@ import { logger } from '~/utils/logger'
 import { useRuntimeConfig } from '#app'
 import { useUIStore } from '~/stores/ui'
 import RedeemVoucherModal from '~/components/customer/RedeemVoucherModal.vue'
+import { useWalleeStatus } from '~/composables/useWalleeStatus'
 
 const props = withDefaults(
   defineProps<{
@@ -539,6 +541,7 @@ const topupStep = ref<'amount'>('amount')
 const topupAmountInput = ref<number | ''>('')
 const topupError = ref('')
 const isStartingTopup = ref(false)
+const { walleeEnabled, loadWalleeStatus } = useWalleeStatus()
 
 function closeTopupModal() {
   showTopupModal.value = false
@@ -769,6 +772,7 @@ async function handleVoucherRedeemed(newBalance: number) {
 }
 
 onMounted(async () => {
+  loadWalleeStatus()
   await refreshWallet()
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search)

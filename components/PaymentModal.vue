@@ -298,6 +298,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { formatDateTime } from '~/utils/dateUtils'
 import LoadingLogo from '~/components/LoadingLogo.vue'
+import { useWalleeStatus } from '~/composables/useWalleeStatus'
 
 
 // Props
@@ -365,8 +366,10 @@ const isPaymentApiResponse = (result: unknown): result is PaymentApiResponse => 
 // Supabase
 
 // State
+const { walleeEnabled, loadWalleeStatus } = useWalleeStatus()
+
 const selectedPaymentMethod = ref<string>('')
-const availablePaymentMethods = ref<PaymentMethod[]>([
+const _allPaymentMethods = ref<PaymentMethod[]>([
   {
     method_code: 'wallee',
     display_name: 'Online Zahlung',
@@ -395,6 +398,10 @@ const availablePaymentMethods = ref<PaymentMethod[]>([
     display_order: 3
   }
 ])
+
+const availablePaymentMethods = computed(() =>
+  _allPaymentMethods.value.filter(m => m.method_code !== 'wallee' || walleeEnabled.value)
+)
 
 const showPaymentModal = ref(false)
 const selectedAppointment = ref(null)
@@ -758,6 +765,7 @@ watch(() => props.isVisible, (newValue) => {
 
 // Lifecycle
 onMounted(() => {
+  loadWalleeStatus()
   if (props.isVisible) {
     loadPaymentMethods()
     loadAppointmentCount()

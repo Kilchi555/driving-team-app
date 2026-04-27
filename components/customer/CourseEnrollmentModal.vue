@@ -366,7 +366,7 @@
               </button>
               <button 
                 @click="submitEnrollment"
-                :disabled="!canSubmit || isLoading"
+                :disabled="!canSubmit || isLoading || (paymentMethod === 'WALLEE' && !walleeEnabled)"
                 class="flex-1 py-3 text-white font-medium rounded-lg hover:opacity-90 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
                 :style="{ backgroundColor: getTenantPrimaryColor() }"
               >
@@ -377,6 +377,7 @@
                   </svg>
                   Lädt...
                 </span>
+                <span v-else-if="paymentMethod === 'WALLEE' && !walleeEnabled">Online-Zahlung nicht verfügbar</span>
                 <span v-else>{{ paymentMethod === 'WALLEE' ? 'Zur Zahlung' : 'Verbindlich anmelden' }}</span>
               </button>
             </div>
@@ -388,11 +389,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
 import { extractCityFromCourseDescription, determinePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLocationUtils'
 import { useTenant } from '~/composables/useTenant'
 import { useAffiliateRef } from '~/composables/useAffiliateRef'
+import { useWalleeStatus } from '~/composables/useWalleeStatus'
 
 interface Props {
   isOpen: boolean
@@ -406,6 +408,8 @@ const emit = defineEmits(['close', 'enrolled'])
 
 // Tenant hooks
 const { tenantPrimaryColor } = useTenant()
+const { walleeEnabled, loadWalleeStatus } = useWalleeStatus()
+onMounted(() => { loadWalleeStatus() })
 const { getStoredRefCode } = useAffiliateRef()
 
 // Helper functions for colors

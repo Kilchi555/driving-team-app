@@ -1219,6 +1219,7 @@
           
           <!-- Jetzt Bezahlen Button -->
           <button
+            v-if="walleeEnabled"
             @click="handlePayNow"
             :disabled="isProcessingPayment"
             class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
@@ -1229,6 +1230,9 @@
             <span v-if="isProcessingPayment">Lädt...</span>
             <span v-else>Jetzt</span>
           </button>
+          <p v-else class="flex-1 text-center text-xs text-gray-400 py-3">
+            Online-Zahlung aktuell nicht verfügbar
+          </p>
         </div>
       </div>
     </div>
@@ -1251,6 +1255,7 @@ import { navigateTo, useRoute, useRuntimeConfig } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { storeToRefs } from 'pinia'
 import EvaluationsOverviewModal from './EvaluationsOverviewModal.vue'
+import { useWalleeStatus } from '~/composables/useWalleeStatus'
 import UpcomingLessonsModal from './UpcomingLessonsModal.vue'
 import { useCustomerPayments } from '~/composables/useCustomerPayments'
 import LoadingLogo from '~/components/LoadingLogo.vue'
@@ -1412,6 +1417,7 @@ const confirmingAppointments = ref<Set<string>>(new Set()) // Loading state per 
 const showPaymentConfirmDialog = ref(false)
 const pendingPaymentUrl = ref<string | null>(null)
 const isProcessingPayment = ref(false)
+const { walleeEnabled, loadWalleeStatus } = useWalleeStatus()
 const currentPaymentAppointment = ref<any>(null)
 const currentPayment = ref<any>(null)
 
@@ -2811,6 +2817,7 @@ watch(() => showProfileModal.value, async (newVal) => {
 // Lifecycle
 onMounted(async () => {
   logger.debug('🔥 CustomerDashboard mounted')
+  loadWalleeStatus()
   
   try {
     // Check for payment success/failure from Wallee redirect
