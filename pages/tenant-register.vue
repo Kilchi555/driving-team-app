@@ -1301,8 +1301,17 @@ const canProceed = computed(() => {
                 formData.value.street && formData.value.streetNr && formData.value.zip && formData.value.city) &&
              slugCheck.value !== 'taken' && emailCheck.value !== 'taken' &&
              !!adminEmailEarly.value && adminEmailEarly.value.includes('@')
-    case 1:
-      return selectedCategoryIds.value.size > 0 // At least one category required
+    case 1: {
+      if (selectedCategoryIds.value.size === 0) return false
+      // Every selected parent that HAS subcategories must have at least one sub selected
+      for (const cat of templateCategories.value) {
+        if (!selectedCategoryIds.value.has(cat.id)) continue
+        if (!cat.children?.length) continue
+        const hasSelectedChild = cat.children.some(c => selectedCategoryIds.value.has(c.id))
+        if (!hasSelectedChild) return false
+      }
+      return effectiveCategoryCount.value > 0
+    }
     case 2:
       return true // Prices are optional (defaults pre-filled)
     case 3:
