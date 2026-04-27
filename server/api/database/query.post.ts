@@ -100,7 +100,7 @@ export default defineEventHandler(async (event) => {
     // Whitelist: table → allowed columns for select/filter/order
     // ⚠️  Never expose auth, secrets, keys, or PII columns via this generic endpoint.
     const TABLE_COLUMN_WHITELIST: Record<string, string[]> = {
-      locations: ['id', 'name', 'address', 'city', 'zip', 'tenant_id', 'is_active', 'latitude', 'longitude', 'created_at', 'staff_ids', 'available_categories', 'location_type', 'is_online_bookable', 'phone', 'email'],
+      locations: ['id', 'name', 'address', 'city', 'postal_code', 'canton', 'formatted_address', 'tenant_id', 'is_active', 'latitude', 'longitude', 'created_at', 'updated_at', 'staff_ids', 'available_categories', 'location_type', 'user_id'],
       categories: ['id', 'name', 'code', 'parent_category_id', 'tenant_id', 'is_active', 'sort_order'],
       staff_working_hours: ['id', 'staff_id', 'tenant_id', 'day_of_week', 'start_time', 'end_time', 'is_active'],
       calendar_tokens: ['id', 'staff_id', 'tenant_id', 'token', 'expires_at', 'created_at'],
