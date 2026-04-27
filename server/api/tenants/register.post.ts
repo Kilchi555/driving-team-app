@@ -24,8 +24,7 @@ interface TenantRegistrationData {
   logo_file?: File | null
   // New optional fields
   uid_number?: string
-  iban?: string
-  bank_name?: string
+  qr_iban?: string
   website_url?: string
   staff_count?: string
   language?: string
@@ -99,8 +98,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       primary_color: '#3B82F6',
       secondary_color: '#10B981',
       uid_number: '',
-      iban: '',
-      bank_name: '',
+      qr_iban: '',
       website_url: '',
       staff_count: '',
       language: 'de',
@@ -291,8 +289,12 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         subscription_status: 'active',
         // Neue Felder
         uid_number:    data.uid_number?.trim()    || null,
-        iban:          data.iban?.trim()          || null,
-        bank_name:     data.bank_name?.trim()     || null,
+        qr_iban:       data.qr_iban?.trim()       || null,
+        // Pre-fill invoice address from company address so QR invoices work immediately
+        invoice_street:    data.street?.trim()   || null,
+        invoice_street_nr: data.streetNr?.trim() || null,
+        invoice_zip:       data.zip?.trim()      || null,
+        invoice_city:      data.city?.trim()     || null,
         website_url:   data.website_url?.trim()   || null,
         staff_count:   data.staff_count ? parseInt(data.staff_count) || null : null,
         instagram_url: data.instagram_url?.trim() || null,

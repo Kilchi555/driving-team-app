@@ -176,6 +176,20 @@ async function handleSubscriptionUpsert(
   // ── Sync feature flags ──────────────────────────────────────────────────
   await syncFeatureFlags(supabase, tenantId, plan, { courses: addonCourses, affiliate: addonAffiliate })
 
+  // ── Deactivate staff chosen by tenant during upgrade ────────────────────
+  const staffToDeactivate = sub.metadata?.staff_to_deactivate
+  if (staffToDeactivate) {
+    const ids = staffToDeactivate.split(',').map(id => id.trim()).filter(Boolean)
+    if (ids.length > 0) {
+      await supabase
+        .from('users')
+        .update({ is_active: false })
+        .in('id', ids)
+        .eq('tenant_id', tenantId)
+      console.log(`🔒 Deactivated ${ids.length} staff for tenant ${tenantId}:`, ids)
+    }
+  }
+
   console.log(`✅ Tenant ${tenantId} → plan=${plan} seats=+${addonSeats} courses=${addonCourses} affiliate=${addonAffiliate}`)
 }
 

@@ -26,6 +26,12 @@ interface SendSMSOptions {
 }
 
 export async function sendSMS({ to, message, senderName }: SendSMSOptions) {
+  // In development: log instead of sending real SMS
+  if (process.env.NODE_ENV === 'development') {
+    logger.debug(`[DEV] SMS would be sent to ${to}: ${message}`)
+    return { success: true, messageSid: 'dev-mock-sid' }
+  }
+
   try {
     const fromNumber = process.env.TWILIO_PHONE_NUMBER
     
