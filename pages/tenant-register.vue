@@ -1143,11 +1143,8 @@ const loadTemplateCategories = async () => {
       query: { business_type: formData.value.business_type }
     })
     templateCategories.value = res.categories || []
-    // Auto-select all categories by default so the count is never 0
-    const allIds = templateCategories.value.flatMap(c =>
-      c.children?.length ? c.children.map(ch => ch.id) : [c.id]
-    )
-    selectedCategoryIds.value = new Set<number>(allIds)
+    // Start with nothing selected – user picks explicitly
+    selectedCategoryIds.value = new Set<number>()
   } catch {
     templateCategories.value = []
   } finally {
@@ -1305,7 +1302,7 @@ const canProceed = computed(() => {
              slugCheck.value !== 'taken' && emailCheck.value !== 'taken' &&
              !!adminEmailEarly.value && adminEmailEarly.value.includes('@')
     case 1:
-      return true // Categories are optional (all pre-selected by default)
+      return selectedCategoryIds.value.size > 0 // At least one category required
     case 2:
       return true // Prices are optional (defaults pre-filled)
     case 3:
