@@ -42,7 +42,7 @@
         <!-- §1 -->
         <section id="s1">
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">1. Geltungsbereich und Vertragsparteien</h2>
-          <p class="mb-3">Diese Allgemeinen Geschäftsbedingungen («AGB») gelten für alle Verträge zwischen der <strong>Driving Team Zürich GmbH</strong>, Baslerstrasse 145, 8048 Zürich, Schweiz («Simy», «wir», «uns») und gewerblichen Kunden («Kunde», «Tenant»), die die Simy-SaaS-Plattform nutzen.</p>
+          <p class="mb-3">Diese Allgemeinen Geschäftsbedingungen («AGB») gelten für alle Verträge zwischen <strong>Simy IT Systems, Pascal Kilchenmann</strong>, Weiherweg 2, 8610 Uster, Schweiz («Simy», «wir», «uns») und gewerblichen Kunden («Kunde», «Tenant»), die die Simy-SaaS-Plattform nutzen.</p>
           <p class="mb-3">Diese AGB gelten ausschliesslich für Unternehmen, Fahrschulen und andere gewerbliche Nutzer (B2B). Verbraucher im Sinne des Konsumentenrechts sind von der Nutzung ausgeschlossen.</p>
           <p class="mb-3">Die Nutzung der Plattform setzt voraus, dass der Kunde ein rechtmässig betriebenes Fahrschulunternehmen oder ein verwandtes Gewerbe führt. Simy behält sich vor, die Registrierung ohne Angabe von Gründen abzulehnen oder zu widerrufen, insbesondere wenn begründeter Verdacht auf fehlende Gewerbsberechtigung, Missbrauch oder Verstoss gegen diese AGB besteht.</p>
           <p>Abweichende Bedingungen des Kunden werden nicht anerkannt, es sei denn, wir stimmen ihrer Geltung ausdrücklich schriftlich zu.</p>
@@ -233,8 +233,8 @@
 
         <!-- Footer -->
         <div class="pt-6 border-t border-gray-100 text-xs text-gray-400">
-          <p>Driving Team Zürich GmbH · Baslerstrasse 145 · 8048 Zürich · Schweiz</p>
-          <p class="mt-1">E-Mail: support@simy.ch · Stand: 1. April 2026 · Version 1.2</p>
+          <p>Simy IT Systems, Pascal Kilchenmann · Weiherweg 2 · 8610 Uster · Schweiz</p>
+          <p class="mt-1">E-Mail: info@simy.ch · Stand: 1. April 2026 · Version 1.2</p>
           <div class="flex gap-4 mt-3">
             <NuxtLink to="/datenschutz" class="text-blue-500 hover:underline">Datenschutz</NuxtLink>
             <NuxtLink to="/avv" class="text-blue-500 hover:underline">Auftragsverarbeitungsvertrag</NuxtLink>

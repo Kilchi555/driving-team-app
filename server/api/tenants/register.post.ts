@@ -348,16 +348,14 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
           const now = new Date().toISOString()
           const locationRows = locations
             .filter((l: any) => l.name?.trim())
-            .map((l: any, idx: number) => ({
+            .map((l: any) => ({
               tenant_id: tenantId,
               name: l.name.trim(),
               address: l.address?.trim() || null,
               city: l.city?.trim() || null,
-              zip: l.zip?.trim() || null,
-              phone: l.phone?.trim() || null,
-              email: l.email?.trim() || null,
+              postal_code: l.zip?.trim() || l.postal_code?.trim() || null,
               is_active: true,
-              display_order: idx + 1,
+              location_type: 'standard',
               created_at: now,
               updated_at: now,
             }))
