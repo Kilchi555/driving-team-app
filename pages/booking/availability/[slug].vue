@@ -971,7 +971,6 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { useSecureAvailability } from '~/composables/useSecureAvailability'
-import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
 import { useCustomerConflictCheck } from '~/composables/useCustomerConflictCheck'
 import LoginRegisterModal from '~/components/booking/LoginRegisterModal.vue'
 import DocumentUploadModal from '~/components/booking/DocumentUploadModal.vue'
@@ -1011,7 +1010,6 @@ const reservationExpiry = ref<Date | null>(null)
 const remainingSeconds = ref(300) // 5 minutes in seconds
 const countdownInterval = ref<NodeJS.Timeout | null>(null)
 
-const { autoSyncCalendars } = useExternalCalendarSync()
 
 const { isEnabled, load: loadFeatures } = useFeatures()
 
