@@ -380,8 +380,14 @@ export class SARISyncEngine {
       }
     }
 
-    // Sync participants from all sessions in this group
-    let participantsSynced = 0
+    // Participant sync is intentionally skipped in the cron flow.
+    // Enrollments come through the app (Wallee/Cash), and pulling them back
+    // from SARI would create duplicates for registrations that have no participant_id
+    // (Cash flow). Fix 1 (dual faberid+participant_id check) is in place for safety,
+    // but we keep this off by default to avoid unnecessary SARI API calls.
+    // To re-enable: uncomment the block below.
+    const participantsSynced = 0
+    /*
     for (const sariSession of sessions) {
       try {
         const syncedCount = await this.syncCourseParticipants(courseId, sariSession.id)
@@ -390,6 +396,7 @@ export class SARISyncEngine {
         logger.error(`Failed to sync participants for session ${sariSession.id}: ${err.message}`)
       }
     }
+    */
 
     // Get actual registration count (including existing ones)
     const { data: registrations, error: regError } = await this.supabase
@@ -539,13 +546,26 @@ export class SARISyncEngine {
             logger.debug(`✅ Created participant ${participant.faberid}: ${participantData.first_name} ${participantData.last_name}`)
           }
 
-          // Check if registration already exists
-          const { data: existingReg } = await this.supabase
+          // Check if registration already exists — covers both flows:
+          // Flow 1 (Wallee): participant_id is set, sari_faberid may also be set
+          // Flow 2 (Cash): participant_id is NULL, only sari_faberid is set
+          const { data: existingByParticipant } = await this.supabase
             .from('course_registrations')
             .select('id')
             .eq('course_id', simyCourseId)
             .eq('participant_id', participantId)
+            .in('status', ['confirmed', 'enrolled'])
             .maybeSingle()
+
+          const { data: existingByFaberid } = await this.supabase
+            .from('course_registrations')
+            .select('id')
+            .eq('course_id', simyCourseId)
+            .eq('sari_faberid', participant.faberid)
+            .in('status', ['confirmed', 'enrolled'])
+            .maybeSingle()
+
+          const existingReg = existingByParticipant || existingByFaberid
 
           if (!existingReg) {
             // Create course registration with full SARI data sync (TIER 1 enhancement)
