@@ -380,14 +380,10 @@ export class SARISyncEngine {
       }
     }
 
-    // Participant sync is intentionally skipped in the cron flow.
-    // Enrollments come through the app (Wallee/Cash), and pulling them back
-    // from SARI would create duplicates for registrations that have no participant_id
-    // (Cash flow). Fix 1 (dual faberid+participant_id check) is in place for safety,
-    // but we keep this off by default to avoid unnecessary SARI API calls.
-    // To re-enable: uncomment the block below.
-    const participantsSynced = 0
-    /*
+    // Sync participants from SARI for all sessions in this group.
+    // Duplicate protection: syncCourseParticipants checks both participant_id
+    // (Wallee flow) and sari_faberid (Cash flow) with confirmed/enrolled status filter.
+    let participantsSynced = 0
     for (const sariSession of sessions) {
       try {
         const syncedCount = await this.syncCourseParticipants(courseId, sariSession.id)
@@ -396,7 +392,6 @@ export class SARISyncEngine {
         logger.error(`Failed to sync participants for session ${sariSession.id}: ${err.message}`)
       }
     }
-    */
 
     // Get actual registration count (including existing ones)
     const { data: registrations, error: regError } = await this.supabase
