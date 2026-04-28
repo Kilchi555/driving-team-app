@@ -214,8 +214,7 @@ const handler = defineEventHandler(async (event) => {
           tenant_id: tenantId,
           role: 'student',
           is_active: true,
-          is_guest: true, // Mark as guest
-          auth_user_id: null // No auth account
+          auth_user_id: null // No auth account — guest user identified by null auth_user_id
         })
         .select('id')
         .single()
