@@ -349,8 +349,18 @@
                       {{ course.current_participants || 0 }} / {{ course.max_participants }}
                       <span class="text-gray-500 ml-1">({{ Math.max(0, (course.max_participants || 0) - (course.current_participants || 0)) }} frei)</span>
                     </div>
-                    <div v-if="course.waitlist_count > 0" class="text-xs text-yellow-600 mt-1">
-                      +{{ course.waitlist_count }} Warteliste
+                    <div v-if="course.waitlist_count > 0" class="text-xs text-amber-600 mt-1">
+                      +{{ course.waitlist_count }} auf Warteliste
+                    </div>
+                    <div v-if="course.status === 'waitlist'" class="mt-1">
+                      <a
+                        :href="`/booking/waitlist/${course.id}`"
+                        target="_blank"
+                        class="text-xs text-blue-600 hover:underline"
+                        @click.stop
+                      >
+                        Link zur Warteliste →
+                      </a>
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
                       <div 
@@ -791,6 +801,49 @@
         </div>
         
         <div class="px-6 py-6 space-y-6">
+          <!-- Kurs-Modus: Warteliste vs. normaler Kurs -->
+          <div class="p-4 bg-gray-50 border border-gray-200 rounded-xl">
+            <h3 class="text-sm font-semibold text-gray-700 mb-3">Kurs-Modus</h3>
+            <div class="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                @click="newCourse.status = 'scheduled'"
+                :class="[
+                  'flex flex-col items-start gap-1 p-3 rounded-lg border-2 text-left transition-all',
+                  newCourse.status !== 'waitlist'
+                    ? 'border-blue-600 bg-blue-50'
+                    : 'border-gray-200 bg-white hover:border-gray-300'
+                ]"
+              >
+                <span class="text-sm font-semibold" :class="newCourse.status !== 'waitlist' ? 'text-blue-700' : 'text-gray-700'">
+                  Normaler Kurs
+                </span>
+                <span class="text-xs text-gray-500">Fester Termin, Sessions erforderlich</span>
+              </button>
+              <button
+                type="button"
+                @click="newCourse.status = 'waitlist'"
+                :class="[
+                  'flex flex-col items-start gap-1 p-3 rounded-lg border-2 text-left transition-all',
+                  newCourse.status === 'waitlist'
+                    ? 'border-amber-500 bg-amber-50'
+                    : 'border-gray-200 bg-white hover:border-gray-300'
+                ]"
+              >
+                <span class="text-sm font-semibold" :class="newCourse.status === 'waitlist' ? 'text-amber-700' : 'text-gray-700'">
+                  Warteliste
+                </span>
+                <span class="text-xs text-gray-500">Kein Datum — Interesse sammeln</span>
+              </button>
+            </div>
+            <div v-if="newCourse.status === 'waitlist'" class="mt-3 flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Interessierte können sich unter <code class="bg-amber-100 px-1 rounded">/booking/waitlist/[kurs-id]</code> auf die Warteliste eintragen. Sobald du ein Datum festlegst, kannst du den Modus auf «Normaler Kurs» ändern.
+            </div>
+          </div>
+
           <!-- Basic Course Info -->
           <div class="space-y-4">
             <h3 class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">Grunddaten</h3>
@@ -911,7 +964,7 @@
           </div>
 
           <!-- Course Sessions -->
-          <div class="space-y-4">
+          <div class="space-y-4" v-if="newCourse.status !== 'waitlist'">
             <div class="flex justify-between items-center border-b border-gray-200 pb-4">
               <h3 class="text-lg font-medium text-gray-900">
                 Kurs-Sessions
@@ -4488,9 +4541,10 @@ const filteredCourses = computed(() => {
 })
 
 const canCreateCourse = computed(() => {
+  const isWaitlist = newCourse.value.status === 'waitlist'
   return newCourse.value.name && 
          newCourse.value.max_participants > 0 &&
-         courseSessions.value.length > 0
+         (isWaitlist || courseSessions.value.length > 0)
 })
 
 const canSaveCategory = computed(() => {
@@ -5023,7 +5077,9 @@ const getCourseStatus = (course: any) => {
 const getStatusText = (course: any) => {
   const status = getCourseStatus(course)
   switch (status) {
+    case 'waitlist': return 'Warteliste'
     case 'draft': return 'Entwurf'
+    case 'scheduled': return 'Geplant'
     case 'active': return 'Aktiv'
     case 'full': return 'Ausgebucht'
     case 'running': return 'Läuft'
@@ -5037,7 +5093,9 @@ const getStatusText = (course: any) => {
 const getStatusBadgeClass = (course: any) => {
   const status = getCourseStatus(course)
   switch (status) {
+    case 'waitlist': return 'bg-amber-500 text-white'
     case 'draft': return 'bg-gray-500 text-white'
+    case 'scheduled': return 'bg-blue-500 text-white'
     case 'active': return 'bg-green-600 text-white'
     case 'full': return 'bg-red-600 text-white'
     case 'running': return 'bg-blue-600 text-white'

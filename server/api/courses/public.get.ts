@@ -110,7 +110,7 @@ export default defineEventHandler(async (event) => {
       `)
       .eq('tenant_id', tenant.id)
       .eq('is_public', true)
-      .eq('status', 'active')
+      .in('status', ['active', 'waitlist', 'scheduled'])
       .order('created_at', { ascending: false })
 
     if (coursesError) {
