@@ -410,29 +410,24 @@
                 <p class="text-sm font-bold text-gray-800">{{ cat.name }}</p>
                 <span v-if="cat.code" class="text-xs text-gray-400 font-mono ml-auto">{{ cat.code }}</span>
               </div>
-              <!-- 3 price rows -->
+              <!-- 3 price rows (flat array access — no nested undefined) -->
               <div class="divide-y divide-gray-50">
-                <div v-for="type in [
-                  { key: 'driving', label: 'Fahrstunde' },
-                  { key: 'exam',    label: 'Prüfung' },
-                  { key: 'theory',  label: 'Theorie' },
-                ]" :key="type.key" class="flex items-center gap-3 px-4 py-2.5">
-                  <span class="text-xs font-medium text-gray-500 w-20 flex-shrink-0">{{ type.label }}</span>
+                <div v-for="row in pricingRows.filter(r => r.catId === cat.id)" :key="row.type"
+                  class="flex items-center gap-3 px-4 py-2.5">
+                  <span class="text-xs font-medium text-gray-500 w-20 flex-shrink-0">{{ row.typeLabel }}</span>
                   <div class="flex items-center gap-1 flex-1">
                     <span class="text-xs text-gray-400">CHF</span>
                     <input
-                      v-model.number="ensurePricing(cat.id)[type.key as keyof CategoryPricing].price_chf"
+                      v-model.number="row.price_chf"
                       type="number" min="0" step="5"
                       class="w-20 px-2 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400"
                     />
                   </div>
-                  <div class="flex items-center gap-1">
-                    <select
-                      v-model.number="ensurePricing(cat.id)[type.key as keyof CategoryPricing].duration_minutes"
-                      class="px-2 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                      <option v-for="d in [30,45,60,75,90,120]" :key="d" :value="d">{{ d }} Min.</option>
-                    </select>
-                  </div>
+                  <select
+                    v-model.number="row.duration_minutes"
+                    class="px-2 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <option v-for="d in [30,45,60,75,90,120]" :key="d" :value="d">{{ d }} Min.</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -847,9 +842,9 @@
                 <div v-for="cat in effectiveCategoryList" :key="cat.id">
                   <p class="text-xs font-semibold text-gray-600 mb-1">{{ cat.name }}</p>
                   <div class="grid grid-cols-3 gap-1 text-xs">
-                    <span class="text-gray-500">Fahrstunde: <strong>CHF {{ pricingByCategory[cat.id]?.driving?.price_chf ?? 95 }}</strong> / {{ pricingByCategory[cat.id]?.driving?.duration_minutes ?? 45 }} Min.</span>
-                    <span class="text-gray-500">Prüfung: <strong>CHF {{ pricingByCategory[cat.id]?.exam?.price_chf ?? 160 }}</strong> / {{ pricingByCategory[cat.id]?.exam?.duration_minutes ?? 60 }} Min.</span>
-                    <span class="text-gray-500">Theorie: <strong>CHF {{ pricingByCategory[cat.id]?.theory?.price_chf ?? 85 }}</strong> / {{ pricingByCategory[cat.id]?.theory?.duration_minutes ?? 45 }} Min.</span>
+                    <span v-for="row in pricingRows.filter(r => r.catId === cat.id)" :key="row.type" class="text-gray-500">
+                      {{ row.typeLabel }}: <strong>CHF {{ row.price_chf }}</strong> / {{ row.duration_minutes }} Min.
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1104,12 +1099,24 @@ const templateCategories = ref<TemplateCategory[]>([])
 const selectedCategoryIds = ref(new Set<number>())
 
 // ─── Pricing ────────────────────────────────────────────────────────────────
-interface CategoryPricing {
-  driving:  { price_chf: number; duration_minutes: number }
-  exam:     { price_chf: number; duration_minutes: number }
-  theory:   { price_chf: number; duration_minutes: number }
+interface PricingRow {
+  catId: number
+  catName: string
+  catCode: string | undefined
+  catColor: string | undefined
+  type: 'driving' | 'exam' | 'theory'
+  typeLabel: string
+  price_chf: number
+  duration_minutes: number
 }
-const pricingByCategory = ref<Record<number, CategoryPricing>>({})
+
+const PRICING_TYPES = [
+  { key: 'driving' as const, label: 'Fahrstunde', defaultPrice: 95,  defaultDuration: 45 },
+  { key: 'exam'    as const, label: 'Prüfung',    defaultPrice: 160, defaultDuration: 60 },
+  { key: 'theory'  as const, label: 'Theorie',    defaultPrice: 85,  defaultDuration: 45 },
+]
+
+const pricingRows = ref<PricingRow[]>([])
 
 const effectiveCategoryList = computed((): TemplateCategory[] => {
   const result: TemplateCategory[] = []
@@ -1124,16 +1131,26 @@ const effectiveCategoryList = computed((): TemplateCategory[] => {
   return result
 })
 
-function ensurePricing(catId: number): CategoryPricing {
-  if (!pricingByCategory.value[catId]) {
-    pricingByCategory.value[catId] = {
-      driving: { price_chf: 95,  duration_minutes: 45 },
-      exam:    { price_chf: 160, duration_minutes: 60 },
-      theory:  { price_chf: 85,  duration_minutes: 45 },
+// Rebuild flat pricingRows whenever selected categories change, preserving existing values
+watch(effectiveCategoryList, (cats) => {
+  const updated: PricingRow[] = []
+  for (const cat of cats) {
+    for (const t of PRICING_TYPES) {
+      const existing = pricingRows.value.find(r => r.catId === cat.id && r.type === t.key)
+      updated.push(existing ? { ...existing, catName: cat.name, catCode: cat.code, catColor: cat.color } : {
+        catId: cat.id,
+        catName: cat.name,
+        catCode: cat.code,
+        catColor: cat.color,
+        type: t.key,
+        typeLabel: t.label,
+        price_chf: t.defaultPrice,
+        duration_minutes: t.defaultDuration,
+      })
     }
   }
-  return pricingByCategory.value[catId]
-}
+  pricingRows.value = updated
+}, { immediate: true, flush: 'sync' })
 const categoriesLoading = ref(false)
 
 const allTemplateCategoryIds = computed(() => {
@@ -1488,22 +1505,14 @@ const submitRegistration = async () => {
       fd.append('selected_category_ids', Array.from(selectedCategoryIds.value).join(','))
     }
 
-    // Pricing rules: 3 per category (driving/exam/theory)
-    const pricingData: any[] = []
-    for (const cat of effectiveCategoryList.value) {
-      const p = pricingByCategory.value[cat.id]
-      const code = cat.code || cat.name.toUpperCase().replace(/\s+/g, '_')
-      const types = [
-        { key: 'driving', label: `${cat.name} – Fahrstunde`, rule_type: 'base_price' },
-        { key: 'exam',    label: `${cat.name} – Prüfung`,    rule_type: 'exam' },
-        { key: 'theory',  label: `${cat.name} – Theorie`,    rule_type: 'theory' },
-      ] as const
-      for (const t of types) {
-        const entry = p?.[t.key] ?? (t.key === 'driving' ? { price_chf: 95, duration_minutes: 45 } : t.key === 'exam' ? { price_chf: 160, duration_minutes: 60 } : { price_chf: 85, duration_minutes: 45 })
-        pricingData.push({ label: t.label, rule_type: t.rule_type, category_code: code, price_chf: entry.price_chf, duration_minutes: entry.duration_minutes })
-      }
-    }
-    fd.append('pricing_json', JSON.stringify(pricingData))
+    // Pricing rules from flat pricingRows array
+    fd.append('pricing_json', JSON.stringify(pricingRows.value.map(r => ({
+      label: `${r.catName} – ${r.typeLabel}`,
+      rule_type: r.type === 'driving' ? 'base_price' : r.type,
+      category_code: r.catCode || r.catName.toUpperCase().replace(/\s+/g, '_'),
+      price_chf: r.price_chf,
+      duration_minutes: r.duration_minutes,
+    }))))
 
     // Locations as JSON
     const locs = validLocations.value
@@ -1623,7 +1632,7 @@ const saveToStorage = () => {
     staffList: staffList.value,
     locationsList: locationsList.value,
     selectedCategoryIds: Array.from(selectedCategoryIds.value),
-    pricingItems: pricingByCategory.value,
+    pricingItems: pricingRows.value,
   }))
 }
 
@@ -1643,12 +1652,12 @@ const loadFromStorage = () => {
     if (d.staffList)    staffList.value    = d.staffList
     if (d.locationsList) locationsList.value = d.locationsList
     if (Array.isArray(d.selectedCategoryIds)) selectedCategoryIds.value = new Set<number>(d.selectedCategoryIds)
-    if (d.pricingItems && typeof d.pricingItems === 'object') pricingByCategory.value = d.pricingItems
+    if (d.pricingItems && typeof d.pricingItems === 'object') pricingRows.value = d.pricingItems
     if (adminSameAsCompany.value) applyAdminFromCompany()
   } catch { /* ignore */ }
 }
 
-watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, staffList, selectedCategoryIds, pricingByCategory], saveToStorage, { deep: true })
+watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, staffList, selectedCategoryIds, pricingRows], saveToStorage, { deep: true })
 
 const route = useRoute()
 

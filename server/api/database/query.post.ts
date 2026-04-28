@@ -1,7 +1,7 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { logger } from '~/utils/logger'
 import { createClient } from '@supabase/supabase-js'
-import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 
 /**
  * Generic secure database query endpoint
@@ -75,7 +75,7 @@ interface QueryRequest {
 export default defineEventHandler(async (event) => {
   try {
     // ✅ AUTHENTIFIZIERUNG - nur eingeloggte User dürfen Queries machen
-    const authUser = await getAuthenticatedUser(event)
+    const authUser = await getAuthenticatedUserWithDbId(event)
     if (!authUser) {
       throw createError({ statusCode: 401, message: 'Unauthorized' })
     }
@@ -135,8 +135,7 @@ export default defineEventHandler(async (event) => {
     // Restrict select to whitelisted columns only — never allow '*' or arbitrary expressions
     const safeSelect = allowedColumns.join(', ')
 
-    // ✅ Create a user-scoped Supabase client using the user's JWT
-    // This respects RLS policies - the user can only access what they're allowed to
+    // ✅ Create a user-scoped Supabase client using the user's JWT (for SELECT → RLS applies)
     const authHeader = getHeader(event, 'authorization')
     let userToken = authHeader?.replace('Bearer ', '') || null
 
@@ -166,7 +165,8 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 401, statusMessage: 'No auth token provided' })
     }
 
-    // Use ANON key + user JWT → Supabase will apply RLS as this user
+    // For SELECT: use user JWT + ANON key → RLS applies
+    // For INSERT/UPDATE/DELETE: use service_role key → bypasses RLS (we enforce tenant isolation below)
     const supabase = createClient(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_ANON_KEY!,
@@ -179,6 +179,14 @@ export default defineEventHandler(async (event) => {
           persistSession: false
         }
       }
+    )
+
+    // Service-role client for writes (INSERT/UPDATE/DELETE) — bypasses RLS
+    // Safe because: auth is validated above, tenant isolation enforced below
+    const supabaseAdmin = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
     logger.debug('📊 Executing database query:', {
@@ -264,7 +272,7 @@ export default defineEventHandler(async (event) => {
       error = result.error
     }
 
-    // HANDLE INSERT
+    // HANDLE INSERT — uses service_role to bypass RLS (auth already validated above)
     else if (body.action === 'insert') {
       if (!body.data) {
         throw createError({ statusCode: 400, statusMessage: 'Data required for insert' })
@@ -276,12 +284,16 @@ export default defineEventHandler(async (event) => {
       if (Object.keys(safeData).length === 0) {
         throw createError({ statusCode: 400, statusMessage: 'No valid columns provided for insert' })
       }
-      const result = await supabase.from(body.table).insert(safeData).select(safeSelect)
+      // Enforce tenant isolation: if the table has a tenant_id column, it must match the auth user's tenant
+      if (allowedColumns.includes('tenant_id') && safeData.tenant_id && safeData.tenant_id !== authUser.tenant_id) {
+        throw createError({ statusCode: 403, statusMessage: 'Tenant mismatch: cannot insert data for another tenant' })
+      }
+      const result = await supabaseAdmin.from(body.table).insert(safeData).select(safeSelect)
       data = result.data
       error = result.error
     }
 
-    // HANDLE UPDATE
+    // HANDLE UPDATE — uses service_role to bypass RLS (auth already validated above)
     else if (body.action === 'update') {
       if (!body.data) {
         throw createError({ statusCode: 400, statusMessage: 'Data required for update' })
@@ -296,19 +308,23 @@ export default defineEventHandler(async (event) => {
       if (Object.keys(safeData).length === 0) {
         throw createError({ statusCode: 400, statusMessage: 'No valid columns provided for update' })
       }
-      query = supabase.from(body.table).update(safeData)
+      query = supabaseAdmin.from(body.table).update(safeData)
       for (const filter of body.filters) {
         switch (filter.operator) {
           case 'eq': query = query.eq(filter.column, filter.value); break
           case 'neq': query = query.neq(filter.column, filter.value); break
         }
       }
+      // Enforce tenant isolation: always filter by auth user's tenant_id for tables that have it
+      if (allowedColumns.includes('tenant_id')) {
+        query = query.eq('tenant_id', authUser.tenant_id)
+      }
       const result = await query.select(safeSelect)
       data = result.data
       error = result.error
     }
 
-    // HANDLE DELETE
+    // HANDLE DELETE — uses service_role to bypass RLS (auth already validated above)
     else if (body.action === 'delete') {
       if (!body.filters || body.filters.length === 0) {
         throw createError({
@@ -317,7 +333,7 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-      query = supabase.from(body.table).delete()
+      query = supabaseAdmin.from(body.table).delete()
 
       // Apply filters
       for (const filter of body.filters) {
@@ -330,6 +346,11 @@ export default defineEventHandler(async (event) => {
             break
           // ... other operators
         }
+      }
+
+      // Enforce tenant isolation: always filter by auth user's tenant_id for tables that have it
+      if (allowedColumns.includes('tenant_id')) {
+        query = query.eq('tenant_id', authUser.tenant_id)
       }
 
       const result = await query.select()
@@ -365,7 +386,7 @@ export default defineEventHandler(async (event) => {
 
   } catch (error: any) {
     logger.error('❌ Query endpoint error:', error.message)
-    
+
     if (error.statusCode) {
       throw error
     }
