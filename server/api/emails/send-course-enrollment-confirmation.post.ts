@@ -10,6 +10,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { generateAdminEnrollmentNotificationEmail } from '~/server/utils/email-templates'
 
 interface ConfirmationEmailRequest {
   courseRegistrationId: string
@@ -326,6 +327,38 @@ export default defineEventHandler(async (event) => {
         ...enrollmentEmail
       })
       logger.info('✅ Course enrollment confirmation email sent to:', enrollment.email)
+
+      // Send admin notification (non-blocking)
+      if (tenant?.contact_email) {
+        const firstSession = (course?.course_sessions || []).sort((a: any, b: any) =>
+          new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+        )[0]
+        const courseDate = firstSession?.start_time
+          ? new Date(firstSession.start_time).toLocaleDateString('de-CH', {
+              weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric'
+            })
+          : undefined
+        const price = course?.price_per_participant_rappen
+          ? (course.price_per_participant_rappen / 100).toFixed(2)
+          : undefined
+        const { subject: adminSubject, html: adminHtml } = generateAdminEnrollmentNotificationEmail({
+          participantFirstName: enrollment.first_name || '',
+          participantLastName: enrollment.last_name || '',
+          participantEmail: enrollment.email,
+          courseName: course?.name || '',
+          courseDate,
+          courseLocation: course?.description || undefined,
+          paymentMethod: paymentMethod === 'cash' ? 'Barzahlung' : 'Online (Wallee)',
+          paymentAmount: price,
+          tenantName: tenant.name
+        })
+        resend.emails.send({
+          from: fromWithName,
+          to: tenant.contact_email,
+          subject: adminSubject,
+          html: adminHtml
+        }).catch((err: any) => logger.warn('⚠️ Admin notification email failed:', err.message))
+      }
 
       return {
         success: true,
