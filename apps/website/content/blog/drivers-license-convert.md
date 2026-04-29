@@ -1,6 +1,7 @@
 ---
 title: "Drivers License: 7 Steps to Convert Your Foreign License to a Swiss One"
-description: "Everything you need to know about converting your foreign driving license to a Swiss one – step by step. Who qualifies, what documents you need, and how long it takes."
+seoTitle: "Foreign License to Swiss: 7 Steps – Driving Team"
+description: "Step-by-step guide to converting your foreign driving license to a Swiss one. Who qualifies, documents needed, and processing time explained."
 slug: "drivers-license-convert"
 date: "2023-09-25"
 dateModified: "2026-03-01"

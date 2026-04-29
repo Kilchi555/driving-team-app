@@ -1,5 +1,6 @@
 ---
 title: "10 Tipps zur Überwindung von Prüfungsangst bei der Fahrprüfung"
+seoTitle: "Prüfungsangst Fahrprüfung – 10 bewährte Tipps"
 description: "Mit diesen 10 bewährten Tipps überwindest du die Nervosität und gehst selbstbewusst in deine praktische Fahrprüfung. Aus der Praxis von erfahrenen Fahrlehrern."
 slug: "pruefungsangst-fahrpruefung"
 date: "2023-09-20"

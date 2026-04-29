@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Autoshkollë Shqipe Zürich – Mëso me Skenderin | Driving Team</Title>
-      <Meta name="description" content="Autoshkollë shqipe në Zürich, Spreitenbach dhe Limmattal. Instruktor Skender Ismajli me përvojë që nga viti 2011. Kategoria B Automatik, Rimorkio BE, Taksi BPT. Rezervo tani!" />
+      <Meta name="description" content="Autoshkollë shqipe Zürich & Spreitenbach. Skender Ismajli – instruktor nga 2011. Kat. B Automatik, BE, Taksi BPT. Rezervo tani online!" />
       <Meta property="og:title" content="Autoshkollë Shqipe Zürich – Mëso me Skenderin | Driving Team" />
       <Meta property="og:description" content="Autoshkollë shqipe me instruktor Skender Ismajli në Zürich, Spreitenbach dhe Limmattal. Kategoria B, BE, Taksi. Që nga viti 2011." />
       <Meta property="og:url" content="https://drivingteam.ch/autoshkolle-shqipe/" />
