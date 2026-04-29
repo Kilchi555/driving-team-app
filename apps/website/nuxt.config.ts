@@ -1,6 +1,21 @@
 export default defineNuxtConfig({
   compatibilityDate: '2026-03-24',
-  modules: ['@nuxtjs/tailwindcss', '@nuxt/content', '@nuxt/image', '@vercel/analytics/nuxt'],
+  modules: ['@nuxtjs/tailwindcss', '@nuxt/content', '@nuxt/image', '@vercel/analytics/nuxt', 'nuxt-gtag'],
+
+  gtag: {
+    // GA4 Measurement ID – set NUXT_PUBLIC_GA_ID in Vercel environment variables
+    id: process.env.NUXT_PUBLIC_GA_ID ?? '',
+    // Load GA4 asynchronously after page interaction – zero render-blocking impact
+    loadingStrategy: 'async',
+    // Disable during local development to avoid polluting GA data
+    enabled: process.env.NODE_ENV === 'production',
+    config: {
+      // Anonymize IPs for DSGVO compliance
+      anonymize_ip: true,
+      // Disable Google Signals to reduce cookie consent requirement
+      allow_google_signals: false,
+    },
+  },
 
   // Use Node.js native SQLite (no native binaries needed → works in Vercel Lambda)
   content: {
