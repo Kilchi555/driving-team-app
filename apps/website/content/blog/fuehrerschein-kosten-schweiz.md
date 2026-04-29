@@ -1,6 +1,7 @@
 ---
 title: "Führerschein Kosten Schweiz 2026 – Der vollständige Überblick"
-description: "Was kostet ein Führerschein in der Schweiz wirklich? Alle Kosten aufgelistet: Fahrstunden, Kurse, Gebühren StVA. Mit Kostenrechner-Beispielen für CHF 2'250 bis CHF 3'530."
+seoTitle: "Führerschein Kosten Schweiz 2026 – Überblick"
+description: "Alle Kosten für den Führerschein Schweiz 2026: Fahrstunden, Kurse, StVA-Gebühren. Kostenbeispiele von CHF 2'250 bis CHF 3'530."
 slug: "fuehrerschein-kosten-schweiz"
 date: "2026-03-25"
 dateModified: "2026-03-25"
@@ -142,7 +143,7 @@ Planst du mehr als nur den Auto-Führerschein? Hier eine Übersicht der Zusatzko
 
 | Kategorie | Typische Ausbildungskosten |
 |-----------|---------------------------|
-| Motorrad (A/A2/A1) | CHF 1'000–2'000 (exkl. Grundkurs) |
+| Motorrad (A/A2/A1) | CHF 1'000–2'000 (inkl. Grundkurs) |
 | Anhänger BE | Ab CHF 900.– |
 | Motorboot | Ab CHF 2000.– |
 | Lastwagen C | CHF 4'000–6'000 |
@@ -159,7 +160,7 @@ Beim Kursanbieter – in der Regel der Fahrschule oder einem speziellen Kurszent
 Die meisten Fahrschulen bieten keine offiziellen Rabatte. Einige akzeptieren Ratenzahlung – frag direkt nach.
 
 **Muss ich die Fahrstunden im Voraus bezahlen?**  
-Das variiert je nach Fahrschule. Üblich ist Zahlung per Lektion oder in kleinen Paketen.
+Das variiert je nach Fahrschule. Üblich ist Zahlung per Lektion oder in Paketen.
 
 **Ist der Lernfahrausweis das Gleiche wie der Führerausweis?**  
 Nein. Der Lernfahrausweis berechtigt zu Lernfahrten – der Führerausweis auf Probe nach bestandener Prüfung zum selbstständigen Fahren.

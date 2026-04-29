@@ -1,6 +1,7 @@
 ---
 title: "BF17 Begleitetes Fahren Schweiz – Alles was Eltern und Jugendliche wissen müssen"
-description: "Der komplette Guide zu BF17 in der Schweiz: Voraussetzungen, Kosten, Regeln für Begleitperson, Vorteile und häufige Fehler. Mit Checkliste zum Download."
+seoTitle: "BF17 Schweiz – Guide für Eltern & Jugendliche"
+description: "BF17 in der Schweiz: Voraussetzungen, Kosten, Regeln für die Begleitperson und häufige Fehler. Mit Checkliste zum Download."
 slug: "bf17-begleitetes-fahren-schweiz"
 date: "2026-04-01"
 dateModified: "2026-04-01"

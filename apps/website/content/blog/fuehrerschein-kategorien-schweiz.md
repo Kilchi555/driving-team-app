@@ -1,6 +1,7 @@
 ---
 title: "Alle Führerausweis-Kategorien Schweiz erklärt – A, B, BE, C, D und mehr"
-description: "Übersicht aller Führerausweis-Kategorien in der Schweiz: Was erlaubt welche Kategorie? Welche brauchst du für Motorrad, Anhänger, Lastwagen oder Boot? Alle Infos 2026."
+seoTitle: "Alle Führerausweis-Kategorien Schweiz 2026"
+description: "Alle Führerausweis-Kategorien der Schweiz: Was erlaubt A, B, BE, C, D? Für Motorrad, Anhänger, Lastwagen & Boot. Vollständige Übersicht 2026."
 slug: "fuehrerschein-kategorien-schweiz"
 date: "2026-04-08"
 dateModified: "2026-04-08"

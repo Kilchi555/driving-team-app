@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>WAB Kurs Schweiz | Weiterbildung Neulenker | Driving Team</Title>
-      <Meta name="description" content="WAB Kurs Schweiz – obligatorische Weiterbildung für Neulenker ✓ Innerhalb 12 Monate nach Fahrprüfung ✓ Ab CHF 290.- ✓ Pfäffikon ZH & Tuggen SZ ✓ Auf Englisch verfügbar ✓ Jetzt anmelden!" />
+      <Meta name="description" content="WAB Kurs Schweiz – Pflicht für Neulenker ✓ Innerhalb 12 Monate nach Fahrprüfung ✓ Ab CHF 290.- ✓ Pfäffikon ZH & Tuggen SZ ✓ Auf Englisch verfügbar ✓ Jetzt anmelden!" />
       <Meta property="og:title" content="WAB Kurs Schweiz – Weiterbildung für Neulenker | Driving Team" />
       <Meta property="og:description" content="Obligatorische WAB Kurse für Neulenker. Innerhalb 12 Monaten nach Fahrprüfung. Ab CHF 290.-. Standorte Pfäffikon ZH & Tuggen SZ." />
       <Meta property="og:url" content="https://drivingteam.ch/wab-kurse/" />

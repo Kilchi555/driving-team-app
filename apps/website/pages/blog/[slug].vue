@@ -212,8 +212,9 @@ const { data: article } = await useAsyncData(`blog-${slug}`, () =>
 )
 
 // SSR-safe SEO meta – direct string values after awaited useAsyncData for correct prerender output
+// seoTitle in frontmatter allows a shorter title tag without changing the displayed article title
 const seoTitle = article.value
-  ? `${article.value.title} | Driving Team Fahrschule`
+  ? `${(article.value as any).seoTitle ?? article.value.title} | Driving Team Fahrschule`
   : 'Blog | Driving Team Fahrschule'
 const seoDescription = article.value?.description ?? ''
 const seoOgImage = `https://drivingteam.ch${article.value?.ogImage ?? '/images/og-image.webp'}`

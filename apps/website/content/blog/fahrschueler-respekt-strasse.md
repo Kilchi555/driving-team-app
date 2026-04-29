@@ -1,5 +1,6 @@
 ---
 title: "Fahrschüler & Respekt auf der Strasse: Ein Appell zur Geduld"
+seoTitle: "Fahrschüler & Respekt auf der Strasse – Appell"
 description: "Warum Geduld gegenüber Fahrschülern wichtig ist und wie wir gemeinsam die Strassen sicherer machen können. Ein Appell von der Driving Team Fahrschule."
 slug: "fahrschueler-respekt-strasse"
 date: "2023-09-26"

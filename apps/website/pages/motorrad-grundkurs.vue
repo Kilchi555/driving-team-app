@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Motorrad Grundkurs Schweiz | A1, A35kW, A | Driving Team</Title>
-      <Meta name="description" content="Motorrad Grundkurs Schweiz ✓ Zürich, Lachen, Zug & Einsiedeln ✓ 3 × 4h praxisorientiert ✓ Max. 5 Teilnehmer ✓ Alle Kat. A1, A2, A ✓ Ab CHF 499.- ✓ Jetzt anmelden!" />
+      <Meta name="description" content="Motorrad Grundkurs Schweiz ✓ Zürich, Lachen, Zug & Einsiedeln ✓ 3×4h praxisorientiert ✓ Max. 5 Teilnehmer ✓ Alle Kat. A1, A2, A ✓ Ab CHF 499.- ✓ Jetzt anmelden!" />
       <Meta property="og:title" content="Motorrad Grundkurs – Zürich, Lachen, Zug & Einsiedeln | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs an 4 Standorten. 3x4h, max. 5 Teilnehmer, ab CHF 499.-. Alle Kategorien A1, A2, A." />
       <Meta property="og:url" content="https://drivingteam.ch/motorrad-grundkurs/" />
@@ -353,7 +353,7 @@
       <div class="section-container">
         <h2 class="text-xl font-bold text-gray-900 mb-6 text-center">Weitere Angebote bei Driving Team</h2>
         <div class="grid md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-          <a href="/motorrad-fahrstunden/" class="bg-white rounded-xl p-4 text-center hover:shadow-md transition border border-gray-100">
+          <a href="/motorrad-fahrschule/" class="bg-white rounded-xl p-4 text-center hover:shadow-md transition border border-gray-100">
             <p class="text-2xl mb-2">🏍️</p>
             <h3 class="font-semibold text-gray-900 text-sm">Motorrad Fahrstunden</h3>
             <p class="text-gray-500 text-xs">Einzelfahrstunden</p>

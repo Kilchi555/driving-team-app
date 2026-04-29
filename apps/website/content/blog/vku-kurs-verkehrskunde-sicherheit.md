@@ -1,5 +1,6 @@
 ---
 title: "Verkehrskunde VKU Kurs: Ein obligatorischer Kurs für mehr Sicherheit"
+seoTitle: "VKU Kurs Schweiz – obligatorisch & wichtig"
 description: "Was ist der VKU Kurs, warum ist er obligatorisch und wie bereitest du dich optimal vor? Alles Wichtige zum Verkehrskundeunterricht in der Schweiz."
 slug: "vku-kurs-verkehrskunde-sicherheit"
 date: "2023-09-27"

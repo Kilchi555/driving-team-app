@@ -101,8 +101,7 @@ export default defineNuxtConfig({
         { name: 'twitter:image', content: 'https://drivingteam.ch/images/og-image.webp' },
       ],
       link: [
-        { rel: 'alternate', hreflang: 'de-CH', href: 'https://drivingteam.ch/' },
-        { rel: 'alternate', hreflang: 'x-default', href: 'https://drivingteam.ch/' },
+        // hreflang self-reference is set dynamically per-page via plugins/hreflang-self-ref.ts
         { rel: 'icon', type: 'image/png', href: '/favicon.png' },
         { rel: 'apple-touch-icon', href: '/favicon.png' },
         { rel: 'preload', as: 'image', href: '/images/categories/auto-fahrschule.webp', fetchpriority: 'high' },
