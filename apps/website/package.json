@@ -17,6 +17,7 @@
     "@vercel/analytics": "^2.0.1",
     "better-sqlite3": "^12.8.0",
     "nuxt": "^3.12.0",
+    "nuxt-gtag": "^4.1.0",
     "resend": "^6.9.3",
     "vue": "^3.4.21",
     "vue-router": "^4.3.3"
