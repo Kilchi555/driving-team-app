@@ -493,14 +493,16 @@
                 </span>
               </div>
               <!-- Email body iframe -->
-              <div class="bg-gray-50 overflow-hidden">
-                <iframe
-                  :srcdoc="demoEmailHtml"
-                  class="w-full border-0 block"
-                  style="height: 380px; pointer-events: none;"
-                  sandbox="allow-same-origin"
-                  title="E-Mail Vorschau"
-                ></iframe>
+              <div class="bg-gray-50 overflow-hidden" ref="previewContainer">
+                <div :style="previewWrapStyle">
+                  <iframe
+                    :srcdoc="demoEmailHtml"
+                    class="border-0 block"
+                    style="width: 560px; height: 420px; pointer-events: none;"
+                    sandbox="allow-same-origin"
+                    title="E-Mail Vorschau"
+                  ></iframe>
+                </div>
               </div>
             </div>
             <!-- Hint -->
@@ -579,6 +581,366 @@
             Simy Starter ab CHF 69.– / Monat — Amortisation am ersten Tag.
           </p>
         </div>
+      </div>
+    </section>
+
+    <!-- ── App in Aktion ──────────────────────────────────────────────────────── -->
+    <section class="py-12 md:py-20 px-4 md:px-6" :style="{ background: `linear-gradient(180deg, white 0%, rgba(var(--brand-rgb), 0.04) 100%)` }">
+      <div class="max-w-6xl mx-auto">
+
+        <div class="text-center mb-8 md:mb-12">
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Live App Demo</p>
+          <h2 class="text-2xl md:text-4xl font-extrabold text-gray-900 mb-3">Dein ganzes Business auf einem Screen</h2>
+          <p class="text-base md:text-lg text-gray-500 max-w-2xl mx-auto">Klick durch die wichtigsten Ansichten – alle live in deinem Branding.</p>
+        </div>
+
+        <!-- Tab selector -->
+        <div class="flex gap-2 flex-wrap justify-center mb-6">
+          <button
+            v-for="tab in appTabs" :key="tab.id"
+            @click="activeAppTab = tab.id"
+            class="flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-all"
+            :style="activeAppTab === tab.id
+              ? { borderColor: primaryColor, color: primaryColor, background: `rgba(var(--brand-rgb), 0.08)` }
+              : { borderColor: 'transparent', color: '#6b7280', background: '#f9fafb' }"
+          >
+            <span>{{ tab.icon }}</span>
+            <span class="hidden sm:inline">{{ tab.label }}</span>
+          </button>
+        </div>
+
+        <!-- Browser window -->
+        <div class="rounded-2xl overflow-hidden shadow-xl border border-gray-200">
+
+          <!-- Browser chrome -->
+          <div class="bg-gray-800 px-3 md:px-4 py-2.5 flex items-center gap-3">
+            <div class="flex gap-1.5 flex-shrink-0">
+              <span class="w-3 h-3 rounded-full bg-red-400"></span>
+              <span class="w-3 h-3 rounded-full bg-amber-400"></span>
+              <span class="w-3 h-3 rounded-full bg-green-400"></span>
+            </div>
+            <div class="flex-1 bg-gray-700 rounded-md px-3 py-1.5 text-xs text-gray-400 min-w-0 truncate text-center">
+              {{ appTabUrl }}
+            </div>
+          </div>
+
+          <!-- App layout -->
+          <div class="bg-white flex" style="min-height: 460px;">
+
+            <!-- Sidebar -->
+            <div class="hidden md:flex flex-col w-52 border-r border-gray-100 bg-gray-50 py-4 px-3 gap-1 flex-shrink-0">
+              <div class="px-3 py-2 mb-3 flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0" :style="{ backgroundColor: primaryColor }">
+                  {{ (schoolNameDemo || 'F').charAt(0).toUpperCase() }}
+                </div>
+                <span class="font-semibold text-sm text-gray-800 truncate">{{ schoolNameDemo || 'Fahrschule Muster' }}</span>
+              </div>
+              <button
+                v-for="item in sidebarItems" :key="item.id"
+                @click="activeAppTab = item.id"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all w-full text-left"
+                :style="activeAppTab === item.id
+                  ? { backgroundColor: `rgba(var(--brand-rgb), 0.1)`, color: primaryColor, fontWeight: '600' }
+                  : { color: '#6b7280' }"
+              >
+                <span>{{ item.icon }}</span>
+                <span>{{ item.label }}</span>
+              </button>
+            </div>
+
+            <!-- Content area -->
+            <div class="flex-1 overflow-hidden">
+
+              <!-- KALENDER -->
+              <div v-if="activeAppTab === 'calendar'" class="p-4 md:p-5 h-full">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="font-bold text-gray-900 text-sm md:text-base">Woche 28. Apr – 2. Mai 2026</h3>
+                  <div class="flex gap-1.5">
+                    <span class="text-xs px-2.5 py-1 rounded-lg font-semibold" :style="{ background: `rgba(var(--brand-rgb), 0.1)`, color: primaryColor }">Woche</span>
+                    <span class="text-xs px-2.5 py-1 rounded-lg font-semibold bg-gray-100 text-gray-400">Monat</span>
+                  </div>
+                </div>
+                <div class="grid grid-cols-5 gap-2">
+                  <div v-for="day in calendarMockDays" :key="day.name" class="space-y-1.5">
+                    <div
+                      class="font-bold text-center py-1.5 rounded-lg text-xs"
+                      :class="day.today ? '' : 'text-gray-400'"
+                      :style="day.today ? { backgroundColor: `rgba(var(--brand-rgb), 0.12)`, color: primaryColor } : {}"
+                    >
+                      {{ day.name }}<br>
+                      <span class="font-normal">{{ day.date }}</span>
+                    </div>
+                    <div
+                      v-for="apt in day.appointments" :key="apt.time"
+                      class="rounded-lg px-1.5 py-1.5 text-left"
+                      :style="apt.type === 'exam'
+                        ? { backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }
+                        : apt.type === 'free'
+                          ? { backgroundColor: '#f9fafb', color: '#d1d5db', border: '1px dashed #e5e7eb' }
+                          : { backgroundColor: `rgba(var(--brand-rgb), 0.1)`, color: primaryColor, border: `1px solid rgba(var(--brand-rgb), 0.2)` }"
+                    >
+                      <div class="font-bold text-xs">{{ apt.time }}</div>
+                      <div class="text-xs truncate leading-tight mt-0.5">{{ apt.label }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- DASHBOARD -->
+              <div v-else-if="activeAppTab === 'dashboard'" class="p-4 md:p-5">
+                <div class="grid grid-cols-3 gap-3 mb-5">
+                  <div v-for="stat in dashboardStats" :key="stat.label" class="bg-gray-50 rounded-xl p-3 text-center">
+                    <div class="text-xl md:text-2xl font-black" :style="{ color: primaryColor }">{{ stat.value }}</div>
+                    <div class="text-xs text-gray-500 mt-0.5">{{ stat.label }}</div>
+                  </div>
+                </div>
+                <div class="rounded-xl p-4 mb-4 flex items-start gap-3" :style="{ background: `rgba(var(--brand-rgb), 0.06)`, border: `1px solid rgba(var(--brand-rgb), 0.15)` }">
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg flex-shrink-0" :style="{ backgroundColor: primaryColor }">📅</div>
+                  <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide mb-0.5" :style="{ color: primaryColor }">Nächster Termin</p>
+                    <p class="font-bold text-gray-900 text-sm">Morgen, 09:00 Uhr · 90 Min</p>
+                    <p class="text-xs text-gray-500">Fahrstunde B · Thomas Meier · Bahnhof Uster</p>
+                  </div>
+                </div>
+                <div class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Aktive Schüler</div>
+                <div class="space-y-1">
+                  <div v-for="student in dashboardStudents" :key="student.name" class="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" :style="{ backgroundColor: student.color }">{{ student.initials }}</div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-semibold text-gray-800">{{ student.name }}</p>
+                      <p class="text-xs text-gray-400 truncate">{{ student.status }}</p>
+                    </div>
+                    <div class="text-xs font-semibold px-2 py-1 rounded-lg flex-shrink-0" :class="student.payStatus === 'paid' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'">
+                      {{ student.payStatus === 'paid' ? '✓ bezahlt' : '⏳ offen' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ZAHLUNGEN -->
+              <div v-else-if="activeAppTab === 'payments'" class="p-4 md:p-5">
+                <div class="flex gap-2 mb-4 flex-wrap">
+                  <span v-for="f in ['Alle', 'Ausstehend', 'Bezahlt', 'Überfällig']" :key="f"
+                    class="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
+                    :style="f === 'Alle' ? { backgroundColor: `rgba(var(--brand-rgb), 0.1)`, color: primaryColor } : { backgroundColor: '#f3f4f6', color: '#6b7280' }"
+                  >{{ f }}</span>
+                </div>
+                <div class="hidden md:grid grid-cols-4 gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest px-3 mb-2">
+                  <span>Schüler</span><span>Datum</span><span>Betrag</span><span>Status</span>
+                </div>
+                <div class="space-y-1.5">
+                  <div v-for="pay in paymentsMock" :key="pay.name" class="grid grid-cols-2 md:grid-cols-4 gap-2 items-center bg-gray-50 hover:bg-gray-100 transition-colors rounded-xl px-3 py-2.5">
+                    <div class="flex items-center gap-2">
+                      <div class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" :style="{ backgroundColor: primaryColor, opacity: '0.75' }">{{ pay.initials }}</div>
+                      <span class="text-sm font-medium text-gray-800 truncate">{{ pay.name }}</span>
+                    </div>
+                    <span class="text-gray-500 text-xs">{{ pay.date }}</span>
+                    <span class="text-sm font-bold text-gray-900">CHF {{ pay.amount }}</span>
+                    <span class="text-xs font-semibold px-2 py-1 rounded-lg w-fit"
+                      :class="pay.status === 'paid' ? 'bg-green-50 text-green-700' : pay.status === 'overdue' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-700'">
+                      {{ pay.status === 'paid' ? '✓ Bezahlt' : pay.status === 'overdue' ? '⚠ Überfällig' : '⏳ Ausstehend' }}
+                    </span>
+                  </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-gray-100 flex justify-end gap-3 text-sm">
+                  <span class="text-gray-400">Ausstehend: <strong class="text-gray-700">CHF 380.–</strong></span>
+                  <span class="text-gray-400">Total: <strong class="text-gray-700">CHF 2'940.–</strong></span>
+                </div>
+              </div>
+
+              <!-- AFFILIATE -->
+              <div v-else-if="activeAppTab === 'affiliate'" class="p-4 md:p-5">
+                <div class="grid grid-cols-3 gap-3 mb-5">
+                  <div v-for="stat in affiliateStats" :key="stat.label" class="rounded-xl p-3 md:p-4 text-center" :style="{ background: `rgba(var(--brand-rgb), 0.06)`, border: `1px solid rgba(var(--brand-rgb), 0.12)` }">
+                    <div class="text-xl md:text-2xl font-black mb-0.5" :style="{ color: primaryColor }">{{ stat.value }}</div>
+                    <div class="text-xs text-gray-500">{{ stat.label }}</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-3 mb-4 border border-gray-100">
+                  <span class="text-xs text-gray-500 flex-1 truncate font-mono">simy.ch/ref/{{ (schoolNameDemo || 'fahrschule-muster').toLowerCase().replace(/\s+/g, '-') }}</span>
+                  <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white flex-shrink-0" :style="{ backgroundColor: primaryColor }">Kopieren</button>
+                </div>
+                <div class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Meine Empfehlungen</div>
+                <div class="space-y-1.5">
+                  <div v-for="ref in affiliateMock" :key="ref.name" class="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
+                    <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs font-bold flex-shrink-0">{{ ref.initials }}</div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-semibold text-gray-800">{{ ref.name }}</p>
+                      <p class="text-xs text-gray-400">{{ ref.date }}</p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-sm font-bold" :style="{ color: primaryColor }">CHF {{ ref.commission }}</p>
+                      <p class="text-xs" :class="ref.paid ? 'text-green-600' : 'text-amber-600'">{{ ref.paid ? '✓ ausgezahlt' : '⏳ ausstehend' }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- BUCHUNGSSEITE MOCK -->
+              <div v-else-if="activeAppTab === 'booking'" class="p-4 md:p-5">
+                <div class="mb-4 flex items-center gap-3">
+                  <h3 class="font-bold text-gray-900">Unsere Kurse</h3>
+                  <div class="flex gap-2">
+                    <select class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-white">
+                      <option>Alle Kategorien</option>
+                    </select>
+                    <select class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-white">
+                      <option>Alle Standorte</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div v-for="course in bookingMockCourses" :key="course.name" class="rounded-xl border-2 border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+                    <div class="px-4 py-3 border-b border-gray-100">
+                      <h4 class="font-semibold text-gray-800 text-sm">{{ course.name }}</h4>
+                      <p class="text-xs text-gray-400 mt-0.5">{{ course.location }}</p>
+                    </div>
+                    <div class="px-4 py-3 space-y-1.5">
+                      <div v-for="session in course.sessions" :key="session.n" class="flex items-center gap-2 text-xs">
+                        <div class="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0" :style="{ backgroundColor: primaryColor }">{{ session.n }}</div>
+                        <span class="text-gray-700">{{ session.date }}</span>
+                        <span class="text-gray-400">{{ session.time }}</span>
+                      </div>
+                    </div>
+                    <div class="px-4 py-3 bg-gray-50 flex items-center justify-between">
+                      <div>
+                        <p class="text-xs text-gray-400">Preis</p>
+                        <p class="font-bold text-gray-900">CHF {{ course.price }}</p>
+                      </div>
+                      <div class="text-right">
+                        <p class="text-xs text-gray-400">Freie Plätze</p>
+                        <p class="font-semibold" :style="{ color: primaryColor }">{{ course.slots > 3 ? 'mehr als 3' : course.slots }}</p>
+                      </div>
+                    </div>
+                    <div class="px-4 pb-4">
+                      <button class="w-full py-2.5 text-white text-sm font-bold rounded-xl transition-opacity hover:opacity-90" :style="{ backgroundColor: primaryColor }">Anmelden</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Zwei Perspektiven ───────────────────────────────────────────────────── -->
+    <section class="py-12 md:py-20 px-4 md:px-6 bg-white">
+      <div class="max-w-5xl mx-auto">
+
+        <div class="text-center mb-8 md:mb-10">
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Für alle</p>
+          <h2 class="text-2xl md:text-4xl font-extrabold text-gray-900 mb-3">Zwei Seiten. Eine Plattform.</h2>
+          <p class="text-base md:text-lg text-gray-500 max-w-xl mx-auto">Derselbe Termin – aus der Sicht deiner Fahrschule und deines Schülers.</p>
+        </div>
+
+        <!-- Toggle -->
+        <div class="flex justify-center mb-8">
+          <div class="flex gap-1 bg-gray-100 p-1 rounded-2xl">
+            <button @click="appDemoView = 'admin'"
+              class="px-4 md:px-6 py-2.5 rounded-xl text-sm font-bold transition-all"
+              :style="appDemoView === 'admin' ? { backgroundColor: primaryColor, color: 'white', boxShadow: `0 2px 8px rgba(var(--brand-rgb), 0.35)` } : { color: '#6b7280' }">
+              🧑‍💼 Admin / Fahrlehrer
+            </button>
+            <button @click="appDemoView = 'student'"
+              class="px-4 md:px-6 py-2.5 rounded-xl text-sm font-bold transition-all"
+              :style="appDemoView === 'student' ? { backgroundColor: primaryColor, color: 'white', boxShadow: `0 2px 8px rgba(var(--brand-rgb), 0.35)` } : { color: '#6b7280' }">
+              🧑‍🎓 Schüler
+            </button>
+          </div>
+        </div>
+
+        <!-- Admin View -->
+        <div v-if="appDemoView === 'admin'" class="grid md:grid-cols-3 gap-4" style="animation: fadeSlideIn 0.25s ease;">
+          <div class="md:col-span-2 rounded-2xl border border-gray-200 overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between" :style="{ backgroundColor: `rgba(var(--brand-rgb), 0.04)` }">
+              <span class="font-bold text-gray-900 text-sm">Heute · Mittwoch 30. April</span>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-lg text-white" :style="{ backgroundColor: primaryColor }">4 Termine</span>
+            </div>
+            <div class="divide-y divide-gray-100">
+              <div v-for="apt in adminTodayApts" :key="apt.time" class="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 transition-colors">
+                <div class="w-12 text-right flex-shrink-0">
+                  <span class="text-sm font-bold text-gray-700">{{ apt.time }}</span>
+                </div>
+                <div class="w-1 self-stretch rounded-full flex-shrink-0" :style="{ backgroundColor: primaryColor, opacity: '0.5' }"></div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-gray-800">{{ apt.student }}</p>
+                  <p class="text-xs text-gray-400">{{ apt.type }} · {{ apt.location }}</p>
+                </div>
+                <div class="text-xs font-semibold px-2 py-1 rounded-lg flex-shrink-0"
+                  :class="apt.payStatus === 'paid' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'">
+                  {{ apt.payStatus === 'paid' ? '✓' : '⏳' }} CHF {{ apt.amount }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div class="rounded-2xl border border-gray-200 p-5">
+              <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Diese Woche</p>
+              <div class="space-y-3">
+                <div v-for="s in adminWeekStats" :key="s.label" class="flex items-center justify-between">
+                  <span class="text-sm text-gray-600">{{ s.label }}</span>
+                  <span class="text-sm font-bold" :style="s.highlight ? { color: primaryColor } : { color: '#111827' }">{{ s.value }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-2xl p-5" :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))` }">
+              <p class="text-white/70 text-xs mb-1">Monatsumsatz</p>
+              <p class="text-white font-black text-2xl">CHF 6'840.–</p>
+              <p class="text-white/60 text-xs mt-1">↑ 12% vs. letzter Monat</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Student View (phone mockup) -->
+        <div v-else class="flex justify-center" style="animation: fadeSlideIn 0.25s ease;">
+          <div class="rounded-[2.5rem] border-4 border-gray-800 overflow-hidden shadow-2xl w-80">
+            <div class="bg-gray-800 py-2 flex justify-center">
+              <div class="w-20 h-1.5 rounded-full bg-gray-600"></div>
+            </div>
+            <div class="bg-white">
+              <div class="px-5 pt-5 pb-6" :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))` }">
+                <p class="text-white/70 text-xs">Guten Morgen</p>
+                <p class="text-white font-bold text-lg">Hallo Anna 👋</p>
+              </div>
+              <div class="mx-4 -mt-4 bg-white rounded-2xl shadow-lg p-4 mb-4 border border-gray-100">
+                <p class="text-xs font-bold uppercase tracking-wide mb-2" :style="{ color: primaryColor }">Nächste Fahrstunde</p>
+                <p class="font-bold text-gray-900">Morgen, 09:00 Uhr</p>
+                <p class="text-sm text-gray-500">90 Min · Thomas Meier</p>
+                <p class="text-xs text-gray-400 mt-1">📍 Bahnhof Uster, Gleis 1</p>
+                <div class="mt-3 flex gap-2">
+                  <button class="flex-1 py-2 rounded-xl text-white text-xs font-bold" :style="{ backgroundColor: primaryColor }">Bestätigen ✓</button>
+                  <button class="flex-1 py-2 rounded-xl text-xs font-bold bg-gray-100 text-gray-600">Absagen</button>
+                </div>
+              </div>
+              <div class="px-4 mb-4">
+                <div class="flex justify-between text-xs mb-1.5">
+                  <span class="font-semibold text-gray-700">Lernfortschritt</span>
+                  <span class="font-bold" :style="{ color: primaryColor }">14 / 20 Std.</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-2.5">
+                  <div class="h-2.5 rounded-full" :style="{ width: '70%', backgroundColor: primaryColor }"></div>
+                </div>
+              </div>
+              <div class="mx-4 mb-4 rounded-xl p-3 flex items-center justify-between bg-amber-50 border border-amber-200">
+                <div>
+                  <p class="text-xs font-bold text-amber-800">Offene Zahlung</p>
+                  <p class="text-xs text-amber-600">CHF 95.– · Lektion 14</p>
+                </div>
+                <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white" :style="{ backgroundColor: primaryColor }">Zahlen →</button>
+              </div>
+            </div>
+            <div class="bg-gray-800 py-2 flex justify-around px-8">
+              <span class="text-gray-400 text-lg">🏠</span>
+              <span class="text-gray-400 text-lg">📅</span>
+              <span class="text-gray-400 text-lg">💳</span>
+              <span class="text-gray-400 text-lg">👤</span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -1300,6 +1662,133 @@ const faqs = reactive([
   { q: 'Sind meine Daten sicher?', a: 'Ja. Simy betreibt alle Daten auf Schweizer Servern, ist DSGVO-konform und verwendet Ende-zu-Ende-Verschlüsselung für sensible Daten.', open: false },
 ])
 
+// ─── App Live Demo ───────────────────────────────────────────────────────────
+const activeAppTab = ref<'calendar' | 'dashboard' | 'payments' | 'affiliate' | 'booking'>('calendar')
+const appDemoView = ref<'admin' | 'student'>('admin')
+
+const appTabUrl = computed(() => {
+  const urls: Record<string, string> = {
+    calendar: 'app.simy.ch/kalender',
+    dashboard: 'app.simy.ch/schüler',
+    payments: 'app.simy.ch/zahlungen',
+    affiliate: 'app.simy.ch/affiliate',
+    booking: 'simy.ch/customer/courses/fahrschule-muster',
+  }
+  return urls[activeAppTab.value]
+})
+
+const appTabs = [
+  { id: 'calendar', icon: '📅', label: 'Kalender' },
+  { id: 'dashboard', icon: '👥', label: 'Schüler' },
+  { id: 'payments', icon: '💳', label: 'Zahlungen' },
+  { id: 'affiliate', icon: '📣', label: 'Affiliate' },
+  { id: 'booking', icon: '🏫', label: 'Buchungsseite' },
+] as const
+
+const sidebarItems = [
+  { id: 'calendar', icon: '📅', label: 'Kalender' },
+  { id: 'dashboard', icon: '👥', label: 'Schüler' },
+  { id: 'payments', icon: '💳', label: 'Zahlungen' },
+  { id: 'affiliate', icon: '📣', label: 'Affiliate' },
+  { id: 'booking', icon: '🏫', label: 'Buchungsseite' },
+] as const
+
+const calendarMockDays = [
+  { name: 'Mo', date: '28.4', today: false, appointments: [
+    { time: '09:00', label: 'Anna M.', type: 'lesson' },
+    { time: '14:00', label: 'Tobias R.', type: 'lesson' },
+  ]},
+  { name: 'Di', date: '29.4', today: false, appointments: [
+    { time: '10:00', label: 'Theorie', type: 'theory' },
+    { time: '15:30', label: 'Max B.', type: 'lesson' },
+  ]},
+  { name: 'Mi', date: '30.4', today: true, appointments: [
+    { time: '08:30', label: 'Sara K.', type: 'lesson' },
+    { time: '11:00', label: 'Prüfung', type: 'exam' },
+    { time: '14:00', label: 'Anna M.', type: 'lesson' },
+  ]},
+  { name: 'Do', date: '1.5', today: false, appointments: [
+    { time: '09:00', label: 'Freier Slot', type: 'free' },
+    { time: '15:00', label: 'Max B.', type: 'lesson' },
+  ]},
+  { name: 'Fr', date: '2.5', today: false, appointments: [
+    { time: '10:00', label: 'Sara K.', type: 'lesson' },
+    { time: '16:00', label: 'Freier Slot', type: 'free' },
+  ]},
+]
+
+const dashboardStats = [
+  { value: '24', label: 'Aktive Schüler' },
+  { value: '8', label: 'Lektionen / Woche' },
+  { value: '98%', label: 'Zahlungsquote' },
+]
+
+const dashboardStudents = computed(() => [
+  { name: 'Anna Müller', initials: 'AM', status: 'Lektion 14 · Kat. B', payStatus: 'paid', color: primaryColor.value },
+  { name: 'Max Berger', initials: 'MB', status: 'Lektion 7 · Kat. B', payStatus: 'pending', color: '#6b7280' },
+  { name: 'Sara Klein', initials: 'SK', status: 'Prüfungsanmeldung offen', payStatus: 'paid', color: '#8b5cf6' },
+  { name: 'Tobias Roth', initials: 'TR', status: 'Lektion 3 · Kat. B', payStatus: 'pending', color: '#f59e0b' },
+])
+
+const paymentsMock = [
+  { name: 'Anna Müller', initials: 'AM', date: '28.04.2026', amount: '95.–', status: 'paid' },
+  { name: 'Max Berger', initials: 'MB', date: '27.04.2026', amount: '95.–', status: 'pending' },
+  { name: 'Sara Klein', initials: 'SK', date: '25.04.2026', amount: '190.–', status: 'paid' },
+  { name: 'Tobias Roth', initials: 'TR', date: '20.04.2026', amount: '95.–', status: 'overdue' },
+  { name: 'Nina Huber', initials: 'NH', date: '18.04.2026', amount: '95.–', status: 'pending' },
+  { name: 'Luca Pfister', initials: 'LP', date: '15.04.2026', amount: '190.–', status: 'paid' },
+]
+
+const affiliateStats = computed(() => [
+  { value: '7', label: 'Empfehlungen' },
+  { value: `CHF 87.50`, label: 'Ausstehend' },
+  { value: `CHF 420.–`, label: 'Total verdient' },
+])
+
+const affiliateMock = [
+  { name: 'Jonas Weber', initials: 'JW', date: '25.04.2026', commission: '35.–', paid: false },
+  { name: 'Lea Brunner', initials: 'LB', date: '18.04.2026', commission: '35.–', paid: false },
+  { name: 'Tim Keller', initials: 'TK', date: '10.04.2026', commission: '35.–', paid: true },
+  { name: 'Mia Steiner', initials: 'MS', date: '02.04.2026', commission: '35.–', paid: true },
+]
+
+const bookingMockCourses = computed(() => [
+  {
+    name: 'VKU Zürich',
+    location: 'Zürich-Altstetten',
+    price: '190.–',
+    slots: 4,
+    sessions: [
+      { n: 1, date: 'Sa 10.05.2026', time: '08:00 – 12:00' },
+      { n: 2, date: 'Sa 17.05.2026', time: '08:00 – 12:00' },
+    ],
+  },
+  {
+    name: 'Motorrad Grundkurs',
+    location: 'Lachen SZ',
+    price: '380.–',
+    slots: 2,
+    sessions: [
+      { n: 1, date: 'Sa 17.05.2026', time: '07:30 – 17:00' },
+      { n: 2, date: 'So 18.05.2026', time: '07:30 – 17:00' },
+    ],
+  },
+])
+
+const adminTodayApts = computed(() => [
+  { time: '08:30', student: 'Sara Klein', type: 'Fahrstunde B', location: 'Bahnhof Uster', payStatus: 'paid', amount: '95.–' },
+  { time: '11:00', student: 'Luca Pfister', type: 'Prüfung B', location: 'Strassenverkehrsamt', payStatus: 'paid', amount: '0.–' },
+  { time: '14:00', student: 'Anna Müller', type: 'Fahrstunde B', location: 'Schulhaus Küsnacht', payStatus: 'pending', amount: '95.–' },
+  { time: '16:30', student: 'Tobias Roth', type: 'Fahrstunde B', location: 'Bahnhof Uster', payStatus: 'pending', amount: '95.–' },
+])
+
+const adminWeekStats = computed(() => [
+  { label: 'Lektionen', value: '18' },
+  { label: 'Schüler aktiv', value: '24' },
+  { label: 'No-Shows', value: '0' },
+  { label: 'Umsatz', value: `CHF 1'710.–`, highlight: true },
+])
+
 // ─── Interactive Email Demo ───────────────────────────────────────────────────
 const schoolNameDemo = ref('Fahrschule Muster AG')
 const demoEmail = ref('')
@@ -1309,6 +1798,34 @@ const demoSentTemplates = ref<Set<string>>(new Set())
 const demoError = ref('')
 
 const demoSentCurrent = computed(() => demoSentTemplates.value.has(activeTemplate.value))
+
+// ─── Email Preview Scaling ────────────────────────────────────────────────────
+const EMAIL_WIDTH = 560
+const previewContainer = ref<HTMLElement | null>(null)
+const previewScale = ref(1)
+
+const previewWrapStyle = computed(() => ({
+  transform: `scale(${previewScale.value})`,
+  transformOrigin: 'top left',
+  width: `${EMAIL_WIDTH}px`,
+  height: `${Math.round(420 * previewScale.value)}px`,
+}))
+
+function updatePreviewScale() {
+  if (previewContainer.value) {
+    const w = previewContainer.value.offsetWidth
+    previewScale.value = Math.min(1, w / EMAIL_WIDTH)
+  }
+}
+
+onMounted(() => {
+  updatePreviewScale()
+  window.addEventListener('resize', updatePreviewScale)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updatePreviewScale)
+})
 
 function getDemoReminderHtml(school: string, primary: string): string {
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
@@ -1515,3 +2032,10 @@ async function sendDemoEmail() {
   }
 }
 </script>
+
+<style>
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
