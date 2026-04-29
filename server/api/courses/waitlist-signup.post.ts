@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
   // 1. Verify course exists and is in waitlist mode
   const { data: course, error: courseError } = await supabase
     .from('courses')
-    .select('id, name, status, tenant_id, max_participants')
+    .select('id, name, description, status, tenant_id, max_participants')
     .eq('id', course_id)
     .eq('is_public', true)
     .single()
@@ -109,6 +109,7 @@ export default defineEventHandler(async (event) => {
       firstName: first_name.trim(),
       lastName: last_name.trim(),
       courseName: course.name,
+      courseDescription: course.description || undefined,
       position,
       tenantName: tenant?.name,
       tenantEmail: tenant?.contact_email

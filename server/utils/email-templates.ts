@@ -318,11 +318,12 @@ export function generateWaitlistConfirmationEmail(data: {
   firstName: string
   lastName: string
   courseName: string
+  courseDescription?: string
   position: number
   tenantName?: string
   tenantEmail?: string
 }): { subject: string; html: string } {
-  const { firstName, lastName, courseName, position, tenantName = 'Driving Team', tenantEmail } = data
+  const { firstName, lastName, courseName, courseDescription, position, tenantName = 'Driving Team', tenantEmail } = data
 
   const subject = `Warteliste bestätigt: ${courseName}`
 
@@ -356,6 +357,7 @@ export function generateWaitlistConfirmationEmail(data: {
                   <td style="padding:20px 24px;">
                     <p style="margin:0 0 8px;font-size:14px;color:#1e40af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Kurs</p>
                     <p style="margin:0 0 12px;font-size:18px;color:#1e3a8a;font-weight:700;">${courseName}</p>
+                    ${courseDescription ? `<p style="margin:0 0 12px;font-size:14px;color:#374151;">${courseDescription}</p>` : ''}
                     <p style="margin:0;font-size:14px;color:#374151;">
                       Ihre Position auf der Warteliste: <strong>#${position}</strong>
                     </p>
