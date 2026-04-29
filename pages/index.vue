@@ -1347,6 +1347,15 @@ function getDemoReminderHtml(school: string, primary: string): string {
               </table>
             </td></tr>
           </table>
+          <div style="margin:0 0 24px;padding:16px 20px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></span>
+              <span style="font-size:12px;font-weight:600;color:#92400e;text-transform:uppercase;letter-spacing:.05em;">Zahlung · Ausstehend</span>
+            </div>
+            <p style="margin:0;font-size:22px;font-weight:700;color:#111827;">CHF 95.00</p>
+            <p style="margin:4px 0 8px;font-size:13px;color:#6b7280;">Zahlungsart: Online-Zahlung</p>
+            <a href="#" style="display:inline-block;padding:10px 24px;background:${primary};color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Jetzt online zahlen →</a>
+          </div>
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
             <tr><td align="center">
               <a href="#" style="display:inline-block;background:${primary};color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:15px;font-weight:700;">
