@@ -4,7 +4,7 @@ import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure
 import { SARISyncEngine } from '~/server/utils/sari-sync-engine'
 import { getPaymentProviderForTenant } from '~/server/payment-providers/factory'
 import { sendEmail } from '~/server/utils/email'
-import { generateSARIEnrollmentConfirmationEmail, generateNonSARIEnrollmentConfirmationEmail } from '~/server/utils/email-templates'
+import { generateSARIEnrollmentConfirmationEmail, generateNonSARIEnrollmentConfirmationEmail, generateAdminEnrollmentNotificationEmail } from '~/server/utils/email-templates'
 import { SARIClient } from '~/utils/sariClient'
 import { logger } from '~/utils/logger'
 
@@ -202,7 +202,7 @@ async function sendConfirmationEmail(
     // Get tenant info
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, slug')
+      .select('name, slug, contact_email')
       .eq('id', tenantId)
       .single()
 
@@ -260,6 +260,30 @@ async function sendConfirmationEmail(
     })
 
     console.log('✅ Enrollment confirmation email sent to:', emailTo)
+
+    // Send admin notification (non-blocking)
+    if (tenant?.contact_email) {
+      const { subject: adminSubject, html: adminHtml } = generateAdminEnrollmentNotificationEmail({
+        participantFirstName: participantData.first_name || participantName.split(' ')[0] || '',
+        participantLastName: participantData.last_name || participantName.split(' ').slice(1).join(' ') || '',
+        participantEmail: emailTo,
+        participantPhone: participantData.phone,
+        courseName: course.name,
+        courseDate: courseDate,
+        courseLocation: course.description || undefined,
+        paymentMethod: 'Online (Wallee)',
+        paymentAmount: enrollmentDetails.paymentAmount
+          ? String((enrollmentDetails.paymentAmount / 100).toFixed(2))
+          : undefined,
+        tenantName: tenant.name
+      })
+      sendEmail({
+        to: tenant.contact_email,
+        subject: adminSubject,
+        html: adminHtml,
+        senderName: tenant.name
+      }).catch((err: any) => console.warn('⚠️ Admin notification email failed:', err.message))
+    }
   } catch (err: any) {
     console.error('Error sending confirmation email:', err)
     // Don't throw - enrollment was successful, email failure shouldn't block it

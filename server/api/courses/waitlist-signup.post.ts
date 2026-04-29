@@ -8,7 +8,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
-import { generateWaitlistConfirmationEmail } from '~/server/utils/email-templates'
+import { generateWaitlistConfirmationEmail, generateAdminWaitlistNotificationEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -116,6 +116,21 @@ export default defineEventHandler(async (event) => {
     })
     await sendEmail({ to: email, subject, html })
     logger.debug(`✅ Waitlist confirmation sent to ${email}`)
+
+    // Send admin notification (non-blocking)
+    if (tenant?.contact_email) {
+      const { subject: adminSubject, html: adminHtml } = generateAdminWaitlistNotificationEmail({
+        participantFirstName: first_name.trim(),
+        participantLastName: last_name.trim(),
+        participantEmail: email,
+        participantPhone: phone?.trim() || undefined,
+        courseName: course.name,
+        position,
+        tenantName: tenant.name
+      })
+      sendEmail({ to: tenant.contact_email, subject: adminSubject, html: adminHtml })
+        .catch((err: any) => logger.warn(`⚠️ Admin waitlist notification failed: ${err.message}`))
+    }
   } catch (emailErr: any) {
     logger.warn(`⚠️ Waitlist confirmation email failed: ${emailErr.message}`)
   }

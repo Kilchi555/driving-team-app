@@ -394,3 +394,171 @@ export function generateWaitlistConfirmationEmail(data: {
 
   return { subject, html }
 }
+
+export function generateAdminEnrollmentNotificationEmail(data: {
+  participantFirstName: string
+  participantLastName: string
+  participantEmail: string
+  participantPhone?: string
+  courseName: string
+  courseDate?: string
+  courseLocation?: string
+  paymentMethod: string
+  paymentAmount?: string
+  tenantName?: string
+}): { subject: string; html: string } {
+  const {
+    participantFirstName,
+    participantLastName,
+    participantEmail,
+    participantPhone,
+    courseName,
+    courseDate,
+    courseLocation,
+    paymentMethod,
+    paymentAmount,
+    tenantName = 'Driving Team'
+  } = data
+
+  const subject = `Neue Anmeldung: ${participantFirstName} ${participantLastName} → ${courseName}`
+
+  const html = `
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          <tr>
+            <td style="background-color:#1d4ed8;padding:28px 40px;text-align:center;">
+              <h1 style="color:#ffffff;margin:0;font-size:22px;font-weight:700;">Neue Kursanmeldung</h1>
+              <p style="color:#bfdbfe;margin:6px 0 0;font-size:13px;">${tenantName}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin-bottom:20px;">
+                <tr>
+                  <td style="padding:18px 22px;">
+                    <p style="margin:0 0 6px;font-size:12px;color:#166534;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Teilnehmer</p>
+                    <p style="margin:0 0 4px;font-size:17px;color:#14532d;font-weight:700;">${participantFirstName} ${participantLastName}</p>
+                    <p style="margin:0 0 2px;font-size:13px;color:#374151;">${participantEmail}</p>
+                    ${participantPhone ? `<p style="margin:0;font-size:13px;color:#374151;">${participantPhone}</p>` : ''}
+                  </td>
+                </tr>
+              </table>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;margin-bottom:20px;">
+                <tr>
+                  <td style="padding:18px 22px;">
+                    <p style="margin:0 0 6px;font-size:12px;color:#1e40af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Kurs</p>
+                    <p style="margin:0 0 8px;font-size:16px;color:#1e3a8a;font-weight:700;">${courseName}</p>
+                    ${courseDate ? `<p style="margin:0 0 4px;font-size:13px;color:#374151;"><strong>Datum:</strong> ${courseDate}</p>` : ''}
+                    ${courseLocation ? `<p style="margin:0 0 4px;font-size:13px;color:#374151;"><strong>Ort:</strong> ${courseLocation}</p>` : ''}
+                    <p style="margin:0;font-size:13px;color:#374151;"><strong>Zahlung:</strong> ${paymentMethod}${paymentAmount ? ` · CHF ${paymentAmount}` : ''}</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="font-size:13px;color:#9ca3af;margin:0;">Diese Benachrichtigung wurde automatisch generiert.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#f9fafb;padding:16px 40px;border-top:1px solid #e5e7eb;text-align:center;">
+              <p style="margin:0;font-size:11px;color:#9ca3af;">${tenantName} · Admin-Benachrichtigung</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `
+
+  return { subject, html }
+}
+
+export function generateAdminWaitlistNotificationEmail(data: {
+  participantFirstName: string
+  participantLastName: string
+  participantEmail: string
+  participantPhone?: string
+  courseName: string
+  position: number
+  tenantName?: string
+}): { subject: string; html: string } {
+  const {
+    participantFirstName,
+    participantLastName,
+    participantEmail,
+    participantPhone,
+    courseName,
+    position,
+    tenantName = 'Driving Team'
+  } = data
+
+  const subject = `Neue Wartelisten-Anmeldung: ${participantFirstName} ${participantLastName} → ${courseName}`
+
+  const html = `
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          <tr>
+            <td style="background-color:#7c3aed;padding:28px 40px;text-align:center;">
+              <h1 style="color:#ffffff;margin:0;font-size:22px;font-weight:700;">Neuer Wartelisten-Eintrag</h1>
+              <p style="color:#ddd6fe;margin:6px 0 0;font-size:13px;">${tenantName}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;margin-bottom:20px;">
+                <tr>
+                  <td style="padding:18px 22px;">
+                    <p style="margin:0 0 6px;font-size:12px;color:#5b21b6;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Interessent</p>
+                    <p style="margin:0 0 4px;font-size:17px;color:#3b0764;font-weight:700;">${participantFirstName} ${participantLastName}</p>
+                    <p style="margin:0 0 2px;font-size:13px;color:#374151;">${participantEmail}</p>
+                    ${participantPhone ? `<p style="margin:0 0 2px;font-size:13px;color:#374151;">${participantPhone}</p>` : ''}
+                    <p style="margin:8px 0 0;font-size:13px;color:#374151;">Wartelisten-Position: <strong>#${position}</strong></p>
+                  </td>
+                </tr>
+              </table>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;margin-bottom:20px;">
+                <tr>
+                  <td style="padding:18px 22px;">
+                    <p style="margin:0 0 6px;font-size:12px;color:#1e40af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Kurs</p>
+                    <p style="margin:0;font-size:16px;color:#1e3a8a;font-weight:700;">${courseName}</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="font-size:13px;color:#9ca3af;margin:0;">Diese Benachrichtigung wurde automatisch generiert.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#f9fafb;padding:16px 40px;border-top:1px solid #e5e7eb;text-align:center;">
+              <p style="margin:0;font-size:11px;color:#9ca3af;">${tenantName} · Admin-Benachrichtigung</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `
+
+  return { subject, html }
+}
