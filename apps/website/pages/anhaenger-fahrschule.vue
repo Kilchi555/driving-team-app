@@ -1,18 +1,16 @@
 <template>
   <div>
     <Head>
-      <Title>Anhänger Fahrschule Zürich & Lachen ✓ BE | ab CHF 120.-</Title>
-      <Meta name="description" content="Anhänger Fahrschule Zürich für Kategorie BE. Praxisnahe Ausbildung, erfahrene Fahrlehrer, flexible Zeiten. Jetzt online buchen!" />
+      <Title>Anhänger Fahrschule – Kat. BE | Keine Theorieprüfung | ab CHF 120.-</Title>
+      <Meta name="description" content="Anhänger Fahrschule für Kat. BE: Keine Theorieprüfung nötig ✓ 5–8 Fahrstunden genügen ✓ Fahrzeug inklusive ✓ Ab CHF 120.-/Lektion ✓ Standorte Zürich & Lachen. Jetzt buchen!" />
       <Meta property="og:title" content="Anhänger Fahrschule Kategorie BE | Driving Team" />
-      <Meta property="og:description" content="Anhänger Fahrausbildung in Zürich und Lachen – Weg zur Anhängerprüfung" />
+      <Meta property="og:description" content="Anhänger Fahrausbildung in Zürich und Lachen – Keine Theorieprüfung, 5–8 Fahrstunden, ab CHF 120.-. Weg zur Anhängerprüfung." />
       <Meta property="og:url" content="https://drivingteam.ch/anhaenger-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-fahrschule/" />
-      
-      
-          <Meta property="og:image" content="https://drivingteam.ch/images/categories/anhaenger-fahrschule-new-hero.webp" />
+      <Meta property="og:image" content="https://drivingteam.ch/images/categories/anhaenger-fahrschule-new-hero.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
-          <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+      <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
     <!-- Hero Section -->
@@ -21,8 +19,8 @@
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
-          <h1 class="heading-lg text-white mb-6">Anhänger Fahrschule Kategorie BE</h1>
-          <p class="text-base xs:text-xl text-white mb-8">Träumst du davon, mühelos grössere Lasten zu transportieren und sicher mit Anhänger unterwegs zu sein? Dann bist du bei unserer Fahrschule für die Anhänger Kategorie BE genau richtig!</p>
+          <h1 class="heading-lg text-white mb-6">Anhänger Fahrschule – Kategorie BE</h1>
+          <p class="text-base xs:text-xl text-white mb-8">Die <strong>schnellste Zusatzkategorie</strong> der Schweiz: Keine Theorieprüfung, kein Nothelferkurs – einfach Lernfahrausweis beantragen und direkt mit den Fahrstunden starten. Durchschnittlich 5–8 Lektionen bis zur Prüfung.</p>
           <a href="https://www.simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
@@ -379,9 +377,86 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Anhänger Fahrschule Kategorie BE", "description": "Praxisnahe Anhänger Fahrausbildung für Kategorie BE. Erfahrene Fahrlehrer, flexible Zeiten in Zürich und Lachen", "url": "https://drivingteam.ch/anhaenger-fahrschule/", "provider": { "@type": "Organization", "name": "Driving Team", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "priceCurrency": "CHF", "url": "https://www.simy.ch/booking/availability/driving-team" }, "educationLevel": "Intermediate", "keywords": "Anhänger Fahrschule, Kategorie BE, Anhängerprüfung, Fahrausbildung" }) },
-  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Anhänger Fahrschule", "item": "https://drivingteam.ch/anhaenger-fahrschule/" }] }) },
-  { type: 'application/ld+json', innerHTML: JSON.stringify({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Brauche ich bereits einen Auto-Führerschein?", "acceptedAnswer": {"@type": "Answer", "text": "Ja, für die Anhänger Ausbildung (Kategorie BE) brauchst du bereits einen gültigen Führerausweis der Kategorie B."}}, {"@type": "Question", "name": "Gibt es eine Theorieprüfung für den BE?", "acceptedAnswer": {"@type": "Answer", "text": "Nein! Um den Anhängerführerausweis der Kategorie BE zu erlangen, brauchst du lediglich den Lernfahrausweis der Kategorie BE und musst dann erfolgreich die praktische Fahrprüfung bestehen."}}, {"@type": "Question", "name": "Darf ich mit dem Lernfahrausweis alleine Anhänger fahren?", "acceptedAnswer": {"@type": "Answer", "text": "Ja, das darfst du sogar alleine. Wir empfehlen allerdings immer eine Begleitperson dabei zu haben, besonders für das Rückwärtsfahren. Wenn du unter 18 Jahre alt bist, ist eine Begleitperson Pflicht."}}, {"@type": "Question", "name": "Ab welchem Alter kann ich den BE machen?", "acceptedAnswer": {"@type": "Answer", "text": "Bereits ab einem Alter von 17 Jahren darf man den Lernfahrausweis für die Kategorie BE bestellen und somit auch Lernfahrten in Begleitung machen."}}, {"@type": "Question", "name": "Was kostet der Anhänger Führerschein insgesamt?", "acceptedAnswer": {"@type": "Answer", "text": "Die Gesamtkosten für einen Anhänger-Führerschein betragen in der Schweiz durchschnittlich CHF 1'200–2'000, da keine Theorieprüfung erforderlich ist. Dies beinhaltet den Lernfahrausweis (CHF 80), Fahrstunden (durchschnittlich 5–8 à CHF 120–140), praktische Prüfung (CHF 130), sowie die Versicherungspauschale (CHF 120) und WarmUp-Kurs mit Prüfungsfahrt (CHF 360). Die genauen Kosten hängen von der Anzahl der benötigten Fahrstunden ab."}}, {"@type": "Question", "name": "Was sind die Voraussetzungen für den Führerschein?", "acceptedAnswer": {"@type": "Answer", "text": "Um einen Anhänger-Führerschein (Kategorie BE) zu erhalten, benötigst du: einen gültigen Auto-Führerschein (Kategorie B), Mindestalter 17 Jahren (mit Begleitperson) oder 18 Jahren (für volle Eigenständigkeit), einen gültigen Lernfahrausweis der Kategorie BE und die Anmeldung in einer Fahrschule. Du musst in der Schweiz wohnhaft sein und einen gültigen Ausweis haben."}}, {"@type": "Question", "name": "Wie lange dauert die komplette Fahrausbildung?", "acceptedAnswer": {"@type": "Answer", "text": "Die Dauer der Anhänger-Fahrausbildung ist üblicherweise sehr kurz, da keine Theorieprüfung erforderlich ist. Die praktische Ausbildung mit 5–8 Fahrstunden dauert typischerweise 1–2 Wochen. Du kannst die Prüfung oft schon nach wenigen Tagen ablegen, wenn du bereits viel Auto-Fahrerfahrung hast."}}, {"@type": "Question", "name": "Was kostet eine Fahrstunde bei euch?", "acceptedAnswer": {"@type": "Answer", "text": "Eine Anhänger-Fahrstunde (45 Minuten) kostet bei uns CHF 120–140. Wir bieten auch günstigere Abo-Preise an: Bei 5 Fahrstunden sparst du gegenüber Einzellektionen. Zusätzlich fallen eine Versicherungspauschale (CHF 120 einmalig) und der WarmUp-Kurs mit Prüfungsfahrt (CHF 360) an. Kontaktiere uns für aktuelle Preise und individuelle Angebote."}}]}) },
+  {
+    type: 'application/ld+json',
+    innerHTML: JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": ["DrivingSchool", "LocalBusiness"],
+      "@id": "https://drivingteam.ch/anhaenger-fahrschule/#driving-school",
+      "name": "Anhänger Fahrschule – Driving Team",
+      "description": "Anhänger Fahrschule für Kategorie BE in Zürich und Lachen. Keine Theorieprüfung, 5–8 Fahrstunden genügen. Ab CHF 120.-/Lektion. Prüfungsfahrzeug inklusive.",
+      "url": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "telephone": "+41444310033",
+      "image": "https://drivingteam.ch/images/categories/anhaenger-fahrschule-new-hero.webp",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Baslerstrasse 145",
+        "addressLocality": "Zürich",
+        "postalCode": "8048",
+        "addressCountry": "CH"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 47.3914,
+        "longitude": 8.4897
+      },
+      "priceRange": "CHF 100.-–120.-",
+      "openingHoursSpecification": [
+        { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "07:00", "closes": "20:00" },
+        { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Saturday"], "opens": "08:00", "closes": "17:00" }
+      ],
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "reviewCount": "368",
+        "bestRating": "5",
+        "worstRating": "1"
+      },
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Anhänger Fahrstunden Kategorie BE",
+        "itemListElement": [
+          {
+            "@type": "Offer",
+            "name": "Anhänger Fahrstunde Kategorie BE (45 Min)",
+            "price": "120",
+            "priceCurrency": "CHF",
+            "availability": "https://schema.org/InStock",
+            "url": "https://www.simy.ch/booking/availability/driving-team?service=BE"
+          }
+        ]
+      },
+      "areaServed": ["Zürich", "Lachen", "Altstetten", "Regensdorf", "Limmattal"],
+      "sameAs": ["https://drivingteam.ch"]
+    })
+  },
+  {
+    type: 'application/ld+json',
+    innerHTML: JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" },
+        { "@type": "ListItem", "position": 2, "name": "Anhänger Fahrschule", "item": "https://drivingteam.ch/anhaenger-fahrschule/" }
+      ]
+    })
+  },
+  {
+    type: 'application/ld+json',
+    innerHTML: JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Brauche ich bereits einen Auto-Führerschein?", "acceptedAnswer": { "@type": "Answer", "text": "Ja, für die Anhänger Ausbildung (Kategorie BE) brauchst du bereits einen gültigen Führerausweis der Kategorie B." } },
+        { "@type": "Question", "name": "Gibt es eine Theorieprüfung für den BE?", "acceptedAnswer": { "@type": "Answer", "text": "Nein! Um den Anhängerführerausweis der Kategorie BE zu erlangen, brauchst du lediglich den Lernfahrausweis der Kategorie BE und musst dann erfolgreich die praktische Fahrprüfung bestehen. Keine Theorieprüfung, kein VKU nötig." } },
+        { "@type": "Question", "name": "Darf ich mit dem Lernfahrausweis alleine Anhänger fahren?", "acceptedAnswer": { "@type": "Answer", "text": "Ja, das darfst du sogar alleine. Wir empfehlen allerdings immer eine Begleitperson dabei zu haben, besonders für das Rückwärtsfahren. Wenn du unter 18 Jahre alt bist, ist eine Begleitperson Pflicht." } },
+        { "@type": "Question", "name": "Ab welchem Alter kann ich den BE machen?", "acceptedAnswer": { "@type": "Answer", "text": "Bereits ab einem Alter von 17 Jahren darf man den Lernfahrausweis für die Kategorie BE bestellen und somit auch Lernfahrten in Begleitung machen." } },
+        { "@type": "Question", "name": "Was kostet der Anhänger Führerschein insgesamt?", "acceptedAnswer": { "@type": "Answer", "text": "Die Gesamtkosten für einen Anhänger-Führerschein betragen in der Schweiz ca. CHF 1'200–1'600. Darin enthalten: Lernfahrausweis (CHF 80), Fahrstunden (5–8 à CHF 120.-), Admin-/Versicherungspauschale (CHF 120.- einmalig), WarmUp + Prüfungsfahrt (CHF 360.-) und die Prüfungsgebühr des StVA." } },
+        { "@type": "Question", "name": "Wie viele Fahrstunden brauche ich für den Anhänger-Führerschein?", "acceptedAnswer": { "@type": "Answer", "text": "Durchschnittlich 5–8 Fahrstunden. Mit viel Auto-Fahrerfahrung und privatem Üben kann es auch weniger sein. Wir empfehlen Doppellektionen (90 Min.) für effizienten Lernfortschritt." } },
+        { "@type": "Question", "name": "Wo findet die Anhängerprüfung statt?", "acceptedAnswer": { "@type": "Answer", "text": "In der Region Zürich am Prüfungszentrum Regensdorf oder Albisgütli. Für das Limmattal/Aargau ist Wettingen eine Alternative. In der Region Lachen und March im entsprechenden Prüfungsgebiet." } }
+      ]
+    })
+  }
 ]
 useHead({ script: jsonLdScripts })
 
