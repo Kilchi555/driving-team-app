@@ -363,23 +363,23 @@
     </section>
 
     <!-- ── Email Demo ─────────────────────────────────────────────────────────── -->
-    <section id="email-demo" class="py-20 px-6" :style="{ background: `linear-gradient(160deg, rgba(var(--brand-rgb), 0.04) 0%, rgba(var(--brand-2-rgb), 0.06) 100%)` }">
+    <section id="email-demo" class="py-12 md:py-20 px-4 md:px-6" :style="{ background: `linear-gradient(160deg, rgba(var(--brand-rgb), 0.04) 0%, rgba(var(--brand-2-rgb), 0.06) 100%)` }">
       <div class="max-w-6xl mx-auto">
 
         <!-- Header -->
-        <div class="text-center mb-12">
+        <div class="text-center mb-8 md:mb-12">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Live Demo</p>
-          <h2 class="text-4xl font-extrabold text-gray-900 mb-4">So kommuniziert Simy mit deinen Schülern</h2>
-          <p class="text-lg text-gray-500 max-w-xl mx-auto">Gib deinen Schulnamen ein – und sieh sofort, wie die E-Mails deiner Fahrschule aussehen werden.</p>
+          <h2 class="text-2xl md:text-4xl font-extrabold text-gray-900 mb-3 md:mb-4">So kommuniziert Simy mit deinen Schülern</h2>
+          <p class="text-base md:text-lg text-gray-500 max-w-xl mx-auto">Gib deinen Schulnamen ein – und sieh sofort, wie die E-Mails deiner Fahrschule aussehen werden.</p>
         </div>
 
-        <div class="grid lg:grid-cols-2 gap-8 items-start">
+        <div class="grid lg:grid-cols-2 gap-6 md:gap-8 items-start">
 
           <!-- LEFT: Controls -->
-          <div class="space-y-6">
+          <div class="space-y-4 md:space-y-6">
 
             <!-- School name input -->
-            <div class="bg-white rounded-2xl p-6 shadow-sm border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
+            <div class="bg-white rounded-2xl p-4 md:p-6 shadow-sm border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
               <label class="block text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Name deiner Fahrschule</label>
               <input
                 v-model="schoolNameDemo"
@@ -394,9 +394,9 @@
             </div>
 
             <!-- Template Tabs -->
-            <div class="bg-white rounded-2xl p-6 shadow-sm border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
-              <label class="block text-xs font-bold uppercase tracking-widest mb-4" style="color: var(--brand-primary);">E-Mail Vorlage wählen</label>
-              <div class="space-y-2.5">
+            <div class="bg-white rounded-2xl p-4 md:p-6 shadow-sm border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
+              <label class="block text-xs font-bold uppercase tracking-widest mb-3 md:mb-4" style="color: var(--brand-primary);">E-Mail Vorlage wählen</label>
+              <div class="space-y-2">
                 <button
                   v-for="tab in [
                     { id: 'reminder', icon: '📅', label: 'Lektionserinnerung', desc: '24h vor jeder Stunde automatisch versendet' },
@@ -405,15 +405,15 @@
                   ]"
                   :key="tab.id"
                   @click="activeTemplate = (tab.id as 'reminder' | 'invoice' | 'welcome')"
-                  class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 transition-all text-left"
+                  class="w-full flex items-center gap-3 px-3 md:px-4 py-3 rounded-xl border-2 transition-all text-left"
                   :style="activeTemplate === tab.id
                     ? { borderColor: primaryColor, background: `rgba(var(--brand-rgb), 0.05)` }
                     : { borderColor: 'transparent', background: '#f9fafb' }"
                 >
-                  <span class="text-xl flex-shrink-0">{{ tab.icon }}</span>
+                  <span class="text-lg md:text-xl flex-shrink-0">{{ tab.icon }}</span>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-bold" :style="activeTemplate === tab.id ? { color: primaryColor } : { color: '#374151' }">{{ tab.label }}</p>
-                    <p class="text-xs text-gray-400 truncate">{{ tab.desc }}</p>
+                    <p class="text-xs text-gray-400 hidden sm:block truncate">{{ tab.desc }}</p>
                   </div>
                   <svg v-if="activeTemplate === tab.id" class="w-4 h-4 flex-shrink-0" :style="{ color: primaryColor }" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
@@ -423,11 +423,11 @@
             </div>
 
             <!-- Send to inbox -->
-            <div class="bg-white rounded-2xl p-6 shadow-sm border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
+            <div class="bg-white rounded-2xl p-4 md:p-6 shadow-sm border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
               <label class="block text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Diese E-Mail an mich senden</label>
 
               <!-- Success state -->
-              <div v-if="demoSent" class="rounded-xl p-5 text-center" :style="{ background: `rgba(var(--brand-rgb), 0.06)`, border: `1px solid rgba(var(--brand-rgb), 0.15)` }">
+              <div v-if="demoSentCurrent" class="rounded-xl p-4 md:p-5 text-center" :style="{ background: `rgba(var(--brand-rgb), 0.06)`, border: `1px solid rgba(var(--brand-rgb), 0.15)` }">
                 <p class="text-3xl mb-2">📬</p>
                 <p class="font-bold text-gray-900 text-sm mb-1">Check dein Postfach!</p>
                 <p class="text-xs text-gray-500 mb-4">Die Demo-E-Mail ist unterwegs an <strong>{{ demoEmail }}</strong></p>
@@ -453,8 +453,7 @@
                 <p v-if="demoError" class="text-xs text-red-500">{{ demoError }}</p>
                 <button
                   @click="sendDemoEmail"
-                  :disabled="!demoEmail || sendingDemo"
-                  class="w-full py-3 px-5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                  :disabled="!demoEmail || sendingDemo"                  class="w-full py-3 px-5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
                   :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))` }"
                 >
                   <svg v-if="sendingDemo" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -470,24 +469,24 @@
           </div>
 
           <!-- RIGHT: Live Email Preview -->
-          <div class="sticky top-24">
-            <div class="rounded-2xl overflow-hidden shadow-2xl border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.15)` }">
+          <div class="lg:sticky lg:top-24">
+            <div class="rounded-2xl overflow-hidden shadow-xl md:shadow-2xl border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.15)` }">
               <!-- Fake email client top bar -->
-              <div class="bg-gray-800 px-4 py-3 flex items-center gap-3">
-                <div class="flex gap-1.5">
-                  <span class="w-3 h-3 rounded-full bg-red-400"></span>
-                  <span class="w-3 h-3 rounded-full bg-amber-400"></span>
-                  <span class="w-3 h-3 rounded-full bg-green-400"></span>
+              <div class="bg-gray-800 px-3 md:px-4 py-2.5 md:py-3 flex items-center gap-2 md:gap-3">
+                <div class="flex gap-1.5 flex-shrink-0">
+                  <span class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-red-400"></span>
+                  <span class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-amber-400"></span>
+                  <span class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-green-400"></span>
                 </div>
-                <div class="flex-1 bg-gray-700 rounded-md px-3 py-1.5 text-xs text-gray-400 truncate">
-                  <span class="text-gray-500 mr-2">Von:</span>
-                  <span class="text-gray-300">{{ schoolNameDemo || 'Fahrschule Muster AG' }} via Simy</span>
+                <div class="flex-1 bg-gray-700 rounded-md px-2 md:px-3 py-1 md:py-1.5 text-xs text-gray-400 min-w-0">
+                  <span class="text-gray-500 mr-1 hidden sm:inline">Von:</span>
+                  <span class="text-gray-300 truncate block sm:inline">{{ schoolNameDemo || 'Fahrschule Muster AG' }} via Simy</span>
                 </div>
               </div>
               <!-- Subject line -->
-              <div class="bg-white px-5 py-3 border-b border-gray-100 flex items-center gap-3">
-                <span class="text-lg flex-shrink-0">{{ activeTemplate === 'reminder' ? '📅' : activeTemplate === 'invoice' ? '🧾' : '🎉' }}</span>
-                <span class="text-sm font-semibold text-gray-700 truncate">
+              <div class="bg-white px-3 md:px-5 py-2.5 md:py-3 border-b border-gray-100 flex items-center gap-2 md:gap-3">
+                <span class="text-base md:text-lg flex-shrink-0">{{ activeTemplate === 'reminder' ? '📅' : activeTemplate === 'invoice' ? '🧾' : '🎉' }}</span>
+                <span class="text-xs md:text-sm font-semibold text-gray-700 truncate">
                   <template v-if="activeTemplate === 'reminder'">Erinnerung: Deine Fahrstunde morgen um 09:00 Uhr</template>
                   <template v-else-if="activeTemplate === 'invoice'">Deine Rechnung: CHF 295.– fällig bis 15.05.2025</template>
                   <template v-else>Willkommen bei {{ schoolNameDemo || 'Fahrschule Muster AG' }}!</template>
@@ -498,7 +497,7 @@
                 <iframe
                   :srcdoc="demoEmailHtml"
                   class="w-full border-0 block"
-                  style="height: 500px; pointer-events: none;"
+                  style="height: 380px; pointer-events: none;"
                   sandbox="allow-same-origin"
                   title="E-Mail Vorschau"
                 ></iframe>
@@ -1306,8 +1305,10 @@ const schoolNameDemo = ref('Fahrschule Muster AG')
 const demoEmail = ref('')
 const activeTemplate = ref<'reminder' | 'invoice' | 'welcome'>('reminder')
 const sendingDemo = ref(false)
-const demoSent = ref(false)
+const demoSentTemplates = ref<Set<string>>(new Set())
 const demoError = ref('')
+
+const demoSentCurrent = computed(() => demoSentTemplates.value.has(activeTemplate.value))
 
 function getDemoReminderHtml(school: string, primary: string): string {
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
@@ -1483,7 +1484,7 @@ const demoEmailHtml = computed(() => {
 })
 
 async function sendDemoEmail() {
-  if (!demoEmail.value || sendingDemo.value || demoSent.value) return
+  if (!demoEmail.value || sendingDemo.value || demoSentCurrent.value) return
   sendingDemo.value = true
   demoError.value = ''
   try {
@@ -1497,7 +1498,7 @@ async function sendDemoEmail() {
         secondaryColor: secondaryColor.value,
       },
     })
-    demoSent.value = true
+    demoSentTemplates.value = new Set([...demoSentTemplates.value, activeTemplate.value])
   } catch (err: any) {
     demoError.value = err?.data?.statusMessage || 'Fehler beim Senden. Bitte nochmals versuchen.'
   } finally {
