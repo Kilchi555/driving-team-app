@@ -166,7 +166,12 @@ export default defineEventHandler(async (event) => {
           postal_code: location.postal_code,
           city: location.city,
           available_staff: [],
-          staff_ids: location.staff_ids || [] // Store staff_ids from location
+          staff_ids: (() => {
+            const raw = location.staff_ids
+            if (!raw) return []
+            if (Array.isArray(raw)) return raw
+            try { return JSON.parse(raw) } catch { return [] }
+          })()
         })
       }
     })

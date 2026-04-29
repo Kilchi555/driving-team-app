@@ -102,6 +102,12 @@
                 </svg>
                 <span>{{ formatDateTime(course.next_session.start_time) }}</span>
               </div>
+              <div v-else-if="course.status === 'waitlist'" class="flex items-center text-amber-600">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>Datum folgt — Warteliste offen</span>
+              </div>
 
               <div v-if="course.price_per_participant_rappen" class="flex items-center">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -115,13 +121,23 @@
 
             <!-- Action Button -->
             <div class="pt-4 border-t border-gray-100">
+              <!-- Waitlist course -->
               <button
-                v-if="!isCourseFull(course)"
+                v-if="course.status === 'waitlist'"
+                @click="router.push(`/booking/waitlist/${course.id}`)"
+                class="w-full bg-amber-500 hover:bg-amber-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                Auf Warteliste eintragen
+              </button>
+              <!-- Normal course, not full -->
+              <button
+                v-else-if="!isCourseFull(course)"
                 @click="enrollInCourse(course)"
                 class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
               >
                 Jetzt anmelden
               </button>
+              <!-- Full -->
               <div
                 v-else
                 class="w-full bg-gray-300 text-gray-600 font-medium py-2 px-4 rounded-lg text-center"

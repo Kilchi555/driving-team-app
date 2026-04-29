@@ -107,8 +107,9 @@
         <div 
           v-for="course in filteredCourses" 
           :key="course.id"
-          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-pointer border-2 border-slate-200"
-          @click="openEnrollmentModal(course)"
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden border-2 border-slate-200"
+          :class="course.status !== 'waitlist' ? 'cursor-pointer' : ''"
+          @click="course.status !== 'waitlist' && openEnrollmentModal(course)"
         >
           <!-- Course Header -->
           <div class="p-5 border-b border-slate-100">
@@ -118,7 +119,19 @@
           
           <!-- Sessions -->
           <div class="p-5 space-y-2">
+            <!-- Waitlist: no date yet -->
+            <div v-if="course.status === 'waitlist'" class="flex items-center gap-3 text-sm">
+              <div 
+                class="w-8 h-8 rounded-full flex items-center justify-center font-medium text-white"
+                :style="{'backgroundColor': tenantBranding?.primary_color || '#10B981'}"
+              >
+                ?
+              </div>
+              <p class="text-slate-500 italic">Datum folgt — Warteliste offen</p>
+            </div>
+            <!-- Regular sessions -->
             <div 
+              v-else
               v-for="(session, idx) in getGroupedSessions(course)" 
               :key="idx"
               class="flex items-center gap-3 text-sm"
@@ -140,53 +153,69 @@
           
           <!-- Footer -->
           <div class="px-5 py-4 bg-slate-50 space-y-4">
-            <!-- Price and Free Slots -->
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <p class="text-sm text-slate-500">Preis</p>
-                <p class="font-bold text-lg text-slate-800">CHF {{ formatPrice(course.price_per_participant_rappen) }}</p>
-              </div>
-              <div class="text-right">
-                <p class="text-sm text-slate-500">Freie Plätze</p>
-                <p class="font-semibold" :class="{'text-red-500': course.free_slots === 0}" :style="course.free_slots > 0 ? {'color': tenantBranding?.primary_color || '#10B981'} : {}">
-                  <span v-if="course.free_slots > 3">mehr als 3</span>
-                  <span v-else-if="course.free_slots === 0">Ausgebucht</span>
-                  <span v-else-if="course.free_slots !== undefined">{{ course.free_slots }}</span>
-                  <span v-else>?</span>
-                </p>
-              </div>
-            </div>
-            
-            <!-- Buttons -->
-            <div class="space-y-2">
-              <!-- Sessions anpassen Button (only if course has free slots) -->
-              <button
-                v-if="hasChangeableSessions(course) && course.free_slots > 0"
-                @click.stop="openSessionCustomizer(course)"
-                class="w-full px-4 py-2 font-medium rounded-lg border-2 transition-colors flex items-center justify-center gap-2"
-                :style="{
-                  'color': tenantBranding?.primary_color || '#10B981',
-                  'borderColor': tenantBranding?.primary_color || '#10B981'
-                }"
+            <!-- Waitlist footer -->
+            <div v-if="course.status === 'waitlist'">
+              <p class="text-sm text-slate-500 mb-3">Trage dich auf die Warteliste ein – wir benachrichtigen dich, sobald ein Termin feststeht.</p>
+              <a
+                :href="`/booking/waitlist/${course.id}`"
+                @click.stop
+                class="block w-full px-4 py-2 text-white font-medium rounded-lg transition-opacity hover:opacity-90 text-center"
+                :style="{'backgroundColor': tenantBranding?.primary_color || '#10B981'}"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Sessions anpassen
-              </button>
+                Auf Warteliste eintragen
+              </a>
+            </div>
+
+            <!-- Regular course footer -->
+            <template v-else>
+              <!-- Price and Free Slots -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <p class="text-sm text-slate-500">Preis</p>
+                  <p class="font-bold text-lg text-slate-800">CHF {{ formatPrice(course.price_per_participant_rappen) }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-sm text-slate-500">Freie Plätze</p>
+                  <p class="font-semibold" :class="{'text-red-500': course.free_slots === 0}" :style="course.free_slots > 0 ? {'color': tenantBranding?.primary_color || '#10B981'} : {}">
+                    <span v-if="course.free_slots > 3">mehr als 3</span>
+                    <span v-else-if="course.free_slots === 0">Ausgebucht</span>
+                    <span v-else-if="course.free_slots !== undefined">{{ course.free_slots }}</span>
+                    <span v-else>?</span>
+                  </p>
+                </div>
+              </div>
               
-              <!-- Anmelden Button -->
-              <button 
-                v-if="course.free_slots > 0"
-                @click.stop="openEnrollmentModal(course)"
-                class="w-full px-4 py-2 text-white font-medium rounded-lg transition-opacity hover:opacity-90"
-                :style="{
-                  'backgroundColor': tenantBranding?.primary_color || '#10B981'
-                }"
-              >
-                Anmelden
-              </button>
-            </div>
+              <!-- Buttons -->
+              <div class="space-y-2">
+                <!-- Sessions anpassen Button (only if course has free slots) -->
+                <button
+                  v-if="hasChangeableSessions(course) && course.free_slots > 0"
+                  @click.stop="openSessionCustomizer(course)"
+                  class="w-full px-4 py-2 font-medium rounded-lg border-2 transition-colors flex items-center justify-center gap-2"
+                  :style="{
+                    'color': tenantBranding?.primary_color || '#10B981',
+                    'borderColor': tenantBranding?.primary_color || '#10B981'
+                  }"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Sessions anpassen
+                </button>
+                
+                <!-- Anmelden Button -->
+                <button 
+                  v-if="course.free_slots > 0"
+                  @click.stop="openEnrollmentModal(course)"
+                  class="w-full px-4 py-2 text-white font-medium rounded-lg transition-opacity hover:opacity-90"
+                  :style="{
+                    'backgroundColor': tenantBranding?.primary_color || '#10B981'
+                  }"
+                >
+                  Anmelden
+                </button>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -300,10 +329,10 @@ const filteredCourses = computed(() => {
     result = result.filter(c => extractCity(c.description) === selectedLocation.value)
   }
   
-  // Sort by first session date
+  // Sort by first session date; waitlist courses (no sessions) go to the end
   result.sort((a, b) => {
-    const aDate = a.course_sessions?.[0]?.start_time || ''
-    const bDate = b.course_sessions?.[0]?.start_time || ''
+    const aDate = a.course_sessions?.[0]?.start_time || (a.status === 'waitlist' ? 'zzz' : '')
+    const bDate = b.course_sessions?.[0]?.start_time || (b.status === 'waitlist' ? 'zzz' : '')
     return aDate.localeCompare(bDate)
   })
   
@@ -333,9 +362,10 @@ const loadData = async () => {
       accent_color: response.tenant.accent_color
     }
     
-    // Filter courses where ALL sessions are in the future
+    // Filter courses where ALL sessions are in the future, OR it's a waitlist course
     const now = new Date().toISOString()
     const futureCourses = (response.courses || []).filter((course: any) => {
+      if (course.status === 'waitlist') return true
       if (!course.course_sessions || course.course_sessions.length === 0) return false
       return course.course_sessions.every((s: any) => s.start_time > now)
     })
