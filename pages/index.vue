@@ -105,6 +105,8 @@
           60 Tage kostenlos – keine Kreditkarte nötig
         </div>
 
+        <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Fahrschule Software Schweiz</p>
+
         <h1 class="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-gray-900 mb-6 leading-tight">
           Deine Fahrschule.<br>
           <span :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }">
@@ -113,8 +115,8 @@
         </h1>
 
         <p class="text-xl md:text-2xl text-gray-500 max-w-2xl mx-auto mb-4 leading-relaxed">
-          Simy übernimmt Verwaltung, Abrechnung und Kommunikation –
-          damit du wieder Zeit für das hast, was wirklich zählt: <strong class="text-gray-700">Unterrichten.</strong>
+          Die smarte Fahrschul-App für die Schweiz: Online-Buchung, automatische Abrechnung und Schülerverwaltung –
+          damit du dich wieder aufs <strong class="text-gray-700">Unterrichten</strong> konzentrieren kannst.
         </p>
         <p class="text-sm text-gray-400 mb-10">Monatlich kündbar · 1 Monat Kündigungsfrist<br> · Flexibel anpassbar</p>
 
@@ -1291,9 +1293,88 @@ import { definePageMeta, useHead } from '#imports'
 definePageMeta({ layout: false })
 
 useHead({
-  title: 'Simy – Die smarte Fahrschul-Software der Schweiz',
+  title: 'Simy – Fahrschule Software Schweiz | Buchung, Abrechnung & App',
   meta: [
-    { name: 'description', content: 'Simy automatisiert Verwaltung, Abrechnung und Kommunikation für Fahrschulen. 60 Tage kostenlos testen – keine Kreditkarte nötig.' }
+    { name: 'description', content: 'Simy ist die Fahrschul-Software für die Schweiz: Online-Buchung, automatische Abrechnung, Schülerverwaltung & App. 30 Tage kostenlos testen – keine Kreditkarte.' },
+    { name: 'keywords', content: 'Fahrschule Software Schweiz, Fahrschule App, Fahrstunden Verwaltung, Fahrschule Buchungssystem, Fahrschule Online Buchung, Fahrstunden App' },
+    { name: 'robots', content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' },
+    { name: 'author', content: 'Simy' },
+    // Open Graph
+    { property: 'og:title', content: 'Simy – Fahrschule Software Schweiz' },
+    { property: 'og:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 30 Tage kostenlos testen.' },
+    { property: 'og:type', content: 'website' },
+    { property: 'og:url', content: 'https://simy.ch/' },
+    { property: 'og:image', content: 'https://simy.ch/og-image.png' },
+    { property: 'og:image:width', content: '1200' },
+    { property: 'og:image:height', content: '630' },
+    { property: 'og:locale', content: 'de_CH' },
+    { property: 'og:site_name', content: 'Simy' },
+    // Twitter Card
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: 'Simy – Fahrschule Software Schweiz' },
+    { name: 'twitter:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 30 Tage kostenlos testen.' },
+    { name: 'twitter:image', content: 'https://simy.ch/og-image.png' },
+  ],
+  link: [
+    { rel: 'canonical', href: 'https://simy.ch/' },
+  ],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: 'Simy',
+        url: 'https://simy.ch',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web, iOS, Android',
+        description: 'Fahrschul-Software für die Schweiz: Online-Buchung, automatische Abrechnung, Schülerverwaltung & Kommunikation.',
+        offers: {
+          '@type': 'Offer',
+          price: '0',
+          priceCurrency: 'CHF',
+          description: '30 Tage kostenlos testen, keine Kreditkarte nötig',
+        },
+        provider: {
+          '@type': 'Organization',
+          name: 'Simy',
+          url: 'https://simy.ch',
+          areaServed: { '@type': 'Country', name: 'Switzerland' },
+        },
+        featureList: [
+          'Online-Buchung für Fahrstunden',
+          'Automatische Abrechnung & Rechnungsversand',
+          'Schülerverwaltung',
+          'Zahlungen mit TWINT und Kreditkarte',
+          'Automatische Terminerinnerungen',
+          'Affiliate-System',
+          'Kursbuchungsseite',
+          'Prüfungsverwaltung',
+        ],
+        aggregateRating: {
+          '@type': 'AggregateRating',
+          ratingValue: '4.9',
+          reviewCount: '38',
+          bestRating: '5',
+        },
+      }),
+    },
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: 'Simy',
+        url: 'https://simy.ch',
+        logo: 'https://simy.ch/simy-logo.png',
+        sameAs: [],
+        contactPoint: {
+          '@type': 'ContactPoint',
+          contactType: 'customer support',
+          availableLanguage: ['German'],
+        },
+      }),
+    },
   ],
 })
 
