@@ -134,7 +134,7 @@
           <div v-if="getContentData(selectedCriterion)?.title" class="text-sm font-semibold text-gray-800">
             {{ getContentData(selectedCriterion).title }}
           </div>
-          <div v-for="(sec, idx) in (getContentData(selectedCriterion)?.sections || [])" :key="idx" class="space-y-2">
+          <div v-for="(sec, idx) in (getContentData(selectedCriterion)?.sections || []).filter((s: any) => !s.categories?.length || studentCodes.some((sc: string) => s.categories.includes(sc)))" :key="idx" class="space-y-2">
             <div v-if="sec.title" class="text-sm font-semibold text-gray-700">{{ sec.title }}</div>
             <div v-if="sec.text" class="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{{ sec.text }}</div>
             <div v-if="sec.images && sec.images.length" class="space-y-3">
@@ -173,6 +173,7 @@ const items = ref<any[]>([])
 const allCategoriesWithProgress = ref<any[]>([])
 const selectedCriterion = ref<any | null>(null)
 const activeTab = ref<string>('')
+const studentCodes = ref<string[]>([])
 const router = useRouter()
 
 // Unique driving categories that actually have evaluated criteria
@@ -259,6 +260,8 @@ onMounted(async () => {
       criteria: allCriteria,
       studentCategories: studentCategoryCodes
     } = response.data
+
+    studentCodes.value = studentCategoryCodes
 
     if (appointments.length === 0) {
       items.value = []
