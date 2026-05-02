@@ -139,8 +139,8 @@ const CONFIG: Record<LeadMagnetCategory, {
   },
   motorrad: {
     headline: 'Dein Motorrad-Führerschein Guide',
-    description: 'Step by Step Ausbildung, Grundkurs-Aufbau, die 4 Pflichtübungen der Prüfung und die häufigsten Fehler – kompakt erklärt.',
-    benefits: ['A1 → A35kW → A erklärt', '4 Prüfungsübungen', 'Grundkurs-Aufbau', 'Schutzausrüstung'],
+    description: 'Kategorien A1 bis A erklärt, Grundkurs-Aufbau, alle 7 Prüfungsübungen mit Profi-Tipps und die häufigsten Fehler – kompakt erklärt.',
+    benefits: ['A1 → A35kW → A erklärt', '7 Prüfungsübungen', 'Grundkurs-Aufbau', 'Schutzausrüstung'],
     ctaLabel: 'Kostenlosen Guide senden',
     bg: 'bg-gradient-to-br from-primary-600 to-primary-700',
     button: 'bg-primary-600 hover:bg-primary-700 focus:ring-primary-500',

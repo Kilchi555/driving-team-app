@@ -150,22 +150,26 @@ function buildMotorradEmail(firstName: string): string {
   const kategorien = `
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef2f2;border-radius:8px;border-left:4px solid ${color};margin-bottom:20px;">
       <tr><td style="padding:16px 20px;">
-        <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:1px;">🏍️ Die 3 Kategorien im Vergleich</p>
+        <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:1px;">🏍️ Die Kategorien im Vergleich</p>
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;color:#374151;">
           <tr style="border-bottom:1px solid #fecaca;">
-            <td style="padding:6px 4px;font-weight:700;width:40px;">A1</td>
+            <td style="padding:6px 4px;font-weight:700;width:60px;">A1</td>
+            <td style="padding:6px 4px;">Ab 15 J. · bis 50 ccm / 4 kW · Grundkurs 12h</td>
+          </tr>
+          <tr style="border-bottom:1px solid #fecaca;">
+            <td style="padding:6px 4px;font-weight:700;">A1</td>
             <td style="padding:6px 4px;">Ab 16 J. · bis 125 ccm / 11 kW · Grundkurs 12h</td>
           </tr>
           <tr style="border-bottom:1px solid #fecaca;">
-            <td style="padding:6px 4px;font-weight:700;">A2</td>
-            <td style="padding:6px 4px;">Ab 18 J. · bis 35 kW · Grundkurs 12h</td>
+            <td style="padding:6px 4px;font-weight:700;">A35kW</td>
+            <td style="padding:6px 4px;">Ab 18 J. · bis 35 kW · Grundkurs 12h und praktische Prüfung</td>
           </tr>
           <tr>
             <td style="padding:6px 4px;font-weight:700;">A</td>
-            <td style="padding:6px 4px;">Ab 20 J. (nach 2 J. A2) · unbeschränkt · <strong>kein neuer Grundkurs nötig!</strong></td>
+            <td style="padding:6px 4px;">Ab 20 J. (nach 2 J. A35kW) · unbeschränkt · kein neuer Grundkurs nötig, aber <strong>nochmals praktische Prüfung innerhalb von 12 Monaten!</strong></td>
           </tr>
         </table>
-        <p style="margin:10px 0 0;font-size:12px;color:#6b7280;">💡 Strategie: A1 ab 16 → A2 ab 18 → A ab 20 ohne neue Grundkurs-Kosten. Günstigster Weg zum grossen Motorrad!</p>
+        <p style="margin:10px 0 0;font-size:12px;color:#6b7280;">💡 Strategie: A1 ab 15/16 → A35kW ab 18 → A ab 20 ohne neue Grundkurs-Kosten. Günstigster Weg zum grossen Motorrad!</p>
       </td></tr>
     </table>`
 
@@ -174,9 +178,9 @@ function buildMotorradEmail(firstName: string): string {
       <tr><td style="padding:16px 20px;">
         <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:1px;">📅 Grundkurs (PGS): 3 Tage × 4h = 12h Pflicht</p>
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;color:#374151;">
-          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">Tag 1</td><td style="padding:6px 4px;">Kupplung, Gas, Bremse, Slalom, Acht, Anhalten</td></tr>
-          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">Tag 2</td><td style="padding:6px 4px;">Notbremsung, Ausweichmanöver, Kurventechnik, Gewichtsverlagerung</td></tr>
-          <tr><td style="padding:6px 4px;font-weight:700;">Tag 3</td><td style="padding:6px 4px;">Strassenverkehr, Gruppenfahren, Überholen, Schräglagentraining</td></tr>
+          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">Tag 1</td><td style="padding:6px 4px;">Kupplung, Gas, Bremse, Spurgasse, Slalom, Acht, Anhalten, Beobachten, Abstand halten, sanftes Bremsen</td></tr>
+          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">Tag 2</td><td style="padding:6px 4px;">Schnelle sichere Bremsung, Kreisverkehrsplatz, Rechtsvortritt, Parkieren, Berganfahren, Lichtsignale</td></tr>
+          <tr><td style="padding:6px 4px;font-weight:700;">Tag 3</td><td style="padding:6px 4px;">Kurvenfahren, Geschwindigkeit differenzieren, Gefahrenerkennung, Gruppenfahren</td></tr>
         </table>
         <p style="margin:10px 0 0;font-size:12px;color:#991b1b;font-weight:600;">⚠️ Alle 12h müssen innerhalb von 4 Monaten nach LFA-Ausstellung abgeschlossen sein!</p>
       </td></tr>
@@ -189,9 +193,9 @@ function buildMotorradEmail(firstName: string): string {
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:12px;color:#374151;">
           <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;width:160px;">1. Anhalten &amp; Wegfahren</td><td style="padding:6px 4px;">Linken Fuss auf Boden · Blicksystematik vor Wegfahren einhalten · Nicht zu schnell!</td></tr>
           <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">2. Gerader Slalom</td><td style="padding:6px 4px;"><strong>Blick nach vorne, nicht auf die Pylonen!</strong> A1: 2.5m Abstand · A: 3.0m</td></tr>
-          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">3. Kletterübung</td><td style="padding:6px 4px;">Beide Füsse am Boden beim Vorfahren · Mit Gas &amp; Kupplung aufs Böckchen · Blick voraus</td></tr>
+          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">3. Kletterübung (nur SZ)</td><td style="padding:6px 4px;">Beide Füsse am Boden beim Vorfahren · Mit Gas &amp; Kupplung aufs Böckchen · Blick voraus</td></tr>
           <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">4. Versetzter Slalom</td><td style="padding:6px 4px;"><strong>Augen fahren der Spur voraus</strong> · Blick zum nächsten Drehpunkt, nicht vor das Vorderrad</td></tr>
-          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">5. Spurgasse</td><td style="padding:6px 4px;">Ziel: <strong>20–22 Sekunden</strong> durch die Gasse · Mit Schleifpunkt der Kupplung arbeiten · Keine Bremse!</td></tr>
+          <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">5. Spurgasse</td><td style="padding:6px 4px;">SZ: <strong>20–22 Sek. / 15 m</strong> · ZH: <strong>15 Sek. / 10 m</strong> · AG: von Auge · Mit Schleifpunkt der Kupplung · Keine Bremse wenn langsam genug!</td></tr>
           <tr style="border-bottom:1px solid #fecaca;"><td style="padding:6px 4px;font-weight:700;">6. Acht fahren</td><td style="padding:6px 4px;"><strong>Blick halber Kreis voraus</strong> · Nicht auf den Boden schauen · Am maximalen Lenkeinschlag fahren</td></tr>
           <tr><td style="padding:6px 4px;font-weight:700;">7. Not-Vollbremsung</td><td style="padding:6px 4px;">Auf <strong>50 km/h</strong> beschleunigen · <strong>Erst auf Bremspunkt, dann abrupt bremsen!</strong> Ohne ABS: Vorderbremse sofort dosieren</td></tr>
         </table>
@@ -201,7 +205,7 @@ function buildMotorradEmail(firstName: string): string {
   const tips = [
     tip('🔍', 'Motorrad-Check vor der Prüfung', 'Der Experte macht einen technischen Check! Kontrolliere: <strong>Reifenprofil ≥ 1,6 mm</strong> · Luftdruck korrekt · Kein Riss im Reifen · Alle Lichter &amp; Blinker funktionieren · Spiegel links &amp; rechts · Vollen Tank · Sozius-Sitz montiert · Fahrzeugausweis dabei', color),
     tip('🦺', 'Schutzausrüstung: abriebfestes Material mit Protektoren Pflicht', 'Für Grundkurs und Prüfung: <strong>ECE-Helm mit Visier</strong> · Motorradjacke (CE-Protektoren Schultern + Ellbogen) · Motorradhose · Handschuhe · Motorradstiefel. Keine Sportschuhe!', color),
-    tip('👁', 'Die häufigsten Prüfungsfehler', '<strong>1. Schulterblick vergessen</strong> vor Spur- und Richtungswechsel – der Klassiker. <strong>2. Blick vor das Vorderrad</strong> statt weit vorausschauen. <strong>3. Zu früh bremsen</strong> bei Notbremsung. <strong>4. Zu schnell</strong> durch Slalom und Spurgasse.', color),
+    tip('👁', 'Die häufigsten Prüfungsfehler', '<strong>1. Schulterblick vergessen</strong> vor Spur- und Richtungswechsel – der Klassiker. <strong>2. Blick vor das Vorderrad</strong> statt weit vorausschauen. <strong>3. Zu früh bremsen</strong> bei Notbremsung. <strong>4. Zu schnell durch Spurgasse</strong> und allgemein falsche Blicktechnik.', color),
     tip('🆕', 'Neu ab Juli 2025: FAS auch bei Motorrad', 'Fahrassistenzsysteme (ABS, Traktionskontrolle, Kurven-ABS) werden seit dem 1. Juli 2025 <strong>auch in der Motorrad-Theorieprüfung</strong> geprüft. Lerne besonders: Wann deaktiviere ich was?', color),
     tip('💰', 'Kosten im Überblick', 'Grundkurs (12h): CHF 480–620 · Fahrstunden optional: CHF 95/Lekt. · StVA (LFA + Prüfung): CHF 150–200 · Ges. A1: <strong>ca. CHF 800–1\'400</strong> · A2/A: <strong>ca. CHF 1\'200–2\'000</strong>', color),
   ]
