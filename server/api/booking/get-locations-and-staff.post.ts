@@ -201,9 +201,8 @@ export default defineEventHandler(async (event) => {
               id: staff.id,
               first_name: staff.first_name || 'Unknown',
               last_name: staff.last_name || 'Staff',
-              email: staff.email,
               category: staff.category,
-              is_online_bookable: isOnlineBookable || false // Store the online bookable status
+              is_online_bookable: isOnlineBookable || false
             })
           }
         }
