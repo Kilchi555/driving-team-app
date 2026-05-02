@@ -135,6 +135,15 @@ export default defineEventHandler(async (event) => {
     // Restrict select to whitelisted columns only — never allow '*' or arbitrary expressions
     const safeSelect = allowedColumns.join(', ')
 
+    // Write operations require staff or admin role — service_role bypasses RLS, so we enforce this here.
+    // SELECT is intentionally open to all authenticated users (user JWT + RLS still applies for reads).
+    if (['insert', 'update', 'delete'].includes(body.action)) {
+      if (!['admin', 'tenant_admin', 'staff'].includes(authUser.role)) {
+        logger.warn(`🚫 Write operation blocked for role '${authUser.role}' on table '${body.table}'`)
+        throw createError({ statusCode: 403, statusMessage: 'Insufficient permissions for write operations' })
+      }
+    }
+
     // ✅ Create a user-scoped Supabase client using the user's JWT (for SELECT → RLS applies)
     const authHeader = getHeader(event, 'authorization')
     let userToken = authHeader?.replace('Bearer ', '') || null
