@@ -1,0 +1,20 @@
+{
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.simy.ch" }],
+      "destination": "https://simy.ch/:path*",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/_nuxt/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/((?!_nuxt).*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    }
+  ]
+}
