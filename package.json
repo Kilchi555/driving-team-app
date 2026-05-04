@@ -14,7 +14,13 @@
     "test": "node test-validators-simple.js",
     "test:validators": "node test-validators-simple.js",
     "test:api": "bash test-api-validation.sh",
-    "test:watch": "npm run test:validators && npm run test:validators"
+    "test:watch": "npm run test:validators && npm run test:validators",
+    "app:build": "bash scripts/build-client.sh",
+    "app:icons": "node scripts/generate-icons.mjs",
+    "app:bump": "bash scripts/bump-version.sh",
+    "app:open:ios": "npx cap open ios",
+    "app:open:android": "npx cap open android",
+    "app:sync": "npx cap sync"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

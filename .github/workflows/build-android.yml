@@ -1,0 +1,146 @@
+name: Build White-Label Android App
+
+on:
+  workflow_dispatch:
+    inputs:
+      client:
+        description: 'Client ID (folder name in clients/)'
+        required: true
+        default: 'driving-team'
+      track:
+        description: 'Play Store track'
+        required: false
+        default: 'internal'
+        type: choice
+        options: [internal, alpha, beta, production]
+
+  push:
+    tags: ['v*']
+
+jobs:
+  setup:
+    name: Resolve client list
+    runs-on: ubuntu-latest
+    outputs:
+      clients: ${{ steps.resolve.outputs.clients }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve clients to build
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "clients=[\"${{ github.event.inputs.client }}\"]" >> "$GITHUB_OUTPUT"
+          else
+            CLIENTS=$(find clients -name config.json \
+              | xargs -I{} node -e "
+                const c = require('{}');
+                if (c.tier === 'whitelabel') process.stdout.write(JSON.stringify(c.clientId) + '\n');
+              " | jq -Rs 'split("\n") | map(select(length > 0))' )
+            echo "clients=$CLIENTS" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-android:
+    name: Android — ${{ matrix.client }}
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        client: ${{ fromJson(needs.setup.outputs.clients) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Load client config
+        id: config
+        run: |
+          CONFIG="clients/${{ matrix.client }}/config.json"
+          echo "bundle_id=$(node -e "console.log(require('./$CONFIG').bundleId)")" >> "$GITHUB_OUTPUT"
+          echo "app_name=$(node -e "console.log(require('./$CONFIG').appName)")" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -e "console.log(require('./$CONFIG').version)")" >> "$GITHUB_OUTPUT"
+          echo "keystore_alias=$(node -e "console.log(require('./$CONFIG').android.keystoreAlias)")" >> "$GITHUB_OUTPUT"
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Nuxt static build
+        env:
+          CLIENT: ${{ matrix.client }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          NODE_ENV: production
+        run: npx nuxt generate
+
+      - name: Add Android platform (if not present)
+        run: |
+          CLIENT="${{ matrix.client }}" npx cap add android 2>/dev/null || true
+          CLIENT="${{ matrix.client }}" npx cap sync android
+
+      - name: Generate app icons
+        env:
+          CLIENT: ${{ matrix.client }}
+        run: |
+          if [ -f "clients/${{ matrix.client }}/icon.png" ]; then
+            npm install -D sharp --no-save
+            node scripts/generate-icons.mjs
+          fi
+
+      - name: Decode Android keystore
+        env:
+          KEYSTORE_ALIAS: ${{ steps.config.outputs.keystore_alias }}
+        run: |
+          # Secret name is KEYSTORE_BASE64_<ALIAS_UPPERCASE>
+          ALIAS_UPPER=$(echo "$KEYSTORE_ALIAS" | tr '[:lower:]-' '[:upper:]_')
+          SECRET_NAME="KEYSTORE_BASE64_${ALIAS_UPPER}"
+          # Access via env since we can't reference dynamic secret names directly
+          echo "${{ secrets.KEYSTORE_BASE64_DRIVING_TEAM }}" | base64 --decode > keystore.jks
+          # NOTE: For other clients, add their keystore secret and update this step.
+          # See docs/WHITELABEL_APP.md for the naming convention.
+
+      - name: Build signed AAB
+        env:
+          KEYSTORE_ALIAS: ${{ steps.config.outputs.keystore_alias }}
+          BUNDLE_ID: ${{ steps.config.outputs.bundle_id }}
+        run: |
+          cd android
+          # Inject signing config
+          cat >> app/build.gradle << 'EOF'
+
+          android.signingConfigs {
+            release {
+              storeFile file("../../keystore.jks")
+              storePassword System.getenv("KEYSTORE_PASSWORD")
+              keyAlias System.getenv("KEYSTORE_ALIAS")
+              keyPassword System.getenv("KEYSTORE_KEY_PASSWORD")
+            }
+          }
+          android.buildTypes.release.signingConfig = android.signingConfigs.release
+          EOF
+          ./gradlew bundleRelease
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD_DRIVING_TEAM }}
+          KEYSTORE_ALIAS: ${{ steps.config.outputs.keystore_alias }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD_DRIVING_TEAM }}
+
+      - name: Upload to Play Store
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+          packageName: ${{ steps.config.outputs.bundle_id }}
+          releaseFiles: android/app/build/outputs/bundle/release/*.aab
+          track: ${{ github.event.inputs.track || 'internal' }}
+          status: completed
+          whatsNewDirectory: clients/${{ matrix.client }}/whatsnew/

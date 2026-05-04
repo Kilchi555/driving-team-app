@@ -1,0 +1,38 @@
+{
+  "clientId": "REPLACE_WITH_SLUG",
+  "appName": "REPLACE_WITH_SCHOOL_NAME",
+  "bundleId": "ch.REPLACE_WITH_SLUG.app",
+  "tenantSlug": "REPLACE_WITH_SLUG",
+  "tier": "whitelabel",
+  "version": "1.0.0",
+  "primaryColor": "#REPLACE_WITH_HEX",
+  "backgroundColor": "#REPLACE_WITH_HEX",
+  "scheme": "REPLACE_WITH_SLUG",
+  "ios": {
+    "teamId": "REPLACE_WITH_APPLE_TEAM_ID",
+    "provisioningProfile": "match AppStore ch.REPLACE_WITH_SLUG.app",
+    "deploymentTarget": "16.0"
+  },
+  "android": {
+    "keystoreAlias": "REPLACE_WITH_SLUG",
+    "minSdkVersion": 22,
+    "targetSdkVersion": 34
+  },
+  "store": {
+    "de": {
+      "name": "REPLACE_WITH_SCHOOL_NAME",
+      "subtitle": "Fahrschule App",
+      "description": "Die offizielle App der REPLACE_WITH_SCHOOL_NAME. Buche Fahrstunden, verfolge deinen Lernfortschritt und kommuniziere mit deinem Fahrlehrer.",
+      "keywords": "fahrschule, fahrstunden, führerausweis"
+    },
+    "en": {
+      "name": "REPLACE_WITH_SCHOOL_NAME",
+      "subtitle": "Driving School App",
+      "description": "The official app of REPLACE_WITH_SCHOOL_NAME. Book lessons, track your progress and communicate with your instructor.",
+      "keywords": "driving school, lessons, licence"
+    }
+  },
+  "privacyPolicyUrl": "https://REPLACE_WITH_DOMAIN/datenschutz",
+  "supportUrl": "https://REPLACE_WITH_DOMAIN/kontakt",
+  "marketingUrl": "https://REPLACE_WITH_DOMAIN"
+}

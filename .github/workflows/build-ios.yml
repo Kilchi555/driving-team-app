@@ -1,0 +1,142 @@
+name: Build White-Label iOS App
+
+on:
+  # Trigger manually for a single client
+  workflow_dispatch:
+    inputs:
+      client:
+        description: 'Client ID (folder name in clients/)'
+        required: true
+        default: 'driving-team'
+      environment:
+        description: 'Target environment'
+        required: false
+        default: 'testflight'
+        type: choice
+        options: [testflight, appstore]
+
+  # Trigger on version tags for all whitelabel clients
+  push:
+    tags: ['v*']
+
+jobs:
+  # ─── Step 1: Determine which clients to build ────────────────────────────
+  setup:
+    name: Resolve client list
+    runs-on: ubuntu-latest
+    outputs:
+      clients: ${{ steps.resolve.outputs.clients }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve clients to build
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Single client from manual trigger
+            echo "clients=[\"${{ github.event.inputs.client }}\"]" >> "$GITHUB_OUTPUT"
+          else
+            # All whitelabel clients from tag push
+            CLIENTS=$(find clients -name config.json \
+              | xargs -I{} node -e "
+                const c = require('{}');
+                if (c.tier === 'whitelabel') process.stdout.write(JSON.stringify(c.clientId) + '\n');
+              " | jq -Rs 'split("\n") | map(select(length > 0))' )
+            echo "clients=$CLIENTS" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ─── Step 2: Build + Upload per client ───────────────────────────────────
+  build-ios:
+    name: iOS — ${{ matrix.client }}
+    needs: setup
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        client: ${{ fromJson(needs.setup.outputs.clients) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Load client config
+        id: config
+        run: |
+          CONFIG="clients/${{ matrix.client }}/config.json"
+          echo "app_name=$(node -e "console.log(require('./$CONFIG').appName)")" >> "$GITHUB_OUTPUT"
+          echo "bundle_id=$(node -e "console.log(require('./$CONFIG').bundleId)")" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -e "console.log(require('./$CONFIG').version)")" >> "$GITHUB_OUTPUT"
+          echo "scheme=$(node -e "console.log(require('./$CONFIG').scheme)")" >> "$GITHUB_OUTPUT"
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Install Fastlane
+        run: |
+          gem install fastlane --no-document
+          gem install fastlane-plugin-match --no-document || true
+
+      - name: Setup App Store Connect API Key
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "${{ secrets.APPLE_API_KEY_CONTENT }}" | base64 --decode \
+            > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+
+      - name: Install CocoaPods
+        run: sudo gem install cocoapods --no-document
+
+      - name: Nuxt static build
+        env:
+          CLIENT: ${{ matrix.client }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          NODE_ENV: production
+        run: npx nuxt generate
+
+      - name: Add iOS platform (if not present)
+        run: |
+          CLIENT="${{ matrix.client }}" npx cap add ios 2>/dev/null || true
+          CLIENT="${{ matrix.client }}" npx cap sync ios
+
+      - name: Generate app icons
+        env:
+          CLIENT: ${{ matrix.client }}
+        run: |
+          if [ -f "clients/${{ matrix.client }}/icon.png" ]; then
+            npm install -D sharp --no-save
+            node scripts/generate-icons.mjs
+          fi
+
+      - name: Run Fastlane — sync certificates + build + upload
+        env:
+          CLIENT: ${{ matrix.client }}
+          BUNDLE_ID: ${{ steps.config.outputs.bundle_id }}
+          APP_NAME: ${{ steps.config.outputs.app_name }}
+          APP_VERSION: ${{ steps.config.outputs.version }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_TOKEN: ${{ secrets.MATCH_GIT_TOKEN }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          DEPLOY_TARGET: ${{ github.event.inputs.environment || 'testflight' }}
+        run: |
+          cd ios/App
+          fastlane ios deploy
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ iOS build failed for **${{ matrix.client }}**. Check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).'
+            }).catch(() => {}) // Ignore if no issue context
