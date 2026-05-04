@@ -9,7 +9,7 @@
   "backgroundColor": "#019ee5",
   "scheme": "drivingteam",
   "ios": {
-    "teamId": "REPLACE_WITH_APPLE_TEAM_ID",
+    "teamId": "25H29N3PDT",
     "provisioningProfile": "match AppStore ch.drivingteam.app",
     "deploymentTarget": "16.0"
   },
