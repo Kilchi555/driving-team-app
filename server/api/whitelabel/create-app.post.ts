@@ -102,11 +102,11 @@ export default defineEventHandler(async (event) => {
   }
 
   // ─── Trigger GitHub Actions workflow_dispatch ────────────────────────────
-  const githubToken = process.env.GITHUB_PAT
+  const githubToken = process.env.SIMY_GITHUB_PAT
   const githubRepo = process.env.GITHUB_REPO || 'Kilchi555/driving-team-app'
 
-  if (!githubToken) {
-    console.warn('⚠️  GITHUB_PAT not set — skipping GitHub Actions trigger')
+    if (!githubToken) {
+      console.warn('⚠️  SIMY_GITHUB_PAT not set — skipping GitHub Actions trigger')
     return { success: true, clientId, status: 'config_saved_no_build' }
   }
 
