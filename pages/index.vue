@@ -102,7 +102,7 @@
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-8 border"
           :style="{ background: `rgba(var(--brand-rgb), 0.07)`, color: primaryColor, borderColor: `rgba(var(--brand-rgb), 0.28)` }">
           <span class="w-2 h-2 rounded-full animate-pulse" :style="{ background: primaryColor }"></span>
-          60 Tage kostenlos – keine Kreditkarte nötig
+          60 Tage kostenlos testen
         </div>
 
         <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Fahrschule Software Schweiz</p>
