@@ -1,0 +1,162 @@
+# fastlane/Fastfile
+# Fastlane configuration for white-label iOS builds.
+# Reads CLIENT env var to load the correct client config.
+
+default_platform(:ios)
+
+# ─── Helper: Load client config ──────────────────────────────────────────────
+
+def load_client_config
+  client_id = ENV['CLIENT'] || 'driving-team'
+  config_path = File.join(File.dirname(__FILE__), '..', 'clients', client_id, 'config.json')
+
+  unless File.exist?(config_path)
+    UI.user_error!("Client config not found: #{config_path}")
+  end
+
+  require 'json'
+  JSON.parse(File.read(config_path))
+end
+
+# ─── iOS Platform ─────────────────────────────────────────────────────────────
+
+platform :ios do
+
+  # ---------------------------------------------------------------------------
+  # sync_certificates: Downloads or creates provisioning profiles via Match
+  # ---------------------------------------------------------------------------
+  lane :sync_certificates do
+    client = load_client_config
+
+    match(
+      type:                'appstore',
+      app_identifier:      client['bundleId'],
+      git_url:             ENV['MATCH_GIT_URL'],
+      git_basic_authorization: Base64.strict_encode64("x-access-token:#{ENV['MATCH_GIT_TOKEN']}"),
+      readonly:            is_ci,                    # Don't create new certs in CI
+      team_id:             ENV['APPLE_TEAM_ID'],
+      api_key_path:        nil,
+      api_key: {
+        key_id:      ENV['APPLE_API_KEY_ID'],
+        issuer_id:   ENV['APPLE_API_ISSUER_ID'],
+        key_content: ENV['APPLE_API_KEY_CONTENT'] || File.read(
+          File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APPLE_API_KEY_ID']}.p8")
+        ),
+        is_key_content_base64: !!ENV['APPLE_API_KEY_CONTENT'],
+        in_house: false,
+      }
+    )
+  end
+
+  # ---------------------------------------------------------------------------
+  # create_app: Creates a new app in App Store Connect (run once per client)
+  # ---------------------------------------------------------------------------
+  lane :create_app do
+    client = load_client_config
+
+    produce(
+      app_identifier:      client['bundleId'],
+      app_name:            client['appName'],
+      language:            'German',
+      app_version:         client['version'],
+      sku:                 client['clientId'],
+      team_id:             ENV['APPLE_TEAM_ID'],
+      api_key: {
+        key_id:      ENV['APPLE_API_KEY_ID'],
+        issuer_id:   ENV['APPLE_API_ISSUER_ID'],
+        key_content: File.read(
+          File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APPLE_API_KEY_ID']}.p8")
+        ),
+        in_house: false,
+      }
+    )
+  end
+
+  # ---------------------------------------------------------------------------
+  # deploy: Full pipeline — certs, build, upload to TestFlight or App Store
+  # ---------------------------------------------------------------------------
+  lane :deploy do
+    client     = load_client_config
+    target     = ENV['DEPLOY_TARGET'] || 'testflight'
+    version    = client['version']
+    bundle_id  = client['bundleId']
+    app_name   = client['appName']
+
+    UI.message("🚀 Deploying #{app_name} (#{bundle_id}) v#{version} → #{target}")
+
+    # 1. Sync certificates and provisioning profiles
+    sync_certificates
+
+    # 2. Update version and build number
+    increment_version_number(
+      version_number: version,
+      xcodeproj: 'ios/App/App.xcodeproj'
+    )
+    increment_build_number(
+      build_number: Time.now.strftime('%Y%m%d%H%M'),
+      xcodeproj: 'ios/App/App.xcodeproj'
+    )
+
+    # 3. Build the app
+    build_app(
+      workspace:            'ios/App/App.xcworkspace',
+      scheme:               'App',
+      configuration:        'Release',
+      export_method:        'app-store',
+      export_options: {
+        provisioningProfiles: {
+          bundle_id => "match AppStore #{bundle_id}"
+        }
+      },
+      output_directory:     './build',
+      output_name:          "#{client['clientId']}.ipa",
+      clean:                true,
+    )
+
+    if target == 'appstore'
+      # 4a. Upload to App Store (requires metadata)
+      deliver(
+        app_identifier:       bundle_id,
+        ipa:                  "./build/#{client['clientId']}.ipa",
+        submit_for_review:    false,       # Manual review submission
+        automatic_release:    false,
+        force:                true,
+        skip_screenshots:     true,        # Screenshots managed manually first time
+        skip_metadata:        false,
+        metadata_path:        "./clients/#{client['clientId']}/metadata",
+        api_key: {
+          key_id:      ENV['APPLE_API_KEY_ID'],
+          issuer_id:   ENV['APPLE_API_ISSUER_ID'],
+          key_content: File.read(
+            File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APPLE_API_KEY_ID']}.p8")
+          ),
+          in_house: false,
+        }
+      )
+      UI.success("✅ #{app_name} uploaded to App Store (pending review)")
+    else
+      # 4b. Upload to TestFlight
+      upload_to_testflight(
+        ipa:          "./build/#{client['clientId']}.ipa",
+        skip_waiting_for_build_processing: true,
+        api_key: {
+          key_id:      ENV['APPLE_API_KEY_ID'],
+          issuer_id:   ENV['APPLE_API_ISSUER_ID'],
+          key_content: File.read(
+            File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APPLE_API_KEY_ID']}.p8")
+          ),
+          in_house: false,
+        }
+      )
+      UI.success("✅ #{app_name} uploaded to TestFlight")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Error handler
+  # ---------------------------------------------------------------------------
+  error do |lane, exception, options|
+    UI.error("❌ Lane '#{lane}' failed: #{exception.message}")
+  end
+
+end

@@ -1,0 +1,38 @@
+{
+  "clientId": "driving-team",
+  "appName": "Driving Team",
+  "bundleId": "ch.drivingteam.app",
+  "tenantSlug": "driving-team",
+  "tier": "whitelabel",
+  "version": "1.0.0",
+  "primaryColor": "#019ee5",
+  "backgroundColor": "#019ee5",
+  "scheme": "drivingteam",
+  "ios": {
+    "teamId": "REPLACE_WITH_APPLE_TEAM_ID",
+    "provisioningProfile": "match AppStore ch.drivingteam.app",
+    "deploymentTarget": "16.0"
+  },
+  "android": {
+    "keystoreAlias": "driving-team",
+    "minSdkVersion": 22,
+    "targetSdkVersion": 34
+  },
+  "store": {
+    "de": {
+      "name": "Driving Team",
+      "subtitle": "Fahrschule App",
+      "description": "Die offizielle App der Driving Team Fahrschule. Buche Fahrstunden, verfolge deinen Lernfortschritt und kommuniziere mit deinem Fahrlehrer – direkt auf deinem Smartphone.",
+      "keywords": "fahrschule, fahrstunden, führerausweis, zürich, schwyz"
+    },
+    "en": {
+      "name": "Driving Team",
+      "subtitle": "Driving School App",
+      "description": "The official app of Driving Team. Book lessons, track your progress and communicate with your instructor – directly on your smartphone.",
+      "keywords": "driving school, lessons, licence, zurich"
+    }
+  },
+  "privacyPolicyUrl": "https://drivingteam.ch/datenschutz",
+  "supportUrl": "https://drivingteam.ch/kontakt",
+  "marketingUrl": "https://drivingteam.ch"
+}

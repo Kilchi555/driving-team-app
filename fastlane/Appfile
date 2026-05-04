@@ -1,0 +1,14 @@
+# fastlane/Appfile
+# App Store Connect credentials are loaded dynamically from ENV + client config.
+# See Fastfile for the API key setup pattern.
+
+# Placeholder — actual values are injected at runtime from:
+#   ENV['APPLE_TEAM_ID']         → Apple Developer Team ID
+#   ENV['APPLE_API_KEY_ID']      → App Store Connect API Key ID
+#   ENV['APPLE_API_ISSUER_ID']   → App Store Connect Issuer ID
+#   clients/{client}/config.json → bundle_id, app_name
+
+app_identifier("")  # Set dynamically per client in Fastfile
+apple_id("")        # Not used — API key auth only (no 2FA required)
+itc_team_id("")     # Set via ENV['APPLE_TEAM_ID']
+team_id("")         # Set via ENV['APPLE_TEAM_ID']
