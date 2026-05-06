@@ -18,23 +18,22 @@ export default defineEventHandler(async (event) => {
 
   try {
     const query = getQuery(event)
-    const staffId = query.staff_id as string
     const calendarToken = query.token as string
 
-    // Either staff_id OR token must be provided
-    if (!staffId && !calendarToken) {
-      logger.warn('❌ No staff_id or token provided to calendar endpoint')
+    // Token is mandatory — direct staff_id access was removed (security: exposed student names)
+    if (!calendarToken) {
+      logger.warn('❌ No calendar token provided')
       return 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Simy//Calendar//EN\r\nEND:VCALENDAR'
     }
 
-    logger.debug(`📅 Generating calendar for: ${staffId ? 'staff_id=' + staffId : 'token=' + calendarToken}`)
+    logger.debug(`📅 Generating calendar for token: ${calendarToken.substring(0, 8)}...`)
 
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
-    let resolvedStaffId = staffId
+    let resolvedStaffId = ''
 
-    // If token is provided, validate and resolve to staff_id
-    if (calendarToken && !staffId) {
+    // Validate token and resolve to staff_id
+    if (calendarToken) {
       logger.debug(`🔑 Validating token: ${calendarToken.substring(0, 8)}...`)
 
       const { data: tokenData, error: tokenError } = await serviceSupabase
@@ -61,8 +60,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!resolvedStaffId) {
-      logger.warn('❌ No valid staff_id found')
-      logger.warn(`Debug: staffId=${staffId}, calendarToken=${calendarToken?.substring(0, 8)}...`)
+      logger.warn('❌ Invalid or expired calendar token')
       return 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Simy//Calendar//EN\r\nEND:VCALENDAR'
     }
 
