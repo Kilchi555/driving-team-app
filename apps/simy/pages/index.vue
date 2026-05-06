@@ -375,10 +375,13 @@
           <p class="text-base md:text-lg text-gray-500 max-w-xl mx-auto">Gib deinen Schulnamen ein – und sieh sofort, wie die E-Mails deiner Fahrschule aussehen werden.</p>
         </div>
 
-        <div class="grid lg:grid-cols-2 gap-6 md:gap-8 items-start">
+        <!-- Mobile: flex-col with order; Desktop: 2-column grid
+             Mobile order: [1] name+tabs → [2] preview → [3] send
+             Desktop: left col (name+tabs + send) | right col (preview sticky) -->
+        <div class="flex flex-col lg:grid lg:grid-cols-2 gap-6 md:gap-8 items-start">
 
-          <!-- LEFT: Controls -->
-          <div class="space-y-4 md:space-y-6">
+          <!-- TOP CONTROLS: school name + template tabs (order-1 on mobile, col-1 row-1 on desktop) -->
+          <div class="order-1 space-y-4 md:space-y-6 lg:col-start-1 lg:row-start-1">
 
             <!-- School name input -->
             <div class="bg-white rounded-2xl p-4 md:p-6 shadow-sm border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
@@ -424,7 +427,55 @@
               </div>
             </div>
 
-            <!-- Send to inbox -->
+          </div>
+
+          <!-- EMAIL PREVIEW (order-2 on mobile → between tabs and send; col-2 rows 1–2 on desktop) -->
+          <div class="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-24">
+            <div class="rounded-2xl overflow-hidden shadow-xl md:shadow-2xl border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.15)` }">
+              <!-- Fake email client top bar -->
+              <div class="bg-gray-800 px-3 md:px-4 py-2.5 md:py-3 flex items-center gap-2 md:gap-3">
+                <div class="flex gap-1.5 flex-shrink-0">
+                  <span class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-red-400"></span>
+                  <span class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-amber-400"></span>
+                  <span class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-green-400"></span>
+                </div>
+                <div class="flex-1 bg-gray-700 rounded-md px-2 md:px-3 py-1 md:py-1.5 text-xs text-gray-400 min-w-0">
+                  <span class="text-gray-500 mr-1 hidden sm:inline">Von:</span>
+                  <span class="text-gray-300 truncate block sm:inline">{{ schoolNameDemo || 'Fahrschule Muster AG' }} via Simy</span>
+                </div>
+              </div>
+              <!-- Subject line -->
+              <div class="bg-white px-3 md:px-5 py-2.5 md:py-3 border-b border-gray-100 flex items-center gap-2 md:gap-3">
+                <span class="text-base md:text-lg flex-shrink-0">{{ activeTemplate === 'reminder' ? '📅' : activeTemplate === 'invoice' ? '🧾' : '🎉' }}</span>
+                <span class="text-xs md:text-sm font-semibold text-gray-700 truncate">
+                  <template v-if="activeTemplate === 'reminder'">Erinnerung: Deine Fahrstunde morgen um 09:00 Uhr</template>
+                  <template v-else-if="activeTemplate === 'invoice'">Deine Rechnung: CHF 295.– fällig bis 15.05.2025</template>
+                  <template v-else>Willkommen bei {{ schoolNameDemo || 'Fahrschule Muster AG' }}!</template>
+                </span>
+              </div>
+              <!-- Email body iframe (scales to container width) -->
+              <div class="bg-gray-50 overflow-hidden" ref="previewContainer">
+                <div :style="previewWrapStyle">
+                  <iframe
+                    :srcdoc="demoEmailHtml"
+                    class="border-0 block"
+                    style="width: 560px; height: 420px; pointer-events: none;"
+                    sandbox="allow-same-origin"
+                    title="E-Mail Vorschau"
+                  ></iframe>
+                </div>
+              </div>
+            </div>
+            <!-- Hint -->
+            <p class="text-center text-xs text-gray-400 mt-3">
+              Farben folgen deiner Auswahl im
+              <button @click="showColorPicker = true; if(showAutoPopup) showAutoPopup = false" class="font-semibold underline underline-offset-2 transition-colors hover:opacity-80" style="color: var(--brand-primary);">Branding-Tool</button>
+              oben
+            </p>
+          </div>
+
+          <!-- BOTTOM CONTROLS: send to inbox (order-3 on mobile, col-1 row-2 on desktop) -->
+          <div class="order-3 lg:col-start-1 lg:row-start-2">
             <div class="bg-white rounded-2xl p-4 md:p-6 shadow-sm border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
               <label class="block text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Diese E-Mail an mich senden</label>
 
@@ -455,7 +506,8 @@
                 <p v-if="demoError" class="text-xs text-red-500">{{ demoError }}</p>
                 <button
                   @click="sendDemoEmail"
-                  :disabled="!demoEmail || sendingDemo"                  class="w-full py-3 px-5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                  :disabled="!demoEmail || sendingDemo"
+                  class="w-full py-3 px-5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
                   :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))` }"
                 >
                   <svg v-if="sendingDemo" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -467,52 +519,6 @@
                 <p class="text-xs text-gray-400 text-center">Kein Spam. Nur diese eine Demo-E-Mail.</p>
               </div>
             </div>
-
-          </div>
-
-          <!-- RIGHT: Live Email Preview -->
-          <div class="lg:sticky lg:top-24">
-            <div class="rounded-2xl overflow-hidden shadow-xl md:shadow-2xl border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.15)` }">
-              <!-- Fake email client top bar -->
-              <div class="bg-gray-800 px-3 md:px-4 py-2.5 md:py-3 flex items-center gap-2 md:gap-3">
-                <div class="flex gap-1.5 flex-shrink-0">
-                  <span class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-red-400"></span>
-                  <span class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-amber-400"></span>
-                  <span class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-green-400"></span>
-                </div>
-                <div class="flex-1 bg-gray-700 rounded-md px-2 md:px-3 py-1 md:py-1.5 text-xs text-gray-400 min-w-0">
-                  <span class="text-gray-500 mr-1 hidden sm:inline">Von:</span>
-                  <span class="text-gray-300 truncate block sm:inline">{{ schoolNameDemo || 'Fahrschule Muster AG' }} via Simy</span>
-                </div>
-              </div>
-              <!-- Subject line -->
-              <div class="bg-white px-3 md:px-5 py-2.5 md:py-3 border-b border-gray-100 flex items-center gap-2 md:gap-3">
-                <span class="text-base md:text-lg flex-shrink-0">{{ activeTemplate === 'reminder' ? '📅' : activeTemplate === 'invoice' ? '🧾' : '🎉' }}</span>
-                <span class="text-xs md:text-sm font-semibold text-gray-700 truncate">
-                  <template v-if="activeTemplate === 'reminder'">Erinnerung: Deine Fahrstunde morgen um 09:00 Uhr</template>
-                  <template v-else-if="activeTemplate === 'invoice'">Deine Rechnung: CHF 295.– fällig bis 15.05.2025</template>
-                  <template v-else>Willkommen bei {{ schoolNameDemo || 'Fahrschule Muster AG' }}!</template>
-                </span>
-              </div>
-              <!-- Email body iframe -->
-              <div class="bg-gray-50 overflow-hidden" ref="previewContainer">
-                <div :style="previewWrapStyle">
-                  <iframe
-                    :srcdoc="demoEmailHtml"
-                    class="border-0 block"
-                    style="width: 560px; height: 420px; pointer-events: none;"
-                    sandbox="allow-same-origin"
-                    title="E-Mail Vorschau"
-                  ></iframe>
-                </div>
-              </div>
-            </div>
-            <!-- Hint -->
-            <p class="text-center text-xs text-gray-400 mt-3">
-              Farben folgen deiner Auswahl im
-              <button @click="showColorPicker = true; if(showAutoPopup) showAutoPopup = false" class="font-semibold underline underline-offset-2 transition-colors hover:opacity-80" style="color: var(--brand-primary);">Branding-Tool</button>
-              oben
-            </p>
           </div>
 
         </div>
