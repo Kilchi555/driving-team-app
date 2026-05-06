@@ -4518,16 +4518,20 @@ const filteredCourses = computed(() => {
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(course => 
+    filtered = filtered.filter(course =>
       course.name.toLowerCase().includes(query) ||
       course.description?.toLowerCase().includes(query) ||
-      course.course_category?.name?.toLowerCase().includes(query)
+      course.course_category?.name?.toLowerCase().includes(query) ||
+      course.room?.name?.toLowerCase().includes(query) ||
+      course.room?.location?.toLowerCase().includes(query) ||
+      course.vehicle?.name?.toLowerCase().includes(query) ||
+      course.vehicle?.location?.toLowerCase().includes(query) ||
+      course.category?.toLowerCase().includes(query)
     )
   }
 
   if (selectedCategory.value) {
-    // Filter by course_category.name OR category field (for SARI courses)
-    filtered = filtered.filter(course => 
+    filtered = filtered.filter(course =>
       course.course_category?.name === selectedCategory.value ||
       course.category === selectedCategory.value
     )
@@ -4536,6 +4540,17 @@ const filteredCourses = computed(() => {
   if (selectedStatus.value) {
     filtered = filtered.filter(course => getCourseStatus(course) === selectedStatus.value)
   }
+
+  // Waitlist courses always on top, then by first session start_time
+  filtered = [...filtered].sort((a, b) => {
+    const aIsWaitlist = getCourseStatus(a) === 'waitlist'
+    const bIsWaitlist = getCourseStatus(b) === 'waitlist'
+    if (aIsWaitlist && !bIsWaitlist) return -1
+    if (!aIsWaitlist && bIsWaitlist) return 1
+    const aStart = a.sessions?.[0]?.start_time ? new Date(a.sessions[0].start_time).getTime() : Infinity
+    const bStart = b.sessions?.[0]?.start_time ? new Date(b.sessions[0].start_time).getTime() : Infinity
+    return aStart - bStart
+  })
 
   return filtered
 })
