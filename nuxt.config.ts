@@ -7,7 +7,7 @@ import { defineNuxtConfig } from 'nuxt/config'
 export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
   devtools: { enabled: false },
-  ssr: true,
+  ssr: false,
 
   // Tenant slug embedded at build time via CLIENT env var (e.g. CLIENT=driving-team)
   // Used by middleware/native-redirect.global.ts to land on the right login page
@@ -168,20 +168,6 @@ export default defineNuxtConfig({
 
   // Route-level optimisations
   routeRules: {
-    // App routes: disable SSR (SPA mode) — avoids FullCalendar/Wallee hydration issues
-    // and keeps Capacitor native build compatibility
-    '/login': { ssr: false },
-    '/register/**': { ssr: false },
-    '/admin/**': { ssr: false },
-    '/staff/**': { ssr: false },
-    '/customer/**': { ssr: false },
-    '/booking/**': { ssr: false },
-    '/courses/**': { ssr: false },
-    '/verify-email': { ssr: false },
-    '/forgot-password': { ssr: false },
-    '/reset-password': { ssr: false },
-    '/onboarding/**': { ssr: false },
-    '/setup/**': { ssr: false },
     // Public booking + courses pages: cache API responses at CDN edge for 60s
     '/api/booking/get-booking-init': { headers: { 'cache-control': 'public, max-age=60, s-maxage=60' } },
     '/api/courses/public': { headers: { 'cache-control': 'public, max-age=60, s-maxage=60' } },
