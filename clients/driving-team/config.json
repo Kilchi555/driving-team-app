@@ -6,7 +6,7 @@
   "tier": "whitelabel",
   "version": "1.0.0",
   "primaryColor": "#019ee5",
-  "backgroundColor": "#019ee5",
+  "backgroundColor": "#ffffff",
   "scheme": "drivingteam",
   "ios": {
     "teamId": "25H29N3PDT",
@@ -34,5 +34,6 @@
   },
   "privacyPolicyUrl": "https://drivingteam.ch/datenschutz",
   "supportUrl": "https://drivingteam.ch/kontakt",
-  "marketingUrl": "https://drivingteam.ch"
+  "marketingUrl": "https://drivingteam.ch",
+  "serverUrl": "https://app.simy.ch"
 }

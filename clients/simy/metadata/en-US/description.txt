@@ -1,0 +1,16 @@
+Simy is the modern platform for driving schools in Switzerland.
+
+As a student, you can:
+• Easily book driving lessons online
+• Track your learning progress
+• Communicate directly with your instructor
+• View exam results
+• Manage payments and invoices
+
+For instructors and driving schools:
+• Manage appointment calendars
+• Overview of students and progress
+• Exam planning and statistics
+• Simple invoicing
+
+Simy works with selected driving schools in Switzerland. Your access is set up directly by your driving school.

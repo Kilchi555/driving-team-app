@@ -1,0 +1,16 @@
+Simy ist die moderne Plattform für Fahrschulen in der Schweiz.
+
+Als Fahrschüler kannst du:
+• Fahrstunden einfach online buchen
+• Deinen Lernfortschritt verfolgen
+• Direkt mit deinem Fahrlehrer kommunizieren
+• Prüfungsresultate einsehen
+• Zahlungen und Rechnungen verwalten
+
+Für Fahrlehrer und Fahrschulen:
+• Terminkalender verwalten
+• Schüler und Fortschritt im Überblick
+• Prüfungsplanung und Statistiken
+• Einfache Abrechnung
+
+Simy arbeitet mit ausgewählten Fahrschulen in der Schweiz zusammen. Dein Zugang wird direkt von deiner Fahrschule eingerichtet.
