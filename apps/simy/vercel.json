@@ -1,17 +1,10 @@
 {
   "redirects": [
-    { "source": "/login", "destination": "https://app.simy.ch/login", "permanent": false },
-    { "source": "/register", "destination": "https://app.simy.ch/register", "permanent": false },
-    { "source": "/register/:path*", "destination": "https://app.simy.ch/register/:path*", "permanent": false },
-    { "source": "/admin/:path*", "destination": "https://app.simy.ch/admin/:path*", "permanent": false },
-    { "source": "/staff/:path*", "destination": "https://app.simy.ch/staff/:path*", "permanent": false },
-    { "source": "/customer/:path*", "destination": "https://app.simy.ch/customer/:path*", "permanent": false },
-    { "source": "/booking/:path*", "destination": "https://app.simy.ch/booking/:path*", "permanent": false },
-    { "source": "/verify-email", "destination": "https://app.simy.ch/verify-email", "permanent": false },
-    { "source": "/forgot-password", "destination": "https://app.simy.ch/forgot-password", "permanent": false },
-    { "source": "/reset-password", "destination": "https://app.simy.ch/reset-password", "permanent": false },
-    { "source": "/onboarding/:path*", "destination": "https://app.simy.ch/onboarding/:path*", "permanent": false },
-    { "source": "/dashboard", "destination": "https://app.simy.ch/dashboard", "permanent": false }
+    {
+      "source": "/((?!_nuxt/|api/).+)",
+      "destination": "https://app.simy.ch/$1",
+      "permanent": false
+    }
   ],
   "headers": [
     {
