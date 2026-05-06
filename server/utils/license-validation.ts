@@ -55,13 +55,18 @@ export function validateLicense(course: Course, customerData: SARICustomer): voi
   }
 
   // 2. Check if the most relevant license is valid for all course sessions
-  // Find the best matching license
+  // Find the best matching license — prefer latest expiry date to handle
+  // customers with multiple licenses of the same category (e.g. expired old + valid new)
   const bestMatchingLicense = customerLicenses
     .filter(lic => allowedCategories.includes(lic.category.toUpperCase()))
     .sort((a, b) => {
+      // Primary: latest expiration date first (ensures renewed licenses win over expired ones)
+      const expiryDiff = new Date(b.expirationdate).getTime() - new Date(a.expirationdate).getTime()
+      if (expiryDiff !== 0) return expiryDiff
+      // Tiebreaker: category specificity (higher index in allowedCategories = more specific)
       const aIndex = allowedCategories.indexOf(a.category.toUpperCase())
       const bIndex = allowedCategories.indexOf(b.category.toUpperCase())
-      return bIndex - aIndex // Higher index (more specific) first
+      return bIndex - aIndex
     })[0]
 
   if (!bestMatchingLicense) {
