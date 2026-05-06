@@ -1,56 +1,51 @@
 <template>
-  <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+  <div class="rounded-xl p-4 border" :style="{ ...primaryBgLight, borderColor: 'color-mix(in srgb, var(--color-primary, #111827) 20%, transparent)' }">
     <!-- Header mit Zurück-Button -->
-    <div class="flex justify-between items-center mb-3">
-      <label class="block text-sm font-semibold text-gray-900">
-        📋 {{ get('label_event_type_header', 'Terminart') }}
-      </label>
+    <div class="flex justify-between items-center mb-4">
+      <span class="text-sm font-semibold text-gray-900">{{ get('label_event_type_header', 'Terminart wählen') }}</span>
       <button
         v-if="showBackButton"
         @click="$emit('back-to-student')"
-        class="text-md text-purple-600 hover:text-purple-800 text-bold"
+        class="flex items-center gap-1 text-sm font-medium hover:opacity-75 transition-opacity"
+        :style="primaryText"
       >
-        ← Zurück
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Zurück
       </button>
     </div>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="text-center py-4">
-      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mx-auto mb-2"></div>
-      <p class="text-sm text-gray-600">Terminarten werden geladen...</p>
+    <div v-if="isLoading" class="flex items-center justify-center gap-3 py-6">
+      <div class="animate-spin rounded-full h-5 w-5 border-b-2" :style="primaryBorder"></div>
+      <p class="text-sm text-gray-500">Terminarten werden geladen...</p>
     </div>
 
     <!-- Event Types Grid -->
-    <div v-else class="space-y-3 mb-4">
-      <!-- No paid dropdown here by design -->
-
-      <!-- Free types -->
-      <div>
-        <div class="text-xs font-semibold text-gray-500 mb-1">{{ get('label_free_event_types', 'Andere Terminarten') }}</div>
-        <div class="grid grid-cols-2 gap-2">
-          <button
-            v-for="eventType in freeEventTypes" 
-            :key="'free-' + eventType.code"
-            @click="selectEventType(eventType)"
-            :disabled="!showBackButton"
-            :class="[
-              'p-3 text-sm rounded border text-left transition-colors duration-200',
-              selectedType === eventType.code
-                ? 'bg-purple-600 text-black border-purple-600'
-                : showBackButton
-                  ? 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-            ]"
-          >
-            {{ eventType.emoji }} {{ eventType.name }}
-          </button>
-        </div>
-      </div>
+    <div v-else class="grid grid-cols-2 gap-2">
+      <button
+        v-for="eventType in freeEventTypes"
+        :key="'free-' + eventType.code"
+        @click="selectEventType(eventType)"
+        :disabled="!showBackButton"
+        class="p-3 text-sm rounded-xl border text-center transition-all duration-200 font-medium"
+        :style="selectedType === eventType.code ? { ...primaryBg } : {}"
+        :class="[
+          selectedType === eventType.code
+            ? 'shadow-sm'
+            : showBackButton
+              ? 'bg-white text-gray-700 border-gray-200 hover:shadow-sm'
+              : 'bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed'
+        ]"
+      >
+        {{ eventType.name }}
+      </button>
     </div>
 
     <!-- Empty State -->
-    <div v-if="!isLoading && eventTypes.length === 0" class="text-center py-4">
-      <p class="text-sm text-gray-500">Keine Terminarten verfügbar</p>
+    <div v-if="!isLoading && eventTypes.length === 0" class="text-center py-6">
+      <p class="text-sm text-gray-400">Keine Terminarten verfügbar</p>
     </div>
   </div>
 </template>
@@ -59,9 +54,9 @@
 
 import { logger } from '~/utils/logger'
 import { ref, onMounted } from 'vue'
-// import { getSupabase } from '~/utils/supabase'
 import { useEventTypes } from '~/composables/useEventTypes'
 import { useUILabels } from '~/composables/useUILabels'
+const { primaryBg, primaryText, primaryBgLight, primaryBorder } = usePrimaryColor()
 
 // Types
 interface EventType {

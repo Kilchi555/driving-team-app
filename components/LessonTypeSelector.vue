@@ -1,27 +1,24 @@
 <template>
-  <div class="bg-blue-50 border border-blue-200 rounded-lg p-2">
-    <label class="block text-sm font-semibold text-gray-900 mb-2">
-      🎯 Terminart
+  <div>
+    <label class="block text-sm font-semibold text-gray-900 mb-1.5">
+      Terminart
     </label>
 
     <template v-if="showButtons">
-      <!-- Kostenpflichtige Typen als Dropdown — Fallback sofort, dynamisch beim ersten Öffnen -->
-      <div>
-        <select
-          v-model="selectedPaidCode"
-          @focus="onDropdownFocus"
-          @change="onSelectPaid()"
-          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-        >
-          <option v-for="eventType in paidEventTypes" :key="'paid-opt-' + eventType.code" :value="eventType.code">
-            {{ eventType.emoji }} {{ eventType.name }}
-          </option>
-        </select>
-      </div>
+      <select
+        v-model="selectedPaidCode"
+        @focus="onDropdownFocus"
+        @change="onSelectPaid()"
+        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-400 focus:border-transparent text-sm bg-white font-medium text-gray-900"
+      >
+        <option v-for="eventType in paidEventTypes" :key="'paid-opt-' + eventType.code" :value="eventType.code">
+          {{ eventType.emoji }} {{ eventType.name }}
+        </option>
+      </select>
     </template>
 
     <!-- Read-only display for past appointments -->
-    <div v-else class="p-2 text-sm text-gray-600 bg-gray-100 rounded border">
+    <div v-else class="px-4 py-2.5 text-sm text-gray-600 bg-gray-50 rounded-xl border border-gray-200">
       {{ getSelectedLessonTypeName() }}
     </div>
   </div>

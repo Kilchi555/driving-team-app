@@ -1,37 +1,37 @@
 <template>
-  <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 z-50">
+  <Teleport to="body">
+  <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 z-[200]">
     <!-- Modal Container - Ganzer verfügbarer Raum -->
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[calc(100svh-80px-env(safe-area-inset-bottom,0px))] flex flex-col overflow-hidden absolute top-4 left-1/2 transform -translate-x-1/2" @click.stop>
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[calc(100svh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-16px)] flex flex-col overflow-hidden absolute top-[max(8px,env(safe-area-inset-top,0px))] left-1/2 transform -translate-x-1/2" @click.stop>
 
       <!-- ✅ FIXED HEADER (nur im Edit/View mode) -->
-      <div v-if="props?.mode === 'edit' || props?.mode === 'view'" class="bg-white px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-        <!-- Links: Staff Selector und Reload Button -->
-        <div class="flex items-center space-x-4">        
+      <div v-if="props?.mode === 'edit' || props?.mode === 'view'" class="bg-white px-4 py-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+        <!-- Links: leer / zukünftig Staff Selector -->
+        <div class="flex items-center space-x-2"></div>
 
-        </div>   
         <!-- Action-Buttons (nur bei edit/view mode) -->
-        <div v-if="(props?.mode === 'edit' || props?.mode === 'view') && props?.eventData?.id" class="flex items-center space-x-2">
-          
+        <div v-if="(props?.mode === 'edit' || props?.mode === 'view') && props?.eventData?.id" class="flex items-center space-x-1">
+
           <!-- Kopieren Button -->
           <button
             @click="handleCopy"
-            class="ml-2 px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded text-sm transition-colors"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
             title="Termin kopieren"
           >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
             Kopieren
           </button>
-          
+
           <!-- Löschen Button -->
           <button
             @click="handleDelete"
-            class="px-3 py-1.5 bg-red-600 text-white hover:bg-red-700 rounded text-sm transition-colors"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
             title="Termin löschen"
           >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             Löschen
           </button>
         </div>
-
-        <!-- ✅ Schließen Button entfernt - Abbrechen Button ist ausreichend -->
       </div>
 
       <!-- ✅ SCROLLABLE CONTENT AREA -->
@@ -100,7 +100,7 @@
           <div v-if="props.mode !== 'create' && !isPastAppointment && !isLessonType(formData.eventType) && formData.eventType !== 'other'" class="py-2">
             <button
               @click="changeEventType"
-              class="w-full px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded text-sm transition-colors"
+              class="w-full px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
               title="Event-Typ ändern"
             >
               Typ ändern
@@ -262,10 +262,10 @@
           </div>
 
           <!-- Loading Display -->
-          <div v-if="isLoading" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div v-if="isLoading" class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
             <div class="flex items-center space-x-2">
               <LoadingLogo size="sm" />
-              <p class="text-sm text-blue-800">💾 Termin wird gespeichert...</p>
+              <p class="text-sm text-gray-600">Termin wird gespeichert...</p>
             </div>
           </div>
 
@@ -273,51 +273,57 @@
       </div>
 
       <!-- ✅ FIXED FOOTER -->
-      <div class="bg-gray-50 px-4 py-2 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
-        <!-- Links: Schüler Fortschritt Button (nur im edit/view mode) -->
+      <div class="bg-white px-4 py-3 border-t border-gray-100 flex justify-between items-center flex-shrink-0">
+        <!-- Links: Schüler Profil Button (nur im edit/view mode) -->
         <button
           v-if="selectedStudent && (props.mode === 'edit' || props.mode === 'view')"
           @click="$emit('open-student-progress', selectedStudent)"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors"
           title="Schüler Fortschritt anzeigen"
         >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
           Profil
         </button>
         <div v-else></div>
-        
-        <!-- Rechts: Standard Buttons -->
-        <div class="flex space-x-3">
+
+        <!-- Rechts: Aktions-Buttons -->
+        <div class="flex items-center gap-2">
+
+          <!-- Zahlungsstatus für stornierte Termine -->
+          <button
+            v-if="props.eventData?.deleted_at && props.eventData?.deletion_reason?.includes('Kostenverrechnung')"
+            @click="showPaymentStatus(props.eventData.id)"
+            class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Zahlungsstatus
+          </button>
+
+          <!-- Abbrechen / Schließen -->
           <button
             @click="$emit('close')"
-            class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
           >
             {{ props.mode === 'view' ? 'Schließen' : 'Abbrechen' }}
           </button>
 
-        <!-- ✅ Payment Status Button für gelöschte Termine mit Stornierungs-Rechnung -->
-        <button
-          v-if="props.eventData?.deleted_at && props.eventData?.deletion_reason?.includes('Kostenverrechnung')"
-          @click="showPaymentStatus(props.eventData.id)"
-          class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-        >
-          💰 Zahlungsstatus prüfen
-        </button>
-
-        <button
-          v-if="props.mode !== 'view'"
-          @click="handleSaveAppointment"  
-          :disabled="!isFormValid || isLoading || (props.mode === 'edit' && isPastAppointment)"
-          :class="[
-            'px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors',
-            (props.mode === 'edit' && isPastAppointment)
-              ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-              : 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50'
-          ]"
-        >
-          <span v-if="isLoading">⏳</span>
-
-          <span v-else>Speichern</span>
-        </button>
+          <!-- Speichern -->
+          <button
+            v-if="props.mode !== 'view'"
+            @click="handleSaveAppointment"
+            :disabled="!isFormValid || isLoading || (props.mode === 'edit' && isPastAppointment)"
+            :class="[
+              'flex items-center gap-1.5 px-5 py-2 text-sm font-semibold rounded-xl transition-colors',
+              (props.mode === 'edit' && isPastAppointment)
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'disabled:opacity-40'
+            ]"
+            :style="!(props.mode === 'edit' && isPastAppointment) ? primaryBg : {}"
+          >
+            <svg v-if="isLoading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+            <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <span>{{ isLoading ? 'Speichern...' : 'Speichern' }}</span>
+          </button>
         </div>
       </div>
 
@@ -626,6 +632,7 @@
       <!-- This UI is no longer used -->
     </div>
   </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -633,6 +640,7 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { logger } from '~/utils/logger'
 import { useSmsService } from '~/composables/useSmsService'
+const { primaryBg } = usePrimaryColor()
 import { useUIStore } from '~/stores/ui' // ✅ NEU: Toast notifications
 import { useCategoryWithFallback, type CategoryWithParent, type EvaluationCriteria } from '~/composables/useCategoryWithFallback'
 

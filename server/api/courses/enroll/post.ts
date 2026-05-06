@@ -1,5 +1,6 @@
 
 import { logger } from '~/utils/logger'
+import { getHeader } from 'h3'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -15,14 +16,22 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Extract bearer token from Authorization header
+    const authHeader = getHeader(event, 'authorization')
+    const token = authHeader?.replace('Bearer ', '')
+
+    if (!token) {
+      throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
+    }
+
     const supabase = getSupabaseAdmin()
-    
-    // Get the current user to determine tenant_id
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+
+    // Validate token and get user
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
       throw createError({
         statusCode: 401,
-        statusMessage: 'Authentication required'
+        statusMessage: 'Invalid or expired session'
       })
     }
 

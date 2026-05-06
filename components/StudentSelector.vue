@@ -5,7 +5,8 @@
       <button 
             v-if="showSwitchToOther"
             @click="handleSwitchToOther"
-            class="w-full px-4 py-2 mb-2 bg-blue-500 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            class="w-full px-4 py-2 mb-2 rounded-xl transition-colors flex items-center justify-center gap-2 font-medium text-sm"
+            :style="primaryBg"
             >
             Andere Terminart
           </button>
@@ -33,39 +34,47 @@
           v-model="showAllStudentsLocal"
           class="sr-only peer"
         >
-        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all" :style="showAllStudentsLocal ? primaryBg : {}"></div>
       </label>
     </div>
     
-    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-      
-      <!-- Ausgewählter Schüler Anzeige (oben) -->
-      <div v-if="selectedStudent" class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-        <div class="flex justify-between items-center">
-          <div class="flex-1">
-            <div class="flex items-center gap-2">
-              <div class="font-semibold text-green-800">
-                {{ selectedStudent.first_name }} {{ selectedStudent.last_name }}
-              </div>
-              <!-- Category Badge rechts vom Namen -->
-              <span v-if="selectedStudent.category" class="inline-block px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs font-medium">
-                {{ Array.isArray(selectedStudent.category) ? selectedStudent.category.join(', ') : selectedStudent.category }}
-              </span>
-            </div>
-            <!-- Telefon unter dem Namen -->
-            <div v-if="selectedStudent.phone" class="mt-2">
-              <a :href="`tel:${selectedStudent.phone}`" class="text-sm text-blue-600 hover:text-blue-800">
-                <span class="no-underline">📞</span> <span class="underline">{{ selectedStudent.phone }}</span>
-              </a>
-            </div>
+    <!-- Ausgewählter Schüler Anzeige (oben) -->
+    <div>
+      <div v-if="selectedStudent" class="mb-3 p-4 bg-white border-2 rounded-xl" :style="{ borderColor: 'var(--color-primary, #e5e7eb)' }">
+        <!-- Zeile 1: Name + X -->
+        <div class="flex items-start justify-between gap-2">
+          <div class="font-semibold text-gray-900 leading-snug min-w-0 truncate">
+            {{ selectedStudent.first_name }} {{ selectedStudent.last_name }}
           </div>
-          <button 
-            v-if="showClearButton" 
-            @click="clearStudent" 
-            class="text-red-500 hover:text-red-700"
+          <button
+            v-if="showClearButton"
+            @click="clearStudent"
+            class="shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors text-sm"
           >
             ✕
           </button>
+        </div>
+        <!-- Zeile 2: Telefon links, Kategorien rechts -->
+        <div class="flex items-center justify-between gap-2 mt-2">
+          <a
+            v-if="selectedStudent.phone"
+            :href="`tel:${selectedStudent.phone}`"
+            class="text-sm hover:opacity-75 min-w-0 truncate"
+            :style="primaryText"
+          >
+            {{ selectedStudent.phone }}
+          </a>
+          <span v-else class="text-sm text-gray-400">Kein Telefon</span>
+          <div v-if="selectedStudent.category" class="flex flex-wrap justify-end gap-1 shrink-0">
+            <span
+              v-for="cat in (Array.isArray(selectedStudent.category) ? selectedStudent.category : [selectedStudent.category])"
+              :key="cat"
+              class="inline-block px-2 py-0.5 rounded-lg text-xs font-medium"
+              :style="{ ...primaryBgLight, ...primaryText }"
+            >
+              {{ cat }}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -78,7 +87,7 @@
           type="text"
           placeholder="Schüler suchen (Name, E-Mail oder Telefon)..."
           autocomplete="off"
-          class="w-full p-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 !bg-white !text-black"
+          class="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 !bg-white !text-black"
         />
       </div>
 
@@ -86,7 +95,8 @@
       <div v-if="!shouldAutoLoadComputed && availableStudents.length === 0 && !isLoading && !selectedStudent" class="mb-3">
         <button 
           @click="loadStudents()"
-          class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          class="w-full px-4 py-3 rounded-xl transition-colors font-medium text-sm"
+          :style="primaryBg"
         >
           Schüler laden
         </button>
@@ -96,7 +106,8 @@
       <div v-if="!selectedStudent && !isLoading" class="mb-3">
         <button 
           @click="openAddStudentModal"
-          class="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+          class="w-full px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2 font-medium text-sm opacity-80 hover:opacity-100"
+          :style="primaryBg"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -106,10 +117,10 @@
       </div>
 
       <!-- Scrollbare Schülerliste - nur wenn kein Schüler ausgewählt -->
-      <div v-if="!selectedStudent" class="border border-gray-300 rounded-lg bg-white">
+      <div v-if="!selectedStudent" class="border border-gray-200 rounded-xl bg-white overflow-hidden">
         <!-- Loading State -->
         <div v-if="isLoading" class="text-center py-8">
-          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <div class="animate-spin rounded-full h-6 w-6 border-b-2 mx-auto mb-2" :style="primaryBorder"></div>
           <p class="text-sm text-gray-600">Schüler werden geladen...</p>
         </div>
 
@@ -127,9 +138,7 @@
               v-for="student in studentList" 
               :key="student.id"
               @click="handleStudentClick(student)"         
-             :class="[
-                'p-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors hover:bg-blue-50'
-              ]"
+             class="p-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors hover:bg-gray-50"
             >
             <div class="flex items-center justify-between">
               <div class="flex-1">
@@ -148,7 +157,8 @@
                   <span>{{ student.phone }}</span>
                   <span>•</span>
                   <span 
-                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                    :style="{ ...primaryBgLight, ...primaryText }"
                     :title="`Kategorie: ${Array.isArray(student.category) ? student.category.join(', ') : (student.category || '-')}`"
                   >
                     <span>{{ Array.isArray(student.category) ? student.category.join(', ') : (student.category || '-') }}</span>
@@ -168,7 +178,6 @@
         </div>
       </div>
     </div>
-
     <!-- Add Student Modal -->
     <AddStudentModal
       :show="showAddStudentModal"
@@ -183,6 +192,7 @@
 
 import { logger } from '~/utils/logger'
 import { ref, computed, watch, onMounted } from 'vue'
+const { primaryBg, primaryText, primaryBorder, primaryBgLight } = usePrimaryColor()
 // import { getSupabase } from '~/utils/supabase'
 import { 
   cacheStudents, 

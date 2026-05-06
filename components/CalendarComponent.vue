@@ -2,6 +2,8 @@
 // @ts-ignore - logger.debug/info/warn accept flexible parameters from old console.log calls
 import { ref, onMounted, onUnmounted, watch, nextTick, onErrorCaptured, computed } from 'vue'
 import { logger } from '~/utils/logger'
+import { usePrimaryColor } from '~/composables/usePrimaryColor'
+const { primaryBg, primaryText, primaryBgLight } = usePrimaryColor()
 import FullCalendar from '@fullcalendar/vue3'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -204,6 +206,7 @@ const switchView = () => {
 
 const calendar = ref()
 const rootEl = ref<HTMLElement | null>(null)
+
 
 // Swipe navigation state
 let touchStartX = 0
@@ -1747,6 +1750,7 @@ showConfirmDialog({
     forceEventDuration: true, 
     selectable: true,
     editable: true,
+    longPressDelay: 500,
     slotLabelFormat: {
       hour: '2-digit',
       minute: '2-digit',
@@ -2715,7 +2719,10 @@ defineExpose({
           v-for="(monthName, index) in ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']"
           :key="index"
           @click="jumpToDate(currentYear, index)"
-          class="px-3 py-2 text-sm hover:bg-blue-100 rounded transition-colors font-medium text-gray-700"
+          class="px-3 py-2 text-sm rounded-lg transition-colors font-medium text-gray-700 hover:opacity-80"
+          :style="{ ':hover': primaryBgLight }"
+          @mouseenter="($event.currentTarget as HTMLElement).style.backgroundColor = 'color-mix(in srgb, var(--color-primary, #111827) 10%, white)'"
+          @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = ''"
         >
           {{ monthName }}
         </button>
@@ -2782,55 +2789,47 @@ defineExpose({
 
  <!-- ✅ NEUES MODAL: Clipboard Choice Modal -->
   <div v-if="showClipboardChoice" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white rounded-lg shadow-xl p-6 max-w-md mx-4">
-      <div class="text-center mb-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-2">
-            Kopierter Termin        
-        </h3>
-      </div>
+    <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm mx-4">
+      <h3 class="text-base font-semibold text-gray-900 mb-4">Kopierter Termin</h3>
 
       <!-- Geklickter Zeitslot Info -->
-      <div v-if="pendingSlotClick" class="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-        <div class="text-sm">
-          <div class="font-medium text-green-900 mb-1">Einfügen am:</div>
-          <div class="text-green-700 text-xs space-y-1">
-            <div>📅 {{ pendingSlotClick.date.toLocaleDateString('de-CH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}</div>
-            <div>🕐 {{ pendingSlotClick.date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) }}</div>
-          </div>
+      <div v-if="pendingSlotClick" class="rounded-xl p-3 mb-3" :style="primaryBgLight">
+        <div class="text-xs font-medium mb-1" :style="primaryText">Einfügen am:</div>
+        <div class="text-xs text-gray-600 space-y-0.5">
+          <div>{{ pendingSlotClick.date.toLocaleDateString('de-CH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}</div>
+          <div>{{ pendingSlotClick.date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) }} Uhr</div>
         </div>
       </div>
 
       <!-- Kopierter Termin Info -->
-      <div v-if="clipboardAppointment" class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-        <div class="text-sm">
-          <div class="font-medium text-blue-900">{{ clipboardAppointment.title }}</div>
-          <div class="text-blue-700 text-xs mt-1">
-            Kategorie {{ clipboardAppointment.category }} • {{ clipboardAppointment.duration }}min
-          </div>
+      <div v-if="clipboardAppointment" class="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-3">
+        <div class="text-sm font-medium text-gray-900">{{ clipboardAppointment.title }}</div>
+        <div class="text-xs text-gray-500 mt-0.5">
+          Kategorie {{ clipboardAppointment.category }} • {{ clipboardAppointment.duration }}min
         </div>
       </div>
 
       <!-- Buttons -->
-      <div class="flex space-x-3">
+      <div class="flex gap-3">
         <button
           @click="pasteAppointmentDirectly"
-          class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-2"
+          class="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center"
+          :style="primaryBg"
         >
-          <span>Dieser einfügen</span>
+          Einfügen
         </button>
-        
         <button
           @click="createNewAppointment"
-          class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center space-x-2"
+          class="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center bg-gray-100 text-gray-700 hover:bg-gray-200"
         >
-          <span>Neuer Termin</span>
+          Neuer Termin
         </button>
       </div>
 
       <!-- Cancel -->
       <button
         @click="cancelClipboardChoice"
-        class="w-full mt-3 px-4 py-2 text-gray-600 hover:text-gray-800 text-sm rounded-lg border border-gray-600"
+        class="w-full mt-3 px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
       >
         Abbrechen
       </button>
@@ -2982,6 +2981,15 @@ defineExpose({
 
 .fc-event:hover {
   box-shadow: none !important;
+}
+
+/* Long-press drag feedback: event scales up when being dragged */
+.fc-event-dragging {
+  transform: scale(1.06) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25) !important;
+  opacity: 0.95 !important;
+  z-index: 100 !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
 }
 
 /* === HEADER & NAVIGATION === */
@@ -3345,14 +3353,14 @@ defineExpose({
 }
 
 .fc-button-primary {
-  background-color: #62b22f !important;
-  border-color: #62b22f !important;
+  background-color: var(--color-primary, #62b22f) !important;
+  border-color: var(--color-primary, #62b22f) !important;
   color: white !important;
 }
 
 .fc-button-primary:hover {
-  background-color: #54a026 !important;
-  border-color: #54a026 !important;
+  background-color: color-mix(in srgb, var(--color-primary, #62b22f) 85%, black) !important;
+  border-color: color-mix(in srgb, var(--color-primary, #62b22f) 85%, black) !important;
 }
 
 .fc-button:disabled {
@@ -3384,7 +3392,7 @@ defineExpose({
 
 /* === SELECTION === */
 .fc-highlight {
-  background-color: rgba(98, 178, 47, 0.2) !important;
+  background-color: color-mix(in srgb, var(--color-primary, #62b22f) 20%, transparent) !important;
   border-radius: 4px;
 }
 
