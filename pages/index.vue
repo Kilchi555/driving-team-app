@@ -375,10 +375,13 @@
           <p class="text-base md:text-lg text-gray-500 max-w-xl mx-auto">Gib deinen Schulnamen ein – und sieh sofort, wie die E-Mails deiner Fahrschule aussehen werden.</p>
         </div>
 
-        <div class="grid lg:grid-cols-2 gap-6 md:gap-8 items-start">
+        <!-- Mobile: flex-col with CSS order; Desktop: 2-column grid
+             Mobile order: [1] name+tabs → [2] preview → [3] send to inbox
+             Desktop: left col (name+tabs top, send bottom) | right col (preview sticky) -->
+        <div class="flex flex-col lg:grid lg:grid-cols-2 gap-6 md:gap-8 lg:items-start">
 
-          <!-- LEFT: Controls -->
-          <div class="space-y-4 md:space-y-6">
+          <!-- TOP CONTROLS: school name + template tabs (order-1 mobile, col-1 row-1 desktop) -->
+          <div class="order-1 space-y-4 md:space-y-6 lg:col-start-1 lg:row-start-1">
 
             <!-- School name input -->
             <div class="bg-white rounded-2xl p-4 md:p-6 shadow-sm border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
@@ -415,7 +418,7 @@
                   <span class="text-lg md:text-xl flex-shrink-0">{{ tab.icon }}</span>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-bold" :style="activeTemplate === tab.id ? { color: primaryColor } : { color: '#374151' }">{{ tab.label }}</p>
-                    <p class="text-xs text-gray-400 hidden sm:block truncate">{{ tab.desc }}</p>
+                    <p class="text-xs text-gray-400 truncate">{{ tab.desc }}</p>
                   </div>
                   <svg v-if="activeTemplate === tab.id" class="w-4 h-4 flex-shrink-0" :style="{ color: primaryColor }" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
@@ -424,7 +427,55 @@
               </div>
             </div>
 
-            <!-- Send to inbox -->
+          </div>
+
+          <!-- EMAIL PREVIEW (order-2 mobile → between tabs and send; col-2 rows 1–2 desktop sticky) -->
+          <div class="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-24">
+            <div class="rounded-2xl overflow-hidden shadow-xl md:shadow-2xl border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.15)` }">
+              <!-- Fake email client top bar -->
+              <div class="bg-gray-800 px-3 md:px-4 py-2.5 md:py-3 flex items-center gap-2 md:gap-3">
+                <div class="flex gap-1.5 flex-shrink-0">
+                  <span class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-red-400"></span>
+                  <span class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-amber-400"></span>
+                  <span class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-green-400"></span>
+                </div>
+                <div class="flex-1 bg-gray-700 rounded-md px-2 md:px-3 py-1 md:py-1.5 text-xs text-gray-400 min-w-0">
+                  <span class="text-gray-500 mr-1">Von:</span>
+                  <span class="text-gray-300 truncate">{{ schoolNameDemo || 'Fahrschule Muster AG' }} via Simy</span>
+                </div>
+              </div>
+              <!-- Subject line -->
+              <div class="bg-white px-3 md:px-5 py-2.5 md:py-3 border-b border-gray-100 flex items-center gap-2 md:gap-3">
+                <span class="text-base md:text-lg flex-shrink-0">{{ activeTemplate === 'reminder' ? '📅' : activeTemplate === 'invoice' ? '🧾' : '🎉' }}</span>
+                <span class="text-xs md:text-sm font-semibold text-gray-700 truncate">
+                  <template v-if="activeTemplate === 'reminder'">Erinnerung: Deine Fahrstunde morgen um 09:00 Uhr</template>
+                  <template v-else-if="activeTemplate === 'invoice'">Deine Rechnung: CHF 295.– fällig bis 15.05.2025</template>
+                  <template v-else>Willkommen bei {{ schoolNameDemo || 'Fahrschule Muster AG' }}!</template>
+                </span>
+              </div>
+              <!-- Email body iframe -->
+              <div class="bg-gray-50 overflow-hidden" ref="previewContainer" :style="{ height: previewContainerHeight }">
+                <div :style="previewWrapStyle">
+                  <iframe
+                    :srcdoc="demoEmailHtml"
+                    class="border-0 block"
+                    style="width: 560px; height: 500px; pointer-events: none;"
+                    sandbox="allow-same-origin"
+                    title="E-Mail Vorschau"
+                  ></iframe>
+                </div>
+              </div>
+            </div>
+            <!-- Hint -->
+            <p class="text-center text-xs text-gray-400 mt-3">
+              Farben folgen deiner Auswahl im
+              <button @click="showColorPicker = true; if(showAutoPopup) showAutoPopup = false" class="font-semibold underline underline-offset-2 transition-colors hover:opacity-80" style="color: var(--brand-primary);">Branding-Tool</button>
+              oben
+            </p>
+          </div>
+
+          <!-- SEND TO INBOX (order-3 mobile, col-1 row-2 desktop) -->
+          <div class="order-3 lg:col-start-1 lg:row-start-2">
             <div class="bg-white rounded-2xl p-4 md:p-6 shadow-sm border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
               <label class="block text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Diese E-Mail an mich senden</label>
 
@@ -455,7 +506,8 @@
                 <p v-if="demoError" class="text-xs text-red-500">{{ demoError }}</p>
                 <button
                   @click="sendDemoEmail"
-                  :disabled="!demoEmail || sendingDemo"                  class="w-full py-3 px-5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                  :disabled="!demoEmail || sendingDemo"
+                  class="w-full py-3 px-5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-40 flex items-center justify-center gap-2"
                   :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))` }"
                 >
                   <svg v-if="sendingDemo" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -467,52 +519,6 @@
                 <p class="text-xs text-gray-400 text-center">Kein Spam. Nur diese eine Demo-E-Mail.</p>
               </div>
             </div>
-
-          </div>
-
-          <!-- RIGHT: Live Email Preview -->
-          <div class="lg:sticky lg:top-24">
-            <div class="rounded-2xl overflow-hidden shadow-xl md:shadow-2xl border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.15)` }">
-              <!-- Fake email client top bar -->
-              <div class="bg-gray-800 px-3 md:px-4 py-2.5 md:py-3 flex items-center gap-2 md:gap-3">
-                <div class="flex gap-1.5 flex-shrink-0">
-                  <span class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-red-400"></span>
-                  <span class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-amber-400"></span>
-                  <span class="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-green-400"></span>
-                </div>
-                <div class="flex-1 bg-gray-700 rounded-md px-2 md:px-3 py-1 md:py-1.5 text-xs text-gray-400 min-w-0">
-                  <span class="text-gray-500 mr-1 hidden sm:inline">Von:</span>
-                  <span class="text-gray-300 truncate block sm:inline">{{ schoolNameDemo || 'Fahrschule Muster AG' }} via Simy</span>
-                </div>
-              </div>
-              <!-- Subject line -->
-              <div class="bg-white px-3 md:px-5 py-2.5 md:py-3 border-b border-gray-100 flex items-center gap-2 md:gap-3">
-                <span class="text-base md:text-lg flex-shrink-0">{{ activeTemplate === 'reminder' ? '📅' : activeTemplate === 'invoice' ? '🧾' : '🎉' }}</span>
-                <span class="text-xs md:text-sm font-semibold text-gray-700 truncate">
-                  <template v-if="activeTemplate === 'reminder'">Erinnerung: Deine Fahrstunde morgen um 09:00 Uhr</template>
-                  <template v-else-if="activeTemplate === 'invoice'">Deine Rechnung: CHF 295.– fällig bis 15.05.2025</template>
-                  <template v-else>Willkommen bei {{ schoolNameDemo || 'Fahrschule Muster AG' }}!</template>
-                </span>
-              </div>
-              <!-- Email body iframe -->
-              <div class="bg-gray-50 overflow-hidden" ref="previewContainer">
-                <div :style="previewWrapStyle">
-                  <iframe
-                    :srcdoc="demoEmailHtml"
-                    class="border-0 block"
-                    style="width: 560px; height: 420px; pointer-events: none;"
-                    sandbox="allow-same-origin"
-                    title="E-Mail Vorschau"
-                  ></iframe>
-                </div>
-              </div>
-            </div>
-            <!-- Hint -->
-            <p class="text-center text-xs text-gray-400 mt-3">
-              Farben folgen deiner Auswahl im
-              <button @click="showColorPicker = true; if(showAutoPopup) showAutoPopup = false" class="font-semibold underline underline-offset-2 transition-colors hover:opacity-80" style="color: var(--brand-primary);">Branding-Tool</button>
-              oben
-            </p>
           </div>
 
         </div>
@@ -833,17 +839,22 @@
 
         <div class="text-center mb-8 md:mb-10">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Für alle</p>
-          <h2 class="text-2xl md:text-4xl font-extrabold text-gray-900 mb-3">Zwei Seiten. Eine Plattform.</h2>
-          <p class="text-base md:text-lg text-gray-500 max-w-xl mx-auto">Derselbe Termin – aus der Sicht deiner Fahrschule und deines Schülers.</p>
+          <h2 class="text-2xl md:text-4xl font-extrabold text-gray-900 mb-3">Drei Rollen. Eine Plattform.</h2>
+          <p class="text-base md:text-lg text-gray-500 max-w-xl mx-auto">Admin, Fahrlehrer und Schüler – jeder sieht genau das, was er braucht.</p>
         </div>
 
         <!-- Toggle -->
         <div class="flex justify-center mb-8">
-          <div class="flex gap-1 bg-gray-100 p-1 rounded-2xl">
+          <div class="flex gap-1 bg-gray-100 p-1 rounded-2xl flex-wrap justify-center">
             <button @click="appDemoView = 'admin'"
               class="px-4 md:px-6 py-2.5 rounded-xl text-sm font-bold transition-all"
               :style="appDemoView === 'admin' ? { backgroundColor: primaryColor, color: 'white', boxShadow: `0 2px 8px rgba(var(--brand-rgb), 0.35)` } : { color: '#6b7280' }">
-              🧑‍💼 Admin / Fahrlehrer
+              🧑‍💼 Admin
+            </button>
+            <button @click="appDemoView = 'staff'"
+              class="px-4 md:px-6 py-2.5 rounded-xl text-sm font-bold transition-all"
+              :style="appDemoView === 'staff' ? { backgroundColor: primaryColor, color: 'white', boxShadow: `0 2px 8px rgba(var(--brand-rgb), 0.35)` } : { color: '#6b7280' }">
+              🚗 Fahrlehrer
             </button>
             <button @click="appDemoView = 'student'"
               class="px-4 md:px-6 py-2.5 rounded-xl text-sm font-bold transition-all"
@@ -896,6 +907,65 @@
           </div>
         </div>
 
+        <!-- Staff View (calendar) -->
+        <div v-else-if="appDemoView === 'staff'" class="grid md:grid-cols-3 gap-4" style="animation: fadeSlideIn 0.25s ease;">
+          <!-- Week calendar strip -->
+          <div class="md:col-span-2 rounded-2xl border border-gray-200 overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between" :style="{ backgroundColor: `rgba(var(--brand-rgb), 0.04)` }">
+              <span class="font-bold text-gray-900 text-sm">Mein Kalender · KW 18</span>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-lg text-white" :style="{ backgroundColor: primaryColor }">12 Lektionen</span>
+            </div>
+            <!-- Day pills -->
+            <div class="flex border-b border-gray-100 bg-gray-50">
+              <div v-for="day in staffCalDays" :key="day.short"
+                class="flex-1 py-3 text-center cursor-pointer transition-all"
+                :class="day.active ? 'bg-white shadow-sm' : ''"
+                @click="staffActiveDay = day.short">
+                <p class="text-xs text-gray-400">{{ day.short }}</p>
+                <p class="text-sm font-bold mt-0.5" :style="day.active ? { color: primaryColor } : { color: '#374151' }">{{ day.num }}</p>
+                <div v-if="day.count" class="w-1.5 h-1.5 rounded-full mx-auto mt-1" :style="{ backgroundColor: primaryColor }"></div>
+              </div>
+            </div>
+            <!-- Appointments for active day -->
+            <div class="divide-y divide-gray-100">
+              <div v-for="apt in staffDayApts" :key="apt.time" class="flex items-center gap-4 px-5 py-3">
+                <span class="text-sm font-bold text-gray-600 w-11 flex-shrink-0">{{ apt.time }}</span>
+                <div class="w-1 self-stretch rounded-full flex-shrink-0" :style="{ backgroundColor: apt.color }"></div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-gray-800">{{ apt.student }}</p>
+                  <p class="text-xs text-gray-400">{{ apt.type }} · {{ apt.location }}</p>
+                </div>
+                <span class="text-xs px-2 py-1 rounded-lg flex-shrink-0 font-medium"
+                  :class="apt.confirmed ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'">
+                  {{ apt.confirmed ? '✓ Bestätigt' : '⏳ Ausstehend' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right sidebar -->
+          <div class="space-y-4">
+            <div class="rounded-2xl border border-gray-200 p-5">
+              <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Meine Woche</p>
+              <div class="space-y-3">
+                <div v-for="s in staffWeekStats" :key="s.label" class="flex items-center justify-between">
+                  <span class="text-sm text-gray-600">{{ s.label }}</span>
+                  <span class="text-sm font-bold" :style="s.highlight ? { color: primaryColor } : { color: '#111827' }">{{ s.value }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-gray-200 p-5">
+              <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Nächste Lektion</p>
+              <p class="font-bold text-gray-900 text-sm">Morgen, 08:30</p>
+              <p class="text-xs text-gray-500 mt-0.5">Sara Klein · Fahrstunde B</p>
+              <p class="text-xs text-gray-400 mt-0.5">📍 Bahnhof Uster, Gleis 1</p>
+              <button class="mt-3 w-full py-2 rounded-xl text-xs font-bold text-white" :style="{ backgroundColor: primaryColor }">
+                Route planen →
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Student View (phone mockup) -->
         <div v-else class="flex justify-center" style="animation: fadeSlideIn 0.25s ease;">
           <div class="rounded-[2.5rem] border-4 border-gray-800 overflow-hidden shadow-2xl w-80">
@@ -941,6 +1011,260 @@
               <span class="text-gray-400 text-lg">👤</span>
             </div>
           </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── Branded App Coming Soon ────────────────────────────────────────────── -->
+    <section class="py-16 md:py-24 px-4 md:px-6 overflow-hidden relative" :style="{ background: `linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 50%, var(--brand-primary) 100%)` }">
+
+      <!-- Background glow -->
+      <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255,255,255,0.08), transparent);"></div>
+      <div class="absolute top-1/2 left-1/4 w-96 h-96 rounded-full blur-3xl pointer-events-none" style="background: rgba(255,255,255,0.05); transform: translate(-50%,-50%);"></div>
+      <div class="absolute top-1/2 right-1/4 w-80 h-80 rounded-full blur-3xl pointer-events-none" style="background: rgba(255,255,255,0.05); transform: translate(50%,-50%);"></div>
+
+      <div class="max-w-6xl mx-auto relative">
+
+        <!-- Badge -->
+        <div class="flex justify-center mb-6">
+          <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest border" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.35); color: white;">
+            <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse inline-block"></span>
+            Demnächst verfügbar
+          </span>
+        </div>
+
+        <!-- Headline -->
+        <div class="text-center mb-4">
+          <h2 class="text-3xl md:text-5xl font-extrabold text-white leading-tight mb-4">
+            Deine Fahrschule.<br>
+            <span style="background: linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,0.6)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Deine eigene App.</span>
+          </h2>
+          <p class="text-base md:text-lg max-w-2xl mx-auto" style="color: rgba(255,255,255,0.6);">
+            Bald gibt es Simy als native iOS & Android App – und gegen Aufpreis sogar als <strong style="color: rgba(255,255,255,0.9);">vollständig gebrandete App im App Store</strong>, die exakt in den Farben und mit dem Logo deiner Fahrschule erscheint.
+          </p>
+        </div>
+
+        <!-- Two-tier cards -->
+        <div class="grid md:grid-cols-2 gap-4 md:gap-6 mb-12 md:mb-16 mt-10 md:mt-14">
+
+          <!-- Standard App -->
+          <div class="rounded-2xl p-5 md:p-7 border" style="background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.2);">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-12 h-12 rounded-2xl flex items-center justify-center" style="background: rgba(255,255,255,0.15);">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                </svg>
+              </div>
+              <div>
+                <p class="font-bold text-white">Simy App</p>
+                <p class="text-xs" style="color: rgba(255,255,255,0.6);">Inklusive in jedem Plan</p>
+              </div>
+            </div>
+            <ul class="space-y-2.5 text-sm text-white">
+              <li class="flex items-center gap-2"><svg class="w-4 h-4 flex-shrink-0" style="color: rgba(255,255,255,0.8);" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Native iOS & Android App</li>
+              <li class="flex items-center gap-2"><svg class="w-4 h-4 flex-shrink-0" style="color: rgba(255,255,255,0.8);" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Push-Benachrichtigungen</li>
+              <li class="flex items-center gap-2"><svg class="w-4 h-4 flex-shrink-0" style="color: rgba(255,255,255,0.8);" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Erscheint als „Simy" im App Store</li>
+            </ul>
+          </div>
+
+          <!-- Branded App -->
+          <div class="rounded-2xl p-5 md:p-7 border relative overflow-hidden" style="background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.4);">
+            <!-- Premium badge -->
+            <div class="absolute top-4 right-4">
+              <span class="text-xs font-bold px-2.5 py-1 rounded-full text-white" style="background: rgba(0,0,0,0.25);">Premium</span>
+            </div>
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-12 h-12 rounded-2xl flex items-center justify-center" style="background: rgba(255,255,255,0.25);">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                </svg>
+              </div>
+              <div>
+                <p class="font-bold text-white">Branded App</p>
+                <p class="text-xs" style="color: rgba(255,255,255,0.7);">Gegen Aufpreis · Eigene App Store Seite</p>
+              </div>
+            </div>
+            <ul class="space-y-2.5 text-sm text-white">
+              <li class="flex items-center gap-2"><svg class="w-4 h-4 flex-shrink-0 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Eigenes App-Icon mit deinem Logo</li>
+              <li class="flex items-center gap-2"><svg class="w-4 h-4 flex-shrink-0 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>App Store Seite im Namen deiner Schule</li>
+              <li class="flex items-center gap-2"><svg class="w-4 h-4 flex-shrink-0 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>UI komplett in deinen Farben & Logo</li>
+              <li class="flex items-center gap-2"><svg class="w-4 h-4 flex-shrink-0 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Schüler laden „deine" App herunter</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- App Store mockup -->
+        <div class="flex flex-col md:flex-row gap-6 md:gap-8 items-center justify-center mb-12 md:mb-16">
+
+          <!-- iPhone with App Store listing -->
+          <div class="relative flex-shrink-0">
+            <!-- Phone frame -->
+            <div class="relative mx-auto" style="width: 280px;">
+              <div class="relative rounded-[2.5rem] overflow-hidden border-4 shadow-2xl" style="border-color: #1a1a2e; background: #000; box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 40px 80px rgba(0,0,0,0.6), 0 0 60px rgba(139,92,246,0.2);">
+                <!-- Status bar -->
+                <div class="flex items-center justify-between px-5 pt-3 pb-1" style="background: #f2f2f7;">
+                  <span class="text-xs font-semibold text-black">9:41</span>
+                  <div class="w-20 h-5 rounded-full" style="background: #000;"></div>
+                  <div class="flex items-center gap-1">
+                    <svg class="w-3 h-3 text-black" fill="currentColor" viewBox="0 0 24 24"><path d="M1.5 8.5c5.8-5.8 15.2-5.8 21 0M5 12c4-4 10-4 14 0M8.5 15.5c2.2-2.2 5.8-2.2 8 0M12 19h.01"/></svg>
+                    <svg class="w-3 h-3 text-black" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+                  </div>
+                </div>
+
+                <!-- App Store UI -->
+                <div style="background: #f2f2f7; min-height: 520px;">
+                  <!-- Search bar -->
+                  <div class="px-3 pb-2">
+                    <div class="rounded-xl px-3 py-2 flex items-center gap-2" style="background: #e5e5ea;">
+                      <svg class="w-3.5 h-3.5" style="color: #8e8e93;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                      <span class="text-xs" style="color: #8e8e93;">Fahrschule App</span>
+                    </div>
+                  </div>
+
+                  <!-- App listing card -->
+                  <div class="mx-3 rounded-2xl overflow-hidden shadow-sm" style="background: white;">
+                    <!-- App banner -->
+                    <div class="h-28 flex items-center justify-center relative overflow-hidden" :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))` }">
+                      <div class="absolute inset-0 opacity-10" style="background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px);"></div>
+                      <div class="text-center z-10">
+                        <div class="w-14 h-14 rounded-2xl mx-auto mb-1.5 flex items-center justify-center shadow-lg overflow-hidden" style="background: white;">
+                          <img v-if="logoPreview" :src="logoPreview" class="w-full h-full object-contain p-1" alt="App Icon"/>
+                          <span v-else class="text-2xl font-black" :style="{ color: primaryColor }">F</span>
+                        </div>
+                        <p class="text-white text-xs font-bold truncate px-2">{{ schoolNameDemo || 'Fahrschule Muster AG' }}</p>
+                      </div>
+                    </div>
+
+                    <!-- App meta -->
+                    <div class="p-3">
+                      <div class="flex items-start justify-between gap-2 mb-2">
+                        <div class="min-w-0">
+                          <p class="text-sm font-bold text-gray-900 truncate">{{ schoolNameDemo || 'Fahrschule Muster AG' }}</p>
+                          <p class="text-xs" style="color: #8e8e93;">Fahrausbildung &amp; Kurse</p>
+                        </div>
+                        <button class="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold" style="background: #0071e3; color: white;">Laden</button>
+                      </div>
+
+                      <!-- Stars -->
+                      <div class="flex items-center gap-1 mb-2">
+                        <div class="flex gap-0.5">
+                          <svg v-for="i in 5" :key="i" class="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                        </div>
+                        <span class="text-xs" style="color: #8e8e93;">4.9 · 128 Bewertungen</span>
+                      </div>
+
+                      <!-- Screenshots strip -->
+                      <div class="flex gap-1.5 overflow-hidden">
+                        <div v-for="(color, i) in ['rgba(var(--brand-rgb),1)', 'rgba(var(--brand-rgb),0.8)', 'rgba(var(--brand-rgb),0.6)']" :key="i"
+                          class="flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
+                          style="width: 68px; height: 120px;"
+                          :style="{ background: i === 0 ? `linear-gradient(160deg, var(--brand-primary), var(--brand-secondary))` : i === 1 ? '#f2f2f7' : 'white', border: '1px solid rgba(0,0,0,0.06)' }">
+                          <div v-if="i === 0" class="text-center px-2">
+                            <div class="w-6 h-6 rounded-full mx-auto mb-1.5 flex items-center justify-center bg-white bg-opacity-20">
+                              <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            </div>
+                            <div class="text-white text-center" style="font-size: 6px; font-weight: 700; line-height: 1.3;">NÄCHSTE<br>STUNDE<br>Di 14:00</div>
+                          </div>
+                          <div v-else-if="i === 1" class="px-1.5 w-full">
+                            <div class="rounded mb-1 h-2" :style="{ background: primaryColor, opacity: 0.3 }"></div>
+                            <div class="rounded mb-1 h-1.5" style="background: #d1d5db;"></div>
+                            <div class="rounded mb-1 h-1.5" style="background: #d1d5db; width: 75%;"></div>
+                            <div class="rounded mt-2 h-8" :style="{ background: `rgba(var(--brand-rgb), 0.12)` }"></div>
+                          </div>
+                          <div v-else class="px-1.5 w-full">
+                            <div class="w-8 h-8 rounded-xl mx-auto mb-1" :style="{ background: primaryColor }"></div>
+                            <div class="rounded h-1.5 mx-auto mb-1" style="background: #d1d5db; width: 80%;"></div>
+                            <div class="rounded h-1" style="background: #e5e7eb; width: 60%; margin: 0 auto;"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- "Other apps" hint -->
+                  <div class="px-3 pt-3 pb-2">
+                    <p class="text-xs font-semibold text-gray-400 mb-2">Weitere Fahrschulen-Apps</p>
+                    <div class="space-y-2">
+                      <div v-for="school in ['Fahrschule Zürich AG', 'Drive Academy Bern']" :key="school" class="flex items-center gap-2.5 rounded-xl p-2" style="background: white;">
+                        <div class="w-8 h-8 rounded-xl flex-shrink-0" :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))`, opacity: 0.7 }"></div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-xs font-semibold text-gray-800 truncate">{{ school }}</p>
+                          <p class="text-xs" style="color: #8e8e93; font-size: 10px;">Fahrausbildung</p>
+                        </div>
+                        <button class="text-xs font-bold px-3 py-1 rounded-full" style="background: #e8f0fd; color: #0071e3; font-size: 10px;">Laden</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Home indicator -->
+                <div class="flex justify-center py-2" style="background: #f2f2f7;">
+                  <div class="w-24 h-1 rounded-full" style="background: #000;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Text side -->
+          <div class="text-center md:text-left max-w-md">
+            <div class="inline-flex items-center gap-2 mb-4 px-3 py-1.5 rounded-full text-xs font-bold text-white" style="background: rgba(255,255,255,0.15);">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+              White-Label App
+            </div>
+            <h3 class="text-2xl md:text-3xl font-extrabold text-white mb-3">
+              Deine Schüler laden<br><em class="not-italic" style="opacity: 0.8;">deine App</em> herunter
+            </h3>
+            <p class="mb-6 text-sm md:text-base leading-relaxed" style="color: rgba(255,255,255,0.75);">
+              Stell dir vor: Dein Logo, deine Farben, dein Name im App Store. Deine Schüler suchen nach deiner Fahrschule – und finden direkt deine App. Kein Simy-Logo. Nur du.
+            </p>
+            <ul class="space-y-3 text-sm text-left mb-8 text-white">
+              <li class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center" style="background: rgba(255,255,255,0.2);">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </span>
+                Eigener App Store Eintrag (iOS &amp; Android)
+              </li>
+              <li class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center" style="background: rgba(255,255,255,0.2);">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+                </span>
+                App-Icon, Splashscreen &amp; UI komplett in deinem Branding
+              </li>
+              <li class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center" style="background: rgba(255,255,255,0.2);">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </span>
+                Automatische Updates – du musst nichts tun
+              </li>
+            </ul>
+
+            <!-- Waitlist CTA -->
+            <div v-if="!appWaitlistSent" class="flex flex-col sm:flex-row gap-3">
+              <input
+                v-model="appWaitlistEmail"
+                type="email"
+                placeholder="deine@email.ch"
+                class="flex-1 px-4 py-3 rounded-xl text-sm outline-none border text-white placeholder-white/50"
+                style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3);"
+                @keyup.enter="submitAppWaitlist"
+              />
+              <button
+                @click="submitAppWaitlist"
+                :disabled="!appWaitlistEmail"
+                class="px-6 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40 whitespace-nowrap"
+                style="background: rgba(0,0,0,0.25); color: white; border: 1px solid rgba(255,255,255,0.3);"
+              >
+                Benachrichtige mich →
+              </button>
+            </div>
+            <div v-else class="flex items-center gap-3 px-4 py-3 rounded-xl" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <p class="text-sm text-white font-medium">Du bist auf der Liste! Wir melden uns sobald es losgeht.</p>
+            </div>
+            <p class="text-xs mt-3" style="color: rgba(255,255,255,0.5);">Kein Spam. Nur eine Nachricht wenn die App fertig ist.</p>
+          </div>
+
         </div>
 
       </div>
@@ -1745,7 +2069,50 @@ const faqs = reactive([
 
 // ─── App Live Demo ───────────────────────────────────────────────────────────
 const activeAppTab = ref<'calendar' | 'dashboard' | 'payments' | 'affiliate' | 'booking'>('calendar')
-const appDemoView = ref<'admin' | 'student'>('admin')
+const appDemoView = ref<'admin' | 'staff' | 'student'>('admin')
+
+// ─── Staff Demo Data ──────────────────────────────────────────────────────────
+const staffActiveDay = ref('Mi')
+const staffCalDays = computed(() => [
+  { short: 'Mo', num: '28', count: 3, active: staffActiveDay.value === 'Mo' },
+  { short: 'Di', num: '29', count: 2, active: staffActiveDay.value === 'Di' },
+  { short: 'Mi', num: '30', count: 4, active: staffActiveDay.value === 'Mi' },
+  { short: 'Do', num: '1',  count: 3, active: staffActiveDay.value === 'Do' },
+  { short: 'Fr', num: '2',  count: 2, active: staffActiveDay.value === 'Fr' },
+])
+const staffDayApts = computed(() => ({
+  Mo: [
+    { time: '09:00', student: 'Luca Pfister', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: true, color: primaryColor },
+    { time: '11:00', student: 'Jana Meier', type: 'Überlandfahrt', location: 'Autobahn A3', confirmed: true, color: primaryColor },
+    { time: '15:00', student: 'Tobias Roth', type: 'Nachtfahrt', location: 'Treff Schulhaus', confirmed: false, color: '#f59e0b' },
+  ],
+  Di: [
+    { time: '08:00', student: 'Sara Klein', type: 'Prüfungsvorbereitung', location: 'Strassenverkehrsamt', confirmed: true, color: primaryColor },
+    { time: '14:00', student: 'Nico Brunner', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: false, color: '#f59e0b' },
+  ],
+  Mi: [
+    { time: '08:30', student: 'Sara Klein', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: true, color: primaryColor },
+    { time: '11:00', student: 'Luca Pfister', type: 'Prüfung B', location: 'Strassenverkehrsamt', confirmed: true, color: primaryColor },
+    { time: '14:00', student: 'Anna Müller', type: 'Fahrstunde B', location: 'Schulhaus Küsnacht', confirmed: false, color: '#f59e0b' },
+    { time: '16:30', student: 'Tobias Roth', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: false, color: '#f59e0b' },
+  ],
+  Do: [
+    { time: '09:00', student: 'Jana Meier', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: true, color: primaryColor },
+    { time: '11:30', student: 'Nico Brunner', type: 'Überlandfahrt', location: 'Autobahn A3', confirmed: true, color: primaryColor },
+    { time: '15:00', student: 'Sara Klein', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: false, color: '#f59e0b' },
+  ],
+  Fr: [
+    { time: '10:00', student: 'Anna Müller', type: 'Prüfungsvorbereitung', location: 'Strassenverkehrsamt', confirmed: true, color: primaryColor },
+    { time: '14:00', student: 'Tobias Roth', type: 'Fahrstunde B', location: 'Schulhaus Küsnacht', confirmed: true, color: primaryColor },
+  ],
+}[staffActiveDay.value] ?? []))
+
+const staffWeekStats = computed(() => [
+  { label: 'Lektionen', value: '12' },
+  { label: 'Fahrstunden', value: '18 Std.' },
+  { label: 'Bestätigungsrate', value: '83%', highlight: true },
+  { label: 'Prüfungen', value: '1' },
+])
 
 const appTabUrl = computed(() => {
   const urls: Record<string, string> = {
@@ -1880,17 +2247,36 @@ const demoError = ref('')
 
 const demoSentCurrent = computed(() => demoSentTemplates.value.has(activeTemplate.value))
 
+// ─── App Waitlist ─────────────────────────────────────────────────────────────
+const appWaitlistEmail = ref('')
+const appWaitlistSent = ref(false)
+
+async function submitAppWaitlist() {
+  if (!appWaitlistEmail.value) return
+  // Simple email-only waitlist – store via demo-email endpoint or just mark as sent
+  appWaitlistSent.value = true
+}
+
 // ─── Email Preview Scaling ────────────────────────────────────────────────────
 const EMAIL_WIDTH = 560
+const EMAIL_HEIGHT = 500
 const previewContainer = ref<HTMLElement | null>(null)
 const previewScale = ref(1)
 
+// The wrapper holds the full-size iframe and is visually scaled via CSS transform.
+// transform: scale() does NOT affect layout, so we set the wrapper's natural dimensions
+// and let the parent container clip to the visual (scaled) height explicitly.
 const previewWrapStyle = computed(() => ({
   transform: `scale(${previewScale.value})`,
   transformOrigin: 'top left',
   width: `${EMAIL_WIDTH}px`,
-  height: `${Math.round(420 * previewScale.value)}px`,
+  height: `${EMAIL_HEIGHT}px`,
 }))
+
+// Container height = visual height after scaling (no empty gap below the iframe)
+const previewContainerHeight = computed(() =>
+  `${Math.round(EMAIL_HEIGHT * previewScale.value)}px`
+)
 
 function updatePreviewScale() {
   if (previewContainer.value) {

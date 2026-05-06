@@ -7,7 +7,13 @@ import { defineNuxtConfig } from 'nuxt/config'
 export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
   devtools: { enabled: false },
-  ssr: false,
+  ssr: true,
+
+  // Tenant slug embedded at build time via CLIENT env var (e.g. CLIENT=driving-team)
+  // Used by middleware/native-redirect.global.ts to land on the right login page
+  appConfig: {
+    nativeTenantSlug: process.env.CLIENT || null,
+  },
   // Avoid watching thousands of non-app files in repository root.
   ignore: [
     '**/*.sql',
@@ -162,6 +168,22 @@ export default defineNuxtConfig({
 
   // Route-level optimisations
   routeRules: {
+    // Marketing landing page: pre-render for SEO & crawlability
+    '/': { prerender: true },
+    // App routes: disable SSR (SPA mode) — avoids FullCalendar/Wallee hydration issues
+    // and keeps Capacitor native build compatibility
+    '/login': { ssr: false },
+    '/register/**': { ssr: false },
+    '/admin/**': { ssr: false },
+    '/staff/**': { ssr: false },
+    '/customer/**': { ssr: false },
+    '/booking/**': { ssr: false },
+    '/courses/**': { ssr: false },
+    '/verify-email': { ssr: false },
+    '/forgot-password': { ssr: false },
+    '/reset-password': { ssr: false },
+    '/onboarding/**': { ssr: false },
+    '/setup/**': { ssr: false },
     // Public booking + courses pages: cache API responses at CDN edge for 60s
     '/api/booking/get-booking-init': { headers: { 'cache-control': 'public, max-age=60, s-maxage=60' } },
     '/api/courses/public': { headers: { 'cache-control': 'public, max-age=60, s-maxage=60' } },
@@ -212,7 +234,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       charset: 'utf-8',
-      viewport: 'width=device-width, initial-scale=1',
+      viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
       htmlAttrs: { lang: 'de' },
       meta: [
         { name: 'description', content: 'Driving Team - Fahrausbildung Online Buchen. Auto, Motorrad, Taxi, Lastwagen, Bus & Motorboot Fahrstunden in Zürich, Lachen, St.Gallen und Umgebung.' },
