@@ -168,8 +168,6 @@ export default defineNuxtConfig({
 
   // Route-level optimisations
   routeRules: {
-    // Marketing landing page: pre-render for SEO & crawlability
-    '/': { prerender: true },
     // App routes: disable SSR (SPA mode) — avoids FullCalendar/Wallee hydration issues
     // and keeps Capacitor native build compatibility
     '/login': { ssr: false },
