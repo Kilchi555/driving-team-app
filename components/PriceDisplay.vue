@@ -2,8 +2,8 @@
 <template>
   <div class="space-y-4">
     <!-- Grundpreis -->
-    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-      <h3 class="text-lg font-semibold text-blue-800 mb-3">Preisübersicht</h3>
+    <div class="p-4 rounded-xl border" :style="{ ...primaryBgLight, borderColor: 'color-mix(in srgb, var(--color-primary, #111827) 20%, transparent)' }">
+      <h3 class="text-base font-semibold mb-3" :style="primaryText">Preisübersicht</h3>
       <div class="space-y-2">
         <div class="flex justify-between">
           <span class="text-gray-700">{{ lessonType || 'Grundpreis' }} ({{ durationMinutes }} min)</span>
@@ -11,13 +11,13 @@
         </div>
         
         <!-- Rabatt Anzeige - direkt im blauen Bereich -->
-        <div v-if="getDiscountAmount() > 0" class="flex justify-between items-center py-2 border-t border-blue-200">
+        <div v-if="getDiscountAmount() > 0" class="flex justify-between items-center py-2 border-t border-black/10">
           <div class="flex items-center">
-            <span class="text-sm font-medium text-green-700">Rabatt</span>
-            <span v-if="getDiscountReason()" class="text-xs text-green-600 ml-2">({{ getDiscountReason() }})</span>
+            <span class="text-sm font-medium" :style="primaryText">Rabatt</span>
+            <span v-if="getDiscountReason()" class="text-xs ml-2 opacity-75" :style="primaryText">({{ getDiscountReason() }})</span>
           </div>
           <div class="flex items-center space-x-2">
-            <span class="text-sm font-bold text-green-700">- CHF {{ (roundToNearestFranken(Math.round(getDiscountAmount() * 100)) / 100).toFixed(2) }}</span>
+            <span class="text-sm font-bold" :style="primaryText">- CHF {{ (roundToNearestFranken(Math.round(getDiscountAmount() * 100)) / 100).toFixed(2) }}</span>
             <button 
               v-if="props.allowDiscountEdit"
               @click="removeDiscount"
@@ -29,7 +29,7 @@
         </div>
         
         <!-- Admin-Fee Anzeige -->
-        <div v-if="getAdminFee() > 0" class="py-2 border-t border-blue-200">
+        <div v-if="getAdminFee() > 0" class="py-2 border-t border-black/10">
           <div class="flex justify-between items-center">
             <span class="text-sm font-medium text-orange-700">Administrationsgebühr</span>
             <span class="text-sm font-semibold text-orange-700">CHF {{ (roundToNearestFranken(Math.round(getAdminFee() * 100)) / 100).toFixed(2) }}</span>
@@ -38,7 +38,7 @@
 
 
         <!-- Student Credit Anzeige -->
-        <div v-if="getUsedCredit() > 0 || (props.studentCredit && props.studentCredit.balance_rappen !== 0)" class="py-2 border-t border-blue-200">
+        <div v-if="getUsedCredit() > 0 || (props.studentCredit && props.studentCredit.balance_rappen !== 0)" class="py-2 border-t border-black/10">
           <div class="space-y-2">
             <!-- ✅ NEW: Negatives Guthaben (Schulden) -->
             <div v-if="props.studentCredit && props.studentCredit.balance_rappen < 0 && !props.isEditMode" class="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -53,14 +53,14 @@
             
             <!-- Im Edit-Modus: Zeige das damals verwendete Guthaben -->
             <div v-if="props.isEditMode && getUsedCredit() > 0" class="flex justify-between items-center">
-              <span class="text-sm font-medium text-green-600">Guthaben verwendet (damals)</span>
-              <span class="text-sm font-semibold text-green-600">- CHF {{ getUsedCredit().toFixed(2) }}</span>
+              <span class="text-sm font-medium" :style="primaryText">Guthaben verwendet (damals)</span>
+              <span class="text-sm font-semibold" :style="primaryText">- CHF {{ getUsedCredit().toFixed(2) }}</span>
             </div>
             
             <!-- Im Create-Modus: Zeige aktuelles Guthaben (nur wenn positiv) -->
             <div v-else-if="!props.isEditMode && props.studentCredit && props.studentCredit.balance_rappen > 0" class="flex justify-between items-center">
-              <span class="text-sm font-medium text-green-700">Verfügbares Guthaben</span>
-              <span class="text-sm font-semibold text-green-700">CHF {{ (roundToNearestFranken(props.studentCredit.balance_rappen) / 100).toFixed(2) }}</span>
+              <span class="text-sm font-medium" :style="primaryText">Verfügbares Guthaben</span>
+              <span class="text-sm font-semibold" :style="primaryText">CHF {{ (roundToNearestFranken(props.studentCredit.balance_rappen) / 100).toFixed(2) }}</span>
             </div>
             
             <!-- Im Create-Modus: Zeige verwendetes Guthaben -->
@@ -78,15 +78,15 @@
         </div>
         
         <!-- Loading State für Guthaben -->
-        <div v-else-if="props.isLoadingCredit" class="py-2 border-t border-blue-200">
+        <div v-else-if="props.isLoadingCredit" class="py-2 border-t border-black/10">
           <div class="flex justify-between items-center">
             <span class="text-sm text-gray-500">Guthaben wird geladen...</span>
-            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+            <div class="animate-spin rounded-full h-4 w-4 border-b-2" :style="primaryBorder"></div>
           </div>
         </div>
         
         <!-- Kein Guthaben verfügbar -->
-        <div v-else-if="props.studentCredit && props.studentCredit.balance_rappen === 0" class="py-2 border-t border-blue-200">
+        <div v-else-if="props.studentCredit && props.studentCredit.balance_rappen === 0" class="py-2 border-t border-black/10">
           <div class="flex justify-between items-center">
             <span class="text-sm text-gray-500">Verfügbares Guthaben</span>
             <span class="text-sm text-gray-500">CHF 0.00</span>
@@ -97,17 +97,17 @@
         </div>
         
         <!-- Kein Guthaben verfügbar (Student hat kein Guthaben) -->
-        <div v-else-if="!props.studentCredit && !props.isLoadingCredit" class="py-2 border-t border-blue-200">
+        <div v-else-if="!props.studentCredit && !props.isLoadingCredit" class="py-2 border-t border-black/10">
           <div class="flex justify-between items-center">
             <span class="text-sm text-gray-500">Verfügbares Guthaben</span>
             <span class="text-sm text-gray-500">CHF 0.00</span>
           </div>
         </div>
 
-        <!-- Produkte Anzeige - direkt im blauen Bereich -->
-        <div v-if="getProducts().length > 0" class="py-2 border-t border-blue-200">
+        <!-- Produkte Anzeige -->
+        <div v-if="getProducts().length > 0" class="py-2 border-t border-black/10">
           <div class="space-y-2">
-            <div class="text-sm font-medium text-blue-700">Produkte</div>
+            <div class="text-sm font-medium" :style="primaryText">Produkte</div>
             <div v-for="product in getProducts()" :key="product.id" class="flex justify-between items-center">
               <div class="flex items-center space-x-2">
                 <span class="text-sm text-gray-700">{{ product.name }}</span>
@@ -138,12 +138,12 @@
           <div class="flex justify-between text-lg font-bold">
             <span class="text-gray-700">Zu bezahlen</span>
             <span v-if="props.isCalculatingPrice" class="text-gray-400 text-base italic font-normal">wird berechnet...</span>
-            <span v-else class="text-blue-600">CHF {{ (roundToNearestFranken(Math.round(calculateTotalPrice * 100)) / 100).toFixed(2) }}</span>
+            <span v-else :style="primaryText">CHF {{ (roundToNearestFranken(Math.round(calculateTotalPrice * 100)) / 100).toFixed(2) }}</span>
           </div>
           
           <!-- Gratis Info wenn vollständig durch Guthaben gedeckt -->
           <div v-if="props.studentCredit && props.studentCredit.balance_rappen / 100 >= calculatePriceBeforeCredit()" class="text-center mt-2">
-            <span class="text-sm font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+            <span class="text-sm font-medium px-3 py-1 rounded-full" :style="{ ...primaryBgLight, ...primaryText }">
               ✅ Vollständig durch Guthaben gedeckt
             </span>
           </div>
@@ -157,18 +157,21 @@
             <button
               v-if="props.allowDiscountEdit"
               @click="showDiscountSelector = true"
-              class="flex items-center px-4 py-2 text-sm text-purple-600 border border-purple-300 rounded-md hover:bg-purple-50"
+              class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl border transition-colors hover:opacity-90"
+              :style="{ ...primaryBgLight, ...primaryText, borderColor: 'color-mix(in srgb, var(--color-primary, #111827) 25%, transparent)' }"
             >
-              🎫 Rabatt
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+              Rabatt
             </button>
-            
-            <!-- ✅ PRODUKTE BUTTON: Immer anzeigen wenn erlaubt -->
+
             <button
               v-if="props.allowProductEdit"
               @click="showProductSelector = true"
-              class="flex items-center px-4 py-2 text-sm text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50"
+              class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl border transition-colors hover:opacity-90"
+              :style="{ ...primaryBgLight, ...primaryText, borderColor: 'color-mix(in srgb, var(--color-primary, #111827) 25%, transparent)' }"
             >
-              📦 Produkte
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+              Produkte
             </button>
           </div>
         </div>
@@ -184,14 +187,13 @@
                   v-for="product in props.availableProducts" 
                   :key="product.id" 
                   @click="addProduct(product)"
-                  class="bg-white border border-gray-200 rounded-lg p-3 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                  class="bg-white border border-gray-200 rounded-xl p-3 cursor-pointer hover:shadow-md transition-all duration-200"
+                  @mouseenter="($event.currentTarget as HTMLElement).style.borderColor = 'var(--color-primary, #6b7280)'"
+                  @mouseleave="($event.currentTarget as HTMLElement).style.borderColor = ''"
                 >
                   <div class="text-center space-y-1">
-                    <!-- Produkt-Name -->
                     <div class="text-sm font-medium text-gray-700">{{ product.name }}</div>
-                    
-                    <!-- Produkt-Preis -->
-                    <div class="text-sm font-bold text-blue-600">
+                    <div class="text-sm font-bold" :style="primaryText">
                       CHF {{ (product.price_rappen / 100).toFixed(2) }}
                     </div>
                   </div>
@@ -228,10 +230,12 @@
                     v-for="discount in availableDiscounts" 
                     :key="discount.id" 
                     @click="applyVoucher(discount)"
-                    class="bg-white border border-gray-200 rounded-lg p-2 cursor-pointer hover:border-purple-300 hover:shadow-md transition-all duration-200"
+                    class="bg-white border border-gray-200 rounded-xl p-2 cursor-pointer hover:shadow-md transition-all duration-200"
+                    @mouseenter="($event.currentTarget as HTMLElement).style.borderColor = 'var(--color-primary, #6b7280)'"
+                    @mouseleave="($event.currentTarget as HTMLElement).style.borderColor = ''"
                   >
                     <div class="text-center">
-                      <div class="text-sm font-bold text-purple-600">
+                      <div class="text-sm font-bold" :style="primaryText">
                         - CHF {{ parseFloat(discount.discount_value).toFixed(2) }}
                       </div>
                       <div class="text-xs text-gray-500">{{ discount.name || 'Gutschein' }}</div>
@@ -327,87 +331,83 @@
         </div>
 
         <!-- Zahlungsarten - nur für neue Termine oder wenn kein Payment existiert -->
-        <div v-if="showPaymentSelection && !props.isPastAppointment" class="border-t pt-3">
-          <div class="text-sm font-medium text-gray-700 mb-3">Zahlungsart</div>
-          
-          <!-- ✅ IMMER die schönen Buttons anzeigen -->
-          <div class="space-y-3">
-            <!-- Online Payment Button -->
+        <div v-if="showPaymentSelection && !props.isPastAppointment" class="border-t pt-4">
+          <div class="text-sm font-medium text-gray-500 mb-2">Zahlungsart</div>
+
+          <!-- Segmented Control -->
+          <div class="flex bg-gray-100 rounded-xl p-1 gap-1">
             <button
               v-if="walleeEnabled"
+              type="button"
               @click="selectPaymentMethod('wallee')"
-              :class="[
-                'w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center space-x-3',
-                selectedPaymentMethod === 'wallee'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50'
-              ]"
+              class="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200"
+              :style="selectedPaymentMethod === 'wallee' ? { ...primaryBg, boxShadow: '0 1px 3px rgba(0,0,0,0.12)' } : {}"
+              :class="selectedPaymentMethod === 'wallee' ? '' : 'text-gray-500 hover:text-gray-700'"
             >
-              <span class="font-medium">Online-Zahlung</span>
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+              </svg>
+              <span>Online</span>
             </button>
-            
-            <!-- Cash Payment Button -->
-            <div class="flex items-center gap-3">
-              <button
-                type="button"
-                @click="selectPaymentMethod('cash')"
-                :class="[
-                  'flex-1 p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center space-x-3',
-                  selectedPaymentMethod === 'cash'
-                    ? 'border-green-500 bg-green-50 text-green-700 shadow-md'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-green-300 hover:bg-green-50'
-                ]"
-              >
-                <span class="font-medium">Bar</span>
-              </button>
 
-              <!-- Toggle: Bereits bezahlt (nur wenn Bar gewählt) -->
-              <Transition name="fade">
-                <div
-                  v-if="selectedPaymentMethod === 'cash'"
-                  class="flex items-center gap-1.5 shrink-0"
-                  title="Bereits bar bezahlt markieren"
-                >
-                  <span class="text-xs text-gray-500 whitespace-nowrap">Bereits bezahlt</span>
-                  <button
-                    type="button"
-                    @click.stop="cashAlreadyPaid = !cashAlreadyPaid"
-                    :class="[
-                      'relative w-9 h-5 rounded-full transition-colors focus:outline-none',
-                      cashAlreadyPaid ? 'bg-green-500' : 'bg-gray-300'
-                    ]"
-                  >
-                    <span :class="[
-                      'absolute top-0.5 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200',
-                      cashAlreadyPaid ? 'translate-x-[18px]' : 'translate-x-[2px]'
-                    ]"></span>
-                  </button>
-                </div>
-              </Transition>
-            </div>
-            
-            <!-- Invoice Button -->
             <button
-              @click="selectPaymentMethod('invoice')"
-              :class="[
-                'w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center space-x-3',
-                selectedPaymentMethod === 'invoice'
-                  ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-md'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-purple-300 hover:bg-purple-50'
-              ]"
+              type="button"
+              @click="selectPaymentMethod('cash')"
+              class="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200"
+              :style="selectedPaymentMethod === 'cash' ? { ...primaryBg, boxShadow: '0 1px 3px rgba(0,0,0,0.12)' } : {}"
+              :class="selectedPaymentMethod === 'cash' ? '' : 'text-gray-500 hover:text-gray-700'"
             >
-              <span class="font-medium">Rechnung</span>
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+              </svg>
+              <span>Bar</span>
+            </button>
+
+            <button
+              type="button"
+              @click="selectPaymentMethod('invoice')"
+              class="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200"
+              :style="selectedPaymentMethod === 'invoice' ? { ...primaryBg, boxShadow: '0 1px 3px rgba(0,0,0,0.12)' } : {}"
+              :class="selectedPaymentMethod === 'invoice' ? '' : 'text-gray-500 hover:text-gray-700'"
+            >
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <span>Rechnung</span>
             </button>
           </div>
+
+          <!-- "Bereits bezahlt" Toggle (nur bei Bar) -->
+          <Transition name="fade">
+            <div
+              v-if="selectedPaymentMethod === 'cash'"
+              class="flex items-center justify-between mt-3 px-1"
+            >
+              <span class="text-sm text-gray-600">Bereits bar bezahlt</span>
+              <button
+                type="button"
+                @click.stop="cashAlreadyPaid = !cashAlreadyPaid"
+                class="relative w-10 h-6 rounded-full transition-colors focus:outline-none"
+                :style="cashAlreadyPaid ? primaryBg : {}"
+                :class="cashAlreadyPaid ? '' : 'bg-gray-300'"
+              >
+                <span :class="[
+                  'absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200',
+                  cashAlreadyPaid ? 'translate-x-5' : 'translate-x-1'
+                ]"></span>
+              </button>
+            </div>
+          </Transition>
         </div>
         
         <!-- Gespeicherte Rechnungsadresse anzeigen (CREATE-Modus mit bestehender Adresse) -->
-        <div v-if="shouldShowSavedBillingAddress && !props.isEditMode" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <div v-if="shouldShowSavedBillingAddress && !props.isEditMode" class="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
           <div class="flex justify-between items-center mb-2">
             <span class="text-sm font-medium text-gray-700">Gespeicherte Rechnungsadresse</span>
-            <button 
+            <button
               @click="startEditingBillingAddress"
-              class="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+              class="text-xs font-medium hover:underline"
+              :style="primaryText"
             >
               Bearbeiten
             </button>
@@ -416,177 +416,176 @@
         </div>
 
         <!-- Rechnungsadresse Form - nur wenn Formular angezeigt werden soll -->
-        <div v-if="shouldShowBillingAddressForm" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-3 gap-2">
-              <h5 class="text-sm font-medium text-gray-700">
+        <div v-if="shouldShowBillingAddressForm" class="mt-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-2">
+              <h5 class="text-sm font-semibold text-gray-700">
                 {{ isEditingBillingAddress ? 'Rechnungsadresse bearbeiten' : 'Rechnungsadresse' }}
               </h5>
-              
-              <!-- Toggle: Gleich wie Kundenadresse (mobil unterhalb, desktop rechts) -->
-              <div class="flex items-center space-x-2">
+
+              <!-- Toggle: Gleich wie Kundenadresse -->
+              <div class="flex items-center gap-2">
                 <button
                   type="button"
                   @click="useCustomBillingAddressInModal = !useCustomBillingAddressInModal"
-                  :class="[
-                    'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                    useCustomBillingAddressInModal ? 'bg-blue-600' : 'bg-gray-300'
-                  ]"
+                  class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
+                  :style="useCustomBillingAddressInModal ? primaryBg : {}"
+                  :class="useCustomBillingAddressInModal ? '' : 'bg-gray-300'"
                 >
                   <span
                     :class="[
-                      'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                      'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
                       useCustomBillingAddressInModal ? 'translate-x-6' : 'translate-x-1'
                     ]"
                   />
                 </button>
-                <span class="text-xs sm:text-sm font-medium text-gray-700">Gleich wie Kundenadresse</span>
+                <span class="text-xs sm:text-sm text-gray-600">Gleich wie Kundenadresse</span>
               </div>
             </div>
             
-            <!-- Formular - immer sichtbar -->
+            <!-- Formular -->
             <div class="space-y-3">
               <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Firmenname</label>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Firmenname</label>
                 <input
                   v-model="invoiceData.company_name"
                   type="text"
                   placeholder="Firmenname (optional)"
-                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                 >
               </div>
-              
+
               <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Kontaktperson *</label>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Kontaktperson *</label>
                 <input
                   v-model="invoiceData.contact_person"
                   type="text"
                   required
                   placeholder="Vorname Nachname"
-                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                 >
               </div>
-              
+
               <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">E-Mail *</label>
+                <label class="block text-xs font-medium text-gray-500 mb-1">E-Mail *</label>
                 <input
                   v-model="invoiceData.email"
                   type="email"
                   required
                   placeholder="email@beispiel.ch"
-                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                 >
               </div>
-              
+
               <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Telefon</label>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Telefon</label>
                 <input
                   v-model="invoiceData.phone"
                   type="tel"
                   placeholder="+41 44 123 45 67"
-                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                 >
               </div>
-              
+
               <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Straße & Hausnummer *</label>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Strasse & Hausnummer *</label>
                 <div class="grid grid-cols-3 gap-2">
                   <input
                     v-model="invoiceData.street"
                     type="text"
                     required
-                    placeholder="Musterstraße"
-                    class="col-span-2 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                    placeholder="Musterstrasse"
+                    class="col-span-2 px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                   >
                   <input
                     v-model="invoiceData.street_number"
                     type="text"
                     required
                     placeholder="123"
-                    class="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                    class="px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                   >
                 </div>
               </div>
-              
-              <div class="grid grid-cols-2 gap-3">
+
+              <div class="grid grid-cols-2 gap-2">
                 <div>
-                  <label class="block text-xs font-medium text-gray-600 mb-1">PLZ *</label>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">PLZ *</label>
                   <input
                     v-model="invoiceData.zip"
                     type="text"
                     required
                     placeholder="8000"
-                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                    class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                   >
                 </div>
                 <div>
-                  <label class="block text-xs font-medium text-gray-600 mb-1">Ort *</label>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Ort *</label>
                   <input
                     v-model="invoiceData.city"
                     type="text"
                     required
                     placeholder="Zürich"
-                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                    class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                   >
                 </div>
               </div>
-              
+
               <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Land</label>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Land</label>
                 <input
                   v-model="invoiceData.country"
                   type="text"
                   placeholder="Schweiz"
-                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                 >
               </div>
-              
-              <div class="grid grid-cols-2 gap-3">
+
+              <div class="grid grid-cols-2 gap-2">
                 <div>
-                  <label class="block text-xs font-medium text-gray-600 mb-1">MWST-Nummer</label>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">MWST-Nummer</label>
                   <input
                     v-model="invoiceData.vat_number"
                     type="text"
                     placeholder="CHE-123.456.789"
-                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                    class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                   >
                 </div>
                 <div>
-                  <label class="block text-xs font-medium text-gray-600 mb-1">Handelsregisternummer</label>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Handelsreg.-Nr.</label>
                   <input
                     v-model="invoiceData.company_register_number"
                     type="text"
                     placeholder="CH-123.456.789"
-                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                    class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                   >
                 </div>
               </div>
-              
+
               <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Notizen</label>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Notizen</label>
                 <textarea
                   v-model="invoiceData.notes"
                   placeholder="Zusätzliche Informationen..."
                   rows="2"
-                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
+                  class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                 ></textarea>
               </div>
-              
+
               <!-- Abbrechen-Button wenn im Edit-Modus -->
               <div v-if="isEditingBillingAddress" class="flex justify-end">
                 <button
                   @click="cancelEditingBillingAddress"
                   type="button"
-                  class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+                  class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
                 >
                   Abbrechen
                 </button>
               </div>
               
               <!-- Auto-save indicator -->
-              <div v-if="isSavingInvoice" class="text-sm text-center text-blue-600">
-                💾 Speichere automatisch...
+              <div v-if="isSavingInvoice" class="text-sm text-center" :style="primaryText">
+                Speichere...
               </div>
-              <div v-if="invoiceSaveMessage" class="text-sm text-center p-2 rounded-md" :class="invoiceSaveMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+              <div v-if="invoiceSaveMessage" class="text-sm text-center px-3 py-2 rounded-xl" :class="invoiceSaveMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'">
                 {{ invoiceSaveMessage.text }}
               </div>
             </div>
@@ -601,6 +600,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { usePaymentMethods, useBillingAddresses } from '~/composables/usePaymentMethods'
 import { useDiscounts } from '~/composables/useDiscounts'
+const { primaryBg, primaryText, primaryBgLight, primaryBorder } = usePrimaryColor()
 import { useEventModalForm } from '~/composables/useEventModalForm'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'

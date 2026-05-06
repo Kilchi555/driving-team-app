@@ -11,15 +11,16 @@
         @click="selectDuration(duration.value)"
         :disabled="props.isPastAppointment"
         :class="[
-          'p-2 text-sm rounded border transition-colors',
+          'p-2 text-sm rounded-xl border transition-colors font-medium',
           Number(modelValue) === Number(duration.value)
             ? props.isPastAppointment 
-              ? 'bg-green-400 text-white border-green-400 cursor-not-allowed' 
-              : 'bg-green-600 text-white border-green-600'
+              ? 'bg-gray-400 text-white border-gray-400 cursor-not-allowed'
+              : 'border-transparent'
             : props.isPastAppointment
-              ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
-              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
         ]"
+        :style="Number(modelValue) === Number(duration.value) && !props.isPastAppointment ? primaryBg : {}"
         :title="`modelValue: ${modelValue} (${typeof modelValue}), duration.value: ${duration.value} (${typeof duration.value}), match: ${Number(modelValue) === Number(duration.value)}`"
       >
         {{ duration.label }}
@@ -54,6 +55,7 @@
 import { computed, watch, onMounted, ref } from 'vue'
 import { useDurationManager } from '~/composables/useDurationManager'
 import { useAuthStore } from '~/stores/auth'
+const { primaryBg } = usePrimaryColor()
 // import { getSupabase } from '~/utils/supabase' 
 
 interface Props {

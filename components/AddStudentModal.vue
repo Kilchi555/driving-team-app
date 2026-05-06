@@ -11,186 +11,174 @@
   />
 
   <!-- Duplicate Warning Modal (higher z-index) -->
-  <div v-if="showDuplicateWarning" class="fixed inset-0 z-[60] flex items-center justify-center">
-    <!-- Backdrop -->
-    <div class="absolute inset-0 bg-black bg-opacity-50" @click="showDuplicateWarning = false"></div>
-    
-    <!-- Modal -->
-    <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden">
+  <div v-if="showDuplicateWarning" class="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+    <div class="absolute inset-0 bg-black/40" @click="showDuplicateWarning = false"></div>
+
+    <div class="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl max-w-md w-full mx-0 sm:mx-4 overflow-hidden">
       <!-- Header -->
-      <div class="flex items-center justify-between p-6 border-b bg-orange-50">
-        <div class="flex items-center gap-3">
-          <div class="text-3xl">⚠️</div>
-          <h2 class="text-xl font-bold text-gray-900">{{ duplicateInfo.title }}</h2>
-        </div>
-        <button 
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <h2 class="text-base font-semibold text-gray-900">{{ duplicateInfo.title }}</h2>
+        <button
           @click="showDuplicateWarning = false"
-          class="text-gray-400 hover:text-gray-600 text-2xl"
+          class="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
         >
-          ×
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
         </button>
       </div>
 
       <!-- Content -->
-      <div class="p-6 space-y-4">
-        <p class="text-gray-700">{{ duplicateInfo.message }}</p>
+      <div class="px-6 py-5 space-y-4">
+        <p class="text-sm text-gray-600">{{ duplicateInfo.message }}</p>
 
         <!-- Action Instructions -->
-        <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
-          <p class="text-sm font-medium text-blue-900 mb-2">{{ duplicateInfo.actionTitle }}</p>
-          <ul class="text-sm text-blue-800 space-y-1 list-disc list-inside">
+        <div class="rounded-xl p-4" :style="primaryBgLight">
+          <p class="text-sm font-medium mb-2" :style="primaryText">{{ duplicateInfo.actionTitle }}</p>
+          <ul class="text-sm space-y-1 list-disc list-inside text-gray-600">
             <li v-for="(action, index) in duplicateInfo.actions" :key="index">{{ action }}</li>
           </ul>
         </div>
       </div>
 
       <!-- Footer -->
-      <div class="flex items-center justify-end p-6 border-t bg-gray-50 gap-3">
+      <div class="flex items-center justify-between px-6 py-4 border-t border-gray-100">
         <button
           @click="showDuplicateWarning = false"
-          class="px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+          class="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
         >
-          Verstanden
+          Schliessen
         </button>
 
-        <!-- Pending: resend SMS button -->
-        <button
-          v-if="duplicateInfo.duplicateStatus === 'pending'"
-          @click="resendOnboardingSmsFromModal"
-          :disabled="isSendingResendSms"
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-        >
-          <svg v-if="isSendingResendSms" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-          </svg>
-          {{ isSendingResendSms ? 'Wird gesendet...' : '📱 Onboarding-SMS senden' }}
-        </button>
+        <div class="flex items-center gap-2">
+          <!-- Pending: resend SMS -->
+          <button
+            v-if="duplicateInfo.duplicateStatus === 'pending'"
+            @click="resendOnboardingSmsFromModal"
+            :disabled="isSendingResendSms"
+            class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            :style="primaryBg"
+          >
+            <svg v-if="isSendingResendSms" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            {{ isSendingResendSms ? 'Wird gesendet...' : 'SMS erneut senden' }}
+          </button>
 
-        <!-- Active / inactive: open profile button -->
-        <button
-          v-if="duplicateInfo.existingUser?.id && duplicateInfo.duplicateStatus !== 'pending'"
-          @click="openStudentProfile"
-          class="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors"
-        >
-          👤 Profil öffnen
-        </button>
+          <!-- Active / inactive: open profile -->
+          <button
+            v-if="duplicateInfo.existingUser?.id && duplicateInfo.duplicateStatus !== 'pending'"
+            @click="openStudentProfile"
+            class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+            :style="primaryBg"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+            Profil öffnen
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Add Student Modal -->
-  <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center">
+  <div v-if="show" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
     <!-- Backdrop -->
-    <div class="absolute inset-0 bg-black bg-opacity-50" @click="$emit('close')"></div>
-    
+    <div class="absolute inset-0 bg-black/40" @click="$emit('close')"></div>
+
     <!-- Modal -->
-    <div class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
+    <div class="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl max-w-lg w-full mx-0 sm:mx-4 max-h-[92vh] overflow-hidden flex flex-col">
       <!-- Header -->
-      <div class="flex items-center justify-between p-6 border-b bg-gray-50">
-        <h2 class="text-xl font-bold text-gray-900">Neuen Schüler hinzufügen</h2>
-        <button 
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <h2 class="text-base font-semibold text-gray-900">Neuer Schüler</h2>
+        <button
           @click="$emit('close')"
-          class="text-gray-400 hover:text-gray-600 text-2xl"
+          class="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
         >
-          ×
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
         </button>
       </div>
 
       <!-- Form -->
-      <form @submit.prevent="submitForm" class="overflow-y-auto max-h-[70vh]">
-        <div class="p-6 space-y-6">
-          <!-- Personal Information -->
-          <div>
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Persönliche Angaben</h3>
-            <!-- Info Banner -->
-            <div class="mb-3 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded p-2">
-              ℹ️ Mindestens Vor- oder Nachname + Telefon erforderlich
+      <form @submit.prevent="submitForm" class="overflow-y-auto flex-1">
+        <div class="px-6 py-5 space-y-4">
+          <!-- Info Banner -->
+          <div class="flex items-center gap-2 text-xs px-3 py-2 rounded-xl" :style="{ ...primaryBgLight, ...primaryText }">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Mindestens Vor- oder Nachname + Telefonnummer erforderlich
+          </div>
+
+          <!-- Vorname / Nachname -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="firstName" class="block text-xs font-medium text-gray-500 mb-1">Vorname</label>
+              <input
+                id="firstName"
+                v-model="form.first_name"
+                type="text"
+                placeholder="Max"
+                class="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
+                :class="errors.first_name ? 'border-red-300' : 'border-gray-200'"
+              >
+              <p v-if="errors.first_name" class="text-red-500 text-xs mt-1">{{ errors.first_name }}</p>
             </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <!-- First Name -->
-              <div>
-                <label for="firstName" class="block text-sm font-medium text-gray-700 mb-1">
-                  Vorname
-                </label>
-                <input
-                  id="firstName"
-                  v-model="form.first_name"
-                  type="text"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-300': errors.first_name }"
-                >
-                <p v-if="errors.first_name" class="text-red-600 text-xs mt-1">{{ errors.first_name }}</p>
-              </div>
-
-              <!-- Last Name -->
-              <div>
-                <label for="lastName" class="block text-sm font-medium text-gray-700 mb-1">
-                  Nachname
-                </label>
-                <input
-                  id="lastName"
-                  v-model="form.last_name"
-                  type="text"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-300': errors.last_name }"
-                >
-                <p v-if="errors.last_name" class="text-red-600 text-xs mt-1">{{ errors.last_name }}</p>
-              </div>
-
-              <!-- Phone -->
-              <div class="md:col-span-2">
-                <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
-                  Telefonnummer *
-                </label>
-                <input
-                  id="phone"
-                  v-model="form.phone"
-                  type="tel"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-300': errors.phone }"
-                  placeholder="+41 79 123 45 67"
-                >
-                <p v-if="errors.phone" class="text-red-600 text-xs mt-1">{{ errors.phone }}</p>
-              </div>
+            <div>
+              <label for="lastName" class="block text-xs font-medium text-gray-500 mb-1">Nachname</label>
+              <input
+                id="lastName"
+                v-model="form.last_name"
+                type="text"
+                placeholder="Mustermann"
+                class="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
+                :class="errors.last_name ? 'border-red-300' : 'border-gray-200'"
+              >
+              <p v-if="errors.last_name" class="text-red-500 text-xs mt-1">{{ errors.last_name }}</p>
             </div>
           </div>
 
+          <!-- Telefon -->
+          <div>
+            <label for="phone" class="block text-xs font-medium text-gray-500 mb-1">Telefonnummer *</label>
+            <input
+              id="phone"
+              v-model="form.phone"
+              type="tel"
+              placeholder="+41 79 123 45 67"
+              class="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
+              :class="errors.phone ? 'border-red-300' : 'border-gray-200'"
+            >
+            <p v-if="errors.phone" class="text-red-500 text-xs mt-1">{{ errors.phone }}</p>
+          </div>
         </div>
 
-        <!-- Footer - Sticky -->
-        <div class="sticky bottom-0 flex items-center justify-between p-6 border-t bg-white shadow-lg">
-          <div class="flex gap-4">
-            <button
-              type="button"
-              @click="$emit('close')"
-              class="px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300"
-            >
-              Abbrechen
-            </button>
-            <button
-              type="submit"
-              :disabled="isSubmitting || !isFormValid"
-              :class="[
-                'px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2',
-                isFormValid && !isSubmitting
-                  ? 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-300 shadow-md hover:shadow-lg'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              ]"
-            >
-              <span v-if="isSubmitting" class="flex items-center gap-2">
-                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Speichert...
-              </span>
-              <span v-else>
-                Speichern
-              </span>
-            </button>
-          </div>
+        <!-- Footer -->
+        <div class="sticky bottom-0 flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-white">
+          <button
+            type="button"
+            @click="$emit('close')"
+            class="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            Abbrechen
+          </button>
+          <button
+            type="submit"
+            :disabled="isSubmitting || !isFormValid"
+            class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+            :style="isFormValid && !isSubmitting ? primaryBg : {}"
+            :class="isFormValid && !isSubmitting ? '' : 'bg-gray-200 text-gray-400'"
+          >
+            <svg v-if="isSubmitting" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            {{ isSubmitting ? 'Speichert...' : 'Einladen & Speichern' }}
+          </button>
         </div>
       </form>
     </div>
@@ -201,8 +189,9 @@
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { usePrimaryColor } from '~/composables/usePrimaryColor'
+const { primaryBg, primaryText, primaryBgLight } = usePrimaryColor()
 import { useUIStore } from '~/stores/ui'
-import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
 import Toast from '~/components/Toast.vue'
 
@@ -286,9 +275,6 @@ const resendOnboardingSmsFromModal = async () => {
     isSendingResendSms.value = false
   }
 }
-const staffMembers = ref<any[]>([])
-const availableCategories = ref<any[]>([])
-const isLoadingCategories = ref(false)
 const showDuplicateWarning = ref(false)
 const duplicateInfo = ref({
   title: '',
@@ -390,61 +376,6 @@ const resetForm = () => {
   errors.value = {}
 }
 
-const loadStaffMembers = async () => {
-  if (props.currentUser?.role !== 'admin') return
-
-  try {
-    const response = await $fetch('/api/staff/get-staff-list') as any
-    if (response?.data) {
-      staffMembers.value = response.data.map((s: any) => ({
-        id: s.id,
-        first_name: s.first_name,
-        last_name: s.last_name
-      }))
-    }
-  } catch (error) {
-    console.error('Fehler beim Laden der Fahrlehrer:', error)
-  }
-}
-
-const loadCategories = async () => {
-  if (!props.currentUser?.id) return
-
-  isLoadingCategories.value = true
-  try {
-    // Use auth context tenant or get from profile
-    const authStore = useAuthStore()
-    if (!authStore.userProfile?.tenant_id) {
-      console.error('No tenant_id in user profile')
-      return
-    }
-
-    // Load categories via secure API (handles auth server-side)
-    const response = await $fetch('/api/staff/get-categories') as any
-    if (response?.data) {
-      availableCategories.value = response.data.map((c: any) => ({
-        code: c.code,
-        name: c.name,
-        is_active: c.is_active
-      }))
-    }
-
-  } catch (error) {
-    console.error('Fehler beim Laden der Kategorien:', error)
-    // Fallback categories
-    availableCategories.value = [
-      { code: 'B', name: 'B - Auto' },
-      { code: 'A1', name: 'A1 - Motorrad 125cc' },
-      { code: 'A', name: 'A - Motorrad' },
-      { code: 'BE', name: 'BE - Anhänger' },
-      { code: 'C', name: 'C - LKW' },
-      { code: 'C1', name: 'C1 - LKW klein' },
-      { code: 'CE', name: 'CE - LKW mit Anhänger' }
-    ]
-  } finally {
-    isLoadingCategories.value = false
-  }
-}
 
 const submitForm = async () => {
   if (!validateForm()) return
@@ -700,18 +631,10 @@ const submitForm = async () => {
   }
 }
 
-// Lifecycle
-onMounted(() => {
-  loadStaffMembers()
-  loadCategories()
-})
-
 // Watchers
 watch(() => props.show, (newValue) => {
   if (newValue) {
     resetForm()
-    loadStaffMembers()
-    loadCategories()
   }
 })
 

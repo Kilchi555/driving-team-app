@@ -8,25 +8,17 @@
     <div v-if="!props.isPastAppointment" class="flex gap-2 mb-3">
       <button
         @click="useStandardLocations = true"
-        :class="[
-          'px-3 py-1 text-sm rounded border',
-          useStandardLocations 
-            ? 'bg-blue-600 text-white border-blue-600' 
-            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-        ]"
+        :class="['px-3 py-1.5 text-sm rounded-xl border font-medium transition-colors', useStandardLocations ? 'border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50']"
+        :style="useStandardLocations ? primaryBg : {}"
       >
-        📋 Standard-Orte
+        Standard-Orte
       </button>
       <button
         @click="useStandardLocations = false"
-        :class="[
-          'px-3 py-1 text-sm rounded border',
-          !useStandardLocations 
-            ? 'bg-purple-600 text-white border-purple-600' 
-            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-        ]"
+        :class="['px-3 py-1.5 text-sm rounded-xl border font-medium transition-colors', !useStandardLocations ? 'border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50']"
+        :style="!useStandardLocations ? primaryBg : {}"
       >
-        🔍 Adresse eingeben
+        Adresse eingeben
       </button>
     </div>
 
@@ -47,7 +39,7 @@
           @focus="showLocationSuggestions = true"
           type="text"
           placeholder="z.B. Zürich HB, Bahnhofstrasse 1, 8001 Zürich"
-          class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-black bg-white"
+          class="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 text-black bg-white"
         />
       </div>
 
@@ -72,11 +64,11 @@
       
       <!-- Current manual location display -->
       <div v-if="selectedCustomLocation && selectedCustomLocation.id && selectedCustomLocation.id.includes('manual')" 
-           class="p-3 bg-green-50 border border-green-200 rounded-lg">
+           class="p-3 bg-gray-50 border border-gray-200 rounded-xl">
         <div class="flex items-center justify-between">
           <div class="flex-1">
-            <div class="font-medium text-green-800">✅ {{ selectedCustomLocation.name }}</div>
-            <div class="text-sm text-green-600">{{ selectedCustomLocation.address }}</div>
+            <div class="font-medium text-gray-900">{{ selectedCustomLocation.name }}</div>
+            <div class="text-sm text-gray-500">{{ selectedCustomLocation.address }}</div>
           </div>
           <button @click="clearManualLocation" class="text-red-500 hover:text-red-700">
             ✕
@@ -165,6 +157,7 @@
 <script setup lang="ts">
 
 import { ref, watch, onMounted, computed, nextTick } from 'vue'
+const { primaryBg } = usePrimaryColor()
 
 // Google Maps Types Declaration
 declare global {
