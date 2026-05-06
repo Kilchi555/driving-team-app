@@ -8,17 +8,10 @@
 </template>
 
 <script setup lang="ts">
-import { Capacitor } from '@capacitor/core'
-
 definePageMeta({ layout: false })
 
 onMounted(() => {
-  if (!Capacitor.isNativePlatform()) {
-    // Web visitors land on app.simy.ch / → go to simy.ch marketing page
-    window.location.replace('https://simy.ch')
-  } else {
-    // Native app users → go to login
-    navigateTo('/login')
-  }
+  // Always redirect to login – auth middleware handles already-logged-in users
+  navigateTo('/login')
 })
 </script>
