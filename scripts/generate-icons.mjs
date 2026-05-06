@@ -6,7 +6,7 @@
 // Prerequisites: npm install -D sharp
 // Usage: CLIENT=driving-team node scripts/generate-icons.mjs
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -28,36 +28,54 @@ try {
   process.exit(0)
 }
 
-const iconSrc = join(clientDir, 'icon.png')
+let iconSrc = join(clientDir, 'icon.png')
+let tempIconPath = null
 const splashSrc = existsSync(join(clientDir, 'splash.png'))
   ? join(clientDir, 'splash.png')
   : null
 
 if (!existsSync(iconSrc)) {
-  console.error(`❌ Missing: ${iconSrc}`)
-  console.error('   Add a 1024×1024px PNG as clients/${clientId}/icon.png')
-  process.exit(1)
+  console.log('  🌐 No local icon.png found – fetching logo_square_url from Supabase...')
+  const supabaseUrl = process.env.SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ Missing SUPABASE_URL or SUPABASE_ANON_KEY env vars.')
+    console.error('   Either add clients/${clientId}/icon.png or set the Supabase env vars.')
+    process.exit(1)
+  }
+
+  const tenantSlug = config.tenantSlug || clientId
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/tenants?slug=eq.${tenantSlug}&select=logo_square_url`,
+    { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } }
+  )
+
+  if (!res.ok) {
+    console.error(`❌ Supabase request failed: ${res.status} ${res.statusText}`)
+    process.exit(1)
+  }
+
+  const rows = await res.json()
+  const logoDataUrl = rows?.[0]?.logo_square_url
+
+  if (!logoDataUrl) {
+    console.error(`❌ No logo_square_url found for tenant slug "${tenantSlug}" in Supabase.`)
+    console.error('   Upload a square logo in the tenant settings or add clients/${clientId}/icon.png manually.')
+    process.exit(1)
+  }
+
+  // Decode base64 data URL → temp PNG file
+  const base64Data = logoDataUrl.replace(/^data:image\/\w+;base64,/, '')
+  tempIconPath = join(clientDir, '_icon-temp.png')
+  writeFileSync(tempIconPath, Buffer.from(base64Data, 'base64'))
+  iconSrc = tempIconPath
+  console.log('  ✅ Logo fetched from Supabase')
 }
 
 // ─── iOS Icon Sizes ─────────────────────────────────────────────────────────
-
-const IOS_ICONS = [
-  { size: 20,   scale: 1 },
-  { size: 20,   scale: 2 },
-  { size: 20,   scale: 3 },
-  { size: 29,   scale: 1 },
-  { size: 29,   scale: 2 },
-  { size: 29,   scale: 3 },
-  { size: 40,   scale: 1 },
-  { size: 40,   scale: 2 },
-  { size: 40,   scale: 3 },
-  { size: 60,   scale: 2 },
-  { size: 60,   scale: 3 },
-  { size: 76,   scale: 1 },
-  { size: 76,   scale: 2 },
-  { size: 83.5, scale: 2 },
-  { size: 1024, scale: 1 },
-]
+// Xcode 14+ only requires a single 1024x1024 universal icon (AppIcon-512@2x.png).
+// All other sizes are derived automatically.
 
 // ─── Android Icon Sizes ──────────────────────────────────────────────────────
 
@@ -84,15 +102,28 @@ async function generateIosIcons() {
     return
   }
 
-  console.log('  📱 iOS icons...')
-  for (const { size, scale } of IOS_ICONS) {
-    const px = Math.round(size * scale)
-    const filename = `icon-${size}@${scale}x.png`
-    await sharp(iconSrc)
-      .resize(px, px)
-      .toFile(join(iosIconsDir, filename))
+  console.log('  📱 iOS icon (1024x1024 universal)...')
+  await sharp(iconSrc)
+    .resize(1024, 1024)
+    .toFile(join(iosIconsDir, 'AppIcon-512@2x.png'))
+
+  // Write the Contents.json for a single universal icon (Xcode 14+ format)
+  const contentsJson = {
+    images: [
+      {
+        filename: 'AppIcon-512@2x.png',
+        idiom: 'universal',
+        platform: 'ios',
+        size: '1024x1024'
+      }
+    ],
+    info: { author: 'xcode', version: 1 }
   }
-  console.log(`  ✅ ${IOS_ICONS.length} iOS icons generated`)
+  writeFileSync(
+    join(iosIconsDir, 'Contents.json'),
+    JSON.stringify(contentsJson, null, 2) + '\n'
+  )
+  console.log('  ✅ iOS icon generated (AppIcon-512@2x.png)')
 }
 
 async function generateAndroidIcons() {
@@ -145,8 +176,17 @@ async function generateSplashScreens() {
   }
 }
 
+// tempIconPath already declared above
+
 console.log(`\n🎨 Generating assets for client: ${clientId}`)
 await generateIosIcons()
 await generateAndroidIcons()
 await generateSplashScreens()
+
+// Clean up temp file from Supabase download
+if (tempIconPath && existsSync(tempIconPath)) {
+  unlinkSync(tempIconPath)
+  console.log('  🧹 Temp icon file removed')
+}
+
 console.log('\n✅ All assets generated\n')

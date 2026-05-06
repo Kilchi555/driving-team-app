@@ -92,64 +92,64 @@ jobs:
       - name: Generate app icons
         env:
           CLIENT: ${{ matrix.client }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          if [ -f "clients/${{ matrix.client }}/icon.png" ]; then
-            npm install -D sharp --no-save
-            node scripts/generate-icons.mjs
-          fi
+          npm install -D sharp --no-save
+          node scripts/generate-icons.mjs
 
-      - name: Setup keystore (auto-generate if new client)
+      # KEYSTORES_JSON secret format:
+      # { "simy": { "b64": "<base64>", "pass": "<password>" }, "driving-team": { ... } }
+      - name: Setup keystore
         id: keystore
         env:
           GH_TOKEN: ${{ secrets.SIMY_GITHUB_PAT }}
           CLIENT_ID: ${{ matrix.client }}
           KEYSTORE_ALIAS: ${{ steps.config.outputs.keystore_alias }}
+          KEYSTORES_JSON: ${{ secrets.KEYSTORES_JSON }}
         run: |
-          ALIAS_UPPER=$(echo "$CLIENT_ID" | tr '[:lower:]-' '[:upper:]_')
-          SECRET_BASE64="${ALIAS_UPPER}_KEYSTORE_BASE64"
-          SECRET_PASS="${ALIAS_UPPER}_KEY_PASSWORD"
           REPO="${{ github.repository }}"
 
-          # Check if keystore secret already exists via GitHub API
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$REPO/actions/secrets/$SECRET_BASE64")
+          # Try to read keystore from KEYSTORES_JSON secret
+          if [ -n "$KEYSTORES_JSON" ]; then
+            KEYSTORE_B64=$(echo "$KEYSTORES_JSON" | jq -r --arg c "$CLIENT_ID" '.[$c].b64 // empty')
+            KEYSTORE_PASS=$(echo "$KEYSTORES_JSON" | jq -r --arg c "$CLIENT_ID" '.[$c].pass // empty')
+          fi
 
-          if [ "$STATUS" = "404" ]; then
-            echo "No keystore found for $CLIENT_ID — auto-generating..."
-            KEYSTORE_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "No keystore found for $CLIENT_ID in KEYSTORES_JSON — auto-generating..."
+            KEYSTORE_PASS=$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)
             keytool -genkey -v \
               -keystore client.keystore \
               -alias "$KEYSTORE_ALIAS" \
               -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass "$KEYSTORE_PASSWORD" \
-              -keypass "$KEYSTORE_PASSWORD" \
+              -storepass "$KEYSTORE_PASS" \
+              -keypass "$KEYSTORE_PASS" \
               -dname "CN=$CLIENT_ID, OU=Mobile, O=Simy, L=Zurich, ST=ZH, C=CH"
             KEYSTORE_B64=$(base64 -w 0 client.keystore)
-            gh secret set "$SECRET_BASE64" --body "$KEYSTORE_B64" --repo "$REPO"
-            gh secret set "$SECRET_PASS" --body "$KEYSTORE_PASSWORD" --repo "$REPO"
-            echo "keystore_b64=$KEYSTORE_B64" >> "$GITHUB_OUTPUT"
-            echo "keystore_password=$KEYSTORE_PASSWORD" >> "$GITHUB_OUTPUT"
-            echo "✅ Keystore auto-generated and saved as GitHub Secrets"
+
+            # Merge into KEYSTORES_JSON and update secret
+            NEW_JSON=$(echo "${KEYSTORES_JSON:-{}}" | jq \
+              --arg c "$CLIENT_ID" --arg b "$KEYSTORE_B64" --arg p "$KEYSTORE_PASS" \
+              '.[$c] = {b64: $b, pass: $p}')
+            gh secret set KEYSTORES_JSON --body "$NEW_JSON" --repo "$REPO"
+            echo "✅ Keystore generated and saved to KEYSTORES_JSON"
           else
-            echo "Keystore already exists for $CLIENT_ID — using stored secrets"
-            echo "keystore_b64=USE_SECRET" >> "$GITHUB_OUTPUT"
-            echo "keystore_password=USE_SECRET" >> "$GITHUB_OUTPUT"
+            echo "✅ Keystore found in KEYSTORES_JSON for $CLIENT_ID"
+            echo "$KEYSTORE_B64" | base64 --decode > client.keystore
           fi
+
+          echo "keystore_b64=$KEYSTORE_B64" >> "$GITHUB_OUTPUT"
+          echo "keystore_password=$KEYSTORE_PASS" >> "$GITHUB_OUTPUT"
 
       - name: Decode keystore
         run: |
-          if [ "${{ steps.keystore.outputs.keystore_b64 }}" = "USE_SECRET" ]; then
-            echo "${{ secrets.DRIVING_TEAM_KEYSTORE_BASE64 }}" | base64 --decode > client.keystore
-          else
-            echo "${{ steps.keystore.outputs.keystore_b64 }}" | base64 --decode > client.keystore
-          fi
+          echo "${{ steps.keystore.outputs.keystore_b64 }}" | base64 --decode > client.keystore
 
       - name: Build signed AAB
         env:
           KEYSTORE_ALIAS: ${{ steps.config.outputs.keystore_alias }}
-          KEYSTORE_PASSWORD: ${{ steps.keystore.outputs.keystore_password == 'USE_SECRET' && secrets.DRIVING_TEAM_KEY_PASSWORD || steps.keystore.outputs.keystore_password }}
+          KEYSTORE_PASSWORD: ${{ steps.keystore.outputs.keystore_password }}
         run: |
           cd android
           cat >> app/build.gradle << 'EOF'

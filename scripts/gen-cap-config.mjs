@@ -1,39 +1,36 @@
-import { CapacitorConfig } from '@capacitor/cli'
-import { readFileSync } from 'fs'
+#!/usr/bin/env node
+/**
+ * Generates capacitor.config.json for the given client.
+ * Needed because Capacitor CLI can't load .ts configs in ESM projects.
+ * Usage: node scripts/gen-cap-config.mjs [client-id]
+ */
+
+import { readFileSync, writeFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+const root = join(__dirname, '..')
 
-// Which client are we building? Defaults to driving-team for local dev.
-const clientId = process.env.CLIENT || 'driving-team'
-
-const configPath = join(__dirname, `clients/${clientId}/config.json`)
+const clientId = process.env.CLIENT || process.argv[2] || 'driving-team'
+const configPath = join(root, `clients/${clientId}/config.json`)
 const client = JSON.parse(readFileSync(configPath, 'utf-8'))
 
-const config: CapacitorConfig = {
+const config = {
   appId: client.bundleId,
   appName: client.appName,
-  webDir: 'dist',
-
-  server: {
-    // Uncomment for local hot-reload during development:
-    // url: 'http://192.168.x.x:3000',
-    // cleartext: true,
-  },
-
+  webDir: '.output/public',
+  server: client.serverUrl ? { url: client.serverUrl } : {},
   ios: {
     scheme: client.scheme,
     backgroundColor: client.backgroundColor,
     deploymentTarget: client.ios?.deploymentTarget || '16.0',
-    contentInset: 'automatic',
+    contentInset: 'never',
   },
-
   android: {
     backgroundColor: client.backgroundColor,
     allowMixedContent: false,
   },
-
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
@@ -47,10 +44,12 @@ const config: CapacitorConfig = {
       presentationOptions: ['badge', 'sound', 'alert'],
     },
     StatusBar: {
-      style: 'Light',
+      style: 'Dark',
       backgroundColor: client.backgroundColor,
     },
   },
 }
 
-export default config
+const outPath = join(root, 'capacitor.config.json')
+writeFileSync(outPath, JSON.stringify(config, null, 2) + '\n')
+console.log(`✅ capacitor.config.json generated for client: ${clientId}`)

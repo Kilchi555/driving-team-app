@@ -23,8 +23,15 @@ logs
 .env.local
 .env.development
 .env.production
+fastlane/.env
+fastlane/.env.*
 
 # Supabase Edge Function local secrets
 supabase/functions/**/.env.local
 .vercel
 .env*.local
+*.keystore
+
+# Capacitor (generated per-client, do not commit)
+capacitor.config.json
+capacitor.config.ts.bak

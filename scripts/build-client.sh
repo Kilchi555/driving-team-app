@@ -25,21 +25,22 @@ echo "   App Name:  $APP_NAME"
 echo "   Bundle ID: $BUNDLE_ID"
 echo ""
 
-# 1. Generate icons and splash screens (if assets exist)
-if [ -f "clients/${CLIENT}/icon.png" ]; then
-  echo "🎨 Generating icons and splash screens..."
-  CLIENT="$CLIENT" node scripts/generate-icons.mjs
-else
-  echo "⚠️  No icon.png found in clients/${CLIENT}/ — skipping icon generation"
-  echo "   Add a 1024×1024px PNG as clients/${CLIENT}/icon.png"
-fi
+# 1. Generate icons and splash screens
+# generate-icons.mjs falls back to logo_square_url from Supabase when no local icon.png exists
+echo "🎨 Generating icons and splash screens..."
+CLIENT="$CLIENT" node scripts/generate-icons.mjs
 
 # 2. Static build with Nuxt
 echo ""
 echo "🔨 Running nuxt generate..."
 CLIENT="$CLIENT" npx nuxt generate
 
-# 3. Sync into native projects
+# 3. Generate capacitor.config.json for this client
+echo ""
+echo "⚙️  Generating capacitor.config.json..."
+CLIENT="$CLIENT" node scripts/gen-cap-config.mjs "$CLIENT"
+
+# 4. Sync into native projects
 echo ""
 echo "🔄 Syncing to native projects..."
 CLIENT="$CLIENT" npx cap sync
