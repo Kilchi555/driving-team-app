@@ -277,6 +277,9 @@ export default defineEventHandler(async (event) => {
               total_amount_rappen: finalTotalAmount,
               payment_method: (creditUsedRappen && creditUsedRappen >= finalTotalAmount) ? 'credit' : undefined,
               credit_used_rappen: creditUsedRappen || 0,
+              // Keep payment user_id/staff_id in sync with the appointment
+              ...(appointmentData.user_id ? { user_id: appointmentData.user_id } : {}),
+              ...(appointmentData.staff_id ? { staff_id: appointmentData.staff_id } : {}),
               updated_at: new Date().toISOString()
             }
             

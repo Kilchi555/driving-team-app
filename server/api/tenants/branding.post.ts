@@ -296,13 +296,62 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Add updated_at timestamp
-    updateData.updated_at = new Date().toISOString()
+    // ============ LAYER 7: FIELD WHITELIST ============
+    // Only allow specific branding-related fields to be updated.
+    // Critical fields (slug, is_active, subscription_*, wallee_*, created_*) are blocked.
+    const ALLOWED_FIELDS = new Set([
+      // Visual branding
+      'logo_url', 'logo_dark_url', 'logo_square_url', 'logo_wide_url', 'favicon_url',
+      'primary_color', 'secondary_color', 'accent_color',
+      'success_color', 'warning_color', 'error_color', 'info_color',
+      'background_color', 'surface_color', 'text_color', 'text_secondary_color',
+      'font_size_base', 'border_radius', 'spacing_unit',
+      'font_family', 'font_family_heading',
+      // Brand identity
+      'brand_name', 'tagline', 'description',
+      // Contact (tenant's own — they can update)
+      'contact_email', 'contact_phone', 'address',
+      'street', 'street_nr', 'zip', 'city', 'country',
+      // Social / web
+      'website_url', 'instagram_url', 'facebook_url', 'tiktok_url', 'youtube_url',
+      // SEO
+      'seo_title', 'seo_description', 'seo_keywords',
+      // Custom code (already validated above)
+      'custom_css', 'custom_js'
+    ])
 
-    // ============ LAYER 7: UPDATE DATABASE ============
+    const sanitizedUpdate: Record<string, any> = {}
+    const blockedFields: string[] = []
+
+    for (const [key, value] of Object.entries(updateData)) {
+      if (ALLOWED_FIELDS.has(key)) {
+        sanitizedUpdate[key] = value
+      } else if (key !== 'updated_at') {
+        blockedFields.push(key)
+      }
+    }
+
+    if (blockedFields.length > 0) {
+      logger.warn('🚨 Blocked attempt to update protected fields:', {
+        tenantId,
+        userId,
+        blockedFields
+      })
+    }
+
+    if (Object.keys(sanitizedUpdate).length === 0) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'No valid fields to update'
+      })
+    }
+
+    sanitizedUpdate.updated_at = new Date().toISOString()
+
+    // ============ LAYER 8: UPDATE DATABASE ============
     const { data: updatedTenant, error: updateError } = await supabaseAdmin
       .from('tenants')
-      .update(updateData)
+      .update(sanitizedUpdate)
       .eq('id', tenantId)
       .select()
       .single()
@@ -329,9 +378,10 @@ export default defineEventHandler(async (event) => {
       status: 'success',
       ip_address: ipAddress,
       details: {
-        updated_fields: Object.keys(updateData),
-        has_custom_css: !!updateData.custom_css,
-        has_custom_js: !!updateData.custom_js,
+        updated_fields: Object.keys(sanitizedUpdate),
+        blocked_fields: blockedFields,
+        has_custom_css: !!sanitizedUpdate.custom_css,
+        has_custom_js: !!sanitizedUpdate.custom_js,
         is_system_admin: isSystemAdmin,
         duration_ms: Date.now() - startTime
       }
@@ -340,7 +390,7 @@ export default defineEventHandler(async (event) => {
     logger.debug('✅ Tenant branding updated successfully:', {
       tenantId,
       userId,
-      updatedFields: Object.keys(updateData).length,
+      updatedFields: Object.keys(sanitizedUpdate).length,
       durationMs: Date.now() - startTime
     })
 

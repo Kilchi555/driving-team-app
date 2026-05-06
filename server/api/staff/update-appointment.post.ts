@@ -184,10 +184,40 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // ✅ LAYER 6: Update appointment
+    // ✅ LAYER 6: FIELD WHITELIST — only allow safe edit-fields.
+    // Blocks tenant_id, user_id, staff_id, id, created_at, deleted_at and any
+    // unknown columns that should never be changed via this endpoint.
+    const ALLOWED_FIELDS = new Set([
+      'title', 'description', 'notes',
+      'start_time', 'end_time', 'duration_minutes',
+      'location_id', 'custom_location_address', 'custom_location_name', 'google_place_id',
+      'type', 'status', 'event_type_code',
+      'is_paid', 'price_per_minute_rappen'
+    ])
+
+    const sanitizedUpdate: Record<string, any> = {}
+    const blockedFields: string[] = []
+    for (const [key, value] of Object.entries(updateData)) {
+      if (ALLOWED_FIELDS.has(key)) {
+        sanitizedUpdate[key] = value
+      } else if (key !== 'updated_at') {
+        blockedFields.push(key)
+      }
+    }
+
+    if (blockedFields.length > 0) {
+      logger.warn('🚨 Blocked attempt to update protected appointment fields:', {
+        userId: userProfile.id,
+        appointmentId,
+        blockedFields
+      })
+    }
+
+    sanitizedUpdate.updated_at = new Date().toISOString()
+
     const { data: updatedAppointment, error: updateError } = await supabaseAdmin
       .from('appointments')
-      .update(updateData)
+      .update(sanitizedUpdate)
       .eq('id', appointmentId)
       .eq('tenant_id', tenantId)
       .select()
@@ -206,7 +236,8 @@ export default defineEventHandler(async (event) => {
       userId: userProfile.id,
       tenantId: tenantId,
       appointmentId: appointmentId,
-      updatedFields: Object.keys(updateData),
+      updatedFields: Object.keys(sanitizedUpdate),
+      blockedFields,
       creditAdjustment
     })
 
