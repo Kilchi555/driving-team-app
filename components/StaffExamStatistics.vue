@@ -1,6 +1,6 @@
 <template>
   <!-- Modal Wrapper -->
-  <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 min-h-[100svh]">
+  <div class="fixed inset-0 z-[300] bg-black bg-opacity-50 flex items-center justify-center p-4 min-h-[100svh]">
     <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[calc(100svh-80px-env(safe-area-inset-bottom,0px))] overflow-y-auto">
       
       <!-- Modal Header -->
@@ -110,7 +110,7 @@
     </div>
 
     <!-- Category Details Modal -->
-    <div v-if="showDetailsModal" class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div v-if="showDetailsModal" class="fixed inset-0 z-[350] bg-black bg-opacity-50 flex items-center justify-center p-4" style="padding-top: max(16px, env(safe-area-inset-top, 16px))">
       <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
           <div class="flex items-center space-x-3">

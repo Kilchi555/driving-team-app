@@ -448,7 +448,7 @@ onUnmounted(() => {
   </div>
 
   <!-- Success State - Dashboard -->
-  <div v-else-if="currentUser" class="h-[100svh] flex flex-col">
+  <div v-else-if="currentUser" class="h-[100svh] flex flex-col overflow-hidden">
     <!-- Temporär entfernt: Reload Button oben rechts -->
     <!--
     <button
@@ -473,7 +473,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 overflow-hidden">
+    <div class="flex-1 overflow-hidden bg-white" style="padding-top: env(safe-area-inset-top, 0px)">
       
       <!-- Temporär entfernt: Admin Staff Switcher -->
       <!--
@@ -494,47 +494,66 @@ onUnmounted(() => {
       />
     </div>
 
-    <!-- Footer Navigation -->
-    <div class="fixed bottom-0 left-0 right-0 h-[50px] bg-white shadow z-50 flex justify-around items-center px-4">
-      <button 
-        @click="goToCustomers" 
-        class="bg-blue-500 hover:bg-blue-600 text-white font-bold px-3 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200 min-w-[80px] h-[36px] flex items-center justify-center text-sm"
-      >
-        Schüler
-      </button>   
-      
-      <!-- Pendenzen Button - VERBESSERT -->
-      <button 
-        @click="() => { 
-          logger.debug('🔥 Opening pendenzen modal, current count:', pendingCount); 
-          showPendenzen = true; 
-        }"
-        :class="`${pendenzenButtonClasses} min-w-[80px] h-[36px] flex items-center justify-center text-sm`"
-      >
-        {{ pendenzenButtonText }}
-      </button>
+    <!-- Native iOS Tab Bar -->
+    <div 
+      class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 z-50"
+      style="padding-bottom: env(safe-area-inset-bottom, 0px)"
+    >
+      <div class="flex justify-around items-center h-[49px]">
 
-      <!-- Pendenzen Modal -->
-      <PendenzenModal
-        :is-open="showPendenzen"
-        :current-user="currentUser"
-        :default-tab="defaultPendenzenTab"
-        @close="() => { 
-          logger.debug('🔥 Closing pendenzen modal'); 
-          showPendenzen = false; 
-        }"
-        @evaluate-lesson="handleEvaluateLesson"
-        @appointment-cancelled="onAppointmentCancelled"
-      />
-      
-      <!-- Staff Settings nur für Staff/Admin -->
-      <button 
-        @click="showStaffSettings = true" 
-        class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-3 py-2 rounded-xl shadow-lg transform active:scale-95 transition-all duration-200 min-w-[80px] h-[36px] flex items-center justify-center text-sm"
-      >
-        Profil
-      </button>
+        <!-- Schüler -->
+        <button 
+          @click="goToCustomers"
+          class="flex flex-col items-center justify-center gap-[2px] flex-1 h-full active:opacity-60 transition-opacity"
+        >
+          <svg class="w-[18px] h-[18px] text-gray-400" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87m6-4.13a4 4 0 11-8 0 4 4 0 018 0zm6-4a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <span class="text-[10px] font-medium text-gray-400">Schüler</span>
+        </button>
+
+        <!-- Pendenzen mit Badge -->
+        <button 
+          @click="() => { logger.debug('🔥 Opening pendenzen modal'); showPendenzen = true; }"
+          class="flex flex-col items-center justify-center gap-[2px] flex-1 h-full active:opacity-60 transition-opacity"
+        >
+          <div class="relative">
+            <svg class="w-[18px] h-[18px]" :class="pendingCount > 0 ? 'text-red-500' : 'text-gray-400'" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-9.33-5.003m-.67 5.003v3.158c0 .538-.214 1.055-.595 1.437L6 17h9m-4 4a2 2 0 004 0"/>
+            </svg>
+            <span 
+              v-if="pendingCount > 0"
+              class="absolute -top-1.5 -right-2 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-[3px] leading-none"
+            >
+              {{ pendingCount > 99 ? '99+' : pendingCount }}
+            </span>
+          </div>
+          <span class="text-[10px] font-medium" :class="pendingCount > 0 ? 'text-red-500' : 'text-gray-400'">Pendenzen</span>
+        </button>
+
+        <!-- Profil -->
+        <button 
+          @click="showStaffSettings = true"
+          class="flex flex-col items-center justify-center gap-[2px] flex-1 h-full active:opacity-60 transition-opacity"
+        >
+          <svg class="w-[18px] h-[18px] text-gray-400" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+          <span class="text-[10px] font-medium text-gray-400">Profil</span>
+        </button>
+
+      </div>
     </div>
+
+    <!-- Pendenzen Modal -->
+    <PendenzenModal
+      :is-open="showPendenzen"
+      :current-user="currentUser"
+      :default-tab="defaultPendenzenTab"
+      @close="() => { logger.debug('🔥 Closing pendenzen modal'); showPendenzen = false; }"
+      @evaluate-lesson="handleEvaluateLesson"
+      @appointment-cancelled="onAppointmentCancelled"
+    />
   </div>
   
   <!-- Fallback für andere Fehlerzustände -->

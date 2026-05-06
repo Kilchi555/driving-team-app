@@ -301,14 +301,17 @@
 
         <!-- Footer Links -->
         <div class="mt-6 text-center">
-          <p class="text-sm text-gray-600">
+          <p v-if="!isNativeApp" class="text-sm text-gray-600">
             Noch kein Account? 
             <NuxtLink :to="'/register'" class="font-medium hover:underline" style="color: #7C3AED;">
               Registrieren
             </NuxtLink>
           </p>
-          
-          <div class="mt-4 pt-4 border-t border-gray-200">
+          <p v-else class="text-sm text-gray-500">
+            Konto-Erstellung nur über Einladung deiner Fahrschule.
+          </p>
+
+          <div v-if="!isNativeApp" class="mt-4 pt-4 border-t border-gray-200">
             <NuxtLink to="/" class="text-sm text-gray-500 hover:text-gray-700 transition-colors">
               Zurück zur Startseite
             </NuxtLink>
@@ -474,6 +477,13 @@ const { login, logout, isLoggedIn, loading } = useAuthStore()
 const { showError, showSuccess } = useUIStore()
 const { loadTenant, currentTenant } = useTenant()
 const mfaFlow = useMFAFlow()
+
+// Hide registration / "back to home" links in the native app — registration in
+// the native app is invitation-only via onboarding link.
+const isNativeApp = computed(() => {
+  if (process.server) return false
+  return !!(window as any).Capacitor?.isNativePlatform?.()
+})
 
 // Get tenant from URL parameter or route params
 const tenantParam = ref(

@@ -1,47 +1,86 @@
 <template>
-  <!-- Modal Wrapper -->
-  <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 min-h-[100svh]">
-    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[calc(100svh-80px-env(safe-area-inset-bottom,0px))] overflow-y-auto">
-      
-      <!-- Modal Header -->
-      <div class="sticky top-0 bg-white border-b px-4 py-2 flex justify-between items-center">
-        <div class="flex items-center space-x-3">
-          <!-- Exam Statistics Button -->
-          <button
-            @click="openExamStatistics"
-            class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-          >
-            <span>Statistik</span>
-          </button>
-          
-          <!-- Cash Control Button -->
-          <button
-            @click="openCashControl"
-            class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
-          >
-            <span>Kasse</span>
-          </button>
+  <Teleport to="body">
+  <!-- Bottom Sheet Overlay -->
+  <div
+    class="fixed inset-0 z-[200] bg-black/40 flex items-end"
+    style="padding-bottom: env(safe-area-inset-bottom, 0px)"
+    @click.self="$emit('close')"
+  >
+    <div class="bg-gray-100 rounded-t-3xl w-full max-w-4xl mx-auto max-h-[92svh] flex flex-col shadow-2xl">
 
-          <!-- Affiliate Button -->
-          <button
-            v-if="affiliateEnabled"
-            @click="openAffiliateModal"
-            class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
-          >
-            <span>Empfehlen</span>
-          </button>
-          
+      <!-- Drag Handle -->
+      <div class="flex justify-center pt-3 pb-1 flex-shrink-0">
+        <div class="w-9 h-1 bg-gray-300 rounded-full"></div>
+      </div>
+
+      <!-- Profile Header -->
+      <div class="px-5 pt-2 pb-4 flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+            {{ props.currentUser?.first_name?.charAt(0) || '?' }}{{ props.currentUser?.last_name?.charAt(0) || '' }}
+          </div>
+          <div>
+            <div class="font-semibold text-gray-900 text-base leading-tight">
+              {{ props.currentUser?.first_name }} {{ props.currentUser?.last_name }}
+            </div>
+            <div class="text-xs text-gray-500 mt-0.5 capitalize">{{ props.currentUser?.role?.replace('_', ' ') }}</div>
+          </div>
         </div>
         <button
           @click="$emit('close')"
-          class="text-gray-500 hover:text-gray-700 text-2xl leading-none font-bold"
+          class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center active:opacity-60 transition-opacity"
         >
-          ×
+          <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
         </button>
       </div>
 
-      <!-- Modal Content -->
-      <div class="p-4 space-y-2">
+      <!-- Quick Actions Grid -->
+      <div class="px-4 pb-3 flex-shrink-0">
+        <div class="grid gap-3" :class="affiliateEnabled ? 'grid-cols-3' : 'grid-cols-2'">
+          <button
+            @click="openExamStatistics"
+            class="bg-white rounded-2xl p-4 flex flex-col items-center gap-2 active:opacity-60 transition-opacity shadow-sm"
+          >
+            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+            </div>
+            <span class="text-xs font-medium text-gray-700">Statistik</span>
+          </button>
+
+          <button
+            @click="openCashControl"
+            class="bg-white rounded-2xl p-4 flex flex-col items-center gap-2 active:opacity-60 transition-opacity shadow-sm"
+          >
+            <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+              <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+              </svg>
+            </div>
+            <span class="text-xs font-medium text-gray-700">Kasse</span>
+          </button>
+
+          <button
+            v-if="affiliateEnabled"
+            @click="openAffiliateModal"
+            class="bg-white rounded-2xl p-4 flex flex-col items-center gap-2 active:opacity-60 transition-opacity shadow-sm"
+          >
+            <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+              <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+              </svg>
+            </div>
+            <span class="text-xs font-medium text-gray-700">Empfehlen</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable Settings Content -->
+      <div class="overflow-y-auto flex-1 px-4 pb-6">
+        <div class="space-y-2">
         
         <!-- Loading State -->
         <div v-if="isLoading" class="space-y-4">
@@ -62,19 +101,16 @@
         <div v-if="!isLoading" class="space-y-2">
 
         <!-- Externe Kalender Einstellungen -->
-        <div class="border border-gray-200 rounded-lg">
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
           <button  
             @click="toggleSection('externalCalendars')" 
-            class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 transition-colors"
+            class="w-full px-4 py-3.5 text-left flex items-center gap-3 active:opacity-60 transition-opacity"
           >
-            <div class="flex items-center space-x-3">
-              <span class="text-xl">📅</span>
-              <div>
-                <h3 class="font-medium text-gray-900">Externe Kalender</h3>
-              </div>
+            <div class="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             </div>
-            <span class="text-gray-600 font-bold">{{ openSections.externalCalendars ? '−' : '+' }}</span>
-
+            <span class="text-sm font-medium text-gray-900 flex-1">Externe Kalender</span>
+            <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.externalCalendars ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
           </button>
           
           <div v-if="openSections.externalCalendars" class="px-4 pb-4 border-t">
@@ -83,13 +119,16 @@
         </div>
 
         <!-- Nur Arbeitsstunden für 4 Monate - KEINE lessons mehr! -->
-        <div class="border border-gray-200 rounded-lg">
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
           <button  
             @click="toggleSection('workingStats')" 
-            class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
+            class="w-full px-4 py-3.5 text-left flex items-center gap-3 active:opacity-60 transition-opacity"
           >
-            <span class="font-medium text-gray-900">⏰ Arbeitsstunden</span>
-            <span class="text-gray-600 font-bold">{{ openSections.workingStats ? '−' : '+' }}</span>
+            <div class="w-8 h-8 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <span class="text-sm font-medium text-gray-900 flex-1">Arbeitsstunden</span>
+            <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.workingStats ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
           </button>
           
           <div v-if="openSections.workingStats" class="px-4 pb-4 border-t border-gray-100">
@@ -162,13 +201,16 @@
         </div>
 
         <!-- 6. Prüfungsstandorte -->
-        <div class="border border-gray-200 rounded-lg">
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
           <button
             @click="toggleSection('examLocations')"
-            class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
+            class="w-full px-4 py-3.5 text-left flex items-center gap-3 active:opacity-60 transition-opacity"
           >
-            <span class="font-medium text-gray-900">🏛️ Prüfungsstandorte</span>
-            <span class="text-gray-600 font-bold">{{ openSections.examLocations ? '−' : '+' }}</span>
+            <div class="w-8 h-8 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            </div>
+            <span class="text-sm font-medium text-gray-900 flex-1">Prüfungsstandorte</span>
+            <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.examLocations ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
           </button>
           
           <div v-if="openSections.examLocations" class="px-4 pb-4 border-t border-gray-100">
@@ -188,13 +230,16 @@
 
           
           <!-- 3. Treffpunkte/Standorte -->
-          <div class="border border-gray-200 rounded-lg">
+          <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
             <button
               @click="toggleSection('locations')"
-              class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
+              class="w-full px-4 py-3.5 text-left flex items-center gap-3 active:opacity-60 transition-opacity"
             >
-              <span class="font-medium text-gray-900">📍 Treffpunkte/Standorte</span>
-              <span class="text-gray-600 font-bold">{{ openSections.locations ? '−' : '+' }}</span>
+              <div class="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </div>
+              <span class="text-sm font-medium text-gray-900 flex-1">Treffpunkte / Standorte</span>
+              <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.locations ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             </button>
             
             <div v-if="openSections.locations" class="px-4 pb-4 border-t border-gray-100">
@@ -280,13 +325,16 @@
           </div>
 
           <!-- 4. Arbeitszeiten -->
-          <div class="border border-gray-200 rounded-lg">
+          <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
             <button
               @click="toggleSection('worktime')"
-              class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
+              class="w-full px-4 py-3.5 text-left flex items-center gap-3 active:opacity-60 transition-opacity"
             >
-              <span class="font-medium text-gray-900">⏰ Arbeitszeiten</span>
-              <span class="text-gray-600 font-bold">{{ openSections.worktime ? '−' : '+' }}</span>
+              <div class="w-8 h-8 bg-teal-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <span class="text-sm font-medium text-gray-900 flex-1">Arbeitszeiten</span>
+              <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.worktime ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             </button>
             
             <div v-if="openSections.worktime" class="px-2 pb-4 border-t border-gray-100">
@@ -389,35 +437,56 @@
       </div>
 
       <!-- Gutschein & Rabattcodes (nur Admin) -->
-      <div v-if="props.currentUser?.role === 'admin' || props.currentUser?.role === 'tenant_admin'" class="border-b border-gray-200">
+      <div v-if="props.currentUser?.role === 'admin' || props.currentUser?.role === 'tenant_admin'" class="bg-white rounded-2xl shadow-sm overflow-hidden">
         <button
           @click="toggleSection('voucherCodes')"
-          class="w-full px-4 py-3 text-left flex justify-between items-center hover:bg-gray-50 focus:outline-none"
+          class="w-full px-4 py-3.5 text-left flex items-center gap-3 active:opacity-60 transition-opacity"
         >
-          <span class="font-medium text-gray-900">🎟️ Gutschein- & Rabattcodes</span>
-          <span class="text-gray-600 font-bold">{{ openSections.voucherCodes ? '−' : '+' }}</span>
+          <div class="w-8 h-8 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+          </div>
+          <span class="text-sm font-medium text-gray-900 flex-1">Gutschein- & Rabattcodes</span>
+          <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.voucherCodes ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
         </button>
         <div v-if="openSections.voucherCodes" class="px-4 pb-4 border-t border-gray-100">
           <p class="mt-4 text-sm text-gray-500">Gutschein- & Rabattcodes werden in Kürze verfügbar sein.</p>
         </div>
       </div>
+      </div><!-- end v-if="!isLoading" accordion wrapper -->
 
-      <!-- Footer with Logout Button and Calendar Link -->
-      <div class="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-between items-center">
-        <button
-          @click="openCalendarIntegration"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-        >
-          <span>Kalender-Link</span>
-        </button>
-        <button
-          @click="handleLogout"
-          class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
-        >
-          <span>Abmelden</span>
-        </button>
-      </div>
-    </div>
+        <!-- Footer Actions -->
+        <div class="mt-2 space-y-2">
+          <button
+            @click="openCalendarIntegration"
+            class="w-full bg-white rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity shadow-sm"
+          >
+            <div class="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+            </div>
+            <span class="text-sm font-medium text-gray-700 flex-1 text-left">Kalender-Link</span>
+            <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
+
+          <button
+            @click="handleLogout"
+            class="w-full bg-white rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity shadow-sm"
+          >
+            <div class="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+              </svg>
+            </div>
+            <span class="text-sm font-medium text-red-600 flex-1 text-left">Abmelden</span>
+          </button>
+        </div>
+
+      </div><!-- end space-y-2 settings -->
+      </div><!-- end overflow-y-auto -->
+  </Teleport>
 
     <!-- Exam Statistics Modal -->
     <StaffExamStatistics
@@ -427,7 +496,7 @@
     />
 
     <!-- Cash Control Modal -->
-    <div v-if="showCashControl" class="fixed inset-0 z-[60] bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div v-if="showCashControl" class="fixed inset-0 z-[300] bg-black bg-opacity-50 flex items-center justify-center p-4" style="padding-top: max(16px, env(safe-area-inset-top, 16px))">
       <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
           <h3 class="text-lg font-semibold text-gray-900">Meine Kassen</h3>
@@ -445,7 +514,7 @@
     </div>
 
     <!-- Affiliate Modal -->
-    <div v-if="showAffiliateModal" class="fixed inset-0 z-[60] bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div v-if="showAffiliateModal" class="fixed inset-0 z-[300] bg-black bg-opacity-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
         <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center shrink-0">
           <h3 class="text-lg font-semibold text-gray-900">🎁 Freunde empfehlen</h3>
@@ -534,7 +603,7 @@
 
     <!-- Referral Detail Sub-Modal -->
     <Teleport to="body">
-      <div v-if="showReferralDetail" class="fixed inset-0 z-[200] bg-black bg-opacity-50 flex items-center justify-center p-4" @click.self="showReferralDetail = false">
+      <div v-if="showReferralDetail" class="fixed inset-0 z-[400] bg-black bg-opacity-50 flex items-center justify-center p-4" @click.self="showReferralDetail = false">
       <div class="bg-white rounded-xl shadow-xl max-w-sm w-full max-h-[80vh] flex flex-col">
         <div class="border-b px-5 py-4 flex justify-between items-center shrink-0">
           <h3 class="font-semibold text-gray-900">{{ referralDetailTitle }}</h3>
@@ -581,7 +650,7 @@
 
     <!-- Affiliate Info Modal -->
     <Teleport to="body">
-      <div v-if="showAffiliateInfoModal" class="fixed inset-0 z-[250] bg-black bg-opacity-50 flex items-center justify-center p-4" @click.self="showAffiliateInfoModal = false">
+      <div v-if="showAffiliateInfoModal" class="fixed inset-0 z-[400] bg-black bg-opacity-50 flex items-center justify-center p-4" @click.self="showAffiliateInfoModal = false">
         <div class="bg-white rounded-xl shadow-xl max-w-sm w-full max-h-[85vh] flex flex-col">
           <div class="border-b px-5 py-4 flex justify-between items-center shrink-0">
             <h3 class="font-semibold text-gray-900">Wie funktioniert's?</h3>
@@ -631,7 +700,7 @@
     </Teleport>
 
     <!-- Calendar Integration Modal -->
-    <div v-if="showCalendarIntegration" class="fixed inset-0 z-100 bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div v-if="showCalendarIntegration" class="fixed inset-0 z-[300] bg-black bg-opacity-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
         <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
           <h3 class="text-lg font-semibold text-gray-900">📅 Kalender-Integration</h3>
@@ -795,7 +864,7 @@
     />
 
     <!-- New Location Modal -->
-    <div v-if="showNewLocationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div v-if="showNewLocationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300]">
       <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
           <h3 class="text-lg font-semibold">Neuen Standort erstellen</h3>
@@ -882,7 +951,6 @@
         </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup lang="ts">

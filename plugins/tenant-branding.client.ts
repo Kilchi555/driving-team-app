@@ -30,7 +30,6 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       '/dashboard',
       '/login',
       '/register',
-      '/auswahl',
       '/shop',
       '/learning',
       '/users',

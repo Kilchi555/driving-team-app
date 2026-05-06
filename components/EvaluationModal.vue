@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
-  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4" style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom));">
-    <div class="bg-white rounded-lg max-w-4xl w-full flex flex-col evaluation-modal-container" style="height: calc(100svh - 1rem - env(safe-area-inset-bottom)); max-height: calc(100svh - 1rem - env(safe-area-inset-bottom));">
+  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4" style="padding-top: max(24px, env(safe-area-inset-top, 24px)); padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));">
+    <div class="bg-white rounded-lg max-w-4xl w-full flex flex-col evaluation-modal-container" style="height: 100%; max-height: 100%;">
       <div class="bg-green-600 text-white p-4 flex-shrink-0">
         <div class="flex items-center justify-between">
           <div>
