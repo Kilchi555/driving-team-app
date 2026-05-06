@@ -228,6 +228,7 @@
       :course="selectedCourse"
       :tenant-id="tenantId"
       :tenant-slug="slug"
+      :wallee-enabled-override="tenantWalleeEnabled"
       @close="closeEnrollmentModal"
       @enrolled="handleEnrolled"
     />
@@ -256,6 +257,7 @@ const isInitializing = ref(true)
 const error = ref<string | null>(null)
 const tenant = ref<any>(null)
 const tenantBranding = ref<any>(null)
+const tenantWalleeEnabled = ref<boolean>(false)
 const courses = ref<any[]>([])
 const selectedCategory = ref('')
 const selectedLocation = ref('')
@@ -329,10 +331,14 @@ const filteredCourses = computed(() => {
     result = result.filter(c => extractCity(c.description) === selectedLocation.value)
   }
   
-  // Sort by first session date; waitlist courses (no sessions) go to the end
+  // Waitlist courses first, then by next session date ascending
   result.sort((a, b) => {
-    const aDate = a.course_sessions?.[0]?.start_time || (a.status === 'waitlist' ? 'zzz' : '')
-    const bDate = b.course_sessions?.[0]?.start_time || (b.status === 'waitlist' ? 'zzz' : '')
+    const aIsWaitlist = a.status === 'waitlist'
+    const bIsWaitlist = b.status === 'waitlist'
+    if (aIsWaitlist && !bIsWaitlist) return -1
+    if (!aIsWaitlist && bIsWaitlist) return 1
+    const aDate = a.course_sessions?.[0]?.start_time || ''
+    const bDate = b.course_sessions?.[0]?.start_time || ''
     return aDate.localeCompare(bDate)
   })
   
@@ -354,6 +360,7 @@ const loadData = async () => {
 
     // Set tenant data
     tenant.value = response.tenant
+    tenantWalleeEnabled.value = response.tenant.wallee_enabled ?? false
     
     // Load branding
     tenantBranding.value = {

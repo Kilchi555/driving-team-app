@@ -401,6 +401,7 @@ interface Props {
   course: any
   tenantId: string
   tenantSlug: string
+  walleeEnabledOverride?: boolean  // Pass from public pages to avoid auth-required API call
 }
 
 const props = defineProps<Props>()
@@ -408,8 +409,19 @@ const emit = defineEmits(['close', 'enrolled'])
 
 // Tenant hooks
 const { tenantPrimaryColor } = useTenant()
-const { walleeEnabled, loadWalleeStatus } = useWalleeStatus()
-onMounted(() => { loadWalleeStatus() })
+const { walleeEnabled: walleeEnabledFromStore, loadWalleeStatus } = useWalleeStatus()
+
+// Prefer the prop value (from public API) over the store value to avoid an auth-required
+// API call that would redirect unauthenticated public users.
+const walleeEnabled = computed(() =>
+  props.walleeEnabledOverride !== undefined ? props.walleeEnabledOverride : walleeEnabledFromStore.value
+)
+
+onMounted(() => {
+  if (props.walleeEnabledOverride === undefined) {
+    loadWalleeStatus()
+  }
+})
 const { getStoredRefCode } = useAffiliateRef()
 
 // Helper functions for colors
