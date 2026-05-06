@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style="padding-top: max(24px, env(safe-area-inset-top, 24px)); padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));"
     <div class="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] flex flex-col">
       <!-- Header -->
       <div class="bg-blue-600 text-white p-4 flex-shrink-0">

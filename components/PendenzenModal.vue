@@ -1,8 +1,10 @@
 <!-- components/PendenzenModal.vue -->
 <template>
-  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-2">
+  <Teleport to="body">
+  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[200] px-2"
+    style="padding-top: max(8px, env(safe-area-inset-top, 8px)); padding-bottom: max(8px, env(safe-area-inset-bottom, 8px))">
     <!-- MODAL CONTAINER -->
-    <div class="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+    <div class="bg-white rounded-lg max-w-4xl w-full max-h-full overflow-hidden flex flex-col">
       
       <!-- Header -->
       <div class="bg-green-600 text-white p-4">
@@ -476,6 +478,7 @@
       </div>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">

@@ -20,7 +20,7 @@
   </div>
 
   <!-- Main Content -->
-  <div v-else-if="currentUser" class="h-[100svh] flex flex-col bg-gray-50">
+  <div v-else-if="currentUser" class="h-[100svh] flex flex-col bg-gray-50" style="padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px)">
     <!-- Header -->
     <div class="bg-white shadow-sm border-b p-4">
       <div class="flex items-center justify-between">
@@ -415,6 +415,7 @@ const searchQuery = ref('')
 const showInactive = ref(false)
 const showAllStudents = ref(false)
 const showOnlyNoUpcoming = ref(false)
+const studentsWithUpcomingIds = ref<Set<string>>(new Set())
 const showPendingModal = ref(false)
 const pendingStudent = ref<any>(null)
 const isResendingSms = ref(false)
@@ -452,35 +453,17 @@ const filteredStudents = computed(() => {
     logger.debug('✅ Filtered by search query:', filtered.length, 'students')
   }
 
-  // Filter by upcoming appointments
+  // Filter by upcoming appointments (uses server-fetched ID set)
   if (showOnlyNoUpcoming.value) {
     const beforeFilter = filtered.length
-    const now = new Date()
-    
-    filtered = filtered.filter(student => {
-      // Prüfe ob der Schüler geplante Termine hat
-      const hasUpcomingAppointments = student.appointments?.some((apt: any) => {
-        const appointmentDate = new Date(apt.start_time)
-        return appointmentDate > now && ['scheduled', 'confirmed'].includes(apt.status)
-      })
-      return !hasUpcomingAppointments
-    })
-    
-    // Sortiere nach dem letzten Termin (die am längsten her sind zuoberst)
-    filtered = filtered.sort((a, b) => {
-      const aLastAppointment = a.appointments?.length > 0 
-        ? new Date(Math.max(...a.appointments.map((apt: any) => new Date(apt.start_time).getTime())))
-        : new Date(0) // Falls keine Termine, ganz nach oben
-      
-      const bLastAppointment = b.appointments?.length > 0 
-        ? new Date(Math.max(...b.appointments.map((apt: any) => new Date(apt.start_time).getTime())))
-        : new Date(0) // Falls keine Termine, ganz nach oben
-      
-      return aLastAppointment.getTime() - bLastAppointment.getTime() // Älteste zuerst
-    })
-    
-    logger.debug(`✅ Showing students without upcoming appointments: ${beforeFilter} → ${filtered.length} students`)
+    filtered = filtered.filter(student => !studentsWithUpcomingIds.value.has(student.id))
+    logger.debug(`✅ No-upcoming filter: ${beforeFilter} → ${filtered.length} students`)
   }
+
+  // Alphabetisch nach Vorname sortieren
+  filtered = filtered.slice().sort((a, b) =>
+    (a.first_name || '').localeCompare(b.first_name || '', 'de-CH', { sensitivity: 'base' })
+  )
 
   logger.debug('🔄 Final filtered students:', filtered.length)
   return filtered
@@ -493,16 +476,25 @@ const filterStudents = () => {
   logger.debug('🔄 Filtering students - showOnlyNoUpcoming:', showOnlyNoUpcoming.value)
 }
 
+const loadUpcomingAppointmentIds = async () => {
+  try {
+    const response = await $fetch('/api/admin/get-students-upcoming-appointments', {
+      method: 'GET'
+    }) as any
+    if (response?.success) {
+      studentsWithUpcomingIds.value = new Set(response.data)
+      logger.debug(`📅 Loaded ${response.data.length} students with upcoming appointments`)
+    }
+  } catch (err) {
+    logger.warn('⚠️ Failed to load upcoming appointment IDs:', err)
+  }
+}
+
 const handleNoUpcomingToggle = async () => {
   logger.debug('🔄 No upcoming toggle changed:', showOnlyNoUpcoming.value)
-  
-  if (showOnlyNoUpcoming.value) {
-    // If switching to "No Upcoming", we need appointments data
-    logger.debug('📅 Loading appointments for "No Upcoming" filter...')
-    await loadStudents(true)
+  if (showOnlyNoUpcoming.value && studentsWithUpcomingIds.value.size === 0) {
+    await loadUpcomingAppointmentIds()
   }
-  
-  // The filteredStudents computed property will handle the rest
 }
 
 // Navigation functions
@@ -659,8 +651,10 @@ onMounted(async () => {
     return
   }
 
-  // Load students with appointments for complete data
-  await loadStudents(true)
+  await Promise.all([
+    loadStudents(true),
+    loadUpcomingAppointmentIds()
+  ])
 })
 
 // Methods - ECHTE SUPABASE CALLS mit korrekten Spaltennamen

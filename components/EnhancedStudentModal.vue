@@ -13,8 +13,8 @@
     :view-invoice="viewInvoiceData"
   />
 
-  <div v-if="selectedStudent" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-    <div class="bg-white rounded-lg max-w-5xl w-full max-h-[calc(100vh-24px)] overflow-hidden flex flex-col">
+  <div v-if="selectedStudent" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2" :style="{ paddingTop: 'max(8px, env(safe-area-inset-top, 8px))', paddingBottom: 'max(8px, env(safe-area-inset-bottom, 8px))' }">
+    <div class="bg-white rounded-lg max-w-5xl w-full max-h-full overflow-hidden flex flex-col">
       <!-- Header -->
       <div class="text-white p-4" :style="{ backgroundColor: primaryColor }">
         <div class="flex items-center justify-between">
@@ -93,30 +93,29 @@
             
             <!-- Bilder anzeigen -->
             <div class="flex justify-center gap-4 flex-wrap mb-6">
-              <a 
-                v-for="doc in studentDocuments" 
+              <div
+                v-for="doc in studentDocuments"
                 :key="doc.id"
-                :href="getStudentDocumentUrl(doc)" 
-                target="_blank"
-                class="flex-shrink-0"
+                class="flex-shrink-0 cursor-pointer"
                 :title="doc.file_name"
+                @click="viewDocument(getStudentDocumentUrl(doc), doc.file_name, doc.file_type)"
               >
                 <!-- Image Preview -->
-                <img 
+                <img
                   v-if="doc.file_type && doc.file_type.startsWith('image/')"
-                  :src="getStudentDocumentUrl(doc)" 
+                  :src="getStudentDocumentUrl(doc)"
                   :alt="doc.file_name"
-                  class="max-h-48 max-w-48 object-contain rounded border border-gray-200 hover:border-blue-400 transition-colors cursor-pointer"
+                  class="max-h-48 max-w-48 object-contain rounded border border-gray-200 hover:border-blue-400 transition-colors"
                   loading="lazy"
                 />
                 <!-- PDF Icon -->
-                <div v-else class="w-24 h-24 bg-red-50 rounded border border-red-200 hover:border-red-400 transition-colors cursor-pointer flex flex-col items-center justify-center">
+                <div v-else class="w-24 h-24 bg-red-50 rounded border border-red-200 hover:border-red-400 transition-colors flex flex-col items-center justify-center">
                   <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                   </svg>
                   <span class="text-xs text-red-600 mt-1 font-medium">PDF</span>
                 </div>
-              </a>
+              </div>
             </div>
             
             <!-- Upload Button - Native Device Behavior -->
@@ -1083,23 +1082,41 @@
     </div>
 
     <!-- Document Viewer Modal -->
-    <div v-if="showDocumentViewer" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-60 p-4">
-      <div class="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-hidden">
-        <div class="flex items-center justify-between p-4 border-b">
-          <h3 class="text-lg font-semibold">{{ viewerTitle }}</h3>
-          <button @click="closeDocumentViewer" class="text-gray-500 hover:text-gray-700">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-        <div class="p-4">
-          <img 
-            :src="viewerImageUrl"
-            :alt="viewerTitle"
-            class="max-w-full max-h-[70vh] object-contain mx-auto"
-          />
-        </div>
+    <div
+      v-if="showDocumentViewer"
+      class="fixed inset-0 bg-black bg-opacity-90 flex flex-col z-[350]"
+      style="padding-top: max(16px, env(safe-area-inset-top, 16px)); padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));"
+      @click.self="closeDocumentViewer"
+    >
+      <!-- Header -->
+      <div class="flex items-center justify-between px-4 pb-3 flex-shrink-0">
+        <p class="text-white text-sm font-medium truncate flex-1 mr-3">{{ viewerTitle }}</p>
+        <button
+          @click="closeDocumentViewer"
+          class="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-white hover:bg-opacity-30 transition flex-shrink-0"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Image Viewer -->
+      <div v-if="viewerFileType && viewerFileType.startsWith('image/')" class="flex-1 flex items-center justify-center overflow-hidden px-2">
+        <img
+          :src="viewerImageUrl"
+          :alt="viewerTitle"
+          class="max-w-full max-h-full object-contain rounded-lg"
+        />
+      </div>
+
+      <!-- PDF Viewer -->
+      <div v-else class="flex-1 overflow-hidden rounded-lg mx-2">
+        <iframe
+          :src="viewerImageUrl"
+          class="w-full h-full rounded-lg bg-white"
+          frameborder="0"
+        />
       </div>
     </div>
     
@@ -1586,6 +1603,7 @@ const currentFileInput = ref<HTMLInputElement>()
 const showDocumentViewer = ref(false)
 const viewerImageUrl = ref('')
 const viewerTitle = ref('')
+const viewerFileType = ref('')
 
 // Progress and Payments data
 const lessons = ref<any[]>([])
@@ -2133,9 +2151,10 @@ const startCategoryUpload = (requirement: any, side: 'front' | 'back', openNativ
 }
 
 
-const viewDocument = (url: string, title: string) => {
+const viewDocument = (url: string, title: string, fileType: string = '') => {
   viewerImageUrl.value = url
   viewerTitle.value = title
+  viewerFileType.value = fileType
   showDocumentViewer.value = true
 }
 
@@ -2143,6 +2162,7 @@ const closeDocumentViewer = () => {
   showDocumentViewer.value = false
   viewerImageUrl.value = ''
   viewerTitle.value = ''
+  viewerFileType.value = ''
 }
 
 // Upload handlers
