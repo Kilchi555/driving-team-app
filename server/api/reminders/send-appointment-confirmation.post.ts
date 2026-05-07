@@ -101,7 +101,7 @@ export default defineEventHandler(async (event) => {
     // 5. Get staff data
     const { data: staff, error: staffError } = await supabase
       .from('users')
-      .select('first_name, last_name')
+      .select('first_name, last_name, email')
       .eq('id', appointment.staff_id)
       .single()
 
@@ -181,6 +181,29 @@ export default defineEventHandler(async (event) => {
     } catch (emailError: any) {
       logger.error('EmailNotification', 'Failed to send appointment confirmation email:', emailError)
       // Don't fail the whole endpoint if email fails - log and continue
+    }
+
+    // 11. Send staff notification (fire-and-forget)
+    if (staff?.email) {
+      $fetch('/api/email/send-appointment-notification', {
+        method: 'POST',
+        body: {
+          email: staff.email,
+          studentName: `${user.first_name} ${user.last_name}`,
+          appointmentTime: appointmentDateTime,
+          type: 'staff_new_booking',
+          staffName,
+          location: location?.name,
+          locationAddress: [location?.address, location?.city].filter(Boolean).join(', ') || undefined,
+          tenantName: tenant.name,
+          tenantId,
+          tenantSlug: tenant.slug,
+          amount
+        }
+      }).catch((err: any) => {
+        logger.warn('⚠️ Could not send staff new booking notification (non-critical):', err.message)
+      })
+      logger.debug('📧 Staff new booking notification queued for:', staff.email)
     }
 
     logger.debug('✅ Appointment confirmation email processed successfully')
