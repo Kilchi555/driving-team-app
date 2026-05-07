@@ -180,7 +180,7 @@ export default defineEventHandler(async (event) => {
     const tenantName   = tenant?.name || 'Ihre Fahrschule'
     const primaryColor = tenant?.primary_color || '#2563eb'
     const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
-    const loginLink    = tenant?.slug ? `https://simy.ch/${tenant.slug}` : 'https://simy.ch'
+    const loginLink    = tenant?.slug ? `https://app.simy.ch/${tenant.slug}` : 'https://app.simy.ch'
 
     // Date/time formatting
     const aptDate = new Date(apt.start_time)

@@ -172,9 +172,9 @@ export default defineEventHandler(async (event) => {
           const tenantName   = tenant?.name || 'Driving Team'
           const tenantSlug   = (tenant as any)?.slug || ''
           const affiliateUrl = tenantSlug
-            ? `https://simy.ch/affiliate-dashboard?tenant=${tenantSlug}`
-            : 'https://simy.ch/affiliate-dashboard'
-          const customerUrl  = tenantSlug ? `https://www.simy.ch/${tenantSlug}` : 'https://www.simy.ch/login'
+            ? `https://app.simy.ch/affiliate-dashboard?tenant=${tenantSlug}`
+            : 'https://app.simy.ch/affiliate-dashboard'
+          const customerUrl  = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : 'https://app.simy.ch/login'
           const firstName    = customer.first_name
           const logoHtml     = tenant?.logo_wide_url || tenant?.logo_url
             ? `<img src="${tenant?.logo_wide_url || tenant?.logo_url}" alt="${tenantName}" style="height:40px;max-width:180px;object-fit:contain;display:block;margin:0 auto 24px">`

@@ -1293,7 +1293,7 @@ const isLoadingCalendarToken = ref(false)
 // Legacy computed (fallback)
 const calendarLink = computed(() => {
   if (calendarTokenLink.value) return calendarTokenLink.value
-  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
+  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
   const staffId = props.currentUser?.id
   return `${baseUrl}/api/calendar/ics?staff_id=${staffId}`
 })
@@ -1358,7 +1358,7 @@ const copyCalendarLink = async () => {
 }
 
 const registrationLink = computed(() => {
-  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
+  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
   // Use the service selection page first
   return `${baseUrl}/services/driving-team`
 })

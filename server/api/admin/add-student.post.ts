@@ -166,7 +166,7 @@ export default defineEventHandler(async (event) => {
       onboarding_status: 'pending',
       onboarding_token: onboardingToken,
       onboarding_token_expires: tokenExpires.toISOString(),
-      onboardingLink: `https://simy.ch/onboarding/${onboardingToken}`
+      onboardingLink: `https://app.simy.ch/onboarding/${onboardingToken}`
     }
 
     return {

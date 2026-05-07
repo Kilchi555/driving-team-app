@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
 
       const trialEnd = new Date(tenant.trial_ends_at!)
       const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-      const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
+      const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
 
       try {
         await sendEmail({

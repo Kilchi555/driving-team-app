@@ -19,7 +19,7 @@ interface SubscribeBody {
 const TENANT_NAME = 'Driving Team Fahrschule'
 const TEAM_EMAIL = 'info@drivingteam.ch'
 const PRIMARY_COLOR = '#1C64F2'
-const BOOKING_URL = 'https://www.simy.ch/booking/availability/driving-team'
+const BOOKING_URL = 'https://app.simy.ch/booking/availability/driving-team'
 
 // ─── Shared layout helpers ────────────────────────────────────────────────────
 

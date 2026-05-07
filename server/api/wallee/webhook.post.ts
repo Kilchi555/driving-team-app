@@ -1,7 +1,7 @@
 // server/api/wallee/webhook.post.ts
 // ✅ SECURE & RELIABLE Wallee Webhook Handler
 // Configured URLs in Wallee:
-//   - Production: https://www.simy.ch/api/wallee/webhook
+//   - Production: https://app.simy.ch/api/wallee/webhook
 //   - Preview: https://preview.simy.ch/api/wallee/webhook
 // Auto-detection based on host header
 
@@ -56,7 +56,7 @@ export default defineEventHandler(async (event) => {
   
   // Auto-detect environment based on request host
   const host = event.headers['host'] || ''
-  const isProduction = host.includes('www.simy.ch') && !host.includes('preview')
+  const isProduction = host.includes('app.simy.ch') && !host.includes('preview')
   const isPreview = host.includes('preview.simy.ch')
   
   logger.info(`Webhook received on host: ${host} (Production: ${isProduction}, Preview: ${isPreview}) [v2.1-token-fix]`)

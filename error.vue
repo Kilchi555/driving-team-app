@@ -30,7 +30,7 @@
 
         <!-- Secondary Link -->
         <a 
-          href="https://simy.ch/login" 
+          href="https://app.simy.ch/login" 
           class="block text-center text-sm text-blue-600 hover:text-blue-700 font-medium transition"
         >
           → Zur Login-Seite
@@ -72,7 +72,7 @@ onMounted(() => {
 const handleAction = () => {
   if (error.value?.statusCode === 404) {
     // Redirect to login on 404 (tenant not found)
-    window.location.href = 'https://simy.ch/login'
+    window.location.href = 'https://app.simy.ch/login'
   } else {
     // Go back or to home
     router.back()

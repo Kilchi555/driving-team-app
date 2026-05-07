@@ -85,9 +85,9 @@ export default defineEventHandler(async (event) => {
     const tenantName = tenant?.name || 'Ihre Fahrschule'
     const senderName = tenant?.twilio_from_sender || tenantName
     const tenantSlug = tenant?.slug || ''
-    const baseUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://simy.ch'
+    const baseUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://app.simy.ch'
     const onboardingUrl = `${baseUrl}/onboarding/${token}`
-    const loginLink = tenantSlug ? `https://simy.ch/${tenantSlug}` : 'https://simy.ch/login'
+    const loginLink = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : 'https://app.simy.ch/login'
 
     const smsMessage = `Hallo ${student.first_name},
 
