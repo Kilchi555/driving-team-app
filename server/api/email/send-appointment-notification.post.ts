@@ -9,7 +9,7 @@ interface AppointmentNotificationBody {
   email: string
   studentName: string
   appointmentTime?: string
-  type: 'pending_payment' | 'cancelled' | 'rescheduled' | 'appointment_confirmation'
+  type: 'pending_payment' | 'cancelled' | 'rescheduled' | 'appointment_confirmation' | 'staff_new_booking'
   cancellationReason?: string
   newTime?: string
   oldTime?: string
@@ -296,6 +296,45 @@ const TEMPLATES = {
 </body>
       `
     }
+  }
+  ,
+
+  staff_new_booking: {
+    subject: 'Neue Online-Buchung',
+    getHtml: (data: AppointmentNotificationBody, primaryColor: string) => `
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background-color:#f3f4f6;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:40px 20px;">
+    <tr><td>
+      <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);margin:0 auto;">
+        <tr>
+          <td style="background-color:${primaryColor};padding:30px;text-align:center;">
+            <h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:bold;">📅 Neue Online-Buchung</h1>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:30px;">
+            <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 20px 0;">Hallo ${data.staffName?.split(' ')[0] || 'Fahrlehrer'},</p>
+            <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 20px 0;">
+              <strong>${data.studentName}</strong> hat soeben online einen Termin bei dir gebucht.
+            </p>
+            <div style="background-color:#f8f9fa;border-left:4px solid ${primaryColor};padding:15px;margin:20px 0;border-radius:4px;">
+              ${data.appointmentTime ? `<p style="margin:5px 0;color:#374151;"><strong>Termin:</strong> ${data.appointmentTime}</p>` : ''}
+              <p style="margin:5px 0;color:#374151;"><strong>Schüler:</strong> ${data.studentName}</p>
+              ${data.location ? `<p style="margin:5px 0;color:#374151;"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px;color:#6b7280">${data.locationAddress}</span>` : ''}</p>` : ''}
+              ${data.amount ? `<p style="margin:5px 0;color:#374151;"><strong>Betrag:</strong> ${data.amount}</p>` : ''}
+            </div>
+            <p style="color:#6b7280;font-size:14px;margin:20px 0 0 0;">Der Termin ist in deinem Kalender sichtbar.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background-color:#f9fafb;padding:20px 30px;text-align:center;">
+            <p style="color:#9ca3af;font-size:12px;margin:0;">${data.tenantName || 'Simy'} – automatische Benachrichtigung</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>`
   }
 }
 
