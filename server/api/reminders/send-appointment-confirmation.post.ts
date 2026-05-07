@@ -75,6 +75,8 @@ export default defineEventHandler(async (event) => {
         staff_id,
         confirmation_token,
         location_id,
+        source,
+        created_by,
         payments (
           id,
           total_amount_rappen,
@@ -183,8 +185,9 @@ export default defineEventHandler(async (event) => {
       // Don't fail the whole endpoint if email fails - log and continue
     }
 
-    // 11. Send staff notification (fire-and-forget)
-    if (staff?.email) {
+    // 11. Send staff notification – only for online bookings made by the customer (not manual)
+    const isOnlineBooking = appointment.source === 'online' && appointment.created_by === userId
+    if (staff?.email && isOnlineBooking) {
       $fetch('/api/email/send-appointment-notification', {
         method: 'POST',
         body: {
@@ -204,6 +207,8 @@ export default defineEventHandler(async (event) => {
         logger.warn('⚠️ Could not send staff new booking notification (non-critical):', err.message)
       })
       logger.debug('📧 Staff new booking notification queued for:', staff.email)
+    } else if (staff?.email && !isOnlineBooking) {
+      logger.debug('⏭️ Skipping staff notification – manual appointment (source:', appointment.source, ')')
     }
 
     logger.debug('✅ Appointment confirmation email processed successfully')
