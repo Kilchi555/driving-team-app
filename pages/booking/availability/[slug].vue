@@ -335,7 +335,7 @@
                     <span class="text-2xl font-extrabold text-gray-900">{{ canton }}</span>
                     <span class="text-xs text-gray-500">
                       {{ allDisplayableLocations.filter((l: any) => (l.canton || l.city) === canton).length }}
-                      {{ allDisplayableLocations.filter((l: any) => (l.canton || l.city) === canton).length === 1 ? 'Standort' : 'Standorte' }}
+                      {{ allDisplayableLocations.filter((l: any) => (l.canton || l.city) === canton).length === 1 ? 'Ort' : 'Orte' }}
                     </span>
                   </div>
                 </button>
