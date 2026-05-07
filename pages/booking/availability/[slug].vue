@@ -317,23 +317,32 @@
 
             <!-- Canton Sub-Step: shown only when > 1 canton available -->
             <div v-if="showCantonStep" class="mb-6">
-              <p class="text-sm font-medium text-gray-500 text-center mb-3">Zuerst: Kanton auswählen</p>
-              <div class="flex flex-wrap justify-center gap-3">
+              <p class="text-sm font-medium text-gray-500 text-center mb-4">In welchem Kanton möchtest du fahren?</p>
+              <div :class="`grid ${availableCantons.length <= 3 ? 'grid-cols-' + availableCantons.length : 'grid-cols-3'} gap-3`">
                 <button
                   v-for="canton in availableCantons"
                   :key="canton"
                   @click="selectedCanton = canton"
-                  class="px-5 py-3 rounded-2xl font-semibold text-sm border-2 transition-all duration-150 active:scale-95"
-                  :style="selectedCanton === canton
-                    ? { backgroundColor: getBrandPrimary(), color: 'white', borderColor: getBrandPrimary(), boxShadow: `0 4px 14px ${getBrandPrimary()}40` }
-                    : { backgroundColor: 'white', color: '#374151', borderColor: '#e5e7eb' }"
+                  class="rounded-2xl p-4 sm:p-5 text-left transition-all duration-200 transform active:translate-y-0.5 border-2"
+                  :style="getInteractiveCardStyle(
+                    selectedCanton === canton || hoveredCanton === canton,
+                    hoveredCanton === canton
+                  )"
+                  @mouseenter="hoveredCanton = canton"
+                  @mouseleave="hoveredCanton = null"
                 >
-                  {{ canton }}
+                  <div class="flex flex-col items-center gap-1">
+                    <span class="text-2xl font-extrabold text-gray-900">{{ canton }}</span>
+                    <span class="text-xs text-gray-500">
+                      {{ allDisplayableLocations.filter((l: any) => (l.canton || l.city) === canton).length }}
+                      {{ allDisplayableLocations.filter((l: any) => (l.canton || l.city) === canton).length === 1 ? 'Standort' : 'Standorte' }}
+                    </span>
+                  </div>
                 </button>
               </div>
-              <div v-if="selectedCanton" class="mt-3 text-center">
+              <div v-if="selectedCanton && selectedCanton !== ''" class="mt-3 text-center">
                 <button
-                  @click="selectedCanton = null"
+                  @click="selectedCanton = ''"
                   class="text-xs text-gray-400 hover:text-gray-600 underline"
                 >
                   Alle Kantone anzeigen
@@ -344,8 +353,8 @@
             <!-- Divider when canton selected -->
             <div v-if="showCantonStep && selectedCanton" class="border-t border-gray-100 mb-5" />
 
-            <!-- Standard Locations (hidden until canton selected if showCantonStep) -->
-            <div v-if="!showCantonStep || selectedCanton">
+            <!-- Standard Locations (hidden until canton chosen; '' = show all) -->
+            <div v-if="!showCantonStep || selectedCanton !== null">
           <div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div 
@@ -1390,6 +1399,7 @@ const selectedMainCategory = ref<any>(null)  // NEW: Main category (B Auto, A Au
 const selectedCategory = ref<any>(null)      // CHANGED: Now represents selected subcategory
 const selectedLocation = ref<any>(null)
 const selectedCanton = ref<string | null>(null)
+const hoveredCanton = ref<string | null>(null)
 const selectedInstructor = ref<any>(null)
 const availableLocations = ref<any[]>([])
 const availableInstructors = ref<any[]>([])
@@ -1473,7 +1483,7 @@ const displayableLocations = computed(() => {
     selectedCanton: selectedCanton.value
   })
 
-  if (!selectedCanton.value || !showCantonStep.value) {
+  if (!showCantonStep.value || selectedCanton.value === null || selectedCanton.value === '') {
     logger.debug(`📊 displayableLocations result: ${all.length}/${availableLocations.value?.length}`)
     return all
   }
@@ -1654,10 +1664,16 @@ const loadStaffForCategory = async () => {
         if (!staffMap.has(s.id)) {
           staffMap.set(s.id, { ...s, available_locations: [] })
         }
-        staffMap.get(s.id)!.available_locations.push(loc)
+        // Ensure canton/city are preserved on the location object
+        staffMap.get(s.id)!.available_locations.push({
+          ...loc,
+          canton: loc.canton || '',
+          city: loc.city || ''
+        })
       })
     })
     availableStaff.value = Array.from(staffMap.values())
+    logger.debug('🗺️ Canton check:', data.locations.map((l: any) => `${l.name}: ${l.canton || 'NO_CANTON'}`).join(', '))
     
   } catch (err: any) {
     logger.error('❌ loadStaffForCategory:', err)
@@ -2411,14 +2427,16 @@ const selectSubcategory = async (category: any) => {
             })
             
             locationsMap.set(location.id, {
-              id: location.id,
-              name: location.name,
-              address: location.address,
-              category_pickup_settings: location.category_pickup_settings || {},
-              time_windows: parseTimeWindows(location.time_windows),
-              available_staff: staffAtLocation,
-              staff_ids: location.staff_ids || []
-            })
+                              id: location.id,
+                              name: location.name,
+                              address: location.address,
+                              city: location.city || '',
+                              canton: location.canton || '',
+                              category_pickup_settings: location.category_pickup_settings || {},
+                              time_windows: parseTimeWindows(location.time_windows),
+                              available_staff: staffAtLocation,
+                              staff_ids: location.staff_ids || []
+                            })
             logger.debug(`✅ Added location "${location.name}" with ${staffAtLocation.length} staff`)
           } else {
             const locationEntry = locationsMap.get(location.id)
@@ -3248,9 +3266,11 @@ const goBackToStep = (step: number) => {
     selectedInstructor.value = null
     availableTimeSlots.value = []
   }
+  if (step < 4) {
+    selectedCanton.value = null
+  }
   if (step < 3) {
     selectedLocation.value = null
-    selectedCanton.value = null
     availableInstructors.value = []
   }
   if (step < 2) {
@@ -3313,12 +3333,17 @@ const scrollToStep = (step: number) => {
 }
 
 // Auto-scroll steps bar when current step changes
-watch(() => currentStep.value, (newStep: number) => {
+watch(() => currentStep.value, (newStep: number, oldStep: number) => {
   // Always scroll on small screens, optionally on large screens too
   if (isScreenSmall.value || true) { // Changed: always scroll to keep current step visible
     nextTick(() => {
       scrollToStep(newStep)
     })
+  }
+
+  // Push browser history entry when moving forward so back button navigates within steps
+  if (newStep > oldStep && typeof history !== 'undefined') {
+    history.pushState({ bookingStep: newStep }, '')
   }
 })
 
@@ -3979,6 +4004,22 @@ onMounted(async () => {
     window.addEventListener('resize', checkScreenSize)
     // Store reference so onBeforeUnmount can remove it correctly
     ;(window as any).__bookingResizeHandler = checkScreenSize
+
+    // Browser back/forward → navigate within booking steps
+    const onPopState = (e: PopStateEvent) => {
+      if (e.state?.bookingStep === undefined) return
+      if (e.state.bookingStep > currentStep.value) {
+        // Forward: restore step directly (all data still in memory)
+        currentStep.value = e.state.bookingStep
+      } else {
+        // Back: use existing back handler (cleans up downstream state)
+        handleBackButton()
+      }
+    }
+    window.addEventListener('popstate', onPopState)
+    ;(window as any).__bookingPopStateHandler = onPopState
+    // Seed initial history entry so first back-press is intercepted
+    history.replaceState({ bookingStep: 0 }, '')
     
     // ✅ Reload time slots when returning to this page (e.g., from EventModal after booking)
     watch(() => route.path, async () => {
@@ -4106,6 +4147,12 @@ onBeforeUnmount(async () => {
   if (resizeHandler) {
     window.removeEventListener('resize', resizeHandler)
     delete (window as any).__bookingResizeHandler
+  }
+
+  const popStateHandler = (window as any).__bookingPopStateHandler
+  if (popStateHandler) {
+    window.removeEventListener('popstate', popStateHandler)
+    delete (window as any).__bookingPopStateHandler
   }
 
   // Release slot reservation if user leaves without completing booking

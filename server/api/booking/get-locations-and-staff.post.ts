@@ -165,6 +165,7 @@ export default defineEventHandler(async (event) => {
           pickup_radius_minutes: location.pickup_radius_minutes || 0,
           postal_code: location.postal_code,
           city: location.city,
+          canton: location.canton,
           available_staff: [],
           staff_ids: (() => {
             const raw = location.staff_ids
