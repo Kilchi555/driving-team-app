@@ -99,7 +99,7 @@ export default defineEventHandler(async (event) => {
     // ============================================
     // Step 3: Generate onboarding link
     // ============================================
-    const onboardingLink = `https://simy.ch/onboarding/${newToken}`
+    const onboardingLink = `https://app.simy.ch/onboarding/${newToken}`
     logger.debug('🔗 Generated onboarding link:', onboardingLink)
 
     // ============================================

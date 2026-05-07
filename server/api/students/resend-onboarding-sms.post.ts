@@ -204,7 +204,7 @@ export default defineEventHandler(async (event: H3Event) => {
     const senderName = tenant?.twilio_from_sender || tenant?.name || 'Driving Team'
     const tenantName = tenant?.name || 'Driving Team'
     const tenantSlug = tenant?.slug || ''
-    const loginLink = tenantSlug ? `https://simy.ch/${tenantSlug}` : 'https://simy.ch/login'
+    const loginLink = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : 'https://app.simy.ch/login'
 
     // ============ LAYER 5: AUDIT LOGGING ============
     await logAudit({
@@ -218,7 +218,7 @@ export default defineEventHandler(async (event: H3Event) => {
     })
 
     // ============ LAYER 6: DETERMINE SMS TYPE & CONTENT ============
-    const baseUrl = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || 'https://simy.ch'
+    const baseUrl = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
     let smsMessage: string
 
     if (!student.onboarding_token) {

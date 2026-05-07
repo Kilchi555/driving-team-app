@@ -8,10 +8,12 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
+import { navigateTo, definePageMeta } from '#imports'
+
 definePageMeta({ layout: false })
 
 onMounted(() => {
-  // Always redirect to login – auth middleware handles already-logged-in users
   navigateTo('/login')
 })
 </script>

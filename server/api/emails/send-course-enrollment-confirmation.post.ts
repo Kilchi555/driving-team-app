@@ -175,7 +175,7 @@ export default defineEventHandler(async (event) => {
     const isEinsiedeln = course?.description?.toLowerCase().includes('einsiedeln')
     const isCashPayment = paymentMethod === 'cash'
     const tenantSlug = tenant?.slug || ''
-    const agbUrl = `https://www.simy.ch/reglemente/agb?tenant=${tenantSlug}`
+    const agbUrl = `https://app.simy.ch/reglemente/agb?tenant=${tenantSlug}`
     
     let importantNotice = ''
     if (isVKU) {

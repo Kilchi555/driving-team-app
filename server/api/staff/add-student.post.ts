@@ -163,8 +163,8 @@ export default defineEventHandler(async (event) => {
     // 7. SEND ONBOARDING INVITATION
     let smsSuccess = false
     let emailSuccess = false
-    let onboardingLink = `https://simy.ch/onboarding/${onboardingToken}`
-    let loginLink = `https://simy.ch/${tenantSlug}`
+    let onboardingLink = `https://app.simy.ch/onboarding/${onboardingToken}`
+    let loginLink = `https://app.simy.ch/${tenantSlug}`
 
     // Send SMS if phone exists
     if (body.phone) {

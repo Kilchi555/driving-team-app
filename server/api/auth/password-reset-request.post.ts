@@ -172,10 +172,10 @@ export default defineEventHandler(async (event) => {
               newExpires.setDate(newExpires.getDate() + 30)
               await serviceSupabase.from('users').update({ onboarding_token: token, onboarding_token_expires: newExpires.toISOString() }).eq('id', user.id)
             }
-            const baseUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://simy.ch'
+            const baseUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://app.simy.ch'
             const tenantSlugFallback = tenantId ? (await serviceSupabase.from('tenants').select('slug').eq('id', tenantId).single()).data?.slug : ''
             const onboardingUrl = `${baseUrl}/onboarding/${token}`
-            const loginLink = tenantSlugFallback ? `https://simy.ch/${tenantSlugFallback}` : 'https://simy.ch/login'
+            const loginLink = tenantSlugFallback ? `https://app.simy.ch/${tenantSlugFallback}` : 'https://app.simy.ch/login'
             const smsMessage = `Bitte vervollständige zuerst deine Registrierung:\n\n${onboardingUrl}\n\nDanach kannst du dich hier anmelden:\n${loginLink}`
             try { await sendSMS({ to: user.phone, message: smsMessage }) } catch { /* ignore */ }
           }
