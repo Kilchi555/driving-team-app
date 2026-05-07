@@ -1401,6 +1401,9 @@ const selectedLocation = ref<any>(null)
 const selectedCanton = ref<string | null>(null)
 const hoveredCanton = ref<string | null>(null)
 const selectedInstructor = ref<any>(null)
+// Resolved UUID for ?staff=<handle> – populated on mount, never exposed in URL
+const lockedStaffId = ref<string | undefined>(undefined)
+const lockedStaffName = ref<string | undefined>(undefined)
 const availableLocations = ref<any[]>([])
 const availableInstructors = ref<any[]>([])
 const availableTimeSlots = ref<any[]>([])
@@ -2618,7 +2621,16 @@ const selectLocation = async (location: any) => {
   
   // Get instructors available at this location
   availableInstructors.value = location.available_staff || []
-  
+
+  // If a staff member is locked via ?staff=<uuid>, auto-select and skip step 5
+  if (lockedStaffId.value) {
+    const locked = availableInstructors.value.find((i: any) => i.id === lockedStaffId.value)
+    if (locked) {
+      await selectInstructor(locked)
+      return
+    }
+  }
+
   await waitForPressEffect()
   currentStep.value = 5
 }
@@ -4045,6 +4057,24 @@ onMounted(async () => {
     // Fire-and-forget: features always default to true for guests, no need to block render
     loadFeatures().catch(() => {})
 
+    // Resolve ?staff=<handle> → UUID (kept in memory only, never in URL)
+    const staffHandleParam = route.query.staff as string | undefined
+    if (staffHandleParam && !route.query.prefill && slug.value) {
+      try {
+        const resolved = await $fetch<{ success: boolean; staff_id: string; name: string }>(
+          '/api/booking/resolve-staff-handle',
+          { query: { handle: staffHandleParam, tenant: slug.value } }
+        )
+        if (resolved?.success) {
+          lockedStaffId.value = resolved.staff_id
+          lockedStaffName.value = resolved.name
+          logger.debug('✅ Staff handle resolved:', staffHandleParam, '→', resolved.name)
+        }
+      } catch {
+        logger.warn('⚠️ Could not resolve staff handle:', staffHandleParam)
+      }
+    }
+
     // Single combined call: tenant + categories + locationsCount (no sequential waterfall)
     if (slug.value) {
       // Only fetch if SSR didn't populate data (e.g. navigated to a different slug client-side)
@@ -4119,6 +4149,15 @@ onMounted(async () => {
             await selectSubcategory(categoryToSelect)
             currentStep.value = 2
             logger.debug('✅ Pre-selected category, user can continue from step 2')
+          }
+        } else if (!prefill && lockedStaffId.value && route.query.category) {
+          // ?staff=<handle>&category=<code> — pre-select category, staff auto-selects after location pick
+          logger.debug('🎯 Staff-locked pre-fill with category:', route.query.category)
+          const categoryToSelect = categories.value.find(c => c.code === route.query.category)
+          if (categoryToSelect) {
+            await selectSubcategory(categoryToSelect)
+            currentStep.value = 2
+            logger.debug('✅ Category pre-selected, staff will auto-select after location')
           }
         }
       } else {
