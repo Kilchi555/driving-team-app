@@ -398,7 +398,9 @@ export default defineEventHandler(async (event: H3Event) => {
         title: appointmentTitle, // "{Vorname} {Name} - {Ort}"
         description: sanitizedNotes || '', // Use notes as description, or empty string
         status: 'confirmed', // Status: confirmed (not booked)
-        original_price_rappen: totalAmountRappen // Add default price
+        original_price_rappen: totalAmountRappen, // Add default price
+        source: 'online',
+        created_by: authenticatedUserId
       })
       .select()
       .single()
