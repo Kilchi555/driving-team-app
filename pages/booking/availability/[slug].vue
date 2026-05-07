@@ -313,10 +313,39 @@
           <div class="bg-white shadow rounded-lg p-4 sm:p-6">
             <div class="text-center mb-6">
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wähle einen Standort</h2>
-             
             </div>
-          
-          <!-- Standard Locations -->
+
+            <!-- Canton Sub-Step: shown only when > 1 canton available -->
+            <div v-if="showCantonStep" class="mb-6">
+              <p class="text-sm font-medium text-gray-500 text-center mb-3">Zuerst: Kanton auswählen</p>
+              <div class="flex flex-wrap justify-center gap-3">
+                <button
+                  v-for="canton in availableCantons"
+                  :key="canton"
+                  @click="selectedCanton = canton"
+                  class="px-5 py-3 rounded-2xl font-semibold text-sm border-2 transition-all duration-150 active:scale-95"
+                  :style="selectedCanton === canton
+                    ? { backgroundColor: getBrandPrimary(), color: 'white', borderColor: getBrandPrimary(), boxShadow: `0 4px 14px ${getBrandPrimary()}40` }
+                    : { backgroundColor: 'white', color: '#374151', borderColor: '#e5e7eb' }"
+                >
+                  {{ canton }}
+                </button>
+              </div>
+              <div v-if="selectedCanton" class="mt-3 text-center">
+                <button
+                  @click="selectedCanton = null"
+                  class="text-xs text-gray-400 hover:text-gray-600 underline"
+                >
+                  Alle Kantone anzeigen
+                </button>
+              </div>
+            </div>
+
+            <!-- Divider when canton selected -->
+            <div v-if="showCantonStep && selectedCanton" class="border-t border-gray-100 mb-5" />
+
+            <!-- Standard Locations (hidden until canton selected if showCantonStep) -->
+            <div v-if="!showCantonStep || selectedCanton">
           <div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div 
@@ -357,6 +386,7 @@
               </div>
             </div>
           </div>
+          </div><!-- end canton-filtered locations wrapper -->
           
           <!-- Pickup Option (wenn verfügbar) -->
           <div v-if="isPickupAvailableForCategory" class="mt-6 p-3 sm:p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
@@ -1359,6 +1389,7 @@ const selectServiceType = (id: 'fahrstunde' | 'theorie' | 'beratung') => {
 const selectedMainCategory = ref<any>(null)  // NEW: Main category (B Auto, A Auto)
 const selectedCategory = ref<any>(null)      // CHANGED: Now represents selected subcategory
 const selectedLocation = ref<any>(null)
+const selectedCanton = ref<string | null>(null)
 const selectedInstructor = ref<any>(null)
 const availableLocations = ref<any[]>([])
 const availableInstructors = ref<any[]>([])
@@ -1415,32 +1446,44 @@ const today = computed(() => {
 })
 
 // Display locations - show ALL available locations with their staff
-const displayableLocations = computed(() => {
+// All displayable locations (with staff), unfiltered by canton
+const allDisplayableLocations = computed(() => {
   if (!availableLocations.value) return []
-  
-  logger.debug('🔍 displayableLocations computed called', {
-    availableLocationsCount: availableLocations.value?.length || 0
-  })
-
-  // Filter locations: show if has available staff
-  const filtered = availableLocations.value.filter((loc: any) => {
-    logger.debug(`  📍 Checking location: ${loc.name}`, {
-      availableStaffCount: loc.available_staff?.length || 0,
-      hasStaffOnlineBookable: !!loc.staffOnlineBookable,
-      staffOnlineBookableLength: loc.staffOnlineBookable?.length || 0
-    })
-
-    // Show location if it has available staff
-    if (!loc.available_staff || loc.available_staff.length === 0) {
-      logger.debug(`    ❌ FILTERED OUT: No available staff for this location`)
-      return false
-    }
-
-    logger.debug(`    ✅ KEEPING: Location has ${loc.available_staff.length} available staff`)
+  return availableLocations.value.filter((loc: any) => {
+    if (!loc.available_staff || loc.available_staff.length === 0) return false
     return true
   })
+})
 
-  logger.debug(`📊 displayableLocations result: ${filtered.length}/${availableLocations.value.length}`)
+// Unique cantons derived from displayable locations (uses canton field, falls back to city)
+const availableCantons = computed(() => {
+  const labels = allDisplayableLocations.value.map((loc: any) => loc.canton || loc.city || '')
+  const unique = [...new Set(labels.filter(Boolean))]
+  return unique.sort()
+})
+
+// Whether to show the canton sub-step (only if > 1 distinct canton)
+const showCantonStep = computed(() => availableCantons.value.length > 1)
+
+const displayableLocations = computed(() => {
+  const all = allDisplayableLocations.value
+
+  logger.debug('🔍 displayableLocations computed called', {
+    availableLocationsCount: availableLocations.value?.length || 0,
+    selectedCanton: selectedCanton.value
+  })
+
+  if (!selectedCanton.value || !showCantonStep.value) {
+    logger.debug(`📊 displayableLocations result: ${all.length}/${availableLocations.value?.length}`)
+    return all
+  }
+
+  const filtered = all.filter((loc: any) => {
+    const label = loc.canton || loc.city || ''
+    return label === selectedCanton.value
+  })
+
+  logger.debug(`📊 displayableLocations result (canton=${selectedCanton.value}): ${filtered.length}/${all.length}`)
   return filtered
 })
 
@@ -3207,6 +3250,7 @@ const goBackToStep = (step: number) => {
   }
   if (step < 3) {
     selectedLocation.value = null
+    selectedCanton.value = null
     availableInstructors.value = []
   }
   if (step < 2) {
