@@ -107,11 +107,11 @@ export default defineEventHandler(async (event) => {
       .eq('is_active', true)
       .order('name')
 
-    // Get tenant exam locations (Prüfungsorte)
+    // Get global exam locations (Prüfungsorte – tenant_id = null, searchable by staff)
     const { data: examLocations } = await supabase
       .from('locations')
-      .select('id, name, address, location_type')
-      .eq('tenant_id', invitation.tenant_id)
+      .select('id, name, address, city, canton, postal_code, location_type')
+      .is('tenant_id', null)
       .eq('location_type', 'exam')
       .eq('is_active', true)
       .order('name')
