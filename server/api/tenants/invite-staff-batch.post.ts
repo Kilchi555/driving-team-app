@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
   const envBase = process.env.NUXT_PUBLIC_BASE_URL || process.env.BASE_URL
   const host    = getHeader(event, 'x-forwarded-host') || getHeader(event, 'host')
   const proto   = getHeader(event, 'x-forwarded-proto') || 'https'
-  let baseUrl   = envBase || (host && !host.includes('localhost') ? `${proto}://${host}` : 'https://www.simy.ch')
+  let baseUrl   = envBase || (host && !host.includes('localhost') ? `${proto}://${host}` : 'https://app.simy.ch')
 
   const results: Array<{
     name: string

@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
     const regularHost = event.headers['host'] as string
     const host = forwardedHost || regularHost || ''
     const protocol = host.includes('localhost') ? 'http' : 'https'
-    const baseUrl = host ? `${protocol}://${host}` : (process.env.PUBLIC_URL || 'https://www.simy.ch')
+    const baseUrl = host ? `${protocol}://${host}` : (process.env.PUBLIC_URL || 'https://app.simy.ch')
     
     logger.info(`Payment redirect: host=${host}, forwardedHost=${forwardedHost}, regularHost=${regularHost}, baseUrl=${baseUrl}`)
     let tenantSlug = 'driving-team' // Default
