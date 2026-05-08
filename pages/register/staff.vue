@@ -671,13 +671,11 @@ const canProceed = computed(() => {
     case 2:
       // At least one working day active
       return Object.values(form.workingDays).some(d => d.active)
-    case 3:
-      // At least one location or exam location selected (skip if none available)
-      return (
-        (tenantLocations.value.length === 0 && tenantExamLocations.value.length === 0) ||
-        form.selectedLocationIds.length > 0 ||
-        form.selectedExamLocations.length > 0
-      )
+    case 3: {
+      const hasLocation = tenantLocations.value.length === 0 || form.selectedLocationIds.length > 0
+      const hasExamLocation = tenantExamLocations.value.length === 0 || form.selectedExamLocations.length > 0
+      return hasLocation && hasExamLocation
+    }
     case 4:
       // If a provider is selected, the URL must also be filled
       return !form.externalCalendarProvider || !!form.externalCalendarUrl
