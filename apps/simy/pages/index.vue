@@ -1835,6 +1835,10 @@ const registerUrl = computed(() => {
     secondary_color: secondaryColor.value,
     accent_color: accentColor.value,
   })
+  // Pass the logo via URL param when it's small enough (< 300 KB base64)
+  if (logoPreview.value && logoPreview.value.length < 300 * 1024) {
+    params.set('logo_data', logoPreview.value)
+  }
   return `/tenant-register?${params.toString()}`
 })
 
