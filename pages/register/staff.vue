@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-[100svh] bg-gray-50 flex items-center justify-center py-8 px-4">
+  <div class="min-h-[100svh] bg-gray-50 flex items-center justify-center py-8 px-4" :style="brandVars">
     <div class="w-full max-w-xl">
 
       <!-- Header + Progress (outside card) -->
@@ -14,12 +14,12 @@
             v-for="(s, i) in VISIBLE_STEPS"
             :key="i"
             class="flex-1 h-1.5 rounded-full transition-all"
-            :class="i <= currentStep ? 'bg-purple-600' : 'bg-gray-200'"
+            :style="i <= currentStep ? { background: tenantColor } : { background: '#e5e7eb' }"
           ></div>
         </div>
         <div class="flex justify-between mt-1">
           <span class="text-xs text-gray-400">Schritt {{ currentStep + 1 }} / {{ VISIBLE_STEPS.length }}</span>
-          <span class="text-xs text-purple-600 font-medium">{{ VISIBLE_STEPS[currentStep]?.label }}</span>
+          <span class="text-xs font-medium" :style="{ color: tenantColor }">{{ VISIBLE_STEPS[currentStep]?.label }}</span>
         </div>
       </div>
 
@@ -28,7 +28,7 @@
 
         <!-- ── Loading ── -->
         <div v-if="currentStep === STEP_LOADING" class="p-12 text-center">
-          <div class="animate-spin rounded-full h-14 w-14 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <div class="animate-spin rounded-full h-14 w-14 border-b-2 mx-auto mb-4" :style="{ borderColor: tenantColor }"></div>
           <p class="text-gray-600 font-medium">Konto wird erstellt…</p>
           <p class="text-sm text-gray-400 mt-1">Bitte warten Sie einen Moment.</p>
         </div>
@@ -42,13 +42,13 @@
           </div>
 
           <!-- ICS-Feed URL -->
-          <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-left">
-            <p class="text-sm font-semibold text-purple-800 mb-2">📅 Kalender-Abo-Link</p>
-            <p class="text-xs text-purple-600 mb-2">Diesen Link in Apple/Google/Outlook als Kalenderabo eintragen, um Termine automatisch zu synchronisieren:</p>
+          <div class="rounded-lg p-4 text-left" :style="{ background: tenantColor + '14', border: `1px solid ${tenantColor}40` }">
+            <p class="text-sm font-semibold mb-2" :style="{ color: tenantColor }">📅 Kalender-Abo-Link</p>
+            <p class="text-xs mb-2" :style="{ color: tenantColor }">Diesen Link in Apple/Google/Outlook als Kalenderabo eintragen, um Termine automatisch zu synchronisieren:</p>
             <div class="flex items-center gap-2">
-              <code class="flex-1 bg-white border border-purple-200 rounded px-2 py-1 text-xs break-all">{{ icsUrl }}</code>
+              <code class="flex-1 bg-white border border-gray-200 rounded px-2 py-1 text-xs break-all">{{ icsUrl }}</code>
               <button type="button" @click="copyIcsUrl"
-                class="text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 flex-shrink-0">
+                class="text-xs text-white px-2 py-1 rounded hover:opacity-90 flex-shrink-0" :style="{ background: tenantColor }">
                 {{ icsCopied ? '✓' : 'Kopieren' }}
               </button>
             </div>
@@ -68,7 +68,8 @@
           </div>
 
           <button @click="goToDashboard"
-            class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-lg transition-colors">
+            class="w-full text-white font-semibold py-3 rounded-lg transition-opacity hover:opacity-90"
+            :style="{ background: tenantColor }">
             🚀 Zum Dashboard
           </button>
         </div>
@@ -89,7 +90,7 @@
 
         <!-- ── Initial loading ── -->
         <div v-else-if="isLoading" class="p-12 text-center">
-          <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mx-auto mb-3"></div>
+          <div class="animate-spin rounded-full h-10 w-10 border-b-2 mx-auto mb-3" :style="{ borderColor: tenantColor }"></div>
           <p class="text-sm text-gray-500">Einladung wird geladen…</p>
         </div>
 
@@ -107,23 +108,23 @@
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="label">Vorname *</label>
-                <input v-model="form.firstName" type="text" required class="input" placeholder="Max">
+                <input v-model="form.firstName" type="text" class="input" placeholder="Max">
               </div>
               <div>
                 <label class="label">Nachname *</label>
-                <input v-model="form.lastName" type="text" required class="input" placeholder="Mustermann">
+                <input v-model="form.lastName" type="text" class="input" placeholder="Mustermann">
               </div>
               <div class="col-span-2">
                 <label class="label">E-Mail *</label>
-                <input v-model="form.email" type="email" required class="input" placeholder="max@example.com">
+                <input v-model="form.email" type="email" class="input" placeholder="max@example.com">
               </div>
-              <div>
-                <label class="label">Telefon</label>
+              <div class="col-span-2">
+                <label class="label">Telefon *</label>
                 <input v-model="form.phone" type="tel" class="input" placeholder="+41 79 123 45 67">
               </div>
               <div>
-                <label class="label">Geburtsdatum</label>
-                <input v-model="form.birthdate" type="date" class="input">
+                <label class="label">Geburtsdatum *</label>
+                <input v-model="form.birthdate" type="date" class="input w-auto">
               </div>
               <div>
                 <label class="label">Sprache</label>
@@ -133,24 +134,23 @@
                   <option value="it">Italiano</option>
                 </select>
               </div>
-              <div></div>
               <div class="col-span-2 border-t pt-3">
                 <p class="text-xs text-gray-500 font-medium mb-2">Adresse</p>
               </div>
               <div>
-                <label class="label">Strasse</label>
+                <label class="label">Strasse *</label>
                 <input v-model="form.street" type="text" class="input" placeholder="Musterstrasse">
               </div>
               <div>
-                <label class="label">Nr.</label>
+                <label class="label">Nr. *</label>
                 <input v-model="form.streetNr" type="text" class="input" placeholder="12">
               </div>
               <div>
-                <label class="label">PLZ</label>
+                <label class="label">PLZ *</label>
                 <input v-model="form.zip" type="text" pattern="[0-9]{4}" class="input" placeholder="8000">
               </div>
               <div>
-                <label class="label">Ort</label>
+                <label class="label">Ort *</label>
                 <input v-model="form.city" type="text" class="input" placeholder="Zürich">
               </div>
             </div>
@@ -180,10 +180,13 @@
                   :key="cat.code"
                   class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition-all text-sm"
                   :class="form.selectedCategories.includes(cat.code)
-                    ? 'border-purple-500 bg-purple-50 text-purple-800'
+                    ? 'text-gray-800'
                     : 'border-gray-200 hover:border-gray-300'"
+                  :style="form.selectedCategories.includes(cat.code)
+                    ? { borderColor: tenantColor, backgroundColor: tenantColor + '14' }
+                    : {}"
                 >
-                  <input type="checkbox" :value="cat.code" v-model="form.selectedCategories" class="accent-purple-600">
+                  <input type="checkbox" :value="cat.code" v-model="form.selectedCategories">
                   <span class="font-medium">{{ cat.code }}</span>
                   <span class="text-gray-400 text-xs truncate">{{ cat.name }}</span>
                 </label>
@@ -201,10 +204,13 @@
                 v-for="day in weekDays"
                 :key="day.value"
                 class="flex items-center gap-3 p-3 border rounded-lg"
-                :class="form.workingDays[day.value]?.active ? 'border-purple-300 bg-purple-50' : 'border-gray-200'"
+                :style="form.workingDays[day.value]?.active
+                  ? { borderColor: tenantColor, backgroundColor: tenantColor + '14' }
+                  : {}"
+                :class="!form.workingDays[day.value]?.active ? 'border-gray-200' : ''"
               >
                 <label class="flex items-center gap-2 w-16 cursor-pointer">
-                  <input type="checkbox" v-model="form.workingDays[day.value].active" class="accent-purple-600">
+                  <input type="checkbox" v-model="form.workingDays[day.value].active">
                   <span class="text-sm font-medium text-gray-700">{{ day.short }}</span>
                 </label>
                 <template v-if="form.workingDays[day.value]?.active">
@@ -237,11 +243,12 @@
                   v-for="loc in tenantLocations"
                   :key="loc.id"
                   class="flex items-start gap-2 p-3 border rounded-lg cursor-pointer transition-all"
-                  :class="form.selectedLocationIds.includes(loc.id)
-                    ? 'border-purple-400 bg-purple-50'
-                    : 'border-gray-200 hover:border-gray-300'"
+                  :class="!form.selectedLocationIds.includes(loc.id) ? 'border-gray-200 hover:border-gray-300' : ''"
+                  :style="form.selectedLocationIds.includes(loc.id)
+                    ? { borderColor: tenantColor, backgroundColor: tenantColor + '14' }
+                    : {}"
                 >
-                  <input type="checkbox" :value="loc.id" v-model="form.selectedLocationIds" class="accent-purple-600 mt-0.5">
+                  <input type="checkbox" :value="loc.id" v-model="form.selectedLocationIds" class="mt-0.5">
                   <div>
                     <div class="text-sm font-medium">{{ loc.name }}</div>
                     <div class="text-xs text-gray-500">{{ loc.address }}</div>
@@ -259,11 +266,12 @@
                   v-for="loc in tenantExamLocations"
                   :key="loc.id"
                   class="flex items-start gap-2 p-3 border rounded-lg cursor-pointer transition-all"
-                  :class="form.selectedExamLocationIds.includes(loc.id)
-                    ? 'border-blue-400 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'"
+                  :class="!form.selectedExamLocationIds.includes(loc.id) ? 'border-gray-200 hover:border-gray-300' : ''"
+                  :style="form.selectedExamLocationIds.includes(loc.id)
+                    ? { borderColor: tenantColor, backgroundColor: tenantColor + '14' }
+                    : {}"
                 >
-                  <input type="checkbox" :value="loc.id" v-model="form.selectedExamLocationIds" class="accent-blue-600 mt-0.5">
+                  <input type="checkbox" :value="loc.id" v-model="form.selectedExamLocationIds" class="mt-0.5">
                   <div>
                     <div class="text-sm font-medium">{{ loc.name }}</div>
                     <div class="text-xs text-gray-500">{{ loc.address }}</div>
@@ -285,9 +293,10 @@
               <div class="space-y-3">
                 <label v-for="provider in calendarProviders" :key="provider.id"
                   class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all"
-                  :class="form.externalCalendarProvider === provider.id ? 'border-purple-400 bg-purple-50' : 'border-gray-200 hover:border-gray-300'"
+                  :class="form.externalCalendarProvider !== provider.id ? 'border-gray-200 hover:border-gray-300' : ''"
+                  :style="form.externalCalendarProvider === provider.id ? { borderColor: tenantColor, backgroundColor: tenantColor + '14' } : {}"
                 >
-                  <input type="radio" :value="provider.id" v-model="form.externalCalendarProvider" class="accent-purple-600">
+                  <input type="radio" :value="provider.id" v-model="form.externalCalendarProvider">
                   <span class="text-xl">{{ provider.icon }}</span>
                   <span class="text-sm font-medium">{{ provider.label }}</span>
                 </label>
@@ -309,7 +318,7 @@
             <div class="bg-gray-50 border rounded-lg p-4 mt-2">
               <p class="text-sm font-semibold text-gray-700 mb-1">📅 Dein persönlicher Kalender-Link</p>
               <p class="text-xs text-gray-500">Nach der Registrierung erhältst du einen ICS-Link, den du in deinem Handy-Kalender als Abo eintragen kannst. So siehst du alle Fahrstunden in deiner eigenen Kalender-App.</p>
-              <p class="text-xs text-purple-600 mt-2 font-medium">→ Wird auf der Bestätigungsseite angezeigt</p>
+              <p class="text-xs mt-2 font-medium" :style="{ color: tenantColor }">→ Wird auf der Bestätigungsseite angezeigt</p>
             </div>
           </template>
 
@@ -322,8 +331,8 @@
             <div>
               <label class="label">Führerausweis Vorderseite</label>
               <div
-                class="border-2 border-dashed rounded-lg p-5 text-center cursor-pointer hover:border-purple-400 transition-colors"
-                :class="isDraggingFront ? 'border-purple-400 bg-purple-50' : 'border-gray-300'"
+                class="border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-colors"
+                :style="isDraggingFront ? { borderColor: tenantColor, backgroundColor: tenantColor + '14' } : { borderColor: '#d1d5db' }"
                 @click="licenseFrontInput?.click()"
                 @dragover.prevent="isDraggingFront = true"
                 @dragleave.prevent="isDraggingFront = false"
@@ -347,8 +356,8 @@
             <div>
               <label class="label">Führerausweis Rückseite</label>
               <div
-                class="border-2 border-dashed rounded-lg p-5 text-center cursor-pointer hover:border-purple-400 transition-colors"
-                :class="isDraggingBack ? 'border-purple-400 bg-purple-50' : 'border-gray-300'"
+                class="border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-colors"
+                :style="isDraggingBack ? { borderColor: tenantColor, backgroundColor: tenantColor + '14' } : { borderColor: '#d1d5db' }"
                 @click="licenseBackInput?.click()"
                 @dragover.prevent="isDraggingBack = true"
                 @dragleave.prevent="isDraggingBack = false"
@@ -416,12 +425,12 @@
             <!-- AGB -->
             <div class="bg-gray-50 border rounded-lg p-4">
               <label class="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" v-model="form.acceptedTerms" required class="mt-0.5 accent-purple-600">
+                <input type="checkbox" v-model="form.acceptedTerms" class="mt-0.5">
                 <span class="text-sm text-gray-700">
                   Ich akzeptiere die
-                  <a href="#" class="text-purple-600 hover:underline">Nutzungsbedingungen</a>
+                  <a href="#" class="hover:underline" :style="{ color: tenantColor }">Nutzungsbedingungen</a>
                   und die
-                  <a href="#" class="text-purple-600 hover:underline">Datenschutzerklärung</a>.
+                  <a href="#" class="hover:underline" :style="{ color: tenantColor }">Datenschutzerklärung</a>.
                 </span>
               </label>
             </div>
@@ -452,7 +461,8 @@
                 type="button"
                 @click="nextStep"
                 :disabled="!canProceed"
-                class="px-5 py-2 text-sm bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white rounded-lg transition-colors font-medium"
+                class="px-5 py-2 text-sm text-white rounded-lg transition-opacity font-medium disabled:opacity-40"
+                :style="{ background: canProceed ? tenantColor : undefined }"
               >{{ currentStep === 6 ? 'Registrierung abschliessen' : 'Weiter →' }}</button>
             </div>
           </div>
@@ -507,6 +517,7 @@ const loadError          = ref('')
 const registrationError  = ref('')
 const tenantName         = ref('')
 const tenantSlugRef      = ref('')
+const tenantColor        = ref('#7C3AED')
 const availableCategories = ref<any[]>([])
 const tenantLocations    = ref<any[]>([])
 const tenantExamLocations = ref<any[]>([])
@@ -585,9 +596,23 @@ const passwordIsValid = computed(() =>
 
 const isOptionalStep = computed(() => [2, 3, 4, 5].includes(currentStep.value))
 
+const brandVars = computed(() => ({
+  '--brand': tenantColor.value,
+}))
+
 const canProceed = computed(() => {
   if (currentStep.value === 0) {
-    return !!(form.firstName && form.lastName && form.email)
+    return !!(
+      form.firstName &&
+      form.lastName &&
+      form.email &&
+      form.phone &&
+      form.birthdate &&
+      form.street &&
+      form.streetNr &&
+      form.zip &&
+      form.city
+    )
   }
   if (currentStep.value === 6) {
     return passwordIsValid.value &&
@@ -624,6 +649,7 @@ const loadInvitation = async () => {
 
     tenantName.value          = response.tenant?.name || ''
     tenantSlugRef.value       = response.tenant?.slug || ''
+    tenantColor.value         = response.tenant?.primary_color || '#7C3AED'
     availableCategories.value = response.categories   || []
     tenantLocations.value     = response.locations    || []
     tenantExamLocations.value = response.examLocations || []
@@ -803,6 +829,9 @@ onMounted(() => loadInvitation())
 
 <style scoped>
 .label  { @apply block text-sm font-medium text-gray-700 mb-1; }
-.input  { @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500; }
-.input-sm { @apply px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-purple-400; }
+.input  { @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-sm; }
+.input:focus { outline: none; border-color: var(--brand, #7C3AED); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand, #7C3AED) 25%, transparent); }
+.input-sm { @apply px-2 py-1 border border-gray-300 rounded text-sm; }
+.input-sm:focus { outline: none; border-color: var(--brand, #7C3AED); box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand, #7C3AED) 25%, transparent); }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--brand, #7C3AED); }
 </style>
