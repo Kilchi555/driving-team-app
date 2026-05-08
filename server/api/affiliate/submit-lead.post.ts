@@ -116,7 +116,7 @@ export default defineEventHandler(async (event) => {
   }
   const tenantName = tenant.twilio_from_sender || tenant.name || 'Fahrschule'
   const tenantSlugResolved = tenant.slug
-  const baseUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://simy.ch'
+  const baseUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://app.simy.ch'
 
   // 6. Reuse or create pending user
   let pendingUserId: string

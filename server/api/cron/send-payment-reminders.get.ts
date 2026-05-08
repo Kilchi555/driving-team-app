@@ -153,7 +153,7 @@ export default defineEventHandler(async (event) => {
     const tenant    = tenantMap.get(userPayments[0].tenant_id)
     const tenantName = tenant?.name || 'Ihre Fahrschule'
     const tenantSlug = tenant?.slug || ''
-    const loginLink  = tenantSlug ? `https://simy.ch/${tenantSlug}` : 'https://simy.ch'
+    const loginLink  = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : 'https://app.simy.ch'
     const primaryColor = tenant?.primary_color || '#2563eb'
     const logoUrl    = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
 

@@ -205,7 +205,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const affiliateCodeResult = await ensureAffiliateCode(tenant.id, userId)
-  const affiliateShareLink = `https://simy.ch/ref/${tenant.slug}?ref=${affiliateCodeResult.codeRow.code}`
+  const affiliateShareLink = `https://app.simy.ch/ref/${tenant.slug}?ref=${affiliateCodeResult.codeRow.code}`
 
   if (!authUserId) {
     // Still no auth user — cannot send magic link

@@ -343,7 +343,7 @@ export const useReminderService = () => {
       const location = appointmentData.locations?.name || 'Nicht angegeben'
       const price = ((payment.total_amount_rappen || 0) / 100).toFixed(2)
       // Create login URL with redirect to dashboard (shows all open payments)
-      const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
+      const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
       const dashboardUrl = encodeURIComponent(`${baseUrl}/customer-dashboard`)
       // Use dynamically loaded tenant slug (with fallback)
       const finalTenantSlug = tenantSlug || 'driving-team'
@@ -517,7 +517,7 @@ export const useReminderService = () => {
       })
 
       // Create confirmation link with token
-      const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
+      const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
       const tenantSlug = Array.isArray(userData.tenants) ? userData.tenants[0]?.slug : userData.tenants?.slug || 'driving-team'
       const confirmationLink = `${baseUrl}/confirm/${appointment.confirmation_token}`
 

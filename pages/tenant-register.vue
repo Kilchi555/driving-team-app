@@ -622,6 +622,26 @@
               </div>
             </div>
           </div>
+
+          <!-- E-Mail Absender -->
+          <div class="pt-2 border-t border-gray-100">
+            <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+              E-Mail Absender
+              <span class="normal-case font-normal text-gray-400 ml-1">(optional)</span>
+            </p>
+            <p class="text-xs text-gray-400 mb-3">
+              Damit E-Mails von deiner eigenen Domain kommen, z. B.
+              <code class="bg-gray-100 px-1 rounded">info@deine-fahrschule.ch</code>.
+              Die DNS-Verifizierung erledigst du nach der Registrierung unter
+              <strong>Einstellungen → E-Mail Domain</strong>.
+            </p>
+            <input
+              v-model="formData.from_email"
+              type="email"
+              placeholder="info@deine-fahrschule.ch"
+              class="w-full sm:w-80 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm"
+            />
+          </div>
         </div>
 
         <!-- ═══ STEP 5: Admin-Konto ═══ -->
@@ -949,13 +969,55 @@
               <div class="px-4 py-2 bg-amber-50">
                 <p class="text-xs font-semibold text-amber-600 mb-2">Nach dem Login noch offen:</p>
                 <div class="space-y-1.5">
-                  <div v-for="label in ['Erste Fahrstunde buchen']"
-                    :key="label" class="flex items-center gap-2 text-sm text-amber-800">
+                  <div class="flex items-center gap-2 text-sm text-amber-800">
                     <div class="w-4 h-4 rounded-full border-2 border-amber-400 flex-shrink-0"></div>
-                    {{ label }}
+                    Erste Fahrstunde buchen
+                  </div>
+                  <div v-if="formData.from_email" class="flex items-center gap-2 text-sm text-amber-800">
+                    <div class="w-4 h-4 rounded-full border-2 border-amber-400 flex-shrink-0"></div>
+                    E-Mail Domain verifizieren
+                    <span class="font-mono text-xs bg-amber-100 px-1.5 py-0.5 rounded text-amber-700">{{ formData.from_email }}</span>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- E-Mail Domain Setup Hinweis (nur wenn from_email gesetzt) -->
+          <div v-if="formData.from_email" class="rounded-2xl border border-blue-200 bg-blue-50 overflow-hidden mb-5">
+            <div class="flex items-center gap-2.5 px-4 py-3 bg-blue-100 border-b border-blue-200">
+              <div class="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-bold text-blue-900">E-Mail Domain einrichten</p>
+                <p class="text-xs text-blue-600 font-mono">{{ formData.from_email }}</p>
+              </div>
+              <span class="ml-auto text-xs font-semibold bg-amber-400 text-amber-900 px-2 py-0.5 rounded-full">Ausstehend</span>
+            </div>
+            <div class="px-4 py-3.5 space-y-3">
+              <p class="text-sm text-blue-800">
+                Damit E-Mails mit <strong>{{ formData.from_email }}</strong> versendet werden können, müssen noch DNS-Einträge bei deinem Domain-Anbieter gesetzt werden.
+              </p>
+              <ol class="space-y-2">
+                <li class="flex items-start gap-2.5">
+                  <span class="w-5 h-5 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+                  <span class="text-sm text-blue-800">Einloggen und zu <strong>Einstellungen → E-Mail Domain</strong> navigieren</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <span class="w-5 h-5 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+                  <span class="text-sm text-blue-800">Domain-Setup starten – du erhältst die benötigten DNS-Einträge (DKIM, SPF)</span>
+                </li>
+                <li class="flex items-start gap-2.5">
+                  <span class="w-5 h-5 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
+                  <span class="text-sm text-blue-800">Einträge beim Domain-Anbieter (z. B. Hostpoint, Infomaniak) eintragen und Verifizierung abwarten</span>
+                </li>
+              </ol>
+              <p class="text-xs text-blue-500">
+                Bis zur Verifizierung werden E-Mails automatisch von <code class="bg-blue-100 px-1 rounded">noreply@simy.ch</code> versendet.
+              </p>
             </div>
           </div>
 
@@ -1082,6 +1144,7 @@ const formData = ref({
   qr_iban: '',
   instagram_url: '',
   facebook_url: '',
+  from_email: '',
 })
 
 // ─── Categories ────────────────────────────────────────────────────────────

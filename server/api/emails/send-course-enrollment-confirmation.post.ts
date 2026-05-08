@@ -53,6 +53,7 @@ export default defineEventHandler(async (event) => {
         email,
         first_name,
         last_name,
+        user_id,
         course_id,
         custom_sessions,
         courses!inner(
@@ -74,8 +75,30 @@ export default defineEventHandler(async (event) => {
       .eq('id', courseRegistrationId)
       .single()
 
-    if (enrollmentError || !enrollment?.email) {
+    if (enrollmentError || !enrollment) {
       logger.warn('❌ Course enrollment not found:', courseRegistrationId)
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Course enrollment not found'
+      })
+    }
+
+    // Fallback: fetch email/name from users table if not stored on registration
+    if (!enrollment.email && enrollment.user_id) {
+      const { data: user } = await supabase
+        .from('users')
+        .select('email, first_name, last_name')
+        .eq('id', enrollment.user_id)
+        .single()
+      if (user?.email) {
+        enrollment.email      = user.email
+        enrollment.first_name = enrollment.first_name || user.first_name
+        enrollment.last_name  = enrollment.last_name  || user.last_name
+      }
+    }
+
+    if (!enrollment.email) {
+      logger.warn('❌ No email found for enrollment:', courseRegistrationId)
       throw createError({
         statusCode: 404,
         statusMessage: 'Course enrollment not found'

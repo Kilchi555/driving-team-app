@@ -90,7 +90,7 @@ export default defineEventHandler(async (event) => {
 
     // ============ LAYER 3: RATE LIMITING ============
     const rateLimitKey = `send_onboarding_sms:${authenticatedUserId}`
-    const rateLimitResult = await checkRateLimit(rateLimitKey, 20, 3600 * 1000) // 20 per hour
+    const rateLimitResult = await checkRateLimit(rateLimitKey, 'send_onboarding_sms', 20, 3600 * 1000) // 20 per hour
     if (!rateLimitResult.allowed) {
       await logAudit({
         user_id: authenticatedUserId,
@@ -202,7 +202,7 @@ export default defineEventHandler(async (event) => {
     const formattedPhone = formatSwissPhoneNumber(phone)
 
     // Build onboarding link (force public domain)
-    const onboardingLink = `https://simy.ch/onboarding/${onboardingToken}`
+    const onboardingLink = `https://app.simy.ch/onboarding/${onboardingToken}`
 
     // ============ LAYER 7: LOAD TENANT DATA ============
     const { data: tenant } = await supabaseAdmin
@@ -215,7 +215,7 @@ export default defineEventHandler(async (event) => {
     let tenantSlug = tenant?.slug || ''
 
     // SMS Message with onboarding link and login link
-    const loginLink = tenantSlug ? `https://simy.ch/${tenantSlug}` : 'https://simy.ch/login'
+    const loginLink = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : 'https://app.simy.ch/login'
     const message = `Hallo ${sanitizedFirstName}! Willkommen bei ${tenantName}. Vervollständige deine Registrierung: ${onboardingLink} (Link 30 Tage gültig). Nach der Registrierung kannst du dich über folgenden Link anmelden: ${loginLink}`
 
     logger.debug('📱 Sending onboarding SMS:', {

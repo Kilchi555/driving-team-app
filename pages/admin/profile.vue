@@ -1699,6 +1699,11 @@
           <ReglementeManager />
         </div>
 
+        <!-- E-Mail Domain Tab -->
+        <div v-show="activeTab === 'email'" class="space-y-6">
+          <EmailDomainSettings />
+        </div>
+
       </div>
     </div>
   </div>
@@ -1718,6 +1723,7 @@ import ToggleSwitch from '~/components/ToggleSwitch.vue'
 import { useFeatures } from '~/composables/useFeatures'
 import EventTypesManager from '~/components/admin/EventTypesManager.vue'
 import ReglementeManager from '~/components/admin/ReglementeManager.vue'
+import EmailDomainSettings from '~/components/admin/EmailDomainSettings.vue'
 
 // Icons for tabs
 const PaletteIcon = markRaw({
@@ -1806,6 +1812,7 @@ const tabs = ref([
   { id: 'reminders', name: 'Erinnerungen', icon: ShieldIcon },
   { id: 'templates', name: 'Nachrichten-Vorlagen', icon: ShieldIcon },
   { id: 'payments', name: 'Zahlungen', icon: PaymentIcon },
+  { id: 'email', name: 'E-Mail Domain', icon: ContactIcon },
   { id: 'reglemente', name: 'Reglemente', icon: DocumentIcon }
 ])
 
@@ -2538,7 +2545,7 @@ const previewTemplate = (template: string) => {
     '{{location}}': 'Bahnhof Zürich',
     '{{price}}': '125.00',
     '{{price_with_currency}}': 'CHF 125.00',
-    '{{confirmation_link}}': 'https://simy.ch/confirm/abc123'
+    '{{confirmation_link}}': 'https://app.simy.ch/confirm/abc123'
   }
   
   let result = template

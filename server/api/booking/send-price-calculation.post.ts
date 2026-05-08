@@ -165,7 +165,7 @@ export default defineEventHandler(async (event) => {
             <!-- CTA -->
             <div style="text-align: center; margin: 30px 0;">
               <p style="margin-bottom: 10px; color: #666;">Bereit? Lass uns gemeinsam deine Fahrausbildung planen!</p>
-              <a href="https://simy.ch/booking/availability/driving-team" class="cta-button">📅 Jetzt Fahrstunden buchen</a>
+              <a href="https://app.simy.ch/booking/availability/driving-team" class="cta-button">📅 Jetzt Fahrstunden buchen</a>
             </div>
 
             <!-- Footer -->

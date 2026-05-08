@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const stripe = new Stripe(stripeSecret, { apiVersion: '2025-08-27.basil' })
-  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
+  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
 
   // ── Resolve Stripe Customer for this tenant ──────────────────────────────
   // Accounts V2 requires a customer for Checkout. We always ensure one exists.

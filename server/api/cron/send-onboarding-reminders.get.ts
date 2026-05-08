@@ -131,8 +131,8 @@ export default defineEventHandler(async (event) => {
     const tenant = tenantMap.get(student.tenant_id)
     const tenantName = tenant?.name || 'Ihre Fahrschule'
     const tenantSlug = tenant?.slug || ''
-    const loginLink = tenantSlug ? `https://simy.ch/${tenantSlug}` : 'https://simy.ch'
-    const onboardingUrl = `https://simy.ch/onboarding/${student.onboarding_token}`
+    const loginLink = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : 'https://app.simy.ch'
+    const onboardingUrl = `https://app.simy.ch/onboarding/${student.onboarding_token}`
     const primaryColor = tenant?.primary_color || '#2563eb'
     const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
 
