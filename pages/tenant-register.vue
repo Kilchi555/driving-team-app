@@ -423,11 +423,7 @@
                       class="w-20 px-2 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400"
                     />
                   </div>
-                  <select
-                    v-model.number="row.duration_minutes"
-                    class="px-2 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    <option v-for="d in [30,45,60,75,90,120]" :key="d" :value="d">{{ d }} Min.</option>
-                  </select>
+                  <DurationPicker v-model="row.duration_minutes" />
                 </div>
               </div>
             </div>
@@ -1747,14 +1743,18 @@ onMounted(async () => {
   if (q.secondary_color && typeof q.secondary_color === 'string') formData.value.secondary_color = q.secondary_color
   if (q.accent_color && typeof q.accent_color === 'string') formData.value.accent_color = q.accent_color
 
-  // Pre-populate logo from sessionStorage (set by the index page logo upload)
-  const savedLogo = sessionStorage.getItem('simy_preview_logo')
-  if (savedLogo) {
-    logoPreview.value = savedLogo
-    sessionStorage.removeItem('simy_preview_logo')
+  // Pre-populate logo: URL param takes priority (works cross-origin), sessionStorage as fallback
+  if (q.logo_data && typeof q.logo_data === 'string' && q.logo_data.startsWith('data:image/')) {
+    logoPreview.value = q.logo_data
+  } else {
+    const savedLogo = sessionStorage.getItem('simy_preview_logo')
+    if (savedLogo) {
+      logoPreview.value = savedLogo
+      sessionStorage.removeItem('simy_preview_logo')
+    }
   }
 
-  // Pre-populate brand colors from sessionStorage (set by the index page branding preview)
+  // Pre-populate brand colors from sessionStorage (fallback for same-origin)
   const savedPrimary   = sessionStorage.getItem('simy_preview_primary')
   const savedSecondary = sessionStorage.getItem('simy_preview_secondary')
   const savedAccent    = sessionStorage.getItem('simy_preview_accent')
