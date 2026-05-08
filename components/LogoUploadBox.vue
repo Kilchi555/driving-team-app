@@ -167,8 +167,8 @@ const handleFileSelect = async (event: Event) => {
     error.value = 'Nur Bilddateien sind erlaubt'
     return
   }
-  if (file.size > 10 * 1024 * 1024) {
-    error.value = 'Datei zu groß! Maximale Größe: 10MB'
+  if (file.size > 5 * 1024 * 1024) {
+    error.value = 'Datei zu groß! Maximale Größe: 5MB'
     return
   }
 

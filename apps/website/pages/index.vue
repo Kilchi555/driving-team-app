@@ -49,7 +49,7 @@
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6 px-4">
           
           <a
-            href="https://www.simy.ch/booking/availability/driving-team"
+            href="https://app.simy.ch/booking/availability/driving-team"
             target="_blank"
             rel="noopener noreferrer"
             class="flex-shrink-0 inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-2.5 px-5 rounded-xl hover:bg-primary-700 active:scale-95 transition shadow-md text-sm"

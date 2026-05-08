@@ -29,7 +29,7 @@
           <h1 class="heading-lg text-white mb-4">Motorrad Grundkurs Altstetten</h1>
           <p class="text-base xs:text-xl text-white mb-2">Kompletter Kurs in Zürich-Altstetten nur für <strong>CHF 499.–</strong></p>
           <p class="text-base xs:text-xl text-white mb-8">Praxisorientierter Motorrad Grundkurs: 3 Kursteile à 4 Stunden. Max. 5 Teilnehmer. Treffpunkt: Baslerstrasse 145, 8048 Zürich-Altstetten.</p>
-          <a href="https://www.simy.ch/customer/courses/driving-team/?category=PGS&location=Z%C3%BCrich" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/customer/courses/driving-team/?category=PGS&location=Z%C3%BCrich" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
         </div>

@@ -35,7 +35,7 @@
             </p>
             <div class="flex flex-col sm:flex-row gap-3">
               <a
-                href="https://www.simy.ch/booking/availability/driving-team?service=B"
+                href="https://app.simy.ch/booking/availability/driving-team?service=B"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="btn-primary bg-white text-primary-700 hover:bg-primary-50 text-lg"
@@ -306,7 +306,7 @@
         <p class="text-xl text-white/80 mb-8 max-w-2xl mx-auto">Du hast das Können. Pascal gibt dir die mentale Stärke dazu. Buch jetzt eine Fahrstunde oder ruf direkt an.</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a
-            href="https://www.simy.ch/booking/availability/driving-team?service=B"
+            href="https://app.simy.ch/booking/availability/driving-team?service=B"
             target="_blank"
             rel="noopener noreferrer"
             class="btn-primary bg-white text-primary-700 hover:bg-primary-50 text-lg"

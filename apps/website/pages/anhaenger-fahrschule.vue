@@ -21,7 +21,7 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Anhänger Fahrschule – Kategorie BE</h1>
           <p class="text-base xs:text-xl text-white mb-8">Die <strong>schnellste Zusatzkategorie</strong> der Schweiz: Keine Theorieprüfung, kein Nothelferkurs – einfach Lernfahrausweis beantragen und direkt mit den Fahrstunden starten. Durchschnittlich 5–8 Lektionen bis zur Prüfung.</p>
-          <a href="https://www.simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
         </div>
@@ -317,7 +317,7 @@
         <h2 class="heading-md mb-6 text-white">Sicher fahren mit Anhänger!</h2>
         <p class="text-base xs:text-xl text-white mb-8">Mit professioneller Ausbildung und erfahrenen Fahrlehrern in Zürich und Lachen</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt anmelden
           </a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
@@ -422,7 +422,7 @@ const jsonLdScripts = [
             "price": "120",
             "priceCurrency": "CHF",
             "availability": "https://schema.org/InStock",
-            "url": "https://www.simy.ch/booking/availability/driving-team?service=BE"
+            "url": "https://app.simy.ch/booking/availability/driving-team?service=BE"
           }
         ]
       },

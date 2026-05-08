@@ -25,7 +25,7 @@
           <p class="text-base xs:text-xl text-primary-200 mb-2">In Kooperation mit Fahrschule Schoch</p>
           <p class="text-base xs:text-xl text-white mb-2">Kompletter Kurs in Zug für nur <strong>CHF 600.–</strong> anstatt 630.-</p>
           <p class="text-base xs:text-xl text-white mb-8">Praxisorientierter Motorrad Grundkurs: 3 Kursteile à 4 Stunden. Max. 5 Teilnehmer. Inkl. Kursbestätigung & Getränk.</p>
-          <a href="https://www.simy.ch/customer/courses/driving-team/?category=PGS&location=Zug" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/customer/courses/driving-team/?category=PGS&location=Zug" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
         </div>
@@ -185,7 +185,7 @@
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt Motorrad Grundkurs Zug buchen!</h2>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://www.simy.ch/customer/courses/driving-team/?category=PGS&location=Zug" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Jetzt anmelden</a>
+          <a href="https://app.simy.ch/customer/courses/driving-team/?category=PGS&location=Zug" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Jetzt anmelden</a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">📞 +41 44 431 00 33</a>
         </div>
       </div>

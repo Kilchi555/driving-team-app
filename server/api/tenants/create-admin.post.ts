@@ -7,6 +7,7 @@ import { defineEventHandler, createError, getHeader, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
+import { normalizePhoneNumber } from '~/server/utils/sms'
 
 export default defineEventHandler(async (event) => {
   const ipAddress =
@@ -41,7 +42,7 @@ export default defineEventHandler(async (event) => {
   // Verify tenant exists and is not yet initialized
   const { data: tenant, error: tenantErr } = await supabase
     .from('tenants')
-    .select('id, name, is_active')
+    .select('id, name, is_active, working_days_template')
     .eq('id', tenant_id)
     .single()
 
@@ -68,7 +69,7 @@ export default defineEventHandler(async (event) => {
     user_metadata: {
       first_name: sanitizeString(first_name, 100),
       last_name: sanitizeString(last_name, 100),
-      role: 'tenant_admin',
+      role: 'admin',
       tenant_id,
     }
   })
@@ -79,6 +80,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 2. Create users row
+  const normalizedPhone = phone?.trim() ? normalizePhoneNumber(phone.trim()) : null
   const { data: userRow, error: userErr } = await supabase
     .from('users')
     .insert({
@@ -87,9 +89,11 @@ export default defineEventHandler(async (event) => {
       email: email.toLowerCase().trim(),
       first_name: sanitizeString(first_name, 100),
       last_name: sanitizeString(last_name, 100),
-      phone: phone?.trim() || null,
-      role: 'tenant_admin',
+      phone: normalizedPhone,
+      role: 'admin',
       is_active: true,
+      is_primary_admin: true,
+      accepted_terms_at: new Date().toISOString(),
     })
     .select('id, email, first_name, last_name, role')
     .single()
@@ -102,25 +106,45 @@ export default defineEventHandler(async (event) => {
 
   console.log(`✅ Admin user created for tenant ${tenant_id}: ${email}`)
 
-  // Auto-create default working hours Mon–Sat 08:00–18:00 for the new admin
+  // Auto-create working hours from tenant's working_days_template
   if (userRow?.id) {
     try {
-      const DEFAULT_DAYS = [1, 2, 3, 4, 5, 6] // 1=Mon … 6=Sat
-      const workingHoursRows = DEFAULT_DAYS.map(day => ({
-        staff_id: userRow.id,
-        tenant_id,
-        day_of_week: day,
-        start_time: '08:00:00',
-        end_time:   '18:00:00',
-        is_active: true,
-      }))
+      const tpl = tenant.working_days_template as any
+      let workingHoursRows: any[]
+
+      if (tpl && Array.isArray(tpl.days) && tpl.days.length > 0) {
+        workingHoursRows = tpl.days.map((day: number) => {
+          const daySchedule = tpl.schedule?.[String(day)]
+          return {
+            staff_id: userRow.id,
+            tenant_id,
+            day_of_week: day,
+            start_time: (daySchedule?.start ?? tpl.start_time ?? '07:00') + ':00',
+            end_time:   (daySchedule?.end   ?? tpl.end_time   ?? '19:00') + ':00',
+            is_active: true,
+            timezone: 'Europe/Zurich',
+          }
+        })
+      } else {
+        // Fallback to standard hours if no template set
+        workingHoursRows = [1, 2, 3, 4, 5, 6].map(day => ({
+          staff_id: userRow.id,
+          tenant_id,
+          day_of_week: day,
+          start_time: '07:00:00',
+          end_time: day === 6 ? '16:00:00' : '19:00:00',
+          is_active: true,
+          timezone: 'Europe/Zurich',
+        }))
+      }
+
       const { error: whErr } = await supabase
         .from('staff_working_hours')
         .upsert(workingHoursRows, { onConflict: 'staff_id,day_of_week' })
-      if (whErr) console.warn('⚠️ Default working hours insert failed (non-critical):', whErr.message)
-      else console.log('✅ Default working hours Mo–Sa created for admin:', userRow.id)
+      if (whErr) console.warn('⚠️ Working hours insert failed (non-critical):', whErr.message)
+      else console.log('✅ Working hours created from template for admin:', userRow.id)
     } catch (whEx: any) {
-      console.warn('⚠️ Default working hours exception (non-critical):', whEx.message)
+      console.warn('⚠️ Working hours exception (non-critical):', whEx.message)
     }
   }
 

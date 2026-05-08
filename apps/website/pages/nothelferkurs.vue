@@ -263,10 +263,10 @@
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt Nothelferkurs anmelden!</h2>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-red-600 hover:bg-red-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-red-600 hover:bg-red-50 text-lg">
             📅 Jetzt Kurs anmelden
           </a>
-       
+          
         </div>
       </div>
     </section>

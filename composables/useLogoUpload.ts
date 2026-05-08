@@ -33,8 +33,8 @@ export const useLogoUpload = () => {
       return null
     }
 
-    if (file.size > 10 * 1024 * 1024) { // 10MB Limit (compressed before upload)
-      uploadError.value = 'Datei zu groß! Maximale Größe: 10MB'
+    if (file.size > 5 * 1024 * 1024) { // 5MB Limit (compressed before upload)
+      uploadError.value = 'Datei zu groß! Maximale Größe: 5MB'
       return null
     }
 
@@ -229,8 +229,8 @@ export const useLogoUpload = () => {
       return 'Nur Bilddateien sind erlaubt'
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      return 'Datei zu groß! Maximale Größe: 10MB'
+    if (file.size > 5 * 1024 * 1024) {
+      return 'Datei zu groß! Maximale Größe: 5MB'
     }
 
     return null // Keine Fehler – Formatkonvertierung übernimmt compressImage
