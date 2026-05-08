@@ -554,7 +554,7 @@
                       {{ logoPreview ? 'Ändern' : 'Auswählen' }}
                     </button>
                   </div>
-                  <p class="text-xs text-gray-400 mt-2">Beliebiges Bildformat · bis 10 MB</p>
+                  <p class="text-xs text-gray-400 mt-2">Beliebiges Bildformat · bis 5 MB</p>
                   <button v-if="logoPreview" @click="removeLogo"
                     class="text-red-400 hover:text-red-600 text-xs mt-1 block mx-auto transition-colors" type="button">
                     Entfernen
@@ -587,7 +587,7 @@
                       {{ logoSquarePreview ? 'Ändern' : 'Icon hochladen' }}
                     </button>
                   </div>
-                  <p class="text-xs text-gray-400 mt-2">Beliebiges Bildformat · bis 10 MB</p>
+                  <p class="text-xs text-gray-400 mt-2">Beliebiges Bildformat · bis 5 MB</p>
                   <button v-if="logoSquarePreview" @click="removeLogoSquare"
                     class="text-red-400 hover:text-red-600 text-xs mt-1 block mx-auto transition-colors" type="button">
                     Entfernen
@@ -1488,7 +1488,7 @@ const canSubmit = computed(() => acceptTerms.value && canProceed.value)
 
 const tenantUrl = computed(() =>
   createdTenantSlug.value
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/auswahl?tenant=${createdTenantSlug.value}`
+    ? `https://app.simy.ch/${createdTenantSlug.value}`
     : ''
 )
 
@@ -1565,7 +1565,7 @@ const handleLogoSelect = async (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   if (!file.type.startsWith('image/')) { alert('Nur Bilddateien sind erlaubt'); return }
-  if (file.size > 10 * 1024 * 1024) { alert('Datei zu gross! Maximum 10MB'); return }
+  if (file.size > 5 * 1024 * 1024) { alert('Datei zu gross! Maximum 5MB'); return }
   try {
     logoPreview.value = await compressImage(file, 'wide')
     logoFile.value = base64ToFile(logoPreview.value, `logo-${Date.now()}.webp`)
@@ -1578,7 +1578,7 @@ const handleLogoSquareSelect = async (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   if (!file.type.startsWith('image/')) { alert('Nur Bilddateien sind erlaubt'); return }
-  if (file.size > 10 * 1024 * 1024) { alert('Datei zu gross! Maximum 10MB'); return }
+  if (file.size > 5 * 1024 * 1024) { alert('Datei zu gross! Maximum 5MB'); return }
   try {
     logoSquarePreview.value = await compressImage(file, 'square')
     logoSquareFile.value = base64ToFile(logoSquarePreview.value, `logo-square-${Date.now()}.webp`)
@@ -1737,8 +1737,9 @@ const submitRegistration = async () => {
 
 const goToLogin = () => {
   if (createdTenantSlug.value) {
-    navigateTo(`/auswahl?tenant=${createdTenantSlug.value}`)
+    window.location.href = `https://app.simy.ch/${createdTenantSlug.value}`
   }
+}
 }
 
 // ─── Watchers ─────────────────────────────────────────────────────────────
