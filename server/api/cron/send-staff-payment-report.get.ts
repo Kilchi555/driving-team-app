@@ -160,7 +160,7 @@ export default defineEventHandler(async (event) => {
     const primaryColor = tenant?.primary_color || '#2563eb'
     const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
     const tenantSlug   = tenant?.slug   || ''
-    const adminLink    = tenantSlug ? `https://simy.ch/${tenantSlug}/admin` : 'https://simy.ch'
+    const adminLink    = tenantSlug ? `https://app.simy.ch/${tenantSlug}/admin` : 'https://app.simy.ch'
 
     const totalRappen = staffPayments.reduce((s: number, p: any) => s + (p.total_amount_rappen || 0), 0)
     const totalCHF    = chf(totalRappen)

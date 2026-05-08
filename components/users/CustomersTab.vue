@@ -294,6 +294,8 @@ import { ref, onMounted, computed } from 'vue'
 import { logger } from '~/utils/logger'
 import { useSmsService } from '~/composables/useSmsService'
 import { useUIStore } from '~/stores/ui'
+import { useAuthStore } from '~/stores/auth'
+import { getSupabase } from '~/utils/supabase'
 import EnhancedStudentModal from '~/components/EnhancedStudentModal.vue'
 import AddStudentModal from '~/components/AddStudentModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
@@ -309,10 +311,12 @@ const emit = defineEmits<{
 }>()
 
 // Supabase client
+const supabase = getSupabase()
 
 // Composables
 const { sendSms } = useSmsService()
 const uiStore = useUIStore()
+const authStore = useAuthStore()
 
 // Local state
 const selectedCustomer = ref<any>(null)
@@ -473,19 +477,19 @@ const quickAction = (customer: any) => {
   selectedCustomer.value = customer
 }
 
-const editCustomer = (customer: any) => {
+const editCustomer = () => {
   selectedCustomer.value = null
-  logger.debug('Edit customer:', customer)
+  logger.debug('Edit customer')
 }
 
-const handleCreateAppointment = (customer: any) => {
+const handleCreateAppointment = () => {
   selectedCustomer.value = null
-  logger.debug('Create appointment for:', customer)
+  logger.debug('Create appointment')
 }
 
-const handleEvaluateLesson = (lesson: any) => {
+const handleEvaluateLesson = () => {
   selectedCustomer.value = null
-  logger.debug('Evaluate lesson:', lesson)
+  logger.debug('Evaluate lesson')
 }
 
 const handleCustomerUpdated = (updateData: any) => {
@@ -558,7 +562,7 @@ const resendOnboardingSms = async () => {
       console.warn('Could not load tenant name:', tenantError)
     }
     
-    const onboardingLink = `https://simy.ch/onboarding/${pendingCustomer.value.onboarding_token}`
+    const onboardingLink = `https://app.simy.ch/onboarding/${pendingCustomer.value.onboarding_token}`
     const message = `Hallo ${pendingCustomer.value.first_name}! Willkommen bei ${senderName}. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
     
     const result = await sendSms(pendingCustomer.value.phone, message, senderName)
@@ -593,7 +597,7 @@ const copyOnboardingLink = async () => {
   if (!pendingCustomer.value) return
   
   try {
-    const onboardingLink = `https://simy.ch/onboarding/${pendingCustomer.value.onboarding_token}`
+    const onboardingLink = `https://app.simy.ch/onboarding/${pendingCustomer.value.onboarding_token}`
     
     await navigator.clipboard.writeText(onboardingLink)
     

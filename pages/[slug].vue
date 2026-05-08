@@ -790,7 +790,7 @@ const handleLogin = async () => {
     if (redirectUrl) {
       logger.debug('🔄 Redirecting to:', redirectUrl)
       // Remove base URL if present to make it relative
-      const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
+      const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
       let relativeUrl = decodeURIComponent(redirectUrl)
       
       // If it's an absolute URL, extract the path

@@ -32,6 +32,7 @@ interface TenantRegistrationData {
   accent_color?: string
   instagram_url?: string
   facebook_url?: string
+  from_email?: string
   selected_categories?: string   // comma-separated codes, e.g. "B,BE,A"
   selected_category_ids?: string // comma-separated UUIDs of template categories to copy
   working_days_template?: string // JSON string
@@ -301,6 +302,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         staff_count:   data.staff_count ? parseInt(data.staff_count) || null : null,
         instagram_url: data.instagram_url?.trim() || null,
         facebook_url:  data.facebook_url?.trim()  || null,
+        from_email:    data.from_email?.trim()    || null,
         selected_categories: data.selected_categories
           ? data.selected_categories.split(',').map(c => c.trim()).filter(Boolean)
           : null,

@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
     .single()
 
   const stripe = new Stripe(stripeSecret, { apiVersion: '2025-08-27.basil' })
-  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://www.simy.ch'
+  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
 
   // Create customer if not yet existing (edge case: trial without checkout)
   let customerId = tenant?.stripe_customer_id

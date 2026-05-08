@@ -1023,7 +1023,7 @@ const copyOnboardingLink = async () => {
       studentName: tokenResponse.student_name
     })
 
-    const onboardingLink = `https://simy.ch/onboarding/${tokenResponse.onboarding_token}`
+    const onboardingLink = `https://app.simy.ch/onboarding/${tokenResponse.onboarding_token}`
     
     try {
       // Try modern clipboard API first (works on HTTPS + localhost)
