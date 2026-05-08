@@ -1,190 +1,90 @@
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    
-    <!-- Header -->
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900">Sicherheit & Rate Limiting</h1>
-      <p class="mt-2 text-gray-600">Überwachen Sie Anmeldeversuche, Blockierungen und Sicherheitsanomalien</p>
+  <div>
+    <div class="sa-page-header">
+      <div>
+        <h1 class="sa-page-title">Security & Rate Limiting</h1>
+        <p class="sa-page-sub">Anmeldeversuche, Blockierungen und Sicherheitsanomalien</p>
+      </div>
+      <button @click="loadRateLimitLogs" :disabled="isLoading" class="sa-btn-primary">
+        <svg class="w-4 h-4" :class="{ 'animate-spin': isLoading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        Aktualisieren
+      </button>
     </div>
 
-    <!-- Quick Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <!-- Blocked IPs -->
-      <div class="bg-white rounded-xl shadow border p-6">
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-              <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 4v2M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            </div>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Blockierte IPs (24h)</p>
-            <p class="text-2xl font-semibold text-red-600">{{ stats.blockedIPs }}</p>
-          </div>
-        </div>
+    <!-- KPI row -->
+    <div class="sa-kpi-grid-3">
+      <div class="sa-kpi-card sa-kpi-rose">
+        <div class="sa-kpi-icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 4v2M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+        <div class="sa-kpi-value">{{ stats.blockedIPs }}</div>
+        <div class="sa-kpi-label">Geblockte IPs ({{ filters.timeRange }})</div>
       </div>
-
-      <!-- Failed Attempts -->
-      <div class="bg-white rounded-xl shadow border p-6">
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4v2m0 4v2M9 17H5a2 2 0 01-2-2V9a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4"></path>
-              </svg>
-            </div>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Fehlgeschlagene Versuche (24h)</p>
-            <p class="text-2xl font-semibold text-yellow-600">{{ stats.failedAttempts }}</p>
-          </div>
-        </div>
+      <div class="sa-kpi-card sa-kpi-amber">
+        <div class="sa-kpi-icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4v2m0 4v2M9 17H5a2 2 0 01-2-2V9a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4"/></svg></div>
+        <div class="sa-kpi-value">{{ stats.failedAttempts }}</div>
+        <div class="sa-kpi-label">Fehlversuche</div>
       </div>
-
-      <!-- Most Active IP -->
-      <div class="bg-white rounded-xl shadow border p-6">
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            </div>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Aktuellste blockierte IP</p>
-            <p class="text-2xl font-semibold text-blue-600 font-mono">{{ stats.mostActiveIP }}</p>
-          </div>
-        </div>
+      <div class="sa-kpi-card sa-kpi-indigo">
+        <div class="sa-kpi-icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div>
+        <div class="sa-kpi-value-mono">{{ stats.mostActiveIP }}</div>
+        <div class="sa-kpi-label">Zuletzt geblockte IP</div>
       </div>
     </div>
 
     <!-- Filters -->
-    <div class="bg-white rounded-xl shadow border p-6 mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <!-- Operation Filter -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Operation</label>
-          <select 
-            v-model="filters.operation"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Alle Operationen</option>
-            <option value="login">Login</option>
-            <option value="register">Registrierung</option>
-            <option value="password_reset">Passwort zurücksetzen</option>
-          </select>
-        </div>
-
-        <!-- Status Filter -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-          <select 
-            v-model="filters.status"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Alle</option>
-            <option value="allowed">Erlaubt</option>
-            <option value="blocked">Blockiert</option>
-          </select>
-        </div>
-
-        <!-- Time Range -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Zeitraum</label>
-          <select 
-            v-model="filters.timeRange"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="1h">Letzte Stunde</option>
-            <option value="24h">Letzte 24h</option>
-            <option value="7d">Letzte 7 Tage</option>
-            <option value="30d">Letzte 30 Tage</option>
-          </select>
-        </div>
-
-        <!-- Refresh Button -->
-        <div class="flex items-end">
-          <button
-            @click="loadRateLimitLogs"
-            class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-          >
-            Aktualisieren
-          </button>
-        </div>
-      </div>
+    <div class="sa-filter-bar">
+      <select v-model="filters.operation" class="sa-select">
+        <option value="">Alle Operationen</option>
+        <option value="login">Login</option>
+        <option value="register">Registrierung</option>
+        <option value="password_reset">Passwort zurücksetzen</option>
+      </select>
+      <select v-model="filters.status" class="sa-select">
+        <option value="">Alle Status</option>
+        <option value="allowed">Erlaubt</option>
+        <option value="blocked">Blockiert</option>
+      </select>
+      <select v-model="filters.timeRange" class="sa-select">
+        <option value="1h">Letzte Stunde</option>
+        <option value="24h">Letzte 24h</option>
+        <option value="7d">Letzte 7 Tage</option>
+        <option value="30d">Letzte 30 Tage</option>
+      </select>
     </div>
 
-    <!-- Rate Limit Logs Table -->
-    <div class="bg-white rounded-xl shadow border overflow-hidden">
-      <div v-if="isLoading" class="flex justify-center items-center py-12">
-        <div class="text-center">
-          <div class="animate-spin inline-block w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full"></div>
-          <p class="mt-4 text-gray-600">Logs werden geladen...</p>
-        </div>
+    <!-- Log table -->
+    <div class="sa-card mb-5">
+      <div v-if="isLoading" class="sa-loading">
+        <div class="sa-spinner" />
+        <p>Wird geladen…</p>
       </div>
-
-      <div v-else-if="rateLimitLogs.length === 0" class="flex justify-center items-center py-12">
-        <div class="text-center text-gray-500">
-          <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-          </svg>
-          <p>Keine Rate Limit Logs vorhanden</p>
-        </div>
-      </div>
-
-      <div v-else class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+      <div v-else-if="rateLimitLogs.length === 0" class="sa-empty">Keine Logs gefunden</div>
+      <div v-else class="sa-table-wrap">
+        <table class="sa-table">
+          <thead>
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zeitstempel</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operation</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP-Adresse</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">E-Mail</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Versuche</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Backoff</th>
+              <th>Zeit</th><th>Operation</th><th>IP</th><th>E-Mail</th><th>Status</th><th>Versuche</th><th>Backoff</th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="log in rateLimitLogs" :key="log.id" class="hover:bg-gray-50">
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {{ formatDateTime(log.created_at) }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span :class="[
-                  'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
-                  log.operation === 'login' ? 'bg-blue-100 text-blue-800' :
-                  log.operation === 'register' ? 'bg-green-100 text-green-800' :
-                  'bg-gray-100 text-gray-800'
-                ]">
+          <tbody>
+            <tr v-for="log in rateLimitLogs" :key="log.id">
+              <td class="sa-cell-muted font-mono text-xs">{{ formatDateTime(log.created_at) }}</td>
+              <td>
+                <span :class="['sa-badge', log.operation === 'login' ? 'sa-badge-indigo' : log.operation === 'register' ? 'sa-badge-green' : 'sa-badge-neutral']">
                   {{ getOperationLabel(log.operation) }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                {{ log.ip_address }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                {{ log.email || '-' }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span :class="[
-                  'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
-                  log.status === 'allowed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                ]">
+              <td class="font-mono text-xs text-slate-300">{{ log.ip_address }}</td>
+              <td class="sa-cell-muted text-xs">{{ log.email || '—' }}</td>
+              <td>
+                <span :class="['sa-badge', log.status === 'allowed' ? 'sa-badge-green' : 'sa-badge-red']">
                   {{ log.status === 'allowed' ? 'Erlaubt' : 'Blockiert' }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {{ log.request_count }}/{{ log.max_requests }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <span :class="[
-                  'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
-                  log.backoff_level && log.backoff_level > 1 ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'
-                ]">
+              <td class="sa-cell-muted">{{ log.request_count }}/{{ log.max_requests }}</td>
+              <td>
+                <span :class="['sa-badge', log.backoff_level && log.backoff_level > 1 ? 'sa-badge-amber' : 'sa-badge-neutral']">
                   {{ getBackoffLabel(log.backoff_level) }}
                 </span>
               </td>
@@ -192,70 +92,49 @@
           </tbody>
         </table>
       </div>
-
-      <!-- Pagination -->
-      <div v-if="rateLimitLogs.length > 0" class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-        <div class="text-sm text-gray-600">
-          Zeige {{ rateLimitLogs.length }} von {{ totalLogs }} Einträgen
-        </div>
+      <div v-if="rateLimitLogs.length > 0" class="sa-pagination">
+        <span class="sa-page-info">{{ rateLimitLogs.length }} / {{ totalLogs }} Einträge</span>
         <div class="flex gap-2">
-          <button
-            @click="currentPage = Math.max(1, currentPage - 1)"
-            :disabled="currentPage === 1"
-            class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Vorherige
-          </button>
-          <button
-            @click="currentPage++"
-            :disabled="rateLimitLogs.length < pageSize"
-            class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Nächste
-          </button>
+          <button @click="currentPage = Math.max(1, currentPage - 1); loadRateLimitLogs()" :disabled="currentPage === 1" class="sa-page-btn">‹</button>
+          <span class="sa-page-info">Seite {{ currentPage }}</span>
+          <button @click="currentPage++; loadRateLimitLogs()" :disabled="rateLimitLogs.length < pageSize" class="sa-page-btn">›</button>
         </div>
       </div>
     </div>
 
-    <!-- Statistics -->
-    <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Top Blocked IPs -->
-      <div class="bg-white rounded-xl shadow border p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Top 10 blockierte IPs</h3>
-        <div class="space-y-3">
-          <div v-for="(ip, index) in topBlockedIPs" :key="ip.ip_address" class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                <span class="text-sm font-semibold text-red-600">{{ index + 1 }}</span>
-              </div>
-              <span class="font-mono text-sm text-gray-900">{{ ip.ip_address }}</span>
-            </div>
+    <!-- Bottom analytics -->
+    <div class="sa-two-col">
+      <!-- Top blocked IPs -->
+      <div class="sa-card">
+        <div class="sa-card-header"><h2 class="sa-card-title">Top 10 geblockte IPs</h2></div>
+        <div v-if="topBlockedIPs.length === 0" class="sa-empty-sm">Keine Daten</div>
+        <div v-else class="space-y-2">
+          <div v-for="(ip, idx) in topBlockedIPs" :key="ip.ip_address" class="sa-ip-row">
+            <div class="sa-ip-rank">{{ idx + 1 }}</div>
+            <span class="sa-ip-addr">{{ ip.ip_address }}</span>
             <div class="text-right">
-              <p class="text-sm font-semibold text-gray-900">{{ ip.block_count }} Blocks</p>
-              <p class="text-xs text-gray-500">{{ ip.last_blocked }}</p>
+              <p class="text-xs font-semibold text-rose-400">{{ ip.block_count }}×</p>
+              <p class="text-xs sa-cell-muted">{{ ip.last_blocked }}</p>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Operation Stats -->
-      <div class="bg-white rounded-xl shadow border p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Operation-Statistiken (24h)</h3>
-        <div class="space-y-3">
-          <div v-for="op in operationStats" :key="op.operation" class="border rounded-lg p-3">
-            <div class="flex justify-between items-center mb-2">
-              <span class="font-medium text-gray-900">{{ getOperationLabel(op.operation) }}</span>
-              <span class="text-sm text-gray-600">{{ op.total }} Versuche</span>
+      <!-- Operation stats -->
+      <div class="sa-card">
+        <div class="sa-card-header"><h2 class="sa-card-title">Operationen (24h)</h2></div>
+        <div class="space-y-4">
+          <div v-for="op in operationStats" :key="op.operation">
+            <div class="flex justify-between mb-1">
+              <span class="text-xs text-slate-400">{{ getOperationLabel(op.operation) }}</span>
+              <span class="text-xs text-slate-400">{{ op.total }} gesamt</span>
             </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-              <div
-                :style="{ width: calculatePercentage(op.blocked, op.total) + '%' }"
-                class="h-2 bg-red-600 rounded-full"
-              ></div>
+            <div class="sa-bar-wrap">
+              <div class="sa-bar sa-bar-rose" :style="{ width: calculatePercentage(op.blocked, op.total) + '%' }" />
             </div>
-            <div class="flex justify-between mt-2 text-xs text-gray-600">
-              <span>Erlaubt: {{ op.total - op.blocked }}</span>
-              <span>Blockiert: {{ op.blocked }}</span>
+            <div class="flex justify-between mt-1">
+              <span class="text-xs text-emerald-400">Erlaubt: {{ op.total - op.blocked }}</span>
+              <span class="text-xs text-rose-400">Blockiert: {{ op.blocked }}</span>
             </div>
           </div>
         </div>
@@ -265,249 +144,148 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+definePageMeta({ layout: 'tenant-admin' })
+import { ref, onMounted } from 'vue'
 
-definePageMeta({ 
-  layout: 'tenant-admin'
-})
-
-
-// State
 const isLoading = ref(false)
-const rateLimitLogs = ref([])
-const topBlockedIPs = ref([])
-const operationStats = ref([])
+const rateLimitLogs = ref<any[]>([])
+const topBlockedIPs = ref<any[]>([])
+const operationStats = ref<any[]>([])
 const totalLogs = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(50)
 
-const stats = ref({
-  blockedIPs: 0,
-  failedAttempts: 0,
-  mostActiveIP: '-'
-})
+const stats = ref({ blockedIPs: 0, failedAttempts: 0, mostActiveIP: '-' })
+const filters = ref({ operation: '', status: '', timeRange: '24h' })
 
-const filters = ref({
-  operation: '',
-  status: '',
-  timeRange: '24h'
-})
-
-// Helper Functions
 const getTimeRangeQuery = (range: string) => {
   const now = new Date()
-  let startDate = new Date()
-
-  switch (range) {
-    case '1h':
-      startDate.setHours(now.getHours() - 1)
-      break
-    case '24h':
-      startDate.setDate(now.getDate() - 1)
-      break
-    case '7d':
-      startDate.setDate(now.getDate() - 7)
-      break
-    case '30d':
-      startDate.setDate(now.getDate() - 30)
-      break
-  }
-
-  return startDate.toISOString()
+  const s = new Date()
+  if (range === '1h')  s.setHours(now.getHours() - 1)
+  if (range === '24h') s.setDate(now.getDate() - 1)
+  if (range === '7d')  s.setDate(now.getDate() - 7)
+  if (range === '30d') s.setDate(now.getDate() - 30)
+  return s.toISOString()
 }
-
-const formatDateTime = (dateString: string) => {
-  const date = new Date(dateString)
-  return date.toLocaleString('de-DE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
-}
-
-const getOperationLabel = (op: string) => {
-  const labels: Record<string, string> = {
-    login: 'Login',
-    register: 'Registrierung',
-    password_reset: 'Passwort zurücksetzen'
-  }
-  return labels[op] || op
-}
-
+const formatDateTime = (d: string) => new Date(d).toLocaleString('de-CH', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })
+const getOperationLabel = (op: string) => ({ login:'Login', register:'Registrierung', password_reset:'Passwort Reset' }[op] || op)
 const getBackoffLabel = (level?: number) => {
-  if (!level || level === 0) return 'Normal'
-  const labels: Record<number, string> = {
-    1: '1x (1 min)',
-    2: '2x (2 min)',
-    3: '5x (5 min)',
-    4: '15x (15 min)',
-    5: '60x (1h)',
-    6: '240x (4h)'
-  }
-  return labels[level] || `${level}x`
+  if (!level) return 'Normal'
+  return ({ 1:'1x (1min)', 2:'2x (2min)', 3:'5x (5min)', 4:'15x (15min)', 5:'60x (1h)', 6:'240x (4h)' }[level] || `${level}x`)
 }
+const calculatePercentage = (blocked: number, total: number) => total === 0 ? 0 : Math.round((blocked / total) * 100)
 
-const calculatePercentage = (blocked: number, total: number) => {
-  return total === 0 ? 0 : Math.round((blocked / total) * 100)
-}
-
-// Data Loading
 const loadRateLimitLogs = async () => {
   isLoading.value = true
   try {
     const timeRangeStart = getTimeRangeQuery(filters.value.timeRange)
-    let query = supabase
-      .from('rate_limit_logs')
-      .select('*', { count: 'exact' })
-      .gte('created_at', timeRangeStart)
-      .order('created_at', { ascending: false })
-
-    if (filters.value.operation) {
-      query = query.eq('operation', filters.value.operation)
-    }
-
-    if (filters.value.status) {
-      query = query.eq('status', filters.value.status)
-    }
-
-    const { data, error, count } = await query.range(
-      (currentPage.value - 1) * pageSize.value,
-      currentPage.value * pageSize.value - 1
-    )
-
+    let query = supabase.from('rate_limit_logs').select('*', { count: 'exact' }).gte('created_at', timeRangeStart).order('created_at', { ascending: false })
+    if (filters.value.operation) query = query.eq('operation', filters.value.operation)
+    if (filters.value.status)    query = query.eq('status', filters.value.status)
+    const { data, error, count } = await query.range((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value - 1)
     if (error) throw error
-
     rateLimitLogs.value = data || []
     totalLogs.value = count || 0
-
-    // Load stats
-    await loadStats()
-    await loadTopBlockedIPs()
-    await loadOperationStats()
-  } catch (error) {
-    console.error('Error loading rate limit logs:', error)
-  } finally {
-    isLoading.value = false
-  }
+    await loadStats(); await loadTopBlockedIPs(); await loadOperationStats()
+  } catch (e) { console.error(e) } finally { isLoading.value = false }
 }
 
 const loadStats = async () => {
-  try {
-    const timeRangeStart = getTimeRangeQuery(filters.value.timeRange)
-
-    // Count blocked IPs
-    const { data: blockedData, error: blockedError } = await supabase
-      .from('rate_limit_logs')
-      .select('ip_address')
-      .eq('status', 'blocked')
-      .gte('created_at', timeRangeStart)
-
-    const uniqueBlockedIPs = new Set(blockedData?.map(d => d.ip_address) || [])
-
-    // Count failed attempts
-    const { data: failedData, error: failedError } = await supabase
-      .from('rate_limit_logs')
-      .select('id')
-      .eq('status', 'blocked')
-      .gte('created_at', timeRangeStart)
-
-    // Get most recently blocked IP
-    const { data: recentBlockedData, error: recentError } = await supabase
-      .from('rate_limit_logs')
-      .select('ip_address')
-      .eq('status', 'blocked')
-      .gte('created_at', timeRangeStart)
-      .order('created_at', { ascending: false })
-      .limit(1)
-
-    stats.value = {
-      blockedIPs: uniqueBlockedIPs.size,
-      failedAttempts: failedData?.length || 0,
-      mostActiveIP: recentBlockedData?.[0]?.ip_address || '-'
-    }
-  } catch (error) {
-    console.error('Error loading stats:', error)
+  const start = getTimeRangeQuery(filters.value.timeRange)
+  const [{ data: bd }, { data: fd }, { data: rd }] = await Promise.all([
+    supabase.from('rate_limit_logs').select('ip_address').eq('status', 'blocked').gte('created_at', start),
+    supabase.from('rate_limit_logs').select('id').eq('status', 'blocked').gte('created_at', start),
+    supabase.from('rate_limit_logs').select('ip_address').eq('status', 'blocked').gte('created_at', start).order('created_at', { ascending: false }).limit(1),
+  ])
+  stats.value = {
+    blockedIPs: new Set(bd?.map(d => d.ip_address) || []).size,
+    failedAttempts: fd?.length || 0,
+    mostActiveIP: rd?.[0]?.ip_address || '-',
   }
 }
 
 const loadTopBlockedIPs = async () => {
-  try {
-    const timeRangeStart = getTimeRangeQuery(filters.value.timeRange)
-
-    const { data, error } = await supabase
-      .from('rate_limit_logs')
-      .select('ip_address, created_at')
-      .eq('status', 'blocked')
-      .gte('created_at', timeRangeStart)
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-
-    // Group by IP and count
-    const ipStats: Record<string, { count: number; lastBlocked: string }> = {}
-    data?.forEach(log => {
-      if (!ipStats[log.ip_address]) {
-        ipStats[log.ip_address] = { count: 0, lastBlocked: log.created_at }
-      }
-      ipStats[log.ip_address].count++
-    })
-
-    topBlockedIPs.value = Object.entries(ipStats)
-      .map(([ip, stats]) => ({
-        ip_address: ip,
-        block_count: stats.count,
-        last_blocked: formatDateTime(stats.lastBlocked)
-      }))
-      .sort((a, b) => b.block_count - a.block_count)
-      .slice(0, 10)
-  } catch (error) {
-    console.error('Error loading top blocked IPs:', error)
-  }
+  const { data } = await supabase.from('rate_limit_logs').select('ip_address, created_at').eq('status', 'blocked').gte('created_at', getTimeRangeQuery(filters.value.timeRange)).order('created_at', { ascending: false })
+  const map: Record<string, { count: number; last: string }> = {}
+  data?.forEach(l => { if (!map[l.ip_address]) map[l.ip_address] = { count: 0, last: l.created_at }; map[l.ip_address].count++ })
+  topBlockedIPs.value = Object.entries(map).map(([ip, s]) => ({ ip_address: ip, block_count: s.count, last_blocked: formatDateTime(s.last) })).sort((a, b) => b.block_count - a.block_count).slice(0, 10)
 }
 
 const loadOperationStats = async () => {
-  try {
-    const timeRangeStart = getTimeRangeQuery(filters.value.timeRange)
-
-    const { data, error } = await supabase
-      .from('rate_limit_logs')
-      .select('operation, status')
-      .gte('created_at', timeRangeStart)
-
-    if (error) throw error
-
-    // Group by operation
-    const opStats: Record<string, { total: number; blocked: number }> = {
-      login: { total: 0, blocked: 0 },
-      register: { total: 0, blocked: 0 },
-      password_reset: { total: 0, blocked: 0 }
-    }
-
-    data?.forEach(log => {
-      if (opStats[log.operation]) {
-        opStats[log.operation].total++
-        if (log.status === 'blocked') {
-          opStats[log.operation].blocked++
-        }
-      }
-    })
-
-    operationStats.value = Object.entries(opStats).map(([operation, stats]) => ({
-      operation,
-      ...stats
-    }))
-  } catch (error) {
-    console.error('Error loading operation stats:', error)
-  }
+  const { data } = await supabase.from('rate_limit_logs').select('operation, status').gte('created_at', getTimeRangeQuery(filters.value.timeRange))
+  const ops: Record<string, { total: number; blocked: number }> = { login: { total: 0, blocked: 0 }, register: { total: 0, blocked: 0 }, password_reset: { total: 0, blocked: 0 } }
+  data?.forEach(l => { if (ops[l.operation]) { ops[l.operation].total++; if (l.status === 'blocked') ops[l.operation].blocked++ } })
+  operationStats.value = Object.entries(ops).map(([op, s]) => ({ operation: op, ...s }))
 }
 
-onMounted(() => {
-  loadRateLimitLogs()
-})
+onMounted(() => loadRateLimitLogs())
 </script>
 
 <style scoped>
+.sa-page-header { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;gap:1rem; }
+.sa-page-title  { font-size:1.75rem;font-weight:800;color:#f1f5f9;letter-spacing:-.03em; }
+.sa-page-sub    { font-size:.85rem;color:#64748b;margin-top:.25rem; }
+.sa-btn-primary { display:inline-flex;align-items:center;gap:.375rem;padding:.5rem 1rem;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:white;font-size:.8rem;font-weight:600;border-radius:8px;border:none;cursor:pointer;transition:all .2s; }
+.sa-btn-primary:hover { filter:brightness(1.1); }
+
+.sa-kpi-grid-3 { display:grid;grid-template-columns:repeat(1,1fr);gap:1rem;margin-bottom:1.5rem; }
+@media(min-width:768px) { .sa-kpi-grid-3 { grid-template-columns:repeat(3,1fr); } }
+.sa-kpi-card  { border-radius:14px;padding:1.25rem;border:1px solid transparent; }
+.sa-kpi-indigo { background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.2); }
+.sa-kpi-amber  { background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.2); }
+.sa-kpi-rose   { background:rgba(244,63,94,.08); border-color:rgba(244,63,94,.2); }
+.sa-kpi-icon { width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:.75rem; }
+.sa-kpi-indigo .sa-kpi-icon { background:rgba(99,102,241,.15);color:#a5b4fc; }
+.sa-kpi-amber  .sa-kpi-icon { background:rgba(245,158,11,.15);color:#fcd34d; }
+.sa-kpi-rose   .sa-kpi-icon { background:rgba(244,63,94,.15); color:#fda4af; }
+.sa-kpi-value      { font-size:2rem;font-weight:800;color:#f1f5f9;line-height:1;letter-spacing:-.04em; }
+.sa-kpi-value-mono { font-size:1.1rem;font-weight:700;color:#f1f5f9;font-family:monospace; }
+.sa-kpi-label { font-size:.75rem;color:#64748b;margin-top:.375rem;font-weight:500; }
+
+.sa-filter-bar { display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1.25rem; }
+.sa-select { padding:.4rem .75rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#e2e8f0;font-size:.78rem;border-radius:7px;cursor:pointer; }
+.sa-select option { background:#1e2130; }
+
+.sa-card { background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;overflow:hidden; }
+.sa-card-header { display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem 0; }
+.sa-card-title  { font-size:.9rem;font-weight:700;color:#e2e8f0; }
+
+.sa-table-wrap { overflow-x:auto; }
+.sa-table { width:100%;border-collapse:collapse; }
+.sa-table th { padding:.625rem .875rem;text-align:left;font-size:.7rem;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.2); }
+.sa-table td { padding:.75rem .875rem;font-size:.78rem;color:#cbd5e1;border-bottom:1px solid rgba(255,255,255,.04); }
+.sa-table tr:last-child td { border-bottom:none; }
+.sa-table tr:hover td { background:rgba(255,255,255,.025); }
+.sa-cell-muted { color:#64748b!important; }
+
+.sa-badge { display:inline-flex;align-items:center;padding:.15rem .55rem;border-radius:999px;font-size:.68rem;font-weight:600; }
+.sa-badge-green   { background:rgba(16,185,129,.1); color:#6ee7b7;border:1px solid rgba(16,185,129,.2); }
+.sa-badge-red     { background:rgba(239,68,68,.1);  color:#fca5a5;border:1px solid rgba(239,68,68,.2); }
+.sa-badge-amber   { background:rgba(245,158,11,.1); color:#fcd34d;border:1px solid rgba(245,158,11,.2); }
+.sa-badge-indigo  { background:rgba(99,102,241,.1); color:#a5b4fc;border:1px solid rgba(99,102,241,.2); }
+.sa-badge-neutral { background:rgba(100,116,139,.1);color:#94a3b8;border:1px solid rgba(100,116,139,.2); }
+
+.sa-pagination { display:flex;align-items:center;justify-content:space-between;padding:.875rem 1.25rem;border-top:1px solid rgba(255,255,255,.06); }
+.sa-page-info { font-size:.75rem;color:#64748b; }
+.sa-page-btn  { padding:.25rem .625rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:6px;cursor:pointer;font-size:.8rem; }
+.sa-page-btn:hover { background:rgba(255,255,255,.08); }
+.sa-page-btn:disabled { opacity:.4;cursor:not-allowed; }
+
+.sa-two-col { display:grid;grid-template-columns:1fr;gap:1.25rem; }
+@media(min-width:1024px) { .sa-two-col { grid-template-columns:1fr 1fr; } }
+
+.sa-ip-row { display:flex;align-items:center;gap:.75rem;padding:.5rem 1.25rem;border-bottom:1px solid rgba(255,255,255,.04); }
+.sa-ip-row:last-child { border-bottom:none; }
+.sa-ip-rank { width:22px;height:22px;border-radius:50%;background:rgba(244,63,94,.1);color:#fda4af;font-size:.68rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+.sa-ip-addr { flex:1;font-family:monospace;font-size:.78rem;color:#e2e8f0; }
+
+.sa-bar-wrap { height:6px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden; }
+.sa-bar      { height:100%;background:linear-gradient(90deg,#4f46e5,#7c3aed);border-radius:999px;transition:width .3s; }
+.sa-bar-rose { background:linear-gradient(90deg,#be123c,#f43f5e); }
+
+.sa-loading { display:flex;flex-direction:column;align-items:center;gap:.75rem;padding:3rem;color:#64748b;font-size:.8rem; }
+.sa-spinner { width:32px;height:32px;border:3px solid rgba(99,102,241,.2);border-top-color:#6366f1;border-radius:50%;animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.sa-empty    { text-align:center;padding:3rem;color:#475569;font-size:.8rem; }
+.sa-empty-sm { text-align:center;padding:1.5rem;color:#475569;font-size:.78rem; }
 </style>

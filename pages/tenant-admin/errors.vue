@@ -1,314 +1,179 @@
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Header -->
-    <div class="mb-8 flex justify-between items-center">
+  <div>
+    <div class="sa-page-header">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Error Monitoring</h1>
-        <p class="mt-2 text-gray-600">Überwachen und verwalten Sie Fehler in Ihrer Anwendung</p>
+        <h1 class="sa-page-title">Error Monitoring</h1>
+        <p class="sa-page-sub">Fehler und Probleme auf der Plattform</p>
       </div>
-      <button
-        @click="groupErrors"
-        :disabled="isGrouping"
-        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors"
-      >
-        {{ isGrouping ? 'Gruppiert...' : 'Errors Gruppieren' }}
-      </button>
-    </div>
-
-    <!-- Quick Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-      <div class="bg-white rounded-xl shadow border p-6">
-        <div class="flex items-center">
-          <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4v2m0 4v2M9 5a3 3 0 016 0"></path>
-            </svg>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Fehler (heute)</p>
-            <p class="text-2xl font-semibold text-red-600">{{ stats.todayErrors }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-xl shadow border p-6">
-        <div class="flex items-center">
-          <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-            <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 4v2M9 3a9 9 0 1118 0 9 9 0 01-18 0z"></path>
-            </svg>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Offene Fehler</p>
-            <p class="text-2xl font-semibold text-orange-600">{{ stats.openErrors }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-xl shadow border p-6">
-        <div class="flex items-center">
-          <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Behoben</p>
-            <p class="text-2xl font-semibold text-green-600">{{ stats.fixedErrors }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-xl shadow border p-6">
-        <div class="flex items-center">
-          <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-            <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857m0 0a5.002 5.002 0 00-9.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-            </svg>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Benutzer</p>
-            <p class="text-2xl font-semibold text-yellow-600">{{ stats.affectedUsers }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-xl shadow border p-6">
-        <div class="flex items-center">
-          <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-            </svg>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Rate</p>
-            <p class="text-2xl font-semibold text-blue-600">{{ stats.errorRate }}%</p>
-          </div>
-        </div>
+      <div class="flex gap-2">
+        <button @click="groupErrors" :disabled="isGrouping" class="sa-btn-ghost">
+          {{ isGrouping ? 'Gruppiert…' : 'Errors gruppieren' }}
+        </button>
+        <button @click="loadErrors" :disabled="isLoading" class="sa-btn-primary">
+          <svg class="w-4 h-4" :class="{ 'animate-spin': isLoading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Refresh
+        </button>
       </div>
     </div>
 
-    <!-- Trends Chart -->
-    <div class="bg-white rounded-xl shadow border p-6 mb-8">
-      <h2 class="text-lg font-semibold text-gray-900 mb-4">Error Trends (30 Tage)</h2>
-      <div v-if="trends.length > 0" class="h-64 bg-gray-50 rounded-lg p-4 flex items-end justify-between gap-1">
-        <div v-for="(point, idx) in trends.slice(-48)" :key="idx" class="flex-1 flex flex-col items-center">
-          <div class="w-full bg-red-400 rounded-t" :style="{ height: Math.max(10, (point.total / maxTrendValue) * 100) + '%' }"></div>
-          <span class="text-xs text-gray-500 mt-2">{{ new Date(point.timestamp).getHours() }}h</span>
+    <!-- KPI row -->
+    <div class="sa-kpi-grid">
+      <div class="sa-kpi-card sa-kpi-rose">
+        <div class="sa-kpi-icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4v2m0 4v2M9 5a3 3 0 016 0"/></svg></div>
+        <div class="sa-kpi-value">{{ stats.todayErrors }}</div>
+        <div class="sa-kpi-label">Fehler heute</div>
+      </div>
+      <div class="sa-kpi-card sa-kpi-amber">
+        <div class="sa-kpi-icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 4v2M9 3a9 9 0 1118 0 9 9 0 01-18 0z"/></svg></div>
+        <div class="sa-kpi-value">{{ stats.openErrors }}</div>
+        <div class="sa-kpi-label">Offene Fehler</div>
+      </div>
+      <div class="sa-kpi-card sa-kpi-emerald">
+        <div class="sa-kpi-icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+        <div class="sa-kpi-value">{{ stats.fixedErrors }}</div>
+        <div class="sa-kpi-label">Behoben</div>
+      </div>
+      <div class="sa-kpi-card sa-kpi-violet">
+        <div class="sa-kpi-icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857m0 0a5.002 5.002 0 00-9.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
+        <div class="sa-kpi-value">{{ stats.affectedUsers }}</div>
+        <div class="sa-kpi-label">Betroffene User</div>
+      </div>
+      <div class="sa-kpi-card sa-kpi-indigo">
+        <div class="sa-kpi-icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
+        <div class="sa-kpi-value">{{ stats.errorRate }}%</div>
+        <div class="sa-kpi-label">Error Rate</div>
+      </div>
+    </div>
+
+    <!-- Trend chart -->
+    <div v-if="trends.length > 0" class="sa-card sa-card-p mb-5">
+      <div class="sa-card-header-plain"><h2 class="sa-card-title">Error Trend</h2></div>
+      <div class="sa-trend-chart">
+        <div v-for="(point, idx) in trends.slice(-48)" :key="idx" class="sa-trend-bar-wrap">
+          <div class="sa-trend-bar" :style="{ height: Math.max(4, (point.total / maxTrendValue) * 100) + '%' }" />
         </div>
       </div>
-      <div v-else class="text-center py-8 text-gray-500">Keine Trend-Daten verfügbar</div>
     </div>
 
     <!-- Filters -->
-    <div class="bg-white rounded-xl shadow border p-6 mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Level</label>
-          <select v-model="filters.level" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">Alle</option>
-            <option value="error">Error</option>
-            <option value="warn">Warning</option>
-            <option value="info">Info</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-          <select v-model="filters.status" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">Alle</option>
-            <option value="open">Offen</option>
-            <option value="investigating">Untersucht</option>
-            <option value="fixed">Behoben</option>
-            <option value="ignored">Ignoriert</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Komponente</label>
-          <select v-model="filters.component" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">Alle</option>
-            <option v-for="comp in uniqueComponents" :key="comp" :value="comp">{{ comp }}</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Zeitraum</label>
-          <select v-model="filters.timeRange" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="1h">Letzte Stunde</option>
-            <option value="24h">Letzte 24h</option>
-            <option value="7d">Letzte 7 Tage</option>
-            <option value="30d">Letzte 30 Tage</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Suche</label>
-          <input v-model="filters.search" type="text" placeholder="Nachricht..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-
-        <div class="flex items-end">
-          <button @click="loadErrors" class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
-            Aktualisieren
-          </button>
-        </div>
-      </div>
+    <div class="sa-filter-bar">
+      <select v-model="filters.level" class="sa-select">
+        <option value="">Alle Level</option>
+        <option value="error">Error</option>
+        <option value="warn">Warning</option>
+        <option value="info">Info</option>
+      </select>
+      <select v-model="filters.status" class="sa-select">
+        <option value="">Alle Status</option>
+        <option value="open">Offen</option>
+        <option value="investigating">Untersucht</option>
+        <option value="fixed">Behoben</option>
+        <option value="ignored">Ignoriert</option>
+      </select>
+      <select v-model="filters.component" class="sa-select">
+        <option value="">Alle Komponenten</option>
+        <option v-for="c in uniqueComponents" :key="c" :value="c">{{ c }}</option>
+      </select>
+      <select v-model="filters.timeRange" class="sa-select">
+        <option value="1h">Letzte Stunde</option>
+        <option value="24h">Letzte 24h</option>
+        <option value="7d">Letzte 7 Tage</option>
+        <option value="30d">Letzte 30 Tage</option>
+      </select>
+      <input v-model="filters.search" type="text" placeholder="Suche…" class="sa-input-sm" />
     </div>
 
-    <!-- Error Groups / List -->
-    <div class="bg-white rounded-xl shadow border overflow-hidden">
-      <div v-if="isLoading" class="flex justify-center items-center py-12">
-        <div class="text-center">
-          <div class="animate-spin inline-block w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full"></div>
-          <p class="mt-4 text-gray-600">Fehler werden geladen...</p>
-        </div>
-      </div>
-
-      <div v-else-if="filteredErrors.length === 0" class="flex justify-center items-center py-12">
-        <div class="text-center text-gray-500">
-          <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-          </svg>
-          <p>Keine Fehler vorhanden</p>
-        </div>
-      </div>
-
-      <div v-else class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zeitstempel</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Komponente</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nachricht</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
-            </tr>
+    <!-- Table -->
+    <div class="sa-card">
+      <div v-if="isLoading" class="sa-loading"><div class="sa-spinner" /><p>Wird geladen…</p></div>
+      <div v-else-if="filteredErrors.length === 0" class="sa-empty">Keine Fehler gefunden</div>
+      <div v-else class="sa-table-wrap">
+        <table class="sa-table">
+          <thead>
+            <tr><th>Zeit</th><th>Level</th><th>Komponente</th><th>Nachricht</th><th>Status</th><th class="text-right">Details</th></tr>
           </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="error in filteredErrors" :key="error.id" class="hover:bg-gray-50 cursor-pointer">
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {{ formatDateTime(error.created_at) }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span :class="[
-                  'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
-                  error.level === 'error' ? 'bg-red-100 text-red-800' :
-                  error.level === 'warn' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-blue-100 text-blue-800'
-                ]">
+          <tbody>
+            <tr v-for="error in filteredErrors" :key="error.id" class="cursor-pointer">
+              <td class="sa-cell-muted font-mono text-xs">{{ formatDateTime(error.created_at) }}</td>
+              <td>
+                <span :class="['sa-badge', error.level === 'error' ? 'sa-badge-red' : error.level === 'warn' ? 'sa-badge-amber' : 'sa-badge-indigo']">
                   {{ error.level.toUpperCase() }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                {{ error.component }}
-              </td>
-              <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
-                {{ error.message }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <select v-model="error.status" @change="updateErrorStatus(error)" :class="[
-                  'px-2 py-1 text-xs font-semibold rounded-full border-0',
-                  error.status === 'open' ? 'bg-orange-100 text-orange-800' :
-                  error.status === 'investigating' ? 'bg-blue-100 text-blue-800' :
-                  error.status === 'fixed' ? 'bg-green-100 text-green-800' :
-                  'bg-gray-100 text-gray-800'
-                ]">
+              <td class="text-xs font-medium" style="color:#e2e8f0">{{ error.component }}</td>
+              <td class="sa-cell-muted text-xs max-w-xs truncate">{{ error.message }}</td>
+              <td>
+                <select v-model="error.status" @change="updateErrorStatus(error)" :class="['sa-status-select',
+                  error.status === 'open' ? 'sa-status-open' :
+                  error.status === 'investigating' ? 'sa-status-inv' :
+                  error.status === 'fixed' ? 'sa-status-fixed' : 'sa-status-ignore']">
                   <option value="open">Offen</option>
                   <option value="investigating">Untersucht</option>
                   <option value="fixed">Behoben</option>
                   <option value="ignored">Ignoriert</option>
                 </select>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button @click="selectedError = error" class="text-blue-600 hover:text-blue-900">
-                  Details
-                </button>
+              <td class="text-right">
+                <button @click="selectedError = error" class="sa-action-btn">Details</button>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-
-      <!-- Pagination -->
-      <div v-if="filteredErrors.length > 0" class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-        <div class="text-sm text-gray-600">
-          Zeige {{ filteredErrors.length }} von {{ totalErrors }} Einträgen
-        </div>
+      <div v-if="filteredErrors.length > 0" class="sa-pagination">
+        <span class="sa-page-info">{{ filteredErrors.length }} / {{ totalErrors }} Einträge</span>
         <div class="flex gap-2">
-          <button
-            @click="currentPage = Math.max(1, currentPage - 1)"
-            :disabled="currentPage === 1"
-            class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Vorherige
-          </button>
-          <button
-            @click="currentPage++"
-            :disabled="filteredErrors.length < pageSize"
-            class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Nächste
-          </button>
+          <button @click="currentPage = Math.max(1, currentPage - 1); loadErrors()" :disabled="currentPage === 1" class="sa-page-btn">‹</button>
+          <span class="sa-page-info">Seite {{ currentPage }}</span>
+          <button @click="currentPage++; loadErrors()" :disabled="filteredErrors.length < pageSize" class="sa-page-btn">›</button>
         </div>
       </div>
     </div>
 
-    <!-- Error Detail Modal -->
-    <div v-if="selectedError" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-96 overflow-auto">
-        <div class="p-6">
-          <div class="flex justify-between items-start mb-4">
-            <h2 class="text-2xl font-bold text-gray-900">Error Details</h2>
-            <button @click="selectedError = null" class="text-gray-400 hover:text-gray-600">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
-          </div>
-
-          <div class="space-y-4">
-            <div>
-              <h3 class="text-sm font-medium text-gray-500">Nachricht</h3>
-              <p class="mt-1 text-sm text-gray-900 break-words">{{ selectedError.message }}</p>
-            </div>
-
-            <div v-if="selectedError.data" class="bg-gray-50 p-4 rounded-lg">
-              <h3 class="text-sm font-medium text-gray-900 mb-2">Stack Trace</h3>
-              <pre class="text-xs text-gray-700 overflow-auto max-h-48">{{ selectedError.data.stack || 'N/A' }}</pre>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <h3 class="text-sm font-medium text-gray-500">Browser</h3>
-                <p class="mt-1 text-sm text-gray-900">{{ selectedError.data?.browserName || 'Unknown' }}</p>
-              </div>
-              <div>
-                <h3 class="text-sm font-medium text-gray-500">URL</h3>
-                <p class="mt-1 text-sm text-gray-900 truncate">{{ selectedError.url }}</p>
+    <!-- Detail Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="selectedError" class="sa-modal-backdrop" @click.self="selectedError = null">
+          <div class="sa-modal">
+            <div class="sa-modal-header">
+              <div class="flex items-center justify-between">
+                <h2 class="sa-modal-title">Error Details</h2>
+                <button @click="selectedError = null" class="sa-modal-close">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
               </div>
             </div>
-
-            <div v-if="selectedError.resolution_notes" class="bg-blue-50 p-4 rounded-lg">
-              <h3 class="text-sm font-medium text-gray-900 mb-2">Notizen</h3>
-              <p class="text-sm text-gray-700">{{ selectedError.resolution_notes }}</p>
+            <div class="sa-modal-body space-y-4">
+              <div>
+                <p class="sa-label">Nachricht</p>
+                <p class="text-sm text-slate-300 break-words">{{ selectedError.message }}</p>
+              </div>
+              <div v-if="selectedError.data" class="sa-code-block">
+                <p class="sa-label mb-1">Stack Trace</p>
+                <pre class="text-xs text-slate-400 overflow-auto max-h-48 whitespace-pre-wrap">{{ selectedError.data.stack || 'N/A' }}</pre>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div><p class="sa-label">Browser</p><p class="text-sm text-slate-300">{{ selectedError.data?.browserName || 'Unknown' }}</p></div>
+                <div><p class="sa-label">URL</p><p class="text-sm text-slate-300 truncate">{{ selectedError.url || '—' }}</p></div>
+              </div>
+              <div v-if="selectedError.resolution_notes" class="sa-code-block">
+                <p class="sa-label mb-1">Notizen</p>
+                <p class="text-sm text-slate-300">{{ selectedError.resolution_notes }}</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
+definePageMeta({ layout: 'tenant-admin' })
 import { ref, onMounted, computed } from 'vue'
 
-definePageMeta({ 
-  layout: 'tenant-admin'
-})
-
-
-// State
 const isLoading = ref(false)
 const isGrouping = ref(false)
 const errorLogs = ref<any[]>([])
@@ -318,170 +183,152 @@ const currentPage = ref(1)
 const pageSize = ref(50)
 const selectedError = ref<any>(null)
 
-const stats = ref({
-  todayErrors: 0,
-  openErrors: 0,
-  fixedErrors: 0,
-  affectedUsers: 0,
-  errorRate: 0,
-})
+const stats = ref({ todayErrors: 0, openErrors: 0, fixedErrors: 0, affectedUsers: 0, errorRate: 0 })
+const filters = ref({ level: '', status: '', component: '', search: '', timeRange: '24h' })
 
-const filters = ref({
-  level: '',
-  status: '',
-  component: '',
-  search: '',
-  timeRange: '24h',
-})
+const maxTrendValue = computed(() => Math.max(...trends.value.map(t => t.total), 1))
+const uniqueComponents = computed(() => [...new Set(errorLogs.value.map(e => e.component))])
+const filteredErrors = computed(() => errorLogs.value.filter(e => {
+  if (filters.value.level && e.level !== filters.value.level) return false
+  if (filters.value.status && e.status !== filters.value.status) return false
+  if (filters.value.component && e.component !== filters.value.component) return false
+  if (filters.value.search && !e.message.toLowerCase().includes(filters.value.search.toLowerCase())) return false
+  return true
+}))
 
-// Computed
-const maxTrendValue = computed(() => {
-  return Math.max(...trends.value.map(t => t.total), 1)
-})
-
-const uniqueComponents = computed(() => {
-  return [...new Set(errorLogs.value.map(e => e.component))]
-})
-
-const filteredErrors = computed(() => {
-  return errorLogs.value.filter(error => {
-    if (filters.value.level && error.level !== filters.value.level) return false
-    if (filters.value.status && error.status !== filters.value.status) return false
-    if (filters.value.component && error.component !== filters.value.component) return false
-    if (filters.value.search && !error.message.toLowerCase().includes(filters.value.search.toLowerCase())) return false
-    return true
-  })
-})
-
-// Helpers
-const formatDateTime = (dateString: string) => {
-  const date = new Date(dateString)
-  return date.toLocaleString('de-DE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
-}
-
+const formatDateTime = (d: string) => new Date(d).toLocaleString('de-CH', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })
 const getTimeRangeQuery = (range: string) => {
-  const now = new Date()
-  let startDate = new Date()
-
-  switch (range) {
-    case '1h':
-      startDate.setHours(now.getHours() - 1)
-      break
-    case '24h':
-      startDate.setDate(now.getDate() - 1)
-      break
-    case '7d':
-      startDate.setDate(now.getDate() - 7)
-      break
-    case '30d':
-      startDate.setDate(now.getDate() - 30)
-      break
-  }
-
-  return startDate.toISOString()
+  const s = new Date()
+  if (range === '1h')  s.setHours(s.getHours() - 1)
+  if (range === '24h') s.setDate(s.getDate() - 1)
+  if (range === '7d')  s.setDate(s.getDate() - 7)
+  if (range === '30d') s.setDate(s.getDate() - 30)
+  return s.toISOString()
 }
 
-// Load errors
 const loadErrors = async () => {
   isLoading.value = true
   try {
-    // Use /api/auth/current-user which reads httpOnly cookies automatically
-    const currentUserResponse = await $fetch('/api/auth/current-user').catch(() => null)
-    const sessionUser = currentUserResponse?.user
-    const session = sessionUser ? { user: sessionUser } : null
-
-    if (!session?.user) {
-      console.error('No session found')
-      return
+    const currentUserResponse = await $fetch<any>('/api/auth/current-user').catch(() => null)
+    const session = currentUserResponse?.user ? { user: currentUserResponse.user } : null
+    if (!session?.user) return
+    const { data: up } = await supabase.from('users').select('tenant_id, role').eq('auth_user_id', session.user.id).single()
+    if (!up) return
+    if (up.role === 'super_admin') {
+      const r = await $fetch<any>('/api/admin/error-logs-debug')
+      if (r.data) { errorLogs.value = r.data; totalErrors.value = r.count || 0 }
     }
-
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id, role')
-      .eq('auth_user_id', session.user.id)
-      .single()
-
-    if (!userProfile) return
-
-    const timeRangeStart = getTimeRangeQuery(filters.value.timeRange)
-
-    // Load errors
-    if (userProfile.role === 'super_admin') {
-      const response = await $fetch('/api/admin/error-logs-debug')
-      if (response.data) {
-        errorLogs.value = response.data
-        totalErrors.value = response.count || 0
-      }
-    }
-
-    // Load trends
-    const trendsResponse = await $fetch('/api/admin/error-trends')
-    if (trendsResponse.trends) {
-      trends.value = trendsResponse.trends
-    }
-
-    // Update stats
+    const tr = await $fetch<any>('/api/admin/error-trends')
+    if (tr.trends) trends.value = tr.trends
     await loadStats()
-  } catch (error) {
-    console.error('Error loading errors:', error)
-  } finally {
-    isLoading.value = false
-  }
+  } catch (e) { console.error(e) } finally { isLoading.value = false }
 }
 
 const loadStats = async () => {
-  const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
-
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
   stats.value = {
-    todayErrors: errorLogs.value.filter(e => e.created_at >= todayStart).length,
+    todayErrors: errorLogs.value.filter(e => e.created_at >= todayStart.toISOString()).length,
     openErrors: errorLogs.value.filter(e => e.status === 'open').length,
     fixedErrors: errorLogs.value.filter(e => e.status === 'fixed').length,
     affectedUsers: new Set(errorLogs.value.filter(e => e.user_id).map(e => e.user_id)).size,
-    errorRate: errorLogs.value.length > 0 
-      ? Math.round((errorLogs.value.filter(e => e.level === 'error').length / errorLogs.value.length) * 100)
-      : 0
+    errorRate: errorLogs.value.length > 0 ? Math.round((errorLogs.value.filter(e => e.level === 'error').length / errorLogs.value.length) * 100) : 0,
   }
 }
 
 const groupErrors = async () => {
   isGrouping.value = true
-  try {
-    const response = await $fetch('/api/admin/error-group', { method: 'POST' })
-    console.log('Errors grouped:', response)
-    await loadErrors()
-  } catch (error) {
-    console.error('Error grouping:', error)
-  } finally {
-    isGrouping.value = false
-  }
+  try { await $fetch('/api/admin/error-group', { method: 'POST' }); await loadErrors() } catch (e) { console.error(e) } finally { isGrouping.value = false }
 }
 
 const updateErrorStatus = async (error: any) => {
-  try {
-    await $fetch('/api/admin/error-update-status', {
-      method: 'POST',
-      body: {
-        errorId: error.id,
-        status: error.status
-      }
-    })
-  } catch (error) {
-    console.error('Error updating status:', error)
-  }
+  try { await $fetch('/api/admin/error-update-status', { method: 'POST', body: { errorId: error.id, status: error.status } }) } catch (e) { console.error(e) }
 }
 
-onMounted(() => {
-  loadErrors()
-})
+onMounted(() => loadErrors())
 </script>
 
 <style scoped>
+.sa-page-header { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2rem;gap:1rem; }
+.sa-page-title  { font-size:1.75rem;font-weight:800;color:#f1f5f9;letter-spacing:-.03em; }
+.sa-page-sub    { font-size:.85rem;color:#64748b;margin-top:.25rem; }
+.sa-btn-primary { display:inline-flex;align-items:center;gap:.375rem;padding:.5rem 1rem;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:white;font-size:.8rem;font-weight:600;border-radius:8px;border:none;cursor:pointer; }
+.sa-btn-ghost   { padding:.5rem .875rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#94a3b8;font-size:.78rem;font-weight:500;border-radius:8px;cursor:pointer; }
+.sa-btn-ghost:hover { background:rgba(255,255,255,.08);color:#e2e8f0; }
+
+.sa-kpi-grid { display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin-bottom:1.5rem; }
+@media(min-width:1024px) { .sa-kpi-grid { grid-template-columns:repeat(5,1fr); } }
+.sa-kpi-card  { border-radius:14px;padding:1.25rem;border:1px solid transparent; }
+.sa-kpi-rose    { background:rgba(244,63,94,.08); border-color:rgba(244,63,94,.2); }
+.sa-kpi-amber   { background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.2); }
+.sa-kpi-emerald { background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.2); }
+.sa-kpi-violet  { background:rgba(139,92,246,.08);border-color:rgba(139,92,246,.2); }
+.sa-kpi-indigo  { background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.2); }
+.sa-kpi-icon { width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:.75rem; }
+.sa-kpi-rose    .sa-kpi-icon { background:rgba(244,63,94,.15);  color:#fda4af; }
+.sa-kpi-amber   .sa-kpi-icon { background:rgba(245,158,11,.15); color:#fcd34d; }
+.sa-kpi-emerald .sa-kpi-icon { background:rgba(16,185,129,.15); color:#6ee7b7; }
+.sa-kpi-violet  .sa-kpi-icon { background:rgba(139,92,246,.15); color:#c4b5fd; }
+.sa-kpi-indigo  .sa-kpi-icon { background:rgba(99,102,241,.15); color:#a5b4fc; }
+.sa-kpi-value { font-size:2rem;font-weight:800;color:#f1f5f9;line-height:1;letter-spacing:-.04em; }
+.sa-kpi-label { font-size:.75rem;color:#64748b;margin-top:.375rem;font-weight:500; }
+
+.sa-card { background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;overflow:hidden; }
+.sa-card-p { padding:1.5rem; }
+.sa-card-header-plain { margin-bottom:1rem; }
+.sa-card-title { font-size:.9rem;font-weight:700;color:#e2e8f0; }
+
+.sa-trend-chart { display:flex;align-items:flex-end;gap:2px;height:80px;background:rgba(0,0,0,.15);border-radius:8px;padding:.5rem .75rem; }
+.sa-trend-bar-wrap { flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%; }
+.sa-trend-bar { width:100%;background:rgba(244,63,94,.4);border-radius:2px 2px 0 0;transition:height .2s; }
+
+.sa-filter-bar { display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center; }
+.sa-select { padding:.4rem .75rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#e2e8f0;font-size:.78rem;border-radius:7px;cursor:pointer; }
+.sa-select option { background:#1e2130; }
+.sa-input-sm { padding:.4rem .75rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#e2e8f0;font-size:.78rem;border-radius:7px;flex:1;min-width:140px; }
+.sa-input-sm::placeholder { color:#475569; }
+
+.sa-table-wrap { overflow-x:auto; }
+.sa-table { width:100%;border-collapse:collapse; }
+.sa-table th { padding:.625rem .875rem;text-align:left;font-size:.7rem;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.2); }
+.sa-table td { padding:.75rem .875rem;font-size:.78rem;color:#cbd5e1;border-bottom:1px solid rgba(255,255,255,.04); }
+.sa-table tr:last-child td { border-bottom:none; }
+.sa-table tr:hover td { background:rgba(255,255,255,.025); }
+.sa-cell-muted { color:#64748b!important; }
+
+.sa-badge { display:inline-flex;align-items:center;padding:.15rem .55rem;border-radius:999px;font-size:.68rem;font-weight:600; }
+.sa-badge-red    { background:rgba(239,68,68,.1); color:#fca5a5;border:1px solid rgba(239,68,68,.2); }
+.sa-badge-amber  { background:rgba(245,158,11,.1);color:#fcd34d;border:1px solid rgba(245,158,11,.2); }
+.sa-badge-indigo { background:rgba(99,102,241,.1);color:#a5b4fc;border:1px solid rgba(99,102,241,.2); }
+
+.sa-status-select { padding:.15rem .375rem;border-radius:6px;font-size:.7rem;font-weight:600;border:none;cursor:pointer; }
+.sa-status-open   { background:rgba(245,158,11,.15); color:#fcd34d; }
+.sa-status-inv    { background:rgba(99,102,241,.15); color:#a5b4fc; }
+.sa-status-fixed  { background:rgba(16,185,129,.15); color:#6ee7b7; }
+.sa-status-ignore { background:rgba(100,116,139,.1); color:#94a3b8; }
+
+.sa-action-btn { font-size:.72rem;font-weight:500;color:#6366f1;background:none;border:none;cursor:pointer; }
+.sa-action-btn:hover { color:#a5b4fc; }
+
+.sa-pagination { display:flex;align-items:center;justify-content:space-between;padding:.875rem 1.25rem;border-top:1px solid rgba(255,255,255,.06); }
+.sa-page-info { font-size:.75rem;color:#64748b; }
+.sa-page-btn  { padding:.25rem .625rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:6px;cursor:pointer;font-size:.8rem; }
+.sa-page-btn:disabled { opacity:.4;cursor:not-allowed; }
+
+.sa-modal-backdrop { position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1.5rem; }
+.sa-modal { background:#141620;border:1px solid rgba(255,255,255,.1);border-radius:16px;width:100%;max-width:560px;box-shadow:0 40px 80px rgba(0,0,0,.5);overflow:hidden; }
+.sa-modal-header { padding:1.5rem 1.5rem .75rem; }
+.sa-modal-title  { font-size:1rem;font-weight:700;color:#f1f5f9; }
+.sa-modal-close  { color:#64748b;background:none;border:none;cursor:pointer; }
+.sa-modal-close:hover { color:#94a3b8; }
+.sa-modal-body   { padding:1rem 1.5rem 1.5rem; }
+.sa-label { font-size:.72rem;font-weight:500;color:#64748b; }
+.sa-code-block { background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:.75rem; }
+
+.sa-loading { display:flex;flex-direction:column;align-items:center;gap:.75rem;padding:3rem;color:#64748b;font-size:.8rem; }
+.sa-spinner { width:32px;height:32px;border:3px solid rgba(99,102,241,.2);border-top-color:#6366f1;border-radius:50%;animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.sa-empty { text-align:center;padding:3rem;color:#475569;font-size:.8rem; }
+
+.modal-enter-active,.modal-leave-active { transition:all .2s ease; }
+.modal-enter-from,.modal-leave-to { opacity:0;transform:scale(.97); }
 </style>
