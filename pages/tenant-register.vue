@@ -531,32 +531,68 @@
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <!-- Logo Upload -->
-            <div>
-              <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">Logo</p>
-              <div class="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:border-gray-300 transition-colors">
-                <div v-if="logoPreview" class="mb-4">
-                  <img :src="logoPreview" alt="Logo Preview" class="h-16 w-auto mx-auto object-contain rounded-lg">
-                </div>
-                <div v-else class="mb-4">
-                  <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto">
-                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
+            <!-- Logos column -->
+            <div class="space-y-4">
+              <!-- Wide logo -->
+              <div>
+                <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Hauptlogo <span class="normal-case font-normal text-gray-400">(breit)</span></p>
+                <div class="border-2 border-dashed border-gray-200 rounded-2xl p-5 text-center hover:border-gray-300 transition-colors">
+                  <div v-if="logoPreview" class="mb-3">
+                    <img :src="logoPreview" alt="Logo Preview" class="h-14 w-auto mx-auto object-contain rounded-lg">
                   </div>
-                </div>
-                <div class="relative inline-block">
-                  <input ref="logoInput" type="file" accept="image/*" @change="handleLogoSelect"
-                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                  <button class="bg-gray-900 hover:bg-gray-700 text-white font-semibold text-xs py-2 px-4 rounded-xl transition-colors" type="button">
-                    {{ logoPreview ? 'Logo ändern' : 'Logo auswählen' }}
+                  <div v-else class="mb-3">
+                    <div class="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center mx-auto">
+                      <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="relative inline-block">
+                    <input ref="logoInput" type="file" accept="image/*" @change="handleLogoSelect"
+                      class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                    <button class="bg-gray-900 hover:bg-gray-700 text-white font-semibold text-xs py-2 px-4 rounded-xl transition-colors" type="button">
+                      {{ logoPreview ? 'Ändern' : 'Auswählen' }}
+                    </button>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-2">Beliebiges Bildformat · bis 10 MB</p>
+                  <button v-if="logoPreview" @click="removeLogo"
+                    class="text-red-400 hover:text-red-600 text-xs mt-1 block mx-auto transition-colors" type="button">
+                    Entfernen
                   </button>
                 </div>
-                <p class="text-xs text-gray-400 mt-2">JPG, PNG, WebP · max. 2 MB</p>
-                <button v-if="logoPreview" @click="removeLogo"
-                  class="text-red-400 hover:text-red-600 text-xs mt-2 block mx-auto transition-colors" type="button">
-                  Entfernen
-                </button>
+              </div>
+
+              <!-- Square logo (optional) -->
+              <div>
+                <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+                  App-Icon <span class="normal-case font-normal text-gray-400">(quadratisch, optional)</span>
+                </p>
+                <div class="border-2 border-dashed border-gray-200 rounded-2xl p-5 text-center hover:border-gray-300 transition-colors">
+                  <!-- Uploaded square logo -->
+                  <div v-if="logoSquarePreview" class="mb-3">
+                    <img :src="logoSquarePreview" alt="Square Logo" class="w-14 h-14 mx-auto object-contain rounded-xl">
+                  </div>
+                  <!-- Initials fallback preview -->
+                  <div v-else class="mb-3 flex flex-col items-center gap-1.5">
+                    <div class="w-14 h-14 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-sm"
+                      :style="{ background: formData.primary_color || '#3B82F6' }">
+                      {{ companyInitials }}
+                    </div>
+                    <p class="text-[10px] text-gray-400">So wird es ohne Icon aussehen</p>
+                  </div>
+                  <div class="relative inline-block">
+                    <input ref="logoSquareInput" type="file" accept="image/*" @change="handleLogoSquareSelect"
+                      class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                    <button class="bg-gray-900 hover:bg-gray-700 text-white font-semibold text-xs py-2 px-4 rounded-xl transition-colors" type="button">
+                      {{ logoSquarePreview ? 'Ändern' : 'Icon hochladen' }}
+                    </button>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-2">Beliebiges Bildformat · bis 10 MB</p>
+                  <button v-if="logoSquarePreview" @click="removeLogoSquare"
+                    class="text-red-400 hover:text-red-600 text-xs mt-1 block mx-auto transition-colors" type="button">
+                    Entfernen
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1097,6 +1133,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { navigateTo, useRoute } from '#app'
+import { compressImage } from '~/utils/imageCompression'
 
 definePageMeta({ layout: false })
 
@@ -1334,10 +1371,21 @@ const currentStep = ref(0)
 const acceptTerms = ref(false)
 const logoFile    = ref<File | null>(null)
 const logoPreview = ref<string | null>(null)
+const logoSquareFile    = ref<File | null>(null)
+const logoSquarePreview = ref<string | null>(null)
 const error       = ref<string | null>(null)
 const createdTenantSlug    = ref('')
 const createdCustomerNumber = ref('')
 const logoInput = ref<HTMLInputElement>()
+const logoSquareInput = ref<HTMLInputElement>()
+
+const companyInitials = computed(() => {
+  const name = (formData.value.name || '').trim()
+  if (!name) return '?'
+  const words = name.split(/\s+/).filter(Boolean)
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
+  return (words[0][0] + words[1][0]).toUpperCase()
+})
 const userEditedSlug = ref(false)
 
 // ─── Admin Form ────────────────────────────────────────────────────────────
@@ -1513,21 +1561,52 @@ const onSlugInput = () => {
   checkSlug(formData.value.slug)
 }
 
-const handleLogoSelect = (event: Event) => {
+const handleLogoSelect = async (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   if (!file.type.startsWith('image/')) { alert('Nur Bilddateien sind erlaubt'); return }
-  if (file.size > 2 * 1024 * 1024) { alert('Datei zu gross! Maximum 2MB'); return }
-  logoFile.value = file
-  const reader = new FileReader()
-  reader.onload = (e) => { logoPreview.value = e.target?.result as string }
-  reader.readAsDataURL(file)
+  if (file.size > 10 * 1024 * 1024) { alert('Datei zu gross! Maximum 10MB'); return }
+  try {
+    logoPreview.value = await compressImage(file, 'wide')
+    logoFile.value = base64ToFile(logoPreview.value, `logo-${Date.now()}.webp`)
+  } catch {
+    alert('Dieses Bildformat wird nicht unterstützt. Bitte PNG, JPG oder WebP hochladen.')
+  }
+}
+
+const handleLogoSquareSelect = async (event: Event) => {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) { alert('Nur Bilddateien sind erlaubt'); return }
+  if (file.size > 10 * 1024 * 1024) { alert('Datei zu gross! Maximum 10MB'); return }
+  try {
+    logoSquarePreview.value = await compressImage(file, 'square')
+    logoSquareFile.value = base64ToFile(logoSquarePreview.value, `logo-square-${Date.now()}.webp`)
+  } catch {
+    alert('Dieses Bildformat wird nicht unterstützt. Bitte PNG, JPG oder WebP hochladen.')
+  }
+}
+
+function base64ToFile(base64: string, filename: string): File {
+  const arr = base64.split(',')
+  const mime = arr[0].match(/:(.*?);/)![1]
+  const bstr = atob(arr[1])
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) { u8arr[n] = bstr.charCodeAt(n) }
+  return new File([u8arr], filename, { type: mime })
 }
 
 const removeLogo = () => {
   logoFile.value = null
   logoPreview.value = null
   if (logoInput.value) logoInput.value.value = ''
+}
+
+const removeLogoSquare = () => {
+  logoSquareFile.value = null
+  logoSquarePreview.value = null
+  if (logoSquareInput.value) logoSquareInput.value.value = ''
 }
 
 const applyAdminFromCompany = () => {
@@ -1580,6 +1659,7 @@ const submitRegistration = async () => {
     }
 
     if (logoFile.value) fd.append('logo_file', logoFile.value)
+    if (logoSquareFile.value) fd.append('logo_square_file', logoSquareFile.value)
 
     // 1. Register tenant + copy templates + create locations
     const response = await $fetch('/api/tenants/register', { method: 'POST', body: fd }) as any
@@ -1688,6 +1768,7 @@ const saveToStorage = () => {
     currentStep: currentStep.value,
     userEditedSlug: userEditedSlug.value,
     logoPreview: logoPreview.value,
+    logoSquarePreview: logoSquarePreview.value,
     staffList: staffList.value,
     locationsList: locationsList.value,
     selectedCategoryIds: Array.from(selectedCategoryIds.value),
@@ -1708,6 +1789,7 @@ const loadFromStorage = () => {
     currentStep.value         = d.currentStep || 0
     userEditedSlug.value      = d.userEditedSlug || false
     logoPreview.value         = d.logoPreview || null
+    logoSquarePreview.value   = d.logoSquarePreview || null
     if (d.staffList)    staffList.value    = d.staffList
     if (d.locationsList) locationsList.value = d.locationsList
     if (Array.isArray(d.selectedCategoryIds)) selectedCategoryIds.value = new Set<number>(d.selectedCategoryIds)

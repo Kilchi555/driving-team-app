@@ -22,6 +22,7 @@ interface TenantRegistrationData {
   primary_color: string
   secondary_color: string
   logo_file?: File | null
+  logo_square_file?: File | null
   // New optional fields
   uid_number?: string
   qr_iban?: string
@@ -116,6 +117,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     }
 
     let logoFile: File | null = null
+    let logoSquareFile: File | null = null
 
     // FormData-Felder verarbeiten
     logger.debug('🔍 Processing FormData fields:')
@@ -123,12 +125,16 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       logger.debug(`  Field: ${field.name}, Type: ${field.type}, Filename: ${field.filename}`)
       
       if (field.name === 'logo_file' && field.filename) {
-        // Logo-Datei
         logoFile = new File([field.data], field.filename, {
           type: field.type || 'image/jpeg'
         })
         logger.debug(`  ✅ Processed logo file: ${field.filename}`)
-        } else if (field.name && field.data) {
+      } else if (field.name === 'logo_square_file' && field.filename) {
+        logoSquareFile = new File([field.data], field.filename, {
+          type: field.type || 'image/webp'
+        })
+        logger.debug(`  ✅ Processed square logo file: ${field.filename}`)
+      } else if (field.name && field.data) {
         // Text-Felder
         const value = field.data.toString()
         if (field.name in data) {
@@ -140,8 +146,9 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       }
     }
 
-    // Logo-File zu data hinzufügen
+    // Logo-Files zu data hinzufügen
     data.logo_file = logoFile
+    data.logo_square_file = logoSquareFile
 
     logger.debug('🏢 Starting tenant registration for:', data.name)
     logger.debug('📊 Final data object:', JSON.stringify(data, null, 2))
@@ -230,7 +237,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     }
     logger.debug('✅ No duplicate email found for admin')
 
-    // 3. Logo hochladen (falls vorhanden)
+    // 3. Logos hochladen (falls vorhanden)
     let logoUrl: string | null = null
     if (data.logo_file) {
       try {
@@ -238,7 +245,16 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         logger.debug('✅ Logo uploaded successfully:', logoUrl)
       } catch (logoError) {
         console.warn('⚠️ Logo upload failed, continuing without logo:', logoError)
-        // Weiter ohne Logo - nicht kritisch
+      }
+    }
+
+    let logoSquareUrl: string | null = null
+    if (data.logo_square_file) {
+      try {
+        logoSquareUrl = await uploadTenantLogo(data.logo_square_file, data.slug, 'square')
+        logger.debug('✅ Square logo uploaded successfully:', logoSquareUrl)
+      } catch (logoError) {
+        console.warn('⚠️ Square logo upload failed, continuing without:', logoError)
       }
     }
 
@@ -297,6 +313,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         brand_name: data.name, // Standard: Firmenname
         // Trial-Management
         logo_url: logoUrl,
+        logo_square_url: logoSquareUrl,
         timezone: data.timezone || 'Europe/Zurich',
         currency: 'CHF',
         language: data.language || 'de',
@@ -589,7 +606,7 @@ function validateTenantData(data: TenantRegistrationData): string | null {
 /**
  * Lädt ein Tenant-Logo hoch mit File Type & Size Validation
  */
-async function uploadTenantLogo(file: File, tenantSlug: string): Promise<string> {
+async function uploadTenantLogo(file: File, tenantSlug: string, suffix = 'logo'): Promise<string> {
   const supabase = getSupabaseAdmin()
   
   // ✅ LAYER 1: File type validation
@@ -616,7 +633,7 @@ async function uploadTenantLogo(file: File, tenantSlug: string): Promise<string>
   
   // ✅ LAYER 4: Timestamped filename (no user input)
   const timestamp = Date.now()
-  const fileName = `${tenantSlug}-logo-${timestamp}.${fileExtension}`
+  const fileName = `${tenantSlug}-${suffix}-${timestamp}.${fileExtension}`
   const filePath = `tenant-logos/${fileName}`
 
   logger.debug('🔄 Uploading tenant logo:', filePath)
