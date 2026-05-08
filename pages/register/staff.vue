@@ -480,7 +480,7 @@
             <div class="flex gap-2">
               <!-- Next / Submit -->
               <button
-                v-if="currentStep < STEP_LOADING - 1"
+                v-if="currentStep < STEP_LOADING"
                 type="button"
                 @click="nextStep"
                 :disabled="!canProceed"
