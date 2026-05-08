@@ -835,9 +835,15 @@ async function copyDefaultDataToTenant(
       )
 
       const filtered = selectedCategoryIds?.length
-        ? validTemplates.filter(c =>
-            !c.parent_category_id || selectedCategoryIds.includes(String(c.id))
-          )
+        ? validTemplates.filter(c => {
+            if (!c.parent_category_id) {
+              // Top-level: nur einschliessen wenn explizit ausgewählt
+              return selectedCategoryIds.includes(String(c.id))
+            } else {
+              // Unterkategorie: einschliessen wenn Elternkategorie ausgewählt wurde
+              return selectedCategoryIds.includes(String(c.parent_category_id))
+            }
+          })
         : validTemplates
 
       const parentCats = filtered.filter(c => !c.parent_category_id)

@@ -29,9 +29,6 @@ export default defineEventHandler(async (event) => {
       city,
       password,
       selectedCategories,
-      // New fields
-      lernfahrausweis_nr,
-      instructor_since_year,
       language,
       acceptedTerms,
       // Working hours: [{ day_of_week: 1, start_time: '07:00', end_time: '18:00' }, ...]
@@ -214,8 +211,6 @@ export default defineEventHandler(async (event) => {
         street_nr: sanitizedStreetNr,
         zip: zip || null,
         city: sanitizedCity,
-        lernfahrausweis_nr: lernfahrausweis_nr ? sanitizeString(lernfahrausweis_nr, 50) : null,
-        instructor_since_year: instructor_since_year ? parseInt(instructor_since_year) || null : null,
         language: language || 'de',
         accepted_terms_at: acceptedTerms ? new Date().toISOString() : null
       })
