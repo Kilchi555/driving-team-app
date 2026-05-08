@@ -1,6 +1,17 @@
 // composables/useLogoUpload.ts
 import { ref } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { compressImage } from '~/utils/imageCompression'
+
+function base64ToFile(base64: string, filename: string): File {
+  const arr = base64.split(',')
+  const mime = arr[0].match(/:(.*?);/)![1]
+  const bstr = atob(arr[1])
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) { u8arr[n] = bstr.charCodeAt(n) }
+  return new File([u8arr], filename, { type: mime })
+}
 
 export const useLogoUpload = () => {
   const isUploading = ref(false)
@@ -22,8 +33,8 @@ export const useLogoUpload = () => {
       return null
     }
 
-    if (file.size > 2 * 1024 * 1024) { // 2MB Limit
-      uploadError.value = 'Datei zu groß! Maximale Größe: 2MB'
+    if (file.size > 10 * 1024 * 1024) { // 10MB Limit (compressed before upload)
+      uploadError.value = 'Datei zu groß! Maximale Größe: 10MB'
       return null
     }
 
@@ -33,26 +44,26 @@ export const useLogoUpload = () => {
 
     try {
       const supabase = getSupabase()
-      
-      // Dateiname generieren
+
+      // Convert to WebP before uploading
+      const base64Webp = await compressImage(file, 'square')
       const timestamp = Date.now()
-      const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-      const fileName = `${tenantSlug}-logo-${timestamp}.${fileExtension}`
-      const filePath = `tenant-logos/${fileName}`
+      const webpFile = base64ToFile(base64Webp, `${tenantSlug}-logo-${timestamp}.webp`)
+      const filePath = `tenant-logos/${webpFile.name}`
 
       logger.debug('🔄 Uploading logo:', filePath)
 
       // Upload zu Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { data: uploadData, error: storageError } = await supabase.storage
         .from('public')
-        .upload(filePath, file, {
+        .upload(filePath, webpFile, {
           cacheControl: '3600',
           upsert: false
         })
 
-      if (uploadError) {
-        console.error('❌ Upload error:', uploadError)
-        throw new Error(`Upload fehlgeschlagen: ${uploadError.message}`)
+      if (storageError) {
+        console.error('❌ Upload error:', storageError)
+        throw new Error(`Upload fehlgeschlagen: ${storageError.message}`)
       }
 
       logger.debug('✅ Upload successful:', uploadData.path)
@@ -215,19 +226,14 @@ export const useLogoUpload = () => {
    */
   const validateImageFile = (file: File): string | null => {
     if (!file.type.startsWith('image/')) {
-      return 'Nur Bilddateien sind erlaubt (JPG, PNG, GIF, WebP)'
+      return 'Nur Bilddateien sind erlaubt'
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      return 'Datei zu groß! Maximale Größe: 2MB'
+    if (file.size > 10 * 1024 * 1024) {
+      return 'Datei zu groß! Maximale Größe: 10MB'
     }
 
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
-    if (!allowedTypes.includes(file.type)) {
-      return 'Nicht unterstütztes Dateiformat. Erlaubt: JPG, PNG, GIF, WebP'
-    }
-
-    return null // Keine Fehler
+    return null // Keine Fehler – Formatkonvertierung übernimmt compressImage
   }
 
   return {

@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { useLogoUpload } from '~/composables/useLogoUpload'
+import { compressImage } from '~/utils/imageCompression'
 
 // Props
 interface Props {
@@ -94,16 +94,20 @@ const emit = defineEmits<{
   'logo-updated': [logoType: string, logoUrl: string | null]
 }>()
 
-// Logo Upload Composable
-const {
-  isUploading,
-  uploadError,
-  validateImageFile
-} = useLogoUpload()
-
 // Local state
 const fileInput = ref<HTMLInputElement>()
 const error = ref<string | null>(null)
+const isUploading = ref(false)
+
+function base64ToFile(base64: string, filename: string): File {
+  const arr = base64.split(',')
+  const mime = arr[0].match(/:(.*?);/)![1]
+  const bstr = atob(arr[1])
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) { u8arr[n] = bstr.charCodeAt(n) }
+  return new File([u8arr], filename, { type: mime })
+}
 
 // Computed
 const containerClass = computed(() => {
@@ -159,30 +163,44 @@ const handleFileSelect = async (event: Event) => {
 
   error.value = null
 
-  // Validierung
-  const validationError = validateImageFile(file)
-  if (validationError) {
-    error.value = validationError
+  if (!file.type.startsWith('image/')) {
+    error.value = 'Nur Bilddateien sind erlaubt'
+    return
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    error.value = 'Datei zu groß! Maximale Größe: 10MB'
     return
   }
 
+  isUploading.value = true
+
   try {
-    // Upload-Logik hier implementieren
-    // TODO: Erweitere useLogoUpload für verschiedene Logo-Typen
-    
-    // Für jetzt: Simuliere Upload
-    const logoUrl = await simulateUpload(file)
-    
-    if (logoUrl) {
-      emit('logo-updated', props.logoType, logoUrl)
-    }
-    
+    // Convert to WebP via canvas
+    const base64Webp = await compressImage(file, props.logoType)
+    const webpFile = base64ToFile(base64Webp, `${props.logoType}-${Date.now()}.webp`)
+
+    const formData = new FormData()
+    formData.append('file', webpFile)
+    formData.append('assetType', props.logoType === 'wide' ? 'logo_wide' : 'logo_square')
+    formData.append('tenantId', props.tenantId)
+
+    const response = await $fetch<{ asset: { url: string } }>('/api/tenant/upload-logo', {
+      method: 'POST',
+      body: formData
+    })
+
+    emit('logo-updated', props.logoType, response.asset.url)
   } catch (err: any) {
     console.error('Logo upload failed:', err)
-    error.value = err.message || 'Upload fehlgeschlagen'
+    if (err.message?.includes('nicht unterstützt') || err.message?.includes('Failed to load')) {
+      error.value = 'Dieses Bildformat wird nicht unterstützt. Bitte PNG, JPG oder WebP verwenden.'
+    } else {
+      error.value = err.data?.statusMessage || err.message || 'Upload fehlgeschlagen'
+    }
+  } finally {
+    isUploading.value = false
   }
-  
-  // Input zurücksetzen
+
   if (fileInput.value) {
     fileInput.value.value = ''
   }
@@ -192,38 +210,19 @@ const handleRemoveLogo = async () => {
   if (!confirm(`Möchten Sie das ${getLogoTypeName()} wirklich entfernen?`)) return
 
   try {
-    // Remove-Logik hier implementieren
-    // TODO: API-Call zum Löschen des spezifischen Logo-Typs
-    
+    await $fetch(`/api/tenant/delete-asset`, {
+      method: 'DELETE',
+      body: { tenantId: props.tenantId, assetType: props.logoType === 'wide' ? 'logo_wide' : 'logo_square' }
+    })
     emit('logo-updated', props.logoType, null)
-    
   } catch (err: any) {
     console.error('Logo removal failed:', err)
-    error.value = err.message || 'Entfernen fehlgeschlagen'
+    error.value = err.data?.statusMessage || err.message || 'Entfernen fehlgeschlagen'
   }
 }
 
 const getLogoTypeName = () => {
-  const names = {
-    'square': 'quadratische Logo',
-    'wide': 'breite Logo (Hauptlogo)'
-  }
+  const names = { 'square': 'quadratische Logo', 'wide': 'breite Logo (Hauptlogo)' }
   return names[props.logoType] || 'Logo'
 }
-
-// Simulate upload for now - replace with real API call
-const simulateUpload = async (file: File): Promise<string> => {
-  // Simuliere Upload-Delay
-  await new Promise(resolve => setTimeout(resolve, 1000))
-  
-  // Erstelle temporäre URL für Demo
-  return URL.createObjectURL(file)
-}
-
-// Watch for upload errors
-watch(uploadError, (newError) => {
-  if (newError) {
-    error.value = newError
-  }
-})
 </script>

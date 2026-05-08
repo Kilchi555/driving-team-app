@@ -81,6 +81,17 @@
 import { ref, reactive, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import IconUpload from '~icons/mdi/upload'
+import { compressImage } from '~/utils/imageCompression'
+
+function base64ToFile(base64: string, filename: string): File {
+  const arr = base64.split(',')
+  const mime = arr[0].match(/:(.*?);/)![1]
+  const bstr = atob(arr[1])
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) { u8arr[n] = bstr.charCodeAt(n) }
+  return new File([u8arr], filename, { type: mime })
+}
 
 const { t } = useI18n()
 const emit = defineEmits<{
@@ -130,24 +141,37 @@ async function handleFileSelect(event: Event, assetType: string) {
 
   if (!file) return
 
-  // Validate file size (5MB)
-  if (file.size > 5 * 1024 * 1024) {
-    uploadStatus.value = {
-      type: 'error',
-      message: t('admin.branding.fileTooLarge')
-    }
+  // Accept any image (browser-renderable) up to 10MB before compression
+  if (!file.type.startsWith('image/')) {
+    uploadStatus.value = { type: 'error', message: 'Nur Bilddateien sind erlaubt' }
+    return
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    uploadStatus.value = { type: 'error', message: t('admin.branding.fileTooLarge') }
     return
   }
 
-  // Create preview
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    previews[assetType as keyof typeof previews] = e.target?.result as string
-  }
-  reader.readAsDataURL(file)
+  uploadStatus.value = { type: 'loading', message: t('admin.branding.uploading') }
 
-  // Upload file
-  await uploadFile(file, assetType)
+  try {
+    // Convert to WebP via canvas (handles PNG, JPG, HEIC on Safari, etc.)
+    const imageType = assetType === 'logo_wide' ? 'wide' : 'square'
+    const base64Webp = await compressImage(file, imageType)
+
+    // Show compressed preview immediately
+    previews[assetType as keyof typeof previews] = base64Webp
+
+    // Convert base64 to File for upload
+    const webpFile = base64ToFile(base64Webp, `${assetType}-${Date.now()}.webp`)
+
+    // Upload compressed WebP file
+    await uploadFile(webpFile, assetType)
+  } catch {
+    uploadStatus.value = {
+      type: 'error',
+      message: 'Dieses Bildformat wird nicht unterstützt. Bitte PNG, JPG oder WebP verwenden.'
+    }
+  }
 }
 
 // Upload file to server
