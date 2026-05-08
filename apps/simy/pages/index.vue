@@ -1955,14 +1955,51 @@ async function extractColorsFromLogo(dataUrl: string): Promise<[string, string, 
   })
 }
 
+async function convertImageToWebP(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas')
+          const MAX_DIM = 800
+          let w = img.width, h = img.height
+          if (w > MAX_DIM || h > MAX_DIM) {
+            if (w >= h) { h = Math.round(h * MAX_DIM / w); w = MAX_DIM }
+            else { w = Math.round(w * MAX_DIM / h); h = MAX_DIM }
+          }
+          canvas.width = w
+          canvas.height = h
+          const ctx = canvas.getContext('2d')!
+          ctx.fillStyle = '#ffffff'
+          ctx.fillRect(0, 0, w, h)
+          ctx.drawImage(img, 0, 0, w, h)
+          let quality = 0.85
+          let result = canvas.toDataURL('image/webp', quality)
+          while (result.length > 200 * 1024 * 1.33 && quality > 0.4) {
+            quality -= 0.1
+            result = canvas.toDataURL('image/webp', quality)
+          }
+          resolve(result)
+        } catch (err) { reject(err) }
+      }
+      img.onerror = () => reject(new Error('Bildformat nicht unterstützt'))
+      img.src = e.target?.result as string
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 async function handleLogoUpload(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   if (!file.type.startsWith('image/')) return
-  if (file.size > 2 * 1024 * 1024) { alert('Datei zu gross! Max. 2 MB'); return }
-  const reader = new FileReader()
-  reader.onload = async (e) => {
-    const dataUrl = e.target?.result as string
+  if (file.size > 10 * 1024 * 1024) { alert('Datei zu gross! Max. 10 MB'); return }
+
+  try {
+    const dataUrl = await convertImageToWebP(file)
     logoPreview.value = dataUrl
     extractingColors.value = true
     colorsExtracted.value = false
@@ -1975,8 +2012,9 @@ async function handleLogoUpload(event: Event) {
       colorsExtracted.value = true
       setTimeout(() => { colorsExtracted.value = false }, 3500)
     }
+  } catch {
+    alert('Dieses Bildformat wird leider nicht unterstützt. Bitte laden Sie Ihr Logo als PNG, JPG oder WebP hoch.')
   }
-  reader.readAsDataURL(file)
 }
 
 function removeLogo() {
