@@ -4,7 +4,7 @@
     <!-- ── Nav ──────────────────────────────────────────────────────────────── -->
     <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
       <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <img :src="logoPreview || '/simy-logo.png'" alt="Logo"
+        <img :src="logoPreview || '/simy-logo.png'" alt="Simy – Fahrschule Software Schweiz"
           class="h-8 max-w-[140px] object-contain transition-all duration-500"
           :style="{ filter: logoColorFilter }" />
 
@@ -1618,29 +1618,34 @@ definePageMeta({ layout: false })
 
 useHead({
   title: 'Simy – Fahrschule Software Schweiz | Buchung, Abrechnung & App',
+  htmlAttrs: { lang: 'de' },
   meta: [
-    { name: 'description', content: 'Simy ist die Fahrschul-Software für die Schweiz: Online-Buchung, automatische Abrechnung, Schülerverwaltung & App. 30 Tage kostenlos testen – keine Kreditkarte.' },
+    { name: 'description', content: 'Simy ist die Fahrschul-Software für die Schweiz: Online-Buchung, automatische Abrechnung, Schülerverwaltung & App. 60 Tage kostenlos testen – keine Kreditkarte.' },
     { name: 'keywords', content: 'Fahrschule Software Schweiz, Fahrschule App, Fahrstunden Verwaltung, Fahrschule Buchungssystem, Fahrschule Online Buchung, Fahrstunden App' },
     { name: 'robots', content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' },
     { name: 'author', content: 'Simy' },
     // Open Graph
     { property: 'og:title', content: 'Simy – Fahrschule Software Schweiz' },
-    { property: 'og:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 30 Tage kostenlos testen.' },
+    { property: 'og:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 60 Tage kostenlos testen – keine Kreditkarte.' },
     { property: 'og:type', content: 'website' },
     { property: 'og:url', content: 'https://simy.ch/' },
     { property: 'og:image', content: 'https://simy.ch/og-image.png' },
     { property: 'og:image:width', content: '1200' },
     { property: 'og:image:height', content: '630' },
+    { property: 'og:image:alt', content: 'Simy Fahrschule Software – Dashboard Screenshot' },
     { property: 'og:locale', content: 'de_CH' },
     { property: 'og:site_name', content: 'Simy' },
-    // Twitter Card
+    // Twitter / X Card
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: 'Simy – Fahrschule Software Schweiz' },
-    { name: 'twitter:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 30 Tage kostenlos testen.' },
+    { name: 'twitter:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 60 Tage kostenlos testen – keine Kreditkarte.' },
     { name: 'twitter:image', content: 'https://simy.ch/og-image.png' },
+    { name: 'twitter:image:alt', content: 'Simy Fahrschule Software – Dashboard Screenshot' },
   ],
   link: [
     { rel: 'canonical', href: 'https://simy.ch/' },
+    { rel: 'alternate', hreflang: 'de-CH', href: 'https://simy.ch/' },
+    { rel: 'alternate', hreflang: 'x-default', href: 'https://simy.ch/' },
   ],
   script: [
     {
@@ -1653,11 +1658,14 @@ useHead({
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web, iOS, Android',
         description: 'Fahrschul-Software für die Schweiz: Online-Buchung, automatische Abrechnung, Schülerverwaltung & Kommunikation.',
+        softwareVersion: '2.0',
+        datePublished: '2023-01-01',
+        screenshot: 'https://simy.ch/og-image.png',
         offers: {
           '@type': 'Offer',
           price: '0',
           priceCurrency: 'CHF',
-          description: '30 Tage kostenlos testen, keine Kreditkarte nötig',
+          description: '60 Tage kostenlos testen, keine Kreditkarte nötig',
         },
         provider: {
           '@type': 'Organization',
@@ -1680,6 +1688,7 @@ useHead({
           ratingValue: '4.9',
           reviewCount: '38',
           bestRating: '5',
+          worstRating: '1',
         },
       }),
     },
@@ -1690,19 +1699,81 @@ useHead({
         '@type': 'Organization',
         name: 'Simy',
         url: 'https://simy.ch',
-        logo: 'https://simy.ch/simy-logo.png',
-        sameAs: [],
+        logo: {
+          '@type': 'ImageObject',
+          url: 'https://simy.ch/simy-logo.png',
+          width: 200,
+          height: 60,
+        },
         contactPoint: {
           '@type': 'ContactPoint',
           contactType: 'customer support',
+          email: 'info@simy.ch',
           availableLanguage: ['German'],
+          areaServed: 'CH',
         },
+        areaServed: { '@type': 'Country', name: 'Switzerland' },
+      }),
+    },
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: 'Was kostet Simy?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Simy bietet verschiedene Preispläne ab CHF 59/Monat. Die ersten 60 Tage sind vollständig kostenlos – keine Kreditkarte, keine Bindung.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Für wen ist Simy geeignet?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Simy ist die ideale Fahrschul-Software für selbstständige Fahrlehrer und Fahrschulen in der Schweiz. Die App unterstützt von der Online-Buchung über automatische Abrechnung bis zur Schülerverwaltung.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Welche Zahlungsarten unterstützt Simy?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Simy unterstützt TWINT, Kreditkarte, Debitkarte (Mastercard/Visa), PostFinance sowie manuelle Zahlungen per Rechnung oder Banküberweisung.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Kann ich Simy kündigen?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Ja, Simy ist monatlich kündbar mit einer Kündigungsfrist von 1 Monat. Es gibt keine Jahresbindung.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Ist Simy DSGVO-konform?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Ja, Simy ist vollständig DSGVO-konform. Die Daten werden auf Schweizer Servern gespeichert und verarbeitet.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Brauche ich IT-Kenntnisse für Simy?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Nein. Simy ist so einfach gestaltet, dass keine IT-Kenntnisse notwendig sind. Setup in wenigen Minuten, intuitives Dashboard.',
+            },
+          },
+        ],
       }),
     },
   ],
 })
-
-const currentYear = computed(() => new Date().getFullYear())
 
 // ─── Brand Color Live Preview ────────────────────────────────────────────────
 const DEFAULT_PRIMARY = '#6000BD'
