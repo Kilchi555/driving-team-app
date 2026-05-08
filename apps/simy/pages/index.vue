@@ -1996,7 +1996,7 @@ async function handleLogoUpload(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   if (!file.type.startsWith('image/')) return
-  if (file.size > 10 * 1024 * 1024) { alert('Datei zu gross! Max. 10 MB'); return }
+  if (file.size > 5 * 1024 * 1024) { alert('Datei zu gross! Max. 5 MB'); return }
 
   try {
     const dataUrl = await convertImageToWebP(file)

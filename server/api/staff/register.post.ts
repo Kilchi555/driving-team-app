@@ -252,9 +252,10 @@ export default defineEventHandler(async (event) => {
     }
 
     // 5. Setup working hours (service role)
-    if (Array.isArray(workingHours) && workingHours.length > 0) {
+    const hoursToInsert = Array.isArray(workingHours) ? workingHours : []
+    if (hoursToInsert.length > 0) {
       try {
-        const whInserts = workingHours
+        const whInserts = hoursToInsert
           .filter((wh: any) => wh.day_of_week && wh.start_time && wh.end_time)
           .map((wh: any) => ({
             staff_id: newUser.id,
@@ -271,6 +272,31 @@ export default defineEventHandler(async (event) => {
         }
       } catch (whErr) {
         console.warn('⚠️ Working hours storage failed (non-fatal):', whErr)
+      }
+    } else {
+      // Fallback: use tenant's working_days_template
+      try {
+        const { data: tenantTpl } = await serviceSupabase
+          .from('tenants').select('working_days_template').eq('id', invitation.tenant_id).single()
+        const tpl = tenantTpl?.working_days_template as any
+        if (tpl && Array.isArray(tpl.days) && tpl.days.length > 0) {
+          const whInserts = tpl.days.map((day: number) => {
+            const daySchedule = tpl.schedule?.[String(day)]
+            return {
+              staff_id: newUser.id,
+              tenant_id: invitation.tenant_id,
+              day_of_week: day,
+              start_time: (daySchedule?.start ?? tpl.start_time ?? '07:00') + ':00',
+              end_time:   (daySchedule?.end   ?? tpl.end_time   ?? '19:00') + ':00',
+              is_active: true,
+              timezone: 'Europe/Zurich',
+            }
+          })
+          await serviceSupabase.from('staff_working_hours').insert(whInserts)
+          logger.debug('✅ Working hours from tenant template stored:', whInserts.length)
+        }
+      } catch (whErr) {
+        console.warn('⚠️ Working hours fallback failed (non-fatal):', whErr)
       }
     }
 

@@ -141,12 +141,12 @@ async function handleFileSelect(event: Event, assetType: string) {
 
   if (!file) return
 
-  // Accept any image (browser-renderable) up to 10MB before compression
+  // Accept any image (browser-renderable) up to 5MB before compression
   if (!file.type.startsWith('image/')) {
     uploadStatus.value = { type: 'error', message: 'Nur Bilddateien sind erlaubt' }
     return
   }
-  if (file.size > 10 * 1024 * 1024) {
+  if (file.size > 5 * 1024 * 1024) {
     uploadStatus.value = { type: 'error', message: t('admin.branding.fileTooLarge') }
     return
   }

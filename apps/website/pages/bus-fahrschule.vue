@@ -22,7 +22,7 @@
       <div class="section-container relative z-10">
           <h1 class="heading-lg text-white mb-6">Bus Fahrschule Kategorie D1 & D</h1>
           <p class="text-base xs:text-xl text-white mb-8">Möchtest du deinen Bus Führerschein machen? Bei unserer Bus Fahrschule wirst du von einem erfahrenen Fahrlehrer unterrichtet, der seine Begeisterung für grosse Fahrzeuge mit dir teilt. Freu dich auf lehrreiche und spannende Fahrstunden!</p>
-          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
       </div>
@@ -211,7 +211,7 @@
           </details>
         </div>
         <div class="text-center mt-12">
-          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
             🚀 Jetzt anmelden!
           </a>
         </div>
@@ -329,7 +329,7 @@
         <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-white">Starte deine Bus-Fahrer-Karriere!</h2>
         <p class="text-base xs:text-xl text-white mb-8">Mit professioneller Ausbildung von Driving Team in Zürich</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://www.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt anmelden
           </a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
@@ -384,7 +384,7 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"Course","name":"Bus Fahrschule - Kategorie D1 & D","description":"Professionelle Bus Fahrausbildung für Kategorie D1 & D. 52-24 Fahrstunden, erfahrene Fahrlehrer, flexible Zeiten","provider":{"@type":"Organization","name":"Driving Team","url":"https://drivingteam.ch"},"offers":{"@type":"Offer","priceCurrency":"CHF","url":"https://www.simy.ch/booking/availability/driving-team"},"educationLevel":"Advanced","keywords":"Bus Fahrschule, Kategorie D, Bus Führerschein, professionelle Fahrausbildung"}' },
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"Course","name":"Bus Fahrschule - Kategorie D1 & D","description":"Professionelle Bus Fahrausbildung für Kategorie D1 & D. 52-24 Fahrstunden, erfahrene Fahrlehrer, flexible Zeiten","provider":{"@type":"Organization","name":"Driving Team","url":"https://drivingteam.ch"},"offers":{"@type":"Offer","priceCurrency":"CHF","url":"https://app.simy.ch/booking/availability/driving-team"},"educationLevel":"Advanced","keywords":"Bus Fahrschule, Kategorie D, Bus Führerschein, professionelle Fahrausbildung"}' },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "AggregateRating", "itemReviewed": { "@type": "Course", "name": "Bus Fahrschule - Kategorie D1 & D", "url": "https://drivingteam.ch/bus-fahrschule/" }, "ratingValue": 4.9, "bestRating": 5, "worstRating": 1, "ratingCount": 366, "reviewCount": 366 }) },
   { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://drivingteam.ch/"},{"@type":"ListItem","position":2,"name":"Bus Fahrschule","item":"https://drivingteam.ch/bus-fahrschule/"}]}' },
   { type: 'application/ld+json', innerHTML: JSON.stringify({"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Ab welchem Alter kann ich den Bus Führerschein machen?","acceptedAnswer":{"@type":"Answer","text":"Bereits ab einem Alter von 21 Jahren darf man den Lernfahrausweis für die Kategorie D bestellen, wenn man die Kategorie B mindestens seit 2 Jahren besitzt."}},{"@type":"Question","name":"Wie lange dauert die Ausbildung?","acceptedAnswer":{"@type":"Answer","text":"Das hängt von dir ab. Der bisher schnellste Fahrschüler hat den Lernfahrausweis bis zur bestandenen Prüfung innert 7 Wochen geschafft."}},{"@type":"Question","name":"Muss ich zuerst die Theorie machen?","acceptedAnswer":{"@type":"Answer","text":"Nein. Du benötigst lediglich den Lernfahrausweis, um mit den Bus Fahrstunden zu starten. Es macht Sinn, die Bus Theorie parallel zu den praktischen Fahrstunden zu lernen."}},{"@type":"Question","name":"Was kostet der Bus Führerschein insgesamt?","acceptedAnswer":{"@type":"Answer","text":"Die Gesamtkosten für einen Bus-Führerschein betragen in der Schweiz durchschnittlich CHF 4'500–6'500, abhängig von der Anzahl der benötigten Fahrstunden. Dies beinhaltet den Nothelferkurs (ca. CHF 100), Sehtest (CHF 50), Lernfahrausweis (CHF 80), Theorieprüfung (CHF 40), Fahrstunden (durchschnittlich 25–35 à CHF 200), praktische Prüfung (CHF 200–250), sowie die Versicherungspauschale (CHF 200) und WarmUp-Kurs (CHF 1'066). Die genauen Kosten hängen von deinen Vorkenntnissen ab."}},{"@type":"Question","name":"Was sind die Voraussetzungen für den Führerschein?","acceptedAnswer":{"@type":"Answer","text":"Um einen Bus-Führerschein (Kategorie D) zu erhalten, benötigst du: Mindestalter 21 Jahren, einen gültigen Auto-Führerschein (Kategorie B) seit mindestens 2 Jahren, einen bestandenen Nothelferkurs (obligatorisch), einen bestandenen Sehtest, einen gültigen Lernfahrausweis und die Anmeldung in einer Fahrschule. Du musst in der Schweiz wohnhaft sein und einen gültigen Ausweis haben."}},{"@type":"Question","name":"Wie lange dauert die komplette Fahrausbildung?","acceptedAnswer":{"@type":"Answer","text":"Die Dauer der Bus-Fahrausbildung hängt von deinem Tempo und Lernfortschritt ab. Die Theorieausbildung dauert typischerweise 8–10 Wochen mit Unterrichtsabenden. Die praktische Ausbildung mit 25–35 Fahrstunden dauert 3–6 Wochen. Insgesamt solltest du mit 2–3 Monaten rechnen, wenn du zügig voranschreitest und regelmässig trainierst."}},{"@type":"Question","name":"Was kostet eine Fahrstunde bei euch?","acceptedAnswer":{"@type":"Answer","text":"Eine Bus-Fahrstunde (45 Minuten) kostet bei uns CHF 200. Wir bieten auch günstigere Abo-Preise an: Bei 5 Fahrstunden sparst du gegenüber Einzellektionen. Zusätzlich fallen eine Versicherungspauschale (CHF 200 einmalig) und der WarmUp-Kurs mit Prüfungsfahrt (CHF 1'066) an. Kontaktiere uns für aktuelle Preise und individuelle Angebote."}}]}) },

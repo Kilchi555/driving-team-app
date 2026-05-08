@@ -22,7 +22,7 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">VKU Kurs Lachen</h1>
           <p class="text-xl text-white mb-8">Im total achtstündigen VKU Kurs Lachen wirst Du ausführlich auf den Alltag im Strassenverkehr vorbereitet. Der Abschluss des Verkehrskunde Kurses ist obligatorisch und Voraussetzung für die Anmeldung an die Praktische Führerprüfung.</p>
-          <a href="https://www.simy.ch/customer/courses/driving-team/?category=VKU&location=Lachen" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/customer/courses/driving-team/?category=VKU&location=Lachen" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Kurs anmelden
           </a>
         </div>
@@ -251,7 +251,7 @@
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt VKU Kurs Lachen anmelden!</h2>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://www.simy.ch/customer/courses/driving-team/?category=VKU&location=Lachen" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/customer/courses/driving-team/?category=VKU&location=Lachen" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Jetzt Kurs anmelden
           </a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
