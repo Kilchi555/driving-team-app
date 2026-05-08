@@ -1754,6 +1754,14 @@ onMounted(async () => {
     sessionStorage.removeItem('simy_preview_logo')
   }
 
+  // Pre-populate brand colors from sessionStorage (set by the index page branding preview)
+  const savedPrimary   = sessionStorage.getItem('simy_preview_primary')
+  const savedSecondary = sessionStorage.getItem('simy_preview_secondary')
+  const savedAccent    = sessionStorage.getItem('simy_preview_accent')
+  if (savedPrimary)   { formData.value.primary_color   = savedPrimary;   sessionStorage.removeItem('simy_preview_primary') }
+  if (savedSecondary) { formData.value.secondary_color = savedSecondary; sessionStorage.removeItem('simy_preview_secondary') }
+  if (savedAccent)    { formData.value.accent_color    = savedAccent;    sessionStorage.removeItem('simy_preview_accent') }
+
   loadFromStorage()
   if (adminSameAsCompany.value) applyAdminFromCompany()
   // Pre-load categories if already past step 0
