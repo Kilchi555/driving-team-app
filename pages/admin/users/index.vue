@@ -1,24 +1,29 @@
 <template>
-  <div class="p-6">
-    <!-- Tabs (Kunden, Fahrlehrer, Admins) -->
-    <div class="bg-white shadow-sm border p-4 rounded-lg mb-6">
-      <div class="flex items-center justify-between">
-        <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Benutzerverwaltung</h1>
-      </div>
-      <div class="mt-4">
-        <div class="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-          <button
-            v-for="tab in tabs"
-            :key="tab.id"
-            @click="activeTab = tab.id as any"
-            :class="[
-              'flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors',
-              activeTab === tab.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-            ]"
-          >
-            {{ tab.name }}
-          </button>
+  <div class="p-4 sm:p-6 space-y-5 max-w-[1600px] mx-auto">
+
+    <!-- ═══ PAGE HEADER + TABS ═══ -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 pt-5 pb-4">
+        <div>
+          <h1 class="text-xl font-bold text-gray-900">Benutzerverwaltung</h1>
+          <p class="text-sm text-gray-400 mt-0.5">Schüler, Fahrlehrer und Admins</p>
         </div>
+      </div>
+      <!-- Tabs -->
+      <div class="flex px-5 pb-0 border-b border-gray-100 gap-1">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          @click="activeTab = tab.id as any"
+          :class="[
+            'px-4 py-2.5 text-sm font-semibold rounded-t-xl transition-colors border-b-2 -mb-px',
+            activeTab === tab.id
+              ? 'border-blue-600 text-blue-700 bg-blue-50/60'
+              : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+          ]"
+        >
+          {{ tab.name }}
+        </button>
       </div>
     </div>
 
@@ -79,231 +84,148 @@
 
 
     <!-- Filters and Search -->
-    <div class="bg-white rounded-lg shadow-sm border mb-6">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-          <div class="flex flex-col gap-2">
-            <h2 class="text-xl font-semibold text-gray-900">
-              Benutzer ({{ filteredUsers.length }})
-            </h2>
-            
-            <!-- Invitation Filter Toggle -->
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-gray-600">Anzeigen:</span>
-              <div class="flex items-center bg-gray-100 rounded-lg p-1">
-                <button
-                  @click="invitationFilter = 'users'"
-                  :class="[
-                    'px-3 py-1 text-xs font-medium rounded-md transition-colors',
-                    invitationFilter === 'users' 
-                      ? 'bg-white text-gray-900 shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
-                  ]"
-                >
-                  Nur Benutzer
-                </button>
-                <button
-                  @click="invitationFilter = 'all'"
-                  :class="[
-                    'px-3 py-1 text-xs font-medium rounded-md transition-colors',
-                    invitationFilter === 'all' 
-                      ? 'bg-white text-gray-900 shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
-                  ]"
-                >
-                  Alle
-                </button>
-                <button
-                  @click="invitationFilter = 'invitations'"
-                  :class="[
-                    'px-3 py-1 text-xs font-medium rounded-md transition-colors',
-                    invitationFilter === 'invitations' 
-                      ? 'bg-white text-gray-900 shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
-                  ]"
-                >
-                  Nur Einladungen
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          <div class="flex flex-col sm:flex-row gap-3">
-            <!-- Search -->
-            <div class="relative">
-              <input
-                v-model="searchTerm"
-                type="text"
-                placeholder="Name oder E-Mail suchen..."
-                class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center">
-                <span class="text-gray-400">🔍</span>
-              </div>
-            </div>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm">
+      <div class="flex flex-col sm:flex-row gap-3 flex-wrap items-stretch sm:items-center px-5 py-4">
+        <div>
+          <p class="text-sm font-bold text-gray-900">{{ filteredUsers.length }} Benutzer</p>
+        </div>
 
-            
+        <!-- Invitation Filter -->
+        <div class="flex items-center bg-gray-100 rounded-xl p-1 gap-0.5">
+          <button @click="invitationFilter = 'users'"
+            :class="['px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors', invitationFilter === 'users' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800']">
+            Benutzer
+          </button>
+          <button @click="invitationFilter = 'all'"
+            :class="['px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors', invitationFilter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800']">
+            Alle
+          </button>
+          <button @click="invitationFilter = 'invitations'"
+            :class="['px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors', invitationFilter === 'invitations' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800']">
+            Einladungen
+          </button>
+        </div>
 
-            <!-- Status Filter -->
-            <select
-              v-model="selectedStatus"
-              class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Alle Status</option>
-              <option value="active">Aktiv</option>
-              <option value="inactive">Inaktiv</option>
-              <option value="unpaid">Mit offenen Zahlungen</option>
-            </select>
+        <!-- Search -->
+        <div class="flex-1 min-w-[200px] relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+          </svg>
+          <input v-model="searchTerm" type="text" placeholder="Name oder E-Mail…"
+            class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-300 focus:outline-none"/>
+        </div>
 
-            <!-- Tab-abhängige Aktionen -->
-            <template v-if="activeTab === 'customers'">
-              <button
-                @click="openCreateForCurrentTab()"
-                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-              >
-                ➕ Neuer Kunde
-              </button>
-            </template>
-            <template v-else-if="activeTab === 'staff'">
-              <button
-                @click="showInviteStaffModal = true"
-                class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors whitespace-nowrap"
-              >
-                📧 Fahrlehrer einladen
-              </button>
-              <button
-                @click="openCreateForCurrentTab()"
-                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-              >
-                ➕ Neuer Fahrlehrer
-              </button>
-            </template>
+        <!-- Status Filter -->
+        <select v-model="selectedStatus"
+          class="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-300 focus:outline-none bg-white text-gray-700">
+          <option value="">Alle Status</option>
+          <option value="active">Aktiv</option>
+          <option value="inactive">Inaktiv</option>
+          <option value="unpaid">Mit offenen Zahlungen</option>
+        </select>
+
+        <!-- Tab-abhängige Aktionen -->
+        <template v-if="activeTab === 'customers'">
+          <button @click="openCreateForCurrentTab()"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap">
+            Neuer Kunde
+          </button>
+        </template>
+        <template v-else-if="activeTab === 'staff'">
+          <button @click="openCreateForCurrentTab()"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap">
+            Neuer Fahrlehrer
+          </button>
+        </template>
+        <template v-else-if="activeTab === 'staff'">
+          <button @click="showInviteStaffModal = true"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap">
+            Fahrlehrer einladen
+          </button>
+          <button @click="openCreateForCurrentTab()"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap">
+            Neuer Fahrlehrer
+          </button>
+        </template>
             <template v-else-if="activeTab === 'admins'">
               <button
                 @click="openCreateForCurrentTab()"
-                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all hover:-translate-y-0.5"
               >
-                ➕ Neuer Admin
+                Neuer Admin
               </button>
             </template>
           </div>
-        </div>
-      </div>
+    </div>
 
-      <!-- Users Table -->
+    <!-- Users Table -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Benutzer</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rolle</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kontakt</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tenant</th>
+          <thead>
+            <tr class="bg-gray-50/80 border-b border-gray-100">
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Benutzer</th>
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rolle</th>
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Kontakt</th>
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tenant</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-200">
-            <tr 
-              v-for="user in filteredUsers" 
-              :key="user.id" 
+          <tbody class="divide-y divide-gray-50">
+            <tr
+              v-for="user in filteredUsers"
+              :key="user.id"
               :class="[
-                'cursor-pointer transition-colors',
-                user.is_invitation 
-                  ? 'bg-gray-100 hover:bg-gray-150 opacity-70' 
-                  : 'hover:bg-gray-50'
+                'transition-colors group',
+                user.is_invitation
+                  ? 'bg-gray-50/50 opacity-75'
+                  : 'hover:bg-blue-50/30 cursor-pointer'
               ]"
               @click="user.is_invitation ? null : navigateToUserDetails(user.id)"
             >
-              <td class="px-6 py-4">
+              <td class="px-5 py-3.5">
                 <div class="flex items-center gap-3">
-                  <div 
-                    :class="[
-                      'w-10 h-10 rounded-full flex items-center justify-center',
-                      user.is_invitation ? 'bg-gray-300' : 'bg-gray-200'
-                    ]"
-                  >
-                    <span 
-                      :class="[
-                        'text-sm font-medium',
-                        user.is_invitation ? 'text-gray-500' : 'text-gray-600'
-                      ]"
-                    >
-                      {{ getInitials(user.first_name, user.last_name) }}
-                    </span>
+                  <div :class="[
+                    'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold',
+                    user.is_invitation ? 'bg-gray-200 text-gray-500' : 'bg-blue-100 text-blue-700'
+                  ]">
+                    {{ getInitials(user.first_name, user.last_name) }}
                   </div>
                   <div>
-                    <div 
-                      :class="[
-                        'font-medium',
-                        user.is_invitation ? 'text-gray-600' : 'text-gray-900'
-                      ]"
-                    >
+                    <p :class="['text-sm font-semibold', user.is_invitation ? 'text-gray-500' : 'text-gray-900 group-hover:text-blue-700 transition-colors']">
                       {{ user.first_name }} {{ user.last_name }}
-                      <span v-if="user.is_invitation" class="text-xs text-gray-500 ml-2">(Eingeladen)</span>
-                    </div>
-                    <div 
-                      :class="[
-                        'text-sm',
-                        user.is_invitation ? 'text-gray-500' : 'text-gray-500'
-                      ]"
-                    >
-                      {{ user.email }}
-                    </div>
+                      <span v-if="user.is_invitation" class="font-normal text-xs text-gray-400 ml-1">(Eingeladen)</span>
+                    </p>
+                    <p class="text-xs text-gray-400 mt-0.5">{{ user.email }}</p>
                   </div>
                 </div>
               </td>
 
-              <td class="px-6 py-4">
+              <td class="px-5 py-3.5">
                 <span :class="getRoleBadgeClass(user)"
-                      class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
+                  class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full">
                   {{ getRoleLabel(user) }}
                 </span>
               </td>
 
-              <td class="px-6 py-4">
-                <div 
-                  :class="[
-                    'text-sm',
-                    user.is_invitation ? 'text-gray-500' : 'text-gray-900'
-                  ]"
-                >
-                  {{ user.phone || '-' }}
-                </div>
-                <div class="text-xs text-gray-500">
-                  {{ user.is_invitation ? 'Einladung ausstehend' : (user.preferred_payment_method || 'Nicht festgelegt') }}
-                </div>
+              <td class="px-5 py-3.5">
+                <p class="text-sm text-gray-700">{{ user.phone || '—' }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ user.is_invitation ? 'Einladung ausstehend' : (user.preferred_payment_method || 'Nicht festgelegt') }}</p>
               </td>
 
-              <td class="px-6 py-4">
-                <span 
-                  v-if="user.is_invitation"
-                  :class="[
-                    'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
-                    user.invitation_status === 'expired' 
-                      ? 'bg-red-100 text-red-800' 
-                      : 'bg-yellow-100 text-yellow-800'
-                  ]"
-                >
-                  {{ user.invitation_status === 'expired' ? 'Einladung abgelaufen' : 'Eingeladen' }}
+              <td class="px-5 py-3.5">
+                <span v-if="user.is_invitation"
+                  :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', user.invitation_status === 'expired' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700']">
+                  {{ user.invitation_status === 'expired' ? 'Abgelaufen' : 'Eingeladen' }}
                 </span>
-                <span 
-                  v-else
-                  :class="user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
-                >
+                <span v-else :class="user.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'"
+                  class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full">
                   {{ user.is_active ? 'Aktiv' : 'Inaktiv' }}
                 </span>
               </td>
 
-              <td class="px-6 py-4">
-                <div 
-                  :class="[
-                    'text-sm',
-                    user.is_invitation ? 'text-gray-500' : 'text-gray-900'
-                  ]"
-                >
-                  {{ currentTenant?.name || 'Unbekannt' }}
-                </div>
+              <td class="px-5 py-3.5">
+                <p class="text-sm text-gray-700">{{ currentTenant?.name || 'Unbekannt' }}</p>
                 <div class="text-xs text-gray-500">
                   {{ user.is_invitation && user.invitation_expires_at 
                     ? `Läuft ab: ${formatExpiryDate(user.invitation_expires_at)}` 

@@ -1,453 +1,245 @@
 <template>
-  <div>
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-2 sm:p-4">
-        <div>
-          <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Rechnungen</h1>
+  <div class="p-4 sm:p-6 space-y-5 max-w-[1600px] mx-auto">
+
+    <!-- ═══ PAGE HEADER ═══ -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">Rechnungen</h1>
+        <p class="text-sm text-gray-500 mt-0.5">
+          {{ totalInvoices }} Rechnungen · CHF {{ formatCurrency(summary.paid_amount).replace('CHF ', '') }} bezahlt
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button @click="showCamtModal = true"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          <span class="hidden sm:inline">CAMT Import</span>
+        </button>
+        <button @click="showCreateModal = true"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Neue Rechnung
+        </button>
+        <button @click="refreshData" :disabled="isLoading"
+          class="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 transition-colors disabled:opacity-50 shadow-sm"
+          title="Aktualisieren">
+          <svg class="h-4 w-4" :class="{ 'animate-spin': isLoading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══ KPI CARDS ═══ -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Gesamt</p>
+        <p class="text-2xl font-bold text-gray-900">{{ summary.total_invoices || 0 }}</p>
+        <p class="text-xs text-gray-400 mt-1">Rechnungen</p>
+      </div>
+      <div class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-sm p-5">
+        <p class="text-xs font-semibold text-emerald-100 uppercase tracking-widest mb-2">Bezahlt</p>
+        <p class="text-2xl font-bold text-white">{{ formatCurrency(summary.paid_amount) }}</p>
+        <p class="text-xs text-emerald-200 mt-1">Eingegangen</p>
+      </div>
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Ausstehend</p>
+        <p class="text-2xl font-bold text-amber-600">{{ formatCurrency(summary.pending_amount) }}</p>
+        <p class="text-xs text-gray-400 mt-1">Offen</p>
+      </div>
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Überfällig</p>
+        <p class="text-2xl font-bold" :class="(summary.overdue_amount || 0) > 0 ? 'text-red-600' : 'text-gray-400'">
+          {{ formatCurrency(summary.overdue_amount) }}
+        </p>
+        <p class="text-xs text-gray-400 mt-1">Fällig</p>
+      </div>
+    </div>
+
+    <!-- ═══ FILTER BAR ═══ -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5 p-4">
+        <!-- Suchfeld -->
+        <div class="flex-1 min-w-[200px] relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+          </svg>
+          <input
+            v-model="filters.search"
+            type="text"
+            placeholder="Name, Rechnungsnummer…"
+            :class="[
+              'w-full pl-9 pr-3 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2',
+              filters.search?.trim() ? 'border-emerald-400 focus:ring-emerald-300' : 'border-gray-200 focus:ring-blue-300'
+            ]"
+            @input="debouncedSearch"
+          />
         </div>
-        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
-          <button
-            @click="showCamtModal = true"
-            class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-          >
-            <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            <span class="hidden sm:inline">CAMT Import</span>
-            <span class="sm:hidden">CAMT</span>
+
+        <!-- Status Filter -->
+        <div class="relative" data-dropdown="status">
+          <button @click.stop="toggleStatusDropdown"
+            :class="[
+              'inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors',
+              (filters.status?.length || 0) > 0
+                ? 'border-emerald-400 bg-emerald-50 text-emerald-700'
+                : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+            ]">
+            {{ getStatusLabel() }}
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </button>
-          <button
-            @click="showCreateModal = true"
-            class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            <span class="hidden sm:inline">Neue Rechnung</span>
-            <span class="sm:hidden">Neu</span>
-          </button>
-          <button
-            @click="refreshData"
-            :disabled="isLoading"
-            class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span class="hidden sm:inline">Aktualisieren</span>
-            <span class="sm:hidden">↻</span>
-          </button>
+          <div v-if="showStatusDropdown" class="absolute z-10 mt-1.5 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 space-y-0.5">
+            <label v-for="[val, lbl] in [['draft','Entwurf'],['sent','Versendet'],['paid','Bezahlt'],['overdue','Überfällig'],['cancelled','Storniert']]" :key="val"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-gray-50 cursor-pointer text-sm text-gray-700">
+              <input type="checkbox" :checked="filters.status?.includes(val) || false" @change="toggleStatusFilter(val)" class="rounded keep-checkbox"/>
+              {{ lbl }}
+            </label>
+          </div>
         </div>
+
+        <!-- Zahlungsstatus Filter -->
+        <div class="relative" data-dropdown="payment-status">
+          <button @click.stop="togglePaymentStatusDropdown"
+            :class="[
+              'inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors',
+              (filters.payment_status?.length || 0) > 0
+                ? 'border-emerald-400 bg-emerald-50 text-emerald-700'
+                : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+            ]">
+            {{ getPaymentStatusLabel() }}
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div v-if="showPaymentStatusDropdown" class="absolute z-10 mt-1.5 w-52 bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 space-y-0.5">
+            <label v-for="[val, lbl] in [['pending','Ausstehend'],['partial','Teilweise bezahlt'],['paid','Vollständig bezahlt'],['overdue','Überfällig']]" :key="val"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-gray-50 cursor-pointer text-sm text-gray-700">
+              <input type="checkbox" :checked="filters.payment_status?.includes(val) || false" @change="togglePaymentStatusFilter(val)" class="rounded keep-checkbox"/>
+              {{ lbl }}
+            </label>
+          </div>
+        </div>
+
+        <!-- Datum Filter -->
+        <div class="relative" data-dropdown="date">
+          <button @click.stop="toggleDateDropdown"
+            :class="[
+              'inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors',
+              (filters.date_from || filters.date_to)
+                ? 'border-emerald-400 bg-emerald-50 text-emerald-700'
+                : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+            ]">
+            {{ getDateLabel() }}
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div v-if="showDateDropdown" class="absolute z-10 mt-1.5 w-64 bg-white border border-gray-100 rounded-2xl shadow-xl p-4 space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 mb-1">Von</label>
+              <input v-model="filters.date_from" type="date" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300"/>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 mb-1">Bis</label>
+              <input v-model="filters.date_to" type="date" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- Apply + Reset -->
+        <button @click="applyFilters"
+          class="px-4 py-2 text-sm font-semibold rounded-xl text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors">
+          Anwenden
+        </button>
+        <button @click="clearFilters"
+          class="px-4 py-2 text-sm font-medium rounded-xl text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
+          Reset
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══ INVOICE TABLE ═══ -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+        <h3 class="text-sm font-bold text-gray-900">Rechnungen <span class="text-gray-400 font-normal">({{ totalInvoices }})</span></h3>
       </div>
 
-    <div class="min-h-screen bg-gray-50">
-      <!-- Filter und Suche -->
-      <div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
-        <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200">
-          <h3 class="text-sm sm:text-base font-medium text-gray-900">Filter & Suche</h3>
-        </div>
-        <div class="px-3 sm:px-4 py-3">
-          <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
-            <!-- Suchfeld -->
-            <div class="flex-1 min-w-0">
-              <input
-                v-model="filters.search"
-                type="text"
-                placeholder="Suche..."
-                :class="[
-                  'w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2',
-                  filters.search && filters.search.trim()
-                    ? 'border-green-500 focus:ring-green-500' 
-                    : 'border-gray-300 focus:ring-blue-500'
-                ]"
-                @input="debouncedSearch"
-              />
-            </div>
+      <div v-if="isLoading" class="flex items-center justify-center py-16 gap-2 text-gray-400">
+        <svg class="animate-spin h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Lade Rechnungen…
+      </div>
 
-            <!-- Status Filter -->
-            <div class="relative w-full sm:w-auto" data-dropdown="status">
-              <button
-              @click.stop="toggleStatusDropdown"
-              :class="[
-                'inline-flex items-center justify-between w-full sm:w-auto px-3 py-2 text-sm border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2',
-                (filters.status?.length || 0) > 0 
-                  ? 'border-green-500 bg-green-50 text-green-700 hover:bg-gray-100 focus:ring-green-500' 
-                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500'
-              ]"
-            >
-              <span class="mr-2">{{ getStatusLabel() }}</span>
-              <svg class="w-4 h-4" :class="(filters.status?.length || 0) > 0 ? 'text-green-700' : 'text-gray-700'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            <div v-if="showStatusDropdown" class="absolute z-10 mt-1 w-48 bg-white border border-gray-300 rounded-md shadow-lg">
-              <div class="p-2 space-y-1">
-                <label class="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    :checked="filters.status?.includes('draft') || false"
-                    @change="toggleStatusFilter('draft')"
-                    class="mr-2 text-blue-600 keep-checkbox"
-                  >
-                  <span class="text-sm text-gray-700">Entwurf</span>
-                </label>
-                <label class="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    :checked="filters.status?.includes('sent') || false"
-                    @change="toggleStatusFilter('sent')"
-                    class="mr-2 text-blue-600 keep-checkbox"
-                  >
-                  <span class="text-sm text-gray-700">Versendet</span>
-                </label>
-                <label class="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    :checked="filters.status?.includes('paid') || false"
-                    @change="toggleStatusFilter('paid')"
-                    class="mr-2 text-blue-600 keep-checkbox"
-                  >
-                  <span class="text-sm text-gray-700">Bezahlt</span>
-                </label>
-                <label class="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    :checked="filters.status?.includes('overdue') || false"
-                    @change="toggleStatusFilter('overdue')"
-                    class="mr-2 text-blue-600 keep-checkbox"
-                  >
-                  <span class="text-sm text-gray-700">Überfällig</span>
-                </label>
-                <label class="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    :checked="filters.status?.includes('cancelled') || false"
-                    @change="toggleStatusFilter('cancelled')"
-                    class="mr-2 text-blue-600 keep-checkbox"
-                  >
-                  <span class="text-sm text-gray-700">Storniert</span>
-                </label>
-              </div>
-            </div>
-          </div>
+      <div v-else-if="!hasInvoices" class="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <p class="text-sm font-medium">Keine Rechnungen gefunden</p>
+      </div>
 
-          <!-- Zahlungsstatus Filter -->
-          <div class="relative" data-dropdown="payment-status">
-            <button
-              @click.stop="togglePaymentStatusDropdown"
-              :class="[
-                'inline-flex items-center px-3 py-1.5 text-sm border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2',
-                (filters.payment_status?.length || 0) > 0 
-                  ? 'border-green-500 bg-green-50 text-green-700 hover:bg-green-100 focus:ring-green-500' 
-                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500'
-              ]"
-            >
-              <span class="mr-2">{{ getPaymentStatusLabel() }}</span>
-              <svg class="w-4 h-4" :class="(filters.payment_status?.length || 0) > 0 ? 'text-green-700' : 'text-gray-700'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            <div v-if="showPaymentStatusDropdown" class="absolute z-10 mt-1 w-48 bg-white border border-gray-300 rounded-md shadow-lg">
-              <div class="p-2 space-y-1">
-                <label class="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    :checked="filters.payment_status?.includes('pending') || false"
-                    @change="togglePaymentStatusFilter('pending')"
-                    class="mr-2 text-blue-600 keep-checkbox"
-                  >
-                  <span class="text-sm text-gray-700">Ausstehend</span>
-                </label>
-                <label class="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    :checked="filters.payment_status?.includes('partial') || false"
-                    @change="togglePaymentStatusFilter('partial')"
-                    class="mr-2 text-blue-600 keep-checkbox"
-                  >
-                  <span class="text-sm text-gray-700">Teilweise bezahlt</span>
-                </label>
-                <label class="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    :checked="filters.payment_status?.includes('paid') || false"
-                    @change="togglePaymentStatusFilter('paid')"
-                    class="mr-2 text-blue-600 keep-checkbox"
-                  >
-                  <span class="text-sm text-gray-700">Vollständig bezahlt</span>
-                </label>
-                <label class="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    :checked="filters.payment_status?.includes('overdue') || false"
-                    @change="togglePaymentStatusFilter('overdue')"
-                    class="mr-2 text-blue-600 keep-checkbox"
-                  >
-                  <span class="text-sm text-gray-700">Überfällig</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <!-- Datum Filter -->
-          <div class="relative" data-dropdown="date">
-            <button
-              @click.stop="toggleDateDropdown"
-              :class="[
-                'inline-flex items-center px-3 py-1.5 text-sm border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2',
-                (filters.date_from || filters.date_to) 
-                  ? 'border-green-500 bg-green-50 text-green-700 hover:bg-green-100 focus:ring-green-500' 
-                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500'
-              ]"
-            >
-              <span class="mr-2">{{ getDateLabel() }}</span>
-              <svg class="w-4 h-4" :class="(filters.date_from || filters.date_to) ? 'text-green-700' : 'text-gray-700'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            <div v-if="showDateDropdown" class="absolute z-10 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg">
-              <div class="p-3 space-y-3">
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Von</label>
-                  <input
-                    v-model="filters.date_from"
-                    type="date"
-                    class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  />
+      <div v-else class="overflow-x-auto">
+        <table class="min-w-full">
+          <thead>
+            <tr class="bg-gray-50/80">
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rechnung</th>
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Kunde</th>
+              <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Betrag</th>
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Fällig</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            <tr v-for="invoice in invoices" :key="invoice.id"
+              class="hover:bg-blue-50/40 cursor-pointer transition-colors group"
+              @click="viewInvoice(invoice.id)">
+              <td class="px-5 py-3.5">
+                <p class="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">{{ invoice.invoice_number }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ formatDate(invoice.invoice_date) }}</p>
+              </td>
+              <td class="px-5 py-3.5">
+                <p class="text-sm font-medium text-gray-900">{{ invoice.customer_first_name }} {{ invoice.customer_last_name }}</p>
+                <p class="text-xs text-gray-400 truncate max-w-[200px]">{{ invoice.customer_email }}</p>
+              </td>
+              <td class="px-5 py-3.5 text-right">
+                <p class="text-sm font-bold text-gray-900">{{ formatCurrency(invoice.total_amount_rappen) }}</p>
+                <p v-if="invoice.discount_amount_rappen > 0" class="text-xs text-emerald-600 mt-0.5">-{{ formatCurrency(invoice.discount_amount_rappen) }}</p>
+              </td>
+              <td class="px-5 py-3.5">
+                <div class="flex flex-wrap gap-1">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold" :class="getStatusBadgeClass(invoice.status)">
+                    {{ getStatusLabel() }}
+                  </span>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold" :class="getPaymentStatusBadgeClass(invoice.payment_status)">
+                    {{ getPaymentStatusLabel() }}
+                  </span>
                 </div>
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Bis</label>
-                  <input
-                    v-model="filters.date_to"
-                    type="date"
-                    class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+              </td>
+              <td class="px-5 py-3.5">
+                <p class="text-sm text-gray-700">{{ formatDate(invoice.due_date) }}</p>
+                <p v-if="isOverdue(invoice.due_date)" class="text-xs text-red-600 font-semibold mt-0.5">Überfällig</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-          <!-- Filter anwenden Button -->
-          <button
-            @click="applyFilters"
-            class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Anwenden
+      <!-- Pagination -->
+      <div v-if="totalPages > 1" class="flex items-center justify-between px-5 py-3.5 border-t border-gray-50">
+        <p class="text-xs text-gray-500">
+          {{ (currentPage - 1) * itemsPerPage + 1 }}–{{ Math.min(currentPage * itemsPerPage, totalInvoices) }} von {{ totalInvoices }}
+        </p>
+        <div class="flex items-center gap-2">
+          <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1"
+            class="px-3 py-1.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            ← Zurück
           </button>
-          
-          <!-- Filter zurücksetzen Button -->
-          <button
-            @click="clearFilters"
-            class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-          >
-            Zurücksetzen
+          <span class="text-xs text-gray-400 font-medium">{{ currentPage }} / {{ totalPages }}</span>
+          <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages"
+            class="px-3 py-1.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            Weiter →
           </button>
         </div>
       </div>
     </div>
-    <!-- Statistiken -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-          <div class="p-5">
-            <div class="flex items-center">
-              <div class="flex-shrink-0">
-                <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div class="ml-5 w-0 flex-1">
-                <dl>
-                  <dt class="text-sm font-medium text-gray-500 truncate">Gesamt Rechnungen</dt>
-                  <dd class="text-lg font-medium text-gray-900">{{ summary.total_invoices || 0 }}</dd>
-                  <dd v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-          <div class="p-5">
-            <div class="flex items-center">
-              <div class="flex-shrink-0">
-                <svg class="h-6 w-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-              </div>
-              <div class="ml-5 w-0 flex-1">
-                <dl>
-                  <dt class="text-sm font-medium text-gray-500 truncate">Bezahlt</dt>
-                  <dd class="text-lg font-medium text-gray-900">{{ formatCurrency(summary.paid_amount) }}</dd>
-                  <dd v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-          <div class="p-5">
-            <div class="flex items-center">
-              <div class="flex-shrink-0">
-                <svg class="h-6 w-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div class="ml-5 w-0 flex-1">
-                <dl>
-                  <dt class="text-sm font-medium text-gray-500 truncate">Ausstehend</dt>
-                  <dd class="text-lg font-medium text-gray-900">{{ formatCurrency(summary.pending_amount) }}</dd>
-                  <dd v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-          <div class="p-5">
-            <div class="flex items-center">
-              <div class="flex-shrink-0">
-                <svg class="h-6 w-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-              <div class="ml-5 w-0 flex-1">
-                <dl>
-                  <dt class="text-sm font-medium text-gray-500 truncate">Überfällig</dt>
-                  <dd class="text-lg font-medium text-gray-900">{{ formatCurrency(summary.overdue_amount) }}</dd>
-                  <dd v-if="currentTenant" class="text-xs text-gray-500">{{ currentTenant.name }}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Rechnungsliste -->
-      <div class="bg-white shadow rounded-lg">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h3 class="text-lg font-medium text-gray-900">
-            Rechnungen ({{ totalInvoices }})
-          </h3>
-        </div>
-
-        <div v-if="isLoading" class="p-6 text-center">
-          <div class="inline-flex items-center">
-            <svg class="animate-spin h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Lade Rechnungen...
-          </div>
-        </div>
-
-        <div v-else-if="!hasInvoices" class="p-6 text-center text-gray-500">
-          Keine Rechnungen gefunden.
-        </div>
-
-        <div v-else class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rechnung
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Kunde
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Betrag
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fälligkeitsdatum
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tenant
-                </th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="invoice in invoices" :key="invoice.id" class="hover:bg-gray-50 cursor-pointer" @click="viewInvoice(invoice.id)">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div class="text-sm font-medium text-gray-900">{{ invoice.invoice_number }}</div>
-                    <div class="text-sm text-gray-500">{{ formatDate(invoice.invoice_date) }}</div>
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div class="text-sm font-medium text-gray-900">
-                      {{ invoice.customer_first_name }} {{ invoice.customer_last_name }}
-                    </div>
-                    <div class="text-sm text-gray-500">
-                      {{ invoice.customer_email }}
-                    </div>
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-gray-900">
-                    {{ formatCurrency(invoice.total_amount_rappen) }}
-                  </div>
-                  <div v-if="invoice.discount_amount_rappen > 0" class="text-sm text-gray-500">
-                    Rabatt: {{ formatCurrency(invoice.discount_amount_rappen) }}
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="flex items-center space-x-2">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                          :class="getStatusBadgeClass(invoice.status)">
-                      {{ getStatusLabel() }}
-                    </span>
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                          :class="getPaymentStatusBadgeClass(invoice.payment_status)">
-                      {{ getPaymentStatusLabel() }}
-                    </span>
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-900">
-                    {{ formatDate(invoice.due_date) }}
-                  </div>
-                  <div v-if="isOverdue(invoice.due_date)" class="text-sm text-red-600">
-                    Überfällig
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-900">{{ currentTenant?.name || 'Unbekannt' }}</div>
-                  <div class="text-xs text-gray-500">{{ currentTenant?.slug || 'Kein Slug' }}</div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Paginierung -->
-        <div v-if="totalPages > 1" class="px-6 py-4 border-t border-gray-200">
-          <div class="flex items-center justify-between">
-            <div class="text-sm text-gray-700">
-              Zeige {{ (currentPage - 1) * itemsPerPage + 1 }} bis {{ Math.min(currentPage * itemsPerPage, totalInvoices) }} von {{ totalInvoices }} Rechnungen
-            </div>
-            <div class="flex space-x-2">
-              <button
-                @click="changePage(currentPage - 1)"
-                :disabled="currentPage === 1"
-                class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Zurück
-              </button>
-              <button
-                @click="changePage(currentPage + 1)"
-                :disabled="currentPage === totalPages"
-                class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Weiter
-              </button>
-            </div>
-          </div>
-        </div>
-          </div>
 
     <!-- Modals -->
     <CamtImportModal

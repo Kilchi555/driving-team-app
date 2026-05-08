@@ -1,578 +1,262 @@
 <template>
-  <div class="admin-layout">
+  <div class="admin-layout min-h-screen flex flex-col">
     <!-- Trial Banner -->
     <TrialBanner />
-    
-    <!-- Admin Header/Navigation -->
-    <header 
-      class="admin-header text-white p-2"
-      :style="{ 
-        background: `linear-gradient(135deg, ${primaryColor || '#374151'} 0%, ${secondaryColor || '#4B5563'} 100%)` 
-      }"
+
+    <!-- ═══ HEADER ═══ -->
+    <header
+      class="sticky top-0 z-50 text-white"
+      :style="{ background: `linear-gradient(135deg, ${primaryColor || '#1e293b'} 0%, ${secondaryColor || '#334155'} 100%)` }"
     >
-      <div class="container flex justify-between items-center">
-        <!-- Left: Tenant Name and Date -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-          <NuxtLink
-            to="/admin"
-            class="font-bold px-2 rounded-md text-lg transition-colors flex items-center gap-2 text-white"
-            :class="isActive('/admin') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
-          >
-            <!-- Dynamic Title mit besserer Loading-Logik -->
-            <span v-if="tenantName">{{ tenantName }}</span>
-            <span v-else-if="isLoading" class="animate-pulse">Lade...</span>
-            <span v-else>Admin Dashboard</span>
-          </NuxtLink>        
-          <!-- Responsive Datum -->
-          <p class="text-sm text-white text-opacity-80 px-3 py-1"> 
-            {{ new Date().toLocaleDateString('de-CH', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: '2-digit', 
-              day: '2-digit' 
-            }) }}
-          </p>  
-        </div>      
+      <div class="mx-auto px-3 sm:px-5 h-14 flex items-center justify-between gap-3">
 
-        <!-- Right: Navigation and Logout -->
-        <div class="flex items-center space-x-4">
-          <!-- Desktop Navigation -->
-          <nav class="hidden md:flex space-x-1">
-            <!-- Loading state -->
-            <div v-if="featuresLoading" class="flex items-center space-x-2 text-white text-sm">
-              <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span>Lade...</span>
-            </div>
-            
-            <!-- Navigation links -->
-            <template v-else>
-              <NuxtLink
-                v-if="shouldShowNavLink('invoices_enabled')"
-                to="/admin/payment-overview"
-                @click.prevent="onNav('/admin/payment-overview')"
-                class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
-                :class="isActive('/admin/payment-overview') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
-              >
-                Zahlungen
-              </NuxtLink>
-            <NuxtLink
-              v-if="shouldShowNavLink('invoices_enabled')"
-              to="/admin/invoices"
-              @click.prevent="onNav('/admin/invoices')"
-              class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
-              :class="isActive('/admin/invoices') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
-            >
-              Rechnungen
-            </NuxtLink>
-            <NuxtLink
-              to="/admin/student-credits"
-              class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
-              :class="isActive('/admin/student-credits') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
-            >
-              Guthaben
-            </NuxtLink>
-            <NuxtLink
-              v-if="shouldShowNavLink('cash_management_enabled')"
-              to="/admin/cash-management"
-              @click.prevent="onNav('/admin/cash-management')"
-              class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
-              :class="isActive('/admin/cash-management') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
-            >
-              Kassen
-            </NuxtLink>
-            <NuxtLink
-              v-if="shouldShowNavLink('cancellation_management_enabled')"
-              to="/admin/cancellation-management"
-              @click.prevent="onNav('/admin/cancellation-management')"
-              class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
-              :class="isActive('/admin/cancellation-management') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
-            >
-              Absagen
-            </NuxtLink>
-            <NuxtLink
-              v-if="shouldShowNavLink('staff_hours_enabled')"
-              to="/admin/staff-hours"
-              @click.prevent="onNav('/admin/staff-hours')"
-              class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
-              :class="isActive('/admin/staff-hours') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
-            >
-              Stunden
-            </NuxtLink>
-            <NuxtLink
-              to="/admin/users"
-              class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
-              :class="isActive('/admin/users') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
-            >
-              Benutzer
-            </NuxtLink>
-            <NuxtLink
-              to="/admin/cron-status"
-              @click.prevent="onNav('/admin/cron-status')"
-              class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
-              :class="isActive('/admin/cron-status') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
-            >
-              Cron Status
-            </NuxtLink>
-            <NuxtLink
-              to="/admin/payment-reminders"
-              class="block px-4 py-2 text-sm text-white rounded-md transition-colors"
-              :class="isActive('/admin/payment-reminders') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
-            >
-              Erinnerungen
-            </NuxtLink>
-              <NuxtLink
-                to="/dashboard"
-                class="px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
-                :class="isActive('/dashboard') ? 'bg-black bg-opacity-30' : 'hover:bg-white hover:bg-opacity-20'"
-              >
-                Kalender
-              </NuxtLink>
-            </template>
-          </nav>
-          
-          <!-- Logout Button (Desktop) -->
-          <button
-            @click="handleLogout"
-            class="hidden md:flex px-3 py-2 rounded-md text-sm font-medium transition-colors text-white hover:bg-red-600 hover:bg-opacity-80 border border-white border-opacity-30 items-center"
-            title="Abmelden"
-          >
-            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+        <!-- Brand -->
+        <NuxtLink to="/admin" class="flex items-center gap-2.5 flex-shrink-0 min-w-0 group">
+          <div class="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 bg-white/20 flex items-center justify-center">
+            <img v-if="tenantLogo" :src="tenantLogo" :alt="tenantName" class="w-full h-full object-cover" />
+            <svg v-else class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3z"/>
             </svg>
-            Abmelden
-          </button>
+          </div>
+          <span class="font-bold text-sm text-white leading-tight truncate max-w-[140px] sm:max-w-[200px] group-hover:opacity-80 transition-opacity">
+            <span v-if="tenantName && !isLoading">{{ tenantName }}</span>
+            <span v-else-if="isLoading" class="opacity-60 animate-pulse">Lade…</span>
+            <span v-else class="opacity-80">Admin</span>
+          </span>
+        </NuxtLink>
 
-          <!-- Mobile Menu Button -->
-          <div class="md:hidden relative">
-          <button
-            @click="showMobileMenu = !showMobileMenu"
-            class="p-2 rounded-md text-white hover:bg-white hover:bg-opacity-20 focus:outline-none transition-colors"
-            type="button"
-          >
-            <svg 
-              class="h-6 w-6" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path 
-                v-if="!showMobileMenu"
-                stroke-linecap="round" 
-                stroke-linejoin="round" 
-                stroke-width="2" 
-                d="M4 6h16M4 12h16M4 18h16" 
-              />
-              <path 
-                v-else
-                stroke-linecap="round" 
-                stroke-linejoin="round" 
-                stroke-width="2" 
-                d="M6 18L18 6M6 6l12 12" 
-              />
+        <!-- Desktop Nav -->
+        <nav class="hidden lg:flex items-center gap-0.5 flex-1 justify-center">
+          <template v-if="!featuresLoading">
+            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/payment-overview" @click.prevent="onNav('/admin/payment-overview')"
+              class="nav-link" :class="isActive('/admin/payment-overview') ? 'nav-active' : ''">Zahlungen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/invoices" @click.prevent="onNav('/admin/invoices')"
+              class="nav-link" :class="isActive('/admin/invoices') ? 'nav-active' : ''">Rechnungen</NuxtLink>
+            <NuxtLink to="/admin/users"
+              class="nav-link" :class="isActive('/admin/users') ? 'nav-active' : ''">Schüler</NuxtLink>
+            <NuxtLink to="/dashboard"
+              class="nav-link" :class="isActive('/dashboard') ? 'nav-active' : ''">Kalender</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('courses_enabled')" to="/admin/courses" @click.prevent="onNav('/admin/courses')"
+              class="nav-link" :class="isActive('/admin/courses') ? 'nav-active' : ''">Kurse</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('cash_management_enabled')" to="/admin/cash-management" @click.prevent="onNav('/admin/cash-management')"
+              class="nav-link" :class="isActive('/admin/cash-management') ? 'nav-active' : ''">Kassen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('cancellation_management_enabled')" to="/admin/cancellation-management" @click.prevent="onNav('/admin/cancellation-management')"
+              class="nav-link" :class="isActive('/admin/cancellation-management') ? 'nav-active' : ''">Absagen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('staff_hours_enabled')" to="/admin/staff-hours" @click.prevent="onNav('/admin/staff-hours')"
+              class="nav-link" :class="isActive('/admin/staff-hours') ? 'nav-active' : ''">Stunden</NuxtLink>
+            <NuxtLink to="/admin/student-credits"
+              class="nav-link" :class="isActive('/admin/student-credits') ? 'nav-active' : ''">Guthaben</NuxtLink>
+            <NuxtLink to="/admin/payment-reminders"
+              class="nav-link" :class="isActive('/admin/payment-reminders') ? 'nav-active' : ''">Erinnerungen</NuxtLink>
+          </template>
+          <div v-else class="flex items-center gap-2 opacity-60 text-sm px-3">
+            <svg class="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            Lade…
+          </div>
+        </nav>
+
+        <!-- Right: Date + Logout + Mobile Trigger -->
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <!-- Date (only large screens) -->
+          <span class="hidden xl:block text-xs text-white/60 font-medium pr-1">
+            {{ new Date().toLocaleDateString('de-CH', { weekday: 'short', day: '2-digit', month: '2-digit' }) }}
+          </span>
+
+          <!-- Settings shortcut -->
+          <NuxtLink to="/admin/profile" title="Einstellungen"
+            class="hidden lg:flex w-8 h-8 rounded-lg items-center justify-center hover:bg-white/20 transition-colors"
+            :class="isActive('/admin/profile') ? 'bg-white/30' : ''">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </NuxtLink>
+
+          <!-- Logout (Desktop) -->
+          <button @click="handleLogout" title="Abmelden"
+            class="hidden lg:flex w-8 h-8 rounded-lg items-center justify-center hover:bg-red-500/60 transition-colors text-white">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
           </button>
 
-          <!-- Mobile Dropdown Menu -->
-          <div
-            v-show="showMobileMenu"
-            class="absolute right-0 top-full mt-2 w-64 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50"
-            @click.stop
-          >
-            <div class="py-2">
-              <!-- Loading state -->
-              <div v-if="featuresLoading" class="flex items-center justify-center px-4 py-3 text-white text-sm">
-                <svg class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>Lade Navigation...</span>
-              </div>
-              
-              <!-- Navigation links -->
-              <template v-else>
-                <NuxtLink
-                  v-if="shouldShowNavLink('invoices_enabled')"
-                  to="/admin/payment-overview"
-                  @click="showMobileMenu = false"
-                  class="block px-4 py-3 text-sm font-medium transition-colors text-white hover:bg-white hover:bg-opacity-10"
-                  :class="isActive('/admin/payment-overview') ? 'bg-black bg-opacity-30' : ''"
-                >
-                  Zahlungen
-                </NuxtLink>
-              <NuxtLink
-                v-if="shouldShowNavLink('data_management_enabled')"
-                to="/admin/data-management"
-                @click="showMobileMenu = false"
-                class="block px-4 py-3 text-sm font-medium transition-colors text-white hover:bg-white hover:bg-opacity-10"
-                :class="isActive('/admin/data-management') ? 'bg-black bg-opacity-30' : ''"
-              >
-                Datenverwaltung
-              </NuxtLink>
-              <NuxtLink
-                v-if="shouldShowNavLink('invoices_enabled')"
-                to="/admin/invoices"
-                @click="showMobileMenu = false"
-                class="block px-4 py-3 text-sm font-medium transition-colors text-white hover:bg-white hover:bg-opacity-10"
-                :class="isActive('/admin/invoices') ? 'bg-black bg-opacity-30' : ''"
-              >
-                Rechnungen
-              </NuxtLink>
-              <NuxtLink
-                to="/admin/student-credits"
-                @click="showMobileMenu = false"
-                class="block px-4 py-3 text-sm font-medium transition-colors text-white hover:bg-white hover:bg-opacity-10"
-                :class="isActive('/admin/student-credits') ? 'bg-black bg-opacity-30' : ''"
-              >
-                Guthaben
-              </NuxtLink>
-              <NuxtLink
-                v-if="shouldShowNavLink('cash_management_enabled')"
-                to="/admin/cash-management"
-                @click="showMobileMenu = false"
-                class="block px-4 py-3 text-sm font-medium transition-colors text-white hover:bg-white hover:bg-opacity-10"
-                :class="isActive('/admin/cash-management') ? 'bg-black bg-opacity-30' : ''"
-              >
-                Kassen
-              </NuxtLink>
-              <NuxtLink
-                v-if="shouldShowNavLink('cancellation_management_enabled')"
-                to="/admin/cancellation-management"
-                @click="showMobileMenu = false"
-                class="block px-4 py-3 text-sm font-medium transition-colors text-white hover:bg-white hover:bg-opacity-10"
-                :class="isActive('/admin/cancellation-management') ? 'bg-black bg-opacity-30' : ''"
-              >
-                Absagen
-              </NuxtLink>
-              <NuxtLink
-                v-if="shouldShowNavLink('staff_hours_enabled')"
-                to="/admin/staff-hours"
-                @click="showMobileMenu = false"
-                class="block px-4 py-3 text-sm font-medium transition-colors text-white hover:bg-white hover:bg-opacity-10"
-                :class="isActive('/admin/staff-hours') ? 'bg-black bg-opacity-30' : ''"
-              >
-                Stundenübersicht
-              </NuxtLink>
-              <NuxtLink
-                to="/admin/users"
-                @click="showMobileMenu = false"
-                class="block px-4 py-3 text-sm font-medium transition-colors text-white hover:bg-white hover:bg-opacity-10"
-                :class="isActive('/admin/users') ? 'bg-black bg-opacity-30' : ''"
-              >
-                Benutzer
-              </NuxtLink>
-              <NuxtLink
-                to="/admin/cron-status"
-                @click="showMobileMenu = false; onNav('/admin/cron-status')"
-                class="block px-4 py-3 text-sm font-medium transition-colors text-white hover:bg-white hover:bg-opacity-10"
-                :class="isActive('/admin/cron-status') ? 'bg-black bg-opacity-30' : ''"
-              >
-                Cron Status
-              </NuxtLink>
-              <NuxtLink
-                to="/admin/payment-reminders"
-                class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                :class="isActive('/admin/payment-reminders') ? 'bg-black bg-opacity-30' : ''"
-              >
-                Erinnerungen
-              </NuxtLink>
-                <NuxtLink
-                  to="/dashboard"
-                  @click="showMobileMenu = false"
-                  class="block px-4 py-3 text-sm font-medium transition-colors text-white hover:bg-white hover:bg-opacity-10"
-                  :class="isActive('/dashboard') ? 'bg-black bg-opacity-30' : ''"
-                >
-                  Kalender
-                </NuxtLink>
-                
-                <!-- Mobile Logout Button -->
-                <div class="border-t border-gray-700 mt-2 pt-2">
-                  <button
-                    @click="handleLogout"
-                    class="block w-full text-left px-4 py-3 text-sm font-medium transition-colors text-red-400 hover:bg-red-600 hover:bg-opacity-20 hover:text-red-300"
-                  >
-                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                    </svg>
-                    Abmelden
-                  </button>
-                </div>
-              </template>
-            </div>
-          </div>
-          </div>
+          <!-- Mobile menu button -->
+          <button @click="showMobileMenu = !showMobileMenu"
+            class="lg:hidden w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/20 transition-colors"
+            type="button">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path v-if="!showMobileMenu" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+              <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
         </div>
       </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="admin-main min-h-screen bg-gray-50">
+    <!-- ═══ MOBILE DRAWER ═══ -->
+    <Transition
+      enter-active-class="transition-opacity duration-200"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition-opacity duration-150"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div v-if="showMobileMenu" class="fixed inset-0 z-40 lg:hidden" @click="showMobileMenu = false">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+      </div>
+    </Transition>
+
+    <Transition
+      enter-active-class="transition-transform duration-250 ease-out"
+      enter-from-class="-translate-x-full"
+      enter-to-class="translate-x-0"
+      leave-active-class="transition-transform duration-200 ease-in"
+      leave-from-class="translate-x-0"
+      leave-to-class="-translate-x-full"
+    >
+      <div v-if="showMobileMenu"
+        class="fixed top-0 left-0 bottom-0 z-50 w-72 flex flex-col lg:hidden shadow-2xl"
+        :style="{ background: `linear-gradient(180deg, ${primaryColor || '#1e293b'} 0%, ${secondaryColor || '#334155'} 100%)` }"
+        @click.stop
+      >
+        <!-- Drawer Header -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-white/10">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl overflow-hidden bg-white/20 flex items-center justify-center flex-shrink-0">
+              <img v-if="tenantLogo" :src="tenantLogo" :alt="tenantName" class="w-full h-full object-cover" />
+              <svg v-else class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3z"/>
+              </svg>
+            </div>
+            <div>
+              <p class="text-sm font-bold text-white">{{ tenantName }}</p>
+              <p class="text-xs text-white/50">Admin Panel</p>
+            </div>
+          </div>
+          <button @click="showMobileMenu = false" class="w-8 h-8 rounded-lg hover:bg-white/20 flex items-center justify-center text-white/70 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <!-- Drawer Nav -->
+        <nav class="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
+          <template v-if="!featuresLoading">
+            <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-2 pb-1">Hauptbereich</p>
+            <NuxtLink to="/admin" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin') && !isActive('/admin/') ? '' : (route.path === '/admin' ? 'drawer-active' : '')">
+              Dashboard
+            </NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/payment-overview" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/payment-overview') ? 'drawer-active' : ''">Zahlungen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/invoices" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/invoices') ? 'drawer-active' : ''">Rechnungen</NuxtLink>
+            <NuxtLink to="/admin/users" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">Schüler</NuxtLink>
+            <NuxtLink to="/dashboard" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/dashboard') ? 'drawer-active' : ''">Kalender</NuxtLink>
+            <NuxtLink to="/admin/student-credits" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
+
+            <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Verwaltung</p>
+            <NuxtLink v-if="shouldShowNavLink('courses_enabled')" to="/admin/courses" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/courses') ? 'drawer-active' : ''">Kurse</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('cash_management_enabled')" to="/admin/cash-management" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/cash-management') ? 'drawer-active' : ''">Kassen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('cancellation_management_enabled')" to="/admin/cancellation-management" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/cancellation-management') ? 'drawer-active' : ''">Absagen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('staff_hours_enabled')" to="/admin/staff-hours" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/staff-hours') ? 'drawer-active' : ''">Stunden</NuxtLink>
+            <NuxtLink to="/admin/payment-reminders" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/payment-reminders') ? 'drawer-active' : ''">Erinnerungen</NuxtLink>
+
+            <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Weitere</p>
+            <NuxtLink v-if="shouldShowNavLink('product_sales_enabled')" to="/admin/products" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/products') ? 'drawer-active' : ''">Produkte</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('data_management_enabled')" to="/admin/data-management" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/data-management') ? 'drawer-active' : ''">Datenverwaltung</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('discounts_enabled')" to="/admin/discounts" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/discounts') ? 'drawer-active' : ''">Rabatte</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('categories_enabled')" to="/admin/categories" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">Kategorien</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('examiners_enabled')" to="/admin/examiners" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/examiners') ? 'drawer-active' : ''">Experten</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('evaluations_enabled')" to="/admin/evaluation-system" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/evaluation-system') ? 'drawer-active' : ''">Bewertungen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('exams_enabled')" to="/admin/exam-statistics" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/exam-statistics') ? 'drawer-active' : ''">Prüfungen</NuxtLink>
+            <NuxtLink to="/admin/affiliate" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/affiliate') ? 'drawer-active' : ''">Affiliate</NuxtLink>
+            <NuxtLink to="/admin/pricing" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/pricing') ? 'drawer-active' : ''">Preise</NuxtLink>
+            <NuxtLink to="/admin/cron-status" @click="showMobileMenu = false; onNav('/admin/cron-status')"
+              class="drawer-link" :class="isActive('/admin/cron-status') ? 'drawer-active' : ''">Cron Status</NuxtLink>
+          </template>
+          <div v-else class="flex items-center justify-center py-8 text-white/50 text-sm gap-2">
+            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            Lade Navigation…
+          </div>
+        </nav>
+
+        <!-- Drawer Footer -->
+        <div class="border-t border-white/10 p-3 space-y-1">
+          <NuxtLink to="/admin/profile" @click="showMobileMenu = false"
+            class="drawer-link" :class="isActive('/admin/profile') ? 'drawer-active' : ''">
+            <svg class="w-4 h-4 mr-2 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/></svg>
+            Einstellungen
+          </NuxtLink>
+          <button @click="handleLogout"
+            class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-colors text-left">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Abmelden
+          </button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- ═══ MAIN CONTENT ═══ -->
+    <main class="flex-1 bg-gray-50/60">
       <slot />
     </main>
 
-    <!-- Footer -->
-    <footer 
-      class="admin-footer text-white py-3 mt-auto sticky bottom-0 z-40"
-      :style="{ 
-        background: `linear-gradient(135deg, ${primaryColor || '#374151'} 0%, ${secondaryColor || '#4B5563'} 100%)` 
-      }"
-    >
-      <div class="container mx-auto px-4">
-        <!-- Desktop: Quick links -->
-        <div class="hidden md:flex flex-wrap justify-center space-x-4 mb-3">
-          <!-- Loading state -->
-          <div v-if="featuresLoading" class="flex items-center space-x-2 text-white text-opacity-80 text-sm">
-            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span>Lade Links...</span>
-          </div>
-          
-          <!-- Footer links -->
-          <template v-else>
-            <NuxtLink 
-              v-if="shouldShowNavLink('product_sales_enabled')" 
-              to="/admin/products" 
-              @click.prevent="onNav('/admin/products')"
-              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
-            >
-              Produkte
-            </NuxtLink>
-            <NuxtLink 
-              v-if="shouldShowNavLink('data_management_enabled')" 
-              to="/admin/data-management" 
-              @click.prevent="onNav('/admin/data-management')"
-              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
-            >
-              Datenverwaltung
-            </NuxtLink>
-            <NuxtLink 
-              v-if="shouldShowNavLink('discounts_enabled')" 
-              to="/admin/discounts" 
-              @click.prevent="onNav('/admin/discounts')"
-              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
-            >
-              Rabatte
-            </NuxtLink>
-            <NuxtLink 
-              v-if="shouldShowNavLink('categories_enabled')" 
-              to="/admin/categories" 
-              @click.prevent="onNav('/admin/categories')"
-              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
-            >
-              Kategorien
-            </NuxtLink>
-            <NuxtLink 
-              v-if="shouldShowNavLink('courses_enabled')" 
-              to="/admin/courses" 
-              @click.prevent="onNav('/admin/courses')"
-              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
-            >
-              Kurse
-            </NuxtLink>
-            <NuxtLink 
-              v-if="shouldShowNavLink('examiners_enabled')" 
-              to="/admin/examiners" 
-              @click.prevent="onNav('/admin/examiners')"
-              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
-            >
-              Experten
-            </NuxtLink>
-            <NuxtLink 
-              v-if="shouldShowNavLink('evaluations_enabled')" 
-              to="/admin/evaluation-system" 
-              @click.prevent="onNav('/admin/evaluation-system')"
-              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
-            >
-              Bewertungen
-            </NuxtLink>
-            <NuxtLink 
-              v-if="shouldShowNavLink('exams_enabled')" 
-              to="/admin/exam-statistics" 
-              @click.prevent="onNav('/admin/exam-statistics')"
-              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
-            >
-              Prüfungen
-            </NuxtLink>
-            <NuxtLink 
-              to="/admin/affiliate" 
-              @click.prevent="onNav('/admin/affiliate')"
-              class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm"
-            >
-              Affiliate
-            </NuxtLink>
-            <NuxtLink to="/admin/profile" @click.prevent="onNav('/admin/profile')" class="text-white text-opacity-80 hover:text-opacity-100 transition-colors text-sm">
-              Profil
-            </NuxtLink>
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="border-t border-white/10 py-3"
+      :style="{ background: `linear-gradient(135deg, ${primaryColor || '#1e293b'} 0%, ${secondaryColor || '#334155'} 100%)` }">
+      <div class="mx-auto px-4 sm:px-6">
+        <!-- Secondary Links (desktop only, compact) -->
+        <div class="hidden md:flex flex-wrap items-center justify-center gap-x-5 gap-y-1 mb-2">
+          <template v-if="!featuresLoading">
+            <NuxtLink v-if="shouldShowNavLink('product_sales_enabled')" to="/admin/products" @click.prevent="onNav('/admin/products')"
+              class="footer-link">Produkte</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('data_management_enabled')" to="/admin/data-management" @click.prevent="onNav('/admin/data-management')"
+              class="footer-link">Datenverwaltung</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('discounts_enabled')" to="/admin/discounts" @click.prevent="onNav('/admin/discounts')"
+              class="footer-link">Rabatte</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('categories_enabled')" to="/admin/categories" @click.prevent="onNav('/admin/categories')"
+              class="footer-link">Kategorien</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('courses_enabled')" to="/admin/courses" @click.prevent="onNav('/admin/courses')"
+              class="footer-link">Kurse</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('examiners_enabled')" to="/admin/examiners" @click.prevent="onNav('/admin/examiners')"
+              class="footer-link">Experten</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('evaluations_enabled')" to="/admin/evaluation-system" @click.prevent="onNav('/admin/evaluation-system')"
+              class="footer-link">Bewertungen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('exams_enabled')" to="/admin/exam-statistics" @click.prevent="onNav('/admin/exam-statistics')"
+              class="footer-link">Prüfungen</NuxtLink>
+            <NuxtLink to="/admin/affiliate" @click.prevent="onNav('/admin/affiliate')" class="footer-link">Affiliate</NuxtLink>
+            <NuxtLink to="/admin/pricing" @click.prevent="onNav('/admin/pricing')" class="footer-link">Preise</NuxtLink>
+            <NuxtLink to="/admin/profile" @click.prevent="onNav('/admin/profile')" class="footer-link">Einstellungen</NuxtLink>
+            <NuxtLink to="/admin/cron-status" @click.prevent="onNav('/admin/cron-status')" class="footer-link">Cron</NuxtLink>
           </template>
         </div>
-        
-        <!-- Mobile: Dropdown Menu -->
-        <div class="md:hidden mb-3">
-          <div class="relative">
-            <button
-              @click="showFooterDropdown = !showFooterDropdown"
-              class="w-full flex items-center justify-between px-4 py-2 bg-white bg-opacity-10 rounded-lg text-white text-sm font-medium hover:bg-opacity-20 transition-colors"
-            >
-              <span>Admin-Bereiche</span>
-              <svg 
-                class="w-4 h-4 transition-transform" 
-                :class="{ 'rotate-180': showFooterDropdown }"
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-              </svg>
-            </button>
-            
-            <!-- Dropdown Content -->
-            <div
-              v-show="showFooterDropdown"
-              class="absolute bottom-full left-0 right-0 mb-2 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50 max-h-64 overflow-y-auto"
-            >
-              <div class="py-2">
-                <!-- Loading state -->
-                <div v-if="featuresLoading" class="flex items-center justify-center px-4 py-3 text-white text-sm">
-                  <svg class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span>Lade Links...</span>
-                </div>
-                
-                <!-- Footer links -->
-                <template v-else>
-                  <NuxtLink 
-                    v-if="shouldShowNavLink('product_sales_enabled')" 
-                    to="/admin/products" 
-                    @click.prevent="onFooterNav('/admin/products')"
-                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
-                  >
-                    Produkte
-                  </NuxtLink>
-                  <NuxtLink 
-                    v-if="shouldShowNavLink('data_management_enabled')" 
-                    to="/admin/data-management" 
-                    @click.prevent="onFooterNav('/admin/data-management')"
-                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
-                  >
-                    Datenverwaltung
-                  </NuxtLink>
-                  <NuxtLink 
-                    v-if="shouldShowNavLink('discounts_enabled')" 
-                    to="/admin/discounts" 
-                    @click.prevent="onFooterNav('/admin/discounts')"
-                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
-                  >
-                    Rabatte
-                  </NuxtLink>
-                  <NuxtLink 
-                    v-if="shouldShowNavLink('categories_enabled')" 
-                    to="/admin/categories" 
-                    @click.prevent="onFooterNav('/admin/categories')"
-                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
-                  >
-                    Kategorien
-                  </NuxtLink>
-                  <NuxtLink 
-                    v-if="shouldShowNavLink('courses_enabled')" 
-                    to="/admin/courses" 
-                    @click.prevent="onFooterNav('/admin/courses')"
-                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
-                  >
-                    Kurse
-                  </NuxtLink>
-                  <NuxtLink 
-                    v-if="shouldShowNavLink('examiners_enabled')" 
-                    to="/admin/examiners" 
-                    @click.prevent="onFooterNav('/admin/examiners')"
-                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
-                  >
-                    Experten
-                  </NuxtLink>
-                  <NuxtLink 
-                    to="/admin/users" 
-                    @click.prevent="onFooterNav('/admin/users')"
-                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
-                  >
-                    Benutzer
-                  </NuxtLink>
-                  <NuxtLink 
-                    v-if="shouldShowNavLink('evaluations_enabled')" 
-                    to="/admin/evaluation-system" 
-                    @click.prevent="onFooterNav('/admin/evaluation-system')"
-                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
-                  >
-                    Bewertungen
-                  </NuxtLink>
-                  <NuxtLink 
-                    v-if="shouldShowNavLink('exams_enabled')" 
-                    to="/admin/exam-statistics" 
-                    @click.prevent="onFooterNav('/admin/exam-statistics')"
-                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
-                  >
-                    Prüfungen
-                  </NuxtLink>
-                  <NuxtLink 
-                    to="/admin/affiliate" 
-                    @click.prevent="onFooterNav('/admin/affiliate')"
-                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
-                  >
-                    Affiliate
-                  </NuxtLink>
-                  <NuxtLink 
-                    to="/admin/profile" 
-                    @click.prevent="onFooterNav('/admin/profile')"
-                    class="block px-4 py-2 text-sm text-white hover:bg-white hover:bg-opacity-10 transition-colors"
-                  >
-                    Profil
-                  </NuxtLink>
-                </template>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Info Row -->
-        <div class="flex flex-col md:flex-row justify-between items-center text-sm border-t border-white border-opacity-20 pt-2">
-          <!-- Left side - Copyright -->
-          <div class="mb-1 md:mb-0">
-            <span class="text-white text-opacity-70">&copy; 2025 {{ tenantName }}</span>
-          </div>
 
-          <!-- Right side - Contact -->
-          <div class="flex flex-col sm:flex-row sm:space-x-4 text-center sm:text-right">
-            <span class="text-white text-opacity-70">
-              <a 
-                :href="`mailto:${tenantContact.email}`"
-                class="hover:text-opacity-100 transition-colors"
-              >
-                {{ tenantContact.email }}
-              </a>
-            </span>
-            <span class="text-white text-opacity-70">
-              <a 
-                :href="`tel:${tenantContact.phone.replace(/\s+/g, '')}`"
-                class="hover:text-opacity-100 transition-colors"
-              >
-                {{ tenantContact.phone }}
-              </a>
-            </span>
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-1 text-xs text-white/50">
+          <span>&copy; {{ new Date().getFullYear() }} {{ tenantName }}</span>
+          <div class="flex items-center gap-3">
+            <a v-if="tenantContact.email" :href="`mailto:${tenantContact.email}`" class="hover:text-white/80 transition-colors">{{ tenantContact.email }}</a>
+            <a v-if="tenantContact.phone" :href="`tel:${tenantContact.phone.replace(/\s+/g, '')}`" class="hover:text-white/80 transition-colors">{{ tenantContact.phone }}</a>
           </div>
         </div>
       </div>
     </footer>
-
-    <!-- Mobile Menu Backdrop -->
-    <div
-      v-if="showMobileMenu"
-      @click="showMobileMenu = false"
-      class="fixed inset-0 bg-black bg-opacity-25 z-40 md:hidden"
-    ></div>
   </div>
 </template>
 
@@ -773,17 +457,25 @@ const handleLogout = async () => {
   flex-direction: column;
 }
 
-.admin-header {
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  position: sticky;
-  top: 0;
-  z-index: 50;
+/* Desktop nav links */
+.nav-link {
+  @apply px-3 py-1.5 rounded-lg text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-all duration-150 whitespace-nowrap;
+}
+.nav-active {
+  @apply bg-white/25 text-white;
 }
 
-.admin-main {
-  padding-top: 1rem;
-  padding-bottom: 80px; /* Weniger Platz für kompakteren footer */
-  flex: 1;
+/* Mobile drawer links */
+.drawer-link {
+  @apply flex items-center w-full px-3 py-2.5 rounded-xl text-sm font-medium text-white/75 hover:text-white hover:bg-white/15 transition-all duration-150;
+}
+.drawer-active {
+  @apply bg-white/20 text-white;
+}
+
+/* Footer secondary links */
+.footer-link {
+  @apply text-xs text-white/50 hover:text-white/80 transition-colors font-medium;
 }
 
 .admin-footer {
