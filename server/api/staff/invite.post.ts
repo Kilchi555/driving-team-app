@@ -263,7 +263,7 @@ export default defineEventHandler(async (event) => {
       baseUrl = `${proto}://${host}`
     } else {
       // Default to production domain
-      baseUrl = 'https://www.simy.ch'
+      baseUrl = 'https://app.simy.ch'
     }
     
     const inviteLink = `${baseUrl}/register/staff?token=${token}`
