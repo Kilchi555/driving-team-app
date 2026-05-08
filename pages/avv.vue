@@ -5,7 +5,10 @@
     <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
       <div class="max-w-4xl mx-auto px-6 py-12 sm:py-16">
         <div class="flex items-center gap-3 mb-4">
-          <NuxtLink to="/agb" class="text-blue-200 hover:text-white text-sm transition-colors">← Zurück zu AGB</NuxtLink>
+          <button @click="handleBack" class="inline-flex items-center gap-1.5 text-blue-200 hover:text-white text-sm transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            Tab schliessen
+          </button>
         </div>
         <h1 class="text-2xl sm:text-3xl font-bold mb-2">Auftragsverarbeitungsvertrag (AVV)</h1>
         <p class="text-blue-200 text-sm">Gemäss Art. 28 DSGVO und Art. 9 nDSG | Stand: 1. April 2026</p>
@@ -20,6 +23,30 @@
         <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
           <p><strong>Hinweis:</strong> Dieser Auftragsverarbeitungsvertrag (AVV) ist integraler Bestandteil der <NuxtLink to="/agb" class="text-amber-700 font-semibold hover:underline">Allgemeinen Geschäftsbedingungen (AGB)</NuxtLink> von Simy. Mit der Registrierung einer Fahrschule auf der Simy-Plattform und der Akzeptanz der AGB stimmt der Kunde diesem AVV zu.</p>
         </div>
+
+        <!-- Inhaltsverzeichnis -->
+        <nav class="rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+          <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-white/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10"/></svg>
+            <p class="text-xs font-bold text-white uppercase tracking-widest">Inhaltsverzeichnis</p>
+          </div>
+          <ol class="divide-y divide-gray-50">
+            <li v-for="(item, i) in toc" :key="item.href">
+              <a :href="item.href" @click.prevent="scrollTo(item.href)"
+                class="flex items-center gap-3 px-5 py-2.5 text-sm transition-all"
+                :class="activeSection === item.href.slice(1)
+                  ? 'bg-blue-50 text-blue-700 font-semibold'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'">
+                <span class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 transition-colors"
+                  :class="activeSection === item.href.slice(1) ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'">
+                  {{ i + 1 }}
+                </span>
+                <span class="leading-snug">{{ item.label }}</span>
+                <svg v-if="activeSection === item.href.slice(1)" class="w-3.5 h-3.5 ml-auto text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+              </a>
+            </li>
+          </ol>
+        </nav>
 
         <!-- Vertragsparteien -->
         <section>
@@ -194,8 +221,40 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
 definePageMeta({ layout: false })
 useHead({ title: 'Auftragsverarbeitungsvertrag (AVV) | Simy' })
+
+const activeSection = ref('')
+
+const toc = [
+  { href: '#a1', label: 'Gegenstand und Dauer der Verarbeitung' },
+  { href: '#a2', label: 'Art, Zweck und Umfang der Verarbeitung' },
+  { href: '#a3', label: 'Pflichten von Simy als Auftragsverarbeiter' },
+  { href: '#a4', label: 'Technische und organisatorische Massnahmen (TOMs)' },
+  { href: '#a5', label: 'Weitere Auftragsverarbeiter (Sub-Prozessoren)' },
+  { href: '#a6', label: 'Pflichten des Auftraggebers' },
+  { href: '#a7', label: 'Datenlöschung nach Vertragsende' },
+  { href: '#a8', label: 'Anwendbares Recht' },
+]
+
+function scrollTo(href: string) {
+  document.querySelector(href)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function handleBack() {
+  window.close()
+  setTimeout(() => history.back(), 80)
+}
+
+let observer: IntersectionObserver | null = null
+onMounted(() => {
+  observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) activeSection.value = e.target.id })
+  }, { rootMargin: '-10% 0px -75% 0px' })
+  document.querySelectorAll('section[id]').forEach(s => observer!.observe(s))
+})
+onUnmounted(() => observer?.disconnect())
 
 const toms = [
   { title: 'Transportverschlüsselung', desc: 'TLS 1.2+ für alle Datenübertragungen zwischen Client und Server.' },

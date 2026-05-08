@@ -5,7 +5,10 @@
     <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
       <div class="max-w-4xl mx-auto px-6 py-12 sm:py-16">
         <div class="flex items-center gap-3 mb-4">
-          <NuxtLink to="/" class="text-blue-200 hover:text-white text-sm transition-colors">← Zurück</NuxtLink>
+          <button @click="handleBack" class="inline-flex items-center gap-1.5 text-blue-200 hover:text-white text-sm transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            Tab schliessen
+          </button>
         </div>
         <h1 class="text-2xl sm:text-3xl font-bold mb-2">Allgemeine Geschäftsbedingungen</h1>
         <p class="text-blue-200 text-sm">Simy – SaaS-Plattform für Fahrschulen | Stand: 1. April 2026 · Version 1.1</p>
@@ -17,25 +20,26 @@
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-10 space-y-10 text-sm sm:text-base leading-relaxed text-gray-700">
 
         <!-- Inhaltsverzeichnis -->
-        <nav class="bg-gray-50 rounded-xl p-5 border border-gray-200">
-          <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Inhaltsverzeichnis</p>
-          <ol class="space-y-1.5 text-sm text-blue-600 columns-2">
-            <li><a href="#s1" class="hover:underline">1. Geltungsbereich und Vertragsparteien</a></li>
-            <li><a href="#s2" class="hover:underline">2. Leistungsbeschreibung</a></li>
-            <li><a href="#s3" class="hover:underline">3. Abonnement, Preise und Zahlung</a></li>
-            <li><a href="#s4" class="hover:underline">4. Verfügbarkeit (SLA)</a></li>
-            <li><a href="#s5" class="hover:underline">5. Nutzungsrechte und geistiges Eigentum</a></li>
-            <li><a href="#s6" class="hover:underline">6. Hochgeladene Inhalte</a></li>
-            <li><a href="#s7" class="hover:underline">7. Datenschutz und Auftragsverarbeitung</a></li>
-            <li><a href="#s8" class="hover:underline">8. Pflichten des Kunden</a></li>
-            <li><a href="#s9" class="hover:underline">9. Empfehlungsprogramm und Guthaben</a></li>
-            <li><a href="#s10" class="hover:underline">10. Wechselrecht und Datenexport</a></li>
-            <li><a href="#s11" class="hover:underline">11. Haftungsbeschränkung</a></li>
-            <li><a href="#s12" class="hover:underline">12. Vertragsdauer und Kündigung</a></li>
-            <li><a href="#s13" class="hover:underline">13. Änderungen der AGB</a></li>
-            <li><a href="#s14" class="hover:underline">14. Anwendbares Recht und Gerichtsstand</a></li>
-            <li><a href="#s15" class="hover:underline">15. Vertraulichkeit</a></li>
-            <li><a href="#s16" class="hover:underline">16. Schlussbestimmungen</a></li>
+        <nav class="rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+          <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-white/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10"/></svg>
+            <p class="text-xs font-bold text-white uppercase tracking-widest">Inhaltsverzeichnis</p>
+          </div>
+          <ol class="divide-y divide-gray-50">
+            <li v-for="(item, i) in toc" :key="item.href">
+              <a :href="item.href" @click.prevent="scrollTo(item.href)"
+                class="flex items-center gap-3 px-5 py-2.5 text-sm transition-all"
+                :class="activeSection === item.href.slice(1)
+                  ? 'bg-blue-50 text-blue-700 font-semibold'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'">
+                <span class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 transition-colors"
+                  :class="activeSection === item.href.slice(1) ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'">
+                  {{ i + 1 }}
+                </span>
+                <span class="leading-snug">{{ item.label }}</span>
+                <svg v-if="activeSection === item.href.slice(1)" class="w-3.5 h-3.5 ml-auto text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+              </a>
+            </li>
           </ol>
         </nav>
 
@@ -246,6 +250,46 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
 definePageMeta({ layout: false })
 useHead({ title: 'AGB – Allgemeine Geschäftsbedingungen | Simy' })
+
+const activeSection = ref('')
+
+const toc = [
+  { href: '#s1',  label: 'Geltungsbereich und Vertragsparteien' },
+  { href: '#s2',  label: 'Leistungsbeschreibung' },
+  { href: '#s3',  label: 'Abonnement, Preise und Zahlung' },
+  { href: '#s4',  label: 'Verfügbarkeit (SLA)' },
+  { href: '#s5',  label: 'Nutzungsrechte und geistiges Eigentum' },
+  { href: '#s6',  label: 'Hochgeladene Inhalte' },
+  { href: '#s7',  label: 'Datenschutz und Auftragsverarbeitung' },
+  { href: '#s8',  label: 'Pflichten des Kunden' },
+  { href: '#s9',  label: 'Empfehlungsprogramm und Guthaben' },
+  { href: '#s10', label: 'Wechselrecht und Datenexport' },
+  { href: '#s11', label: 'Haftungsbeschränkung' },
+  { href: '#s12', label: 'Vertragsdauer und Kündigung' },
+  { href: '#s13', label: 'Änderungen der AGB' },
+  { href: '#s14', label: 'Anwendbares Recht und Gerichtsstand' },
+  { href: '#s15', label: 'Vertraulichkeit' },
+  { href: '#s16', label: 'Schlussbestimmungen' },
+]
+
+function scrollTo(href: string) {
+  document.querySelector(href)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function handleBack() {
+  window.close()
+  setTimeout(() => history.back(), 80)
+}
+
+let observer: IntersectionObserver | null = null
+onMounted(() => {
+  observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) activeSection.value = e.target.id })
+  }, { rootMargin: '-10% 0px -75% 0px' })
+  document.querySelectorAll('section[id]').forEach(s => observer!.observe(s))
+})
+onUnmounted(() => observer?.disconnect())
 </script>
