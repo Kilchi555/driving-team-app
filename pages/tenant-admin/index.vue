@@ -175,12 +175,9 @@
 definePageMeta({ layout: 'tenant-admin' })
 import { ref, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
-import { useAuthStore } from '~/stores/auth'
-import { useLogger } from '~/composables/useLogger'
+import { logger } from '~/utils/logger'
 
 const supabase = getSupabase()
-const authStore = useAuthStore()
-const logger = useLogger('sa-dashboard')
 
 const stats = ref({ totalTenants: 0, activeTenants: 0, trialTenants: 0, totalUsers: 0, blockedIPs: 0 })
 const recentTenants = ref<any[]>([])
