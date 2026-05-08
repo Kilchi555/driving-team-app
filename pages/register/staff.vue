@@ -258,27 +258,58 @@
               <p v-else class="text-sm text-gray-400 italic">Noch keine Treffpunkte erfasst. Du kannst sie später in den Einstellungen hinzufügen.</p>
             </div>
 
-            <!-- Prüfungsorte -->
+            <!-- Prüfungsorte mit Suche -->
             <div class="border-t pt-4">
-              <h3 class="text-sm font-semibold text-gray-700 mb-2">Prüfungsorte</h3>
-              <div v-if="tenantExamLocations.length" class="space-y-2">
-                <label
-                  v-for="loc in tenantExamLocations"
-                  :key="loc.id"
-                  class="flex items-start gap-2 p-3 border rounded-lg cursor-pointer transition-all"
-                  :class="!form.selectedExamLocationIds.includes(loc.id) ? 'border-gray-200 hover:border-gray-300' : ''"
-                  :style="form.selectedExamLocationIds.includes(loc.id)
-                    ? { borderColor: tenantColor, backgroundColor: tenantColor + '14' }
-                    : {}"
-                >
-                  <input type="checkbox" :value="loc.id" v-model="form.selectedExamLocationIds" class="mt-0.5">
-                  <div>
-                    <div class="text-sm font-medium">{{ loc.name }}</div>
-                    <div class="text-xs text-gray-500">{{ loc.address }}</div>
+              <h3 class="text-sm font-semibold text-gray-700 mb-1">Prüfungsorte</h3>
+              <p class="text-xs text-gray-500 mb-3">Suche und wähle die Prüfungsorte, an denen du Prüfungen abnimmst.</p>
+
+              <!-- Suchfeld -->
+              <div class="relative mb-3">
+                <input
+                  v-model="examLocationSearch"
+                  type="text"
+                  placeholder="Suchen (z.B. Zürich, Bern, SVA...)"
+                  class="input pr-8"
+                  @focus="examSearchOpen = true"
+                  @blur="setTimeout(() => examSearchOpen = false, 150)"
+                />
+                <svg class="absolute right-2.5 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <!-- Dropdown -->
+                <div v-if="examSearchOpen && filteredExamLocations.length" class="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  <div
+                    v-for="loc in filteredExamLocations"
+                    :key="loc.id"
+                    class="flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
+                    @mousedown.prevent="toggleExamLocationSelection(loc)"
+                  >
+                    <div class="flex-1 min-w-0">
+                      <div class="text-sm font-medium text-gray-900 truncate">{{ loc.name }}</div>
+                      <div class="text-xs text-gray-500 truncate">{{ loc.address }}<span v-if="loc.canton"> · {{ loc.canton }}</span></div>
+                    </div>
+                    <span v-if="isExamLocationSelected(loc.id)" class="ml-2 text-xs font-medium flex-shrink-0" :style="{ color: tenantColor }">✓</span>
+                    <span v-else class="ml-2 text-xs text-gray-400 flex-shrink-0">+ Wählen</span>
                   </div>
-                </label>
+                </div>
+                <p v-if="examSearchOpen && examLocationSearch.length > 1 && !filteredExamLocations.length" class="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow p-3 text-sm text-gray-500">
+                  Keine Prüfungsorte gefunden für "{{ examLocationSearch }}"
+                </p>
               </div>
-              <p v-else class="text-sm text-gray-400 italic">Noch keine Prüfungsorte erfasst.</p>
+
+              <!-- Ausgewählte Prüfungsorte als Tags -->
+              <div v-if="form.selectedExamLocations.length" class="flex flex-wrap gap-2">
+                <span
+                  v-for="loc in form.selectedExamLocations"
+                  :key="loc.id"
+                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-white"
+                  :style="{ background: tenantColor }"
+                >
+                  {{ loc.name }}
+                  <button type="button" @click="toggleExamLocationSelection(loc)" class="ml-0.5 hover:opacity-75">×</button>
+                </span>
+              </div>
+              <p v-else class="text-xs text-gray-400 italic">Noch keine Prüfungsorte ausgewählt.</p>
             </div>
           </template>
 
@@ -510,10 +541,39 @@ const registrationError  = ref('')
 const tenantName         = ref('')
 const tenantSlugRef      = ref('')
 const tenantColor        = ref('#7C3AED')
-const availableCategories = ref<any[]>([])
-const tenantLocations    = ref<any[]>([])
-const tenantExamLocations = ref<any[]>([])
-const affiliateEnabled   = ref(false)
+const availableCategories  = ref<any[]>([])
+const tenantLocations      = ref<any[]>([])
+const tenantExamLocations  = ref<any[]>([]) // global exam locations (tenant_id = null)
+const affiliateEnabled     = ref(false)
+
+// Exam location search state
+const examLocationSearch = ref('')
+const examSearchOpen     = ref(false)
+
+const filteredExamLocations = computed(() => {
+  const q = examLocationSearch.value.toLowerCase().trim()
+  if (!q) return tenantExamLocations.value.slice(0, 20) // show first 20 when empty
+  return tenantExamLocations.value.filter(loc =>
+    loc.name?.toLowerCase().includes(q) ||
+    loc.address?.toLowerCase().includes(q) ||
+    loc.city?.toLowerCase().includes(q) ||
+    loc.canton?.toLowerCase().includes(q) ||
+    loc.postal_code?.includes(q)
+  )
+})
+
+const isExamLocationSelected = (id: string) =>
+  form.selectedExamLocations.some((l: any) => l.id === id)
+
+const toggleExamLocationSelection = (loc: any) => {
+  const idx = form.selectedExamLocations.findIndex((l: any) => l.id === loc.id)
+  if (idx >= 0) {
+    form.selectedExamLocations.splice(idx, 1)
+  } else {
+    form.selectedExamLocations.push(loc)
+  }
+  examLocationSearch.value = ''
+}
 const affiliateCode      = ref('')
 const icsUrl             = ref('')
 const icsCopied          = ref(false)
@@ -547,7 +607,8 @@ const form = reactive({
   workingDays: defaultWorkingDays() as Record<number, { active: boolean; start: string; end: string }>,
   // Step 3
   selectedLocationIds: [] as string[],
-  selectedExamLocationIds: [] as string[],
+  selectedExamLocationIds: [] as string[], // kept for backward compat
+  selectedExamLocations: [] as any[],      // full objects for global exam locations
   // Step 4
   externalCalendarProvider: '' as string,
   externalCalendarUrl: '',
@@ -615,7 +676,7 @@ const canProceed = computed(() => {
       return (
         (tenantLocations.value.length === 0 && tenantExamLocations.value.length === 0) ||
         form.selectedLocationIds.length > 0 ||
-        form.selectedExamLocationIds.length > 0
+        form.selectedExamLocations.length > 0
       )
     case 4:
       // If a provider is selected, the URL must also be filled
@@ -728,7 +789,7 @@ const submit = async () => {
         acceptedTerms:         form.acceptedTerms,
         workingHours,
         selectedLocationIds:      form.selectedLocationIds,
-        selectedExamLocationIds:  form.selectedExamLocationIds,
+        selectedExamLocationIds:  form.selectedExamLocations.map((l: any) => l.id),
       }
     })
 
