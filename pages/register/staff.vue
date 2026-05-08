@@ -634,8 +634,10 @@ const loadInvitation = async () => {
       if (Array.isArray(tpl.days)) {
         Object.keys(form.workingDays).forEach(d => {
           form.workingDays[+d].active = tpl.days.includes(+d)
-          if (tpl.start_time) form.workingDays[+d].start = tpl.start_time
-          if (tpl.end_time)   form.workingDays[+d].end   = tpl.end_time
+          // Per-day overrides take priority over global start/end
+          const daySchedule = tpl.schedule?.[d]
+          form.workingDays[+d].start = daySchedule?.start ?? tpl.start_time ?? '07:00'
+          form.workingDays[+d].end   = daySchedule?.end   ?? tpl.end_time   ?? '19:00'
         })
       }
     }
