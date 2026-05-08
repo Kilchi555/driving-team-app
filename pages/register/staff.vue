@@ -152,17 +152,6 @@
           <template v-if="currentStep === 1">
             <h2 class="text-lg font-semibold text-gray-900">Fahrlehrer-Profil</h2>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="label">Führerausweis Nr.</label>
-                <input v-model="form.lernfahrausweis_nr" type="text" class="input" placeholder="z.B. 1234567">
-              </div>
-              <div>
-                <label class="label">Fahrlehrer seit (Jahr)</label>
-                <input v-model="form.instructor_since_year" type="number" min="1960" :max="new Date().getFullYear()" class="input" placeholder="2015">
-              </div>
-            </div>
-
             <!-- Kategorien -->
             <div v-if="availableCategories.length">
               <label class="label mb-2">Unterrichtete Kategorien</label>
@@ -180,7 +169,7 @@
                 >
                   <input type="checkbox" :value="cat.code" v-model="form.selectedCategories">
                   <span class="font-medium">{{ cat.code }}</span>
-                  <span class="text-gray-400 text-xs truncate">{{ cat.name }}</span>
+                  <span class="text-gray-400 text-xs truncate">{{ cat.description }}</span>
                 </label>
               </div>
             </div>
@@ -491,9 +480,9 @@
                 <input type="checkbox" v-model="form.acceptedTerms" class="mt-0.5">
                 <span class="text-sm text-gray-700">
                   Ich akzeptiere die
-                  <a href="#" class="hover:underline" :style="{ color: tenantColor }">Nutzungsbedingungen</a>
+                  <a href="/register/staff-agb" target="_blank" class="hover:underline" :style="{ color: tenantColor }">Nutzungsbedingungen</a>
                   und die
-                  <a href="#" class="hover:underline" :style="{ color: tenantColor }">Datenschutzerklärung</a>.
+                  <a href="/register/staff-datenschutz" target="_blank" class="hover:underline" :style="{ color: tenantColor }">Datenschutzerklärung</a>.
                 </span>
               </label>
             </div>
@@ -620,6 +609,7 @@ const toggleExamLocationSelection = (loc: any) => {
     form.selectedExamLocations.push(loc)
   }
   examLocationSearch.value = ''
+  examSearchOpen.value = false
 }
 const affiliateCode      = ref('')
 const icsUrl             = ref('')
@@ -649,7 +639,7 @@ const form = reactive({
   firstName: '', lastName: '', email: '', phone: '', birthdate: '',
   street: '', streetNr: '', zip: '', city: '',
   // Step 1
-  lernfahrausweis_nr: '', instructor_since_year: '', selectedCategories: [] as string[],
+  selectedCategories: [] as string[],
   // Step 2
   workingDays: defaultWorkingDays() as Record<number, { active: boolean; start: string; end: string }>,
   // Step 3
@@ -829,8 +819,6 @@ const submit = async () => {
         city:                  form.city,
         password:              form.password,
         selectedCategories:    form.selectedCategories,
-        lernfahrausweis_nr:    form.lernfahrausweis_nr,
-        instructor_since_year: form.instructor_since_year,
         acceptedTerms:         form.acceptedTerms,
         workingHours,
         selectedLocationIds:      form.selectedLocationIds,
