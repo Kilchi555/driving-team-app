@@ -1008,7 +1008,26 @@ const emit = defineEmits<{
 }>()
 
 // Tenant composable
-const { currentTenant } = useTenant()
+const { currentTenant, tenantSlug } = useTenant()
+
+// Redirect to tenant login on expired/invalid session
+const handleSessionError = (err: any): boolean => {
+  const status = err?.response?.status ?? err?.statusCode ?? err?.status
+  const message = (err?.message ?? '').toLowerCase()
+  const isSessionError =
+    status === 401 ||
+    status === 403 ||
+    message.includes('unauthorized') ||
+    message.includes('not authenticated') ||
+    message.includes('session expired') ||
+    message.includes('jwt') ||
+    message.includes('token expired')
+  if (isSessionError) {
+    navigateTo(tenantSlug.value ? `/${tenantSlug.value}` : '/login')
+    return true
+  }
+  return false
+}
 
 // Exam Statistics Modal State
 const showExamStatistics = ref(false)
@@ -1461,7 +1480,9 @@ const loadExamLocations = async () => {
 
   } catch (err: any) {
     console.error('❌ Fehler beim Laden der Prüfungsstandorte:', err);
-    error.value = `Fehler beim Laden: ${err.message}`;
+    if (!handleSessionError(err)) {
+      error.value = `Fehler beim Laden: ${err.message}`;
+    }
   } finally {
     isLoadingExamLocations.value = false
   }
@@ -1527,7 +1548,9 @@ const toggleExamLocation = async (location: any) => {
 
   } catch (err: any) {
     console.error('❌ Fehler beim Umschalten des Prüfungsstandorts:', err);
-    error.value = `Fehler beim Speichern der Präferenz: ${err.message}`;
+    if (!handleSessionError(err)) {
+      error.value = `Fehler beim Speichern der Präferenz: ${err.message}`;
+    }
   } finally {
     isSavingExamLocation.value = false;
     await loadExamLocations();
@@ -1545,7 +1568,9 @@ const loadAllData = async () => {
     logger.debug('✅ Basic data loading completed')
   } catch (err: any) {
     console.error('❌ Error loading data:', err)
-    error.value = err.message
+    if (!handleSessionError(err)) {
+      error.value = err.message
+    }
   } finally {
     isLoading.value = false
   }
@@ -1607,7 +1632,9 @@ const removeExamLocation = async (location: any) => {
 
   } catch (err: any) {
     console.error('❌ Fehler beim Entfernen des Prüfungsstandorts:', err)
-    error.value = `Fehler beim Entfernen: ${err.message}`
+    if (!handleSessionError(err)) {
+      error.value = `Fehler beim Entfernen: ${err.message}`
+    }
   } finally {
     isSavingExamLocation.value = false
   }
@@ -1717,7 +1744,9 @@ const addExamLocation = async () => {
 
   } catch (err: any) {
     console.error('❌ Error adding exam location:', err)
-    error.value = `Fehler beim Hinzufügen: ${err.message}`
+    if (!handleSessionError(err)) {
+      error.value = `Fehler beim Hinzufügen: ${err.message}`
+    }
   }
 }
 
@@ -1759,7 +1788,9 @@ const createNewLocation = async () => {
     }
   } catch (err: any) {
     console.error('❌ Error creating location:', err)
-    error.value = `Fehler beim Erstellen: ${err.message}`
+    if (!handleSessionError(err)) {
+      error.value = `Fehler beim Erstellen: ${err.message}`
+    }
     alert(`Fehler: ${err.message}`)
   }
 }
@@ -1815,6 +1846,7 @@ const toggleLocationAssignment = async (locationId: string) => {
     logger.debug('✅ Location assignment updated successfully')
   } catch (err: any) {
     console.error('❌ Error in toggleLocationAssignment:', err)
+    handleSessionError(err)
   }
 }
 
@@ -1850,7 +1882,9 @@ const toggleLocationBookable = async (locationId: string, isOnlineBookable: bool
     }
   } catch (err: any) {
     console.error('❌ Error toggling location bookable status:', err)
-    error.value = `Fehler beim Aktualisieren: ${err.message}`
+    if (!handleSessionError(err)) {
+      error.value = `Fehler beim Aktualisieren: ${err.message}`
+    }
   }
 }
 
@@ -1934,7 +1968,9 @@ const toggleExamLocationAssignment = async (sourceLocation: any) => {
 
   } catch (err: any) {
     console.error('❌ Error in toggleExamLocationAssignment:', err)
-    error.value = `Fehler: ${err.message}`
+    if (!handleSessionError(err)) {
+      error.value = `Fehler: ${err.message}`
+    }
   }
 }
 
@@ -1965,6 +2001,8 @@ const removeLocation = async (locationId: string) => {
       return
     }
     
+    if (handleSessionError(err)) return
+
     // Offline-Support: Benutzerfreundliche Meldung
     if (err.message?.includes('synchronisiert')) {
       // Optimistic Update auch bei Offline
@@ -1973,8 +2011,6 @@ const removeLocation = async (locationId: string) => {
       
       // Optional: Success-Message für Offline
       logger.debug('📦 Location will be deleted when online')
-      // Sie könnten hier eine Notification anzeigen:
-      // showMessage("Standort wird gelöscht sobald Internet verfügbar ist")
     } else {
       // Alle anderen Fehler normal behandeln
       error.value = `Fehler beim Löschen: ${err.message}`
@@ -2071,7 +2107,9 @@ const loadData = async () => {
 
   } catch (err: any) {
     console.error('❌ Error loading data:', err)
-    error.value = `Fehler beim Laden: ${err.message}`
+    if (!handleSessionError(err)) {
+      error.value = `Fehler beim Laden: ${err.message}`
+    }
   } finally {
     isLoading.value = false
   }
