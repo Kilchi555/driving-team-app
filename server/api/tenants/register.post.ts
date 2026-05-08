@@ -249,7 +249,22 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     // 5. Tenant in Datenbank erstellen
     const tenantId = crypto.randomUUID()
     const trialEndsAt = new Date()
-    trialEndsAt.setDate(trialEndsAt.getDate() + 30) // 30 Tage Trial
+    trialEndsAt.setDate(trialEndsAt.getDate() + 60) // 60 Tage Trial
+
+    // Default working hours template: Mo–Fr 07:00–19:00, Sa 08:00–16:00
+    const defaultWorkingDaysTemplate = {
+      days: [1, 2, 3, 4, 5, 6],
+      start_time: '07:00',
+      end_time: '19:00',
+      schedule: {
+        1: { start: '07:00', end: '19:00' }, // Montag
+        2: { start: '07:00', end: '19:00' }, // Dienstag
+        3: { start: '07:00', end: '19:00' }, // Mittwoch
+        4: { start: '07:00', end: '19:00' }, // Donnerstag
+        5: { start: '07:00', end: '19:00' }, // Freitag
+        6: { start: '08:00', end: '16:00' }, // Samstag
+      }
+    }
     
     const { data: newTenant, error: insertError } = await supabase
       .from('tenants')
@@ -308,7 +323,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
           : null,
         working_days_template: data.working_days_template
           ? JSON.parse(data.working_days_template)
-          : null,
+          : defaultWorkingDaysTemplate,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
