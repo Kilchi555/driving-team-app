@@ -1839,7 +1839,7 @@ const registerUrl = computed(() => {
   if (logoPreview.value && logoPreview.value.length < 300 * 1024) {
     params.set('logo_data', logoPreview.value)
   }
-  return `/tenant-register?${params.toString()}`
+  return `https://app.simy.ch/tenant-register?${params.toString()}`
 })
 
 const colorPresets = [
