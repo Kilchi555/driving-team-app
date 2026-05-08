@@ -124,15 +124,7 @@
               </div>
               <div>
                 <label class="label">Geburtsdatum *</label>
-                <input v-model="form.birthdate" type="date" class="input w-auto">
-              </div>
-              <div>
-                <label class="label">Sprache</label>
-                <select v-model="form.language" class="input">
-                  <option value="de">Deutsch</option>
-                  <option value="fr">Français</option>
-                  <option value="it">Italiano</option>
-                </select>
+                <input v-model="form.birthdate" type="date" class="input" style="width: fit-content; min-width: 130px; max-width: 160px">
               </div>
               <div class="col-span-2 border-t pt-3">
                 <p class="text-xs text-gray-500 font-medium mb-2">Adresse</p>
@@ -524,8 +516,8 @@
                 type="button"
                 @click="nextStep"
                 :disabled="!canProceed"
-                class="px-5 py-2 text-sm text-white rounded-lg transition-opacity font-medium disabled:opacity-40"
-                :style="{ background: canProceed ? tenantColor : undefined }"
+                class="px-5 py-2 text-sm text-white rounded-lg transition-opacity font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                :style="{ background: tenantColor }"
               >{{ currentStep === 6 ? 'Registrierung abschliessen' : 'Weiter →' }}</button>
             </div>
           </div>
@@ -655,7 +647,7 @@ const defaultWorkingDays = () => Object.fromEntries(
 const form = reactive({
   // Step 0
   firstName: '', lastName: '', email: '', phone: '', birthdate: '',
-  language: 'de', street: '', streetNr: '', zip: '', city: '',
+  street: '', streetNr: '', zip: '', city: '',
   // Step 1
   lernfahrausweis_nr: '', instructor_since_year: '', selectedCategories: [] as string[],
   // Step 2
@@ -839,7 +831,6 @@ const submit = async () => {
         selectedCategories:    form.selectedCategories,
         lernfahrausweis_nr:    form.lernfahrausweis_nr,
         instructor_since_year: form.instructor_since_year,
-        language:              form.language,
         acceptedTerms:         form.acceptedTerms,
         workingHours,
         selectedLocationIds:      form.selectedLocationIds,
