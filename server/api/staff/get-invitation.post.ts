@@ -69,19 +69,28 @@ export default defineEventHandler(async (event) => {
     // Get tenant info (including slug for redirect)
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('business_type, id, name, slug, primary_color, secondary_color, logo_url')
+      .select('business_type, id, name, slug, primary_color, secondary_color, logo_url, selected_categories')
       .eq('id', invitation.tenant_id)
       .single()
 
     // Get categories if driving school (with hierarchy)
     let categories = []
     if (tenant?.business_type === 'driving_school') {
-      const { data: cats } = await supabase
+      let catQuery = supabase
         .from('categories')
         .select('code, name, parent_category_id, id, color')
         .eq('tenant_id', invitation.tenant_id)
         .eq('is_active', true)
-        .order('code')
+
+      // If the tenant has explicitly selected categories during registration, filter by those codes
+      const selectedCodes: string[] = Array.isArray(tenant?.selected_categories)
+        ? (tenant.selected_categories as string[]).filter(Boolean)
+        : []
+      if (selectedCodes.length > 0) {
+        catQuery = catQuery.in('code', selectedCodes)
+      }
+
+      const { data: cats } = await catQuery.order('code')
 
       // Filter: show only leaf categories (subcategories, or mains without children)
       const allCats = cats || []

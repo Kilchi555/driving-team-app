@@ -377,6 +377,20 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         : undefined
       await copyDefaultDataToTenant(tenantId, data.business_type, selectedIds)
       logger.debug('✅ Default data copied to tenant')
+
+      // Store selected category codes on the tenant so staff-register can filter by them
+      if (selectedIds && selectedIds.length > 0) {
+        const { data: templateCats } = await supabase
+          .from('categories')
+          .select('code')
+          .is('tenant_id', null)
+          .in('id', selectedIds)
+        if (templateCats && templateCats.length > 0) {
+          const codes = [...new Set(templateCats.map((c: any) => c.code))]
+          await supabase.from('tenants').update({ selected_categories: codes }).eq('id', tenantId)
+          logger.debug('✅ Stored selected category codes:', codes)
+        }
+      }
     } catch (defaultDataError) {
       console.warn('⚠️ Default data copy failed:', defaultDataError)
     }
