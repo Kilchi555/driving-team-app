@@ -38,7 +38,9 @@ export default defineEventHandler(async (event) => {
       workingHours,
       // Location assignments: array of location IDs
       selectedLocationIds,
-      selectedExamLocationIds
+      selectedExamLocationIds,
+      // New meetup locations created by staff during registration
+      newLocations
     } = body
 
     logger.debug('📝 Staff registration request:', { email, firstName, lastName, ipAddress })
@@ -319,6 +321,28 @@ export default defineEventHandler(async (event) => {
         }
       }
       logger.debug('✅ Standard locations assigned:', selectedLocationIds.length)
+    }
+
+    // 7a. Create new meetup locations added by staff
+    if (Array.isArray(newLocations) && newLocations.length > 0) {
+      try {
+        const locationRows = newLocations
+          .filter((l: any) => l.name?.trim() && l.address?.trim())
+          .map((l: any) => ({
+            name:          l.name.trim(),
+            address:       l.address.trim(),
+            tenant_id:     invitation.tenant_id,
+            staff_ids:     [newUser.id],
+            location_type: 'standard',
+            is_active:     true,
+          }))
+        if (locationRows.length > 0) {
+          await serviceSupabase.from('locations').insert(locationRows)
+          logger.debug('✅ New meetup locations created:', locationRows.length)
+        }
+      } catch (err) {
+        console.warn('⚠️ Creating new locations failed (non-fatal):', err)
+      }
     }
 
     // 7. Assign exam locations (Prüfungsorte)

@@ -238,7 +238,9 @@
             <!-- Treffpunkte -->
             <div>
               <h3 class="text-sm font-semibold text-gray-700 mb-2">Treffpunkte / Abholorte</h3>
-              <div v-if="tenantLocations.length" class="space-y-2">
+
+              <!-- Bestehende Tenant-Treffpunkte -->
+              <div v-if="tenantLocations.length" class="space-y-2 mb-3">
                 <label
                   v-for="loc in tenantLocations"
                   :key="loc.id"
@@ -255,7 +257,45 @@
                   </div>
                 </label>
               </div>
-              <p v-else class="text-sm text-gray-400 italic">Noch keine Treffpunkte erfasst. Du kannst sie später in den Einstellungen hinzufügen.</p>
+
+              <!-- Eigene neue Treffpunkte als Tags -->
+              <div v-if="form.newLocations.length" class="flex flex-wrap gap-2 mb-3">
+                <span
+                  v-for="(loc, i) in form.newLocations"
+                  :key="i"
+                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-white"
+                  :style="{ background: tenantColor }"
+                >
+                  {{ loc.name }}
+                  <button type="button" @click="form.newLocations.splice(i, 1)" class="ml-0.5 hover:opacity-75">×</button>
+                </span>
+              </div>
+
+              <!-- Neuen Treffpunkt hinzufügen -->
+              <div v-if="showNewLocationForm" class="border border-gray-200 rounded-lg p-3 space-y-2 mb-2">
+                <input v-model="newLocationName" type="text" placeholder="Name (z.B. Bahnhof Zürich HB)" class="input text-sm">
+                <input v-model="newLocationAddress" type="text" placeholder="Adresse (z.B. Bahnhofplatz 1, 8001 Zürich)" class="input text-sm">
+                <div class="flex gap-2">
+                  <button
+                    type="button"
+                    @click="addNewLocation"
+                    :disabled="!newLocationName.trim() || !newLocationAddress.trim()"
+                    class="px-3 py-1.5 text-xs font-medium text-white rounded-lg disabled:opacity-40 transition-opacity"
+                    :style="{ background: tenantColor }"
+                  >Hinzufügen</button>
+                  <button type="button" @click="showNewLocationForm = false; newLocationName = ''; newLocationAddress = ''" class="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700">Abbrechen</button>
+                </div>
+              </div>
+
+              <button
+                v-if="!showNewLocationForm"
+                type="button"
+                @click="showNewLocationForm = true"
+                class="text-xs font-medium flex items-center gap-1 mt-1"
+                :style="{ color: tenantColor }"
+              >
+                <span class="text-base leading-none">+</span> Treffpunkt hinzufügen
+              </button>
             </div>
 
             <!-- Prüfungsorte mit Suche -->
@@ -546,6 +586,21 @@ const tenantLocations      = ref<any[]>([])
 const tenantExamLocations  = ref<any[]>([]) // global exam locations (tenant_id = null)
 const affiliateEnabled     = ref(false)
 
+// New meetup location form state
+const showNewLocationForm  = ref(false)
+const newLocationName      = ref('')
+const newLocationAddress   = ref('')
+
+const addNewLocation = () => {
+  const name    = newLocationName.value.trim()
+  const address = newLocationAddress.value.trim()
+  if (!name || !address) return
+  form.newLocations.push({ name, address })
+  newLocationName.value    = ''
+  newLocationAddress.value = ''
+  showNewLocationForm.value = false
+}
+
 // Exam location search state
 const examLocationSearch = ref('')
 const examSearchOpen     = ref(false)
@@ -609,6 +664,7 @@ const form = reactive({
   selectedLocationIds: [] as string[],
   selectedExamLocationIds: [] as string[], // kept for backward compat
   selectedExamLocations: [] as any[],      // full objects for global exam locations
+  newLocations: [] as { name: string; address: string }[], // new meetup locations added by staff
   // Step 4
   externalCalendarProvider: '' as string,
   externalCalendarUrl: '',
@@ -672,7 +728,7 @@ const canProceed = computed(() => {
       // At least one working day active
       return Object.values(form.workingDays).some(d => d.active)
     case 3: {
-      const hasLocation = tenantLocations.value.length === 0 || form.selectedLocationIds.length > 0
+      const hasLocation     = tenantLocations.value.length === 0 || form.selectedLocationIds.length > 0 || form.newLocations.length > 0
       const hasExamLocation = tenantExamLocations.value.length === 0 || form.selectedExamLocations.length > 0
       return hasLocation && hasExamLocation
     }
@@ -787,6 +843,7 @@ const submit = async () => {
         acceptedTerms:         form.acceptedTerms,
         workingHours,
         selectedLocationIds:      form.selectedLocationIds,
+        newLocations:             form.newLocations,
         selectedExamLocationIds:  form.selectedExamLocations.map((l: any) => l.id),
       }
     })
