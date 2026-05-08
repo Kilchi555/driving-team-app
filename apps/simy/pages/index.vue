@@ -1986,6 +1986,10 @@ function saveLogoToSession() {
   } else {
     sessionStorage.removeItem('simy_preview_logo')
   }
+  // Also persist brand colors so the register page can pre-fill them
+  sessionStorage.setItem('simy_preview_primary', primaryColor.value)
+  sessionStorage.setItem('simy_preview_secondary', secondaryColor.value)
+  sessionStorage.setItem('simy_preview_accent', accentColor.value)
 }
 
 // ─── Auto-Popup after 10s ─────────────────────────────────────────────────────
