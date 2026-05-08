@@ -288,8 +288,8 @@
 
             <!-- Externen Kalender einbinden -->
             <div>
-              <h3 class="text-sm font-semibold text-gray-700 mb-1">Externen Kalender verbinden (optional)</h3>
-              <p class="text-xs text-gray-500 mb-3">Trage die ICS-URL deines privaten Kalenders ein, damit Termine aus Apple/Google/Outlook als Sperrzeiten erscheinen.</p>
+              <h3 class="text-sm font-semibold text-gray-700 mb-1">Externen Kalender verbinden</h3>
+              <p class="text-xs text-gray-500 mb-3">Wähle deinen Kalender-Anbieter und trage die ICS-URL ein, damit Termine als Sperrzeiten erscheinen.</p>
               <div class="space-y-3">
                 <label v-for="provider in calendarProviders" :key="provider.id"
                   class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all"
@@ -324,8 +324,8 @@
 
           <!-- ═══ STEP 5: Dokumente ═══ -->
           <template v-if="currentStep === 5">
-            <h2 class="text-lg font-semibold text-gray-900">Dokumente <span class="text-sm text-gray-400 font-normal">(optional)</span></h2>
-            <p class="text-sm text-gray-500">Lade deinen Führerausweis hoch. Du kannst das auch später in den Einstellungen nachholen.</p>
+            <h2 class="text-lg font-semibold text-gray-900">Dokumente</h2>
+            <p class="text-sm text-gray-500">Lade deinen Führerausweis hoch (Vorderseite erforderlich).</p>
 
             <!-- Vorderseite -->
             <div>
@@ -447,14 +447,6 @@
             <div v-else></div>
 
             <div class="flex gap-2">
-              <!-- Skip button for optional steps -->
-              <button
-                v-if="isOptionalStep"
-                type="button"
-                @click="currentStep++"
-                class="px-5 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-              >Überspringen</button>
-
               <!-- Next / Submit -->
               <button
                 v-if="currentStep < STEP_LOADING - 1"
@@ -594,32 +586,50 @@ const passwordIsValid = computed(() =>
   hibpStatus.value !== 'pwned' && hibpStatus.value !== 'checking'
 )
 
-const isOptionalStep = computed(() => [2, 3, 4, 5].includes(currentStep.value))
-
 const brandVars = computed(() => ({
   '--brand': tenantColor.value,
 }))
 
 const canProceed = computed(() => {
-  if (currentStep.value === 0) {
-    return !!(
-      form.firstName &&
-      form.lastName &&
-      form.email &&
-      form.phone &&
-      form.birthdate &&
-      form.street &&
-      form.streetNr &&
-      form.zip &&
-      form.city
-    )
+  switch (currentStep.value) {
+    case 0:
+      return !!(
+        form.firstName &&
+        form.lastName &&
+        form.email &&
+        form.phone &&
+        form.birthdate &&
+        form.street &&
+        form.streetNr &&
+        form.zip &&
+        form.city
+      )
+    case 1:
+      // At least one category selected (skip if none available)
+      return availableCategories.value.length === 0 || form.selectedCategories.length > 0
+    case 2:
+      // At least one working day active
+      return Object.values(form.workingDays).some(d => d.active)
+    case 3:
+      // At least one location or exam location selected (skip if none available)
+      return (
+        (tenantLocations.value.length === 0 && tenantExamLocations.value.length === 0) ||
+        form.selectedLocationIds.length > 0 ||
+        form.selectedExamLocationIds.length > 0
+      )
+    case 4:
+      // If a provider is selected, the URL must also be filled
+      return !form.externalCalendarProvider || !!form.externalCalendarUrl
+    case 5:
+      // Front side of license required
+      return !!licenseFrontFile.value
+    case 6:
+      return passwordIsValid.value &&
+             form.password === form.confirmPassword &&
+             form.acceptedTerms
+    default:
+      return true
   }
-  if (currentStep.value === 6) {
-    return passwordIsValid.value &&
-           form.password === form.confirmPassword &&
-           form.acceptedTerms
-  }
-  return true
 })
 
 // ─── Load invitation ─────────────────────────────────────────────────────────
