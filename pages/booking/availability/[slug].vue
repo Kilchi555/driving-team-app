@@ -33,7 +33,7 @@
             class="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg"
             :style="{ backgroundColor: getBrandPrimary() }"
           >
-            {{ currentTenant?.name?.charAt(0) || '…' }}
+            {{ getInitials(currentTenant?.name || '') }}
           </div>
         </div>
 

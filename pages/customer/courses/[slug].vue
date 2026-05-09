@@ -41,7 +41,7 @@
           class="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg"
           :style="{ backgroundColor: tenantBranding?.primary_color || '#10B981' }"
         >
-          {{ tenant?.name?.charAt(0) || '…' }}
+          {{ getInitials(tenant?.name || '') }}
         </div>
       </div>
       <div

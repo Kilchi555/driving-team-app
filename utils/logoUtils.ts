@@ -182,6 +182,19 @@ export function suggestTextColor(backgroundColor: string): string {
 }
 
 /**
+ * Gibt die Initialen eines Namens zurück:
+ * - "Driving Team"   → "DT"
+ * - "Müller"         → "MÜ"
+ * - ""               → "?"
+ */
+export function getInitials(name: string): string {
+  const words = (name || '').trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return '?'
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
+  return (words[0][0] + words[1][0]).toUpperCase()
+}
+
+/**
  * Logo-Konfiguration für verschiedene Kontexte
  */
 export const logoContexts = {

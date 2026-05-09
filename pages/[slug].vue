@@ -59,7 +59,7 @@
           v-else 
           class="w-10 h-10 mx-auto bg-white rounded-lg shadow-lg flex items-center justify-center"
         >
-          <span class="text-xl font-bold" :style="{ color: primaryColor }">{{ brandName.charAt(0).toUpperCase() }}</span>
+          <span class="text-xl font-bold" :style="{ color: primaryColor }">{{ getInitials(brandName) }}</span>
         </div>
       </div>
       

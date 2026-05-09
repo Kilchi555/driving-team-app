@@ -132,7 +132,7 @@
               <td class="sa-cell-muted font-mono">{{ idx + 1 }}</td>
               <td>
                 <div class="flex items-center gap-3">
-                  <div class="sa-tenant-avatar">{{ tenant.name?.charAt(0)?.toUpperCase() }}</div>
+                  <div class="sa-tenant-avatar">{{ getInitials(tenant.name || '') }}</div>
                   <div>
                     <div class="sa-tenant-name">{{ tenant.name }}</div>
                     <div class="sa-tenant-slug">{{ tenant.slug }}</div>
