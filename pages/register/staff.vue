@@ -524,9 +524,10 @@ import { ref, computed, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from '#app'
 import { useAuthStore } from '~/stores/auth'
 
-const route     = useRoute()
-const router    = useRouter()
-const authStore = useAuthStore()
+const route              = useRoute()
+const router             = useRouter()
+const authStore          = useAuthStore()
+const { loadTenantBranding } = useTenantBranding()
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const STEP_LOADING = 7
@@ -880,7 +881,15 @@ const submit = async () => {
 }
 
 // ─── Dashboard redirect ───────────────────────────────────────────────────────
-const goToDashboard = () => router.push('/dashboard')
+const goToDashboard = async () => {
+  // Load tenant branding before navigating so the dashboard shows correct colors/logo.
+  // The plugin skips branding for /dashboard (it's in nonTenantPaths), so we
+  // pre-load it here using the slug we got from the registration response.
+  if (tenantSlugRef.value) {
+    await loadTenantBranding(tenantSlugRef.value).catch(() => {})
+  }
+  router.push('/dashboard')
+}
 
 // ─── File handling ────────────────────────────────────────────────────────────
 const validateFile = (file: File): string | null => {
