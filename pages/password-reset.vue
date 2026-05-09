@@ -13,7 +13,7 @@
           v-else 
           class="w-10 h-10 mx-auto bg-white rounded-lg shadow-lg flex items-center justify-center"
         >
-          <span class="text-xl font-bold" :style="{ color: primaryColor || '#2563eb' }">{{ (brandName || 'S').charAt(0).toUpperCase() }}</span>
+          <span class="text-xl font-bold" :style="{ color: primaryColor || '#2563eb' }">{{ getInitials(brandName || 'S') }}</span>
         </div>
       </div>
 
@@ -218,7 +218,7 @@
               v-else 
               class="w-10 h-10 flex items-center justify-center"
             >
-              <span class="text-xl font-bold" :style="{ color: primaryColor || '#2563eb' }">{{ (brandName || 'S').charAt(0).toUpperCase() }}</span>
+              <span class="text-xl font-bold" :style="{ color: primaryColor || '#2563eb' }">{{ getInitials(brandName || 'S') }}</span>
             </div>
           </div>
         </div>

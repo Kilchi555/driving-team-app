@@ -49,7 +49,7 @@
         </div>
         <div v-else class="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-xl font-bold"
              :style="brandColor ? `background-color: ${brandColor}` : 'background-color: #10b981'">
-          {{ branding?.name?.charAt(0) || 'F' }}
+          {{ getInitials(branding?.name || 'F') }}
         </div>
         <h1 class="text-lg font-bold text-gray-900">{{ branding?.name || 'Fahrschule' }}</h1>
         <p class="text-sm text-gray-500 mt-1">
