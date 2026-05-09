@@ -100,7 +100,8 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       throwValidationError(errors)
     }
 
-    // ============ LAYER 5: GET TENANT FROM AUTHENTICATED USER ============
+    // ============ LAYER 5+6: GET USER & PAYMENT IN PARALLEL ============
+    // User profile and payment record are independent — fetch simultaneously.
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, tenant_id, email, first_name, last_name')
@@ -115,27 +116,28 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     tenantId = userData.tenant_id
     auditDetails.tenant_id = tenantId
 
-    // ============ LAYER 6: GET STUDENT CREDIT BALANCE ============
-    logger.debug('💰 Checking student credit balance for user:', userData.id)
-    const { data: creditData, error: creditError } = await supabaseAdmin
-      .from('student_credits')
-      .select('balance_rappen')
-      .eq('user_id', userData.id)
-      .maybeSingle()
+    // Fetch credit balance and payment record in parallel (saves one sequential roundtrip)
+    logger.debug('💰 Fetching credit balance + payment in parallel for user:', userData.id)
+    const [
+      { data: creditData },
+      { data: payment, error: paymentError }
+    ] = await Promise.all([
+      supabaseAdmin
+        .from('student_credits')
+        .select('balance_rappen')
+        .eq('user_id', userData.id)
+        .maybeSingle(),
+      supabaseAdmin
+        .from('payments')
+        .select('id, user_id, tenant_id, total_amount_rappen, credit_used_rappen, payment_method, payment_status, description, metadata, wallee_transaction_id, appointments(id, start_time, duration_minutes, staff:users!staff_id(first_name, last_name))')
+        .eq('id', body.paymentId)
+        .eq('tenant_id', tenantId)
+        .single()
+    ])
 
     const availableCredit = creditData?.balance_rappen || 0
     auditDetails.available_credit_rappen = availableCredit
-    
     logger.debug('💰 Available credit:', (availableCredit / 100).toFixed(2), 'CHF')
-
-    // ============ LAYER 7: LOAD EXISTING PAYMENT ============
-    // Load the existing payment that customer wants to pay for
-    const { data: payment, error: paymentError } = await supabaseAdmin
-      .from('payments')
-      .select('id, user_id, tenant_id, total_amount_rappen, credit_used_rappen, payment_method, payment_status, description, metadata, wallee_transaction_id, appointments(id, start_time, duration_minutes, staff:users!staff_id(first_name, last_name))')
-      .eq('id', body.paymentId)
-      .eq('tenant_id', tenantId)
-      .single()
 
     if (paymentError || !payment) {
       logger.warn('❌ Payment not found in tenant')
@@ -545,23 +547,25 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     })
 
     // ============ LAYER 10: GET PAYMENT URL & UPDATE PAYMENT ============
-    // Use the Transaction Service to get the payment page URL
-    let paymentPageUrl: string | undefined
-    
-    try {
-      // Try to get payment page URL from the service
-      const paymentService: Wallee.api.TransactionPaymentPageService = new Wallee.api.TransactionPaymentPageService(config)
-      const urlResponse = await paymentService.paymentPageUrl(spaceId, transactionId)
-      
-      // The response is wrapped in { response, body }, extract the string URL from body
-      paymentPageUrl = urlResponse?.body || urlResponse
-      
-      logger.debug('✅ Payment page URL retrieved from service:', paymentPageUrl?.substring(0, 100) + '...')
-    } catch (urlError: any) {
-      logger.warn('⚠️ Could not get payment page URL from service, constructing manually:', urlError.message)
-      
-      // Fallback: construct the URL manually
-      paymentPageUrl = `https://app-wallee.com/payment/transaction/pay?spaceId=${spaceId}&transactionId=${transactionId}`
+    // Prefer the URL already embedded in the create-transaction response — avoids a
+    // second round-trip to the Wallee API (saves ~2-3 seconds).
+    let paymentPageUrl: string | undefined =
+      (transaction?.paymentPageUrl as string | undefined) ||
+      (transaction?.paymentPageEndpoint as string | undefined)
+
+    if (paymentPageUrl) {
+      logger.debug('✅ Payment page URL from transaction response (no extra API call):', paymentPageUrl.substring(0, 100) + '...')
+    } else {
+      // Fallback: ask the dedicated service — only if the create response had no URL
+      try {
+        const paymentService: Wallee.api.TransactionPaymentPageService = new Wallee.api.TransactionPaymentPageService(config)
+        const urlResponse = await paymentService.paymentPageUrl(spaceId, transactionId)
+        paymentPageUrl = urlResponse?.body || urlResponse
+        logger.debug('✅ Payment page URL from service (fallback):', paymentPageUrl?.substring(0, 100) + '...')
+      } catch (urlError: any) {
+        logger.warn('⚠️ Could not get payment page URL from service, constructing manually:', urlError.message)
+        paymentPageUrl = `https://app-wallee.com/payment/transaction/pay?spaceId=${spaceId}&transactionId=${transactionId}`
+      }
     }
 
     if (!paymentPageUrl || typeof paymentPageUrl !== 'string') {
