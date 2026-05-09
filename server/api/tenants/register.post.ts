@@ -35,6 +35,7 @@ interface TenantRegistrationData {
   facebook_url?: string
   google_review_link?: string
   from_email?: string
+  twilio_from_sender?: string    // Alphanumeric SMS sender ID (max 11 chars)
   selected_categories?: string   // comma-separated codes, e.g. "B,BE,A"
   selected_category_ids?: string // comma-separated UUIDs of template categories to copy
   working_days_template?: string // JSON string
@@ -111,6 +112,8 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       instagram_url: '',
       facebook_url: '',
       google_review_link: '',
+      from_email: '',
+      twilio_from_sender: '',
       selected_categories: '',
       selected_category_ids: '',
       working_days_template: '',
@@ -339,7 +342,8 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         google_review_places: data.google_review_link?.trim()
           ? JSON.stringify([{ url: data.google_review_link.trim() }])
           : '[]',
-        from_email:    data.from_email?.trim()    || null,
+        from_email:          data.from_email?.trim()           || null,
+        twilio_from_sender:  data.twilio_from_sender?.trim()   || null,
         selected_categories: data.selected_categories
           ? data.selected_categories.split(',').map(c => c.trim()).filter(Boolean)
           : null,

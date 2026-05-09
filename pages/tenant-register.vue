@@ -685,6 +685,33 @@
               class="w-full sm:w-80 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm"
             />
           </div>
+
+          <!-- SMS Absender -->
+          <div class="pt-2 border-t border-gray-100">
+            <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+              SMS Absender
+              <span class="normal-case font-normal text-gray-400 ml-1">(optional)</span>
+            </p>
+            <p class="text-xs text-gray-400 mb-3">
+              Name der bei SMS-Nachrichten als Absender erscheint, z. B.
+              <code class="bg-gray-100 px-1 rounded">Fahrschule</code>.
+              <span class="text-amber-600 font-medium">Maximal 11 Zeichen</span> – Einschränkung des SMS-Providers.
+              Leer lassen = Fahrschulname wird automatisch verwendet.
+            </p>
+            <div class="relative w-full sm:w-80">
+              <input
+                v-model="formData.twilio_from_sender"
+                type="text"
+                maxlength="11"
+                placeholder="Fahrschule"
+                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm pr-14"
+              />
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono"
+                :class="(formData.twilio_from_sender?.length || 0) > 11 ? 'text-red-500' : 'text-gray-400'">
+                {{ formData.twilio_from_sender?.length || 0 }}/11
+              </span>
+            </div>
+          </div>
         </div>
 
         <!-- ═══ STEP 5: Admin-Konto ═══ -->
@@ -1190,6 +1217,7 @@ const formData = ref({
   facebook_url: '',
   google_review_link: '',
   from_email: '',
+  twilio_from_sender: '',
 })
 
 // ─── Categories ────────────────────────────────────────────────────────────
