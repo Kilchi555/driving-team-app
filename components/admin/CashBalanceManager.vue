@@ -1109,7 +1109,8 @@ const getMovementTypeText = (type) => {
     'deposit': 'Kasse aufgestockt',
     'withdrawal': 'Kasse abgestockt',
     'cash_transaction': 'Bargeldtransaktion',
-    'adjustment': 'Korrektur'
+    'adjustment': 'Korrektur',
+    'system_init': 'Kasse eröffnet'
   }
   return texts[type] || type
 }
