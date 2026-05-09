@@ -802,7 +802,7 @@ const submit = async () => {
     // Build working hours array from selected days
     const workingHours = Object.entries(form.workingDays)
       .filter(([, v]) => v.active)
-      .map(([day, v]) => ({ day_of_week: +day, start_time: v.start + ':00', end_time: v.end + ':00' }))
+      .map(([day, v]) => ({ day_of_week: +day, start_time: v.start, end_time: v.end }))
 
     const response = await $fetch<any>('/api/staff/register', {
       method: 'POST',

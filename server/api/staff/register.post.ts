@@ -283,8 +283,8 @@ export default defineEventHandler(async (event) => {
               staff_id: newUser.id,
               tenant_id: invitation.tenant_id,
               day_of_week: day,
-              start_time: (daySchedule?.start ?? tpl.start_time ?? '07:00') + ':00',
-              end_time:   (daySchedule?.end   ?? tpl.end_time   ?? '19:00') + ':00',
+              start_time: daySchedule?.start ?? tpl.start_time ?? '07:00',
+              end_time:   daySchedule?.end   ?? tpl.end_time   ?? '19:00',
               is_active: true,
               timezone: 'Europe/Zurich',
             }
