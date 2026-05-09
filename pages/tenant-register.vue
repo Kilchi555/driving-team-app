@@ -1802,6 +1802,14 @@ const loadFromStorage = () => {
     userEditedSlug.value      = d.userEditedSlug || false
     logoPreview.value         = d.logoPreview || null
     logoSquarePreview.value   = d.logoSquarePreview || null
+    // File objects can't be serialized to JSON, so we reconstruct them from the
+    // stored base64 previews so the logo is actually uploaded on submit.
+    if (logoPreview.value) {
+      logoFile.value = base64ToFile(logoPreview.value, `logo-${Date.now()}.webp`)
+    }
+    if (logoSquarePreview.value) {
+      logoSquareFile.value = base64ToFile(logoSquarePreview.value, `logo-square-${Date.now()}.webp`)
+    }
     if (d.staffList)    staffList.value    = d.staffList
     if (d.locationsList) locationsList.value = d.locationsList
     if (Array.isArray(d.selectedCategoryIds)) selectedCategoryIds.value = new Set<number>(d.selectedCategoryIds)
