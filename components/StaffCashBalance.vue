@@ -271,7 +271,8 @@ const getMovementTypeClass = (type) => {
   const classes = {
     'deposit': 'bg-green-100 text-green-600',
     'withdrawal': 'bg-red-100 text-red-600',
-    'adjustment': 'bg-yellow-100 text-yellow-600'
+    'adjustment': 'bg-yellow-100 text-yellow-600',
+    'system_init': 'bg-gray-100 text-gray-500'
   }
   return classes[type] || 'bg-gray-100 text-gray-600'
 }
@@ -281,7 +282,8 @@ const getMovementTypeIcon = (type) => {
     'deposit': '➕',
     'withdrawal': '➖',
     'cash_transaction': '💰',
-    'adjustment': '⚖️'
+    'adjustment': '⚖️',
+    'system_init': '🏁'
   }
   return icons[type] || '❓'
 }
@@ -291,7 +293,8 @@ const getMovementTypeText = (type) => {
     'deposit': 'Kasse aufgestockt',
     'withdrawal': 'Kasse abgestockt',
     'cash_transaction': 'Bargeldtransaktion',
-    'adjustment': 'Korrektur'
+    'adjustment': 'Korrektur',
+    'system_init': 'Kasse eröffnet'
   }
   return texts[type] || type
 }

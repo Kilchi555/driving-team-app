@@ -687,7 +687,8 @@ const getMovementTypeLabel = (type) => {
     deposit: 'Einzahlung',
     withdrawal: 'Abhebung',
     transfer: 'Transfer',
-    adjustment: 'Anpassung'
+    adjustment: 'Anpassung',
+    system_init: 'Kasse eröffnet'
   }
   return labels[type] || type
 }
