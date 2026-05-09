@@ -18,7 +18,8 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       }
     }
     
-    // Skip these paths - they're NOT tenant slugs!
+    // These paths don't contain tenant slugs in the URL — skip slug extraction,
+    // but still fall through to the auth-store tenant_id lookup below.
     const nonTenantPaths = [
       '/register-staff',
       '/password-reset',
@@ -38,24 +39,23 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       '/affiliate-dashboard',
     ]
     
-    if (currentRoute?.path && nonTenantPaths.includes(currentRoute.path)) {
-      logger.debug('🎨 getTenantInfo: Path is not a tenant slug:', currentRoute.path)
-      return null
+    const isNonTenantPath = !!(currentRoute?.path && nonTenantPaths.includes(currentRoute.path))
+
+    if (!isNonTenantPath) {
+      // 1. Prüfe Login-Seiten mit Tenant-Slug in Route-Parametern
+      if (currentRoute?.params?.tenant) {
+        logger.debug('🎨 getTenantInfo: Found tenant param:', currentRoute.params.tenant, 'from route:', currentRoute.name)
+        return { type: 'slug', value: currentRoute.params.tenant as string }
+      }
+      
+      // 1b. Prüfe auch [slug] Route für public pages
+      if (currentRoute?.params?.slug && currentRoute?.path && !currentRoute.path.includes('admin') && !currentRoute.path.includes('dashboard')) {
+        logger.debug('🎨 getTenantInfo: Found slug param:', currentRoute.params.slug, 'from route:', currentRoute.name)
+        return { type: 'slug', value: currentRoute.params.slug as string }
+      }
     }
     
-    // 1. Prüfe Login-Seiten mit Tenant-Slug in Route-Parametern
-    if (currentRoute?.params?.tenant) {
-      logger.debug('🎨 getTenantInfo: Found tenant param:', currentRoute.params.tenant, 'from route:', currentRoute.name)
-      return { type: 'slug', value: currentRoute.params.tenant as string }
-    }
-    
-    // 1b. Prüfe auch [slug] Route für public pages
-    if (currentRoute?.params?.slug && currentRoute?.path && !currentRoute.path.includes('admin') && !currentRoute.path.includes('dashboard')) {
-      logger.debug('🎨 getTenantInfo: Found slug param:', currentRoute.params.slug, 'from route:', currentRoute.name)
-      return { type: 'slug', value: currentRoute.params.slug as string }
-    }
-    
-    // 2. Für alle anderen Seiten: Verwende Tenant-ID des eingeloggten Users
+    // 2. Für alle Seiten (inkl. nonTenantPaths): Verwende Tenant-ID des eingeloggten Users
     if (process.client) {
       try {
         // useCurrentUser() creates a new ref(null) instance each time and requires
@@ -119,20 +119,28 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     logger.debug('🔄 Route changed to:', to?.path, 'params:', to?.params)
     
     const newTenantInfo = await getTenantInfo(to)
-    const currentBranding = useTenantBranding().currentTenantBranding.value
+    const { currentTenantBranding, applyBrandingStyles } = useTenantBranding()
+    const currentBranding = currentTenantBranding.value
     
     logger.debug('🔄 Tenant info detected:', newTenantInfo)
     
-    // Nur neu laden wenn sich der Tenant geändert hat
-    if (newTenantInfo && (!currentBranding || 
+    if (newTenantInfo) {
+      const tenantChanged = !currentBranding ||
         (newTenantInfo.type === 'id' && currentBranding.id !== newTenantInfo.value) ||
-        (newTenantInfo.type === 'slug' && currentBranding.slug !== newTenantInfo.value))) {
-      logger.debug('🔄 Tenant changed, updating branding:', newTenantInfo)
-      
-      if (newTenantInfo.type === 'id') {
-        await loadTenantBrandingById(newTenantInfo.value)
+        (newTenantInfo.type === 'slug' && currentBranding.slug !== newTenantInfo.value)
+
+      if (tenantChanged) {
+        logger.debug('🔄 Tenant changed, updating branding:', newTenantInfo)
+        if (newTenantInfo.type === 'id') {
+          await loadTenantBrandingById(newTenantInfo.value)
+        } else {
+          await loadTenantBranding(newTenantInfo.value)
+        }
       } else {
-        await loadTenantBranding(newTenantInfo.value)
+        // Branding already correct — re-apply CSS variables to ensure they are
+        // present after navigation (e.g. dashboard ↔ customers round-trip).
+        logger.debug('🔄 Tenant unchanged, re-applying CSS vars')
+        await applyBrandingStyles()
       }
     }
   }

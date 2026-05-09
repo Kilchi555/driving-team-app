@@ -2359,117 +2359,19 @@ const loadExamResults = async () => {
   
   try {
     logger.debug('🎓 Loading exam results for student:', props.selectedStudent.id)
-    
-    const supabase = getSupabase()
-    
-    // Zuerst alle appointments dieses Schülers laden
-    const { data: studentAppointments, error: aptError } = await supabase
-      .from('appointments')
-      .select(`
-        id, 
-        type, 
-        start_time, 
-        title, 
-        user_id, 
-        status,
-        event_type_code,
-        staff_id,
-        event_types (
-          name
-        )
-      `)
-      .eq('user_id', props.selectedStudent.id)
-    
-    if (aptError) {
-      console.error('❌ Error loading student appointments:', aptError)
-      throw aptError
-    }
-    
-    const appointmentIds = (studentAppointments || []).map((apt: any) => apt.id)
-    
-    if (appointmentIds.length === 0) {
-      examResults.value = []
-      logger.debug('✅ No appointments found for student')
-      return
-    }
-    
-    // Dann die exam_results für diese appointments laden
-    const { data: examResultsData, error: examError } = await supabase
-      .from('exam_results')
-      .select('*')
-      .in('appointment_id', appointmentIds)
-      .order('exam_date', { ascending: false })
-    
-    if (examError) {
-      console.error('❌ Error loading exam results:', examError)
-      throw examError
-    }
-    
-    // Lade Instructor-Namen für Prüfungen
-    const instructorIds = [...new Set(studentAppointments
-      .map((apt: any) => apt.staff_id)
-      .filter(Boolean))]
-    
-    let instructorsMap: Record<string, any> = {}
-    
-    if (instructorIds.length > 0) {
-      const { data: instructorsData, error: instructorsError } = await supabase
-        .from('users')
-        .select('id, first_name')
-        .in('id', instructorIds)
-      
-      if (instructorsError) {
-        console.error('❌ Error loading instructors for exams:', instructorsError)
-      } else if (instructorsData) {
-        instructorsData.forEach((instructor: any) => {
-          instructorsMap[instructor.id] = instructor
-        })
-      }
-    }
-    
-    // Verknüpfe exam_results mit appointment-Daten und Instructor-Namen
-    const appointmentsMap = new Map(studentAppointments.map((apt: any) => [apt.id, {
-      ...apt,
-      instructor: apt.staff_id ? instructorsMap[apt.staff_id] : null
-    }]))
 
-    const completedExamResults = (examResultsData || []).map((result: any) => ({
-      ...result,
-      appointments: appointmentsMap.get(result.appointment_id),
-      isPlanned: false
-    }))
+    // Use secure backend API (service role) — avoids client-side RLS/session issues
+    const response = await $fetch('/api/staff/get-student-exams', {
+      query: { studentId: props.selectedStudent.id }
+    }) as any
 
-    // Also include upcoming planned exams that don't have an exam_result yet
-    const appointmentIdsWithResult = new Set(
-      (examResultsData || []).map((result: any) => result.appointment_id)
-    )
-    const now = new Date()
-    const examsWithoutResult = (studentAppointments || [])
-      .filter((apt: any) =>
-        isExam(apt)
-        && !appointmentIdsWithResult.has(apt.id)
-        && apt.status !== 'cancelled'
-      )
-      .map((apt: any) => ({
-        id: `planned-${apt.id}`,
-        appointment_id: apt.id,
-        exam_date: apt.start_time,
-        passed: null,
-        examiner_behavior_rating: null,
-        examiner_behavior_notes: null,
-        appointments: {
-          ...apt,
-          instructor: apt.staff_id ? instructorsMap[apt.staff_id] : null
-        },
-        isPlanned: new Date(apt.start_time) >= now,
-        isUnrated: new Date(apt.start_time) < now
-      }))
+    if (!response?.success) {
+      throw new Error(response?.message || 'Failed to load exam results')
+    }
 
-    examResults.value = [...examsWithoutResult, ...completedExamResults]
-      .sort((a: any, b: any) => new Date(b.exam_date).getTime() - new Date(a.exam_date).getTime())
-    
-    logger.debug('✅ Loaded', examResults.value.length, 'exam results')
-    
+    examResults.value = response.data || []
+    logger.debug('✅ Loaded', examResults.value.length, 'exam entries')
+
   } catch (error: any) {
     console.error('Error loading exam results:', error)
     examResultsError.value = error.message || 'Fehler beim Laden der Prüfungsergebnisse'
