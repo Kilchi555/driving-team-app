@@ -77,7 +77,6 @@ import { ref, computed, onMounted } from 'vue'
 import { formatDate, formatDateTime } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import Toast from '~/components/Toast.vue'
-import { useTenant } from '~/composables/useTenant'
 
 // Props
 const props = defineProps({
@@ -87,8 +86,9 @@ const props = defineProps({
   }
 })
 
-// Tenant
-const { tenantPrimaryColor } = useTenant()
+// Use useTenantBranding (auto-loaded by plugin) instead of useTenant which
+// requires an explicit loadTenant() call to be non-null.
+const { primaryColor: tenantPrimaryColor } = useTenantBranding()
 
 // Supabase
 
