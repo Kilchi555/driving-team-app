@@ -8,6 +8,7 @@ import { logger } from '~/utils/logger'
 import { sendSMS } from '~/server/utils/sms'
 import { sendEmail } from '~/server/utils/email'
 import { sanitizeString } from '~/server/utils/validators'
+import { getPlanById } from '~/utils/planFeatures'
 
 interface StaffEntry {
   first_name: string
@@ -64,7 +65,6 @@ export default defineEventHandler(async (event) => {
     .single()
 
   if (tenantSub) {
-    const { getPlanById } = await import('../../utils/planFeatures')
     const plan = tenantSub.subscription_plan || 'trial'
     const planDef = getPlanById(plan)
     const includedSeats = plan === 'trial' ? 3 : (planDef?.includedSeats ?? null)
