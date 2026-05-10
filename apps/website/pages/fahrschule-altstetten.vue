@@ -2,9 +2,9 @@
   <div>
     <Head>
       <Title>Fahrschule Altstetten | Direkt beim Bahnhof Altstetten</Title>
-      <Meta name="description" content="Fahrschule Altstetten ✓ Hauptstandort Baslerstrasse 145 ✓ Auto, Motorrad, Anhänger ✓ 85% Erfolgsquote ✓ ab CHF 95.- ✓ Flexible Zeiten. Jetzt buchen!" />
+      <Meta name="description" content="Fahrschule Altstetten ✓ Hauptstandort Vulkanstrasse 130b ✓ Auto, Motorrad, Anhänger ✓ 85% Erfolgsquote ✓ ab CHF 95.- ✓ Flexible Zeiten. Jetzt buchen!" />
       <Meta name="keywords" content="Fahrschule Altstetten, Fahrstunden Altstetten, Auto Fahrschule Altstetten, Fahrlehrer Altstetten, Fahrschule Zürich Altstetten" />
-      <Meta property="og:title" content="Fahrschule Altstetten – Driving Team | Baslerstrasse 145" />
+      <Meta property="og:title" content="Fahrschule Altstetten – Driving Team | Vulkanstrasse 130b" />
       <Meta property="og:description" content="Deine Fahrschule direkt in Zürich-Altstetten. Auto, Motorrad & Anhänger ab CHF 95.-. Buche jetzt flexibel online." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-altstetten/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-altstetten/" />
@@ -19,7 +19,7 @@
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/locations/zuerich-hero.webp" alt="Fahrschule Altstetten – Driving Team an der Baslerstrasse 145 in Zürich-Altstetten" class="absolute inset-0 w-full h-full object-cover opacity-100" fetchpriority="high" loading="eager" width="1920" height="1080" />
+      <img src="/images/locations/zuerich-hero.webp" alt="Fahrschule Altstetten – Driving Team an der Vulkanstrasse 130b in Zürich-Altstetten" class="absolute inset-0 w-full h-full object-cover opacity-100" fetchpriority="high" loading="eager" width="1920" height="1080" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
@@ -40,7 +40,7 @@
           <div>
             <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-4">Wo findest du uns in Altstetten?</h2>
             <div class="space-y-3 text-gray-700">
-              <p class="text-lg">📍 <strong>Baslerstrasse 145, 8048 Zürich-Altstetten</strong></p>
+              <p class="text-lg">📍 <strong>Vulkanstrasse 130b, 8048 Zürich-Altstetten</strong></p>
               <p>Unser Standort liegt im Herzen von Altstetten – einem der lebhaftesten Stadtteile Zürichs mit direktem Anschluss an die Autobahn und das öffentliche Verkehrsnetz.</p>
             </div>
           </div>
@@ -143,7 +143,7 @@
         <div class="faq-masonry">
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wo genau befindet sich eure Fahrschule in Altstetten?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Unser Hauptstandort ist an der Baslerstrasse 145, 8048 Zürich-Altstetten. Du erreichst uns mit der S-Bahn (Bahnhof Altstetten, 5 Min. zu Fuss), Tram 2 (Lindenplatz) oder dem Bus 80. Parkplätze sind in der Umgebung verfügbar.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Unser Hauptstandort ist an der Vulkanstrasse 130b, 8048 Zürich-Altstetten. Du erreichst uns mit der S-Bahn (Bahnhof Altstetten, 5 Min. zu Fuss), Tram 2 (Lindenplatz) oder dem Bus 80. Parkplätze sind in der Umgebung verfügbar.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">In welchen Quartieren fahren wir beim Unterricht?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
@@ -208,12 +208,12 @@ const jsonLdScripts = [
     "@context": "https://schema.org",
     "@type": ["DrivingSchool", "LocalBusiness"],
     "name": "Driving Team Fahrschule Altstetten",
-    "description": "Fahrschule in Zürich-Altstetten an der Baslerstrasse 145. Auto, Motorrad, Anhänger, Lastwagen. Unterricht auf Deutsch, Englisch und Albanisch.",
+    "description": "Fahrschule in Zürich-Altstetten an der Vulkanstrasse 130b. Auto, Motorrad, Anhänger, Lastwagen. Unterricht auf Deutsch, Englisch und Albanisch.",
     "url": "https://drivingteam.ch/fahrschule-altstetten/",
     "telephone": "+41444310033",
     "address": {
       "@type": "PostalAddress",
-      "streetAddress": "Baslerstrasse 145",
+      "streetAddress": "Vulkanstrasse 130b",
       "addressLocality": "Zürich",
       "addressRegion": "Altstetten",
       "postalCode": "8048",
@@ -244,7 +244,7 @@ const jsonLdScripts = [
       {
         "@type": "Question",
         "name": "Wo genau befindet sich eure Fahrschule in Altstetten?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Baslerstrasse 145, 8048 Zürich-Altstetten. Erreichbar mit S-Bahn (Bahnhof Altstetten, 5 Min.), Tram 2 (Haltestelle Lindenplatz) oder Bus 80." }
+        "acceptedAnswer": { "@type": "Answer", "text": "Vulkanstrasse 130b, 8048 Zürich-Altstetten. Erreichbar mit S-Bahn (Bahnhof Altstetten, 5 Min.), Tram 2 (Haltestelle Lindenplatz) oder Bus 80." }
       },
       {
         "@type": "Question",

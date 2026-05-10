@@ -729,12 +729,12 @@
     },
     {
       "source": "/it/anhaenger-fahrschule-lachen",
-      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
       "permanent": true
     },
     {
       "source": "/it/anhaenger-fahrschule-lachen/",
-      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
       "permanent": true
     },
     {
@@ -1759,22 +1759,22 @@
     },
     {
       "source": "/motorrad-fahrstunden",
-      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule-zuerich/",
       "permanent": true
     },
     {
       "source": "/motorrad-fahrstunden/",
-      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule-zuerich/",
       "permanent": true
     },
     {
-      "source": "/anhaenger-fahrschule-lachen",
-      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "source": "/anh%C3%A4nger-fahrschule-lachen",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
       "permanent": true
     },
     {
-      "source": "/anhaenger-fahrschule-lachen/",
-      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "source": "/anh%C3%A4nger-fahrschule-lachen/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
       "permanent": true
     },
     {
@@ -1884,12 +1884,12 @@
     },
     {
       "source": "/en/anhaenger-fahrschule-lachen",
-      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
       "permanent": true
     },
     {
       "source": "/en/anhaenger-fahrschule-lachen/",
-      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
       "permanent": true
     },
     {
@@ -2294,12 +2294,12 @@
     },
     {
       "source": "/sq/anhaenger-fahrschule-lachen",
-      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
       "permanent": true
     },
     {
       "source": "/sq/anhaenger-fahrschule-lachen/",
-      "destination": "https://drivingteam.ch/anhaenger-fahrschule/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
       "permanent": true
     },
     {

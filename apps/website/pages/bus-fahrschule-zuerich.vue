@@ -167,7 +167,7 @@ const jsonLdScripts = [
       "telephone": "+41444310033",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Baslerstrasse 145",
+        "streetAddress": "Vulkanstrasse 130b",
         "addressLocality": "Zürich",
         "postalCode": "8048",
         "addressCountry": "CH"

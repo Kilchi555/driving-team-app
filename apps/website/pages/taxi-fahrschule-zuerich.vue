@@ -44,7 +44,7 @@
         <p class="text-lg text-gray-700 mb-6">Unsere Taxi Fahrschule in Zürich-Altstetten bietet dir die komplette BPT Ausbildung – von den Taxifahrstunden bis zur Prüfungsbegleitung. Wir kennen die Zürcher Prüfungsrouten und bereiten dich optimal auf die praktische BPT Prüfung vor.</p>
         <div class="bg-primary-50 rounded-lg p-6 mb-6">
           <p class="font-semibold text-gray-900 mb-2">📍 Standort:</p>
-          <p class="text-gray-700">Baslerstrasse 145, 8048 Zürich-Altstetten<br/>2 Gehminuten vom Bahnhof Altstetten (S3, S5, S12, S14)</p>
+          <p class="text-gray-700">Vulkanstrasse 130b, 8048 Zürich-Altstetten<br/>2 Gehminuten vom Bahnhof Altstetten (S3, S5, S12, S14)</p>
         </div>
         <div class="grid md:grid-cols-2 gap-6">
           <div class="bg-primary-50 rounded-lg p-6 flex items-start gap-3">

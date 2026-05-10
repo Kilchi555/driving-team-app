@@ -13,14 +13,14 @@ export const motorradGrundkursData = {
       '🏍️ Kompletter Kurs: <strong>CHF 499.-</strong> (3 Kursteile à CHF 190.-)',
       '👥 Maximal <strong>5 Teilnehmer</strong>',
       '📜 Inkl. <strong>Kursbestätigung & Getränk</strong>',
-      '📍 Treffpunkt: <strong>Driving Team Zürich, Baslerstrasse 145, 8048 Zürich</strong>'
+      '📍 Treffpunkt: <strong>Driving Team Zürich, Vulkanstrasse 130b, 8048 Zürich</strong>'
     ],
     importantNotes: [
       'Für Kategorie A1 sind neu ebenfalls die Kursteile 1, 2 & 3 zu absolvieren. (Für Inhaber der Kategorie B ist dann keine praktische Prüfung notwendig.)',
     ],
     stats: { requirements: 4, details: 4, hours: '12h' },
     location: {
-      address: 'Baslerstrasse 145, 8048 Zürich',
+      address: 'Vulkanstrasse 130b, 8048 Zürich',
       lat: 47.3769,
       lng: 8.5225,
       mapUrl: 'https://maps.google.com/maps?q=47.3769,8.5225'

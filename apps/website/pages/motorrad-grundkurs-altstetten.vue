@@ -2,10 +2,10 @@
   <div>
     <Head>
       <Title>Motorrad Grundkurs Altstetten | CHF 499.- | Driving Team</Title>
-      <Meta name="description" content="Motorrad Grundkurs Altstetten ✓ CHF 499.- ✓ 12 Stunden (3×4h) ✓ Max. 5 Teilnehmer ✓ Baslerstrasse 145 ✓ Kat. A1/A2/A. Jetzt buchen!" />
+      <Meta name="description" content="Motorrad Grundkurs Altstetten ✓ CHF 499.- ✓ 12 Stunden (3×4h) ✓ Max. 5 Teilnehmer ✓ Vulkanstrasse 130b ✓ Kat. A1/A2/A. Jetzt buchen!" />
       <Meta name="keywords" content="Motorrad Grundkurs Altstetten, Motorrad Grundkurs Zürich Altstetten, PGS Kurs Altstetten, Motorrad Kurs Zürich-Altstetten, Grundkurs Motorrad Altstetten" />
       <Meta property="og:title" content="Motorrad Grundkurs Altstetten | CHF 499.- | Driving Team" />
-      <Meta property="og:description" content="Motorrad Grundkurs direkt in Zürich-Altstetten. CHF 499.- Komplettpreis. 12 Stunden (3×4h). Max. 5 Teilnehmer. Treffpunkt Baslerstrasse 145. Obligatorisch für Kat. A1/A2/A." />
+      <Meta property="og:description" content="Motorrad Grundkurs direkt in Zürich-Altstetten. CHF 499.- Komplettpreis. 12 Stunden (3×4h). Max. 5 Teilnehmer. Treffpunkt Vulkanstrasse 130b. Obligatorisch für Kat. A1/A2/A." />
       <Meta property="og:url" content="https://drivingteam.ch/motorrad-grundkurs-altstetten/" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />
@@ -28,7 +28,7 @@
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Driving Team – Zürich-Altstetten</p>
           <h1 class="heading-lg text-white mb-4">Motorrad Grundkurs Altstetten</h1>
           <p class="text-base xs:text-xl text-white mb-2">Kompletter Kurs in Zürich-Altstetten nur für <strong>CHF 499.–</strong></p>
-          <p class="text-base xs:text-xl text-white mb-8">Praxisorientierter Motorrad Grundkurs: 3 Kursteile à 4 Stunden. Max. 5 Teilnehmer. Treffpunkt: Baslerstrasse 145, 8048 Zürich-Altstetten.</p>
+          <p class="text-base xs:text-xl text-white mb-8">Praxisorientierter Motorrad Grundkurs: 3 Kursteile à 4 Stunden. Max. 5 Teilnehmer. Treffpunkt: Vulkanstrasse 130b, 8048 Zürich-Altstetten.</p>
           <a href="https://app.simy.ch/customer/courses/driving-team/?category=PGS&location=Z%C3%BCrich" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
@@ -39,7 +39,7 @@
     <!-- Kursübersicht -->
     <CourseOverviewSection
       title="Motorrad Grundkurs Altstetten"
-      description="Der Motorrad Grundkurs in Zürich-Altstetten findet direkt an der Baslerstrasse 145 statt – im Herzen unseres Hauptstandorts. Praxisorientiert, mit max. 5 Teilnehmern und erfahrenen Motorradfahrlehrern."
+      description="Der Motorrad Grundkurs in Zürich-Altstetten findet direkt an der Vulkanstrasse 130b statt – im Herzen unseres Hauptstandorts. Praxisorientiert, mit max. 5 Teilnehmern und erfahrenen Motorradfahrlehrern."
       :requirements="[
         'Gültiger Lernfahrausweis der Kategorie A1 / A35kW / A',
         'Selbständiges Fahren von A nach B möglich',
@@ -50,7 +50,7 @@
         '🏍️ Kompletter Kurs: <strong>CHF 499.-</strong> (3 Kursteile à CHF 190.-)',
         '👥 Maximal <strong>5 Teilnehmer</strong>',
         '📜 Inkl. <strong>Kursbestätigung & Getränk</strong>',
-        '📍 Treffpunkt: <strong>Baslerstrasse 145, 8048 Zürich-Altstetten</strong>'
+        '📍 Treffpunkt: <strong>Vulkanstrasse 130b, 8048 Zürich-Altstetten</strong>'
       ]"
       :important-notes="[
         'Für Kategorie A1 sind ebenfalls die Kursteile 1, 2 & 3 zu absolvieren.',
@@ -80,7 +80,7 @@
         <div class="max-w-3xl mx-auto space-y-4">
           <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wo genau findet der Motorrad Grundkurs in Altstetten statt?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm">Der Treffpunkt befindet sich direkt vor unserem Lokal in Zürich-Altstetten: <strong>Baslerstrasse 145, 8048 Zürich</strong>. Du bist gut erreichbar mit dem öffentlichen Verkehr (Tram 2, 3, 8 bis Altstetten) oder mit dem Auto. Parkplätze sind in der Nähe verfügbar.</p>
+            <p class="text-gray-600 mt-4 text-sm">Der Treffpunkt befindet sich direkt vor unserem Lokal in Zürich-Altstetten: <strong>Vulkanstrasse 130b, 8048 Zürich</strong>. Du bist gut erreichbar mit dem öffentlichen Verkehr (Tram 2, 3, 8 bis Altstetten) oder mit dem Auto. Parkplätze sind in der Nähe verfügbar.</p>
           </details>
           <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Was kostet der Motorrad Grundkurs in Altstetten?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>
@@ -161,7 +161,7 @@ const jsonLdScripts = [
     "url": "https://drivingteam.ch/motorrad-grundkurs-altstetten/",
     "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" },
     "offers": { "@type": "Offer", "price": "499", "priceCurrency": "CHF", "availability": "https://schema.org/InStock" },
-    "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Driving Team Zürich-Altstetten", "address": { "@type": "PostalAddress", "streetAddress": "Baslerstrasse 145", "postalCode": "8048", "addressLocality": "Zürich", "addressCountry": "CH" } } }]
+    "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Driving Team Zürich-Altstetten", "address": { "@type": "PostalAddress", "streetAddress": "Vulkanstrasse 130b", "postalCode": "8048", "addressLocality": "Zürich", "addressCountry": "CH" } } }]
   }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({
     "@context": "https://schema.org",
@@ -176,7 +176,7 @@ const jsonLdScripts = [
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
-      { "@type": "Question", "name": "Wo findet der Motorrad Grundkurs in Altstetten statt?", "acceptedAnswer": { "@type": "Answer", "text": "Baslerstrasse 145, 8048 Zürich-Altstetten. Gut erreichbar mit Tram 2, 3, 8 bis Altstetten." } },
+      { "@type": "Question", "name": "Wo findet der Motorrad Grundkurs in Altstetten statt?", "acceptedAnswer": { "@type": "Answer", "text": "Vulkanstrasse 130b, 8048 Zürich-Altstetten. Gut erreichbar mit Tram 2, 3, 8 bis Altstetten." } },
       { "@type": "Question", "name": "Was kostet der Motorrad Grundkurs Altstetten?", "acceptedAnswer": { "@type": "Answer", "text": "CHF 499.- für alle 3 Kursteile (à CHF 190.-). Motorrad-Miete CHF 80.- pro Kursteil." } },
       { "@type": "Question", "name": "Wie viele Stunden dauert der Motorrad Grundkurs?", "acceptedAnswer": { "@type": "Answer", "text": "12 Stunden in 3 Kursteilen à 4 Stunden." } }
     ]

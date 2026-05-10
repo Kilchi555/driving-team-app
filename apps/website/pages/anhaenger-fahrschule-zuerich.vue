@@ -190,7 +190,7 @@
             <div class="flex items-center justify-center w-12 h-12 bg-orange-500 text-white rounded-full font-black text-lg flex-shrink-0">2</div>
             <div>
               <h3 class="font-bold text-gray-900 text-lg mb-2">Anhänger Fahrstunden in Zürich-Altstetten</h3>
-              <p class="text-sm text-gray-600 leading-relaxed">Wir üben alle Prüfungsmanöver und Strassenszenarien direkt im Prüfungsgebiet Regensdorf. Treffpunkt: Bahnhof Altstetten. Empfehlung: Doppellektionen (90 Min.) für effizienten Lernfortschritt.</p>
+              <p class="text-sm text-gray-600 leading-relaxed">Wir üben alle Prüfungsmanöver und Strassenszenarien direkt im Prüfungsgebiet Regensdorf. Treffpunkt: Altstetterplatz 12, 8048 Zürich (Bahnhof Zürich-Altstetten). Empfehlung: Doppellektionen (90 Min.) für effizienten Lernfortschritt.</p>
             </div>
           </div>
           <div class="flex items-start gap-5 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -452,7 +452,7 @@ const jsonLdScripts = [
       "image": "https://drivingteam.ch/images/categories/anhaenger-fahrschule-new.webp",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Baslerstrasse 145",
+        "streetAddress": "Vulkanstrasse 130b",
         "addressLocality": "Zürich",
         "postalCode": "8048",
         "addressCountry": "CH"

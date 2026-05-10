@@ -28,7 +28,7 @@ export const locationData = {
       },
       {
         question: 'Wie flexibel sind die Fahrstunden in Zürich?',
-        answer: 'Bei den Autofahrlektionen können wir nach Möglichkeit flexible Treffpunkte vereinbaren. Wir holen euch nach Möglichkeit zu Hause oder bei der Arbeit ab. Bei der Anhänger- und Motorradausbildung beschränkt sich der Treffpunkt auf Zürich-Altstetten.'
+        answer: 'Bei den Autofahrlektionen können wir nach Möglichkeit flexible Treffpunkte vereinbaren. Wir holen euch nach Möglichkeit zu Hause oder bei der Arbeit ab. Bei der Anhänger- und Motorradausbildung ist der feste Treffpunkt Altstetterplatz 12, 8048 Zürich (Bahnhof Zürich-Altstetten).'
       },
       {
         question: 'Wo genau befindet sich die Fahrschule Zürich?',
@@ -73,7 +73,7 @@ export const locationData = {
       },
       {
         question: 'Bietet ihr auch Motorradfahrstunden in Lachen an?',
-        answer: 'Ja, wir bieten Motorradfahrstunden und Grundkurse an. Bei der Motorradausbildung beschränkt sich der Treffpunkt jedoch auf Zürich-Altstetten.'
+        answer: 'Ja, wir bieten Motorradfahrstunden und Grundkurse an. Bei der Motorradausbildung ist der Treffpunkt für Fahrstunden Altstetterplatz 12, 8048 Zürich (Bahnhof Zürich-Altstetten). Der Motorrad Grundkurs findet direkt an der Vulkanstrasse 130b statt.'
       },
       {
         question: 'Kann ich in Lachen alle Fahrzeugkategorien fahren lernen?',

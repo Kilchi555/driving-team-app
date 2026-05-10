@@ -384,7 +384,7 @@
               </div>
             </summary>
             <div class="px-6 pb-5 ml-14 text-sm text-gray-600 leading-relaxed">
-              <p class="mb-2">Wir machen nur <strong>Doppellektionen</strong> (90 Min., CHF 190.-) – das macht mehr Sinn beim Motorrad als kurze Einzel-Einheiten. Treffpunkt: Bahnhof Altstetten, Zürich.</p>
+              <p class="mb-2">Wir machen nur <strong>Doppellektionen</strong> (90 Min., CHF 190.-) – das macht mehr Sinn beim Motorrad als kurze Einzel-Einheiten. Treffpunkt: Altstetterplatz 12, 8048 Zürich (Bahnhof Zürich-Altstetten).</p>
               <div class="mt-2 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-800">
                 <strong>Fahrschul-Motorrad:</strong> Du hast kein eigenes Motorrad? Unser A35kW-Schulungsmotorrad ist für CHF 20.- pro Lektion mietbar (nur für Fahrstunden vor dem Grundkurs).
               </div>
@@ -469,6 +469,120 @@
             <p class="text-2xl mb-2">📱</p>
             <p class="font-bold text-gray-900 text-sm">Online buchbar</p>
             <p class="text-xs text-gray-600 mt-1">Twint, Debit- oder Kreditkarte</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== MOTORRAD FAHRLEHRER ZÜRICH ====== -->
+    <section class="py-16 bg-white">
+      <div class="section-container">
+        <div class="text-center mb-10">
+          <div class="inline-block mb-4 px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-bold">
+            🏍️ Motorrad Fahrlehrer Zürich
+          </div>
+          <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            Ihr Motorrad Fahrlehrer in Zürich – Pascal Kilchenmann
+          </h2>
+          <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+            Pascal ist staatlich geprüfter Fahrlehrer mit eidgenössischem Fachausweis und SFV-Zusatzqualifikation als Motorradfahrlehrer. Seit über 15 Jahren bildet er Motorradfahrer:innen in Zürich aus.
+          </p>
+        </div>
+
+        <div class="max-w-4xl mx-auto bg-white rounded-2xl border-2 border-red-100 shadow-xl overflow-hidden">
+          <div class="grid md:grid-cols-2">
+            <!-- Left: Pascal Info -->
+            <div class="p-8">
+              <div class="flex items-center gap-4 mb-6">
+                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-red-100 to-red-200 overflow-hidden flex-shrink-0">
+                  <NuxtImg
+                    src="/images/team/pascal.webp"
+                    alt="Pascal Kilchenmann – Motorrad Fahrlehrer Zürich"
+                    class="w-full h-full object-cover"
+                    width="160"
+                    height="160"
+                    loading="lazy"
+                  />
+                </div>
+                <div>
+                  <h3 class="text-xl font-black text-gray-900">Pascal Kilchenmann</h3>
+                  <p class="text-red-600 font-semibold text-sm">Motorrad Fahrlehrer Zürich</p>
+                  <p class="text-gray-500 text-xs mt-0.5">Fahrlehrer seit 2009 · Motorrad seit 2019</p>
+                </div>
+              </div>
+
+              <p class="text-gray-700 text-sm leading-relaxed mb-6">
+                Pascal ist bekannt für seine geduldige, positive und ausgeglichene Art. Er hat keine Probleme, nur Lösungen – und genau das schätzen seine Fahrschüler:innen. Motorradfahren ist für ihn Leidenschaft, die er gerne weitergibt.
+              </p>
+
+              <div class="space-y-3">
+                <div class="flex items-start gap-3">
+                  <span class="text-red-600 font-bold text-lg leading-none mt-0.5">✓</span>
+                  <div>
+                    <p class="font-semibold text-gray-900 text-sm">Fahrlehrer mit eidg. Fachausweis (Kat. B)</p>
+                    <p class="text-xs text-gray-500">Seit 2011 – staatlich anerkannt</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3">
+                  <span class="text-red-600 font-bold text-lg leading-none mt-0.5">✓</span>
+                  <div>
+                    <p class="font-semibold text-gray-900 text-sm">SFV Zusatzqualifikation Motorradfahrlehrer</p>
+                    <p class="text-xs text-gray-500">Modulabschluss A · Seit 2019</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3">
+                  <span class="text-red-600 font-bold text-lg leading-none mt-0.5">✓</span>
+                  <div>
+                    <p class="font-semibold text-gray-900 text-sm">Dipl. Mentaltrainer</p>
+                    <p class="text-xs text-gray-500">MyMentalCoach Schweiz · Seit 2025</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3">
+                  <span class="text-red-600 font-bold text-lg leading-none mt-0.5">✓</span>
+                  <div>
+                    <p class="font-semibold text-gray-900 text-sm">85% Erfolgsquote · 32'000+ Lektionen</p>
+                    <p class="text-xs text-gray-500">Deutsch & Englisch</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Stats & CTA -->
+            <div class="bg-gradient-to-br from-red-600 to-red-800 p-8 text-white flex flex-col justify-between">
+              <div>
+                <h3 class="text-xl font-bold mb-6">Motorrad Fahrstunden mit Pascal</h3>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                  <div class="bg-white/10 rounded-xl p-4 text-center">
+                    <p class="text-3xl font-black text-yellow-300">85%</p>
+                    <p class="text-sm text-white/80 mt-1">Erfolgsquote</p>
+                  </div>
+                  <div class="bg-white/10 rounded-xl p-4 text-center">
+                    <p class="text-3xl font-black text-yellow-300">15+</p>
+                    <p class="text-sm text-white/80 mt-1">Jahre Erfahrung</p>
+                  </div>
+                  <div class="bg-white/10 rounded-xl p-4 text-center">
+                    <p class="text-3xl font-black text-yellow-300">A1</p>
+                    <p class="text-sm text-white/80 mt-1">bis Kat. A</p>
+                  </div>
+                  <div class="bg-white/10 rounded-xl p-4 text-center">
+                    <p class="text-3xl font-black text-yellow-300">2</p>
+                    <p class="text-sm text-white/80 mt-1">Sprachen</p>
+                  </div>
+                </div>
+                <div class="bg-white/10 rounded-xl p-4 mb-6">
+                  <p class="text-sm text-white/90 italic">"Ich glaube daran, dass Fahren lernen Spass machen kann. Probleme gibt es für mich nicht, nur Lösungen."</p>
+                  <p class="text-xs text-white/60 mt-2">– Pascal Kilchenmann, Motorrad Fahrlehrer Zürich</p>
+                </div>
+              </div>
+              <a
+                href="https://app.simy.ch/booking/availability/driving-team?service=A"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block text-center bg-white text-red-600 hover:bg-yellow-50 font-bold py-3 px-6 rounded-xl transition"
+              >
+                📅 Mit Pascal fahren →
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -705,7 +819,7 @@ const jsonLdScripts = [
       "image": "https://drivingteam.ch/images/categories/motorrad-fahrschule-hero.webp",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Baslerstrasse 145",
+        "streetAddress": "Vulkanstrasse 130b",
         "addressLocality": "Zürich",
         "postalCode": "8048",
         "addressCountry": "CH"
@@ -754,6 +868,37 @@ const jsonLdScripts = [
         { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" },
         { "@type": "ListItem", "position": 2, "name": "Motorrad Fahrschule", "item": "https://drivingteam.ch/motorrad-fahrschule/" },
         { "@type": "ListItem", "position": 3, "name": "Motorrad Fahrschule Zürich", "item": "https://drivingteam.ch/motorrad-fahrschule-zuerich/" }
+      ]
+    })
+  },
+  {
+    type: 'application/ld+json',
+    innerHTML: JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "@id": "https://drivingteam.ch/motorrad-fahrschule-zuerich/#pascal-kilchenmann",
+      "name": "Pascal Kilchenmann",
+      "jobTitle": "Motorrad Fahrlehrer Zürich",
+      "description": "Staatlich geprüfter Fahrlehrer mit eidgenössischem Fachausweis (seit 2011) und SFV Zusatzqualifikation als Motorradfahrlehrer (seit 2019). Über 15 Jahre Erfahrung in Zürich.",
+      "image": "https://drivingteam.ch/images/team/pascal.webp",
+      "url": "https://drivingteam.ch/motorrad-fahrschule-zuerich/",
+      "telephone": "+41444310033",
+      "knowsAbout": ["Motorrad Fahrschule Zürich", "Kategorie A1", "Kategorie A35kW", "Kategorie A", "Motorrad Grundkurs", "Fahrstunden Zürich"],
+      "worksFor": {
+        "@type": "Organization",
+        "name": "Driving Team Fahrschule",
+        "url": "https://drivingteam.ch",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Vulkanstrasse 130b",
+          "addressLocality": "Zürich",
+          "postalCode": "8048",
+          "addressCountry": "CH"
+        }
+      },
+      "hasCredential": [
+        { "@type": "EducationalOccupationalCredential", "name": "Fahrlehrer mit eidgenössischem Fachausweis Kat. B", "dateCreated": "2011" },
+        { "@type": "EducationalOccupationalCredential", "name": "SFV Zusatzqualifikation Motorradfahrlehrer (Modulabschluss A)", "dateCreated": "2019" }
       ]
     })
   },

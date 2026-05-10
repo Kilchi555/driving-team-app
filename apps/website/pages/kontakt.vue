@@ -40,10 +40,19 @@
             <p class="text-xs uppercase tracking-widest text-gray-400 mb-3">Standorte</p>
             <div class="space-y-3 text-sm text-gray-700">
               <div class="flex items-start gap-3">
-                <span class="mt-0.5 text-base">📍</span>
+                <span class="mt-0.5 text-base">🏢</span>
                 <div>
-                  <p class="font-semibold">Zürich</p>
-                  <p class="text-gray-500">Baslerstrasse 145, 8048 Zürich</p>
+                  <p class="font-semibold">Zürich – Büro & Kurslokal</p>
+                  <p class="text-gray-500">Vulkanstrasse 130b, 8048 Zürich</p>
+                  <p class="text-gray-400 text-xs">Swisslife Arena · Trakt T · 4. Stock</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <span class="mt-0.5 text-base">🚗</span>
+                <div>
+                  <p class="font-semibold">Zürich – Treffpunkt Fahrstunden</p>
+                  <p class="text-gray-500">Altstetterplatz 12, 8048 Zürich</p>
+                  <p class="text-gray-400 text-xs">Bahnhof Zürich-Altstetten</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
