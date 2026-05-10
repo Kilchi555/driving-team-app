@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Taxi Fahrschule Zürich | BPT Ausbildung Code 121/122 | Driving Team</Title>
-      <Meta name="description" content="Taxi Fahrschule Zürich ✓ BPT Ausbildung Code 121/122 ✓ Prüfung StVA Zürich ✓ Kat. B Erweiterung auf Taxi ✓ Flexible Termine. Jetzt anmelden!" />
-      <Meta property="og:title" content="Taxi Fahrschule Zürich | BPT Ausbildung Code 121/122 | Driving Team" />
-      <Meta property="og:description" content="BPT zertifizierte Taxi Fahrschule in Zürich – Ausbildung Code 121/122 in 5 Schritten zur Taxiprüfung" />
+      <Title>Taxi Fahrschule Schweiz | BPT Kat. 121 & 122 | Driving Team</Title>
+      <Meta name="description" content="Taxi Fahrschule mit BPT-Zulassung ✓ Code 121/122 ✓ Zürich & Lachen ✓ Flexible Termine ✓ Geprüfte Fahrlehrer. Jetzt Taxi-Fahrstunden anmelden!" />
+      <Meta property="og:title" content="Taxi Fahrschule Schweiz | BPT Kat. 121 & 122 | Driving Team" />
+      <Meta property="og:description" content="BPT-Ausbildung Code 121/122 – Taxi Fahrschule an mehreren Standorten. Professionelle Fahrlehrer, flexible Termine." />
       <Meta property="og:url" content="https://drivingteam.ch/taxi-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/taxi-fahrschule/" />
       
@@ -20,7 +20,7 @@
       <img src="/images/categories/taxi-fahrschule-hero.webp" alt="Taxi Fahrschule – BPT 121 und 122 Ausbildung mit professionellem Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
-          <h1 class="heading-lg text-white mb-6">Taxi Fahrschule Kategorie BPT</h1>
+          <h1 class="heading-lg text-white mb-6">Taxi Fahrschule – BPT Ausbildung Code 121 & 122</h1>
           <p class="text-base xs:text-xl text-white mb-8">Träumst du davon, als Taxifahrer:in auf den Strassen unterwegs zu sein und Menschen sicher an ihr Ziel zu bringen? Dann bist du bei uns genau richtig! Wir bieten dir die massgeschneiderte Ausbildung für deinen Traumberuf als Taxifahrer:in.</p>
           <div class="flex flex-wrap gap-4">
             <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">

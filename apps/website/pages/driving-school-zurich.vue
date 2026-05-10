@@ -478,7 +478,7 @@ const jsonLdScripts = [
       areaServed: ['Zürich-Altstetten', 'Albisrieden', 'Schlieren', 'Höngg', 'Urdorf', 'Dietikon'],
       inLanguage: 'en',
       openingHoursSpecification: [
-        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['http://schema.org/Monday','http://schema.org/Tuesday','http://schema.org/Wednesday','http://schema.org/Thursday','http://schema.org/Friday'], opens: 'T07:00', closes: 'T20:00' },
+        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['http://schema.org/Monday','http://schema.org/Tuesday','http://schema.org/Wednesday','http://schema.org/Thursday','http://schema.org/Friday'], opens: '07:00', closes: '20:00' },
         { '@type': 'OpeningHoursSpecification', dayOfWeek: ['http://schema.org/Saturday'], opens: 'T08:00', closes: 'T17:00' }
       ],
       priceRange: 'CHF 95',

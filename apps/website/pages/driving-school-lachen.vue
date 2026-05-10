@@ -402,8 +402,8 @@ const jsonLdScripts = [
       areaServed: ['Lachen SZ', 'Rapperswil-Jona', 'Pfäffikon SZ', 'Wädenswil', 'Schindellegi', 'Altendorf', 'Siebnen', 'Richterswil', 'Ziegelbrücke'],
       inLanguage: 'en',
       openingHoursSpecification: [
-        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['http://schema.org/Monday','http://schema.org/Tuesday','http://schema.org/Wednesday','http://schema.org/Thursday','http://schema.org/Friday'], opens: 'T07:00', closes: 'T20:00' },
-        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['http://schema.org/Saturday'], opens: 'T08:00', closes: 'T17:00' }
+        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['http://schema.org/Monday','http://schema.org/Tuesday','http://schema.org/Wednesday','http://schema.org/Thursday','http://schema.org/Friday'], opens: '07:00', closes: '20:00' },
+        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['http://schema.org/Saturday'], opens: '08:00', closes: '17:00' }
       ],
       priceRange: 'CHF 95',
       aggregateRating: { '@type': 'AggregateRating', ratingValue: 4.9, reviewCount: 368, bestRating: 5, worstRating: 1 },

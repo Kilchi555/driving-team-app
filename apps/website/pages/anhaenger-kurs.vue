@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Anhänger Kurs Zürich ✓ CHF 190.- | Anhänger Prüfung Vorbereitung | Kat. BE</Title>
-      <Meta name="description" content="Anhänger Kurs Zürich-Altstetten ✓ CHF 190.- ✓ Anhänger Prüfung Vorbereitung ✓ Gruppe & Einzeln ✓ Kategorie BE ✓ Prüfungsrelevante Manöver ✓ Vulkanstrasse 130b. Jetzt anmelden!" />
+      <Title>Anhänger Kurs Zürich | CHF 190.- | Kat. BE | Driving Team</Title>
+      <Meta name="description" content="Anhänger Kurs Zürich-Altstetten ✓ CHF 190.- ✓ Prüfungsvorbereitung Kat. BE ✓ Gruppe & Einzeln ✓ Prüfungsrelevante Manöver ✓ Swisslife Arena. Jetzt anmelden!" />
       <Meta name="keywords" content="Anhänger Kurs Zürich, Anhänger Prüfung Vorbereitung, Anhänger Kurs Altstetten, Kategorie BE Kurs, Anhänger Fahrkurs Zürich, BE Prüfung Zürich, Anhänger Gruppentraining" />
       <Meta property="og:title" content="Anhänger Kurs Zürich | Anhänger Prüfung Vorbereitung | CHF 190.- | Driving Team" />
       <Meta property="og:description" content="Anhänger Kurs in Zürich-Altstetten. Optimale Vorbereitung auf die Anhänger Prüfung (Kat. BE). CHF 190.- pro Person, 3 Stunden, Gruppe & Einzeln möglich." />
