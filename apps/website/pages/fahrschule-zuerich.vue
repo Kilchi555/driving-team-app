@@ -250,8 +250,23 @@
           <a href="/driving-school-zurich/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm" aria-label="Driving School Zurich – English lessons">
             🌍 Driving School Zurich
           </a>
-          <a href="/fahrschule-altstetten/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm" aria-label="Fahrschule Altstetten – Standort Baslerstrasse">
+          <a href="/fahrschule-altstetten/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm" aria-label="Fahrschule Altstetten">
             📍 Fahrschule Altstetten
+          </a>
+          <a href="/fahrschule-schlieren/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">
+            📍 Fahrschule Schlieren
+          </a>
+          <a href="/fahrschule-urdorf/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">
+            📍 Fahrschule Urdorf
+          </a>
+          <a href="/fahrschule-birmensdorf/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">
+            📍 Fahrschule Birmensdorf
+          </a>
+          <a href="/fahrschule-uitikon/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">
+            📍 Fahrschule Uitikon
+          </a>
+          <a href="/fahrschule-wettswil/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">
+            📍 Fahrschule Wettswil
           </a>
         </div>
       </div>

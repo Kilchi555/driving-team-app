@@ -44,6 +44,13 @@
               <a href="/fahrschule-stgallen/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule St.Gallen</a>
               <a href="/fahrschule-dietikon/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Dietikon</a>
               <a href="/fahrschule-spreitenbach/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Aargau</a>
+              <div class="border-t border-gray-100 mx-2 my-1"></div>
+              <p class="px-5 py-1 text-xs text-gray-400 font-semibold uppercase tracking-wider">Zürich Umgebung</p>
+              <a href="/fahrschule-schlieren/" class="block px-5 py-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap text-sm">📍 Schlieren</a>
+              <a href="/fahrschule-urdorf/" class="block px-5 py-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap text-sm">📍 Urdorf</a>
+              <a href="/fahrschule-birmensdorf/" class="block px-5 py-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap text-sm">📍 Birmensdorf</a>
+              <a href="/fahrschule-uitikon/" class="block px-5 py-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap text-sm">📍 Uitikon</a>
+              <a href="/fahrschule-wettswil/" class="block px-5 py-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap text-sm">📍 Wettswil</a>
             </div>
           </div>
 
@@ -229,6 +236,12 @@
             <a href="/fahrschule-stgallen/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 St.Gallen</a>
             <a href="/fahrschule-dietikon/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Dietikon</a>
             <a href="/fahrschule-spreitenbach/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Aargau</a>
+            <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider pt-2 pb-1">Zürich Umgebung</p>
+            <a href="/fahrschule-schlieren/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Schlieren</a>
+            <a href="/fahrschule-urdorf/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Urdorf</a>
+            <a href="/fahrschule-birmensdorf/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Birmensdorf</a>
+            <a href="/fahrschule-uitikon/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Uitikon</a>
+            <a href="/fahrschule-wettswil/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Wettswil</a>
           </div>
 
           <!-- Kategorie -->
@@ -433,6 +446,11 @@
               <li><a href="/fahrschule-spreitenbach/" class="hover:text-white transition">Fahrschule Aargau</a></li>
               <li><a href="/fahrschule-stgallen/" class="hover:text-white transition">Fahrschule St.Gallen</a></li>
               <li><a href="/fahrschule-dietikon/" class="hover:text-white transition">Fahrschule Dietikon</a></li>
+              <li><a href="/fahrschule-schlieren/" class="hover:text-white transition">Fahrschule Schlieren</a></li>
+              <li><a href="/fahrschule-urdorf/" class="hover:text-white transition">Fahrschule Urdorf</a></li>
+              <li><a href="/fahrschule-birmensdorf/" class="hover:text-white transition">Fahrschule Birmensdorf</a></li>
+              <li><a href="/fahrschule-uitikon/" class="hover:text-white transition">Fahrschule Uitikon</a></li>
+              <li><a href="/fahrschule-wettswil/" class="hover:text-white transition">Fahrschule Wettswil</a></li>
             </ul>
           </div>
 
