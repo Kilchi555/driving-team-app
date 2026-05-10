@@ -144,7 +144,11 @@ async function handleSubscriptionUpsert(
 
   // ── Resolve plan from metadata ──────────────────────────────────────────
   const plan = (sub.metadata?.plan || resolvePlanFromPrices(sub)) as SubscriptionPlan
-  const currentPeriodEnd = new Date((sub.current_period_end as number) * 1000).toISOString()
+
+  const periodEndTs = (sub as any).current_period_end ?? (sub as any).billing_cycle_anchor ?? null
+  const currentPeriodEnd = periodEndTs != null && Number.isFinite(Number(periodEndTs))
+    ? new Date(Number(periodEndTs) * 1000).toISOString()
+    : null
 
   // ── Resolve add-ons from subscription items ─────────────────────────────
   const addonSeats = parseAddonSeats(sub)
@@ -154,8 +158,9 @@ async function handleSubscriptionUpsert(
     sub.metadata?.addon_affiliate === 'true'
 
   // cancel_at from Stripe (if scheduled)
-  const cancelAt = sub.cancel_at
-    ? new Date((sub.cancel_at as number) * 1000).toISOString()
+  const cancelAtTs = (sub as any).cancel_at ?? null
+  const cancelAt = cancelAtTs != null && Number.isFinite(Number(cancelAtTs))
+    ? new Date(Number(cancelAtTs) * 1000).toISOString()
     : null
 
   // ── Update tenant ───────────────────────────────────────────────────────

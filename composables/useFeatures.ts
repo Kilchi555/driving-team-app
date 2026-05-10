@@ -73,28 +73,30 @@ export function useFeatures() {
           // Parse JSON metadata from setting_value
           const metadata = JSON.parse(row.setting_value)
           
-          // Only include features with valid metadata (displayName and description)
+          // Resolve enabled state regardless of whether displayName/description exist
+          // (syncFeatureFlags writes {enabled: bool} only; the definitions UI needs displayName)
+          let isEnabled = false
+          if (typeof metadata.enabled === 'boolean') {
+            isEnabled = metadata.enabled
+          } else if (metadata.displayName) {
+            // Legacy: has displayName but no enabled field → assume enabled
+            isEnabled = true
+          }
+
+          // Always populate the flags map so isEnabled() works for nav gating
+          flags[row.setting_key] = isEnabled
+
+          // Only add to definitions list when full metadata is present (for feature toggle UI)
           if (metadata.displayName && metadata.description) {
-            // Handle different JSON structures - some have 'enabled' field, others don't
-            let isEnabled = false
-            if (typeof metadata.enabled === 'boolean') {
-              isEnabled = metadata.enabled
-            } else if (metadata.displayName && !metadata.enabled) {
-              // If displayName exists but no enabled field, assume it's enabled (for backwards compatibility)
-              isEnabled = true
-            }
-            
             // Check if this is a driving_school specific feature and filter by business_type
             const drivingSchoolOnlyFeatures = ['categories_enabled', 'exams_enabled', 'experts_enabled', 'examiners_enabled']
             if (drivingSchoolOnlyFeatures.includes(row.setting_key)) {
-              // Only show driving school specific features for driving_school business_type
               if (tenantData?.business_type !== 'driving_school') {
                 logger.debug('🚫 Hiding driving school feature', row.setting_key, 'for business_type:', tenantData?.business_type)
-                return // Skip this feature
+                return
               }
             }
-            
-            // courses_enabled is available for all business types
+
             if (row.setting_key === 'courses_enabled') {
               logger.debug('✅ Processing courses_enabled feature:', {
                 tenantBusinessType: tenantData?.business_type,
@@ -104,7 +106,6 @@ export function useFeatures() {
               })
             }
 
-            
             definitions.push({
               key: row.setting_key,
               displayName: metadata.displayName,
@@ -114,10 +115,6 @@ export function useFeatures() {
               sortOrder: metadata.sortOrder || 0,
               isEnabled
             })
-
-            flags[row.setting_key] = isEnabled
-          } else {
-            console.warn(`Feature ${row.setting_key} has incomplete metadata:`, metadata)
           }
         } catch (e) {
           // Skip invalid JSON entries completely

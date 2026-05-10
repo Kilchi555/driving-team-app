@@ -19,9 +19,15 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'Stripe not configured' })
   }
 
+  const MAX_ADDON_SEATS = 10
+
   const body = await readBody<CheckoutBody>(event)
   const plan = body?.plan || 'starter'
   const addons = body?.addons || {}
+  // Enforce maximum 10 addon seats server-side to prevent manipulation
+  if (addons.seats && addons.seats > MAX_ADDON_SEATS) {
+    addons.seats = MAX_ADDON_SEATS
+  }
   const withWallee = body?.withWallee !== false // default: true
   const staffToDeactivate = Array.isArray(body?.staffToDeactivate) ? body.staffToDeactivate : []
 

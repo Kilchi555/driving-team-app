@@ -117,8 +117,10 @@ export default defineEventHandler(async (event) => {
 
     if (tenantSub) {
       const { getPlanById } = await import('~/utils/planFeatures')
-      const planDef = getPlanById(tenantSub.subscription_plan || 'trial')
-      const includedSeats = planDef?.includedSeats ?? null  // null = unlimited
+      const plan = tenantSub.subscription_plan || 'trial'
+      const planDef = getPlanById(plan)
+      // Trial gets 3 seats (enough to test multi-staff), paid plans use their definition
+      const includedSeats = plan === 'trial' ? 3 : (planDef?.includedSeats ?? null)
 
       if (includedSeats !== null) {
         const totalAllowedSeats = includedSeats + (tenantSub.addon_seats || 0)

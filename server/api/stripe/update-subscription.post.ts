@@ -61,8 +61,9 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Resolve desired state ────────────────────────────────────────────────────
+  const MAX_ADDON_SEATS = 10
   const desiredPlan = (body.plan || tenant.subscription_plan || 'starter') as SubscriptionPlan
-  const desiredSeats = body.addons?.seats ?? tenant.addon_seats ?? 0
+  const desiredSeats = Math.min(MAX_ADDON_SEATS, body.addons?.seats ?? tenant.addon_seats ?? 0)
   const desiredCourses = body.addons?.courses ?? tenant.addon_courses_enabled ?? false
   const desiredAffiliate = body.addons?.affiliate ?? tenant.addon_affiliate_enabled ?? false
 
