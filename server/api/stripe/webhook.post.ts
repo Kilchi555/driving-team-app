@@ -107,7 +107,11 @@ export default defineEventHandler(async (event) => {
             const tenantName = tenant?.name || tenantId
             const tenantEmail = tenant?.contact_email || '–'
 
-            await sendEmail({
+            const attemptCount = (invoice as any).attempt_count ?? 1
+            const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
+
+            // Notify Simy super-admin
+            sendEmail({
               to: 'info@simy.ch',
               subject: `❌ Zahlung fehlgeschlagen – ${tenantName}`,
               html: `
@@ -119,15 +123,58 @@ export default defineEventHandler(async (event) => {
                   <tr><td><strong>Betrag</strong></td><td>CHF ${amountCHF}</td></tr>
                   <tr><td><strong>Plan</strong></td><td>${tenant?.subscription_plan || '–'}</td></tr>
                   <tr><td><strong>Zeitpunkt</strong></td><td>${new Date(failedAt).toLocaleString('de-CH')}</td></tr>
-                  <tr><td><strong>Versuch</strong></td><td>${(invoice as any).attempt_count ?? 1} / 4</td></tr>
+                  <tr><td><strong>Versuch</strong></td><td>${attemptCount} / 4</td></tr>
                 </table>
                 <p style="margin-top:16px">
-                  <a href="https://dashboard.stripe.com/invoices/${invoice.id}" style="color:#2563eb">
-                    Invoice in Stripe öffnen →
-                  </a>
-                </p>
-              `
-            }).catch(e => console.error('Failed to send payment-failed email:', e))
+                  <a href="https://dashboard.stripe.com/invoices/${invoice.id}" style="color:#2563eb">Invoice in Stripe öffnen →</a>
+                </p>`
+            }).catch(e => console.error('Failed to send payment-failed simy email:', e))
+
+            // Notify the tenant itself
+            if (tenant?.contact_email) {
+              sendEmail({
+                to: tenant.contact_email,
+                senderName: 'Simy',
+                subject: '❌ Zahlung fehlgeschlagen – Bitte Zahlungsmethode aktualisieren',
+                html: `<!DOCTYPE html>
+<html lang="de"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px">
+        <tr><td style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08)">
+          <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);padding:32px;border-radius:12px 12px 0 0;text-align:center">
+            <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700">Zahlung fehlgeschlagen</h1>
+            <p style="margin:8px 0 0;color:rgba(255,255,255,.8);font-size:14px">Betrag: CHF ${amountCHF} · Versuch ${attemptCount} von 4</p>
+          </div>
+          <div style="padding:32px">
+            <p style="color:#111827;font-size:15px;margin:0 0 12px">Hallo <strong>${tenantName}</strong>,</p>
+            <p style="color:#4b5563;font-size:15px;line-height:1.6;margin:0 0 16px">
+              Leider konnte deine Simy-Abonnementzahlung von <strong>CHF ${amountCHF}</strong> nicht verarbeitet werden.
+            </p>
+            <p style="color:#4b5563;font-size:15px;line-height:1.6;margin:0 0 16px">
+              Stripe wird automatisch weitere ${4 - attemptCount} Versuche unternehmen. Um Unterbrechungen zu vermeiden, aktualisiere bitte jetzt deine Zahlungsmethode.
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0"><tr>
+              <td align="center" style="padding:20px 0">
+                <a href="${baseUrl}/admin/profile?tab=payments"
+                   style="display:inline-block;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;text-decoration:none;padding:14px 40px;border-radius:8px;font-size:15px;font-weight:600">
+                  Zahlungsmethode aktualisieren →
+                </a>
+              </td>
+            </tr></table>
+            <p style="color:#6b7280;font-size:13px;margin:0">Fragen? <a href="mailto:support@simy.ch" style="color:#6000BD">support@simy.ch</a></p>
+          </div>
+          <div style="background:#f9fafb;padding:14px 28px;text-align:center;border-top:1px solid #e5e7eb">
+            <p style="margin:0;font-size:12px;color:#9ca3af">Simy.ch · support@simy.ch</p>
+          </div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+              }).catch(e => console.error('Failed to send payment-failed tenant email:', e))
+            }
 
             console.warn(`⚠️ Payment failed for tenant ${tenantId} (${tenantName}) – marked as past_due`)
           }

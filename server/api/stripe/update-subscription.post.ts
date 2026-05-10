@@ -1,6 +1,7 @@
 import Stripe from 'stripe'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { PLANS, ADDONS, type SubscriptionPlan } from '~/utils/planFeatures'
+import { sendEmail } from '~/server/utils/email'
 
 interface UpdateBody {
   plan?: SubscriptionPlan
@@ -40,7 +41,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('stripe_subscription_id, stripe_customer_id, subscription_plan, addon_seats, addon_courses_enabled, addon_affiliate_enabled')
+    .select('stripe_subscription_id, stripe_customer_id, subscription_plan, addon_seats, addon_courses_enabled, addon_affiliate_enabled, name, contact_email')
     .eq('id', userRow.tenant_id)
     .single()
 
@@ -175,6 +176,84 @@ export default defineEventHandler(async (event) => {
     .eq('id', userRow.tenant_id)
 
   console.log(`✅ Subscription updated for tenant ${userRow.tenant_id}: plan=${desiredPlan}, seats=+${desiredSeats}`)
+
+  // Send plan change confirmation to tenant
+  if (tenant?.contact_email) {
+    const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
+    const tenantName = tenant.name || 'Fahrschule'
+    const planName = PLANS.find(p => p.id === desiredPlan)?.name ?? desiredPlan
+    const oldPlanName = PLANS.find(p => p.id === tenant.subscription_plan)?.name ?? tenant.subscription_plan ?? '–'
+    const isUpgrade = PLANS.findIndex(p => p.id === desiredPlan) > PLANS.findIndex(p => p.id === tenant.subscription_plan)
+    const changeLabel = isUpgrade ? 'Upgrade' : 'Änderung'
+    const nextBillingStr = new Date(currentPeriodEnd).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' })
+
+    const addonsText = [
+      desiredSeats > 0 ? `${desiredSeats} Extra-Seat${desiredSeats !== 1 ? 's' : ''}` : '',
+      desiredCourses ? 'Kursbuchungsseite' : '',
+      desiredAffiliate ? 'Affiliate-System' : '',
+    ].filter(Boolean).join(', ')
+
+    sendEmail({
+      to: tenant.contact_email,
+      senderName: 'Simy',
+      subject: `Abonnement ${changeLabel} – ${oldPlanName} → ${planName}`,
+      html: `<!DOCTYPE html>
+<html lang="de"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px">
+        <tr><td style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08)">
+          <div style="background:linear-gradient(135deg,#6000BD,#8B2FE8);padding:32px;border-radius:12px 12px 0 0;text-align:center">
+            <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700">Abonnement ${changeLabel}</h1>
+            <p style="margin:8px 0 0;color:rgba(255,255,255,.8);font-size:14px">${oldPlanName} → ${planName}</p>
+          </div>
+          <div style="padding:32px">
+            <p style="color:#111827;font-size:15px;margin:0 0 12px">Hallo <strong>${tenantName}</strong>,</p>
+            <p style="color:#4b5563;font-size:15px;line-height:1.6;margin:0 0 16px">
+              Dein Simy-Abonnement wurde erfolgreich aktualisiert.
+            </p>
+            <div style="background:#f5f3ff;border-radius:8px;padding:18px 20px;margin:20px 0">
+              <table width="100%" cellpadding="4">
+                <tr>
+                  <td style="font-size:13px;color:#6b7280">Neuer Plan</td>
+                  <td style="font-size:15px;font-weight:700;color:#6000BD;text-align:right">${planName}</td>
+                </tr>
+                ${addonsText ? `<tr>
+                  <td style="font-size:13px;color:#6b7280">Add-ons</td>
+                  <td style="font-size:14px;color:#374151;text-align:right">${addonsText}</td>
+                </tr>` : ''}
+                <tr>
+                  <td style="font-size:13px;color:#6b7280">Nächste Abrechnung</td>
+                  <td style="font-size:14px;color:#374151;text-align:right">${nextBillingStr}</td>
+                </tr>
+              </table>
+            </div>
+            <p style="color:#4b5563;font-size:14px;line-height:1.6;margin:0 0 24px">
+              Die anteilsmässige Verrechnung für die Planänderung erscheint auf deiner nächsten Rechnung.
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0"><tr>
+              <td align="center" style="padding:0 0 8px">
+                <a href="${baseUrl}/admin"
+                   style="display:inline-block;background:linear-gradient(135deg,#6000BD,#8B2FE8);color:#fff;text-decoration:none;padding:14px 40px;border-radius:8px;font-size:15px;font-weight:600">
+                  Zum Admin-Dashboard →
+                </a>
+              </td>
+            </tr></table>
+            <p style="color:#6b7280;font-size:13px;text-align:center;margin:16px 0 0">
+              Fragen? <a href="mailto:support@simy.ch" style="color:#6000BD">support@simy.ch</a>
+            </p>
+          </div>
+          <div style="background:#f9fafb;padding:14px 28px;text-align:center;border-top:1px solid #e5e7eb">
+            <p style="margin:0;font-size:12px;color:#9ca3af">Simy.ch · support@simy.ch</p>
+          </div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+    }).catch(e => console.error('Failed to send plan-change email:', e))
+  }
 
   return {
     success: true,
