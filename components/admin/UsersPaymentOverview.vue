@@ -485,7 +485,7 @@ const fetchUsersSummary = async () => {
 
 
 const navigateToUser = (userId: string) => {
-  // Navigiere zur Zahlungsdetails-Seite des Benutzers
+  if (!userId || userId === 'null') return
   navigateTo(`/admin/payments/${userId}`)
 }
 

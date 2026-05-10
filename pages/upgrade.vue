@@ -4,7 +4,7 @@
     <!-- ── Nav ──────────────────────────────────────────────────────────────── -->
     <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b" style="border-color: rgba(var(--brand-rgb), 0.12)">
       <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <img :src="logoPreview || '/simy-logo.png'" alt="Simy" class="h-8 max-w-[140px] object-contain" />
+        <img :src="logoPreview || '/simy-logo.png'" alt="Simy" class="h-8 max-w-[140px] object-contain" :style="{ filter: logoColorFilter }" />
         <a href="/login"
           class="text-sm font-medium transition-colors hover:opacity-80"
           style="color: var(--brand-primary);">
@@ -23,7 +23,7 @@
 
       <div class="relative max-w-3xl mx-auto text-center">
         <!-- Trial / Status Banner -->
-        <div v-if="trialStatus.status !== 'active'" class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium mb-8"
+        <div v-if="trialStatus?.status && trialStatus.status !== 'active'" class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium mb-8"
           :class="trialStatus.status === 'expired'
             ? 'bg-red-50 text-red-700 border border-red-200'
             : 'bg-amber-50 text-amber-700 border border-amber-200'">
@@ -53,7 +53,7 @@
         <p class="text-xs font-bold uppercase tracking-widest text-center mb-8" style="color: var(--brand-primary); opacity: 0.6;">
           1 — Plan wählen
         </p>
-        <div class="grid md:grid-cols-3 gap-5">
+        <div class="grid md:grid-cols-3 gap-5 pt-5">
           <div
             v-for="plan in plans"
             :key="plan.id"
@@ -74,10 +74,8 @@
           >
             <!-- Popular badge -->
             <div v-if="plan.highlighted"
-              class="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wide"
-              :style="selectedPlan === plan.id
-                ? { background: `rgba(255,255,255,0.25)`, color: 'white' }
-                : { background: `linear-gradient(135deg, var(--brand-primary), var(--brand-accent))`, color: 'white' }">
+              class="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wide whitespace-nowrap"
+              :style="{ background: 'rgba(255,255,255,0.92)', color: primaryColor }">
               ✦ Am Beliebtesten
             </div>
 
@@ -157,27 +155,44 @@
             :style="addonSeats > 0 ? { borderColor: primaryColor, boxShadow: `0 10px 25px rgba(var(--brand-rgb), 0.12)` } : {}">
             <div class="flex items-start justify-between mb-4">
               <div>
-                <p class="font-bold text-gray-900 text-sm">Fahrlehrer Seat</p>
-                <p class="text-xs text-gray-400 mt-0.5">Zusätzlicher Account</p>
+                <p class="font-bold text-gray-900 text-sm">Fahrlehrer Seats</p>
+                <p class="text-xs text-gray-400 mt-0.5">
+                  <template v-if="selectedPlan !== 'enterprise'">
+                    {{ includedSeatsForPlan }} im Plan inkl.
+                    <template v-if="addonSeats > 0"> · {{ addonSeats }} extra</template>
+                  </template>
+                  <template v-else>Unbegrenzt inklusive</template>
+                </p>
               </div>
               <span class="text-xs font-bold px-2.5 py-1 rounded-lg"
                 style="background: rgba(var(--brand-rgb), 0.08); color: var(--brand-primary);">
-                {{ pricesLoading ? '…' : pricesAvailable ? formatChf(addonPriceAmount('seats')) : '–' }}/Seat
+                {{ pricesLoading ? '…' : pricesAvailable ? `+${formatChf(addonPriceAmount('seats'))}/extra` : '–' }}
               </span>
             </div>
             <div v-if="selectedPlan === 'enterprise'" class="text-xs text-gray-400 italic text-center py-2">
-              Unbegrenzt im Enterprise inklusive
+              ∞ Fahrlehrer inklusive
             </div>
-            <div v-else class="flex items-center justify-center gap-4">
-              <button @click="addonSeats = Math.max(0, addonSeats - 1)"
-                class="w-9 h-9 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-500 font-bold transition-all text-lg hover:border-current"
-                :style="{ '--hover-color': primaryColor }"
-                @mouseenter="(e) => { (e.currentTarget as HTMLElement).style.borderColor = primaryColor; (e.currentTarget as HTMLElement).style.color = primaryColor }"
-                @mouseleave="(e) => { (e.currentTarget as HTMLElement).style.borderColor = ''; (e.currentTarget as HTMLElement).style.color = '' }">−</button>
-              <span class="text-2xl font-black w-8 text-center" style="color: var(--brand-primary)">{{ addonSeats }}</span>
-              <button @click="addonSeats++"
-                class="w-9 h-9 rounded-full border-2 flex items-center justify-center font-bold transition-all text-lg text-white"
-                :style="{ background: primaryColor, borderColor: primaryColor }">+</button>
+            <div v-else class="flex flex-col items-center gap-2">
+              <div class="flex items-center justify-center gap-4">
+                <button
+                  @click="addonSeats = Math.max(0, addonSeats - 1)"
+                  :disabled="addonSeats === 0"
+                  class="w-9 h-9 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-500 font-bold transition-all text-lg disabled:opacity-30 disabled:cursor-not-allowed"
+                  @mouseenter="(e) => { if (addonSeats > 0) { (e.currentTarget as HTMLElement).style.borderColor = primaryColor; (e.currentTarget as HTMLElement).style.color = primaryColor } }"
+                  @mouseleave="(e) => { (e.currentTarget as HTMLElement).style.borderColor = ''; (e.currentTarget as HTMLElement).style.color = '' }">−</button>
+                <span class="text-2xl font-black w-8 text-center" style="color: var(--brand-primary)">{{ totalSeats }}</span>
+                <button @click="addonSeats++"
+                  class="w-9 h-9 rounded-full border-2 flex items-center justify-center font-bold transition-all text-lg text-white"
+                  :style="{ background: primaryColor, borderColor: primaryColor }">+</button>
+              </div>
+              <p class="text-xs text-center" :class="addonSeats > 0 ? 'text-gray-500' : 'text-gray-300'">
+                <template v-if="addonSeats > 0">
+                  {{ includedSeatsForPlan }} inkl. + {{ addonSeats }} × {{ pricesAvailable ? formatChf(addonPriceAmount('seats')) : '–' }}/Mt.
+                </template>
+                <template v-else>
+                  {{ includedSeatsForPlan }} Seat{{ (includedSeatsForPlan ?? 1) !== 1 ? 's' : '' }} im Plan enthalten
+                </template>
+              </p>
             </div>
           </div>
 
@@ -387,7 +402,7 @@
                 </svg>
                 Weiterleitung zu Stripe…
               </span>
-              <span v-else>Jetzt starten →</span>
+              <span v-else>Jetzt Abo buchen →</span>
             </button>
             <p v-if="!isLoggedIn" class="text-center text-xs text-gray-400 mt-3">
               Bereits ein Konto? <a href="/login" class="underline">Einloggen</a>
@@ -523,7 +538,7 @@
 
     <!-- ── Footer ────────────────────────────────────────────────────────────── -->
     <footer class="border-t border-gray-100 py-8 px-6 text-center">
-      <img :src="logoPreview || '/simy-logo.png'" alt="Simy" class="h-7 mx-auto mb-4 opacity-40" />
+      <img :src="logoPreview || '/simy-logo.png'" alt="Simy" class="h-7 mx-auto mb-4 opacity-40" :style="{ filter: logoColorFilter }" />
       <p class="text-xs text-gray-400 mb-4">
         Alle Preise in CHF exkl. MwSt. · Zahlungsabwicklung via Stripe · Jederzeit kündbar
       </p>
@@ -550,6 +565,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useLazyFetch, useHead, useRoute } from '#imports'
 import { PLANS } from '~/utils/planFeatures'
 import { useTrialFeatures } from '~/composables/useTrialFeatures'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 import type { PricingResponse } from '~/server/api/stripe/prices.get'
 
 definePageMeta({ layout: 'minimal' })
@@ -564,12 +580,43 @@ const secondaryColor = ref(DEFAULT_SECONDARY)
 const accentColor = ref(DEFAULT_ACCENT)
 const logoPreview = ref<string | null>(null)
 
+const { getLogo } = useTenantBranding()
+
 function hexToRgb(hex: string) {
   const r = parseInt(hex.slice(1, 3), 16)
   const g = parseInt(hex.slice(3, 5), 16)
   const b = parseInt(hex.slice(5, 7), 16)
   return { r, g, b }
 }
+
+function hexToHsl(hex: string): [number, number, number] {
+  const r = parseInt(hex.slice(1, 3), 16) / 255
+  const g = parseInt(hex.slice(3, 5), 16) / 255
+  const b = parseInt(hex.slice(5, 7), 16) / 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b)
+  const l = (max + min) / 2
+  let h = 0, s = 0
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6
+    else if (max === g) h = ((b - r) / d + 2) / 6
+    else h = ((r - g) / d + 4) / 6
+  }
+  return [h * 360, s * 100, l * 100]
+}
+
+// CSS filter to recolor the Simy logo from its default purple to the tenant's primary color
+const logoColorFilter = computed(() => {
+  if (logoPreview.value) return 'none'
+  if (primaryColor.value === DEFAULT_PRIMARY) return 'none'
+  const [tH, tS, tL] = hexToHsl(primaryColor.value)
+  const [oH, oS, oL] = hexToHsl(DEFAULT_PRIMARY)
+  const hRot = Math.round(tH - oH)
+  const sat  = Math.round(oS > 0 ? (tS / oS) * 100 : 100)
+  const bri  = Math.round(oL > 0 ? (tL / oL) * 100 : 100)
+  return `hue-rotate(${hRot}deg) saturate(${sat}%) brightness(${bri}%)`
+})
 
 const brandCssVars = computed(() => {
   const rgb = hexToRgb(primaryColor.value)
@@ -587,13 +634,36 @@ const route = useRoute()
 
 onMounted(() => {
   const q = route.query
-  if (q.primary_color) primaryColor.value = decodeURIComponent(String(q.primary_color))
-  if (q.secondary_color) secondaryColor.value = decodeURIComponent(String(q.secondary_color))
-  if (q.accent_color) accentColor.value = decodeURIComponent(String(q.accent_color))
+  if (q.primary_color) {
+    primaryColor.value = decodeURIComponent(String(q.primary_color))
+  } else {
+    // Fall back to tenant branding already applied by the branding plugin
+    const css = getComputedStyle(document.documentElement)
+    const p = css.getPropertyValue('--color-primary').trim()
+    if (p) primaryColor.value = p
+  }
+  if (q.secondary_color) {
+    secondaryColor.value = decodeURIComponent(String(q.secondary_color))
+  } else {
+    const css = getComputedStyle(document.documentElement)
+    const s = css.getPropertyValue('--color-secondary').trim()
+    if (s) secondaryColor.value = s
+  }
+  if (q.accent_color) {
+    accentColor.value = decodeURIComponent(String(q.accent_color))
+  } else {
+    const css = getComputedStyle(document.documentElement)
+    const a = css.getPropertyValue('--color-accent').trim()
+    if (a) accentColor.value = a
+  }
   const stored = sessionStorage.getItem('simy_preview_logo')
   if (stored) {
     logoPreview.value = stored
     sessionStorage.removeItem('simy_preview_logo')
+  } else {
+    // Use tenant logo already loaded by the branding plugin
+    const tenantLogo = getLogo('header') || getLogo('square')
+    if (tenantLogo) logoPreview.value = tenantLogo
   }
 })
 
@@ -608,12 +678,26 @@ const staffList = ref<StaffMember[]>([])
 // IDs of staff to KEEP active — initialized with all staff
 const keepActiveIds = ref<Set<string>>(new Set())
 
+// These refs must be declared BEFORE any computed that references them
+const plans = PLANS
+const selectedPlan = ref<string>('starter')
+const addonSeats = ref(0)
+const addonCourses = ref(false)
+const addonAffiliate = ref(false)
+const withWallee = ref(true)
+const loading = ref(false)
+const error = ref<string | null>(null)
+
+// Seats already included in the selected plan (no extra cost)
+const includedSeatsForPlan = computed(() => {
+  if (selectedPlan.value === 'enterprise') return null // unlimited
+  return PLANS.find(p => p.id === selectedPlan.value)?.includedSeats ?? 1
+})
+
 // Total seats available for the chosen plan + addons
 const totalSeats = computed(() => {
   if (selectedPlan.value === 'enterprise') return Infinity
-  const planDef = PLANS.find(p => p.id === selectedPlan.value)
-  const included = planDef?.includedSeats ?? 1
-  return included + addonSeats.value
+  return (includedSeatsForPlan.value ?? 1) + addonSeats.value
 })
 
 // Staff that will be deactivated (those NOT in keepActiveIds)
@@ -663,7 +747,11 @@ onMounted(async () => {
     const { getSupabase } = await import('~/utils/supabase')
     const supabase = getSupabase()
     const { data: { session } } = await supabase.auth.getSession()
-    isLoggedIn.value = !!session?.user
+
+    // Also check Pinia store as fallback (covers HTTP-only cookie sessions on admin redirect)
+    const { useAuthStore } = await import('~/stores/auth')
+    const authStore = useAuthStore()
+    isLoggedIn.value = !!session?.user || authStore.isLoggedIn
 
     if (session?.access_token) {
       try {
@@ -678,23 +766,28 @@ onMounted(async () => {
           courses:    prefill.hasCourseSessions,
           affiliate:  prefill.hasAffiliateCodes,
         }
+
+        // Auto-select plan based on active staff count
+        const count = prefill.activeStaffCount
+        if (count <= 1) {
+          selectedPlan.value = 'starter'
+          addonSeats.value = 0
+        } else if (count <= 5) {
+          selectedPlan.value = 'professional'
+          addonSeats.value = 0
+        } else {
+          // Enterprise is cheaper than stacking many addon seats
+          selectedPlan.value = 'enterprise'
+          addonSeats.value = 0
+        }
+
         // Pre-select add-ons based on current usage
         if (prefill.hasCourseSessions)  addonCourses.value   = true
         if (prefill.hasAffiliateCodes)  addonAffiliate.value = true
-        // addonSeats pre-fill happens when plan is selected (depends on includedSeats)
       } catch { /* non-critical */ }
     }
   } catch { /* not critical */ }
 })
-
-const plans = PLANS
-const selectedPlan = ref<string>('starter')
-const addonSeats = ref(0)
-const addonCourses = ref(false)
-const addonAffiliate = ref(false)
-const withWallee = ref(true)
-const loading = ref(false)
-const error = ref<string | null>(null)
 
 const { data: pricing, pending: pricesLoading, error: pricesError } = useLazyFetch<PricingResponse>('/api/stripe/prices')
 

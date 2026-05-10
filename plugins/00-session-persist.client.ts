@@ -37,7 +37,10 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       authStore.user = session.user as any
       authStore.userProfile = session.profile
       authStore.userRole = session.profile.role
-      
+      if (session.trialInfo) {
+        authStore.tenantTrialInfo = session.trialInfo
+      }
+
       // Set isInitialized immediately for HMR recovery
       authStore.isInitialized = true
       return true
@@ -73,10 +76,18 @@ export default defineNuxtPlugin(async (nuxtApp) => {
           authStore.userProfile = response.profile
           authStore.userRole = response.profile.role || ''
 
-          // Save to localStorage for HMR recovery
+          // Fetch trial info and persist it alongside the session
+          if (response.profile.tenant) {
+            authStore.tenantTrialInfo = response.profile.tenant
+          } else if (response.profile.tenant_id) {
+            await authStore.loadTenantTrialInfo()
+          }
+
+          // Save to localStorage for HMR recovery (including trial info)
           const session: PersistentSession = {
             user: response.user,
             profile: response.profile,
+            trialInfo: authStore.tenantTrialInfo ?? undefined,
             timestamp: Date.now(),
             expiresIn: 24 * 60 * 60 * 1000 // 24 hours
           }

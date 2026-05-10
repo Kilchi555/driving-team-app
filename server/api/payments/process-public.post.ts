@@ -31,6 +31,7 @@ const ProcessPublicPaymentSchema = z.object({
   customerName:  z.string().min(1).max(200).trim(),
   courseId:      z.string().uuid(),
   tenantId:      z.string().uuid(),
+  userId:        z.string().uuid().optional(), // existing user – set immediately so payment is never orphaned
   metadata:      z.record(z.unknown()).optional(),
 })
 
@@ -52,6 +53,7 @@ export default defineEventHandler(async (event) => {
       customerName,
       courseId,
       tenantId,
+      userId: passedUserId,
       metadata = {}
     } = parseResult.data
 
@@ -158,14 +160,19 @@ export default defineEventHandler(async (event) => {
     // ✅ STEP 0: Create Payment record FIRST - so we have the ID for merchantReference fallback
     logger.debug('💾 Creating payment record in database FIRST...')
     
-    // Get the actual user_id from the enrollment (enrollment has user_id from guest user creation)
-    const { data: enrollmentUser } = await supabase
-      .from('course_registrations')
-      .select('user_id')
-      .eq('id', enrollmentId)
-      .single()
-    
-    const actualUserId = enrollmentUser?.user_id || null
+    // Resolve user_id priority:
+    // 1. passedUserId from caller (existing user, passed via schema)
+    // 2. user_id from existing enrollment (legacy flow)
+    // 3. null → will be set by webhook after payment confirmation (new users)
+    let actualUserId: string | null = passedUserId || null
+    if (!actualUserId && enrollmentId) {
+      const { data: enrollmentUser } = await supabase
+        .from('course_registrations')
+        .select('user_id')
+        .eq('id', enrollmentId)
+        .single()
+      actualUserId = enrollmentUser?.user_id || null
+    }
     
     // Build payment record - only include columns that exist in the table
     // ✅ IMPORTANT: Only store primitive values in metadata to avoid circular references

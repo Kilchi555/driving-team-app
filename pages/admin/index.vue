@@ -11,6 +11,9 @@
 
     <div v-else class="p-4 sm:p-6 space-y-6 max-w-[1600px] mx-auto">
 
+      <!-- ═══ ONBOARDING CHECKLIST ═══ -->
+      <AdminOnboardingChecklist />
+
       <!-- ═══ PENDENZEN ═══ -->
       <AdminPendencies />
 
@@ -712,7 +715,8 @@ const getCategoryColor = (categoryCode: string): string => {
 // Load 12 months revenue data for modal
 const load12MonthsRevenue = async () => {
   try {
-    if (!currentUser.value?.tenant_id) {
+    const tenantId = authStore.userProfile?.tenant_id || currentUser.value?.tenant_id
+    if (!tenantId) {
       console.warn('No tenant ID found for 12 months revenue data')
       return
     }
@@ -735,6 +739,7 @@ const load12MonthsRevenue = async () => {
 }
 
 const navigateToStudentPayments = (userId: string) => {
+  if (!userId || userId === 'null') return
   navigateTo(`/admin/payments/${userId}`)
 }
 

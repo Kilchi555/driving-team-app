@@ -22,6 +22,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         const session: PersistentSession = {
           user: newUser,
           profile: authStore.userProfile,
+          trialInfo: authStore.tenantTrialInfo ?? undefined,
           timestamp: Date.now(),
           expiresIn: 24 * 60 * 60 * 1000 // 24 hours
         }

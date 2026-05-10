@@ -256,6 +256,7 @@ async function loadPendingStudents(supabase: any, tenantId: string) {
 
     pendingPayments.forEach(payment => {
       const userId = payment.user_id
+      if (!userId) return // skip orphaned payments without a user
       const existing = studentMap.get(userId)
       const userInfo = userNames[userId] || { first_name: '', last_name: '', email: '' }
 

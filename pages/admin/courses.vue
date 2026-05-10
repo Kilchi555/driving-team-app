@@ -925,6 +925,22 @@
             ></textarea>
           </div>
 
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Stadt / Standort <span class="text-red-500">*</span>
+            </label>
+            <p class="text-xs text-gray-500 mb-2">
+              Wird für den Ort-Filter auf der Kursseite verwendet. Nur den Stadtnamen eingeben, z.&thinsp;B. <strong>Zürich</strong>, <strong>Lachen</strong> oder <strong>Pfäffikon</strong>.
+            </p>
+            <input
+              v-model="newCourse.city"
+              type="text"
+              required
+              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="z. B. Zürich"
+            />
+          </div>
+
           <!-- Participant Settings -->
           <div class="space-y-4">
             <h3 class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">Teilnehmer-Einstellungen</h3>
@@ -4445,6 +4461,7 @@ const roomForm = ref({
 const newCourse = ref({
   name: '',
   description: '',
+  city: '',
   course_category_id: null as string | null,
   max_participants: 20,
   min_participants: 1,
@@ -4829,6 +4846,7 @@ const resetNewCourse = () => {
   newCourse.value = {
     name: '',
     description: '',
+    city: '',
     course_category_id: null,
     max_participants: 20,
     min_participants: 1,
@@ -5580,6 +5598,7 @@ const editCourse = (course: any) => {
   newCourse.value = {
     name: course.name || '',
     description: course.description || '',
+    city: course.city || '',
     course_category_id: course.course_category_id || '',
     max_participants: course.max_participants || 20,
     min_participants: course.min_participants || 1,

@@ -10,6 +10,16 @@
     >
       <div class="mx-auto px-3 sm:px-5 h-14 flex items-center justify-between gap-3">
 
+        <!-- Hamburger (always left) -->
+        <button @click="showMobileMenu = !showMobileMenu"
+          class="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/20 transition-colors flex-shrink-0"
+          type="button">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path v-if="!showMobileMenu" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+
         <!-- Brand -->
         <NuxtLink to="/admin" class="flex items-center gap-2.5 flex-shrink-0 min-w-0 group">
           <div class="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 bg-white/20 flex items-center justify-center">
@@ -25,35 +35,8 @@
           </span>
         </NuxtLink>
 
-        <!-- Desktop Nav -->
-        <nav class="hidden lg:flex items-center gap-0.5 flex-1 justify-center">
-          <template v-if="!featuresLoading">
-            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/payment-overview" @click.prevent="onNav('/admin/payment-overview')"
-              class="nav-link" :class="isActive('/admin/payment-overview') ? 'nav-active' : ''">Zahlungen</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/invoices" @click.prevent="onNav('/admin/invoices')"
-              class="nav-link" :class="isActive('/admin/invoices') ? 'nav-active' : ''">Rechnungen</NuxtLink>
-            <NuxtLink to="/admin/users"
-              class="nav-link" :class="isActive('/admin/users') ? 'nav-active' : ''">Schüler</NuxtLink>
-            <NuxtLink to="/dashboard"
-              class="nav-link" :class="isActive('/dashboard') ? 'nav-active' : ''">Kalender</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('courses_enabled')" to="/admin/courses" @click.prevent="onNav('/admin/courses')"
-              class="nav-link" :class="isActive('/admin/courses') ? 'nav-active' : ''">Kurse</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('cash_management_enabled')" to="/admin/cash-management" @click.prevent="onNav('/admin/cash-management')"
-              class="nav-link" :class="isActive('/admin/cash-management') ? 'nav-active' : ''">Kassen</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('cancellation_management_enabled')" to="/admin/cancellation-management" @click.prevent="onNav('/admin/cancellation-management')"
-              class="nav-link" :class="isActive('/admin/cancellation-management') ? 'nav-active' : ''">Absagen</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('staff_hours_enabled')" to="/admin/staff-hours" @click.prevent="onNav('/admin/staff-hours')"
-              class="nav-link" :class="isActive('/admin/staff-hours') ? 'nav-active' : ''">Stunden</NuxtLink>
-            <NuxtLink to="/admin/student-credits"
-              class="nav-link" :class="isActive('/admin/student-credits') ? 'nav-active' : ''">Guthaben</NuxtLink>
-            <NuxtLink to="/admin/payment-reminders"
-              class="nav-link" :class="isActive('/admin/payment-reminders') ? 'nav-active' : ''">Erinnerungen</NuxtLink>
-          </template>
-          <div v-else class="flex items-center gap-2 opacity-60 text-sm px-3">
-            <svg class="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-            Lade…
-          </div>
-        </nav>
+        <!-- Spacer -->
+        <div class="flex-1"></div>
 
         <!-- Right: Date + Logout + Mobile Trigger -->
         <div class="flex items-center gap-2 flex-shrink-0">
@@ -64,30 +47,21 @@
 
           <!-- Settings shortcut -->
           <NuxtLink to="/admin/profile" title="Einstellungen"
-            class="hidden lg:flex w-8 h-8 rounded-lg items-center justify-center hover:bg-white/20 transition-colors"
+            class="flex w-8 h-8 rounded-lg items-center justify-center hover:bg-white/20 transition-colors"
             :class="isActive('/admin/profile') ? 'bg-white/30' : ''">
             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
             </svg>
           </NuxtLink>
 
-          <!-- Logout (Desktop) -->
+          <!-- Logout -->
           <button @click="handleLogout" title="Abmelden"
-            class="hidden lg:flex w-8 h-8 rounded-lg items-center justify-center hover:bg-red-500/60 transition-colors text-white">
+            class="flex w-8 h-8 rounded-lg items-center justify-center hover:bg-red-500/60 transition-colors text-white">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
           </button>
 
-          <!-- Mobile menu button -->
-          <button @click="showMobileMenu = !showMobileMenu"
-            class="lg:hidden w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/20 transition-colors"
-            type="button">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path v-if="!showMobileMenu" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-              <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
         </div>
       </div>
     </header>
@@ -101,7 +75,7 @@
       leave-from-class="opacity-100"
       leave-to-class="opacity-0"
     >
-      <div v-if="showMobileMenu" class="fixed inset-0 z-40 lg:hidden" @click="showMobileMenu = false">
+      <div v-if="showMobileMenu" class="fixed inset-0 z-40" @click="showMobileMenu = false">
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
       </div>
     </Transition>
@@ -115,7 +89,7 @@
       leave-to-class="-translate-x-full"
     >
       <div v-if="showMobileMenu"
-        class="fixed top-0 left-0 bottom-0 z-50 w-72 flex flex-col lg:hidden shadow-2xl"
+        class="fixed top-0 left-0 bottom-0 z-50 w-72 flex flex-col shadow-2xl"
         :style="{ background: `linear-gradient(180deg, ${primaryColor || '#1e293b'} 0%, ${secondaryColor || '#334155'} 100%)` }"
         @click.stop
       >
@@ -152,8 +126,7 @@
               class="drawer-link" :class="isActive('/admin/invoices') ? 'drawer-active' : ''">Rechnungen</NuxtLink>
             <NuxtLink to="/admin/users" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">Schüler</NuxtLink>
-            <NuxtLink to="/dashboard" @click="showMobileMenu = false"
-              class="drawer-link" :class="isActive('/dashboard') ? 'drawer-active' : ''">Kalender</NuxtLink>
+
             <NuxtLink to="/admin/student-credits" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
 
