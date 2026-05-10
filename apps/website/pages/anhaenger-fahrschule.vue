@@ -46,19 +46,16 @@
             </li>
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Gültiger Auto-Führerschein Kategorie B</p>
+              <p class="text-gray-700">Gültiger Auto Fahrausweis oder Lernfahrausweis Kategorie B</p>
             </li>
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
               <p class="text-gray-700">Gültiger Lernfahrausweis der Kategorie BE</p>
             </li>
-            <li class="flex gap-3">
-              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Gültiger Schweizer Ausweis oder Pass</p>
-            </li>
+          
           </ul>
           <div class="mt-6 p-4 bg-primary-50 rounded-lg">
-            <p class="text-sm text-primary-800">Gute Nachricht: Für die Anhänger Ausbildung (Kategorie BE) brauchst du keine Theorieprüfung und keinen neuen Nothelferkurs – dein Auto-Führerschein reicht aus!</p>
+            <p class="text-sm text-primary-800">Gute Nachricht: Für die Anhänger Ausbildung (Kategorie BE) brauchst du keine Theorieprüfung und keinen neuen Nothelferkurs – wenn du bereits einen Auto Fahrausweis hast, reicht das aus!</p>
           </div>
         </div>
       </div>
