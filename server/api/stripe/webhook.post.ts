@@ -5,6 +5,7 @@ import {
   ALL_FEATURE_FLAGS,
   type SubscriptionPlan,
 } from '~/utils/planFeatures'
+import { sendEmail } from '~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
   const stripeSecret = process.env.STRIPE_SECRET_KEY
@@ -83,6 +84,8 @@ export default defineEventHandler(async (event) => {
         if (invoice.customer) {
           const tenantId = await getTenantIdByCustomer(supabase, invoice.customer as string)
           if (tenantId) {
+            const failedAt = new Date().toISOString()
+
             // Mark tenant as past_due in tenant_settings so the UI can show a warning
             await supabase
               .from('tenant_settings')
@@ -90,9 +93,43 @@ export default defineEventHandler(async (event) => {
                 tenant_id: tenantId,
                 category: 'billing',
                 setting_key: 'subscription_status',
-                setting_value: JSON.stringify({ status: 'past_due', failed_at: new Date().toISOString() }),
+                setting_value: JSON.stringify({ status: 'past_due', failed_at: failedAt }),
               }, { onConflict: 'tenant_id,setting_key' })
-            console.warn(`⚠️ Payment failed for tenant ${tenantId} – marked as past_due`)
+
+            // Notify Simy super-admin immediately
+            const { data: tenant } = await supabase
+              .from('tenants')
+              .select('name, contact_email, subscription_plan, addon_seats, slug')
+              .eq('id', tenantId)
+              .single()
+
+            const amountCHF = invoice.amount_due ? (invoice.amount_due / 100).toFixed(2) : '?'
+            const tenantName = tenant?.name || tenantId
+            const tenantEmail = tenant?.contact_email || '–'
+
+            await sendEmail({
+              to: 'info@simy.ch',
+              subject: `❌ Zahlung fehlgeschlagen – ${tenantName}`,
+              html: `
+                <h2 style="color:#dc2626">Stripe-Zahlung fehlgeschlagen</h2>
+                <table cellpadding="6" style="border-collapse:collapse;font-size:14px">
+                  <tr><td><strong>Tenant</strong></td><td>${tenantName}</td></tr>
+                  <tr><td><strong>E-Mail</strong></td><td>${tenantEmail}</td></tr>
+                  <tr><td><strong>Stripe Invoice ID</strong></td><td>${invoice.id}</td></tr>
+                  <tr><td><strong>Betrag</strong></td><td>CHF ${amountCHF}</td></tr>
+                  <tr><td><strong>Plan</strong></td><td>${tenant?.subscription_plan || '–'}</td></tr>
+                  <tr><td><strong>Zeitpunkt</strong></td><td>${new Date(failedAt).toLocaleString('de-CH')}</td></tr>
+                  <tr><td><strong>Versuch</strong></td><td>${(invoice as any).attempt_count ?? 1} / 4</td></tr>
+                </table>
+                <p style="margin-top:16px">
+                  <a href="https://dashboard.stripe.com/invoices/${invoice.id}" style="color:#2563eb">
+                    Invoice in Stripe öffnen →
+                  </a>
+                </p>
+              `
+            }).catch(e => console.error('Failed to send payment-failed email:', e))
+
+            console.warn(`⚠️ Payment failed for tenant ${tenantId} (${tenantName}) – marked as past_due`)
           }
         }
         break

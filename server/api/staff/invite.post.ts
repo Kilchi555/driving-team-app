@@ -5,6 +5,7 @@ import { sendSMS } from '~/server/utils/sms'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
+import { getPlanById } from '~/utils/planFeatures'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -116,7 +117,6 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (tenantSub) {
-      const { getPlanById } = await import('~/utils/planFeatures')
       const plan = tenantSub.subscription_plan || 'trial'
       const planDef = getPlanById(plan)
       // Trial gets 3 seats (enough to test multi-staff), paid plans use their definition
