@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
   const positionNum = parseInt(sessionPosition as string)
 
-  // Extract city/location from description (e.g., "Baslerstrasse 145, 8048 Zürich" → "Zürich")
+  // Extract city/location from description (e.g., "Vulkanstrasse 130b, 8048 Zürich" → "Zürich")
   const extractLocation = (description: string): string => {
     if (!description) return ''
     const parts = description.split(',')

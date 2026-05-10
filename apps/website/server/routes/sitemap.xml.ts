@@ -116,6 +116,36 @@ export default defineEventHandler((event) => {
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://drivingteam.ch/fahrschule-schlieren/</loc>
+    <lastmod>2026-05-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/fahrschule-urdorf/</loc>
+    <lastmod>2026-05-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/fahrschule-birmensdorf/</loc>
+    <lastmod>2026-05-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/fahrschule-uitikon/</loc>
+    <lastmod>2026-05-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/fahrschule-wettswil/</loc>
+    <lastmod>2026-05-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://drivingteam.ch/fahrschule-spreitenbach/</loc>
     <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>

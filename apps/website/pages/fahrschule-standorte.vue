@@ -206,6 +206,11 @@
       <div class="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
         <a href="/fahrschule-spreitenbach/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Aargau</a>
         <a href="/fahrschule-pfaeffikon-sz/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Pfäffikon SZ</a>
+        <a href="/fahrschule-schlieren/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Schlieren</a>
+        <a href="/fahrschule-urdorf/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Urdorf</a>
+        <a href="/fahrschule-birmensdorf/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Birmensdorf</a>
+        <a href="/fahrschule-uitikon/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Uitikon</a>
+        <a href="/fahrschule-wettswil/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Wettswil</a>
       </div>
     </section>
 
