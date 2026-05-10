@@ -14,6 +14,10 @@ export default defineNuxtConfig({
   runtimeConfig: {
     resendApiKey: process.env.RESEND_API_KEY ?? '',
     resendFromEmail: process.env.RESEND_FROM_EMAIL ?? 'noreply@simy.ch',
+    stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? '',
+    stripePriceStarter: process.env.STRIPE_PRICE_STARTER ?? '',
+    stripePriceProfessional: process.env.STRIPE_PRICE_PROFESSIONAL ?? '',
+    stripePriceEnterprise: process.env.STRIPE_PRICE_ENTERPRISE ?? '',
   },
 
   app: {

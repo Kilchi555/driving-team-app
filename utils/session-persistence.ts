@@ -68,6 +68,13 @@ export interface PersistentSession {
     access_token: string
     refresh_token: string
   }
+  // Trial/subscription info for client-side middleware enforcement
+  trialInfo?: {
+    is_trial: boolean
+    trial_ends_at: string | null
+    subscription_plan: string | null
+    current_period_end: string | null
+  }
   timestamp: number
   expiresIn: number // 24 hours = 86400000 ms
 }

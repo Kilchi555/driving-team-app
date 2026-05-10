@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
 
     const { data: tenants } = await supabase
       .from('tenants')
-      .select('id, name, email, trial_ends_at, subscription_plan')
+      .select('id, name, contact_email, trial_ends_at, subscription_plan')
       .eq('is_trial', true)
       .gte('trial_ends_at', windowStart.toISOString())
       .lt('trial_ends_at', windowEnd.toISOString())
@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
       .neq('subscription_plan', 'enterprise')
 
     for (const tenant of tenants || []) {
-      if (!tenant.email) continue
+      if (!tenant.contact_email) continue
 
       const trialEnd = new Date(tenant.trial_ends_at!)
       const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
 
       try {
         await sendEmail({
-          to: tenant.email,
+          to: tenant.contact_email,
           subject: `Dein Simy Trial endet in ${label} – jetzt upgraden`,
           senderName: 'Simy',
           html: `
@@ -100,11 +100,11 @@ export default defineEventHandler(async (event) => {
 </html>`,
         })
         totalSent++
-        results.push({ tenantId: tenant.id, email: tenant.email, daysLeft, sent: true })
-        console.log(`📧 Trial reminder sent to ${tenant.email} (${daysLeft} days left)`)
+        results.push({ tenantId: tenant.id, email: tenant.contact_email, daysLeft, sent: true })
+        console.log(`📧 Trial reminder sent to ${tenant.contact_email} (${daysLeft} days left)`)
       } catch (err) {
-        console.error(`❌ Failed to send trial reminder to ${tenant.email}:`, err)
-        results.push({ tenantId: tenant.id, email: tenant.email, daysLeft, sent: false })
+        console.error(`❌ Failed to send trial reminder to ${tenant.contact_email}:`, err)
+        results.push({ tenantId: tenant.id, email: tenant.contact_email, daysLeft, sent: false })
       }
     }
   }

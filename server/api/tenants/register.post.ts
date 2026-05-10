@@ -270,7 +270,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     // 5. Tenant in Datenbank erstellen
     const tenantId = crypto.randomUUID()
     const trialEndsAt = new Date()
-    trialEndsAt.setDate(trialEndsAt.getDate() + 60) // 60 Tage Trial
+    trialEndsAt.setDate(trialEndsAt.getDate() + 30) // 30 Tage Trial
 
     // Default working hours template: Mo–Fr 07:00–19:00, Sa 08:00–16:00
     const defaultWorkingDaysTemplate = {

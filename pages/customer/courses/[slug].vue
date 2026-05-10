@@ -238,6 +238,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAsyncData } from '#app'
 import { logger } from '~/utils/logger'
 import { useUIStore } from '~/stores/ui'
 import CourseEnrollmentModal from '~/components/customer/CourseEnrollmentModal.vue'
@@ -264,13 +265,16 @@ const selectedLocation = ref('')
 const selectedCourse = ref<any>(null)
 const showEnrollmentModal = ref(false)
 
-// SSR pre-fetch so tenant + courses are available before JS hydration
-const { data: initData } = await useAsyncData(
-  () => `courses-init-${slug.value}`,
+// Pre-fetch tenant branding so the header colour is available before onMounted
+// Using a try/catch so a failing API (wrong slug, network error) never throws
+// up to Nuxt's error page — the component's own error state handles it.
+const { data: initData, error: initError } = await useAsyncData(
+  `courses-init-${slug.value}`,
   () => $fetch<any>('/api/courses/public', { query: { slug: slug.value } }),
-  { watch: [slug] }
-)
-if (initData.value?.success && initData.value.tenant) {
+  { watch: [slug], lazy: true }
+).catch(() => ({ data: ref(null), error: ref(null) }))
+
+if (initData.value?.success && initData.value?.tenant) {
   tenant.value = initData.value.tenant
   tenantBranding.value = {
     primary_color: initData.value.tenant.primary_color || '#10B981',
@@ -287,22 +291,42 @@ const categories = computed(() => {
   
   // If location is selected, only show categories of courses in that location
   if (selectedLocation.value) {
-    coursesToUse = coursesToUse.filter(c => extractCity(c.description) === selectedLocation.value)
+    coursesToUse = coursesToUse.filter(c => getCourseCity(c) === selectedLocation.value)
   }
   
   const cats = new Set(coursesToUse.map(c => c.category).filter(Boolean))
   return Array.from(cats).sort()
 })
 
-// Extract city from description (e.g., "Herrengasse 17, 8853 Zürich SZ" → "Zürich")
-const extractCity = (description: string): string => {
-  if (!description) return ''
-  // Pattern: extract city after PLZ (4 digits)
-  // Handles: "Herrengasse 17, 8853 Zürich SZ" → "Zürich"
-  const match = description.match(/,\s*\d{4}\s+([A-Za-zäöüÄÖÜ\-\s]+?)(?:\s+[A-Z]{2})?$/)
-  if (match) {
-    return match[1].trim()
-  }
+const getInitials = (name: string): string => {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0].toUpperCase())
+    .join('')
+}
+
+// Returns the city for a course. Uses the dedicated `city` column when available,
+// falls back to extracting it from description or name for legacy records.
+const getCourseCity = (c: any): string => {
+  if (c.city) return c.city
+  return extractCity(c.description || c.name)
+}
+
+// Extract city from free-text description or course name (legacy fallback).
+// Handles:
+//   "Herrengasse 17, 8853 Zürich SZ"  →  "Zürich"  (PLZ format)
+//   "Swiss Life Arena in Zürich"       →  "Zürich"  ("in City" pattern)
+//   "VKU Zürich"                       →  "Zürich"  (last capitalised word)
+const extractCity = (text: string): string => {
+  if (!text) return ''
+  const plzMatch = text.match(/,\s*\d{4}\s+([A-Za-zäöüÄÖÜ\-\s]+?)(?:\s+[A-Z]{2})?$/)
+  if (plzMatch) return plzMatch[1].trim()
+  const inMatch = text.match(/\bin\s+([A-ZÄÖÜ][A-Za-zäöüÄÖÜ\-]+)(?:\s+[A-Z]{2})?$/)
+  if (inMatch) return inMatch[1].trim()
+  const lastWordMatch = text.match(/\s([A-ZÄÖÜ][A-Za-zäöüÄÖÜ\-]+)(?:\s+[A-Z]{2})?$/)
+  if (lastWordMatch) return lastWordMatch[1].trim()
   return ''
 }
 
@@ -314,8 +338,7 @@ const locations = computed(() => {
     coursesToUse = coursesToUse.filter(c => c.category === selectedCategory.value)
   }
   
-  // Extract unique cities (without street addresses)
-  const locs = new Set(coursesToUse.map(c => extractCity(c.description)).filter(Boolean))
+  const locs = new Set(coursesToUse.map(c => getCourseCity(c)).filter(Boolean))
   return Array.from(locs).sort()
 })
 
@@ -327,8 +350,7 @@ const filteredCourses = computed(() => {
   }
   
   if (selectedLocation.value) {
-    // Filter by extracted city name, not full description
-    result = result.filter(c => extractCity(c.description) === selectedLocation.value)
+    result = result.filter(c => getCourseCity(c) === selectedLocation.value)
   }
   
   // Waitlist courses first, then by next session date ascending

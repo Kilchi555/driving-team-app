@@ -295,6 +295,8 @@ export class SARIClient {
 
     const data = (await response.json()) as SARIResponse<SARICourseMember[]>
 
+    console.log(`📥 SARI getCourseDetail raw response (courseId=${courseId}):`, JSON.stringify(data))
+
     if (data.status !== 'OK') {
       throw new Error(`SARI error: ${data.status}`)
     }

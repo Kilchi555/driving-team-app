@@ -2,10 +2,9 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { logger } from '~/utils/logger'
 import { sendSMS } from '~/server/utils/sms'
-import { sendEmail } from '~/server/utils/email'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
-import { sanitizeString, validateEmail } from '~/server/utils/validators'
+import { sanitizeString } from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -17,21 +16,13 @@ export default defineEventHandler(async (event) => {
                       'unknown'
 
     const body = await readBody(event)
-    const { firstName, lastName, email, phone, sendVia } = body
+    const { firstName, phone, sendVia } = body
 
     // Validate required fields
-    if (!firstName || !lastName || !email) {
+    if (!firstName || !phone) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Vorname, Nachname und E-Mail sind erforderlich'
-      })
-    }
-
-    // ✅ LAYER 2: Email validation
-    if (!validateEmail(email)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Ungültige E-Mail-Adresse'
+        statusMessage: 'Vorname und Telefonnummer sind erforderlich'
       })
     }
 
@@ -160,30 +151,13 @@ export default defineEventHandler(async (event) => {
 
     // ✅ LAYER 4: XSS Protection - Sanitize all string inputs
     const sanitizedFirstName = sanitizeString(firstName, 100)
-    const sanitizedLastName = sanitizeString(lastName, 100)
-    const sanitizedPhone = phone ? sanitizeString(phone, 20) : null
+    const sanitizedPhone = sanitizeString(phone, 20)
 
-    // Check: existiert die Email bereits als User im selben Tenant?
-    const { data: existingUser } = await serviceSupabase
-      .from('users')
-      .select('id, role')
-      .eq('email', email.toLowerCase().trim())
-      .eq('tenant_id', userProfile.tenant_id)
-      .eq('is_active', true)
-      .maybeSingle()
-
-    if (existingUser) {
-      throw createError({
-        statusCode: 409,
-        statusMessage: `Diese E-Mail-Adresse ist bereits als ${existingUser.role === 'admin' ? 'Admin' : existingUser.role === 'staff' ? 'Fahrlehrer' : 'Benutzer'} in Ihrem Betrieb registriert.`
-      })
-    }
-
-    // Check: existiert bereits eine offene Einladung für diese Email?
+    // Check: existiert bereits eine offene Einladung für diese Telefonnummer?
     const { data: existingInvite } = await serviceSupabase
       .from('staff_invitations')
       .select('id, status')
-      .eq('email', email.toLowerCase().trim())
+      .eq('phone', sanitizedPhone)
       .eq('tenant_id', userProfile.tenant_id)
       .eq('status', 'pending')
       .maybeSingle()
@@ -191,7 +165,7 @@ export default defineEventHandler(async (event) => {
     if (existingInvite) {
       throw createError({
         statusCode: 409,
-        statusMessage: 'Für diese E-Mail-Adresse existiert bereits eine offene Einladung.'
+        statusMessage: 'Für diese Telefonnummer existiert bereits eine offene Einladung.'
       })
     }
 
@@ -202,14 +176,17 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('🎫 Creating invitation with token:', token.substring(0, 10) + '...')
 
+    // Placeholder email & last_name – instructor fills in real data via onboarding link
+    const placeholderEmail = `pending_${token.slice(0, 16)}@invite.simy.ch`
+
     // Create invitation in database using service role to bypass RLS
     const { data: invitation, error: inviteError } = await serviceSupabase
       .from('staff_invitations')
       .insert({
         tenant_id: userProfile.tenant_id,
         first_name: sanitizedFirstName,
-        last_name: sanitizedLastName,
-        email: email.toLowerCase().trim(),
+        last_name: '',
+        email: placeholderEmail,
         phone: sanitizedPhone,
         invitation_token: token,
         invited_by: user.id,
@@ -239,9 +216,9 @@ export default defineEventHandler(async (event) => {
       ip_address: ipAddress,
       status: 'success',
       details: {
-        invited_email: email.toLowerCase().trim(),
-        invited_name: `${sanitizedFirstName} ${sanitizedLastName}`,
-        send_via: sendVia || 'none',
+        invited_phone: sanitizedPhone,
+        invited_name: sanitizedFirstName,
+        send_via: sendVia || 'sms',
         expires_at: expiresAt.toISOString(),
         duration_ms: Date.now() - startTime
       }
@@ -278,213 +255,48 @@ export default defineEventHandler(async (event) => {
     const tenantName = tenant?.name || 'Driving Team'
     const smsSenderName = tenant?.twilio_from_sender || tenantName
 
-    // Send invitation
-    if (sendVia === 'email') {
-      // Send email via existing Supabase Edge Function 'send-email' (same as reminders)
-      logger.debug(`📧 Sending email to ${email} with link: ${inviteLink}`)
-      
-      try {
-        const subject = `Einladung als Fahrlehrer - ${tenantName}`
-        
-        // Professional HTML email with button
-        const bodyHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 40px 0;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 40px 30px; border-radius: 8px 8px 0 0; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">
-                Willkommen im Team!
-              </h1>
-            </td>
-          </tr>
-          
-          <!-- Content -->
-          <tr>
-            <td style="padding: 40px 30px;">
-              <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
-                Hallo <strong>${firstName} ${lastName}</strong>,
-              </p>
-              
-              <p style="margin: 0 0 20px; color: #555555; font-size: 16px; line-height: 1.6;">
-                wir freuen uns, Sie im Team von <strong>${tenantName}</strong> begrüssen zu dürfen! 
-                Sie wurden als Fahrlehrer eingeladen.
-              </p>
-              
-              <p style="margin: 0 0 30px; color: #555555; font-size: 16px; line-height: 1.6;">
-                Um Ihre Registrierung abzuschliessen, klicken Sie bitte auf den folgenden Button:
-              </p>
-              
-              <!-- Button -->
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding: 20px 0;">
-                    <a href="${inviteLink}" 
-                       style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 6px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.25);">
-                      Jetzt registrieren
-                    </a>
-                  </td>
-                </tr>
-              </table>
-              
-              <p style="margin: 30px 0 20px; color: #666666; font-size: 14px; line-height: 1.6;">
-                Falls der Button nicht funktioniert, können Sie auch diesen Link kopieren und in Ihrem Browser öffnen:
-              </p>
-              
-              <p style="margin: 0 0 30px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #2563eb; border-radius: 4px; word-break: break-all;">
-                <a href="${inviteLink}" style="color: #2563eb; text-decoration: none; font-size: 14px;">${inviteLink}</a>
-              </p>
-              
-              <!-- Info Box -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; margin: 20px 0;">
-                <tr>
-                  <td style="padding: 15px;">
-                    <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.5;">
-                      <strong>Wichtig:</strong> Diese Einladung ist 7 Tage gültig. Bitte schliessen Sie Ihre Registrierung zeitnah ab.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-              
-              <p style="margin: 30px 0 0; color: #555555; font-size: 16px; line-height: 1.6;">
-                Bei Fragen stehen wir Ihnen gerne zur Verfügung.
-              </p>
-              
-              <p style="margin: 20px 0 0; color: #555555; font-size: 16px; line-height: 1.6;">
-                Freundliche Grüsse<br>
-                <strong>${tenantName}</strong>
-              </p>
-            </td>
-          </tr>
-          
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px; text-align: center; border-top: 1px solid #e5e7eb;">
-              <p style="margin: 0; color: #6b7280; font-size: 13px; line-height: 1.5;">
-                Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese Nachricht.
-              </p>
-              <p style="margin: 10px 0 0; color: #9ca3af; font-size: 12px;">
-                © ${new Date().getFullYear()} ${tenantName}. Alle Rechte vorbehalten.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-        `
-        
-        const bodyText = `Hallo ${firstName} ${lastName},
+    // Send invitation via SMS
+    logger.debug(`📱 Sending SMS to ${sanitizedPhone} with link: ${inviteLink}`)
 
-wir freuen uns, Sie im Team von ${tenantName} begrüssen zu dürfen! Sie wurden als Fahrlehrer eingeladen.
+    try {
+      const smsMessage = `Hallo ${sanitizedFirstName}! Sie wurden als Fahrlehrer bei ${tenantName} eingeladen. Registrierung: ${inviteLink}`
 
-Um Ihre Registrierung abzuschliessen, öffnen Sie bitte folgenden Link:
+      const smsResult = await sendSMS({
+        to: sanitizedPhone,
+        message: smsMessage,
+        senderName: smsSenderName
+      })
 
-${inviteLink}
+      logger.debug('✅ SMS sent via Twilio:', smsResult)
 
-Wichtig: Diese Einladung ist 7 Tage gültig. Bitte schliessen Sie Ihre Registrierung zeitnah ab.
-
-Bei Fragen stehen wir Ihnen gerne zur Verfügung.
-
-Freundliche Grüsse
-${tenantName}`
-
-        // Use Resend API for email sending
-        const emailResult = await sendEmail({
-          to: email,
-          subject,
-          html: bodyHtml,
-          senderName: tenantName
-        })
-
-        logger.debug('✅ Email sent via Resend:', emailResult)
-        
-        return {
-          success: true,
-          sentVia: 'email',
-          email,
-          inviteLink,
-          emailId: emailResult?.messageId || emailResult?.id,
-          message: 'Einladung per E-Mail gesendet'
-        }
-
-      } catch (emailError: any) {
-        console.error('❌ Email sending failed:', emailError)
-        // Return invitation data only; no other email fallback
-        return {
-          success: true,
-          sentVia: 'email_failed',
-          email,
-          inviteLink,
-          message: 'Einladung erstellt, aber E-Mail konnte nicht gesendet werden. Link: ' + inviteLink
-        }
-      }
-      
-    } else if (sendVia === 'sms' && phone) {
-      // Send SMS via local Twilio function
-      logger.debug(`📱 Sending SMS to ${phone} with link: ${inviteLink}`)
-      
-      try {
-        const smsMessage = `Hallo ${firstName}! Sie wurden als Fahrlehrer bei ${tenantName} eingeladen. Registrierung: ${inviteLink}`
-
-        // Use local sendSMS function with Alphanumeric Sender ID support
-        const smsResult = await sendSMS({
-          to: phone,
+      await serviceSupabase
+        .from('sms_logs')
+        .insert({
+          to_phone: sanitizedPhone,
           message: smsMessage,
-          senderName: smsSenderName
+          twilio_sid: smsResult?.messageSid || 'unknown',
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+          tenant_id: userProfile.tenant_id
         })
 
-        logger.debug('✅ SMS sent via Twilio:', smsResult)
-
-        // Log SMS using service role
-        await serviceSupabase
-          .from('sms_logs')
-          .insert({
-            to_phone: phone,
-            message: smsMessage,
-            twilio_sid: smsResult?.messageSid || 'unknown',
-            status: 'sent',
-            sent_at: new Date().toISOString(),
-            tenant_id: userProfile.tenant_id
-          })
-        
-        return {
-          success: true,
-          sentVia: 'sms',
-          phone,
-          inviteLink,
-          smsId: smsResult?.messageSid,
-          message: 'Einladung per SMS gesendet'
-        }
-
-      } catch (smsError: any) {
-        console.error('❌ SMS sending failed:', smsError)
-        // Return invitation data even if SMS fails
-        return {
-          success: true,
-          sentVia: 'sms_failed',
-          phone,
-          inviteLink,
-          message: 'Einladung erstellt, aber SMS konnte nicht gesendet werden. Link: ' + inviteLink
-        }
-      }
-      
-    } else {
       return {
         success: true,
+        sentVia: 'sms',
+        phone: sanitizedPhone,
         inviteLink,
-        message: 'Einladung erstellt (kein Versand konfiguriert)'
+        smsId: smsResult?.messageSid,
+        message: 'Einladung per SMS gesendet'
+      }
+
+    } catch (smsError: any) {
+      console.error('❌ SMS sending failed:', smsError)
+      return {
+        success: true,
+        sentVia: 'sms_failed',
+        phone: sanitizedPhone,
+        inviteLink,
+        message: 'Einladung erstellt, aber SMS konnte nicht gesendet werden. Link: ' + inviteLink
       }
     }
 

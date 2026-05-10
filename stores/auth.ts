@@ -9,6 +9,13 @@ import { logger } from '~/utils/logger'
 import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
 
 // Types
+interface TenantTrialInfo {
+  is_trial: boolean
+  trial_ends_at: string | null
+  subscription_plan: string | null
+  current_period_end: string | null
+}
+
 interface UserProfile {
   id: string
   email: string
@@ -19,6 +26,7 @@ interface UserProfile {
   tenant_id: string | null
   is_active: boolean
   preferred_payment_method?: string | null
+  tenant?: TenantTrialInfo | null
 }
 
 export const useAuthStore = defineStore('authV2', () => {
@@ -29,6 +37,7 @@ export const useAuthStore = defineStore('authV2', () => {
   const errorMessage = ref<string | null>(null)
   const loading = ref<boolean>(false)
   const isInitialized = ref<boolean>(false)
+  const tenantTrialInfo = ref<TenantTrialInfo | null>(null)
 
   // Computed Properties
 const isLoggedIn = computed(() => !!user.value && !!userProfile.value)
@@ -395,16 +404,47 @@ const isAdmin = computed(() => {
     }
   }
 
+  const loadTenantTrialInfo = async () => {
+    try {
+      // Pass the Supabase Bearer token so the endpoint works for both
+      // HTTP-only cookie sessions AND Supabase localStorage sessions
+      const supabaseClient = getSupabase()
+      const { data: { session } } = await supabaseClient.auth.getSession()
+      const headers: Record<string, string> = {}
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`
+      }
+
+      const data = await $fetch('/api/tenants/trial-status', { headers }) as any
+      if (data) {
+        tenantTrialInfo.value = {
+          is_trial: data.is_trial,
+          trial_ends_at: data.trial_ends_at ?? null,
+          subscription_plan: data.subscription_plan ?? null,
+          current_period_end: data.current_period_end ?? null,
+        }
+        logger.debug('✅ Tenant trial info loaded:', tenantTrialInfo.value)
+      }
+    } catch (err: any) {
+      logger.debug('⚠️ Could not load tenant trial info:', err?.message)
+    }
+  }
+
   const fetchUserProfile = async (userId: string) => {
     errorMessage.value = null
     const applyProfile = (p: UserProfile) => {
       userProfile.value = p
       userRole.value = p.role || ''
+      if (p.tenant) {
+        tenantTrialInfo.value = p.tenant
+      }
       logger.debug('✅ User profile loaded:', {
         role: p.role,
         tenant_id: p.tenant_id,
         email: p.email,
         user_id: p.id,
+        is_trial: p.tenant?.is_trial,
+        trial_ends_at: p.tenant?.trial_ends_at,
       })
     }
 
@@ -421,6 +461,10 @@ const isAdmin = computed(() => {
 
         if (response?.profile) {
           applyProfile(response.profile as UserProfile)
+          // If server didn't include tenant data (old cache / cold start), fetch it separately
+          if (!tenantTrialInfo.value && userProfile.value?.tenant_id) {
+            await loadTenantTrialInfo()
+          }
           return
         }
       } catch (err: any) {
@@ -462,6 +506,9 @@ const isAdmin = computed(() => {
         is_active: true,
         preferred_payment_method: null,
       })
+      if (!tenantTrialInfo.value && userProfile.value?.tenant_id) {
+        await loadTenantTrialInfo()
+      }
     } catch (err: any) {
       console.error('❌ Error fetching user profile:', err?.message)
       errorMessage.value = 'Konnte Benutzerprofil nicht laden.'
@@ -551,6 +598,7 @@ const isAdmin = computed(() => {
     userRole.value = ''
     errorMessage.value = null
     loading.value = false // ✅ WICHTIG: Loading zurücksetzen damit Login-Seite nicht hängen bleibt
+    tenantTrialInfo.value = null
   }
 
   const clearError = () => {
@@ -586,6 +634,7 @@ const isAdmin = computed(() => {
     errorMessage,
     loading,
     isInitialized,
+    tenantTrialInfo,
 
     // Computed
     isLoggedIn,
@@ -604,6 +653,7 @@ const isAdmin = computed(() => {
     register,
     logout,
     fetchUserProfile,
+    loadTenantTrialInfo,
     updateUserProfile,
     createUserProfile,
     clearAuthState,

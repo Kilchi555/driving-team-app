@@ -72,6 +72,12 @@ export default defineNuxtPlugin(async (nuxtApp) => {
           authStore.user = response.user
           authStore.userProfile = response.profile
           authStore.userRole = response.profile.role || ''
+          // Sync trial info — prefer server-provided, fallback to dedicated endpoint
+          if (response.profile.tenant) {
+            authStore.tenantTrialInfo = response.profile.tenant
+          } else if (response.profile.tenant_id) {
+            await authStore.loadTenantTrialInfo()
+          }
         } else {
           logger.debug('🔄 No valid session cookie found')
         }
@@ -82,8 +88,13 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     // This happens when Supabase localStorage was cleared but HTTP-Only cookies are still valid
     if (authStore.user && !existingSession?.session) {
       logger.debug('⚠️ User in store but no Supabase session - tokens needed from server')
-      // The user will need to re-login to get fresh tokens
-      // HTTP-Only cookies can authenticate API calls, but not client Supabase calls
+    }
+
+    // Ensure tenantTrialInfo is always loaded — regardless of which restore path was taken.
+    // Covers: session-persist sets the user early → auth-restore skips the API call → info stays null.
+    if (authStore.user && authStore.userProfile?.tenant_id && !authStore.tenantTrialInfo) {
+      logger.debug('🔒 tenantTrialInfo missing — loading via dedicated endpoint...')
+      await authStore.loadTenantTrialInfo()
     }
     
   } catch (err: any) {

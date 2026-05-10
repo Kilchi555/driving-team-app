@@ -85,7 +85,7 @@
           <a :href="registerUrl" @click="saveLogoToSession; mobileMenuOpen = false"
             class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90 mt-2"
             style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));">
-            60 Tage kostenlos starten →
+            30 Tage kostenlos starten →
           </a>
         </div>
       </Transition>
@@ -102,7 +102,7 @@
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-8 border"
           :style="{ background: `rgba(var(--brand-rgb), 0.07)`, color: primaryColor, borderColor: `rgba(var(--brand-rgb), 0.28)` }">
           <span class="w-2 h-2 rounded-full animate-pulse" :style="{ background: primaryColor }"></span>
-          60 Tage kostenlos testen
+          30 Tage kostenlos testen
         </div>
 
         <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Fahrschule Software Schweiz</p>
@@ -124,7 +124,7 @@
           <a :href="registerUrl" @click="saveLogoToSession"
             class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-xl transition-all hover:scale-105"
             :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, boxShadow: `0 8px 30px rgba(var(--brand-rgb), 0.35)` }">
-            60 Tage gratis testen
+            30 Tage gratis testen
             <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
           </a>
           <a href="#features"
@@ -210,7 +210,7 @@
               </div>
               <div v-else class="space-y-2">
                 <div class="flex items-center gap-3 bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
-                  <img :src="logoPreview" alt="Logo" class="h-9 max-w-[120px] object-contain rounded">
+                  <img :src="logoPreview" alt="Logo" loading="lazy" class="h-9 max-w-[120px] object-contain rounded">
                   <button @click="removeLogo" class="ml-auto text-xs text-red-400 hover:text-red-600 transition-colors flex-shrink-0 flex items-center gap-1">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     Entfernen
@@ -277,7 +277,7 @@
             <!-- Mini navbar preview -->
             <div class="rounded-2xl border border-gray-100 shadow-md overflow-hidden">
               <div class="bg-white px-5 py-3 flex items-center justify-between border-b border-gray-100">
-                <img :src="logoPreview || '/simy-logo.png'" alt="Logo" class="h-6 max-w-[100px] object-contain transition-all duration-500" :style="{ filter: logoColorFilter }" />
+                <img :src="logoPreview || '/simy-logo.png'" alt="Logo" loading="lazy" class="h-6 max-w-[100px] object-contain transition-all duration-500" :style="{ filter: logoColorFilter }" />
                 <div class="flex items-center gap-2">
                   <span class="text-xs text-gray-400 hidden sm:block">Einloggen</span>
                   <span class="text-xs font-bold px-3 py-1 rounded-lg text-white" :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }">
@@ -290,7 +290,7 @@
                 <div class="h-2 rounded-full mb-2 w-full bg-gray-100"></div>
                 <div class="h-2 rounded-full mb-4 w-5/6 bg-gray-100"></div>
                 <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-bold" :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }">
-                  60 Tage gratis testen →
+                  30 Tage gratis testen →
                 </div>
               </div>
             </div>
@@ -586,7 +586,7 @@
           </div>
 
           <p class="text-center text-xs text-gray-400 mt-4">
-            Simy Starter ab CHF 69.– / Monat — Amortisation am ersten Tag.
+            Simy Starter ab CHF {{ stripePrices?.starter?.formatted ?? '69' }}.– / Monat — Amortisation am ersten Tag.
           </p>
         </div>
       </div>
@@ -1129,7 +1129,7 @@
                       <div class="absolute inset-0 opacity-10" style="background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px);"></div>
                       <div class="text-center z-10">
                         <div class="w-14 h-14 rounded-2xl mx-auto mb-1.5 flex items-center justify-center shadow-lg overflow-hidden" style="background: white;">
-                          <img v-if="logoPreview" :src="logoPreview" class="w-full h-full object-contain p-1" alt="App Icon"/>
+                          <img v-if="logoPreview" :src="logoPreview" loading="lazy" class="w-full h-full object-contain p-1" alt="App Icon"/>
                           <span v-else class="text-2xl font-black" :style="{ color: primaryColor }">F</span>
                         </div>
                         <p class="text-white text-xs font-bold truncate px-2">{{ schoolNameDemo || 'Fahrschule Muster AG' }}</p>
@@ -1275,7 +1275,7 @@
       <div class="max-w-4xl mx-auto text-center">
         <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Preise</p>
         <h2 class="text-4xl font-extrabold text-gray-900 mb-3">Transparent. Flexibel. Fair.</h2>
-        <p class="text-gray-500 text-lg mb-12">Monatlich kündbar, keine Jahresbindung. Starte mit 60 Tagen kostenlos.</p>
+        <p class="text-gray-500 text-lg mb-12">Monatlich kündbar, keine Jahresbindung. Starte mit 30 Tagen kostenlos.</p>
 
         <div class="grid md:grid-cols-3 gap-5 mb-10">
           <div v-for="plan in pricingPlans" :key="plan.name"
@@ -1313,7 +1313,7 @@
               :style="plan.highlighted
                 ? { background: 'rgba(255,255,255,0.92)', color: primaryColor }
                 : { background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, color: 'white' }">
-              60 Tage gratis starten
+              30 Tage gratis starten
             </a>
           </div>
         </div>
@@ -1361,7 +1361,7 @@
         <h2 class="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight">
           Bereit, deine Fahrschule<br>auf Autopilot zu schalten?
         </h2>
-        <p class="text-lg mb-10" style="color: rgba(255,255,255,0.65);">Starte heute mit 60 Tagen kostenlos – keine Kreditkarte, keine Bindung.</p>
+        <p class="text-lg mb-10" style="color: rgba(255,255,255,0.65);">Starte heute mit 30 Tagen kostenlos – keine Kreditkarte, keine Bindung.</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a :href="registerUrl" @click="saveLogoToSession"
             class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-black text-lg shadow-xl hover:scale-105 transition-all"
@@ -1396,7 +1396,7 @@
         <!-- Top row: logo + links -->
         <div class="flex flex-col sm:flex-row items-center justify-between gap-6 mb-6">
           <div class="flex items-center gap-3">
-            <img :src="logoPreview || '/simy-logo.png'" alt="Simy"
+            <img :src="logoPreview || '/simy-logo.png'" alt="Simy" loading="lazy"
               class="h-7 opacity-60 max-w-[100px] object-contain transition-all duration-500"
               :style="{ filter: logoColorFilter }" />
             <span class="text-xs">© {{ currentYear }} Simy</span>
@@ -1504,7 +1504,7 @@
             </div>
             <div v-else class="space-y-1.5">
               <div class="flex items-center gap-3 bg-gray-50 rounded-xl border border-gray-100 px-3 py-2">
-                <img :src="logoPreview" alt="Logo" class="h-8 max-w-[100px] object-contain rounded">
+                <img :src="logoPreview" alt="Logo" loading="lazy" class="h-8 max-w-[100px] object-contain rounded">
                 <button @click="removeLogo" class="ml-auto text-xs text-red-400 hover:text-red-600 transition-colors flex-shrink-0">
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -1556,7 +1556,7 @@
 
           <!-- Logo preview in panel (with color filter applied) -->
           <div class="flex items-center justify-center bg-gray-50 rounded-xl border border-gray-100 py-3 mb-4">
-            <img :src="logoPreview || '/simy-logo.png'" alt="Logo"
+            <img :src="logoPreview || '/simy-logo.png'" alt="Logo" loading="lazy"
               class="h-7 max-w-[120px] object-contain transition-all duration-500"
               :style="{ filter: logoColorFilter }" />
           </div>
@@ -1612,21 +1612,27 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
-import { definePageMeta, useHead } from '#imports'
+import { useHead, useAsyncData } from 'nuxt/app'
+import { $fetch } from 'ofetch'
+import { getDemoReminderHtml, getDemoInvoiceHtml, getDemoWelcomeHtml } from '../utils/demo-email-templates'
+
+declare function definePageMeta(meta: Record<string, unknown>): void
 
 definePageMeta({ layout: false })
+
+const currentYear = new Date().getFullYear()
 
 useHead({
   title: 'Simy – Fahrschule Software Schweiz | Buchung, Abrechnung & App',
   htmlAttrs: { lang: 'de' },
   meta: [
-    { name: 'description', content: 'Simy ist die Fahrschul-Software für die Schweiz: Online-Buchung, automatische Abrechnung, Schülerverwaltung & App. 60 Tage kostenlos testen – keine Kreditkarte.' },
+    { name: 'description', content: 'Simy ist die Fahrschul-Software für die Schweiz: Online-Buchung, automatische Abrechnung, Schülerverwaltung & App. 30 Tage kostenlos testen – keine Kreditkarte.' },
     { name: 'keywords', content: 'Fahrschule Software Schweiz, Fahrschule App, Fahrstunden Verwaltung, Fahrschule Buchungssystem, Fahrschule Online Buchung, Fahrstunden App' },
     { name: 'robots', content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' },
     { name: 'author', content: 'Simy' },
     // Open Graph
     { property: 'og:title', content: 'Simy – Fahrschule Software Schweiz' },
-    { property: 'og:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 60 Tage kostenlos testen – keine Kreditkarte.' },
+    { property: 'og:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 30 Tage kostenlos testen – keine Kreditkarte.' },
     { property: 'og:type', content: 'website' },
     { property: 'og:url', content: 'https://simy.ch/' },
     { property: 'og:image', content: 'https://simy.ch/og-image.png' },
@@ -1638,7 +1644,7 @@ useHead({
     // Twitter / X Card
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: 'Simy – Fahrschule Software Schweiz' },
-    { name: 'twitter:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 60 Tage kostenlos testen – keine Kreditkarte.' },
+    { name: 'twitter:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 30 Tage kostenlos testen – keine Kreditkarte.' },
     { name: 'twitter:image', content: 'https://simy.ch/og-image.png' },
     { name: 'twitter:image:alt', content: 'Simy Fahrschule Software – Dashboard Screenshot' },
   ],
@@ -1665,7 +1671,7 @@ useHead({
           '@type': 'Offer',
           price: '0',
           priceCurrency: 'CHF',
-          description: '60 Tage kostenlos testen, keine Kreditkarte nötig',
+          description: '30 Tage kostenlos testen, keine Kreditkarte nötig',
         },
         provider: {
           '@type': 'Organization',
@@ -1726,7 +1732,7 @@ useHead({
             name: 'Was kostet Simy?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Simy bietet verschiedene Preispläne ab CHF 59/Monat. Die ersten 60 Tage sind vollständig kostenlos – keine Kreditkarte, keine Bindung.',
+              text: 'Simy bietet verschiedene Preispläne ab CHF 69/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte, keine Bindung.',
             },
           },
           {
@@ -2152,32 +2158,46 @@ const personas = computed(() => [
   },
 ])
 
-const pricingPlans = [
+const { data: stripePrices } = await useAsyncData('landing-prices', () =>
+  $fetch<Record<string, { unitAmount: number; formatted: string } | null>>('/api/prices').catch(() => null)
+)
+
+const PLAN_STATIC = [
   {
+    key: 'starter',
     name: 'Starter',
-    tagline: 'Für Einzelfahrlehrer',
-    price: '69',
+    tagline: 'Alles für den Einzelfahrlehrer',
+    fallbackPrice: '69',
     highlighted: true,
-    featureList: ['1 Fahrlehrer', 'Alle Kernfeatures', 'Zahlungen & Rechnungen', 'Auswertungen', 'Prüfungsverwaltung', 'Support per E-Mail'],
+    featureList: ['1 Fahrlehrer', 'Onlineterminbuchung', 'Kundenverwaltung', 'Rechnungen & Zahlungen', 'Prüfungsverwaltung', 'E-Mail Support'],
   },
   {
+    key: 'professional',
     name: 'Professional',
-    tagline: 'Für kleine Teams',
-    price: '129',
+    tagline: 'Für wachsende Fahrschulen',
+    fallbackPrice: '129',
     highlighted: false,
-    featureList: ['Bis 3 Fahrlehrer', 'Alle Starter-Features', 'Multi-Staff Kalender', 'Erweiterte Auswertungen', 'Prioritäts-Support'],
+    featureList: ['Bis 5 Fahrlehrer', 'Alles aus Starter', 'Kursbuchungsseite', 'Prioritäts-Support'],
   },
   {
+    key: 'enterprise',
     name: 'Enterprise',
-    tagline: 'Für grosse Fahrschulen',
-    price: '249',
+    tagline: 'Für grosse Fahrschulen & Ketten',
+    fallbackPrice: '249',
     highlighted: false,
-    featureList: ['Unbegrenzte Fahrlehrer', 'Alle Professional-Features', 'Dediziertes Onboarding', 'API-Zugang', 'SLA-Garantie'],
+    featureList: ['Unbegrenzte Fahrlehrer', 'Alles aus Professional', 'Affiliate-System', 'Dedizierter Support'],
   },
 ]
 
+const pricingPlans = computed(() =>
+  PLAN_STATIC.map(p => ({
+    ...p,
+    price: stripePrices.value?.[p.key]?.formatted ?? p.fallbackPrice,
+  }))
+)
+
 const faqs = reactive([
-  { q: 'Brauche ich eine Kreditkarte für den Trial?', a: 'Nein, der 60-Tage-Trial ist vollständig kostenlos und ohne Kreditkarte. Du wirst erst nach dem Trial zur Kasse gebeten – und kannst jederzeit kündigen.', open: false },
+  { q: 'Brauche ich eine Kreditkarte für den Trial?', a: 'Nein, der 30-Tage-Trial ist vollständig kostenlos und ohne Kreditkarte. Du wirst erst nach dem Trial zur Kasse gebeten – und kannst jederzeit kündigen.', open: false },
   { q: 'Wie funktioniert die Kündigung?', a: 'Du kannst monatlich kündigen. Die Kündigungsfrist beträgt 1 Monat auf Ende des laufenden Monats. Keine Jahresbindung, keine versteckten Kosten.', open: false },
   { q: 'Welche Zahlungsmethoden unterstützt Simy?', a: 'Für deine Schüler unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup.', open: false },
   { q: 'Kann ich von einem Plan upgraden?', a: 'Ja, jederzeit. Dein Upgrade wird sofort aktiv und anteilig verrechnet. Du verlierst keine Daten.', open: false },
@@ -2197,32 +2217,35 @@ const staffCalDays = computed(() => [
   { short: 'Do', num: '1',  count: 3, active: staffActiveDay.value === 'Do' },
   { short: 'Fr', num: '2',  count: 2, active: staffActiveDay.value === 'Fr' },
 ])
-const staffDayApts = computed(() => ({
-  Mo: [
-    { time: '09:00', student: 'Luca Pfister', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: true, color: primaryColor },
-    { time: '11:00', student: 'Jana Meier', type: 'Überlandfahrt', location: 'Autobahn A3', confirmed: true, color: primaryColor },
-    { time: '15:00', student: 'Tobias Roth', type: 'Nachtfahrt', location: 'Treff Schulhaus', confirmed: false, color: '#f59e0b' },
-  ],
-  Di: [
-    { time: '08:00', student: 'Sara Klein', type: 'Prüfungsvorbereitung', location: 'Strassenverkehrsamt', confirmed: true, color: primaryColor },
-    { time: '14:00', student: 'Nico Brunner', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: false, color: '#f59e0b' },
-  ],
-  Mi: [
-    { time: '08:30', student: 'Sara Klein', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: true, color: primaryColor },
-    { time: '11:00', student: 'Luca Pfister', type: 'Prüfung B', location: 'Strassenverkehrsamt', confirmed: true, color: primaryColor },
-    { time: '14:00', student: 'Anna Müller', type: 'Fahrstunde B', location: 'Schulhaus Küsnacht', confirmed: false, color: '#f59e0b' },
-    { time: '16:30', student: 'Tobias Roth', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: false, color: '#f59e0b' },
-  ],
-  Do: [
-    { time: '09:00', student: 'Jana Meier', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: true, color: primaryColor },
-    { time: '11:30', student: 'Nico Brunner', type: 'Überlandfahrt', location: 'Autobahn A3', confirmed: true, color: primaryColor },
-    { time: '15:00', student: 'Sara Klein', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: false, color: '#f59e0b' },
-  ],
-  Fr: [
-    { time: '10:00', student: 'Anna Müller', type: 'Prüfungsvorbereitung', location: 'Strassenverkehrsamt', confirmed: true, color: primaryColor },
-    { time: '14:00', student: 'Tobias Roth', type: 'Fahrstunde B', location: 'Schulhaus Küsnacht', confirmed: true, color: primaryColor },
-  ],
-}[staffActiveDay.value] ?? []))
+const staffDayApts = computed(() => {
+  const c = primaryColor.value
+  return ({
+    Mo: [
+      { time: '09:00', student: 'Luca Pfister', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: true, color: c },
+      { time: '11:00', student: 'Jana Meier', type: 'Überlandfahrt', location: 'Autobahn A3', confirmed: true, color: c },
+      { time: '15:00', student: 'Tobias Roth', type: 'Nachtfahrt', location: 'Treff Schulhaus', confirmed: false, color: '#f59e0b' },
+    ],
+    Di: [
+      { time: '08:00', student: 'Sara Klein', type: 'Prüfungsvorbereitung', location: 'Strassenverkehrsamt', confirmed: true, color: c },
+      { time: '14:00', student: 'Nico Brunner', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: false, color: '#f59e0b' },
+    ],
+    Mi: [
+      { time: '08:30', student: 'Sara Klein', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: true, color: c },
+      { time: '11:00', student: 'Luca Pfister', type: 'Prüfung B', location: 'Strassenverkehrsamt', confirmed: true, color: c },
+      { time: '14:00', student: 'Anna Müller', type: 'Fahrstunde B', location: 'Schulhaus Küsnacht', confirmed: false, color: '#f59e0b' },
+      { time: '16:30', student: 'Tobias Roth', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: false, color: '#f59e0b' },
+    ],
+    Do: [
+      { time: '09:00', student: 'Jana Meier', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: true, color: c },
+      { time: '11:30', student: 'Nico Brunner', type: 'Überlandfahrt', location: 'Autobahn A3', confirmed: true, color: c },
+      { time: '15:00', student: 'Sara Klein', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: false, color: '#f59e0b' },
+    ],
+    Fr: [
+      { time: '10:00', student: 'Anna Müller', type: 'Prüfungsvorbereitung', location: 'Strassenverkehrsamt', confirmed: true, color: c },
+      { time: '14:00', student: 'Tobias Roth', type: 'Fahrstunde B', location: 'Schulhaus Küsnacht', confirmed: true, color: c },
+    ],
+  }[staffActiveDay.value] ?? [])
+})
 
 const staffWeekStats = computed(() => [
   { label: 'Lektionen', value: '12' },
@@ -2402,187 +2425,22 @@ function updatePreviewScale() {
   }
 }
 
+let resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null
+const debouncedResize = () => {
+  if (resizeDebounceTimer) clearTimeout(resizeDebounceTimer)
+  resizeDebounceTimer = setTimeout(updatePreviewScale, 150)
+}
+
 onMounted(() => {
   updatePreviewScale()
-  window.addEventListener('resize', updatePreviewScale)
+  window.addEventListener('resize', debouncedResize)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', updatePreviewScale)
+  window.removeEventListener('resize', debouncedResize)
+  if (resizeDebounceTimer) clearTimeout(resizeDebounceTimer)
 })
 
-function getDemoReminderHtml(school: string, primary: string): string {
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f3f4f6;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.10);">
-        <tr><td style="background:${primary};padding:36px 30px;text-align:center;">
-          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 6px 0;letter-spacing:1px;text-transform:uppercase;">Lektionserinnerung</p>
-          <h1 style="color:#fff;margin:0;font-size:26px;font-weight:700;">${school}</h1>
-        </td></tr>
-        <tr><td style="padding:32px 30px;">
-          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 16px 0;">Hallo <strong>Anna</strong>,</p>
-          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 24px 0;">
-            Wir möchten dich an deine Fahrstunde <strong>morgen</strong> erinnern:
-          </p>
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:8px;margin-bottom:24px;">
-            <tr><td style="padding:20px 24px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="color:#6b7280;font-size:14px;padding:6px 0;width:40%;">📅 Datum</td>
-                  <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">Morgen, 09:00 Uhr</td>
-                </tr>
-                <tr>
-                  <td style="color:#6b7280;font-size:14px;padding:6px 0;">👤 Fahrlehrer</td>
-                  <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">Thomas Meier</td>
-                </tr>
-                <tr>
-                  <td style="color:#6b7280;font-size:14px;padding:6px 0;">📍 Treffpunkt</td>
-                  <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">Bahnhof Uster, Gleis 1</td>
-                </tr>
-                <tr>
-                  <td style="color:#6b7280;font-size:14px;padding:6px 0;">⏱ Dauer</td>
-                  <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">90 Minuten</td>
-                </tr>
-              </table>
-            </td></tr>
-          </table>
-          <div style="margin:0 0 24px;padding:16px 20px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></span>
-              <span style="font-size:12px;font-weight:600;color:#92400e;text-transform:uppercase;letter-spacing:.05em;">Zahlung · Ausstehend</span>
-            </div>
-            <p style="margin:0;font-size:22px;font-weight:700;color:#111827;">CHF 95.00</p>
-            <p style="margin:4px 0 8px;font-size:13px;color:#6b7280;">Zahlungsart: Online-Zahlung</p>
-            <a href="#" style="display:inline-block;padding:10px 24px;background:${primary};color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Jetzt online zahlen →</a>
-          </div>
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
-            <tr><td align="center">
-              <a href="#" style="display:inline-block;background:${primary};color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:15px;font-weight:700;">
-                Termin bestätigen →
-              </a>
-            </td></tr>
-          </table>
-          <p style="color:#9ca3af;font-size:13px;line-height:1.6;margin:0;">
-            Diese Erinnerung wurde automatisch von Simy erstellt und versendet – ohne dass dein Fahrlehrer einen Finger rühren musste.
-          </p>
-        </td></tr>
-        <tr><td style="background:#f9fafb;padding:20px 30px;text-align:center;border-top:1px solid #e5e7eb;">
-          <p style="color:#9ca3af;font-size:12px;margin:0;">${school} · Powered by <strong style="color:${primary}">Simy</strong></p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`
-}
-
-function getDemoInvoiceHtml(school: string, primary: string): string {
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f3f4f6;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.10);">
-        <tr><td style="background:${primary};padding:36px 30px;text-align:center;">
-          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 6px 0;letter-spacing:1px;text-transform:uppercase;">Rechnung</p>
-          <h1 style="color:#fff;margin:0;font-size:26px;font-weight:700;">${school}</h1>
-        </td></tr>
-        <tr><td style="padding:32px 30px;">
-          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 16px 0;">Hallo <strong>Anna</strong>,</p>
-          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 24px 0;">
-            Vielen Dank für deine Fahrstunde. Hier ist deine Rechnung:
-          </p>
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:8px;margin-bottom:8px;">
-            <tr><td style="padding:16px 24px 8px 24px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="color:#374151;font-size:14px;padding:8px 0;border-bottom:1px solid #e5e7eb;">Fahrstunde (90 Min.)</td>
-                  <td align="right" style="color:#374151;font-size:14px;padding:8px 0;border-bottom:1px solid #e5e7eb;">CHF 115.–</td>
-                </tr>
-                <tr>
-                  <td style="color:#374151;font-size:14px;padding:8px 0;border-bottom:1px solid #e5e7eb;">VKU-Kurs Grundkurs</td>
-                  <td align="right" style="color:#374151;font-size:14px;padding:8px 0;border-bottom:1px solid #e5e7eb;">CHF 180.–</td>
-                </tr>
-                <tr>
-                  <td style="color:#111827;font-size:15px;font-weight:700;padding:12px 0 8px 0;">Total</td>
-                  <td align="right" style="color:${primary};font-size:18px;font-weight:800;padding:12px 0 8px 0;">CHF 295.–</td>
-                </tr>
-              </table>
-            </td></tr>
-          </table>
-          <p style="color:#6b7280;font-size:13px;margin:0 0 24px 0;text-align:right;">Fällig bis: 15.05.2025</p>
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
-            <tr><td align="center">
-              <a href="#" style="display:inline-block;background:${primary};color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:15px;font-weight:700;">
-                Jetzt mit TWINT bezahlen →
-              </a>
-            </td></tr>
-          </table>
-          <p style="color:#9ca3af;font-size:13px;line-height:1.6;margin:0;">
-            Diese Rechnung wurde automatisch nach der Fahrstunde erstellt und versendet – du hast dafür keinen Aufwand.
-          </p>
-        </td></tr>
-        <tr><td style="background:#f9fafb;padding:20px 30px;text-align:center;border-top:1px solid #e5e7eb;">
-          <p style="color:#9ca3af;font-size:12px;margin:0;">${school} · Powered by <strong style="color:${primary}">Simy</strong></p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`
-}
-
-function getDemoWelcomeHtml(school: string, primary: string): string {
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f3f4f6;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.10);">
-        <tr><td style="background:${primary};padding:36px 30px;text-align:center;">
-          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 6px 0;letter-spacing:1px;text-transform:uppercase;">Willkommen</p>
-          <h1 style="color:#fff;margin:0;font-size:26px;font-weight:700;">Willkommen bei ${school}!</h1>
-        </td></tr>
-        <tr><td style="padding:32px 30px;">
-          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 16px 0;">Hallo <strong>Anna</strong>,</p>
-          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 24px 0;">
-            Schön, dass du dich für uns entschieden hast! Alles was du brauchst – dein persönliches Schüler-Dashboard, Termine buchen und Zahlungen erledigen – findest du hier:
-          </p>
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:8px;margin-bottom:24px;">
-            <tr><td style="padding:20px 24px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="color:#6b7280;font-size:14px;padding:6px 0;width:40%;">✅ Konto erstellen</td>
-                  <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">Klick auf den Button unten</td>
-                </tr>
-                <tr>
-                  <td style="color:#6b7280;font-size:14px;padding:6px 0;">📅 Erste Stunde buchen</td>
-                  <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">Direkt im Dashboard</td>
-                </tr>
-                <tr>
-                  <td style="color:#6b7280;font-size:14px;padding:6px 0;">💳 Zahlung</td>
-                  <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">TWINT, Karte oder Rechnung</td>
-                </tr>
-              </table>
-            </td></tr>
-          </table>
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
-            <tr><td align="center">
-              <a href="#" style="display:inline-block;background:${primary};color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:15px;font-weight:700;">
-                Konto aktivieren →
-              </a>
-            </td></tr>
-          </table>
-          <p style="color:#9ca3af;font-size:13px;line-height:1.6;margin:0;">
-            Dieser Link ist 14 Tage gültig. Fragen? Melde dich jederzeit bei uns.
-          </p>
-        </td></tr>
-        <tr><td style="background:#f9fafb;padding:20px 30px;text-align:center;border-top:1px solid #e5e7eb;">
-          <p style="color:#9ca3af;font-size:12px;margin:0;">${school} · Powered by <strong style="color:${primary}">Simy</strong></p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`
-}
 
 const demoEmailHtml = computed(() => {
   const school = schoolNameDemo.value.trim() || 'Fahrschule Muster AG'

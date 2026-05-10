@@ -132,12 +132,6 @@
           </button>
         </template>
         <template v-else-if="activeTab === 'staff'">
-          <button @click="openCreateForCurrentTab()"
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap">
-            Neuer Fahrlehrer
-          </button>
-        </template>
-        <template v-else-if="activeTab === 'staff'">
           <button @click="showInviteStaffModal = true"
             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap">
             Fahrlehrer einladen
@@ -264,6 +258,8 @@
         </div>
         
         <form @submit.prevent="sendStaffInvitation" class="px-6 py-4 space-y-4">
+          <p class="text-sm text-gray-500">Der Fahrlehrer erhält einen SMS-Link und füllt den Rest selbst aus.</p>
+
           <!-- First Name -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Vorname *</label>
@@ -276,68 +272,17 @@
             />
           </div>
 
-          <!-- Last Name -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Nachname *</label>
-            <input
-              v-model="inviteForm.lastName"
-              type="text"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              placeholder="Mustermann"
-            />
-          </div>
-
-          <!-- Email -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail *</label>
-            <input
-              v-model="inviteForm.email"
-              type="email"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              placeholder="max@example.com"
-            />
-          </div>
-
           <!-- Phone -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
-              Telefon {{ inviteForm.sendVia === 'sms' ? '*' : '(optional)' }}
-            </label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Telefonnummer *</label>
             <input
               v-model="inviteForm.phone"
               type="tel"
-              :required="inviteForm.sendVia === 'sms'"
+              required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               placeholder="+41 79 123 45 67"
               @blur="inviteForm.phone = normalizeSwissPhone(inviteForm.phone)"
             />
-          </div>
-
-          <!-- Send Via -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Einladung senden via</label>
-            <div class="flex gap-4">
-              <label class="flex items-center">
-                <input
-                  v-model="inviteForm.sendVia"
-                  type="radio"
-                  value="email"
-                  class="mr-2"
-                />
-                <span class="text-sm">📧 E-Mail</span>
-              </label>
-              <label class="flex items-center">
-                <input
-                  v-model="inviteForm.sendVia"
-                  type="radio"
-                  value="sms"
-                  class="mr-2"
-                />
-                <span class="text-sm">📱 SMS</span>
-              </label>
-            </div>
           </div>
 
           <!-- Error Message -->
@@ -775,10 +720,12 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { logger } from '~/utils/logger'
 import { useRuntimeConfig, navigateTo } from '#app'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { useRouter } from '#app'
 import { useAuthStore } from '~/stores/auth'
+import { getSupabase } from '~/utils/supabase'
 import StaffTab from '~/components/users/StaffTab.vue'
 import AdminsTab from '~/components/users/AdminsTab.vue'
 import CustomersTab from '~/components/users/CustomersTab.vue'
@@ -812,6 +759,7 @@ interface User {
 
 // State
 const authStore = useAuthStore()
+const supabase = getSupabase()
 const activeTab = ref<string>('customers')
 const tabs = computed(() => {
   const base = [
@@ -839,10 +787,8 @@ const isInvitingStaff = ref(false)
 const inviteStaffError = ref('')
 const inviteForm = ref({
   firstName: '',
-  lastName: '',
-  email: '',
   phone: '',
-  sendVia: 'email' // 'email' or 'sms'
+  sendVia: 'sms'
 })
 
 // Manual invite link UI state
@@ -886,13 +832,7 @@ const normalizeSwissPhone = (raw: string) => {
   return phone
 }
 
-// When switching to SMS, normalize immediately to avoid Twilio errors
 import { watch } from 'vue'
-watch(() => inviteForm.value.sendVia, (newVal: string, oldVal: string) => {
-  if (newVal === 'sms') {
-    inviteForm.value.phone = normalizeSwissPhone(inviteForm.value.phone)
-  }
-})
 
 // Sync role filter with active tab
 watch(activeTab, (tab) => {
@@ -1048,21 +988,16 @@ const loadUsers = async () => {
       throw new Error(response.error || 'Failed to load users')
     }
 
-    // Load current tenant info
-    const currentUser = authStore.user // ✅ MIGRATED
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
-    
+    // Load current tenant info – tenant_id is already in the JWT user_metadata
+    const currentUser = authStore.user
+    const tenantId = (currentUser?.user_metadata?.tenant_id as string) || (currentUser?.app_metadata?.tenant_id as string)
+
     if (tenantId) {
       const { data: tenantData } = await supabase
         .from('tenants')
         .select('name, slug')
         .eq('id', tenantId)
-        .single()
+        .maybeSingle()
       currentTenant.value = tenantData
       logger.debug('🔍 Current tenant:', tenantData)
     }
@@ -1119,15 +1054,9 @@ const loadUsers = async () => {
 // Load available categories for staff assignment
 const loadCategories = async () => {
   try {
-    // Get current user's tenant_id
-    const currentUser = authStore.user // ✅ MIGRATED
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-
-    const tenantId = userProfile?.tenant_id
+    // tenant_id is already in the JWT user_metadata
+    const currentUser = authStore.user
+    const tenantId = (currentUser?.user_metadata?.tenant_id as string) || (currentUser?.app_metadata?.tenant_id as string)
     if (!tenantId) return
 
     // Get tenant business_type first
@@ -1135,7 +1064,7 @@ const loadCategories = async () => {
       .from('tenants')
       .select('business_type')
       .eq('id', tenantId)
-      .single()
+      .maybeSingle()
 
     if (tenantError) throw tenantError
     
@@ -1379,7 +1308,7 @@ const sendStaffInvitation = async () => {
   isInvitingStaff.value = true
 
   try {
-    logger.debug('📧 Sending staff invitation to:', inviteForm.value.email)
+    logger.debug('📱 Sending staff invitation to:', inviteForm.value.phone)
 
     const response = await fetch('/api/staff/invite', {
       method: 'POST',
@@ -1388,10 +1317,8 @@ const sendStaffInvitation = async () => {
       },
       body: JSON.stringify({
         firstName: inviteForm.value.firstName,
-        lastName: inviteForm.value.lastName,
-        email: inviteForm.value.email,
         phone: inviteForm.value.phone,
-        sendVia: inviteForm.value.sendVia
+        sendVia: 'sms'
       })
     })
 
@@ -1428,10 +1355,8 @@ const sendStaffInvitation = async () => {
     // Reset form
     inviteForm.value = {
       firstName: '',
-      lastName: '',
-      email: '',
       phone: '',
-      sendVia: 'email'
+      sendVia: 'sms'
     }
     
     // Close modal

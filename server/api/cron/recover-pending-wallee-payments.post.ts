@@ -201,8 +201,46 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // ============ PHASE 2: Cancel abandoned checkouts ============
+    // Pending payments with no user_id older than 3 hours = abandoned checkout.
+    // The user started the Wallee checkout page but never completed it.
+    // We mark them as cancelled so they don't pollute the dashboard stats.
+    let abandoned = 0
+    try {
+      const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
+
+      const { data: abandonedPayments, error: abandonedError } = await supabase
+        .from('payments')
+        .select('id')
+        .eq('payment_status', 'pending')
+        .eq('payment_method', 'wallee')
+        .is('user_id', null)
+        .lt('created_at', threeHoursAgo)
+
+      if (!abandonedError && abandonedPayments && abandonedPayments.length > 0) {
+        const ids = abandonedPayments.map(p => p.id)
+        const { error: cancelError } = await supabase
+          .from('payments')
+          .update({
+            payment_status: 'cancelled',
+            notes: 'Automatisch storniert: Checkout-Abbruch (kein User nach 3h)',
+            updated_at: new Date().toISOString()
+          })
+          .in('id', ids)
+
+        if (!cancelError) {
+          abandoned = ids.length
+          logger.info(`🧹 Cancelled ${abandoned} abandoned checkout payment(s) (no user_id after 3h)`)
+        } else {
+          logger.warn('⚠️ Error cancelling abandoned payments:', cancelError.message)
+        }
+      }
+    } catch (abandonedErr: any) {
+      logger.warn('⚠️ Phase 2 (abandoned cleanup) failed:', abandonedErr.message)
+    }
+
     const duration = Date.now() - startTime
-    logger.info(`✅ Recovery cron completed: ${recovered} recovered, ${failed} failed in ${duration}ms`)
+    logger.info(`✅ Recovery cron completed: ${recovered} recovered, ${failed} failed, ${abandoned} abandoned cancelled in ${duration}ms`)
 
     return {
       success: true,
@@ -211,6 +249,7 @@ export default defineEventHandler(async (event) => {
         checked: pendingPayments.length,
         recovered,
         failed,
+        abandoned_cancelled: abandoned,
         errors: errors.length > 0 ? errors : undefined
       },
       duration_ms: duration

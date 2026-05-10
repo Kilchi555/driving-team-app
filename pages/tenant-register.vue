@@ -1765,6 +1765,16 @@ const submitRegistration = async () => {
       }
     }
 
+    // 4. Send welcome email (non-critical)
+    try {
+      await $fetch('/api/tenants/send-welcome-email', {
+        method: 'POST',
+        body: { tenantId: response.tenant.id }
+      })
+    } catch (welcomeErr) {
+      console.warn('Welcome email failed (non-critical):', welcomeErr)
+    }
+
     currentStep.value = SUCCESS_STEP
     localStorage.removeItem(STORAGE_KEY)
 
