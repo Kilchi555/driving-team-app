@@ -181,8 +181,9 @@
                   @mouseenter="(e) => { if (addonSeats > 0) { (e.currentTarget as HTMLElement).style.borderColor = primaryColor; (e.currentTarget as HTMLElement).style.color = primaryColor } }"
                   @mouseleave="(e) => { (e.currentTarget as HTMLElement).style.borderColor = ''; (e.currentTarget as HTMLElement).style.color = '' }">−</button>
                 <span class="text-2xl font-black w-8 text-center" style="color: var(--brand-primary)">{{ totalSeats }}</span>
-                <button @click="addonSeats++"
-                  class="w-9 h-9 rounded-full border-2 flex items-center justify-center font-bold transition-all text-lg text-white"
+                <button @click="incrementAddonSeats"
+                  :disabled="addonSeats >= MAX_ADDON_SEATS"
+                  class="w-9 h-9 rounded-full border-2 flex items-center justify-center font-bold transition-all text-lg text-white disabled:opacity-40 disabled:cursor-not-allowed"
                   :style="{ background: primaryColor, borderColor: primaryColor }">+</button>
               </div>
               <p class="text-xs text-center" :class="addonSeats > 0 ? 'text-gray-500' : 'text-gray-300'">
@@ -192,6 +193,10 @@
                 <template v-else>
                   {{ includedSeatsForPlan }} Seat{{ (includedSeatsForPlan ?? 1) !== 1 ? 's' : '' }} im Plan enthalten
                 </template>
+              </p>
+              <!-- Max-seats hint -->
+              <p v-if="addonSeats >= MAX_ADDON_SEATS" class="text-xs text-amber-600 text-center bg-amber-50 rounded-lg px-3 py-1.5">
+                Mehr als {{ MAX_ADDON_SEATS }} Seats? <a href="mailto:info@simy.ch" class="underline font-medium">info@simy.ch</a>
               </p>
             </div>
           </div>
@@ -323,30 +328,69 @@
 
         <div class="rounded-3xl border bg-white shadow-xl overflow-hidden" style="border-color: rgba(var(--brand-rgb), 0.15); box-shadow: 0 20px 40px rgba(var(--brand-rgb), 0.1)">
           <!-- Summary lines -->
-          <div class="p-6 space-y-3 text-sm border-b border-gray-50">
+          <div class="p-6 space-y-2 text-sm border-b border-gray-50">
+
+            <!-- Plan base -->
             <div class="flex justify-between items-center">
               <span class="font-semibold text-gray-800">{{ selectedPlanDef?.name }}-Plan</span>
               <span class="font-bold text-gray-900">{{ pricesLoading ? '…' : pricesAvailable ? planPrice : '–' }}</span>
             </div>
+
+            <!-- Included seats (always shown, no extra cost) -->
+            <div v-if="selectedPlan !== 'enterprise'" class="flex justify-between items-center text-gray-400 text-xs pl-3">
+              <span>
+                ↳ {{ includedSeatsForPlan }} Fahrlehrer Seat{{ (includedSeatsForPlan ?? 1) !== 1 ? 's' : '' }} inklusive
+              </span>
+              <span class="text-green-600 font-medium">Inklusive</span>
+            </div>
+            <div v-else class="flex justify-between items-center text-gray-400 text-xs pl-3">
+              <span>↳ Unbegrenzte Fahrlehrer Seats</span>
+              <span class="text-green-600 font-medium">Inklusive</span>
+            </div>
+
+            <!-- Included courses (if plan includes it) -->
+            <div v-if="planIncludesCourses" class="flex justify-between items-center text-gray-400 text-xs pl-3">
+              <span>↳ Kursbuchungsseite inklusive</span>
+              <span class="text-green-600 font-medium">Inklusive</span>
+            </div>
+
+            <!-- Included affiliate (if plan includes it) -->
+            <div v-if="planIncludesAffiliate" class="flex justify-between items-center text-gray-400 text-xs pl-3">
+              <span>↳ Affiliate-System inklusive</span>
+              <span class="text-green-600 font-medium">Inklusive</span>
+            </div>
+
+            <!-- Divider between base and addons (only if addons exist) -->
+            <div v-if="addonSeats > 0 || (addonCourses && !planIncludesCourses) || (addonAffiliate && !planIncludesAffiliate)"
+              class="border-t border-dashed border-gray-100 pt-2 mt-1">
+            </div>
+
+            <!-- Extra seats -->
             <div v-if="addonSeats > 0 && selectedPlan !== 'enterprise'"
-              class="flex justify-between items-center text-gray-500">
-              <span>{{ addonSeats }} × Fahrlehrer Seat</span>
-              <span>{{ formatChf(addonSeats * addonPriceAmount('seats')) }}</span>
+              class="flex justify-between items-center text-gray-600">
+              <span>{{ addonSeats }} × Extra Fahrlehrer Seat</span>
+              <span class="font-medium">{{ formatChf(addonSeats * addonPriceAmount('seats')) }}</span>
             </div>
+
+            <!-- Extra courses -->
             <div v-if="addonCourses && !planIncludesCourses"
-              class="flex justify-between items-center text-gray-500">
-              <span>Kursbuchungsseite</span>
-              <span>{{ formatChf(addonPriceAmount('courses')) }}</span>
+              class="flex justify-between items-center text-gray-600">
+              <span>Add-on: Kursbuchungsseite</span>
+              <span class="font-medium">{{ formatChf(addonPriceAmount('courses')) }}</span>
             </div>
+
+            <!-- Extra affiliate -->
             <div v-if="addonAffiliate && !planIncludesAffiliate"
-              class="flex justify-between items-center text-gray-500">
-              <span>Affiliate-System</span>
-              <span>{{ formatChf(addonPriceAmount('affiliate')) }}</span>
+              class="flex justify-between items-center text-gray-600">
+              <span>Add-on: Affiliate-System</span>
+              <span class="font-medium">{{ formatChf(addonPriceAmount('affiliate')) }}</span>
             </div>
-            <div class="flex justify-between items-center text-gray-500">
+
+            <!-- Wallee -->
+            <div class="flex justify-between items-center text-gray-400 text-xs pt-1 border-t border-gray-50">
               <span>Online-Zahlungen (Wallee)</span>
-              <span v-if="withWallee" class="text-green-600 font-medium">Inklusive · 7 Tage Einrichtungszeit</span>
-              <span v-else class="text-gray-400 italic">Nicht gewählt</span>
+              <span v-if="withWallee" class="text-green-600 font-medium">Inklusive</span>
+              <span v-else class="italic">Nicht gewählt</span>
             </div>
           </div>
 
@@ -373,6 +417,19 @@
           <!-- Prices not available banner -->
           <div v-if="!pricesLoading && !pricesAvailable" class="px-6 py-3 text-xs text-center text-amber-700 bg-amber-50 border-t border-amber-100">
             ⚠️ Preise konnten nicht geladen werden. Bitte kontaktiere uns unter info@simy.ch.
+          </div>
+
+          <!-- Seat conflict banner inside summary card -->
+          <div v-if="isLoggedIn && staffList.length > 0 && staffList.length > totalSeats && selectedPlan !== 'enterprise'"
+            class="px-6 py-3 text-xs text-amber-800 bg-amber-50 border-t border-amber-200 flex items-center justify-between gap-2 cursor-pointer"
+            @click="scrollToSeatConflict">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.008v.008H12v-.008z"/>
+              </svg>
+              <span>Du hast <strong>{{ staffList.length }} Fahrlehrer</strong> aber nur <strong>{{ totalSeats }} Seat{{ totalSeats !== 1 ? 's' : '' }}</strong> — wähle welche aktiv bleiben.</span>
+            </div>
+            <span class="underline whitespace-nowrap font-medium">↓ Auswahl</span>
           </div>
 
           <!-- CTA -->
@@ -431,8 +488,8 @@
         </div>
 
         <!-- Seat conflict: staff selection -->
-        <div v-if="isLoggedIn && staffList.length > 0 && staffList.length > totalSeats && selectedPlan !== 'enterprise'"
-          class="mt-4 rounded-2xl border border-amber-200 overflow-hidden">
+        <div id="seat-conflict-section" v-if="isLoggedIn && staffList.length > 0 && staffList.length > totalSeats && selectedPlan !== 'enterprise'"
+          class="mt-4 rounded-2xl border-2 border-amber-300 overflow-hidden ring-2 ring-amber-100">
           <div class="bg-amber-50 px-4 py-3 flex items-start gap-2">
             <svg class="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.008v.008H12v-.008z"/>
@@ -679,6 +736,7 @@ const staffList = ref<StaffMember[]>([])
 const keepActiveIds = ref<Set<string>>(new Set())
 
 // These refs must be declared BEFORE any computed that references them
+const MAX_ADDON_SEATS = 10
 const plans = PLANS
 const selectedPlan = ref<string>('starter')
 const addonSeats = ref(0)
@@ -709,6 +767,10 @@ const staffToDeactivate = computed(() =>
 const seatConflict = computed(() =>
   staffList.value.length > 0 && keepActiveIds.value.size > totalSeats.value
 )
+
+const scrollToSeatConflict = () => {
+  document.getElementById('seat-conflict-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
 
 const toggleKeepActive = (id: string) => {
   const next = new Set(keepActiveIds.value)
@@ -753,11 +815,15 @@ onMounted(async () => {
     const authStore = useAuthStore()
     isLoggedIn.value = !!session?.user || authStore.isLoggedIn
 
-    if (session?.access_token) {
+    if (isLoggedIn.value) {
       try {
+        // Pass Bearer token if available; otherwise the server reads the HTTP-only cookie automatically
+        const prefillHeaders: Record<string, string> = session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : {}
         const prefill = await $fetch<{ activeStaffCount: number; staffList: StaffMember[]; hasCourseSessions: boolean; hasAffiliateCodes: boolean }>(
           '/api/tenants/upgrade-prefill',
-          { headers: { Authorization: `Bearer ${session.access_token}` } }
+          { headers: prefillHeaders }
         )
         staffList.value = prefill.staffList || []
         keepActiveIds.value = new Set(staffList.value.map(s => s.id))
@@ -788,6 +854,29 @@ onMounted(async () => {
     }
   } catch { /* not critical */ }
 })
+
+// Track whether we already notified Simy about >10 seats request to avoid duplicates
+const moreSeatsNotified = ref(false)
+
+async function incrementAddonSeats() {
+  if (addonSeats.value >= MAX_ADDON_SEATS) return
+  addonSeats.value++
+  if (addonSeats.value === MAX_ADDON_SEATS && !moreSeatsNotified.value) {
+    moreSeatsNotified.value = true
+    try {
+      const { useAuthStore } = await import('~/stores/auth')
+      const authStore = useAuthStore()
+      await $fetch('/api/notify/more-seats', {
+        method: 'POST',
+        body: {
+          tenantName: authStore.userProfile?.tenant_id ?? null,
+          tenantEmail: authStore.userProfile?.email ?? null,
+          selectedPlan: selectedPlan.value,
+        }
+      })
+    } catch { /* non-critical */ }
+  }
+}
 
 const { data: pricing, pending: pricesLoading, error: pricesError } = useLazyFetch<PricingResponse>('/api/stripe/prices')
 
@@ -830,7 +919,7 @@ watch(selectedPlan, () => {
     // Re-calculate required extra seats for the newly selected plan
     const planDef = PLANS.find(p => p.id === selectedPlan.value)
     const included = planDef?.includedSeats ?? 1
-    addonSeats.value = Math.max(0, prefillHint.value.staffCount - included)
+    addonSeats.value = Math.min(MAX_ADDON_SEATS, Math.max(0, prefillHint.value.staffCount - included))
   }
 })
 

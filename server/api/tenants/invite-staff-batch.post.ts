@@ -54,6 +54,35 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // ─── Seat-limit check ────────────────────────────────────────────────────
+  // During onboarding (trial), allow up to 3 seats total (admin + 2 staff).
+  // Starter/Professional/Enterprise use their plan definitions.
+  const { data: tenantSub } = await supabase
+    .from('tenants')
+    .select('subscription_plan, addon_seats')
+    .eq('id', tenant_id)
+    .single()
+
+  if (tenantSub) {
+    const { getPlanById } = await import('../../utils/planFeatures')
+    const plan = tenantSub.subscription_plan || 'trial'
+    const planDef = getPlanById(plan)
+    const includedSeats = plan === 'trial' ? 3 : (planDef?.includedSeats ?? null)
+
+    if (includedSeats !== null) {
+      const totalAllowedSeats = includedSeats + (tenantSub.addon_seats || 0)
+      const requestedCount = staff_list.length
+      // +1 for the admin user who was already created
+      if (requestedCount + 1 > totalAllowedSeats) {
+        const allowed = Math.max(0, totalAllowedSeats - 1)
+        throw createError({
+          statusCode: 402,
+          statusMessage: `Seat-Limit erreicht. Du kannst maximal ${allowed} Mitarbeiter einladen.`
+        })
+      }
+    }
+  }
+
   // Fetch the tenant admin to use as invited_by (admin is created before staff invitations)
   const { data: adminUser } = await supabase
     .from('users')

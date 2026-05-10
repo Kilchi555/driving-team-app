@@ -1,6 +1,6 @@
 // middleware/trial.global.ts
 // Runs on every navigation. Redirects to /upgrade when a tenant's
-// subscription has expired (trial ended and no active subscription).
+// subscription has expired (trial ended or paid sub lapsed).
 //
 // When trial is expired, these routes remain accessible (read-only orientation):
 //   /admin           → Dashboard
@@ -24,17 +24,20 @@ export default defineNuxtRouteMiddleware((to) => {
   // If trial data hasn't loaded yet (e.g. before login), allow navigation
   if (!info) return
 
-  // Has active paid subscription → always allow
-  if (info.subscription_plan && info.subscription_plan !== 'trial') {
-    if (info.current_period_end && new Date() < new Date(info.current_period_end)) return
+  const now = new Date()
+
+  // ── Active paid subscription → always allow ────────────────────────────────
+  if (!info.is_trial && info.subscription_plan && info.subscription_plan !== 'trial') {
+    if (info.current_period_end && now < new Date(info.current_period_end)) return
+    // Paid subscription exists but period has ended → redirect to upgrade
+    return navigateTo('/upgrade')
   }
 
-  // Check if trial has expired
+  // ── Trial: check if expired ────────────────────────────────────────────────
   if (info.is_trial && info.trial_ends_at) {
     const trialEnd = new Date(info.trial_ends_at)
-    if (new Date() > trialEnd) {
+    if (now > trialEnd) {
       // Allow only exact matches or explicit sub-paths (e.g. /admin/users/[id])
-      // Note: startsWith('/admin/') would wrongly allow /admin/invoices too, so we check each path individually
       const allowed = TRIAL_EXPIRED_ALLOWED.some(p =>
         to.path === p || (p !== '/admin' && to.path.startsWith(p + '/'))
       )

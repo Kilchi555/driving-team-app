@@ -88,6 +88,29 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Check if courses feature is enabled for this tenant
+    const { data: coursesSetting } = await supabase
+      .from('tenant_settings')
+      .select('setting_value')
+      .eq('tenant_id', tenant.id)
+      .eq('setting_key', 'courses_enabled')
+      .single()
+
+    const coursesEnabled = (() => {
+      try {
+        return JSON.parse(coursesSetting?.setting_value ?? 'false').enabled === true
+      } catch {
+        return false
+      }
+    })()
+
+    if (!coursesEnabled) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Kursbuchung nicht verfügbar'
+      })
+    }
+
     // Get public courses for this tenant
     const { data: courses, error: coursesError } = await supabase
       .from('courses')

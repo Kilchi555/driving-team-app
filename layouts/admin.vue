@@ -157,7 +157,7 @@
               class="drawer-link" :class="isActive('/admin/evaluation-system') ? 'drawer-active' : ''">Bewertungen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('exams_enabled')" to="/admin/exam-statistics" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/exam-statistics') ? 'drawer-active' : ''">Prüfungen</NuxtLink>
-            <NuxtLink to="/admin/affiliate" @click="showMobileMenu = false"
+            <NuxtLink v-if="shouldShowNavLink('affiliate_enabled')" to="/admin/affiliate" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/affiliate') ? 'drawer-active' : ''">Affiliate</NuxtLink>
             <NuxtLink to="/admin/pricing" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/pricing') ? 'drawer-active' : ''">Preise</NuxtLink>
@@ -214,7 +214,7 @@
               class="footer-link">Bewertungen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('exams_enabled')" to="/admin/exam-statistics" @click.prevent="onNav('/admin/exam-statistics')"
               class="footer-link">Prüfungen</NuxtLink>
-            <NuxtLink to="/admin/affiliate" @click.prevent="onNav('/admin/affiliate')" class="footer-link">Affiliate</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('affiliate_enabled')" to="/admin/affiliate" @click.prevent="onNav('/admin/affiliate')" class="footer-link">Affiliate</NuxtLink>
             <NuxtLink to="/admin/pricing" @click.prevent="onNav('/admin/pricing')" class="footer-link">Preise</NuxtLink>
             <NuxtLink to="/admin/profile" @click.prevent="onNav('/admin/profile')" class="footer-link">Einstellungen</NuxtLink>
             <NuxtLink to="/admin/cron-status" @click.prevent="onNav('/admin/cron-status')" class="footer-link">Cron</NuxtLink>

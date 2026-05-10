@@ -1724,6 +1724,7 @@ import { useFeatures } from '~/composables/useFeatures'
 import EventTypesManager from '~/components/admin/EventTypesManager.vue'
 import ReglementeManager from '~/components/admin/ReglementeManager.vue'
 import EmailDomainSettings from '~/components/admin/EmailDomainSettings.vue'
+import WalleeOnboardingWidget from '~/components/admin/WalleeOnboardingWidget.vue'
 
 // Icons for tabs
 const PaletteIcon = markRaw({
