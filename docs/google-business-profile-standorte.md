@@ -42,7 +42,7 @@
 | WAB Kurse | `/wab-kurse-zuerich/` | Zürich Oberland / Pfäffikon, CHF 290.-, CHF 70.- |
 
 **Prüfungsgebiet:** Albisgütli Zürich  
-**Adresse:** Baslerstrasse 145, 8048 Zürich-Altstetten  
+**Adresse:** Vulkanstrasse 130b, 8048 Zürich-Altstetten  
 **Sprachen:** Deutsch, Englisch, Albanisch
 
 ---
@@ -52,7 +52,7 @@
 ### Basisinfos
 ```
 Name:     Driving Team Fahrschule Zürich
-Adresse:  Baslerstrasse 145, 8048 Zürich
+Adresse:  Vulkanstrasse 130b, 8048 Zürich
 Telefon:  +41 44 431 00 33
 Website:  https://drivingteam.ch/fahrschule-zuerich/
 ```
@@ -95,7 +95,7 @@ Driving Team ist deine professionelle Fahrschule in Zürich-Altstetten. Fahrstun
 
 ### Q&A (selbst einstellen als Inhaber)
 - **F:** Was kostet eine Fahrstunde? **A:** Ab CHF 95.-/45min für Auto und Motorrad, CHF 120.- für Anhänger.
-- **F:** Wo befindet sich die Fahrschule? **A:** Baslerstrasse 145, 8048 Zürich-Altstetten (beim Bahnhof Altstetten).
+- **F:** Wo befindet sich die Fahrschule? **A:** Vulkanstrasse 130b, 8048 Zürich-Altstetten (beim Bahnhof Altstetten).
 - **F:** Wo findet die Fahrprüfung statt? **A:** Am Prüfungszentrum Albisgütli in Zürich.
 - **F:** Bietet ihr auch Motorrad-Kurse an? **A:** Ja, A1/A35kW/A inkl. Grundkurs (CHF 499.-) direkt in Zürich.
 - **F:** Kann ich auf Englisch Fahrstunden nehmen? **A:** Ja, Unterricht auf Deutsch, Englisch und Albanisch möglich.

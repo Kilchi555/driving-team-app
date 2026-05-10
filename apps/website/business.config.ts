@@ -91,14 +91,18 @@ export const LOCATION_ZUERICH: Location = {
   placeId: 'ChIJU29cFMgLkEcRzMfDub2bh9s',
 
   address: {
-    street: 'Baslerstrasse 145',
+    street: 'Vulkanstrasse 130b',
     city: 'Zürich',
     district: 'Zürich-Altstetten',
     zip: '8048',
     canton: 'ZH',
     country: 'CH',
   },
-  geo: { lat: 47.3914, lng: 8.4897 },
+  /** Büro/Kurslokal: Swisslife Arena, Trakt T, 4. Stock */
+  office: 'Vulkanstrasse 130b, 8048 Zürich (Swisslife Arena · Trakt T · 4. Stock)',
+  /** Treffpunkt für Fahrstunden (Auto, Motorrad, Anhänger) */
+  meetingPoint: 'Altstetterplatz 12, 8048 Zürich (Bahnhof Zürich-Altstetten)',
+  geo: { lat: 47.3956245, lng: 8.4807767 },
 
   phone: '+41444310033',
   phoneFormatted: '044 431 00 33',

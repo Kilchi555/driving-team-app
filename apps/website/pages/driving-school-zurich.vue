@@ -469,7 +469,7 @@ const jsonLdScripts = [
       image: 'https://drivingteam.ch/images/categories/auto-fahrschule-hero.webp',
       address: {
         '@type': 'PostalAddress',
-        streetAddress: 'Baslerstrasse 145',
+        streetAddress: 'Vulkanstrasse 130b',
         addressLocality: 'Zürich',
         postalCode: '8048',
         addressCountry: { '@type': 'Country', name: 'CH' }

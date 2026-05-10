@@ -398,6 +398,13 @@
               <p class="text-xs text-gray-500">Alle Standorte & Infos</p>
             </div>
           </a>
+          <a href="/nothelferkurs-altstetten/" class="flex items-center gap-3 p-4 border-2 border-primary-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition">
+            <span class="text-2xl">📍</span>
+            <div>
+              <p class="font-semibold text-gray-900 text-sm">Nothelferkurs Altstetten</p>
+              <p class="text-xs text-gray-500">Direkt beim Bahnhof Altstetten</p>
+            </div>
+          </a>
           <a href="/kostenrechner/" class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition">
             <span class="text-2xl">💰</span>
             <div>
@@ -434,7 +441,7 @@ const jsonLdScripts = [
         "telephone": "+41444310033",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Baslerstrasse 145",
+          "streetAddress": "Vulkanstrasse 130b",
           "addressLocality": "Zürich",
           "postalCode": "8048",
           "addressCountry": "CH"

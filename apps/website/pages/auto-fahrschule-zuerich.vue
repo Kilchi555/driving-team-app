@@ -123,7 +123,7 @@
         </h2>
         <div class="space-y-4 text-gray-700 text-lg leading-relaxed">
           <p>
-            Bei der <strong>Auto Fahrschule Driving Team</strong> absolvierst du deine Kategorie-B-Ausbildung direkt in Zürich – mit Treffpunkt am Bahnhof Altstetten. Das bedeutet: Du lernst von Anfang an die Strassen, die du bei der Prüfung am <strong>Strassenverkehrsamt Albisgütli</strong> fahren wirst.
+            Bei der <strong>Auto Fahrschule Driving Team</strong> absolvierst du deine Kategorie-B-Ausbildung direkt in Zürich – Treffpunkt für Fahrstunden ist der <strong>Altstetterplatz 12</strong> beim Bahnhof Zürich-Altstetten. Das bedeutet: Du lernst von Anfang an die Strassen, die du bei der Prüfung am <strong>Strassenverkehrsamt Albisgütli</strong> fahren wirst.
           </p>
           <p>
             <strong>Unser Vorteil:</strong> Unsere Fahrlehrer kennen die häufigsten Prüfungsrouten in- und auswendig – von Wollishofen über Leimbach bis nach Uitikon. So bist du am Prüfungstag nicht überrascht.
@@ -451,7 +451,7 @@
               <span>📍 Wo genau finden die Auto Fahrstunden in Zürich statt?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Treffpunkt ist der Bahnhof Altstetten (Altstetterplatz 1, 8048 Zürich). Das Tätigkeitsgebiet erstreckt sich von Baden bis Thalwil und von Bülach bis Wettswil. Nach Möglichkeit können flexible Treffpunkte vereinbart werden.</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Treffpunkt für Fahrstunden ist der <strong>Altstetterplatz 12, 8048 Zürich</strong> (Bahnhof Zürich-Altstetten). Das Tätigkeitsgebiet erstreckt sich von Baden bis Thalwil und von Bülach bis Wettswil. Nach Möglichkeit können flexible Treffpunkte vereinbart werden.</p>
           </details>
 
           <details class="group bg-gray-50 border border-gray-200 rounded-xl overflow-hidden hover:border-primary-300 transition cursor-pointer">
@@ -619,7 +619,7 @@ const jsonLdScripts = [
       "image": "https://drivingteam.ch/images/categories/auto-fahrschule-hero.webp",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Baslerstrasse 145",
+        "streetAddress": "Vulkanstrasse 130b",
         "addressLocality": "Zürich",
         "postalCode": "8048",
         "addressCountry": "CH"

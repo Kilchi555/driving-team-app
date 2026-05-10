@@ -387,7 +387,7 @@ const jsonLdScripts = [
       "image": "https://drivingteam.ch/images/categories/anhaenger-fahrschule-new-hero.webp",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Baslerstrasse 145",
+        "streetAddress": "Vulkanstrasse 130b",
         "addressLocality": "Zürich",
         "postalCode": "8048",
         "addressCountry": "CH"
