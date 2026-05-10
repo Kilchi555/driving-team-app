@@ -198,7 +198,7 @@ export const LOCATION_LACHEN: Location = {
 export const LOCATION_PFAEFFIKON: Location = {
   id: 'pfaeffikon',
   gbpName: 'Fahrschule Pfäffikon/SZ | Driving Team | Auto | Anhänger | Lastwagen',
-  // Place ID nach GBP-Erstellung eintragen
+  // TODO: Echte Place ID aus GBP Pfäffikon SZ eintragen (maps.google.com → Teilen → Place ID)
   placeId: '',
 
   address: {
@@ -239,7 +239,7 @@ export const LOCATION_PFAEFFIKON: Location = {
     { name: 'Auto Fahrschule Pfäffikon SZ', url: 'https://drivingteam.ch/fahrschule-pfaeffikon-sz/' },
     { name: 'Motorrad Fahrschule', url: 'https://drivingteam.ch/motorrad-fahrschule/' },
     { name: 'Anhänger Fahrschule', url: 'https://drivingteam.ch/anhaenger-fahrschule/' },
-    { name: 'Bootsfahrschule', url: 'https://drivingteam.ch/motorboot-fahrschule//' },
+    { name: 'Bootsfahrschule', url: 'https://drivingteam.ch/motorboot-fahrschule/' },
     { name: 'Lastwagen Fahrschule', url: 'https://drivingteam.ch/lastwagen-fahrschule/' },
     { name: 'Bus Fahrschule', url: 'https://drivingteam.ch/bus-fahrschule/' },
     { name: 'Taxi Fahrschule', url: 'https://drivingteam.ch/taxi-fahrschule/' },

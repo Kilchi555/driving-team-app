@@ -6,6 +6,9 @@
       <Meta property="og:title" content="Kostenrechner – Was kostet meine Fahrausbildung?" />
       <Meta property="og:description" content="Berechne jetzt schnell und einfach deine Fahrschul-Kosten. Kategorie wählen, Fahrstunden eingeben, fertig." />
       <Meta property="og:url" content="https://drivingteam.ch/kostenrechner/" />
+      <Meta property="og:image" content="https://drivingteam.ch/images/og/driving-team-og.webp" />
+      <Meta property="og:image:width" content="1200" />
+      <Meta property="og:image:height" content="630" />
       <Link rel="canonical" href="https://drivingteam.ch/kostenrechner/" />
       <Meta name="robots" content="index, follow" />
     </Head>

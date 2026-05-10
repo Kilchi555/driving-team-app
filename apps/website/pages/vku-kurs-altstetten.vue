@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>VKU Kurs Altstetten ✓ CHF 190.- | Pflicht vor Fahrprüfung | Driving Team</Title>
+      <Title>VKU Kurs Altstetten | CHF 190.- | Pflicht vor Fahrprüfung | Driving Team</Title>
       <Meta name="description" content="VKU Kurs Altstetten ✓ CHF 190.- inkl. Dokumentation ✓ 8 Stunden (2×4h) ✓ Direkt beim Bahnhof Altstetten ✓ Obligatorisch vor Fahrprüfung. Jetzt online anmelden!" />
       <Meta name="keywords" content="VKU Kurs Altstetten, Verkehrskundeunterricht Altstetten, VKU Altstetten, Verkehrskunde Altstetten, VKU Kurs Zürich-Altstetten, Verkehrskunde Kurs Altstetten" />
       <Meta property="og:title" content="VKU Kurs Altstetten | Verkehrskundeunterricht CHF 190.- | Driving Team" />
@@ -34,11 +34,11 @@
           <div class="flex flex-wrap gap-2 mb-4">
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">⚡ Pflicht vor Fahrprüfung</span>
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">💰 <strong>CHF 190.–</strong></span>
-            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">📍 Beim Bhf Altstetten</span>
+            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">📍 Nähe Bhf Altstetten</span>
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">🕐 2×4h = 8 Stunden</span>
           </div>
           <p class="text-xl text-white mb-8">
-            Den VKU Kurs in Altstetten kannst du direkt bei Driving Team absolvieren – nur 2 Gehminuten vom Bahnhof Zürich-Altstetten. Der Abschluss des VKU Kurses ist obligatorisch und Voraussetzung für die Anmeldung an die Praktische Führerprüfung.
+            Den VKU Kurs in Altstetten kannst du direkt bei Driving Team absolvieren – nur 5 Gehminuten vom Bahnhof Zürich-Altstetten. Der Abschluss des VKU Kurses ist obligatorisch und Voraussetzung für die Anmeldung an die Praktische Führerprüfung.
           </p>
           <div class="flex flex-col sm:flex-row gap-3">
             <a href="https://app.simy.ch/customer/courses/driving-team/?category=VKU&location=Z%C3%BCrich" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
@@ -60,7 +60,7 @@
             <span>📍</span> VKU Kurs direkt in Altstetten
           </h2>
           <p class="text-gray-700 mb-3">
-            Unser Fahrschullokal liegt an der <strong>Vulkanstrasse 130b, 8048 Zürich</strong> – nur 2 Gehminuten vom Bahnhof Zürich-Altstetten entfernt. Der VKU Kurs Altstetten ist damit ideal erreichbar: per S-Bahn, Tram oder Bus.
+            Unser Fahrschullokal liegt an der <strong>Baslerstrasse 145, 8048 Zürich</strong> – nur 2 Gehminuten vom Bahnhof Zürich-Altstetten entfernt. Der VKU Kurs Altstetten ist damit ideal erreichbar: per S-Bahn, Tram oder Bus.
           </p>
           <div class="grid sm:grid-cols-3 gap-3 mt-4">
             <div class="bg-white rounded-lg p-3 text-center border border-primary-100">
@@ -100,7 +100,7 @@
           <div class="bg-white rounded-xl p-6 text-center shadow-sm">
             <p class="text-3xl mb-3">📍</p>
             <h3 class="font-bold text-gray-900 mb-2">Ort</h3>
-            <p class="text-gray-600 text-sm">Vulkanstrasse 130b<br>8048 Zürich<br><strong>(Altstetten)</strong></p>
+            <p class="text-gray-600 text-sm">Baslerstrasse 145<br>8048 Zürich<br><strong>(Altstetten)</strong></p>
           </div>
           <div class="bg-white rounded-xl p-6 text-center shadow-sm">
             <p class="text-3xl mb-3">💰</p>
@@ -181,7 +181,7 @@
             Wo genau findet der VKU Kurs in Altstetten statt?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Der VKU Kurs findet in unserem Fahrschullokal an der Vulkanstrasse 130b, 8048 Zürich statt – direkt in Altstetten, nur 2 Gehminuten vom Bahnhof Zürich-Altstetten entfernt.</p>
+          <p class="text-gray-600 mt-4">Der VKU Kurs findet in unserem Fahrschullokal an der Baslerstrasse 145, 8048 Zürich statt – direkt in Altstetten, nur 2 Gehminuten vom Bahnhof Zürich-Altstetten entfernt.</p>
         </details>
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
           <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
@@ -277,7 +277,7 @@ const jsonLdScripts = [
       "telephone": "+41444310033",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Vulkanstrasse 130b",
+        "streetAddress": "Baslerstrasse 145",
         "addressLocality": "Zürich",
         "addressRegion": "Altstetten",
         "postalCode": "8048",
@@ -299,7 +299,7 @@ const jsonLdScripts = [
         "name": "Zürich-Altstetten",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "Vulkanstrasse 130b",
+          "streetAddress": "Baslerstrasse 145",
           "addressLocality": "Zürich",
           "addressRegion": "Altstetten",
           "postalCode": "8048",
@@ -312,7 +312,7 @@ const jsonLdScripts = [
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
-      { "@type": "Question", "name": "Wo findet der VKU Kurs in Altstetten statt?", "acceptedAnswer": { "@type": "Answer", "text": "An der Vulkanstrasse 130b, 8048 Zürich – direkt in Altstetten, 2 Gehminuten vom Bahnhof Zürich-Altstetten." } },
+      { "@type": "Question", "name": "Wo findet der VKU Kurs in Altstetten statt?", "acceptedAnswer": { "@type": "Answer", "text": "An der Baslerstrasse 145, 8048 Zürich – direkt in Altstetten, 2 Gehminuten vom Bahnhof Zürich-Altstetten." } },
       { "@type": "Question", "name": "Gilt der VKU Kurs Altstetten schweizweit?", "acceptedAnswer": { "@type": "Answer", "text": "Ja, der VKU Kurs ist in der ganzen Schweiz gültig, unabhängig davon, in welchem Kanton der Lernfahrausweis ausgestellt wurde." } },
       { "@type": "Question", "name": "Was kostet der VKU Kurs in Altstetten?", "acceptedAnswer": { "@type": "Answer", "text": "CHF 190.- inkl. Lehrmittel und Kursbestätigung. Online bei der Anmeldung zahlbar." } },
       { "@type": "Question", "name": "Wie lange dauert der VKU Kurs in Altstetten?", "acceptedAnswer": { "@type": "Answer", "text": "8 Stunden, aufgeteilt auf 2 Kurstage à 4 Stunden." } }

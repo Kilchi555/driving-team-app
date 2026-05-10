@@ -9,7 +9,7 @@
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-pfaeffikon/" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />
-      <Link rel="canonical" href="https://drivingteam.ch/fahrschule-pfaeffikon/" />
+      <Link rel="canonical" href="https://drivingteam.ch/fahrschule-pfaeffikon-sz/" />
       <Link rel="preload" as="image" href="/images/locations/pfaeffikon-hero.webp" fetchpriority="high" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/pfaeffikon-hero.webp" />
       <Meta property="og:image:width" content="1200" />
