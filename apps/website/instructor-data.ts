@@ -222,6 +222,186 @@ export const instructorData: Record<string, Instructor[]> = {
     }
   ],
 
+  schlieren: [
+    {
+      id: 'skender-schlieren',
+      name: 'Skender Ismajli',
+      title: 'Auto & Anhänger Fahrlehrer',
+      bio: 'Skender ist durch und durch Familien-Mensch. Seine vier Kinder halten ihn auf Trab und er ist daher immer für einen Spass zu haben. Skenders grosse Freude am Fahren überträgt sich auf seine Fahrschüler.',
+      image: '/images/team/skender.webp',
+      yearsExperience: yearsFrom(2010),
+      specialties: ['Auto Automatik', 'Taxi', 'Anhänger'],
+      teachingStyle: 'Fröhlich, motivierend und praktisch. Ich zeige dir nicht nur wie man fährt, sondern auch wie man es geniesst.',
+      lessonsGiven: lessonsFrom(2026, 35000),
+      successRate: 84,
+      languages: ['Deutsch', 'Albanisch'],
+      diplomas: [
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2011, image: '/images/diplome/skender-fachausweis-b.png' },
+        { title: 'Eidg. dipl. Fahrlehrer Kat. BE', category: 'BE', image: '' },
+      ]
+    },
+    {
+      id: 'samir-schlieren',
+      name: 'Samir',
+      title: 'Auto Fahrlehrer',
+      bio: 'Samir ist stets gut gelaunt und fröhlich. Mit seiner positiven Art bringt er seine Fahrschüler:innen auf sehr angenehme Art ans Ziel.',
+      image: '/images/team/samir.webp',
+      yearsExperience: yearsFrom(2022),
+      specialties: ['Auto Automatik'],
+      teachingStyle: 'Positiv, ermutigend und freundlich. Der Weg zum Führerschein wird bei mir zu einem Abenteuer.',
+      lessonsGiven: lessonsFrom(2026, 5500),
+      successRate: 83,
+      languages: ['Deutsch', 'Englisch'],
+      diplomas: [
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', image: '' },
+      ]
+    }
+  ],
+
+  urdorf: [
+    {
+      id: 'skender-urdorf',
+      name: 'Skender Ismajli',
+      title: 'Auto & Anhänger Fahrlehrer',
+      bio: 'Skender ist durch und durch Familien-Mensch. Seine vier Kinder halten ihn auf Trab und er ist daher immer für einen Spass zu haben. Skenders grosse Freude am Fahren überträgt sich auf seine Fahrschüler.',
+      image: '/images/team/skender.webp',
+      yearsExperience: yearsFrom(2010),
+      specialties: ['Auto Automatik', 'Taxi', 'Anhänger'],
+      teachingStyle: 'Fröhlich, motivierend und praktisch. Ich zeige dir nicht nur wie man fährt, sondern auch wie man es geniesst.',
+      lessonsGiven: lessonsFrom(2026, 35000),
+      successRate: 84,
+      languages: ['Deutsch', 'Albanisch'],
+      diplomas: [
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2011, image: '/images/diplome/skender-fachausweis-b.png' },
+        { title: 'Eidg. dipl. Fahrlehrer Kat. BE', category: 'BE', image: '' },
+      ]
+    },
+    {
+      id: 'samir-urdorf',
+      name: 'Samir',
+      title: 'Auto Fahrlehrer',
+      bio: 'Samir ist stets gut gelaunt und fröhlich. Mit seiner positiven Art bringt er seine Fahrschüler:innen auf sehr angenehme Art ans Ziel.',
+      image: '/images/team/samir.webp',
+      yearsExperience: yearsFrom(2022),
+      specialties: ['Auto Automatik'],
+      teachingStyle: 'Positiv, ermutigend und freundlich. Der Weg zum Führerschein wird bei mir zu einem Abenteuer.',
+      lessonsGiven: lessonsFrom(2026, 5500),
+      successRate: 83,
+      languages: ['Deutsch', 'Englisch'],
+      diplomas: [
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', image: '' },
+      ]
+    }
+  ],
+
+  birmensdorf: [
+    {
+      id: 'skender-birmensdorf',
+      name: 'Skender Ismajli',
+      title: 'Auto & Anhänger Fahrlehrer',
+      bio: 'Skender ist durch und durch Familien-Mensch. Seine vier Kinder halten ihn auf Trab und er ist daher immer für einen Spass zu haben. Skenders grosse Freude am Fahren überträgt sich auf seine Fahrschüler.',
+      image: '/images/team/skender.webp',
+      yearsExperience: yearsFrom(2010),
+      specialties: ['Auto Automatik', 'Taxi', 'Anhänger'],
+      teachingStyle: 'Fröhlich, motivierend und praktisch. Ich zeige dir nicht nur wie man fährt, sondern auch wie man es geniesst.',
+      lessonsGiven: lessonsFrom(2026, 35000),
+      successRate: 84,
+      languages: ['Deutsch', 'Albanisch'],
+      diplomas: [
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2011, image: '/images/diplome/skender-fachausweis-b.png' },
+        { title: 'Eidg. dipl. Fahrlehrer Kat. BE', category: 'BE', image: '' },
+      ]
+    },
+    {
+      id: 'samir-birmensdorf',
+      name: 'Samir',
+      title: 'Auto Fahrlehrer',
+      bio: 'Samir ist stets gut gelaunt und fröhlich. Mit seiner positiven Art bringt er seine Fahrschüler:innen auf sehr angenehme Art ans Ziel.',
+      image: '/images/team/samir.webp',
+      yearsExperience: yearsFrom(2022),
+      specialties: ['Auto Automatik'],
+      teachingStyle: 'Positiv, ermutigend und freundlich. Der Weg zum Führerschein wird bei mir zu einem Abenteuer.',
+      lessonsGiven: lessonsFrom(2026, 5500),
+      successRate: 83,
+      languages: ['Deutsch', 'Englisch'],
+      diplomas: [
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', image: '' },
+      ]
+    }
+  ],
+
+  uitikon: [
+    {
+      id: 'skender-uitikon',
+      name: 'Skender Ismajli',
+      title: 'Auto & Anhänger Fahrlehrer',
+      bio: 'Skender ist durch und durch Familien-Mensch. Seine vier Kinder halten ihn auf Trab und er ist daher immer für einen Spass zu haben. Skenders grosse Freude am Fahren überträgt sich auf seine Fahrschüler.',
+      image: '/images/team/skender.webp',
+      yearsExperience: yearsFrom(2010),
+      specialties: ['Auto Automatik', 'Taxi', 'Anhänger'],
+      teachingStyle: 'Fröhlich, motivierend und praktisch. Ich zeige dir nicht nur wie man fährt, sondern auch wie man es geniesst.',
+      lessonsGiven: lessonsFrom(2026, 35000),
+      successRate: 84,
+      languages: ['Deutsch', 'Albanisch'],
+      diplomas: [
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2011, image: '/images/diplome/skender-fachausweis-b.png' },
+        { title: 'Eidg. dipl. Fahrlehrer Kat. BE', category: 'BE', image: '' },
+      ]
+    },
+    {
+      id: 'samir-uitikon',
+      name: 'Samir',
+      title: 'Auto Fahrlehrer',
+      bio: 'Samir ist stets gut gelaunt und fröhlich. Mit seiner positiven Art bringt er seine Fahrschüler:innen auf sehr angenehme Art ans Ziel.',
+      image: '/images/team/samir.webp',
+      yearsExperience: yearsFrom(2022),
+      specialties: ['Auto Automatik'],
+      teachingStyle: 'Positiv, ermutigend und freundlich. Der Weg zum Führerschein wird bei mir zu einem Abenteuer.',
+      lessonsGiven: lessonsFrom(2026, 5500),
+      successRate: 83,
+      languages: ['Deutsch', 'Englisch'],
+      diplomas: [
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', image: '' },
+      ]
+    }
+  ],
+
+  wettswil: [
+    {
+      id: 'skender-wettswil',
+      name: 'Skender Ismajli',
+      title: 'Auto & Anhänger Fahrlehrer',
+      bio: 'Skender ist durch und durch Familien-Mensch. Seine vier Kinder halten ihn auf Trab und er ist daher immer für einen Spass zu haben. Skenders grosse Freude am Fahren überträgt sich auf seine Fahrschüler.',
+      image: '/images/team/skender.webp',
+      yearsExperience: yearsFrom(2010),
+      specialties: ['Auto Automatik', 'Taxi', 'Anhänger'],
+      teachingStyle: 'Fröhlich, motivierend und praktisch. Ich zeige dir nicht nur wie man fährt, sondern auch wie man es geniesst.',
+      lessonsGiven: lessonsFrom(2026, 35000),
+      successRate: 84,
+      languages: ['Deutsch', 'Albanisch'],
+      diplomas: [
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', year: 2011, image: '/images/diplome/skender-fachausweis-b.png' },
+        { title: 'Eidg. dipl. Fahrlehrer Kat. BE', category: 'BE', image: '' },
+      ]
+    },
+    {
+      id: 'samir-wettswil',
+      name: 'Samir',
+      title: 'Auto Fahrlehrer',
+      bio: 'Samir ist stets gut gelaunt und fröhlich. Mit seiner positiven Art bringt er seine Fahrschüler:innen auf sehr angenehme Art ans Ziel.',
+      image: '/images/team/samir.webp',
+      yearsExperience: yearsFrom(2022),
+      specialties: ['Auto Automatik'],
+      teachingStyle: 'Positiv, ermutigend und freundlich. Der Weg zum Führerschein wird bei mir zu einem Abenteuer.',
+      lessonsGiven: lessonsFrom(2026, 5500),
+      successRate: 83,
+      languages: ['Deutsch', 'Englisch'],
+      diplomas: [
+        { title: 'Fahrlehrer mit eidgenössischem Fachausweis', category: 'B', image: '' },
+      ]
+    }
+  ],
+
   aargau: [
     {
       id: 'skender-aargau',
