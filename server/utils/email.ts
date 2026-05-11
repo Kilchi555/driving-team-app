@@ -179,6 +179,85 @@ export function generateCourseTransferEmail(p: CourseTransferEmailParams): strin
   return emailWrapper(content, p.tenantName)
 }
 
+// ─── Customer cancellation → staff + admin ────────────────────────────────────
+
+export interface CustomerCancelledAdminEmailParams {
+  recipientName: string
+  customerName: string
+  customerEmail?: string
+  appointmentDate: string
+  appointmentTime: string
+  staffName: string
+  reason: string
+  chargePercentage: number
+  tenantName: string
+  requiresMedicalCertificate?: boolean
+}
+
+export function generateCustomerCancelledAdminEmail(p: CustomerCancelledAdminEmailParams): string {
+  const chargeInfo = p.chargePercentage === 0
+    ? '<span style="color:#059669;font-weight:600">Kostenlose Stornierung</span>'
+    : `<span style="color:#dc2626;font-weight:600">${p.chargePercentage}% Stornogebühr</span>`
+
+  const certNote = p.requiresMedicalCertificate
+    ? `<div class="box" style="border-left:4px solid #f59e0b">
+        <p style="margin:0;font-size:13px;color:#92400e">⚠️ Kunde muss ein Arztzeugnis einreichen. Bitte unter «Arztzeugnis-Prüfung» prüfen sobald hochgeladen.</p>
+       </div>`
+    : ''
+
+  const content = `
+<div class="header"><h1>Termin abgesagt</h1></div>
+<div class="body">
+  <p style="color:#374151;font-size:15px;margin-bottom:24px">Hallo ${p.recipientName},<br><br>
+  ein Kunde hat einen Termin selbst abgesagt.</p>
+  <div class="box">
+    <div class="label">Kunde</div>
+    <div class="value">${p.customerName}${p.customerEmail ? ` · <a href="mailto:${p.customerEmail}" style="color:#2563eb">${p.customerEmail}</a>` : ''}</div>
+    <div class="label">Datum &amp; Uhrzeit</div>
+    <div class="value">${p.appointmentDate} um ${p.appointmentTime} Uhr</div>
+    <div class="label">Fahrlehrer</div>
+    <div class="value">${p.staffName}</div>
+    <div class="label">Absagegrund</div>
+    <div class="value">${p.reason}</div>
+    <div class="label">Kostenfolge</div>
+    <div class="value">${chargeInfo}</div>
+  </div>
+  ${certNote}
+</div>`
+  return emailWrapper(content, p.tenantName)
+}
+
+// ─── Medical certificate uploaded → admin ─────────────────────────────────────
+
+export interface MedicalCertUploadedAdminEmailParams {
+  recipientName: string
+  customerName: string
+  customerEmail?: string
+  appointmentDate: string
+  appointmentTime: string
+  certificateUrl: string
+  tenantName: string
+}
+
+export function generateMedicalCertUploadedAdminEmail(p: MedicalCertUploadedAdminEmailParams): string {
+  const content = `
+<div class="header"><h1>Arztzeugnis eingereicht</h1></div>
+<div class="body">
+  <p style="color:#374151;font-size:15px;margin-bottom:24px">Hallo ${p.recipientName},<br><br>
+  ein Kunde hat ein Arztzeugnis für einen stornierten Termin hochgeladen und wartet auf Prüfung.</p>
+  <div class="box">
+    <div class="label">Kunde</div>
+    <div class="value">${p.customerName}${p.customerEmail ? ` · <a href="mailto:${p.customerEmail}" style="color:#2563eb">${p.customerEmail}</a>` : ''}</div>
+    <div class="label">Termin</div>
+    <div class="value">${p.appointmentDate} um ${p.appointmentTime} Uhr</div>
+    <div class="label">Dokument</div>
+    <div class="value"><a href="${p.certificateUrl}" style="color:#2563eb" target="_blank">Arztzeugnis anzeigen</a></div>
+  </div>
+  <p style="color:#374151;font-size:14px">Bitte prüfe das Zeugnis unter <strong>Admin → Arztzeugnis-Prüfung</strong> und genehmige oder lehne es ab.</p>
+</div>`
+  return emailWrapper(content, p.tenantName)
+}
+
 export interface StaffNotificationEmailParams {
   staffName: string
   customerName: string

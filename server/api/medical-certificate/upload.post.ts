@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
+import { sendTenantEmail, generateMedicalCertUploadedAdminEmail } from '~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -81,7 +82,7 @@ export default defineEventHandler(async (event) => {
     // Get appointment to verify it exists and is cancelled
     const { data: appointment, error: appointmentError } = await supabaseAdmin
       .from('appointments')
-      .select('id, user_id, deleted_at, cancellation_reason_id, tenant_id')
+      .select('id, user_id, deleted_at, cancellation_reason_id, tenant_id, start_time')
       .eq('id', appointmentId)
       .single()
 
@@ -165,12 +166,56 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // TODO: Send notification to admin
-    // await sendAdminNotification({
-    //   type: 'medical_certificate_uploaded',
-    //   appointmentId,
-    //   userId: appointment.user_id
-    // })
+    // Notify admin (fire-and-forget)
+    ;(async () => {
+      try {
+        const apptDate = new Date(appointment.start_time || '').toLocaleDateString('de-CH', {
+          timeZone: 'Europe/Zurich', weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric'
+        })
+        const apptTime = new Date(appointment.start_time || '').toLocaleTimeString('de-CH', {
+          timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit'
+        })
+
+        const { data: customerProfile } = await supabaseAdmin
+          .from('users')
+          .select('first_name, last_name, email')
+          .eq('id', appointment.user_id)
+          .single()
+
+        const { data: tenant } = await supabaseAdmin
+          .from('tenants')
+          .select('name, contact_email, contact_person_first_name, contact_person_last_name')
+          .eq('id', appointment.tenant_id)
+          .single()
+
+        const adminEmail = tenant?.contact_email
+        if (!adminEmail) return
+
+        const adminName = [tenant?.contact_person_first_name, tenant?.contact_person_last_name]
+          .filter(Boolean).join(' ') || 'Administrator'
+        const customerName = [customerProfile?.first_name, customerProfile?.last_name]
+          .filter(Boolean).join(' ') || 'Kunde'
+
+        const html = generateMedicalCertUploadedAdminEmail({
+          recipientName: adminName,
+          customerName,
+          customerEmail: customerProfile?.email || undefined,
+          appointmentDate: apptDate,
+          appointmentTime: apptTime,
+          certificateUrl: urlData.publicUrl,
+          tenantName: tenant?.name || 'Fahrschule',
+        })
+
+        await sendTenantEmail(appointment.tenant_id, {
+          to: adminEmail,
+          subject: `Arztzeugnis eingereicht – ${customerName}`,
+          html,
+        })
+        logger.debug('✅ Admin notified of medical certificate upload:', adminEmail)
+      } catch (notifyErr: any) {
+        logger.warn('⚠️ Med-cert admin notification failed (non-critical):', notifyErr.message)
+      }
+    })()
 
     return {
       success: true,

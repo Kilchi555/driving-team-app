@@ -138,7 +138,7 @@
     <div v-if="showContent" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-6 py-6">
       
       <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         
         <!-- Zahlungsübersicht -->
         <div 
@@ -251,7 +251,7 @@
       </div>
 
       <!-- Affiliate + Booking Sections in einem gemeinsamen Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
         
         <!-- Affiliate: gleich mit dem Grid sichtbar; ausblenden nur wenn Tenant nach API deaktiviert hat -->
         <div
@@ -700,7 +700,7 @@
 
         <!-- Content -->
         <div class="p-6 overflow-y-auto flex-1">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <button
               @click="navigateToReglement('datenschutz'); showReglementeModal = false"
               class="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 text-left transition-colors border border-gray-200 hover:border-indigo-300"
@@ -1022,6 +1022,7 @@
       :tenant-id="userData?.tenant_id"
       @close="showUpcomingLessonsModal = false"
       @transfer-done="() => { showUpcomingLessonsModal = false; loadAppointments(true) }"
+      @appointment-cancelled="() => { showUpcomingLessonsModal = false; loadAppointments(true) }"
     />
 
     <!-- Instructor Details Modal -->
