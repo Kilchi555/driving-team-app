@@ -97,8 +97,13 @@ export default defineEventHandler(async (event) => {
       .single()
 
     const coursesEnabled = (() => {
+      if (!coursesSetting?.setting_value) return false
       try {
-        return JSON.parse(coursesSetting?.setting_value ?? 'false').enabled === true
+        const val = JSON.parse(coursesSetting.setting_value)
+        // Explicit disabled flag
+        if (val.enabled === false) return false
+        // Either enabled: true is set, or the record simply exists (feature metadata format)
+        return true
       } catch {
         return false
       }
