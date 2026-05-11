@@ -28,7 +28,9 @@ export default defineNuxtRouteMiddleware((to) => {
 
   // ── Active paid subscription → always allow ────────────────────────────────
   if (!info.is_trial && info.subscription_plan && info.subscription_plan !== 'trial') {
-    if (info.current_period_end && now < new Date(info.current_period_end)) return
+    // No period end = legacy/manual subscription (e.g. old "premium" plan) → always allow
+    if (!info.current_period_end) return
+    if (now < new Date(info.current_period_end)) return
     // Paid subscription exists but period has ended → redirect to upgrade
     return navigateTo('/upgrade')
   }
