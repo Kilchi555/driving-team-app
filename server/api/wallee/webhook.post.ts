@@ -590,6 +590,44 @@ export default defineEventHandler(async (event) => {
             if (!insertError && newRegs) {
               logger.info(`✅ Created ${newRegs.length} new course registration(s)`)
               updatedRegistrations = [...updatedRegistrations, ...newRegs]
+
+              // Increment discount usage_count for any discount codes used
+              ;(async () => {
+                try {
+                  for (const payment of paymentsToUpdate) {
+                    const discountCode = payment.metadata?.discount_code
+                    const tenantIdForDiscount = payment.tenant_id
+                    if (!discountCode || !tenantIdForDiscount) continue
+
+                    const { data: disc } = await supabase
+                      .from('discounts')
+                      .select('id, usage_count')
+                      .ilike('code', discountCode)
+                      .eq('tenant_id', tenantIdForDiscount)
+                      .maybeSingle()
+
+                    if (disc) {
+                      await supabase.from('discounts').update({ usage_count: (disc.usage_count ?? 0) + 1 }).eq('id', disc.id)
+                      logger.debug('📊 Discount usage_count incremented (webhook):', discountCode)
+                      continue
+                    }
+
+                    const { data: vc } = await supabase
+                      .from('voucher_codes')
+                      .select('id, current_redemptions')
+                      .ilike('code', discountCode)
+                      .eq('tenant_id', tenantIdForDiscount)
+                      .maybeSingle()
+
+                    if (vc) {
+                      await supabase.from('voucher_codes').update({ current_redemptions: (vc.current_redemptions ?? 0) + 1 }).eq('id', vc.id)
+                      logger.debug('📊 Voucher current_redemptions incremented (webhook):', discountCode)
+                    }
+                  }
+                } catch (e: any) {
+                  logger.warn('⚠️ Discount usage increment failed (non-critical):', e.message)
+                }
+              })()
               
               // ✅ NEW: Update payments with user_id and course_registration_id
               for (let i = 0; i < registrationsToCreate.length && i < newRegs.length; i++) {
