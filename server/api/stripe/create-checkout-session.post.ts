@@ -118,11 +118,16 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Require an authenticated tenant — no anonymous checkouts allowed
+  if (!tenantId) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthenticated: please log in or create an account before upgrading.' })
+  }
+
   // Accounts V2: always requires a customer — create a transient one if none resolved
   if (!stripeCustomerId) {
     const transient = await stripe.customers.create({
       description: 'Transient customer – Simy upgrade flow',
-      metadata: { ...(tenantId ? { tenant_id: tenantId } : {}), transient: 'true' },
+      metadata: { tenant_id: tenantId },
     })
     stripeCustomerId = transient.id
   }
