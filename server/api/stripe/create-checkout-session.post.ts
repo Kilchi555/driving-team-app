@@ -178,6 +178,13 @@ export default defineEventHandler(async (event) => {
         ...(tenantId ? { tenant_id: tenantId } : {}),
       },
     },
+    ...(needsWalleeTrial ? {
+      custom_text: {
+        submit: {
+          message: 'Du wirst erst belastet, sobald dein Wallee-Konto aktiviert ist. Bis dahin läuft dein Abonnement kostenlos.',
+        },
+      },
+    } : {}),
     success_url: successUrl,
     cancel_url: `${baseUrl}/upgrade`,
   })
