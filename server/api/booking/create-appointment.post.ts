@@ -47,6 +47,8 @@ interface CreateAppointmentRequest {
   appointment_type: string
   notes?: string
   category_code: string
+  discount_code?: string
+  discount_amount_rappen?: number
 }
 
 export default defineEventHandler(async (event: H3Event) => {
@@ -418,30 +420,82 @@ export default defineEventHandler(async (event: H3Event) => {
     auditDetails.appointment_id = newAppointment.id
     logger.debug('✅ Appointment created successfully:', newAppointment.id)
 
+    // ============ LAYER 7b: VALIDATE DISCOUNT (if provided) ============
+    let validatedDiscountAmount = 0
+    if (body.discount_code && body.discount_amount_rappen && body.discount_amount_rappen > 0) {
+      try {
+        const { data: voucherData } = await supabase
+          .from('voucher_codes')
+          .select('discount_type, discount_value, max_discount_rappen, valid_until, is_active')
+          .ilike('code', body.discount_code)
+          .eq('tenant_id', tenantId!)
+          .eq('is_active', true)
+          .maybeSingle()
+
+        let discountRow: any = voucherData
+
+        if (!discountRow) {
+          const { data: discountData } = await supabase
+            .from('discounts')
+            .select('discount_type, discount_value, max_discount_rappen, valid_until, is_active, first_lesson_only')
+            .ilike('code', body.discount_code)
+            .eq('tenant_id', tenantId!)
+            .eq('is_active', true)
+            .maybeSingle()
+          if (discountData) discountRow = discountData
+        }
+
+        if (discountRow) {
+          const now = new Date()
+          const validUntil = discountRow.valid_until ? new Date(discountRow.valid_until) : null
+          if (!validUntil || now <= validUntil) {
+            if (discountRow.discount_type === 'percentage') {
+              validatedDiscountAmount = Math.round((totalAmountRappen * discountRow.discount_value) / 100)
+              if (discountRow.max_discount_rappen) {
+                validatedDiscountAmount = Math.min(validatedDiscountAmount, discountRow.max_discount_rappen)
+              }
+            } else if (discountRow.discount_type === 'fixed') {
+              validatedDiscountAmount = discountRow.discount_value || 0
+            }
+            validatedDiscountAmount = Math.min(validatedDiscountAmount, totalAmountRappen)
+          }
+        }
+        logger.debug('💸 Discount validated:', { code: body.discount_code, amount: validatedDiscountAmount })
+      } catch (discountErr: any) {
+        logger.warn('⚠️ Discount validation failed (non-critical):', discountErr.message)
+      }
+    }
+
+    const netAmountRappen = Math.max(0, totalAmountRappen - validatedDiscountAmount)
+
     // ============ LAYER 8: CREATE PAYMENT ============ 
     logger.debug('💳 Creating payment record for appointment...', {
       appointment_id: newAppointment.id,
-      user_id: newAppointment.user_id, // ✅ FIX: Use user_id from the newAppointment (the client)!
+      user_id: newAppointment.user_id,
       tenant_id: tenantId,
-      total_amount_rappen: totalAmountRappen
+      total_amount_rappen: netAmountRappen,
+      discount_amount_rappen: validatedDiscountAmount
     })
 
     const paymentToInsert = {
       appointment_id: newAppointment.id,
-      user_id: newAppointment.user_id, // ✅ FIX: Use user_id from the newAppointment (the client)!
+      user_id: newAppointment.user_id,
       tenant_id: tenantId,
-      staff_id: slot.staff_id, // Add staff_id (this is correct, staff_id is for the staff who performs the appointment)
-      lesson_price_rappen: totalAmountRappen, // Use totalAmountRappen for lesson price
-      admin_fee_rappen: 0, // Default to 0 for now
-      products_price_rappen: 0, // Default to 0 as no products are booked via this flow
-      discount_amount_rappen: 0, // Default to 0 as no discounts are applied via this flow
-      total_amount_rappen: totalAmountRappen,
-      payment_status: 'pending', // Payment is pending after booking
-      payment_method: 'wallee', // Standard to wallee
-      payment_provider: 'wallee', // Default payment provider
-      payment_method_id: null, // No payment method yet
+      staff_id: slot.staff_id,
+      lesson_price_rappen: totalAmountRappen,
+      admin_fee_rappen: 0,
+      products_price_rappen: 0,
+      discount_amount_rappen: validatedDiscountAmount,
+      total_amount_rappen: netAmountRappen,
+      payment_status: 'pending',
+      payment_method: 'wallee',
+      payment_provider: 'wallee',
+      payment_method_id: null,
       description: appointmentTitle,
-      metadata: { category: body.category_code || null },
+      metadata: {
+        category: body.category_code || null,
+        ...(body.discount_code ? { discount_code: body.discount_code } : {})
+      },
       currency: 'CHF',
       created_by: newAppointment.user_id
     }

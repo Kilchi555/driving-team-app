@@ -867,7 +867,40 @@
                 <span class="text-gray-600">Dauer:</span>
                 <span class="font-medium text-gray-900 text-right">{{ selectedSlot?.duration_minutes }} Minuten</span>
               </div>
+
+              <!-- Price row -->
+              <template v-if="previewPriceRappen > 0">
+                <div class="border-t border-gray-200 pt-2 mt-1"></div>
+                <div class="flex justify-between items-start text-sm">
+                  <span class="text-gray-600">Preis:</span>
+                  <span
+                    class="font-medium text-gray-900 text-right"
+                    :class="bookingDiscount ? 'line-through text-gray-400' : ''"
+                  >
+                    CHF {{ (previewPriceRappen / 100).toFixed(2) }}
+                  </span>
+                </div>
+                <div v-if="bookingDiscount" class="flex justify-between items-start text-sm">
+                  <span class="text-gray-600">Rabatt:</span>
+                  <span class="font-medium text-green-700 text-right">– CHF {{ (bookingDiscount.discountAmountRappen / 100).toFixed(2) }}</span>
+                </div>
+                <div v-if="bookingDiscount" class="flex justify-between items-start text-sm font-semibold">
+                  <span class="text-gray-800">Total:</span>
+                  <span class="text-gray-900">CHF {{ (Math.max(0, previewPriceRappen - bookingDiscount.discountAmountRappen) / 100).toFixed(2) }}</span>
+                </div>
+              </template>
             </div>
+
+            <!-- Discount code field -->
+            <DiscountCodeInput
+              v-if="previewPriceRappen > 0 && currentTenant?.id"
+              :tenant-id="currentTenant.id"
+              :amount-rappen="previewPriceRappen"
+              :category-code="selectedCategory?.code"
+              :primary-color="getBrandPrimary()"
+              @applied="(d) => bookingDiscount = d"
+              @removed="bookingDiscount = null"
+            />
           </div>
 
           <!-- Navigation -->
@@ -1019,6 +1052,7 @@ import { useFeatures } from '~/composables/useFeatures'
 import { navigateTo } from '#app'
 import AppointmentPreferencesForm from '~/components/booking/AppointmentPreferencesForm.vue'
 import { parseTimeWindows } from '~/utils/travelTimeValidation'
+import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
 
 // Page Meta
 // @ts-ignore - definePageMeta is a Nuxt compiler macro
@@ -3051,6 +3085,31 @@ const successMessage = ref({
   description: 'Dein Termin wurde bestätigt und die Zahlung verarbeitet.'
 })
 
+// Price preview + discount for booking confirmation
+const previewPriceRappen = ref(0)
+const bookingDiscount = ref<{ code: string; discountAmountRappen: number; discountData: any } | null>(null)
+
+watch(currentStep, async (step) => {
+  if (step === 7 && selectedSlot.value?.id && selectedCategory.value?.code && currentTenant.value?.id) {
+    bookingDiscount.value = null
+    try {
+      const res = await $fetch('/api/booking/preview-price', {
+        method: 'POST',
+        body: {
+          slot_id: selectedSlot.value.id,
+          category_code: selectedCategory.value.code,
+          tenant_id: currentTenant.value.id
+        }
+      }) as any
+      if (res?.success) {
+        previewPriceRappen.value = res.price_rappen
+      }
+    } catch (e) {
+      logger.warn('⚠️ Could not load price preview:', e)
+    }
+  }
+})
+
 // Confirm booking
 const confirmBooking = async () => {
   try {
@@ -3129,7 +3188,9 @@ const confirmBooking = async () => {
       session_id: sessionId.value,
       appointment_type: 'lesson',
       category_code: selectedCategory.value.code,
-      notes: bookingNotes.value || undefined
+      notes: bookingNotes.value || undefined,
+      discount_code: bookingDiscount.value?.code,
+      discount_amount_rappen: bookingDiscount.value?.discountAmountRappen ?? 0
     })
 
     logger.debug('✅ Appointment created:', result.appointment_id)
@@ -3197,6 +3258,8 @@ const createAppointmentSecure = async (userData: any) => {
       {
         slot_id: userData.slot_id,
         session_id: userData.session_id,
+        discount_code: userData.discount_code,
+        discount_amount_rappen: userData.discount_amount_rappen,
         appointment_type: userData.appointment_type,
         category_code: userData.category_code || '',
         notes: userData.notes || undefined

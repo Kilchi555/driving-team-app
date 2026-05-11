@@ -45,8 +45,10 @@ const handler = defineEventHandler(async (event) => {
       tenantId,
       email,
       phone,
-      customSessions, // Optional: for flexible session selection
-      referralCode    // Optional: affiliate referral code
+      customSessions,      // Optional: for flexible session selection
+      referralCode,        // Optional: affiliate referral code
+      discountCode,        // Optional: discount/voucher code
+      discountAmountRappen // Optional: client-computed discount (re-validated server-side)
     } = body
 
     logger.debug('📝 Wallee enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions })
@@ -334,40 +336,100 @@ const handler = defineEventHandler(async (event) => {
     
     logger.info('ℹ️ Skipping enrollment creation - will be done by webhook after payment')
 
+    // 8b. Re-validate discount code server-side (if provided)
+    let validatedDiscountAmount = 0
+    let validatedDiscountCode: string | null = null
+
+    if (discountCode) {
+      try {
+        const { data: voucherData } = await supabase
+          .from('voucher_codes')
+          .select('*')
+          .ilike('code', discountCode)
+          .eq('tenant_id', tenantId)
+          .eq('is_active', true)
+          .maybeSingle()
+
+        let discountRow: any = voucherData
+
+        if (!discountRow) {
+          const { data: giftCard } = await supabase
+            .from('vouchers')
+            .select('*')
+            .ilike('code', discountCode)
+            .eq('tenant_id', tenantId)
+            .eq('is_active', true)
+            .maybeSingle()
+          if (giftCard && !giftCard.redeemed_at) {
+            discountRow = { ...giftCard, discount_type: 'fixed', discount_value: giftCard.amount_rappen, is_gift_card: true }
+          }
+        }
+
+        if (!discountRow) {
+          const { data: discountData } = await supabase
+            .from('discounts')
+            .select('*')
+            .ilike('code', discountCode)
+            .eq('tenant_id', tenantId)
+            .eq('is_active', true)
+            .maybeSingle()
+          if (discountData) discountRow = discountData
+        }
+
+        if (discountRow) {
+          const now = new Date()
+          const validUntil = discountRow.valid_until ? new Date(discountRow.valid_until) : null
+          if (!validUntil || now <= validUntil) {
+            const baseAmount = course.price_per_participant_rappen
+            if (discountRow.discount_type === 'percentage') {
+              validatedDiscountAmount = Math.round((baseAmount * discountRow.discount_value) / 100)
+              if (discountRow.max_discount_rappen) {
+                validatedDiscountAmount = Math.min(validatedDiscountAmount, discountRow.max_discount_rappen)
+              }
+            } else if (discountRow.discount_type === 'fixed') {
+              validatedDiscountAmount = discountRow.discount_value || 0
+            }
+            validatedDiscountAmount = Math.min(validatedDiscountAmount, baseAmount)
+            validatedDiscountCode = discountCode
+          }
+        }
+      } catch (discountErr: any) {
+        logger.warn('⚠️ Discount validation failed (non-critical):', discountErr.message)
+      }
+    }
+
     // 9. Call payment processor (WITH VALIDATION DATA, NOT ENROLLMENT ID)
     const priceChf = course.price_per_participant_rappen / 100
     
     try {
+      const finalAmount = Math.max(0, course.price_per_participant_rappen - validatedDiscountAmount)
+
       const paymentResponse = await $fetch('/api/payments/process-public', {
         method: 'POST',
         body: {
-          // ✅ CHANGED: Don't reference enrollmentId (doesn't exist yet)
-          // Instead, pass validation data for webhook
           courseId: courseId,
-          amount: course.price_per_participant_rappen,
+          amount: finalAmount,
           currency: 'CHF',
           customerEmail: finalEmail,
           customerName: `${customerData.firstname} ${customerData.lastname}`,
           tenantId: tenantId,
-          // Pass existing user_id so payment is linked from the start
           ...(guestUserId ? { userId: guestUserId } : {}),
           metadata: {
-            // ✅ CRITICAL: courseId needed by webhook to create registration
             courseId: courseId,
             sari_faberid: faberidClean,
             sari_birthdate: birthdate,
             course_name: course.name,
             course_location: course.description,
-            // ✅ NEW: Store customer data for webhook
             firstname: customerData.firstname,
             lastname: customerData.lastname,
             email: finalEmail,
             phone: finalPhone,
-            // ✅ NEW: Store custom sessions for webhook
             custom_sessions: customSessions || null,
-            // ✅ Affiliate referral code (if present)
             referral_code: referralCode || null,
-            // ✅ NEW: Validation metadata for SARI
+            // Discount tracking for webhook
+            discount_code: validatedDiscountCode,
+            discount_amount_rappen: validatedDiscountAmount,
+            original_price_rappen: course.price_per_participant_rappen,
             sari_validation_data: {
               license: customerData.license,
               birthdate: customerData.birthdate,

@@ -40,7 +40,7 @@
           </button>
 
           <!-- Full actions dropdown -->
-          <div v-else-if="alwaysShowActions || appEnv !== 'production'" class="relative">
+          <div v-else class="relative">
             <button
               type="button"
               class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-green-300 text-green-700 text-sm font-medium rounded-lg hover:bg-green-50 transition-colors shadow-sm"
@@ -51,7 +51,7 @@
             <Transition name="fade">
               <div
                 v-if="showActionsDropdown"
-                class="absolute right-0 bottom-full mb-1 w-52 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-20"
+                class="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-20"
               >
                 <button
                   v-if="walleeEnabled"
@@ -442,7 +442,6 @@ const props = withDefaults(
 
 const emit = defineEmits<{ balanceUpdated: [] }>()
 
-const appEnv = useRuntimeConfig().public.appEnv as string | undefined
 
 const isLoadingBalance = ref(false)
 const walletLoadError = ref('')
