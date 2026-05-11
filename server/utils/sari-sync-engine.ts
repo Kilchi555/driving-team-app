@@ -393,17 +393,26 @@ export class SARISyncEngine {
       }
     }
 
-    // Get actual registration count (including existing ones)
-    const { data: registrations, error: regError } = await this.supabase
-      .from('course_registrations')
-      .select('id')
-      .eq('course_id', courseId)
+    // Derive participant count directly from SARI's freeplaces field.
+    // This is the most reliable signal: it reflects manually-added participants
+    // in SARI that never appear in course_registrations.
+    // All sessions in a group share the same freeplaces value; use the first.
+    const sariFreePlaces = typeof firstSession.freeplaces === 'number' ? firstSession.freeplaces : null
+    let totalParticipants: number
 
-    const totalParticipants = registrations?.length || 0
+    if (sariFreePlaces !== null) {
+      totalParticipants = Math.max(0, Math.min(maxParticipants - sariFreePlaces, maxParticipants))
+      logger.debug(`📊 Updating course ${courseId} with ${totalParticipants} participants from SARI freeplaces (${sariFreePlaces} free, max ${maxParticipants}), ${participantsSynced} registrations synced`)
+    } else {
+      // Fallback: count from course_registrations if freeplaces is unavailable
+      const { data: registrations } = await this.supabase
+        .from('course_registrations')
+        .select('id')
+        .eq('course_id', courseId)
+      totalParticipants = registrations?.length || 0
+      logger.debug(`📊 Updating course ${courseId} with ${totalParticipants} total registrations (SARI freeplaces unavailable, ${participantsSynced} new)`)
+    }
 
-    // Always update course with actual participant count from registrations
-    logger.debug(`📊 Updating course ${courseId} with ${totalParticipants} total registrations (${participantsSynced} new)`)
-    
     const { error: updateError } = await this.supabase
       .from('courses')
       .update({
