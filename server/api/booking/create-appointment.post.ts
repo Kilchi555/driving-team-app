@@ -400,7 +400,7 @@ export default defineEventHandler(async (event: H3Event) => {
         status: 'confirmed', // Status: confirmed (not booked)
         original_price_rappen: totalAmountRappen, // Add default price
         source: 'online',
-        created_by: authenticatedUserId
+        created_by: userData.id
       })
       .select()
       .single()
