@@ -891,9 +891,30 @@
               </template>
             </div>
 
-            <!-- Discount code field -->
+            <!-- Active lesson packages -->
+            <div v-if="availablePackages.length > 0" class="space-y-2">
+              <p class="text-sm font-medium text-gray-700">Paket verwenden</p>
+              <div v-for="pkg in availablePackages" :key="pkg.id"
+                @click="selectedPackage = selectedPackage?.id === pkg.id ? null : pkg"
+                :class="['p-3 rounded-lg border-2 cursor-pointer transition-all', selectedPackage?.id === pkg.id ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300']">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: pkg.lesson_packages?.color || '#3B82F6' }"></div>
+                    <span class="text-sm font-medium text-gray-800">{{ pkg.lesson_packages?.name }}</span>
+                  </div>
+                  <span :class="['text-sm font-bold', selectedPackage?.id === pkg.id ? 'text-green-700' : 'text-gray-700']">
+                    {{ pkg.lessons_total - pkg.lessons_used }} Lektionen verbleibend
+                  </span>
+                </div>
+                <p v-if="selectedPackage?.id === pkg.id" class="text-xs text-green-700 mt-1 pl-4">
+                  ✓ Diese Lektion wird vom Paket abgezogen
+                </p>
+              </div>
+            </div>
+
+            <!-- Discount code field (nur wenn kein Paket gewählt) -->
             <DiscountCodeInput
-              v-if="previewPriceRappen > 0 && currentTenant?.id"
+              v-if="previewPriceRappen > 0 && currentTenant?.id && !selectedPackage"
               :tenant-id="currentTenant.id"
               :amount-rappen="previewPriceRappen"
               :category-code="selectedCategory?.code"
@@ -3085,27 +3106,40 @@ const successMessage = ref({
   description: 'Dein Termin wurde bestätigt und die Zahlung verarbeitet.'
 })
 
-// Price preview + discount for booking confirmation
+// Price preview + discount + packages for booking confirmation
 const previewPriceRappen = ref(0)
 const bookingDiscount = ref<{ code: string; discountAmountRappen: number; discountData: any } | null>(null)
+const availablePackages = ref<any[]>([])
+const selectedPackage = ref<any>(null)  // Package chosen to pay with
 
 watch(currentStep, async (step) => {
   if (step === 7 && selectedSlot.value?.id && selectedCategory.value?.code && currentTenant.value?.id) {
     bookingDiscount.value = null
-    try {
-      const res = await $fetch('/api/booking/preview-price', {
+    selectedPackage.value = null
+
+    // Load price preview and available packages in parallel
+    const [priceRes, pkgRes] = await Promise.allSettled([
+      $fetch('/api/booking/preview-price', {
         method: 'POST',
         body: {
           slot_id: selectedSlot.value.id,
           category_code: selectedCategory.value.code,
           tenant_id: currentTenant.value.id
         }
-      }) as any
-      if (res?.success) {
-        previewPriceRappen.value = res.price_rappen
-      }
-    } catch (e) {
-      logger.warn('⚠️ Could not load price preview:', e)
+      }),
+      $fetch('/api/packages/my-packages').catch(() => null)
+    ])
+
+    if (priceRes.status === 'fulfilled') {
+      previewPriceRappen.value = (priceRes.value as any)?.price_rappen ?? 0
+    }
+    if (pkgRes.status === 'fulfilled' && pkgRes.value) {
+      const allPkgs: any[] = (pkgRes.value as any)?.packages ?? []
+      // Only show packages that match the category (or have no category restriction)
+      availablePackages.value = allPkgs.filter((p: any) => {
+        const pkgCat = p.lesson_packages?.category_code
+        return !pkgCat || pkgCat === selectedCategory.value?.code
+      })
     }
   }
 })
@@ -3190,7 +3224,8 @@ const confirmBooking = async () => {
       category_code: selectedCategory.value.code,
       notes: bookingNotes.value || undefined,
       discount_code: bookingDiscount.value?.code,
-      discount_amount_rappen: bookingDiscount.value?.discountAmountRappen ?? 0
+      discount_amount_rappen: bookingDiscount.value?.discountAmountRappen ?? 0,
+      customer_package_id: selectedPackage.value?.id
     })
 
     logger.debug('✅ Appointment created:', result.appointment_id)
@@ -3260,6 +3295,7 @@ const createAppointmentSecure = async (userData: any) => {
         session_id: userData.session_id,
         discount_code: userData.discount_code,
         discount_amount_rappen: userData.discount_amount_rappen,
+        customer_package_id: userData.customer_package_id,
         appointment_type: userData.appointment_type,
         category_code: userData.category_code || '',
         notes: userData.notes || undefined

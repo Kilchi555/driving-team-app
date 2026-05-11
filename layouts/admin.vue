@@ -149,6 +149,8 @@
               class="drawer-link" :class="isActive('/admin/data-management') ? 'drawer-active' : ''">Datenverwaltung</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('discounts_enabled')" to="/admin/discounts" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/discounts') ? 'drawer-active' : ''">Rabatte</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('discounts_enabled')" to="/admin/packages" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/packages') ? 'drawer-active' : ''">Pakete</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('categories_enabled')" to="/admin/categories" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">Kategorien</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('examiners_enabled')" to="/admin/examiners" @click="showMobileMenu = false"

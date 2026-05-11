@@ -244,6 +244,24 @@
             ></textarea>
           </div>
 
+          <!-- First-Lesson-Only -->
+          <div class="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+            <div class="flex items-center gap-3">
+              <input
+                v-model="form.first_lesson_only"
+                type="checkbox"
+                id="first_lesson_only"
+                class="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+              />
+              <label for="first_lesson_only" class="text-sm font-medium text-gray-800 cursor-pointer">
+                Nur für Erstkunden (erste Fahrstunde)
+              </label>
+            </div>
+            <p class="text-xs text-amber-700 pl-7">
+              Code wird abgelehnt wenn der Kunde bereits eine bestätigte Fahrstunde hatte.
+            </p>
+          </div>
+
           <!-- Status -->
           <div class="flex items-center space-x-3">
             <label for="is_active" class="text-sm font-medium text-gray-700">
@@ -327,7 +345,7 @@ const { currentUser } = useCurrentUser()
 
 // State
 const isLoading = ref(false)
-const form = ref<CreateDiscountRequest>({
+const form = ref<CreateDiscountRequest & { first_lesson_only?: boolean }>({
   name: '',
   code: '',
   discount_type: 'percentage',
@@ -340,7 +358,8 @@ const form = ref<CreateDiscountRequest>({
   max_per_user: undefined,
   applies_to: 'all',
   category_filter: undefined,
-  is_active: true
+  is_active: true,
+  first_lesson_only: false
 })
 
 // Computed
@@ -377,7 +396,8 @@ const initializeForm = () => {
       max_per_user: props.discount.max_per_user,
       applies_to: props.discount.applies_to,
       category_filter: props.discount.category_filter,
-      is_active: props.discount.is_active !== undefined ? props.discount.is_active : true
+      is_active: props.discount.is_active !== undefined ? props.discount.is_active : true,
+      first_lesson_only: (props.discount as any).first_lesson_only ?? false
     }
   } else {
     // Reset form for new discount
@@ -394,7 +414,8 @@ const initializeForm = () => {
       max_per_user: undefined,
       applies_to: 'all',
       category_filter: undefined,
-      is_active: true
+      is_active: true,
+      first_lesson_only: false
     }
   }
 }

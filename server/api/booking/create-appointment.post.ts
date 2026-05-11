@@ -49,6 +49,7 @@ interface CreateAppointmentRequest {
   category_code: string
   discount_code?: string
   discount_amount_rappen?: number
+  customer_package_id?: string
 }
 
 export default defineEventHandler(async (event: H3Event) => {
@@ -466,6 +467,46 @@ export default defineEventHandler(async (event: H3Event) => {
       }
     }
 
+    // ============ LAYER 7c: VALIDATE + RESERVE PACKAGE (if provided) ============
+    let packageUsed = false
+    if (body.customer_package_id) {
+      try {
+        const { data: cp, error: cpError } = await supabase
+          .from('customer_packages')
+          .select('id, lessons_total, lessons_used, expires_at, is_active, lesson_packages(category_code)')
+          .eq('id', body.customer_package_id)
+          .eq('user_id', userData.id)
+          .eq('tenant_id', tenantId!)
+          .single()
+
+        const remaining = cp ? cp.lessons_total - cp.lessons_used : 0
+        const expired = cp?.expires_at && new Date(cp.expires_at) < new Date()
+        const catMatch = !cp?.lesson_packages || !(cp.lesson_packages as any).category_code ||
+          (cp.lesson_packages as any).category_code === body.category_code
+
+        if (!cpError && cp && cp.is_active && remaining > 0 && !expired && catMatch) {
+          // Deduct one lesson from the package
+          await supabase
+            .from('customer_packages')
+            .update({ lessons_used: cp.lessons_used + 1 })
+            .eq('id', cp.id)
+
+          // Record the use
+          await supabase.from('package_lesson_uses').insert({
+            customer_package_id: cp.id,
+            appointment_id: newAppointment.id
+          })
+
+          packageUsed = true
+          logger.info(`📦 Package lesson used: package ${cp.id}, appointment ${newAppointment.id}`)
+        } else {
+          logger.warn('⚠️ Package validation failed, proceeding without package deduction')
+        }
+      } catch (pkgErr: any) {
+        logger.warn('⚠️ Package deduction error (non-critical):', pkgErr.message)
+      }
+    }
+
     const netAmountRappen = Math.max(0, totalAmountRappen - validatedDiscountAmount)
 
     // ============ LAYER 8: CREATE PAYMENT ============ 
@@ -487,14 +528,15 @@ export default defineEventHandler(async (event: H3Event) => {
       products_price_rappen: 0,
       discount_amount_rappen: validatedDiscountAmount,
       total_amount_rappen: netAmountRappen,
-      payment_status: 'pending',
-      payment_method: 'wallee',
-      payment_provider: 'wallee',
+      payment_status: packageUsed ? 'paid' : 'pending',
+      payment_method: packageUsed ? 'package' : 'wallee',
+      payment_provider: packageUsed ? 'package' : 'wallee',
       payment_method_id: null,
       description: appointmentTitle,
       metadata: {
         category: body.category_code || null,
-        ...(body.discount_code ? { discount_code: body.discount_code } : {})
+        ...(body.discount_code ? { discount_code: body.discount_code } : {}),
+        ...(packageUsed ? { customer_package_id: body.customer_package_id } : {})
       },
       currency: 'CHF',
       created_by: newAppointment.user_id
