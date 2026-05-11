@@ -7,16 +7,29 @@
           <div>
             <h1 class="text-3xl font-bold text-gray-900">Kursverwaltung</h1>
           </div>
-          <button
-            v-if="activeTab === 'courses'"
-            @click="openCreateCourseModal"
-            class="text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            Neuer Kurs erstellen
-          </button>
+          <div v-if="activeTab === 'courses'" class="flex items-center gap-3">
+            <button
+              @click="triggerSariSync"
+              :disabled="sariSyncing"
+              class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+              :class="sariSyncing ? 'bg-orange-100 text-orange-400 cursor-not-allowed' : 'bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200'"
+              title="SARI-Kurse jetzt synchronisieren"
+            >
+              <svg class="w-4 h-4" :class="sariSyncing ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              {{ sariSyncing ? 'Synchronisiert…' : 'SARI Sync' }}
+            </button>
+            <button
+              @click="openCreateCourseModal"
+              class="text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+              Neuer Kurs erstellen
+            </button>
+          </div>
           <button
             v-if="activeTab === 'categories'"
             @click="showCreateCategoryModal = true"
@@ -6735,6 +6748,29 @@ const getEnrollmentStatusText = (status: string) => {
       return 'Storniert'
     default:
       return 'Unbekannt'
+  }
+}
+
+// ── SARI Manual Sync ──────────────────────────────────────────────────────────
+const sariSyncing = ref(false)
+
+const triggerSariSync = async () => {
+  if (sariSyncing.value) return
+  sariSyncing.value = true
+  try {
+    const response = await fetch('/api/sari/trigger-sync', { method: 'POST' })
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data?.statusMessage || data?.message || 'Sync fehlgeschlagen')
+    }
+
+    success.value = `✅ SARI Sync abgeschlossen: ${data.total_synced} Kurse synchronisiert (VKU: ${data.vku?.synced ?? 0}, PGS: ${data.pgs?.synced ?? 0})`
+    await loadCourses()
+  } catch (err: any) {
+    error.value = err?.message || 'SARI Sync fehlgeschlagen'
+  } finally {
+    sariSyncing.value = false
   }
 }
 </script>
