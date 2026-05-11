@@ -634,6 +634,33 @@
       </button>
     </footer>
   </div>
+
+  <!-- Auth prompt modal (shown when checkout attempted without session) -->
+  <div v-if="showAuthPrompt" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 text-center">
+      <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-blue-50 mb-5">
+        <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+        </svg>
+      </div>
+      <h2 class="text-xl font-bold text-gray-900 mb-2">Konto erforderlich</h2>
+      <p class="text-sm text-gray-500 mb-7">Um ein Abonnement zu starten, benötigst du ein Simy-Konto.</p>
+      <a
+        href="/tenant-register"
+        class="block w-full py-3 rounded-2xl font-semibold text-sm text-white bg-blue-600 hover:bg-blue-700 transition-colors mb-3"
+      >
+        Jetzt kostenlos registrieren
+      </a>
+      <a
+        href="/login"
+        class="block w-full py-3 rounded-2xl font-semibold text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+      >
+        Ich habe bereits ein Konto → Einloggen
+      </a>
+      <button @click="showAuthPrompt = false" class="mt-4 text-xs text-gray-400 hover:text-gray-600">Abbrechen</button>
+    </div>
+  </div>
+
 </template>
 
 <script setup lang="ts">
@@ -749,6 +776,7 @@ const trialStatus = computed(() => getTrialStatus())
 interface StaffMember { id: string; name: string; role: string }
 
 const isLoggedIn = ref(false)
+const showAuthPrompt = ref(false)
 const prefillHint = ref<{ staffCount: number; courses: boolean; affiliate: boolean } | null>(null)
 const staffList = ref<StaffMember[]>([])
 // IDs of staff to KEEP active — initialized with all staff
@@ -973,7 +1001,7 @@ const startCheckout = async () => {
     throw new Error('Keine Checkout-URL erhalten')
   } catch (err: any) {
     if (err?.status === 401 || err?.statusCode === 401) {
-      window.location.href = '/tenant-register'
+      showAuthPrompt.value = true
       return
     }
     error.value = err?.data?.statusMessage || 'Checkout konnte nicht gestartet werden.'
