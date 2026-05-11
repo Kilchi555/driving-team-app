@@ -82,16 +82,6 @@ export default defineNuxtPlugin((nuxtApp) => {
         try {
           const authStore = useAuthStore()
 
-          // ✅ If the user is still authenticated in the store (admin area, valid profile),
-          // don't log out — just let the component handle the 401 gracefully.
-          // This prevents logout loops when Supabase tokens are missing but HTTP cookies are valid.
-          if (authStore.isLoggedIn && authStore.userProfile && currentPath.startsWith('/admin')) {
-            console.log('ℹ️ 401 on admin page but user still in store — skipping logout')
-            isRedirecting = false
-            const d = (response as any)?._data
-            throw createError({ statusCode: status, statusMessage: d?.statusMessage || response?.statusText || 'Request failed', data: d?.data ?? d ?? undefined })
-          }
-          
           // ✅ CHECK: Sind wir bereits auf einer /{slug} Login-Seite? Dann NICHT redirect!
           // Das verhindert Redirect-Schleifen
           const currentSlug = route.params.slug as string
