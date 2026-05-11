@@ -127,8 +127,11 @@
               v-if="canCancelAppointment(payment)"
               @click="openCancellationModal(payment)"
               :disabled="isProcessingPayment"
-              class="absolute top-3 right-3 px-2.5 py-1 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors disabled:opacity-50"
+              class="group absolute top-3 right-3 flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-30"
             >
+              <svg class="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
               Absagen
             </button>
             

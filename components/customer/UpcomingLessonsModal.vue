@@ -53,18 +53,8 @@
                     </span>
                   </div>
                 </div>
-                <div class="flex items-center gap-2">
-                  <div class="text-sm font-bold" :style="{ color: primaryColor }">
-                    {{ getTimeUntil(lesson.start_time) }}
-                  </div>
-                  <!-- Absagen Button — nur für reguläre Fahrstunden (nicht Kurs-Sessions) -->
-                  <button
-                    v-if="lesson.event_type_code !== 'course' && lesson.id"
-                    @click.stop="openCancellationModal(lesson)"
-                    class="px-2.5 py-1 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors"
-                  >
-                    Absagen
-                  </button>
+                <div class="text-sm font-bold" :style="{ color: primaryColor }">
+                  {{ getTimeUntil(lesson.start_time) }}
                 </div>
               </div>
 
@@ -164,6 +154,19 @@
                     </button>
                   </div>
                 </div>
+              </div>
+
+              <!-- Termin absagen — dezenter Link am Kartenende -->
+              <div v-if="lesson.event_type_code !== 'course' && lesson.id" class="pt-2 mt-1 border-t border-gray-100 flex justify-end">
+                <button
+                  @click.stop="openCancellationModal(lesson)"
+                  class="group flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg class="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Termin absagen
+                </button>
               </div>
             </div>
           </div>

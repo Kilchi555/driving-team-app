@@ -51,7 +51,15 @@
           <div class="rounded-lg p-4 mb-6" :style="{ backgroundColor: getTenantBackgroundColor() }">
             <h3 class="font-semibold text-gray-800">{{ course.name.split(' - ')[0] }}</h3>
             <p class="text-sm mt-1 text-gray-500">{{ course.description }}</p>
-            <p class="text-lg font-bold mt-2 text-gray-800">CHF {{ formatPrice(course.price_per_participant_rappen) }}</p>
+            <div class="mt-2 flex items-center gap-3">
+              <p class="text-lg font-bold text-gray-800"
+                :class="appliedDiscount ? 'line-through text-gray-400 text-base' : ''">
+                CHF {{ formatPrice(course.price_per_participant_rappen) }}
+              </p>
+              <p v-if="appliedDiscount" class="text-lg font-bold text-green-700">
+                CHF {{ formatPrice(effectivePrice) }}
+              </p>
+            </div>
             
             <!-- Sessions overview -->
             <div class="mt-3 space-y-1">
@@ -326,6 +334,15 @@
               </div>
             </div>
 
+            <!-- Discount Code -->
+            <DiscountCodeInput
+              :tenant-id="props.tenantId"
+              :amount-rappen="props.course.price_per_participant_rappen"
+              :primary-color="getTenantPrimaryColor()"
+              @applied="(d) => appliedDiscount = d"
+              @removed="appliedDiscount = null"
+            />
+
             <!-- Payment Method -->
             <div class="border-t pt-4">
               <p class="text-sm font-medium text-slate-700 mb-2">Zahlungsart</p>
@@ -395,6 +412,7 @@ import { extractCityFromCourseDescription, determinePaymentMethod, getPaymentMet
 import { useTenant } from '~/composables/useTenant'
 import { useAffiliateRef } from '~/composables/useAffiliateRef'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
+import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
 
 interface Props {
   isOpen: boolean
@@ -477,6 +495,14 @@ const isValidPhone = computed(() => {
 })
 
 const agbAccepted = ref(false)
+
+// Discount
+const appliedDiscount = ref<{ code: string; discountAmountRappen: number; discountData: any } | null>(null)
+
+const effectivePrice = computed(() => {
+  if (!props.course) return 0
+  return Math.max(0, props.course.price_per_participant_rappen - (appliedDiscount.value?.discountAmountRappen ?? 0))
+})
 
 // Session swap state
 const customSessions = ref<Record<string, any>>({})
@@ -983,7 +1009,9 @@ const submitEnrollment = async () => {
         email: formData.value.email,
         phone: formData.value.phone,
         customSessions: hasCustomSessions ? customSessions.value : null,
-        referralCode: getStoredRefCode() ?? undefined
+        referralCode: getStoredRefCode() ?? undefined,
+        discountCode: appliedDiscount.value?.code ?? undefined,
+        discountAmountRappen: appliedDiscount.value?.discountAmountRappen ?? 0
       }
     }) as any
     
@@ -1023,6 +1051,7 @@ watch(() => props.isOpen, (isOpen) => {
     swappingSession.value = null
     availableSwapSessions.value = []
     formData.value = { faberid: '', birthdate: '', email: '', phone: '' }
+    appliedDiscount.value = null
   }
 })
 

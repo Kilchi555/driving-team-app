@@ -213,6 +213,41 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // Check first-lesson-only restriction
+    if (discount.first_lesson_only) {
+      if (!authUser) {
+        return {
+          isValid: false,
+          discount_amount_rappen: 0,
+          error: 'Bitte melde dich an, um diesen Rabattcode zu verwenden'
+        }
+      }
+      // Look up the internal user profile to get user_id
+      const { data: userProfile } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', authUser.id)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+
+      if (userProfile) {
+        const { count } = await supabaseAdmin
+          .from('appointments')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userProfile.id)
+          .eq('tenant_id', tenantId)
+          .in('status', ['confirmed', 'completed'])
+
+        if ((count ?? 0) > 0) {
+          return {
+            isValid: false,
+            discount_amount_rappen: 0,
+            error: 'Dieser Code gilt nur für die erste Fahrstunde'
+          }
+        }
+      }
+    }
+
     // Calculate discount amount
     let discountAmount = 0
     switch (discount.discount_type) {
