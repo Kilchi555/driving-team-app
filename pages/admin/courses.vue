@@ -4106,6 +4106,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { navigateTo, useNuxtApp } from '#app'
 import { useAuthStore } from '~/stores/auth'
+import { getSupabase } from '~/utils/supabase'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useCourseCategories } from '~/composables/useCourseCategories'
 import { useInstructorInvitations } from '~/composables/useInstructorInvitations'
@@ -4139,6 +4140,9 @@ const showErrorToast = (title: string, message: string = '') => {
 definePageMeta({
   layout: 'admin'
 })
+
+// Supabase client (used throughout this page)
+const supabase = getSupabase()
 
 // Composables
 const { currentUser, fetchCurrentUser } = useCurrentUser()
@@ -5875,8 +5879,6 @@ const confirmStatusChange = async () => {
       updateData,
       updateKeys: Object.keys(updateData)
     })
-    
-    const supabase = getSupabase()
     
     // Step 1: Verify read access
     logger.debug('🔍 Step 1: Testing read access...')

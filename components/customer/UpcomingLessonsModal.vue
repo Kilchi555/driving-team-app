@@ -102,6 +102,61 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Umplanen button (only for SARI course sessions within 7+ days) -->
+              <div v-if="lesson.event_type_code === 'course'">
+                <div v-if="canTransfer(lesson) && transferringLessonId !== lesson.id">
+                  <button
+                    @click.stop="startTransfer(lesson)"
+                    class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors"
+                    :style="{ color: primaryColor, borderColor: primaryColor }"
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                    </svg>
+                    Umplanen
+                  </button>
+                </div>
+                <p v-else-if="!canTransfer(lesson)" class="text-xs text-gray-400">
+                  Umplanung nur bis 7 Tage vor Kursbeginn — bitte Fahrlehrer kontaktieren.
+                </p>
+
+                <!-- Inline transfer picker -->
+                <div v-if="transferringLessonId === lesson.id" class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p class="text-sm font-medium text-blue-800 mb-2">Umplanen zu:</p>
+                  <div v-if="loadingTargetCourses" class="text-xs text-gray-500 mb-2">Kurse werden geladen…</div>
+                  <div v-else-if="transferTargetCourses.length === 0" class="text-xs text-gray-500 mb-2">
+                    Keine verfügbaren Kurse mit freien Plätzen.
+                  </div>
+                  <select
+                    v-else
+                    v-model="transferTargetCourseId"
+                    class="w-full text-sm border border-blue-300 rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="">Ziel-Kurs auswählen…</option>
+                    <option v-for="c in transferTargetCourses" :key="c.id" :value="c.id">
+                      {{ c.name }} ({{ (c.max_participants ?? 0) - (c.current_participants ?? 0) }} freie Plätze)
+                    </option>
+                  </select>
+                  <p v-if="transferError" class="text-xs text-red-600 mb-2">{{ transferError }}</p>
+                  <div class="flex gap-2">
+                    <button
+                      @click="confirmTransfer(lesson)"
+                      :disabled="transferring || !transferTargetCourseId"
+                      class="px-3 py-1.5 text-xs font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      :style="{ backgroundColor: primaryColor }"
+                    >
+                      {{ transferring ? 'Umbuchen…' : 'Umbuchen bestätigen' }}
+                    </button>
+                    <button
+                      @click="cancelTransfer"
+                      class="px-3 py-1.5 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors"
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -120,10 +175,81 @@ import { logger } from '~/utils/logger'
 interface Props {
   isOpen: boolean
   lessons: any[]
+  tenantId?: string
 }
 
 const props = defineProps<Props>()
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'transfer-done'])
+
+// Transfer (Umplanung) state
+const transferringLessonId = ref<string | null>(null)
+const transferTargetCourseId = ref('')
+const transferring = ref(false)
+const transferError = ref('')
+const transferTargetCourses = ref<any[]>([])
+const loadingTargetCourses = ref(false)
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
+
+const canTransfer = (lesson: any): boolean => {
+  if (lesson.event_type_code !== 'course') return false
+  if (!lesson.course_registration_id) return false
+  const start = lesson.start_time ? new Date(lesson.start_time) : null
+  return !!start && start.getTime() - Date.now() > SEVEN_DAYS_MS
+}
+
+const startTransfer = async (lesson: any) => {
+  transferringLessonId.value = lesson.id
+  transferTargetCourseId.value = ''
+  transferError.value = ''
+  transferTargetCourses.value = []
+  loadingTargetCourses.value = true
+
+  try {
+    const data = await $fetch<{ courses: any[] }>('/api/courses/transfer-targets', {
+      query: { courseId: lesson.course_id }
+    })
+    transferTargetCourses.value = data?.courses ?? []
+  } catch {
+    transferTargetCourses.value = []
+  } finally {
+    loadingTargetCourses.value = false
+  }
+}
+
+const cancelTransfer = () => {
+  transferringLessonId.value = null
+  transferTargetCourseId.value = ''
+  transferError.value = ''
+  transferTargetCourses.value = []
+}
+
+const confirmTransfer = async (lesson: any) => {
+  if (!transferTargetCourseId.value || transferring.value) return
+  transferring.value = true
+  transferError.value = ''
+  try {
+    const response = await fetch('/api/sari/transfer-enrollment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        registrationId: lesson.course_registration_id,
+        targetCourseId: transferTargetCourseId.value,
+        notifyCustomer: true,
+      }),
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data?.statusMessage || data?.message || 'Umplanung fehlgeschlagen')
+    }
+    cancelTransfer()
+    emit('transfer-done', data)
+  } catch (err: any) {
+    transferError.value = err?.message || 'Umplanung fehlgeschlagen'
+  } finally {
+    transferring.value = false
+  }
+}
 
 // Tenant branding colors
 const { currentTenantBranding } = useTenantBranding()
