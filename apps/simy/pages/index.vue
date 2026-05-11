@@ -2185,7 +2185,7 @@ const PLAN_STATIC = [
     tagline: 'Für grosse Fahrschulen & Ketten',
     fallbackPrice: '249',
     highlighted: false,
-    featureList: ['Unbegrenzte Fahrlehrer', 'Alles aus Professional', 'Affiliate-System', 'Dedizierter Support'],
+    featureList: ['Bis zu 10 Fahrlehrer', 'Alles aus Professional', 'Affiliate-System', 'Dedizierter Support'],
   },
 ]
 

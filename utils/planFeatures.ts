@@ -97,7 +97,7 @@ export const PLANS: PlanDefinition[] = [
     priceEnvKey: 'STRIPE_PRICE_ENTERPRISE',
     features: [
       'Alles aus Professional',
-      'Unbegrenzte Fahrlehrer',
+      'Bis zu 10 Fahrlehrer',
       'Affiliate-System',
       'Dedizierter Support',
     ],
@@ -115,7 +115,7 @@ export const PLANS: PlanDefinition[] = [
       'affiliate_enabled',
       'product_sales_enabled',
     ],
-    includedSeats: null,
+    includedSeats: 10,
   },
 ]
 
