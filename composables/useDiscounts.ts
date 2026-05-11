@@ -172,8 +172,7 @@ export const useDiscounts = () => {
     try {
       logger.debug('🔄 Creating discount via API')
       
-      // ✅ Use existing save.post endpoint
-      const response = await $fetch('/api/discounts/save', {
+      const response = await $fetch('/api/discounts/manage', {
         method: 'POST',
         body: discountData
       })
@@ -196,8 +195,7 @@ export const useDiscounts = () => {
     try {
       logger.debug('🔄 Updating discount via API:', id)
       
-      // ✅ Use existing save.post endpoint
-      const response = await $fetch('/api/discounts/save', {
+      const response = await $fetch('/api/discounts/manage', {
         method: 'POST',
         body: { id, ...updates }
       })
@@ -224,13 +222,9 @@ export const useDiscounts = () => {
     try {
       logger.debug('🔄 Deleting discount via API:', id)
       
-      // ✅ TODO: Create DELETE endpoint if needed, for now use soft delete via update
-      const response = await $fetch('/api/discounts/save', {
+      const response = await $fetch('/api/discounts/manage', {
         method: 'POST',
-        body: { 
-          id, 
-          deleted_at: new Date().toISOString()
-        }
+        body: { id, action: 'delete' }
       })
       
       if (!response.success) {
