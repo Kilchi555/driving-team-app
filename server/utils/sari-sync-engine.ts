@@ -533,12 +533,30 @@ export class SARISyncEngine {
               .single()
 
             if (createError) {
-              logger.error(`Error creating participant ${participant.faberid}: ${createError.message}`)
-              continue
+              const errDetail = createError.message || createError.details || createError.hint || createError.code || JSON.stringify(createError)
+              // Unique constraint violation (23505): another sync already created the record — fetch it
+              if (createError.code === '23505') {
+                logger.warn(`⚠️ Participant ${participant.faberid} already exists (race condition) — fetching existing record`)
+                const { data: raceParticipant } = await this.supabase
+                  .from('course_participants')
+                  .select('id')
+                  .eq('tenant_id', this.tenantId)
+                  .eq('faberid', participant.faberid)
+                  .single()
+                if (raceParticipant) {
+                  participantId = raceParticipant.id
+                } else {
+                  logger.error(`Error creating participant ${participant.faberid}: ${errDetail}`)
+                  continue
+                }
+              } else {
+                logger.error(`Error creating participant ${participant.faberid}: ${errDetail}`, { createError })
+                continue
+              }
+            } else {
+              participantId = newParticipant.id
+              logger.debug(`✅ Created participant ${participant.faberid}: ${participantData.first_name} ${participantData.last_name}`)
             }
-
-            participantId = newParticipant.id
-            logger.debug(`✅ Created participant ${participant.faberid}: ${participantData.first_name} ${participantData.last_name}`)
           }
 
           // Check if registration already exists — covers both flows:
