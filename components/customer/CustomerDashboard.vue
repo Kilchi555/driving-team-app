@@ -1019,7 +1019,9 @@
     <UpcomingLessonsModal 
       :is-open="showUpcomingLessonsModal"
       :lessons="lessons"
+      :tenant-id="userData?.tenant_id"
       @close="showUpcomingLessonsModal = false"
+      @transfer-done="() => { showUpcomingLessonsModal = false; loadAppointments(true) }"
     />
 
     <!-- Instructor Details Modal -->
