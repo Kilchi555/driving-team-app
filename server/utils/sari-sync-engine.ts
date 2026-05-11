@@ -386,7 +386,7 @@ export class SARISyncEngine {
     let participantsSynced = 0
     for (const sariSession of sessions) {
       try {
-        const syncedCount = await this.syncCourseParticipants(courseId, sariSession.id)
+        const syncedCount = await this.syncCourseParticipants(courseId, sariSession.id, courseType)
         participantsSynced += syncedCount
       } catch (err: any) {
         logger.error(`Failed to sync participants for session ${sariSession.id}: ${err.message}`)
@@ -426,7 +426,7 @@ export class SARISyncEngine {
    * Sync participants from a SARI course to Simy
    * Creates course_participants if they don't exist and creates course registrations
    */
-  async syncCourseParticipants(simyCourseId: string, sariCourseId: number): Promise<number> {
+  async syncCourseParticipants(simyCourseId: string, sariCourseId: number, courseType: 'VKU' | 'PGS' = 'PGS'): Promise<number> {
     try {
       logger.debug(`📥 Syncing participants for SARI course ${sariCourseId}...`)
       
@@ -458,12 +458,18 @@ export class SARISyncEngine {
             logger.warn(`Could not fetch full customer data for ${participant.faberid}: ${err.message}`)
           }
 
+          // Normalize faberid: SARI's getCourseDetail pads with leading zeros (e.g. "007181751")
+          // but getCustomer returns without padding (e.g. "7181751"). Use the canonical form
+          // from fullCustomerData if available, otherwise strip leading zeros for consistency.
+          const canonicalFaberid = fullCustomerData?.faberid || participant.faberid.replace(/^0+/, '') || participant.faberid
+
           // Check if course_participant with this faberid already exists
+          // Search both padded and canonical forms to avoid duplicates
           const { data: existingParticipant } = await this.supabase
             .from('course_participants')
             .select('id, first_name, last_name, email, street, zip, city')
             .eq('tenant_id', this.tenantId)
-            .eq('faberid', participant.faberid)
+            .eq('faberid', canonicalFaberid)
             .maybeSingle()
 
           let participantId: string
@@ -511,12 +517,11 @@ export class SARISyncEngine {
             // Create new course_participant with full SARI data
             const participantData: any = {
               tenant_id: this.tenantId,
-              faberid: participant.faberid,
+              faberid: canonicalFaberid,
+              course_type: courseType.toLowerCase(), // required NOT NULL field
               first_name: fullCustomerData?.firstname || participant.firstname || 'Unbekannt',
               last_name: fullCustomerData?.lastname || participant.lastname || 'Unbekannt',
               birthdate: fullCustomerData?.birthdate || participant.birthdate || null,
-              sari_synced: true,
-              sari_synced_at: new Date().toISOString()
             }
             
             // Add address data if available
@@ -536,26 +541,26 @@ export class SARISyncEngine {
               const errDetail = createError.message || createError.details || createError.hint || createError.code || JSON.stringify(createError)
               // Unique constraint violation (23505): another sync already created the record — fetch it
               if (createError.code === '23505') {
-                logger.warn(`⚠️ Participant ${participant.faberid} already exists (race condition) — fetching existing record`)
+                logger.warn(`⚠️ Participant ${canonicalFaberid} already exists (race condition) — fetching existing record`)
                 const { data: raceParticipant } = await this.supabase
                   .from('course_participants')
                   .select('id')
                   .eq('tenant_id', this.tenantId)
-                  .eq('faberid', participant.faberid)
+                  .eq('faberid', canonicalFaberid)
                   .single()
                 if (raceParticipant) {
                   participantId = raceParticipant.id
                 } else {
-                  logger.error(`Error creating participant ${participant.faberid}: ${errDetail}`)
+                  logger.error(`Error creating participant ${canonicalFaberid}: ${errDetail}`)
                   continue
                 }
               } else {
-                logger.error(`Error creating participant ${participant.faberid}: ${errDetail}`, { createError })
+                logger.error(`Error creating participant ${canonicalFaberid}: ${errDetail}`, { createError })
                 continue
               }
             } else {
               participantId = newParticipant.id
-              logger.debug(`✅ Created participant ${participant.faberid}: ${participantData.first_name} ${participantData.last_name}`)
+              logger.debug(`✅ Created participant ${canonicalFaberid}: ${participantData.first_name} ${participantData.last_name}`)
             }
           }
 
@@ -574,7 +579,7 @@ export class SARISyncEngine {
             .from('course_registrations')
             .select('id')
             .eq('course_id', simyCourseId)
-            .eq('sari_faberid', participant.faberid)
+            .eq('sari_faberid', canonicalFaberid)
             .in('status', ['confirmed', 'enrolled'])
             .maybeSingle()
 
@@ -597,7 +602,7 @@ export class SARISyncEngine {
               last_name: fullCustomerData?.lastname || participant.lastname || 'Unbekannt',
               email: participant.email || fullCustomerData?.email || null,
               phone: participant.phone || fullCustomerData?.phone || null,
-              sari_faberid: participant.faberid,
+              sari_faberid: canonicalFaberid,
               street: fullCustomerData?.address || null,
               zip: fullCustomerData?.zip || null,
               city: fullCustomerData?.city || null,
