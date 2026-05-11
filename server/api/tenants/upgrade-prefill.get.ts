@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
   const tenantId = authUser.tenant_id
 
-  const [staffRes, coursesRes, affiliateRes] = await Promise.all([
+  const [staffRes, coursesRes, affiliateRes, tenantRes] = await Promise.all([
     supabase
       .from('users')
       .select('id, first_name, last_name, role, email')
@@ -37,6 +37,12 @@ export default defineEventHandler(async (event) => {
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
       .limit(1),
+
+    supabase
+      .from('tenants')
+      .select('uid_number')
+      .eq('id', tenantId)
+      .single(),
   ])
 
   const staffList = (staffRes.data || []).map(u => ({
@@ -50,5 +56,6 @@ export default defineEventHandler(async (event) => {
     staffList,
     hasCourseSessions: (coursesRes.count ?? 0) > 0,
     hasAffiliateCodes: (affiliateRes.count ?? 0) > 0,
+    hasUid: !!(tenantRes.data?.uid_number?.trim()),
   }
 })

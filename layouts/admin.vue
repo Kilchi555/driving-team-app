@@ -195,38 +195,8 @@
     <footer class="border-t border-white/10 py-3"
       :style="{ background: `linear-gradient(135deg, ${primaryColor || '#1e293b'} 0%, ${secondaryColor || '#334155'} 100%)` }">
       <div class="mx-auto px-4 sm:px-6">
-        <!-- Secondary Links (desktop only, compact) -->
-        <div class="hidden md:flex flex-wrap items-center justify-center gap-x-5 gap-y-1 mb-2">
-          <template v-if="!featuresLoading">
-            <NuxtLink v-if="shouldShowNavLink('product_sales_enabled')" to="/admin/products" @click.prevent="onNav('/admin/products')"
-              class="footer-link">Produkte</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('data_management_enabled')" to="/admin/data-management" @click.prevent="onNav('/admin/data-management')"
-              class="footer-link">Datenverwaltung</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('discounts_enabled')" to="/admin/discounts" @click.prevent="onNav('/admin/discounts')"
-              class="footer-link">Rabatte</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('categories_enabled')" to="/admin/categories" @click.prevent="onNav('/admin/categories')"
-              class="footer-link">Kategorien</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('courses_enabled')" to="/admin/courses" @click.prevent="onNav('/admin/courses')"
-              class="footer-link">Kurse</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('examiners_enabled')" to="/admin/examiners" @click.prevent="onNav('/admin/examiners')"
-              class="footer-link">Experten</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('evaluations_enabled')" to="/admin/evaluation-system" @click.prevent="onNav('/admin/evaluation-system')"
-              class="footer-link">Bewertungen</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('exams_enabled')" to="/admin/exam-statistics" @click.prevent="onNav('/admin/exam-statistics')"
-              class="footer-link">Prüfungen</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('affiliate_enabled')" to="/admin/affiliate" @click.prevent="onNav('/admin/affiliate')" class="footer-link">Affiliate</NuxtLink>
-            <NuxtLink to="/admin/pricing" @click.prevent="onNav('/admin/pricing')" class="footer-link">Preise</NuxtLink>
-            <NuxtLink to="/admin/profile" @click.prevent="onNav('/admin/profile')" class="footer-link">Einstellungen</NuxtLink>
-            <NuxtLink to="/admin/cron-status" @click.prevent="onNav('/admin/cron-status')" class="footer-link">Cron</NuxtLink>
-          </template>
-        </div>
-
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-1 text-xs text-white/50">
-          <span>&copy; {{ new Date().getFullYear() }} {{ tenantName }}</span>
-          <div class="flex items-center gap-3">
-            <a v-if="tenantContact.email" :href="`mailto:${tenantContact.email}`" class="hover:text-white/80 transition-colors">{{ tenantContact.email }}</a>
-            <a v-if="tenantContact.phone" :href="`tel:${tenantContact.phone.replace(/\s+/g, '')}`" class="hover:text-white/80 transition-colors">{{ tenantContact.phone }}</a>
-          </div>
+        <div class="text-center text-xs text-white/50">
+          <span>Powered by <a href="https://simy.ch" target="_blank" rel="noopener" class="hover:text-white/80 transition-colors">Simy.ch</a></span>
         </div>
       </div>
     </footer>

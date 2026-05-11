@@ -290,8 +290,8 @@
           <div class="flex items-center justify-between">
             <p class="text-xs text-gray-500 max-w-sm">
               <span v-if="withWallee">
-                ✅ <strong>Mit Online-Zahlungen:</strong> Wir richten dein Wallee-Konto ein (2–5 Werktage).
-                Die Abrechnung startet sobald dein Konto aktiv ist.
+                ✅ <strong>Mit Online-Zahlungen:</strong> Wir richten dein Wallee-Konto ein (ca. 5 Werktage).
+                Die Abrechnung startet erst wenn alles aktiv ist — du hast 30 Tage Zeit.
               </span>
               <span v-else>
                 ℹ️ <strong>Ohne Online-Zahlungen:</strong> Nur Bar- und Rechnungszahlung.
@@ -313,6 +313,22 @@
               </button>
               <span class="text-xs" :class="withWallee ? 'font-medium' : 'text-gray-400'" :style="withWallee ? { color: primaryColor } : {}">Mit</span>
             </div>
+          </div>
+
+          <!-- UID fehlt → Banner nur wenn Wallee aktiviert und kein UID im Profil -->
+          <div v-if="withWallee && isLoggedIn && !tenantHasUid"
+            class="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-1"
+            @click.stop>
+            <p class="text-xs font-semibold text-blue-800">ℹ️ Keine UID-Nummer hinterlegt</p>
+            <p class="text-xs text-blue-700">
+              Für Online-Zahlungen ist eine UID-Nummer erforderlich. Falls dein Betrieb noch nicht registriert ist,
+              <strong>übernimmt Simy die Kosten</strong> für die Eintragung als Einzelfirma.
+              Die Kosten entstehen erst nach einer erfolgreich abgeschlossenen Eintragung — es entstehen dir keine Vorauskosten.
+            </p>
+            <p class="text-xs text-blue-600">
+              Die UID kannst du unter <strong>Einstellungen → Profil</strong> nachtragen, oder schreib uns:
+              <a href="mailto:info@simy.ch" class="underline font-medium" @click.stop>info@simy.ch</a>
+            </p>
           </div>
         </div>
 
@@ -396,7 +412,8 @@
 
           <!-- Wallee info banner -->
           <div v-if="withWallee" class="px-6 py-3 text-xs text-blue-700 bg-blue-50 border-t border-blue-100">
-            💳 Abrechnung startet erst nach Wallee-Aktivierung (max. 7 Tage). Du erhältst nach dem Upgrade einen Link zur Einrichtung.
+            💳 Die Abrechnung startet erst wenn deine Online-Zahlungen aktiv sind — du hast <strong>30 Tage Zeit</strong>:
+            ca. 20 Tage für die HR-Eintragung (falls nötig) + ca. 5 Tage für das Wallee-Onboarding.
           </div>
 
           <!-- Total -->
@@ -743,6 +760,7 @@ const addonSeats = ref(0)
 const addonCourses = ref(false)
 const addonAffiliate = ref(false)
 const withWallee = ref(true)
+const tenantHasUid = ref(true)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
@@ -821,12 +839,13 @@ onMounted(async () => {
         const prefillHeaders: Record<string, string> = session?.access_token
           ? { Authorization: `Bearer ${session.access_token}` }
           : {}
-        const prefill = await $fetch<{ activeStaffCount: number; staffList: StaffMember[]; hasCourseSessions: boolean; hasAffiliateCodes: boolean }>(
+        const prefill = await $fetch<{ activeStaffCount: number; staffList: StaffMember[]; hasCourseSessions: boolean; hasAffiliateCodes: boolean; hasUid: boolean }>(
           '/api/tenants/upgrade-prefill',
           { headers: prefillHeaders }
         )
         staffList.value = prefill.staffList || []
         keepActiveIds.value = new Set(staffList.value.map(s => s.id))
+        tenantHasUid.value = prefill.hasUid ?? true
         prefillHint.value = {
           staffCount: prefill.activeStaffCount,
           courses:    prefill.hasCourseSessions,
