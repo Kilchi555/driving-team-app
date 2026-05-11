@@ -716,7 +716,7 @@ const confirmCustomerTransfer = async (reg: any) => {
     const response = await fetch('/api/sari/transfer-enrollment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ registrationId: reg.id, targetCourseId: customerTransferTargetId.value }),
+      body: JSON.stringify({ registrationId: reg.id, targetCourseId: customerTransferTargetId.value, notifyCustomer: true }),
     })
     const data = await response.json()
     if (!response.ok) {

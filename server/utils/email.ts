@@ -146,6 +146,39 @@ export function generateAppointmentDeletedEmail(p: AppointmentDeletedEmailParams
   return emailWrapper(content, p.tenantName)
 }
 
+export interface CourseTransferEmailParams {
+  customerName: string
+  fromCourseName: string
+  fromCourseDate?: string
+  toCourseName: string
+  toCourseDate?: string
+  tenantName: string
+  tenantEmail?: string
+  tenantPhone?: string
+}
+
+export function generateCourseTransferEmail(p: CourseTransferEmailParams): string {
+  const content = `
+<div class="header"><h1>Kursumplanung bestätigt</h1></div>
+<div class="body">
+  <p style="color:#374151;font-size:15px;margin-bottom:24px">Hallo ${p.customerName},<br><br>
+  deine Kursanmeldung bei <strong>${p.tenantName}</strong> wurde erfolgreich umgebucht.</p>
+  <div class="box">
+    <div class="label">Bisheriger Kurs</div>
+    <div class="value" style="text-decoration:line-through;color:#9ca3af">${p.fromCourseName}${p.fromCourseDate ? ` · ${p.fromCourseDate}` : ''}</div>
+    <div class="label">Neuer Kurs</div>
+    <div class="value" style="font-weight:600;color:#059669">${p.toCourseName}${p.toCourseDate ? ` · ${p.toCourseDate}` : ''}</div>
+  </div>
+  <p style="color:#374151;font-size:14px">Die Zahlung bleibt unverändert gültig – es entstehen keine zusätzlichen Kosten.</p>
+  ${p.tenantEmail || p.tenantPhone ? `<div class="box">
+    <p style="margin:0 0 12px;font-size:13px;color:#6b7280">Bei Fragen erreichst du uns:</p>
+    ${p.tenantEmail ? `<div class="label">E-Mail</div><div class="value"><a href="mailto:${p.tenantEmail}" style="color:#2563eb">${p.tenantEmail}</a></div>` : ''}
+    ${p.tenantPhone ? `<div class="label">Telefon</div><div class="value">${p.tenantPhone}</div>` : ''}
+  </div>` : ''}
+</div>`
+  return emailWrapper(content, p.tenantName)
+}
+
 export interface StaffNotificationEmailParams {
   staffName: string
   customerName: string

@@ -3387,22 +3387,31 @@
                     {{ c.name }} ({{ c.max_participants - c.current_participants }} freie Plätze)
                   </option>
                 </select>
-                <p v-if="transferError" class="text-xs text-red-600 mb-2">{{ transferError }}</p>
-                <div class="flex gap-2">
-                  <button
-                    @click="confirmTransfer(enrollment)"
-                    :disabled="isTransferring || !transferTargetCourseId"
-                    class="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {{ isTransferring ? 'Umbuchen…' : 'Umbuchen' }}
-                  </button>
-                  <button
-                    @click="cancelTransfer"
-                    class="px-3 py-1.5 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors"
-                  >
-                    Abbrechen
-                  </button>
-                </div>
+              <!-- Notify customer checkbox -->
+              <label class="flex items-center gap-2 mb-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  v-model="transferNotifyCustomer"
+                  class="w-4 h-4 rounded border-blue-300 text-blue-600 focus:ring-blue-400"
+                />
+                <span class="text-xs text-blue-800">Kunde per E-Mail informieren</span>
+              </label>
+              <p v-if="transferError" class="text-xs text-red-600 mb-2">{{ transferError }}</p>
+              <div class="flex gap-2">
+                <button
+                  @click="confirmTransfer(enrollment)"
+                  :disabled="isTransferring || !transferTargetCourseId"
+                  class="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {{ isTransferring ? 'Umbuchen…' : 'Umbuchen' }}
+                </button>
+                <button
+                  @click="cancelTransfer"
+                  class="px-3 py-1.5 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors"
+                >
+                  Abbrechen
+                </button>
+              </div>
               </div>
             </div>
           </div>
@@ -4333,6 +4342,7 @@ const showDeletedParticipants = ref(false)
 // Course Transfer (Umplanung)
 const transferringEnrollmentId = ref<string | null>(null)
 const transferTargetCourseId = ref<string>('')
+const transferNotifyCustomer = ref(true)
 const isTransferring = ref(false)
 const transferError = ref('')
 
@@ -6747,12 +6757,14 @@ const removeParticipant = async (enrollment: any) => {
 const startTransfer = (enrollmentId: string) => {
   transferringEnrollmentId.value = enrollmentId
   transferTargetCourseId.value = ''
+  transferNotifyCustomer.value = true
   transferError.value = ''
 }
 
 const cancelTransfer = () => {
   transferringEnrollmentId.value = null
   transferTargetCourseId.value = ''
+  transferNotifyCustomer.value = true
   transferError.value = ''
 }
 
@@ -6768,7 +6780,7 @@ const confirmTransfer = async (enrollment: any) => {
     const response = await fetch('/api/sari/transfer-enrollment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ registrationId: enrollment.id, targetCourseId: transferTargetCourseId.value }),
+      body: JSON.stringify({ registrationId: enrollment.id, targetCourseId: transferTargetCourseId.value, notifyCustomer: transferNotifyCustomer.value }),
     })
     const data = await response.json()
     if (!response.ok) {
