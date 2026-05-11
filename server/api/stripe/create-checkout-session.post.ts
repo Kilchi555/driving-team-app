@@ -132,7 +132,9 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Create Checkout Session ───────────────────────────────────────────────
-  // If tenant wants Wallee AND it's not yet active → 7-day billing pause
+  // If tenant wants Wallee AND it's not yet active → 30-day billing pause:
+  // ~20 days for Handelsregister (HR) registration + ~5 days for Wallee onboarding + buffer.
+  // Trial ends automatically when Wallee is activated (wallee-activate.post.ts sets trial_end: 'now').
   const needsWalleeTrial = withWallee && !wallleeAlreadyActive
   const successUrl = withWallee
     ? `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}&wallee_setup=1`
@@ -143,7 +145,7 @@ export default defineEventHandler(async (event) => {
     customer: stripeCustomerId,
     line_items: lineItems,
     subscription_data: {
-      ...(needsWalleeTrial ? { trial_period_days: 7 } : {}),
+      ...(needsWalleeTrial ? { trial_period_days: 30 } : {}),
       metadata: {
         plan,
         addon_seats: String(addons.seats || 0),

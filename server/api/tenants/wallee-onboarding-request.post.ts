@@ -98,6 +98,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'Datenbankfehler beim Speichern des Antrags' })
   }
 
+  // ─── Load tenant contact email for confirmation ───────────────────────────
+  const { data: tenantData } = await supabase
+    .from('tenants')
+    .select('contact_email, name')
+    .eq('id', tenantId)
+    .single()
+
   // ─── Send notification email to simy team ────────────────────────────────
   try {
     const { Resend } = await import('resend')
@@ -128,6 +135,70 @@ export default defineEventHandler(async (event) => {
     })
   } catch (emailErr: any) {
     console.error('⚠️ Team notification email failed (non-fatal):', emailErr.message)
+  }
+
+  // ─── Confirmation email to tenant ────────────────────────────────────────
+  if (tenantData?.contact_email) {
+    try {
+      const { sendEmail } = await import('~/server/utils/email')
+      const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
+      await sendEmail({
+        to: tenantData.contact_email,
+        fromName: 'Simy',
+        subject: '✅ Wallee-Antrag erhalten – wir melden uns in ca. 5 Werktagen',
+        html: `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px">
+  <tr><td align="center">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px">
+      <tr><td style="background:#fff;border-radius:12px;overflow:hidden">
+        <div style="background:linear-gradient(135deg,#1e293b,#334155);padding:32px;text-align:center">
+          <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700">Antrag erfolgreich eingereicht</h1>
+          <p style="margin:6px 0 0;color:rgba(255,255,255,.7);font-size:14px">Online-Zahlungen für ${tenantData.name || companyName}</p>
+        </div>
+        <div style="padding:32px">
+          <p style="color:#111827;font-size:15px;margin:0 0 16px">Hallo ${contactName || tenantData.name || 'Team'},</p>
+          <p style="color:#4b5563;font-size:15px;line-height:1.6;margin:0 0 16px">
+            wir haben deinen Antrag für Online-Zahlungen erhalten und werden dein Wallee-Konto innerhalb von <strong>ca. 5 Werktagen</strong> einrichten. Du erhältst eine weitere E-Mail sobald alles aktiv ist.
+          </p>
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:20px;margin:20px 0">
+            <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.05em">Deine Angaben</p>
+            <table cellpadding="4" style="font-size:14px;color:#374151;width:100%">
+              <tr><td style="color:#6b7280;width:140px">Firma</td><td><strong>${companyName}</strong></td></tr>
+              <tr><td style="color:#6b7280">UID-Nummer</td><td><strong>${uidNumber}</strong></td></tr>
+              <tr><td style="color:#6b7280">IBAN</td><td><strong>${iban}</strong></td></tr>
+            </table>
+          </div>
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:20px;margin:20px 0">
+            <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em">Erinnerung: Abrechnung</p>
+            <p style="margin:0;font-size:14px;color:#1e40af;line-height:1.6">
+              Die Abrechnung startet erst ab dem Zeitpunkt, wenn deine Online-Zahlungen aktiv sind. Du hast insgesamt <strong>30 Tage</strong> ab deinem Upgrade.
+            </p>
+          </div>
+          <p style="color:#4b5563;font-size:14px;line-height:1.6">
+            Bei Fragen erreichst du uns jederzeit unter <a href="mailto:info@simy.ch" style="color:#6000BD">info@simy.ch</a>
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td align="center" style="padding:20px 0">
+              <a href="${baseUrl}/admin/profile"
+                 style="display:inline-block;background:linear-gradient(135deg,#1e293b,#334155);color:#fff;text-decoration:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600">
+                Zum Admin-Bereich →
+              </a>
+            </td>
+          </tr></table>
+        </div>
+        <div style="background:#f9fafb;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb">
+          <p style="margin:0;font-size:12px;color:#9ca3af">Powered by <a href="https://simy.ch" style="color:#9ca3af">Simy.ch</a></p>
+        </div>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`,
+      })
+    } catch (confirmErr: any) {
+      console.error('⚠️ Tenant confirmation email failed (non-fatal):', confirmErr.message)
+    }
   }
 
   return {

@@ -54,6 +54,10 @@ export default defineEventHandler(async (event) => {
         if (session.mode === 'subscription' && session.subscription) {
           const sub = await stripe.subscriptions.retrieve(session.subscription as string)
           await handleSubscriptionUpsert(supabase, stripe, sub)
+          // If Wallee was selected and subscription is trialing, send welcome + checklist email
+          if (sub.metadata?.with_wallee === 'true' && sub.status === 'trialing') {
+            await handleWalleeWelcomeEmail(supabase, sub)
+          }
         }
         break
       }
@@ -248,6 +252,7 @@ async function handleSubscriptionUpsert(
     : null
 
   // ── Update tenant ───────────────────────────────────────────────────────
+  const isWalleeTrialing = sub.metadata?.with_wallee === 'true' && sub.status === 'trialing'
   await supabase
     .from('tenants')
     .update({
@@ -259,6 +264,8 @@ async function handleSubscriptionUpsert(
       addon_courses_enabled: addonCourses,
       addon_affiliate_enabled: addonAffiliate,
       subscription_cancel_at: cancelAt,
+      // Track when Wallee trial started so cron can send timely reminders
+      ...(isWalleeTrialing ? { wallee_trial_started_at: new Date().toISOString() } : {}),
     })
     .eq('id', tenantId)
 
@@ -369,6 +376,89 @@ function parseAddonSeats(sub: Stripe.Subscription): number {
   if (!priceId) return 0
   const item = sub.items.data.find(i => i.price.id === priceId)
   return item?.quantity ?? 0
+}
+
+async function handleWalleeWelcomeEmail(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  sub: Stripe.Subscription
+) {
+  const tenantId = sub.metadata?.tenant_id
+  if (!tenantId) return
+  try {
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('contact_email, name')
+      .eq('id', tenantId)
+      .single()
+    if (!tenant?.contact_email) return
+
+    const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
+    await sendEmail({
+      to: tenant.contact_email,
+      fromName: 'Simy',
+      subject: '🚀 Nächste Schritte: Online-Zahlungen einrichten (30 Tage)',
+      html: `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px">
+  <tr><td align="center">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px">
+      <tr><td style="background:#fff;border-radius:12px;overflow:hidden">
+        <div style="background:linear-gradient(135deg,#1e293b,#334155);padding:32px;text-align:center">
+          <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700">Online-Zahlungen einrichten</h1>
+          <p style="margin:6px 0 0;color:rgba(255,255,255,.7);font-size:14px">Du hast 30 Tage — hier ist dein Plan</p>
+        </div>
+        <div style="padding:32px">
+          <p style="color:#111827;font-size:15px;margin:0 0 16px">Hallo ${tenant.name || 'Team'},</p>
+          <p style="color:#4b5563;font-size:15px;line-height:1.6;margin:0 0 16px">
+            vielen Dank für dein Upgrade! Die Abrechnung startet erst wenn deine Online-Zahlungen aktiv sind. Du hast <strong>30 Tage</strong> Zeit — hier sind deine nächsten Schritte:
+          </p>
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:20px;margin:0 0 20px">
+            <p style="margin:0 0 12px;font-size:13px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em">Dein Zeitplan</p>
+            <table cellpadding="4" style="font-size:14px;color:#374151;width:100%">
+              <tr><td style="color:#6000BD;font-weight:700;width:80px">Jetzt</td><td>UID-Nummer beschaffen (falls noch nicht vorhanden)</td></tr>
+              <tr><td style="color:#6000BD;font-weight:700">~20 Tage</td><td>Handelsregistereintrag abgeschlossen, UID erhalten</td></tr>
+              <tr><td style="color:#6000BD;font-weight:700">~25 Tage</td><td>Wallee-Antrag in Simy einreichen</td></tr>
+              <tr><td style="color:#6000BD;font-weight:700">~30 Tage</td><td>Online-Zahlungen aktiv ✅ — Abrechnung startet</td></tr>
+            </table>
+          </div>
+          <p style="margin:0 0 12px;font-size:14px;font-weight:700;color:#111827">Checkliste: Einzelfirma ins Handelsregister eintragen</p>
+          <table cellpadding="5" style="font-size:14px;color:#374151;width:100%;border-collapse:collapse">
+            <tr><td style="padding:6px 0;border-bottom:1px solid #f3f4f6">☐ 1. Personalausweis / Pass bereithalten</td></tr>
+            <tr><td style="padding:6px 0;border-bottom:1px solid #f3f4f6">☐ 2. Firmenname festlegen (muss deinen Nachnamen enthalten)</td></tr>
+            <tr><td style="padding:6px 0;border-bottom:1px solid #f3f4f6">☐ 3. Anmeldeformular ausfüllen (hr-amt.ch oder EasyGov.swiss)</td></tr>
+            <tr><td style="padding:6px 0;border-bottom:1px solid #f3f4f6">☐ 4. Unterschrift amtlich beglaubigen lassen (Gemeindeamt, CHF 15–30)</td></tr>
+            <tr><td style="padding:6px 0;border-bottom:1px solid #f3f4f6">☐ 5. Unterlagen beim kantonalen HR-Amt einreichen (CHF 120–150)</td></tr>
+            <tr><td style="padding:6px 0;border-bottom:1px solid #f3f4f6">☐ 6. UID-Nummer erhalten (5–10 Werktage)</td></tr>
+            <tr><td style="padding:6px 0">☐ 7. UID in Simy hinterlegen und Wallee-Antrag einreichen</td></tr>
+          </table>
+          <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:10px;padding:16px;margin:20px 0">
+            <p style="margin:0;font-size:14px;color:#92400e;line-height:1.6">
+              <strong>Simy übernimmt die Kosten</strong> (CHF 140–180) sobald deine Online-Zahlungen aktiv sind. Es entstehen dir keine Vorauskosten.
+            </p>
+          </div>
+          <table width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td align="center" style="padding:16px 0">
+              <a href="${baseUrl}/admin/profile"
+                 style="display:inline-block;background:linear-gradient(135deg,#1e293b,#334155);color:#fff;text-decoration:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600">
+                Wallee-Antrag einreichen →
+              </a>
+            </td>
+          </tr></table>
+          <p style="color:#6b7280;font-size:13px;margin:0">Fragen? <a href="mailto:info@simy.ch" style="color:#6000BD">info@simy.ch</a></p>
+        </div>
+        <div style="background:#f9fafb;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb">
+          <p style="margin:0;font-size:12px;color:#9ca3af">Powered by <a href="https://simy.ch" style="color:#9ca3af">Simy.ch</a></p>
+        </div>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`,
+    })
+    console.log(`📧 Wallee welcome email sent to ${tenant.contact_email} (tenant ${tenantId})`)
+  } catch (e: any) {
+    console.error('⚠️ Wallee welcome email failed (non-fatal):', e.message)
+  }
 }
 
 async function syncFeatureFlags(

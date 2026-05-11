@@ -29,7 +29,7 @@
     <!-- ACTIVE -->
     <div v-else-if="status === 'active'" class="space-y-4">
       <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-800">
-        ✅ Online-Zahlungen sind aktiv. Deine Kunden können jetzt per Kreditkarte, TWINT und weiteren Methoden bezahlen.
+        ✅ Online-Zahlungen sind aktiv. Deine Kunden können jetzt per Kreditkarte, TWINT und weiteren Methoden bezahlen. Ab heute wird die Abrechnung gestartet.
       </div>
       <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
         <div>
@@ -52,7 +52,7 @@
     <div v-else-if="status === 'pending'" class="space-y-3">
       <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
         <p class="text-sm font-semibold text-amber-800 mb-1">⏳ Antrag eingereicht</p>
-        <p class="text-sm text-amber-700">Wir richten dein Wallee-Konto ein. Das dauert in der Regel <strong>2–5 Werktage</strong>. Du erhältst eine E-Mail sobald alles bereit ist.</p>
+        <p class="text-sm text-amber-700">Wir richten dein Wallee-Konto ein. Das dauert in der Regel <strong>ca. 5 Werktage</strong>. Du erhältst eine E-Mail sobald alles bereit ist. Die Abrechnung startet erst ab diesem Zeitpunkt.</p>
         <p v-if="appliedAt" class="text-xs text-amber-600 mt-2">Eingereicht am {{ formatDate(appliedAt) }}</p>
       </div>
       <p class="text-xs text-gray-400 text-center">Bei Fragen: <a href="mailto:info@simy.ch" class="underline">info@simy.ch</a></p>
@@ -63,6 +63,19 @@
       <p class="text-sm text-gray-600">
         Fülle das Formular aus um Online-Zahlungen zu aktivieren. Wir richten dein Wallee-Konto innerhalb von 2–5 Werktagen ein.
       </p>
+
+      <!-- UID fehlt → Hinweis auf Einzelfirma-Eintragung -->
+      <div v-if="!hasUid" class="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
+        <p class="text-sm font-semibold text-blue-800">ℹ️ Keine UID-Nummer hinterlegt</p>
+        <p class="text-sm text-blue-700">
+          Für Online-Zahlungen ist eine UID-Nummer (Unternehmens-Identifikationsnummer) erforderlich.
+          Falls dein Betrieb noch nicht im Handelsregister eingetragen ist, übernimmt <strong>Simy die anfallenden Kosten</strong> für die Eintragung als Einzelfirma.
+        </p>
+        <p class="text-xs text-blue-600">
+          Die Kosten entstehen erst nach einer erfolgreich abgeschlossenen Eintragung — es entstehen dir keine Vorauskosten.
+          Trage deine UID ein sobald du sie hast, oder wende dich an <a href="mailto:info@simy.ch" class="underline font-medium">info@simy.ch</a> für Unterstützung.
+        </p>
+      </div>
 
       <div v-if="submitError" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
         {{ submitError }}
@@ -142,6 +155,7 @@ const appliedAt = ref<string | null>(null)
 const submitting = ref(false)
 const toggling = ref(false)
 const submitError = ref('')
+const hasUid = ref(true)
 
 const form = ref({
   companyName: '',
@@ -162,12 +176,14 @@ const formatDate = (iso: string) =>
 
 onMounted(async () => {
   try {
-    const data = await $fetch<{ status: string; enabled: boolean; appliedAt: string | null }>(
+    const data = await $fetch<{ status: string; enabled: boolean; appliedAt: string | null; uidNumber: string | null }>(
       '/api/tenants/wallee-onboarding-status'
     )
     status.value = (data.status as any) || 'not_started'
     enabled.value = data.enabled
     appliedAt.value = data.appliedAt
+    hasUid.value = !!data.uidNumber?.trim()
+    if (data.uidNumber) form.value.uidNumber = data.uidNumber
   } catch {
     status.value = 'not_started'
   } finally {
