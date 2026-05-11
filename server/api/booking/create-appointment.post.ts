@@ -467,6 +467,13 @@ export default defineEventHandler(async (event: H3Event) => {
       }
     }
 
+    // ============ LAYER 7b.5: INCREMENT USAGE COUNT ============
+    // Done after appointment creation but we increment optimistically here —
+    // appointment creation is next and any error there rolls back the booking.
+    // For discounts table: increment usage_count. For voucher_codes: increment current_redemptions.
+    // We do this in a fire-and-forget after appointment creation (see below).
+    const discountCodeToTrack = validatedDiscountAmount > 0 ? body.discount_code : null
+
     // ============ LAYER 7c: VALIDATE + RESERVE PACKAGE (if provided) ============
     let packageUsed = false
     if (body.customer_package_id) {
@@ -561,8 +568,48 @@ export default defineEventHandler(async (event: H3Event) => {
       logger.warn('⚠️ Warning: Appointment created, but payment record failed.')
     } else {
       logger.debug('✅ Payment record created successfully:', newPayment.id)
-      // Optionally, update the appointment with payment_id if available
-      // You would need a 'payment_id' column in the appointments table
+    }
+
+    // ============ LAYER 8.5: INCREMENT DISCOUNT USAGE COUNT ============
+    if (discountCodeToTrack && tenantId) {
+      ;(async () => {
+        try {
+          // Try discounts table first
+          const { data: disc } = await supabase
+            .from('discounts')
+            .select('id, usage_count')
+            .ilike('code', discountCodeToTrack)
+            .eq('tenant_id', tenantId)
+            .maybeSingle()
+
+          if (disc) {
+            await supabase
+              .from('discounts')
+              .update({ usage_count: (disc.usage_count ?? 0) + 1 })
+              .eq('id', disc.id)
+            logger.debug('📊 Discount usage_count incremented:', discountCodeToTrack)
+            return
+          }
+
+          // Try voucher_codes table
+          const { data: vc } = await supabase
+            .from('voucher_codes')
+            .select('id, current_redemptions')
+            .ilike('code', discountCodeToTrack)
+            .eq('tenant_id', tenantId)
+            .maybeSingle()
+
+          if (vc) {
+            await supabase
+              .from('voucher_codes')
+              .update({ current_redemptions: (vc.current_redemptions ?? 0) + 1 })
+              .eq('id', vc.id)
+            logger.debug('📊 Voucher current_redemptions incremented:', discountCodeToTrack)
+          }
+        } catch (e: any) {
+          logger.warn('⚠️ Failed to increment discount usage (non-critical):', e.message)
+        }
+      })()
     }
 
     // ============ LAYER 9: Mark all reserved slots as definitively booked ============
