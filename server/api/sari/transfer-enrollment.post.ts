@@ -15,6 +15,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { SARIClient } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { logger } from '~/utils/logger'
+import { sendTenantEmail, generateCourseTransferEmail } from '~/server/utils/email'
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -45,11 +46,14 @@ export default defineEventHandler(async (event) => {
 
   // Parse input
   const body = await readBody(event)
-  const { registrationId, targetCourseId } = body ?? {}
+  const { registrationId, targetCourseId, notifyCustomer } = body ?? {}
 
   if (!registrationId || !targetCourseId) {
     throw createError({ statusCode: 400, statusMessage: 'registrationId und targetCourseId erforderlich' })
   }
+
+  // Customers always get a notification; admins can opt in via notifyCustomer flag
+  const shouldNotify = isAdmin ? (notifyCustomer === true) : true
 
   // Load old registration
   const { data: oldReg } = await supabaseAdmin
@@ -280,6 +284,40 @@ export default defineEventHandler(async (event) => {
     .eq('id', targetCourse.id)
 
   logger.info(`✅ Transfer complete: ${faberid} → "${targetCourse.name}" (new reg ${newReg.id})`)
+
+  // Send transfer confirmation email to the participant (fire-and-forget)
+  const emailAddress = oldReg.email as string | null
+  if (shouldNotify && emailAddress) {
+    const formatDate = (iso: string | null | undefined) => {
+      if (!iso) return undefined
+      try {
+        return new Intl.DateTimeFormat('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(iso))
+      } catch { return undefined }
+    }
+
+    const { data: tenantContact } = await supabaseAdmin
+      .from('tenants')
+      .select('contact_email, contact_phone')
+      .eq('id', callerProfile.tenant_id)
+      .single()
+
+    const html = generateCourseTransferEmail({
+      customerName: `${oldReg.first_name ?? ''} ${oldReg.last_name ?? ''}`.trim() || 'Kursteilnehmer',
+      fromCourseName: oldCourse.name,
+      fromCourseDate: formatDate(oldCourse.course_start_date),
+      toCourseName: targetCourse.name,
+      toCourseDate: formatDate(targetCourse.course_start_date),
+      tenantName: tenant.name,
+      tenantEmail: tenantContact?.contact_email ?? undefined,
+      tenantPhone: tenantContact?.contact_phone ?? undefined,
+    })
+
+    sendTenantEmail(callerProfile.tenant_id, {
+      to: emailAddress,
+      subject: `Kursumplanung bestätigt – ${targetCourse.name}`,
+      html,
+    }).catch((err: any) => logger.warn(`Transfer email failed for ${emailAddress}: ${err.message}`))
+  }
 
   return {
     success: true,
