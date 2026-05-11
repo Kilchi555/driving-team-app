@@ -972,6 +972,10 @@ const startCheckout = async () => {
     if (session?.url) { window.location.href = session.url; return }
     throw new Error('Keine Checkout-URL erhalten')
   } catch (err: any) {
+    if (err?.status === 401 || err?.statusCode === 401) {
+      window.location.href = '/tenant-register'
+      return
+    }
     error.value = err?.data?.statusMessage || 'Checkout konnte nicht gestartet werden.'
   } finally {
     loading.value = false
