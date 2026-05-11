@@ -94,6 +94,97 @@
         </div>
       </div>
 
+      <!-- Meine Anmeldung (authenticated users only) -->
+      <div v-if="myRegistrations.length > 0" class="mb-6">
+        <h2 class="text-base font-semibold text-slate-700 mb-3">Meine Anmeldungen</h2>
+        <div class="space-y-3">
+          <div
+            v-for="reg in myRegistrations"
+            :key="reg.id"
+            class="bg-white rounded-xl shadow-sm border-2 border-slate-200 p-4"
+          >
+            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+              <div>
+                <p class="font-semibold text-slate-800">{{ reg.courses?.name }}</p>
+                <p class="text-sm text-slate-500 mt-0.5">
+                  Kategorie: {{ reg.courses?.category }}
+                  <span v-if="reg.courses?.course_start_date">
+                    · {{ formatSessionDate(reg.courses.course_start_date.split('T')[0]) }}
+                  </span>
+                </p>
+                <span class="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full"
+                  :class="{
+                    'bg-green-100 text-green-800': reg.status === 'confirmed' || reg.status === 'enrolled',
+                    'bg-yellow-100 text-yellow-800': reg.status === 'pending',
+                  }">
+                  {{ reg.status === 'confirmed' || reg.status === 'enrolled' ? 'Bestätigt' : 'Ausstehend' }}
+                </span>
+              </div>
+              <!-- Umplanen button (only for SARI-managed courses with > 7 days until start) -->
+              <div class="flex-shrink-0">
+                <button
+                  v-if="reg.courses?.sari_managed && canCustomerTransfer(reg)"
+                  @click.stop="startCustomerTransfer(reg)"
+                  class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border-2 transition-colors"
+                  :style="{
+                    color: tenantBranding?.primary_color || '#10B981',
+                    borderColor: tenantBranding?.primary_color || '#10B981',
+                  }"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                  </svg>
+                  Umplanen
+                </button>
+                <p
+                  v-else-if="reg.courses?.sari_managed && !canCustomerTransfer(reg)"
+                  class="text-xs text-slate-400 max-w-[160px] text-right"
+                >
+                  Umplanung nur bis 7 Tage vor Kursbeginn — bitte Fahrlehrer kontaktieren.
+                </p>
+              </div>
+            </div>
+            <!-- Inline transfer picker for this registration -->
+            <div
+              v-if="customerTransferRegId === reg.id"
+              class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg"
+            >
+              <p class="text-sm font-medium text-blue-800 mb-2">Umplanen zu:</p>
+              <div v-if="customerTransferOptions(reg).length === 0" class="text-sm text-gray-500 mb-2">
+                Keine verfügbaren Kurse derselben Kategorie mit freien Plätzen.
+              </div>
+              <select
+                v-else
+                v-model="customerTransferTargetId"
+                class="w-full text-sm border border-blue-300 rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="">Ziel-Kurs auswählen…</option>
+                <option v-for="c in customerTransferOptions(reg)" :key="c.id" :value="c.id">
+                  {{ c.name }} ({{ (c.max_participants ?? 0) - (c.current_participants ?? 0) }} freie Plätze)
+                </option>
+              </select>
+              <p v-if="customerTransferError" class="text-xs text-red-600 mb-2">{{ customerTransferError }}</p>
+              <div class="flex gap-2">
+                <button
+                  @click="confirmCustomerTransfer(reg)"
+                  :disabled="customerTransferring || !customerTransferTargetId"
+                  class="px-3 py-1.5 text-xs font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  :style="{ backgroundColor: tenantBranding?.primary_color || '#10B981' }"
+                >
+                  {{ customerTransferring ? 'Umbuchen…' : 'Umbuchen bestätigen' }}
+                </button>
+                <button
+                  @click="cancelCustomerTransfer"
+                  class="px-3 py-1.5 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors"
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- No Courses -->
       <div v-if="filteredCourses.length === 0" class="bg-white rounded-xl shadow-sm p-12 text-center">
         <svg class="w-16 h-16 mx-auto text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -264,6 +355,13 @@ const selectedCategory = ref('')
 const selectedLocation = ref('')
 const selectedCourse = ref<any>(null)
 const showEnrollmentModal = ref(false)
+
+// My registrations (authenticated users)
+const myRegistrations = ref<any[]>([])
+const customerTransferRegId = ref<string | null>(null)
+const customerTransferTargetId = ref<string>('')
+const customerTransferring = ref(false)
+const customerTransferError = ref('')
 
 // Pre-fetch tenant branding so the header colour is available before onMounted
 // Using a try/catch so a failing API (wrong slug, network error) never throws
@@ -576,12 +674,86 @@ watch(() => route.query, (query) => {
   if (query.location) selectedLocation.value = query.location as string
 }, { immediate: true })
 
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
+
+const canCustomerTransfer = (reg: any): boolean => {
+  const startDate = reg.courses?.course_start_date ? new Date(reg.courses.course_start_date) : null
+  if (!startDate) return false
+  return startDate.getTime() - Date.now() > SEVEN_DAYS_MS
+}
+
+const customerTransferOptions = (reg: any) => {
+  return courses.value.filter(c =>
+    c.id !== reg.course_id &&
+    c.sari_managed &&
+    c.category === reg.courses?.category &&
+    c.is_active !== false &&
+    (c.max_participants ?? 0) > (c.current_participants ?? 0)
+  )
+}
+
+const startCustomerTransfer = (reg: any) => {
+  customerTransferRegId.value = reg.id
+  customerTransferTargetId.value = ''
+  customerTransferError.value = ''
+}
+
+const cancelCustomerTransfer = () => {
+  customerTransferRegId.value = null
+  customerTransferTargetId.value = ''
+  customerTransferError.value = ''
+}
+
+const confirmCustomerTransfer = async (reg: any) => {
+  if (!customerTransferTargetId.value) {
+    customerTransferError.value = 'Bitte einen Ziel-Kurs auswählen.'
+    return
+  }
+  if (customerTransferring.value) return
+  customerTransferring.value = true
+  customerTransferError.value = ''
+  try {
+    const response = await fetch('/api/sari/transfer-enrollment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ registrationId: reg.id, targetCourseId: customerTransferTargetId.value }),
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data?.statusMessage || data?.message || 'Umplanung fehlgeschlagen')
+    }
+    cancelCustomerTransfer()
+    const uiStore = useUIStore()
+    uiStore.showSuccess('Umplanung erfolgreich!', `Du wurdest umgebucht zu "${data.toCourse?.name}".`)
+    await loadData()
+    await loadMyRegistrations()
+  } catch (err: any) {
+    customerTransferError.value = err?.message || 'Umplanung fehlgeschlagen'
+  } finally {
+    customerTransferring.value = false
+  }
+}
+
+const loadMyRegistrations = async () => {
+  if (!tenant.value?.id) return
+  try {
+    const data = await $fetch<{ registrations: any[] }>('/api/courses/my-registrations', {
+      query: { tenantId: tenant.value.id }
+    })
+    myRegistrations.value = data?.registrations ?? []
+  } catch {
+    // Not authenticated or other error — silently ignore
+    myRegistrations.value = []
+  }
+}
+
 // Load data
 onMounted(async () => {
   logger.debug('Loading courses for slug:', slug.value)
   
   try {
     await loadData()
+    await loadMyRegistrations()
   } catch (e: any) {
     logger.error('Error:', e)
     error.value = 'Ein Fehler ist aufgetreten'

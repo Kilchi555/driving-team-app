@@ -3332,28 +3332,77 @@
             <div
               v-for="enrollment in currentEnrollments"
               :key="enrollment.id"
-              class="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors gap-3 sm:gap-0"
+              class="flex flex-col p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors gap-2"
             >
-              <div class="flex-1 min-w-0">
-                <div class="font-semibold text-gray-900 text-base sm:text-lg truncate">
-                  {{ enrollment.participant.first_name || enrollment.first_name }} {{ enrollment.participant.last_name || enrollment.last_name }}
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+                <div class="flex-1 min-w-0">
+                  <div class="font-semibold text-gray-900 text-base sm:text-lg truncate">
+                    {{ enrollment.participant.first_name || enrollment.first_name }} {{ enrollment.participant.last_name || enrollment.last_name }}
+                  </div>
+                  <div class="text-xs sm:text-sm text-gray-600 truncate">{{ enrollment.participant.email || enrollment.email }}</div>
+                  <div v-if="enrollment.participant.phone || enrollment.phone" class="text-xs sm:text-sm text-gray-500">📞 {{ enrollment.participant.phone || enrollment.phone }}</div>
                 </div>
-                <div class="text-xs sm:text-sm text-gray-600 truncate">{{ enrollment.participant.email || enrollment.email }}</div>
-                <div v-if="enrollment.participant.phone || enrollment.phone" class="text-xs sm:text-sm text-gray-500">📞 {{ enrollment.participant.phone || enrollment.phone }}</div>
+                <div class="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
+                  <span :class="getEnrollmentStatusBadge(enrollment.status)" class="px-2 sm:px-3 py-1 text-xs font-medium rounded-full">
+                    {{ getEnrollmentStatusText(enrollment.status) }}
+                  </span>
+                  <!-- Umplanen button (only for SARI-managed courses) -->
+                  <button
+                    v-if="selectedCourse?.sari_managed && transferringEnrollmentId !== enrollment.id"
+                    @click="startTransfer(enrollment.id)"
+                    class="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-1 sm:p-2 rounded-lg transition-colors flex-shrink-0"
+                    title="Umplanen"
+                  >
+                    <svg class="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                    </svg>
+                  </button>
+                  <button
+                    @click="removeParticipant(enrollment)"
+                    class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 sm:p-2 rounded-lg transition-colors flex-shrink-0"
+                    title="Teilnehmer entfernen"
+                  >
+                    <svg class="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <div class="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
-                <span :class="getEnrollmentStatusBadge(enrollment.status)" class="px-2 sm:px-3 py-1 text-xs font-medium rounded-full">
-                  {{ getEnrollmentStatusText(enrollment.status) }}
-                </span>
-                <button
-                  @click="removeParticipant(enrollment)"
-                  class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 sm:p-2 rounded-lg transition-colors flex-shrink-0"
-                  title="Teilnehmer entfernen"
+              <!-- Inline transfer picker (inside v-for, same scope as enrollment) -->
+              <div
+                v-if="transferringEnrollmentId === enrollment.id"
+                class="mt-1 p-3 bg-blue-50 border border-blue-200 rounded-lg"
+              >
+                <p class="text-sm font-medium text-blue-800 mb-2">Umplanen zu:</p>
+                <div v-if="transferTargetCourses.length === 0" class="text-sm text-gray-500 mb-2">
+                  Keine verfügbaren Kurse derselben Kategorie mit freien Plätzen.
+                </div>
+                <select
+                  v-else
+                  v-model="transferTargetCourseId"
+                  class="w-full text-sm border border-blue-300 rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 >
-                  <svg class="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                  </svg>
-                </button>
+                  <option value="">Ziel-Kurs auswählen…</option>
+                  <option v-for="c in transferTargetCourses" :key="c.id" :value="c.id">
+                    {{ c.name }} ({{ c.max_participants - c.current_participants }} freie Plätze)
+                  </option>
+                </select>
+                <p v-if="transferError" class="text-xs text-red-600 mb-2">{{ transferError }}</p>
+                <div class="flex gap-2">
+                  <button
+                    @click="confirmTransfer(enrollment)"
+                    :disabled="isTransferring || !transferTargetCourseId"
+                    class="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {{ isTransferring ? 'Umbuchen…' : 'Umbuchen' }}
+                  </button>
+                  <button
+                    @click="cancelTransfer"
+                    class="px-3 py-1.5 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -4280,6 +4329,12 @@ const selectedCourse = ref<any>(null)
 const currentEnrollments = ref<any[]>([])
 const deletedEnrollments = ref<any[]>([])
 const showDeletedParticipants = ref(false)
+
+// Course Transfer (Umplanung)
+const transferringEnrollmentId = ref<string | null>(null)
+const transferTargetCourseId = ref<string>('')
+const isTransferring = ref(false)
+const transferError = ref('')
 
 // SARI Participants Sync
 const isSyncingSARIParticipants = ref(false)
@@ -6688,6 +6743,59 @@ const removeParticipant = async (enrollment: any) => {
     error.value = 'Fehler beim Entfernen des Teilnehmers'
   }
 }
+
+const startTransfer = (enrollmentId: string) => {
+  transferringEnrollmentId.value = enrollmentId
+  transferTargetCourseId.value = ''
+  transferError.value = ''
+}
+
+const cancelTransfer = () => {
+  transferringEnrollmentId.value = null
+  transferTargetCourseId.value = ''
+  transferError.value = ''
+}
+
+const confirmTransfer = async (enrollment: any) => {
+  if (!transferTargetCourseId.value) {
+    transferError.value = 'Bitte einen Ziel-Kurs auswählen.'
+    return
+  }
+  if (isTransferring.value) return
+  isTransferring.value = true
+  transferError.value = ''
+  try {
+    const response = await fetch('/api/sari/transfer-enrollment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ registrationId: enrollment.id, targetCourseId: transferTargetCourseId.value }),
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data?.statusMessage || data?.message || 'Umplanung fehlgeschlagen')
+    }
+    success.value = `✅ ${enrollment.first_name || enrollment.participant?.first_name} ${enrollment.last_name || enrollment.participant?.last_name} wurde umgebucht zu "${data.toCourse?.name}"`
+    cancelTransfer()
+    await loadCourseEnrollments(selectedCourse.value.id)
+    await loadCourses()
+  } catch (err: any) {
+    transferError.value = err?.message || 'Umplanung fehlgeschlagen'
+  } finally {
+    isTransferring.value = false
+  }
+}
+
+// Courses eligible as transfer target: same category, sari_managed, not the current course, has free slots
+const transferTargetCourses = computed(() => {
+  if (!selectedCourse.value) return []
+  return courses.value.filter(c =>
+    c.id !== selectedCourse.value.id &&
+    c.sari_managed &&
+    c.category === selectedCourse.value.category &&
+    c.is_active &&
+    (c.max_participants ?? 0) > (c.current_participants ?? 0)
+  )
+})
 
 const copyEnrollmentLink = async () => {
   try {
