@@ -53,10 +53,18 @@
                     </span>
                   </div>
                 </div>
-                <div class="text-right">
+                <div class="flex items-center gap-2">
                   <div class="text-sm font-bold" :style="{ color: primaryColor }">
                     {{ getTimeUntil(lesson.start_time) }}
                   </div>
+                  <!-- Absagen Button — nur für reguläre Fahrstunden (nicht Kurs-Sessions) -->
+                  <button
+                    v-if="lesson.event_type_code !== 'course' && lesson.id"
+                    @click.stop="openCancellationModal(lesson)"
+                    class="px-2.5 py-1 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors"
+                  >
+                    Absagen
+                  </button>
                 </div>
               </div>
 
@@ -163,6 +171,15 @@
       </div>
     </div>
   </div>
+
+  <!-- Stornierungsmodal (gleich wie in payments.vue) -->
+  <CustomerCancellationModal
+    :is-visible="showCancellationModal"
+    :appointment="selectedCancellationLesson"
+    :payment="null"
+    @close="closeCancellationModal"
+    @cancelled="onAppointmentCancelled"
+  />
 </template>
 
 <script setup lang="ts">
@@ -170,6 +187,7 @@
 import { computed, ref, watch } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { logger } from '~/utils/logger'
+import CustomerCancellationModal from './CustomerCancellationModal.vue'
 
 // Props & Emits
 interface Props {
@@ -179,7 +197,24 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const emit = defineEmits(['close', 'transfer-done'])
+const emit = defineEmits(['close', 'transfer-done', 'appointment-cancelled'])
+
+// Cancellation state
+const showCancellationModal = ref(false)
+const selectedCancellationLesson = ref<any>(null)
+
+const openCancellationModal = (lesson: any) => {
+  selectedCancellationLesson.value = lesson
+  showCancellationModal.value = true
+}
+const closeCancellationModal = () => {
+  showCancellationModal.value = false
+  selectedCancellationLesson.value = null
+}
+const onAppointmentCancelled = (appointmentId: string) => {
+  closeCancellationModal()
+  emit('appointment-cancelled', appointmentId)
+}
 
 // Transfer (Umplanung) state
 const transferringLessonId = ref<string | null>(null)

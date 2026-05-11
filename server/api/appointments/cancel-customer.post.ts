@@ -7,6 +7,7 @@ import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateUUID } from '~/server/utils/validators'
+import { sendTenantEmail, generateCustomerCancelledAdminEmail } from '~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -560,14 +561,86 @@ export default defineEventHandler(async (event) => {
         logger.debug('✅ Payment cancelled (pending)')
       }
     }
-    // await sendEmailNotification({
-    //   to: user.email,
-    //   subject: 'Termin abgesagt',
-    //   template: 'appointment_cancelled',
-    //   data: { appointment, reason }
-    // })
+    // ============ LAYER 9: NOTIFY STAFF + ADMIN ============
+    ;(async () => {
+      try {
+        const supabaseAdmin = getSupabaseAdmin()
 
-    // ============ LAYER 9: QUEUE AVAILABILITY RECALCULATION ============
+        // Format appointment date/time (Zurich TZ)
+        const apptDate = new Date(appointment.start_time).toLocaleDateString('de-CH', {
+          timeZone: 'Europe/Zurich', weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric'
+        })
+        const apptTime = new Date(appointment.start_time).toLocaleTimeString('de-CH', {
+          timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit'
+        })
+        const customerName = `${appointment.first_name || ''} ${appointment.last_name || ''}`.trim() || userProfile.email || 'Unbekannt'
+
+        // Fetch staff name + email
+        let staffName = 'Unbekannt'
+        let staffEmail: string | null = null
+        if (appointment.staff_id) {
+          const { data: staff } = await supabaseAdmin
+            .from('users')
+            .select('first_name, last_name, email')
+            .eq('id', appointment.staff_id)
+            .single()
+          if (staff) {
+            staffName = `${staff.first_name || ''} ${staff.last_name || ''}`.trim() || 'Fahrlehrer'
+            staffEmail = staff.email || null
+          }
+        }
+
+        // Fetch tenant contact info
+        const { data: tenant } = await supabaseAdmin
+          .from('tenants')
+          .select('name, contact_email, contact_person_first_name, contact_person_last_name')
+          .eq('id', tenantId)
+          .single()
+
+        const tenantName = tenant?.name || 'Fahrschule'
+        const adminEmail = tenant?.contact_email
+        const adminName = [tenant?.contact_person_first_name, tenant?.contact_person_last_name]
+          .filter(Boolean).join(' ') || 'Administrator'
+
+        const emailParams = {
+          customerName,
+          customerEmail: userProfile.email,
+          appointmentDate: apptDate,
+          appointmentTime: apptTime,
+          staffName,
+          reason: reason.name_de,
+          chargePercentage,
+          tenantName,
+          requiresMedicalCertificate: reason.requires_proof || false,
+        }
+
+        // Notify staff
+        if (staffEmail) {
+          const html = generateCustomerCancelledAdminEmail({ ...emailParams, recipientName: staffName })
+          await sendTenantEmail(tenantId!, {
+            to: staffEmail,
+            subject: `Termin abgesagt – ${customerName} (${apptDate})`,
+            html,
+          })
+          logger.debug('✅ Staff cancellation notification sent to:', staffEmail)
+        }
+
+        // Notify admin (only if different from staff)
+        if (adminEmail && adminEmail !== staffEmail) {
+          const html = generateCustomerCancelledAdminEmail({ ...emailParams, recipientName: adminName })
+          await sendTenantEmail(tenantId!, {
+            to: adminEmail,
+            subject: `Termin abgesagt – ${customerName} (${apptDate})`,
+            html,
+          })
+          logger.debug('✅ Admin cancellation notification sent to:', adminEmail)
+        }
+      } catch (notifyErr: any) {
+        logger.warn('⚠️ Cancellation notification failed (non-critical):', notifyErr.message)
+      }
+    })()
+
+    // ============ LAYER 10: QUEUE AVAILABILITY RECALCULATION ============
     // Release the appointment slots and regenerate availability for the freed time
     try {
       logger.debug('📋 Queueing availability recalculation after customer cancellation...')
