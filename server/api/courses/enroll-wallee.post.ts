@@ -398,12 +398,86 @@ const handler = defineEventHandler(async (event) => {
       }
     }
 
-    // 9. Call payment processor (WITH VALIDATION DATA, NOT ENROLLMENT ID)
+    // 9. Check if logged-in user has enough credit to bypass Wallee entirely
+    const finalAmount = Math.max(0, course.price_per_participant_rappen - validatedDiscountAmount)
+
+    if (guestUserId && finalAmount > 0) {
+      const { data: creditData } = await supabase
+        .from('student_credits')
+        .select('id, balance_rappen')
+        .eq('user_id', guestUserId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+
+      const availableCredit = creditData?.balance_rappen ?? 0
+
+      if (availableCredit >= finalAmount) {
+        logger.info(`💳 Covering course enrollment fully with credit (CHF ${(finalAmount / 100).toFixed(2)})`)
+
+        // Deduct credit
+        const newBalance = availableCredit - finalAmount
+        await supabase.from('student_credits').update({ balance_rappen: newBalance, updated_at: new Date().toISOString() }).eq('id', creditData!.id)
+
+        // Log credit transaction
+        await supabase.from('credit_transactions').insert({
+          user_id: guestUserId,
+          tenant_id: tenantId,
+          transaction_type: 'payment',
+          amount_rappen: -finalAmount,
+          balance_before_rappen: availableCredit,
+          balance_after_rappen: newBalance,
+          payment_method: 'credit',
+          reference_type: 'course',
+          notes: `Guthaben für Kurs verwendet: ${course.name}`,
+          status: 'completed',
+          created_at: new Date().toISOString()
+        })
+
+        // Enroll in SARI
+        try {
+          await sari.enrollInCourse(faberidClean, course.sari_course_id || course.id)
+          logger.info('✅ SARI enrollment confirmed (credit path)')
+        } catch (sariErr: any) {
+          logger.warn('⚠️ SARI enrollment failed (credit path, non-fatal):', sariErr.message)
+        }
+
+        // Create confirmed registration directly
+        const sessionInserts = (course.course_sessions || []).map((s: any) => ({
+          course_id: courseId,
+          session_id: s.id,
+          start_time: s.start_time,
+          end_time: s.end_time
+        }))
+
+        await supabase.from('course_registrations').insert({
+          course_id: courseId,
+          tenant_id: tenantId,
+          user_id: guestUserId,
+          sari_faberid: faberidClean,
+          status: 'confirmed',
+          payment_status: 'paid',
+          payment_method: 'credit',
+          price_paid_rappen: finalAmount,
+          original_price_rappen: course.price_per_participant_rappen,
+          discount_amount_rappen: validatedDiscountAmount,
+          discount_code: validatedDiscountCode,
+          email: finalEmail,
+          phone: finalPhone,
+          firstname: customerData.firstname,
+          lastname: customerData.lastname,
+          custom_sessions: customSessions || null,
+          created_at: new Date().toISOString()
+        })
+
+        logger.info('✅ Course registration created (credit payment)')
+        return { success: true, paidWithCredit: true }
+      }
+    }
+
+    // 10. Call payment processor (WITH VALIDATION DATA, NOT ENROLLMENT ID)
     const priceChf = course.price_per_participant_rappen / 100
     
     try {
-      const finalAmount = Math.max(0, course.price_per_participant_rappen - validatedDiscountAmount)
-
       const paymentResponse = await $fetch('/api/payments/process-public', {
         method: 'POST',
         body: {

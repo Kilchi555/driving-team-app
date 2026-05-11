@@ -51,14 +51,23 @@
           <div class="rounded-lg p-4 mb-6" :style="{ backgroundColor: getTenantBackgroundColor() }">
             <h3 class="font-semibold text-gray-800">{{ course.name.split(' - ')[0] }}</h3>
             <p class="text-sm mt-1 text-gray-500">{{ course.description }}</p>
-            <div class="mt-2 flex items-center gap-3">
+            <div class="mt-2 flex items-center gap-3 flex-wrap">
               <p class="text-lg font-bold text-gray-800"
-                :class="appliedDiscount ? 'line-through text-gray-400 text-base' : ''">
+                :class="(appliedDiscount || userCreditRappen > 0) ? 'line-through text-gray-400 text-base' : ''">
                 CHF {{ formatPrice(course.price_per_participant_rappen) }}
               </p>
-              <p v-if="appliedDiscount" class="text-lg font-bold text-green-700">
+              <p v-if="appliedDiscount && !userCreditRappen" class="text-lg font-bold text-green-700">
                 CHF {{ formatPrice(effectivePrice) }}
               </p>
+              <p v-if="userCreditRappen > 0" class="text-lg font-bold" :class="effectivePriceAfterCredit === 0 ? 'text-green-700' : 'text-blue-700'">
+                {{ effectivePriceAfterCredit === 0 ? 'Kostenlos ✓' : `CHF ${formatPrice(effectivePriceAfterCredit)}` }}
+              </p>
+            </div>
+            <div v-if="userCreditRappen > 0" class="mt-1 text-xs text-blue-600 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+              </svg>
+              CHF {{ formatPrice(Math.min(userCreditRappen, effectivePrice)) }} Guthaben wird {{ effectivePriceAfterCredit === 0 ? 'vollständig' : 'teilweise' }} verrechnet
             </div>
             
             <!-- Sessions overview -->
@@ -413,6 +422,7 @@ import { useTenant } from '~/composables/useTenant'
 import { useAffiliateRef } from '~/composables/useAffiliateRef'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
 import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
+import { useSupabaseClient } from '#imports'
 
 interface Props {
   isOpen: boolean
@@ -502,6 +512,29 @@ const appliedDiscount = ref<{ code: string; discountAmountRappen: number; discou
 const effectivePrice = computed(() => {
   if (!props.course) return 0
   return Math.max(0, props.course.price_per_participant_rappen - (appliedDiscount.value?.discountAmountRappen ?? 0))
+})
+
+// Credit wallet for logged-in users
+const userCreditRappen = ref(0)
+const loggedInUserId = ref<string | null>(null)
+
+const effectivePriceAfterCredit = computed(() => Math.max(0, effectivePrice.value - userCreditRappen.value))
+
+onMounted(async () => {
+  try {
+    const supabase = useSupabaseClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) return
+
+    const currentUser = await $fetch('/api/auth/current-user') as any
+    if (!currentUser?.id) return
+    loggedInUserId.value = currentUser.id
+
+    const creditRes = await $fetch(`/api/student-credits/get-credit?user_id=${currentUser.id}`) as any
+    userCreditRappen.value = creditRes?.data?.balance_rappen ?? 0
+  } catch {
+    // not logged in or no credit – fine
+  }
 })
 
 // Session swap state
@@ -1021,6 +1054,7 @@ const submitEnrollment = async () => {
         window.location.href = response.paymentUrl
         return
       } else {
+        // Paid with credit or cash – registration already confirmed
         emit('enrolled')
       }
     } else {
