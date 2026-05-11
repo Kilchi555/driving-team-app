@@ -226,7 +226,7 @@
                 </li>
                 <li class="flex items-center">
                   <span class="text-purple-500 mr-2">✓</span>
-                  Unbegrenzt Fahrlehrer
+                  Bis zu 10 Fahrlehrer
                 </li>
                 <li class="flex items-center">
                   <span class="text-purple-500 mr-2">✓</span>

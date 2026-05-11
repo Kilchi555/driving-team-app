@@ -161,7 +161,9 @@
                     {{ includedSeatsForPlan }} im Plan inkl.
                     <template v-if="addonSeats > 0"> · {{ addonSeats }} extra</template>
                   </template>
-                  <template v-else>Unbegrenzt inklusive</template>
+                  <template v-else>10 im Plan inkl.
+                    <template v-if="addonSeats > 0"> · {{ addonSeats }} extra</template>
+                  </template>
                 </p>
               </div>
               <span class="text-xs font-bold px-2.5 py-1 rounded-lg"
@@ -360,7 +362,7 @@
               <span class="text-green-600 font-medium">Inklusive</span>
             </div>
             <div v-else class="flex justify-between items-center text-gray-400 text-xs pl-3">
-              <span>↳ Unbegrenzte Fahrlehrer Seats</span>
+              <span>↳ 10 Fahrlehrer Seats inklusive</span>
               <span class="text-green-600 font-medium">Inklusive</span>
             </div>
 
@@ -766,7 +768,6 @@ const error = ref<string | null>(null)
 
 // Seats already included in the selected plan (no extra cost)
 const includedSeatsForPlan = computed(() => {
-  if (selectedPlan.value === 'enterprise') return null // unlimited
   return PLANS.find(p => p.id === selectedPlan.value)?.includedSeats ?? 1
 })
 
