@@ -4,17 +4,23 @@
 
       <!-- ── STRIPE SUBSCRIPTION SUCCESS ── -->
       <div v-if="isStripeSuccess" class="bg-white rounded-3xl shadow-2xl overflow-hidden">
-        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-10 text-center text-white">
+        <div
+          class="px-8 py-10 text-center text-white"
+          :style="stripeBrandColor ? `background: linear-gradient(135deg, ${stripeBrandColor} 0%, ${stripeBrandColor}cc 100%)` : 'background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)'"
+        >
+          <div v-if="stripeLogo" class="flex justify-center mb-4">
+            <img :src="stripeLogo" alt="Logo" class="h-10 object-contain rounded-lg bg-white/20 px-3 py-1" />
+          </div>
           <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 mb-4">
             <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
             </svg>
           </div>
           <h1 class="text-2xl font-bold mb-1">Abonnement aktiviert!</h1>
-          <p v-if="isWalleeSetup" class="text-blue-100 text-sm">
-            Du hast <strong>7 Tage</strong>, um dein Wallee-Konto einzurichten — erst dann wird abgerechnet.
+          <p v-if="isWalleeSetup" class="text-white/80 text-sm">
+            Du wirst erst abgerechnet, wenn dein Wallee-Konto aktiv ist — du hast <strong>30 Tage</strong> Zeit.
           </p>
-          <p v-else class="text-blue-100 text-sm">Dein neues Abo ist jetzt aktiv. Viel Erfolg mit Simy!</p>
+          <p v-else class="text-white/80 text-sm">Dein neues Abo ist jetzt aktiv. Viel Erfolg mit Simy!</p>
         </div>
         <div v-if="isWalleeSetup" class="px-8 py-5 bg-amber-50 border-b border-amber-100 text-sm text-amber-800">
           <p class="font-semibold mb-1">💳 Nächster Schritt: Wallee-Konto einrichten</p>
@@ -24,7 +30,8 @@
           <p class="text-sm text-gray-400 mb-5">Weiterleitung in {{ stripeCountdown }} Sekunden…</p>
           <button
             @click="redirectToAdminDashboard"
-            class="w-full py-3 rounded-2xl font-semibold text-sm text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+            class="w-full py-3 rounded-2xl font-semibold text-sm text-white transition-colors"
+            :style="stripeBrandColor ? `background:${stripeBrandColor}` : 'background:#2563eb'"
           >
             {{ isWalleeSetup ? 'Wallee jetzt einrichten →' : 'Zum Dashboard' }}
           </button>
@@ -249,12 +256,37 @@ const isWalleeSetup = route.query.wallee_setup === '1'
 // ── Stripe subscription success ────────────────────────────────────────────
 const isStripeSuccess = computed(() => !!stripeSessionId)
 const stripeCountdown = ref(isWalleeSetup ? 8 : 5)
+const stripeBrandColor = ref<string | null>(null)
+const stripeLogo = ref<string | null>(null)
+
+// Load tenant branding for the Stripe success card.
+// The user arrives here right after Stripe checkout — their Supabase session
+// is still active in the browser (localStorage/cookie), so we can read it.
+const loadStripeBranding = async () => {
+  try {
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) return
+    const { data: userRow } = await supabase
+      .from('users').select('tenant_id').eq('auth_user_id', session.user.id).single()
+    if (!userRow?.tenant_id) return
+    const { data: tenant } = await supabase
+      .from('tenants').select('primary_color, logo_url').eq('id', userRow.tenant_id).single()
+    if (tenant?.primary_color) stripeBrandColor.value = tenant.primary_color
+    if (tenant?.logo_url) stripeLogo.value = tenant.logo_url
+  } catch { /* ignore */ }
+}
 
 const redirectToAdminDashboard = () => {
-  window.location.href = isWalleeSetup ? '/admin/profile?tab=payments' : '/admin'
+  if (isWalleeSetup) {
+    window.location.href = '/admin/profile?tab=payments'
+  } else {
+    window.location.href = '/admin'
+  }
 }
 
 if (process.client && stripeSessionId) {
+  loadStripeBranding()
   let t = setInterval(() => {
     stripeCountdown.value--
     if (stripeCountdown.value <= 0) {
