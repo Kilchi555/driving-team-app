@@ -76,7 +76,29 @@ export default defineEventHandler(async (event) => {
           wallleeAlreadyActive = tenant?.wallee_onboarding_status === 'active'
 
           if (tenant?.stripe_customer_id) {
-            stripeCustomerId = tenant.stripe_customer_id
+            // Verify the customer actually exists in the current Stripe mode (live vs test)
+            try {
+              await stripe.customers.retrieve(tenant.stripe_customer_id)
+              stripeCustomerId = tenant.stripe_customer_id
+            } catch (retrieveErr: any) {
+              if (retrieveErr?.code === 'resource_missing') {
+                // Customer exists in wrong Stripe mode (e.g. test key ID used with live key)
+                // Create a new customer and overwrite the stale ID
+                console.warn(`⚠️ Stripe customer ${tenant.stripe_customer_id} not found in current mode — creating new one`)
+                const customer = await stripe.customers.create({
+                  name: tenant.name || undefined,
+                  email: tenant.contact_email || undefined,
+                  metadata: { tenant_id: tenantId },
+                })
+                stripeCustomerId = customer.id
+                await supabase
+                  .from('tenants')
+                  .update({ stripe_customer_id: customer.id })
+                  .eq('id', tenantId)
+              } else {
+                throw retrieveErr
+              }
+            }
           } else if (tenant) {
             const customer = await stripe.customers.create({
               name: tenant.name || undefined,
