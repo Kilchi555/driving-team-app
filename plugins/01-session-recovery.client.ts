@@ -28,6 +28,8 @@ const PUBLIC_PAGES = [
   '/terms',
   '/contact',
   '/shop',
+  '/customer/courses',
+  '/customer/reglemente',
 ]
 
 /** Magic-Link / Supabase-Session ohne httpOnly-Cookie — Session-Recovery nicht erzwingen */
