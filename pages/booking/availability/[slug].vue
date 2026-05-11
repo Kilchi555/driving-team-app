@@ -875,7 +875,7 @@
                   <span class="text-gray-600">Preis:</span>
                   <span
                     class="font-medium text-gray-900 text-right"
-                    :class="bookingDiscount ? 'line-through text-gray-400' : ''"
+                    :class="(bookingDiscount || bookingCreditRappen > 0) ? 'line-through text-gray-400' : ''"
                   >
                     CHF {{ (previewPriceRappen / 100).toFixed(2) }}
                   </span>
@@ -884,9 +884,21 @@
                   <span class="text-gray-600">Rabatt:</span>
                   <span class="font-medium text-green-700 text-right">– CHF {{ (bookingDiscount.discountAmountRappen / 100).toFixed(2) }}</span>
                 </div>
-                <div v-if="bookingDiscount" class="flex justify-between items-start text-sm font-semibold">
+                <div v-if="bookingCreditRappen > 0" class="flex justify-between items-start text-sm">
+                  <span class="text-gray-600">Guthaben:</span>
+                  <span class="font-medium text-blue-700 text-right">– CHF {{ (Math.min(bookingCreditRappen, Math.max(0, previewPriceRappen - (bookingDiscount?.discountAmountRappen ?? 0))) / 100).toFixed(2) }}</span>
+                </div>
+                <div v-if="bookingDiscount || bookingCreditRappen > 0" class="flex justify-between items-start text-sm font-semibold">
                   <span class="text-gray-800">Total:</span>
-                  <span class="text-gray-900">CHF {{ (Math.max(0, previewPriceRappen - bookingDiscount.discountAmountRappen) / 100).toFixed(2) }}</span>
+                  <span :class="effectiveBookingTotal === 0 ? 'text-green-700' : 'text-gray-900'">
+                    {{ effectiveBookingTotal === 0 ? 'Kostenlos ✓' : `CHF ${(effectiveBookingTotal / 100).toFixed(2)}` }}
+                  </span>
+                </div>
+                <div v-if="bookingCreditRappen > 0 && effectiveBookingTotal === 0" class="text-xs text-blue-600 text-right">
+                  Wird automatisch mit deinem Guthaben bezahlt
+                </div>
+                <div v-else-if="bookingCreditRappen > 0" class="text-xs text-blue-600 text-right">
+                  CHF {{ (bookingCreditRappen / 100).toFixed(2) }} Guthaben wird verrechnet
                 </div>
               </template>
             </div>
@@ -3085,25 +3097,50 @@ const successMessage = ref({
   description: 'Dein Termin wurde bestätigt und die Zahlung verarbeitet.'
 })
 
-// Price preview + discount for booking confirmation
+// Price preview + discount + credit for booking confirmation
 const previewPriceRappen = ref(0)
 const bookingDiscount = ref<{ code: string; discountAmountRappen: number; discountData: any } | null>(null)
+const bookingCreditRappen = ref(0)
+
+const effectiveBookingTotal = computed(() => {
+  const afterDiscount = Math.max(0, previewPriceRappen.value - (bookingDiscount.value?.discountAmountRappen ?? 0))
+  return Math.max(0, afterDiscount - bookingCreditRappen.value)
+})
 
 watch(currentStep, async (step) => {
   if (step === 7 && selectedSlot.value?.id && selectedCategory.value?.code && currentTenant.value?.id) {
     bookingDiscount.value = null
-    try {
-      const res = await $fetch('/api/booking/preview-price', {
+    bookingCreditRappen.value = 0
+
+    const [priceRes, userRes] = await Promise.allSettled([
+      $fetch('/api/booking/preview-price', {
         method: 'POST',
         body: {
           slot_id: selectedSlot.value.id,
           category_code: selectedCategory.value.code,
           tenant_id: currentTenant.value.id
         }
-      }) as any
+      }),
+      $fetch('/api/auth/current-user').catch(() => null)
+    ])
+
+    if (priceRes.status === 'fulfilled') {
+      const res = priceRes.value as any
       if (res?.success) previewPriceRappen.value = res.price_rappen
-    } catch (e) {
-      logger.warn('⚠️ Could not load price preview:', e)
+    } else {
+      logger.warn('⚠️ Could not load price preview:', priceRes.reason)
+    }
+
+    if (userRes.status === 'fulfilled' && userRes.value) {
+      const uid = (userRes.value as any)?.id
+      if (uid) {
+        try {
+          const creditRes = await $fetch(`/api/student-credits/get-credit?user_id=${uid}`) as any
+          bookingCreditRappen.value = creditRes?.data?.balance_rappen ?? 0
+        } catch {
+          // not logged in or no credit record - fine
+        }
+      }
     }
   }
 })
