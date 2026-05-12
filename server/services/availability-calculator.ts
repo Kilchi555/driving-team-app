@@ -1018,6 +1018,13 @@ export class AvailabilityCalculator {
         deleteAllQuery = deleteAllQuery.eq('staff_id', staffId)
       }
 
+      // Never delete slots that are actively reserved by a user mid-booking.
+      // A slot is "actively reserved" when reserved_by_session is set AND reserved_until is in the future.
+      const nowIso = new Date().toISOString()
+      deleteAllQuery = deleteAllQuery.or(
+        `reserved_by_session.is.null,reserved_until.is.null,reserved_until.lt.${nowIso}`
+      )
+
       const { error: deleteAllError, count: deletedCount } = await deleteAllQuery
 
       if (deleteAllError) {
