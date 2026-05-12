@@ -423,6 +423,7 @@ import { useRuntimeConfig } from '#app'
 import { useUIStore } from '~/stores/ui'
 import RedeemVoucherModal from '~/components/customer/RedeemVoucherModal.vue'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
+import { roundToNearest5Rappen as roundToNearestFranken } from '~/utils/rounding'
 
 const props = withDefaults(
   defineProps<{
@@ -474,12 +475,6 @@ const uiStore = useUIStore()
 const showSuccess = (title: string, message = '') => uiStore.addNotification({ type: 'success', title, message })
 const showError = (title: string, message = '') => uiStore.addNotification({ type: 'error', title, message })
 
-const roundToNearestFranken = (rappen: number): number => {
-  const remainder = rappen % 100
-  if (remainder === 0) return rappen
-  if (remainder < 50) return rappen - remainder
-  return rappen + (100 - remainder)
-}
 
 const formatAmount = (rappen: number): string => {
   return (roundToNearestFranken(rappen) / 100).toFixed(2)

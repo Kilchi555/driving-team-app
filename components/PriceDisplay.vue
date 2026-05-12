@@ -607,14 +607,7 @@ import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { watch } from 'vue'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
-
-// ✅ Rundungsfunktion: Preise auf nächsten Franken runden
-const roundToNearestFranken = (rappen: number): number => {
-  const remainder = rappen % 100
-  if (remainder === 0) return rappen
-  if (remainder < 50) return rappen - remainder      // Abrunden bei < 50 Rappen
-  else return rappen + (100 - remainder)             // Aufrunden bei >= 50 Rappen
-}
+import { roundToNearest5Rappen as roundToNearestFranken } from '~/utils/rounding'
 
 // Erweiterte Props
 interface Props {

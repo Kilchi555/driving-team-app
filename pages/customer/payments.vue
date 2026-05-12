@@ -293,6 +293,7 @@
 
 import { logger } from '~/utils/logger'
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { roundToNearest5Rappen as roundToNearestFranken } from '~/utils/rounding'
 import { navigateTo } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
@@ -341,13 +342,6 @@ const showDetailsModal = ref(false)
 const showSettings = ref(false)
 const creditWalletRef = ref<InstanceType<typeof CustomerCreditWalletPanel> | null>(null)
 
-// ✅ SWISS ROUNDING: Runde auf nächsten Franken (50 Rappen Grenze)
-const roundToNearestFranken = (rappen: number): number => {
-  const remainder = rappen % 100
-  if (remainder === 0) return rappen
-  if (remainder < 50) return rappen - remainder      // Abrunden bei < 50 Rappen
-  else return rappen + (100 - remainder)             // Aufrunden bei >= 50 Rappen
-}
 
 const formatAmount = (rappen: number): string => {
   return (roundToNearestFranken(rappen) / 100).toFixed(2)
