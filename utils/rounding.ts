@@ -16,11 +16,8 @@
  *   roundToNearest5Rappen(1697) → 1695 (CHF 16.97 → CHF 16.95)
  */
 export function roundToNearest5Rappen(rappen: number): number {
-  const remainder = rappen % 5
-  if (remainder === 0) return rappen
-  return remainder < 3
-    ? rappen - remainder      // 1–2 Rappen → round down
-    : rappen + (5 - remainder) // 3–4 Rappen → round up
+  if (!Number.isFinite(rappen)) return 0
+  return Math.round(rappen / 5) * 5
 }
 
 /**
