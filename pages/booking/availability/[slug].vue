@@ -3242,13 +3242,13 @@ const confirmBooking = async () => {
     isCreatingBooking.value = false
     
     // Redirect to customer dashboard with success message
-    await navigateTo({
-      path: '/customer-dashboard',
-      query: {
-        appointment_id: result.appointment_id,
-        booking_success: 'true'
-      }
-    })
+    try {
+      await navigateTo('/customer-dashboard?booking_success=true')
+    } catch {
+      // Navigation errors after a successful booking are non-fatal –
+      // the appointment was already created. Fall back to a hard redirect.
+      window.location.href = '/customer-dashboard?booking_success=true'
+    }
     
   } catch (error: any) {
     console.error('Error confirming booking:', error)
@@ -3313,10 +3313,9 @@ const createAppointmentSecure = async (userData: any) => {
     
     logger.debug('✅ Slot reserved successfully:', response.reservation.slot_id)
     
-    // Return the appointment ID (use slot_id as identifier for this step)
     return {
       success: true,
-      appointment_id: response.reservation.slot_id,
+      appointment_id: response.appointment_id,
       reservation: response.reservation
     }
     
