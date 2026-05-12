@@ -688,7 +688,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     }
 
     // ✅ Grundpreis berechnen
-    let basePriceRappen = Math.round(rule.price_per_minute_rappen * durationValue)
+    let basePriceRappen = Math.round(Number(rule.price_per_minute_rappen) * durationValue)
     basePriceRappen = roundToNearestFranken(basePriceRappen)
 
     // ✅ NEUE LOGIK: Admin-Fee basierend auf tatsächlichen Zahlungen

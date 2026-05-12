@@ -356,7 +356,7 @@ export default defineEventHandler(async (event) => {
 
       // Calculate base price
       const baseDuration = Math.max(body.durationMinutes, rule.base_duration_minutes)
-      const basePriceRappen = Math.round(baseDuration * rule.price_per_minute_rappen)
+      const basePriceRappen = Math.round(baseDuration * Number(rule.price_per_minute_rappen))
 
       // Calculate admin fee
       let adminFeeRappen = 0
