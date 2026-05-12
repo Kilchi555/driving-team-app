@@ -299,6 +299,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { formatDateTime } from '~/utils/dateUtils'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
+import { roundToNearest5Rappen as roundToNearestFranken } from '~/utils/rounding'
 
 
 // Props
@@ -431,13 +432,6 @@ const invoiceData = ref<InvoiceData>({
   address: ''
 })
 
-// ✅ SWISS ROUNDING: Runde auf nächsten Franken (50 Rappen Grenze)
-const roundToNearestFranken = (rappen: number): number => {
-  const remainder = rappen % 100
-  if (remainder === 0) return rappen
-  if (remainder < 50) return rappen - remainder      // Abrunden bei < 50 Rappen
-  else return rappen + (100 - remainder)             // Aufrunden bei >= 50 Rappen
-}
 
 const formatAmount = (rappen: number): string => {
   return (roundToNearestFranken(rappen) / 100).toFixed(2)
