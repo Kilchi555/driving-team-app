@@ -3,6 +3,7 @@
 // Creates payment record AND initiates Wallee transaction in one call
 
 import { defineEventHandler, getHeader, createError, readBody } from 'h3'
+import { roundToNearest5Rappen } from '~/utils/rounding'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
@@ -435,16 +436,8 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       }
     }
 
-    // ✅ SWISS ROUNDING: Round to nearest Franken (50 Rappen boundary) before sending to Wallee
-    const roundToNearestFranken = (rappen: number): number => {
-      const remainder = rappen % 100
-      if (remainder === 0) return rappen
-      if (remainder < 50) return rappen - remainder      // Round down if < 50 Rappen
-      else return rappen + (100 - remainder)             // Round up if >= 50 Rappen
-    }
-
     // ✅ Use FINAL amount (after credit deduction) and ROUNDED for Wallee transaction
-    const walleeAmount = roundToNearestFranken(finalAmountToPay)
+    const walleeAmount = roundToNearest5Rappen(finalAmountToPay)
 
     logger.debug('💰 Creating Wallee transaction with amount after credit:', {
       original_amount_rappen: payment.total_amount_rappen,

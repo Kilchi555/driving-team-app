@@ -4,15 +4,9 @@ import { useAuthStore } from '~/stores/auth'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import type { Payment, Product, Discount, PaymentMethod } from '~/types/payment'
 import { useDiscounts } from '~/composables/useDiscounts'
+import { roundToNearest5Rappen } from '~/utils/rounding'
 
 export const usePayments = () => {
-  // ✅ RUNDUNGSFUNKTION: Preise auf nächsten Franken runden
-  const roundToNearestFranken = (rappen: number): number => {
-    const remainder = rappen % 100
-    if (remainder === 0) return rappen
-    if (remainder < 50) return rappen - remainder      // Abrunden bei < 50 Rappen
-    else return rappen + (100 - remainder)             // Aufrunden bei >= 50 Rappen
-  }
 
   const { validateDiscountCode, applyDiscount, loadDiscounts, loadDiscountsByCategory, availableDiscounts } = useDiscounts()
   
@@ -67,11 +61,11 @@ export const usePayments = () => {
       const finalTotalRappen = subtotalRappen - discountsTotalRappen
 
       // ✅ RUNDUNG: Alle Preise auf nächsten Franken runden
-      const roundedLessonPriceRappen = roundToNearestFranken(price.total_rappen)
-      const roundedProductsTotalRappen = roundToNearestFranken(productsTotalRappen)
-      const roundedDiscountsTotalRappen = roundToNearestFranken(discountsTotalRappen)
-      const roundedSubtotalRappen = roundToNearestFranken(subtotalRappen)
-      const roundedFinalTotalRappen = roundToNearestFranken(finalTotalRappen)
+      const roundedLessonPriceRappen = roundToNearest5Rappen(price.total_rappen)
+      const roundedProductsTotalRappen = roundToNearest5Rappen(productsTotalRappen)
+      const roundedDiscountsTotalRappen = roundToNearest5Rappen(discountsTotalRappen)
+      const roundedSubtotalRappen = roundToNearest5Rappen(subtotalRappen)
+      const roundedFinalTotalRappen = roundToNearest5Rappen(finalTotalRappen)
 
       // Create payment record mit neuen Spalten
       const paymentData: any = {
@@ -138,11 +132,11 @@ export const usePayments = () => {
       const finalTotalRappen = subtotalRappen - discountsTotalRappen
 
       // ✅ RUNDUNG: Alle Preise auf nächsten Franken runden
-      const roundedLessonPriceRappen = roundToNearestFranken(price.total_rappen)
-      const roundedProductsTotalRappen = roundToNearestFranken(productsTotalRappen)
-      const roundedDiscountsTotalRappen = roundToNearestFranken(discountsTotalRappen)
-      const roundedSubtotalRappen = roundToNearestFranken(subtotalRappen)
-      const roundedFinalTotalRappen = roundToNearestFranken(finalTotalRappen)
+      const roundedLessonPriceRappen = roundToNearest5Rappen(price.total_rappen)
+      const roundedProductsTotalRappen = roundToNearest5Rappen(productsTotalRappen)
+      const roundedDiscountsTotalRappen = roundToNearest5Rappen(discountsTotalRappen)
+      const roundedSubtotalRappen = roundToNearest5Rappen(subtotalRappen)
+      const roundedFinalTotalRappen = roundToNearest5Rappen(finalTotalRappen)
 
       // Create payment record mit neuen Spalten
       const paymentData: any = {
@@ -206,11 +200,11 @@ export const usePayments = () => {
       const finalTotalRappen = subtotalRappen - discountsTotalRappen
 
       // ✅ RUNDUNG: Alle Preise auf nächsten Franken runden
-      const roundedLessonPriceRappen = roundToNearestFranken(price.total_rappen)
-      const roundedProductsTotalRappen = roundToNearestFranken(productsTotalRappen)
-      const roundedDiscountsTotalRappen = roundToNearestFranken(discountsTotalRappen)
-      const roundedSubtotalRappen = roundToNearestFranken(subtotalRappen)
-      const roundedFinalTotalRappen = roundToNearestFranken(finalTotalRappen)
+      const roundedLessonPriceRappen = roundToNearest5Rappen(price.total_rappen)
+      const roundedProductsTotalRappen = roundToNearest5Rappen(productsTotalRappen)
+      const roundedDiscountsTotalRappen = roundToNearest5Rappen(discountsTotalRappen)
+      const roundedSubtotalRappen = roundToNearest5Rappen(subtotalRappen)
+      const roundedFinalTotalRappen = roundToNearest5Rappen(finalTotalRappen)
 
       // Create payment record
       const paymentData: any = {
@@ -335,8 +329,8 @@ export const usePayments = () => {
       )
       
       // Round each component first, then derive total — avoids rounding drift
-      const roundedSubtotalRappen = roundToNearestFranken(subtotal)
-      const roundedTotalDiscountRappen = roundToNearestFranken(totalDiscount)
+      const roundedSubtotalRappen = roundToNearest5Rappen(subtotal)
+      const roundedTotalDiscountRappen = roundToNearest5Rappen(totalDiscount)
       // Total is always derived from the rounded components, never rounded independently
       const roundedTotalRappen = roundedSubtotalRappen - roundedTotalDiscountRappen
 
@@ -461,8 +455,8 @@ export const usePayments = () => {
         sum + Math.round(discount.discount_amount_rappen || 0), 0
       )
 
-      const roundedSubtotalRappen = roundToNearestFranken(subtotal)
-      const roundedTotalDiscountRappen = roundToNearestFranken(totalDiscount)
+      const roundedSubtotalRappen = roundToNearest5Rappen(subtotal)
+      const roundedTotalDiscountRappen = roundToNearest5Rappen(totalDiscount)
       const roundedTotalRappen = roundedSubtotalRappen - roundedTotalDiscountRappen
 
       // Create payment record mit neuen Spalten
