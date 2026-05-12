@@ -331,7 +331,7 @@ export default defineEventHandler(async (event: H3Event) => {
 
     let totalAmountRappen = 0
     if (pricingRule) {
-      let price = pricingRule.price_per_minute_rappen * slot.duration_minutes
+      let price = Number(pricingRule.price_per_minute_rappen) * slot.duration_minutes
 
       // Apply duration multiplier
       if (pricingRule.duration_multiplier && pricingRule.duration_multiplier !== '1.00') {

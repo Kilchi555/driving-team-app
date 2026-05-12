@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
       return { success: true, price_rappen: 0 }
     }
 
-    let price = pricingRule.price_per_minute_rappen * slot.duration_minutes
+    let price = Number(pricingRule.price_per_minute_rappen) * slot.duration_minutes
 
     if (pricingRule.duration_multiplier && pricingRule.duration_multiplier !== '1.00') {
       price = Math.round(price * parseFloat(pricingRule.duration_multiplier))

@@ -158,7 +158,7 @@ export default defineEventHandler(async (event) => {
 
     // 3. Calculate total price for the duration (WITHOUT admin fee for display)
     const durationMinutes = duration_minutes || combined.base_duration_minutes || 45
-    let priceRappen = combined.price_per_minute_rappen * durationMinutes
+    let priceRappen = Math.round(Number(combined.price_per_minute_rappen) * durationMinutes)
 
     // ℹ️ Do NOT add admin_fee here - it's shown separately to the user
     // Admin fee is only added at checkout/payment time

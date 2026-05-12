@@ -1561,7 +1561,7 @@ const syncPricingRules = async (
     
     // Add theory pricing rule ONLY if enabled
     if (theoryEnabled && theoryPriceChf > 0) {
-      const theoryPricePerMinuteRappen = Math.round((theoryPriceChf / theoryDurationMinutes) * 100)
+      const theoryPricePerMinuteRappen = (theoryPriceChf / theoryDurationMinutes) * 100
       pricingRules.push({
         rule_name: `Kategorie ${categoryCode} - Theorielektion`,
         rule_type: 'theory',
@@ -1579,7 +1579,7 @@ const syncPricingRules = async (
     
     // Add consultation pricing rule ONLY if enabled
     if (consultationEnabled && consultationPriceChf > 0) {
-      const consultationPricePerMinuteRappen = Math.round((consultationPriceChf / consultationDurationMinutes) * 100)
+      const consultationPricePerMinuteRappen = (consultationPriceChf / consultationDurationMinutes) * 100
       pricingRules.push({
         rule_name: `Kategorie ${categoryCode} - Beratung`,
         rule_type: 'consultation',
