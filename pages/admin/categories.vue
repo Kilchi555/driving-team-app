@@ -1503,7 +1503,7 @@ const syncPricingRules = async (
     
     // Calculate price per minute from lesson price (always based on 45min for consistency)
     const baseDurationMinutes = categoryForm.value.lesson_duration_minutes[0] || 45
-    const pricePerMinuteRappen = Math.round((pricePerLessonChf / 45) * 100) // Always use 45min as basis
+    const pricePerMinuteRappen = (pricePerLessonChf / 45) * 100 // Decimal – stored as NUMERIC in DB
     const adminFeeRappen = Math.round(adminFeeChf * 100)
     
     // Delete existing pricing rules for this category
