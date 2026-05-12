@@ -6,6 +6,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { roundToNearest5Rappen } from '~/utils/rounding'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -61,11 +62,7 @@ export default defineEventHandler(async (event) => {
       price = Math.round(price * parseFloat(pricingRule.evening_multiplier))
     }
 
-    // Round to nearest franc
-    const remainder = price % 100
-    if (remainder !== 0) {
-      price = remainder < 50 ? price - remainder : price + (100 - remainder)
-    }
+    price = roundToNearest5Rappen(price)
 
     logger.debug('💰 Preview price calculated:', { price, slot_id, category_code })
     return { success: true, price_rappen: price }

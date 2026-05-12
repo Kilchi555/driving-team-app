@@ -1,6 +1,7 @@
 // composables/usePricing.ts - Vereinheitlichte und optimierte Pricing-Lösung
 import { ref, computed, watch, type Ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
+import { roundToNearest5Rappen } from '~/utils/rounding'
 
 // ===== INTERFACES =====
 interface PricingRule {
@@ -462,12 +463,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     return rule
   }
 
-const roundToNearestFranken = (rappen: number): number => {
-  const remainder = rappen % 100
-  if (remainder === 0) return rappen
-  if (remainder < 50) return rappen - remainder      // Abrunden bei < 50 Rappen
-  else return rappen + (100 - remainder)             // Aufrunden bei >= 50 Rappen
-}
+  const roundToNearestFranken = roundToNearest5Rappen
 
   // ===== MAIN CALCULATION FUNCTION =====
   const calculatePrice = async (

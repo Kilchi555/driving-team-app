@@ -29,6 +29,7 @@
 import { defineEventHandler, readBody, createError, getHeader, H3Event } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { roundToNearest5Rappen } from '~/utils/rounding'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
@@ -355,13 +356,7 @@ export default defineEventHandler(async (event: H3Event) => {
 
       totalAmountRappen = Math.round(price)
 
-      // Round to nearest franc (same logic as get-pricing.post.ts)
-      const remainder = totalAmountRappen % 100
-      if (remainder !== 0) {
-        totalAmountRappen = remainder < 50
-          ? totalAmountRappen - remainder        // Round down if < 50 Rappen
-          : totalAmountRappen + (100 - remainder) // Round up if >= 50 Rappen
-      }
+      totalAmountRappen = roundToNearest5Rappen(totalAmountRappen)
 
       logger.debug('💰 Price calculated:', { totalAmountRappen, pricingRule })
     } else {

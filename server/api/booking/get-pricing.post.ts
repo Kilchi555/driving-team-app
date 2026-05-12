@@ -18,6 +18,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { roundToNearest5Rappen } from '~/utils/rounding'
 
 interface GetPricingRequest {
   tenant_id: string
@@ -162,15 +163,7 @@ export default defineEventHandler(async (event) => {
     // ℹ️ Do NOT add admin_fee here - it's shown separately to the user
     // Admin fee is only added at checkout/payment time
 
-    // ✅ SWISS ROUNDING: Round to nearest Franken (50 Rappen boundary)
-    const roundToNearestFranken = (rappen: number): number => {
-      const remainder = rappen % 100
-      if (remainder === 0) return rappen
-      if (remainder < 50) return rappen - remainder      // Round down if < 50 Rappen
-      else return rappen + (100 - remainder)             // Round up if >= 50 Rappen
-    }
-
-    const roundedPriceRappen = roundToNearestFranken(priceRappen)
+    const roundedPriceRappen = roundToNearest5Rappen(priceRappen)
     const priceCHF = (roundedPriceRappen / 100).toFixed(2)
 
     logger.debug('✅ Pricing loaded (base price without admin fee):', {
