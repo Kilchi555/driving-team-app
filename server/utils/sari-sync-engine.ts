@@ -335,11 +335,19 @@ export class SARISyncEngine {
       }
       
       // Parse session date (format from SARI: "2026-01-10 08:00")
-      // IMPORTANT: SARI sends LOCAL time (Swiss time), NOT UTC
-      // We need to store it as UTC by treating the local time as if it were UTC
-      // so that when displayed, it shows the original local time
-      const localTimeStr = sariSession.date.replace(' ', 'T') // "2026-01-10T08:00"
-      const startDate = new Date(localTimeStr + 'Z') // Add Z to treat as UTC (preserves the local time values)
+      // SARI sends times already in Swiss local time (CET in winter, CEST in summer).
+      // Convert the local Swiss time to proper UTC for storage so that display
+      // functions (which convert UTC → Europe/Zurich) show the correct time.
+      const localTimeStr = sariSession.date.replace(' ', 'T') + ':00' // "2026-01-10T08:00:00"
+      // Step 1: treat as UTC temporarily to get a reference point
+      const approxUtc = new Date(localTimeStr + 'Z')
+      // Step 2: find what Zurich clock shows for that reference UTC moment
+      const zurichStr = approxUtc.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+      const zurichFake = new Date(zurichStr.replace(' ', 'T') + 'Z')
+      // Step 3: offset = approxUtc − zurichFake (negative, Zurich is ahead of UTC)
+      // e.g. 08:00UTC − 10:00UTC(fake) = −2h  →  08:00 + (−2h) = 06:00 UTC ✓
+      const offsetMs = approxUtc.getTime() - zurichFake.getTime()
+      const startDate = new Date(approxUtc.getTime() + offsetMs)
       
       // Calculate duration based on course type
       // VKU = 2 hours, PGS = 4 hours
