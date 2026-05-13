@@ -172,7 +172,7 @@
               </span>
             </div>
             <div v-if="selectedPlan === 'enterprise'" class="text-xs text-gray-400 italic text-center py-2">
-              ∞ Fahrlehrer inklusive
+              10 Fahrlehrer inklusive – keine weiteren Seats buchbar
             </div>
             <div v-else class="flex flex-col items-center gap-2">
               <div class="flex items-center justify-center gap-4">
@@ -282,7 +282,7 @@
           <div class="flex items-start justify-between mb-3">
             <div>
               <p class="font-bold text-gray-900 text-sm">Online-Zahlungen für deine Kunden</p>
-              <p class="text-xs text-gray-400 mt-0.5">Kreditkarte, TWINT & mehr via Wallee · Inklusive im Plan</p>
+              <p class="text-xs text-gray-400 mt-0.5">Kreditkarte, TWINT & mehr via Wallee · Inklusive im Plan · 1.7% Transaktionsgebühr pro Zahlung</p>
             </div>
             <span class="text-xs font-bold px-2.5 py-1 rounded-lg"
               style="background: rgba(var(--brand-rgb), 0.08); color: var(--brand-primary);">
@@ -294,6 +294,7 @@
               <span v-if="withWallee">
                 ✅ <strong>Mit Online-Zahlungen:</strong> Wir richten dein Wallee-Konto ein (ca. 5 Werktage).
                 Die Abrechnung startet erst wenn alles aktiv ist — du hast 30 Tage Zeit.
+                Es fällt eine Transaktionsgebühr von <strong>1.7%</strong> pro Zahlung deiner Schüler an.
               </span>
               <span v-else>
                 ℹ️ <strong>Ohne Online-Zahlungen:</strong> Nur Bar- und Rechnungszahlung.
@@ -324,7 +325,7 @@
             <p class="text-xs font-semibold text-blue-800">ℹ️ Keine UID-Nummer hinterlegt</p>
             <p class="text-xs text-blue-700">
               Für Online-Zahlungen ist eine UID-Nummer erforderlich. Falls dein Betrieb noch nicht registriert ist,
-              <strong>übernimmt Simy die Kosten</strong> für die Eintragung als Einzelfirma.
+              <strong>übernimmt Simy die Kosten bis max. CHF 100.–</strong> für die Eintragung als Einzelfirma.
               Die Kosten entstehen erst nach einer erfolgreich abgeschlossenen Eintragung — es entstehen dir keine Vorauskosten.
             </p>
             <p class="text-xs text-blue-600">
@@ -602,6 +603,11 @@
                       <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
                     </svg>
                   </template>
+                  <span v-else-if="row.values[plan.id] === 'Add-on'"
+                    class="inline-block text-xs font-medium px-2 py-0.5 rounded-full"
+                    style="background: rgba(var(--brand-rgb), 0.08); color: var(--brand-primary)">
+                    Add-on
+                  </span>
                   <span v-else class="font-semibold text-gray-700">{{ row.values[plan.id] }}</span>
                 </td>
               </tr>
@@ -1032,16 +1038,16 @@ const openBillingPortal = async () => {
 }
 
 const comparisonRows: { label: string; values: Record<string, string | boolean> }[] = [
-  { label: 'Fahrlehrer inkl.', values: { starter: '1', professional: '5', enterprise: '∞' } },
+  { label: 'Fahrlehrer inkl.', values: { starter: '1', professional: '5', enterprise: '10' } },
   { label: 'Onlineterminbuchung', values: { starter: true, professional: true, enterprise: true } },
   { label: 'Kundenverwaltung', values: { starter: true, professional: true, enterprise: true } },
   { label: 'Rechnungen & Zahlungen', values: { starter: true, professional: true, enterprise: true } },
   { label: 'Auswertungen & Statistiken', values: { starter: true, professional: true, enterprise: true } },
-  { label: 'Kursbuchungsseite', values: { starter: false, professional: true, enterprise: true } },
+  { label: 'Kassenverwaltung', values: { starter: true, professional: true, enterprise: true } },
+  { label: 'Gutscheine & Rabatte', values: { starter: true, professional: true, enterprise: true } },
   { label: 'Prüfungsverwaltung', values: { starter: true, professional: true, enterprise: true } },
-  { label: 'Affiliate-System', values: { starter: false, professional: false, enterprise: true } },
-  { label: 'Kassenverwaltung', values: { starter: true, professional: false, enterprise: false } },
-  { label: 'Gutscheine & Rabatte', values: { starter: true, professional: false, enterprise: false } },
+  { label: 'Kursbuchungsseite', values: { starter: 'Add-on', professional: true, enterprise: true } },
+  { label: 'Affiliate-System', values: { starter: 'Add-on', professional: 'Add-on', enterprise: true } },
   { label: 'Support', values: { starter: 'E-Mail', professional: 'Priorität', enterprise: 'Dediziert' } },
 ]
 

@@ -1,10 +1,9 @@
 import Stripe from 'stripe'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import {
-  resolveFeatureFlags,
-  ALL_FEATURE_FLAGS,
   type SubscriptionPlan,
 } from '~/utils/planFeatures'
+import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
 import { sendEmail } from '~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
@@ -507,22 +506,3 @@ async function handleWalleeWelcomeEmail(
   }
 }
 
-async function syncFeatureFlags(
-  supabase: ReturnType<typeof getSupabaseAdmin>,
-  tenantId: string,
-  plan: SubscriptionPlan,
-  addons: { courses?: boolean; affiliate?: boolean }
-) {
-  const enabledFlags = new Set(resolveFeatureFlags(plan, addons))
-
-  const upserts = ALL_FEATURE_FLAGS.map(flag => ({
-    tenant_id: tenantId,
-    category: 'features',
-    setting_key: flag,
-    setting_value: JSON.stringify({ enabled: enabledFlags.has(flag) }),
-  }))
-
-  await supabase
-    .from('tenant_settings')
-    .upsert(upserts, { onConflict: 'tenant_id,setting_key' })
-}
