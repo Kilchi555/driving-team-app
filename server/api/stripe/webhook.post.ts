@@ -67,6 +67,7 @@ export default defineEventHandler(async (event) => {
       case 'invoice.paid':
       case 'invoice.payment_succeeded': {
         const invoice = stripeEvent.data.object as Stripe.Invoice
+        console.log(`🧾 invoice.paid: id=${invoice.id} subscription=${invoice.subscription} customer=${invoice.customer} amount=${invoice.amount_paid}`)
         if (invoice.subscription) {
           const sub = await stripe.subscriptions.retrieve(invoice.subscription as string)
           await handleSubscriptionUpsert(supabase, stripe, sub)
