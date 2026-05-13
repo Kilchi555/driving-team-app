@@ -224,14 +224,19 @@ async function handleSubscriptionUpsert(
   sub: Stripe.Subscription
 ) {
   const customerId = sub.customer as string
+  console.log(`🔍 handleSubscriptionUpsert: sub.id=${sub.id}, customer=${customerId}, status=${sub.status}, metadata=${JSON.stringify(sub.metadata)}`)
+
   const tenantId = await resolveTenantId(supabase, customerId, sub)
   if (!tenantId) {
-    console.warn(`⚠️ No tenant found for Stripe customer ${customerId}`)
+    console.error(`❌ No tenant found for Stripe customer ${customerId} — sub metadata: ${JSON.stringify(sub.metadata)}`)
     return
   }
 
+  console.log(`✅ Resolved tenant: ${tenantId}`)
+
   // ── Resolve plan from metadata ──────────────────────────────────────────
   const plan = (sub.metadata?.plan || resolvePlanFromPrices(sub)) as SubscriptionPlan
+  console.log(`📦 Resolved plan: "${plan}" (from metadata: "${sub.metadata?.plan}", from prices: "${resolvePlanFromPrices(sub)}")`)
 
   const periodEndTs = (sub as any).current_period_end ?? (sub as any).billing_cycle_anchor ?? null
   const currentPeriodEnd = periodEndTs != null && Number.isFinite(Number(periodEndTs))
@@ -253,21 +258,37 @@ async function handleSubscriptionUpsert(
 
   // ── Update tenant ───────────────────────────────────────────────────────
   const isWalleeTrialing = sub.metadata?.with_wallee === 'true' && sub.status === 'trialing'
-  await supabase
+  const updatePayload = {
+    stripe_subscription_id: sub.id,
+    subscription_plan: plan,
+    current_period_end: currentPeriodEnd,
+    is_trial: false,
+    addon_seats: addonSeats,
+    addon_courses_enabled: addonCourses,
+    addon_affiliate_enabled: addonAffiliate,
+    subscription_cancel_at: cancelAt,
+    ...(isWalleeTrialing ? { wallee_trial_started_at: new Date().toISOString() } : {}),
+  }
+
+  console.log(`🔄 Updating tenant ${tenantId} with:`, JSON.stringify(updatePayload))
+
+  const { error: updateError, count } = await supabase
     .from('tenants')
-    .update({
-      stripe_subscription_id: sub.id,
-      subscription_plan: plan,
-      current_period_end: currentPeriodEnd,
-      is_trial: false,
-      addon_seats: addonSeats,
-      addon_courses_enabled: addonCourses,
-      addon_affiliate_enabled: addonAffiliate,
-      subscription_cancel_at: cancelAt,
-      // Track when Wallee trial started so cron can send timely reminders
-      ...(isWalleeTrialing ? { wallee_trial_started_at: new Date().toISOString() } : {}),
-    })
+    .update(updatePayload)
     .eq('id', tenantId)
+    .select('id', { count: 'exact', head: true })
+
+  if (updateError) {
+    console.error(`❌ Supabase tenant update FAILED for tenant ${tenantId}:`, JSON.stringify(updateError))
+    throw new Error(`Supabase update failed: ${updateError.message}`)
+  }
+
+  if (count === 0) {
+    console.error(`❌ Supabase update matched 0 rows for tenant_id=${tenantId} — does the tenant exist?`)
+    throw new Error(`No tenant row updated for id=${tenantId}`)
+  }
+
+  console.log(`✅ Tenant ${tenantId} DB update successful (${count} row(s) updated)`)
 
   // ── Sync feature flags ──────────────────────────────────────────────────
   await syncFeatureFlags(supabase, tenantId, plan, { courses: addonCourses, affiliate: addonAffiliate })
