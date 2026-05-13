@@ -415,9 +415,13 @@ function hasAddonByEnvKey(sub: Stripe.Subscription, envKey: string): boolean {
 
 function parseAddonSeats(sub: Stripe.Subscription): number {
   const priceId = process.env['STRIPE_PRICE_ADDON_SEATS']
-  if (!priceId) return 0
-  const item = sub.items.data.find(i => i.price.id === priceId)
-  return item?.quantity ?? 0
+  if (priceId) {
+    const item = sub.items.data.find(i => i.price.id === priceId)
+    if (item) return item?.quantity ?? 0
+  }
+  // Fallback: read from subscription metadata set at checkout time
+  const fromMeta = parseInt(sub.metadata?.addon_seats || '0', 10)
+  return isNaN(fromMeta) ? 0 : fromMeta
 }
 
 async function handleWalleeWelcomeEmail(
