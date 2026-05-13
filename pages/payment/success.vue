@@ -277,6 +277,25 @@ const loadStripeBranding = async () => {
   } catch { /* ignore */ }
 }
 
+// Sync subscription to DB directly from the client after checkout.
+// This is a reliable fallback in case the Stripe webhook was delayed or failed.
+const syncStripeSubscription = async () => {
+  if (!stripeSessionId) return
+  try {
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) return
+    await $fetch('/api/stripe/sync-subscription', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: { sessionId: stripeSessionId },
+    })
+    logger.debug('✅ Stripe subscription synced from success page')
+  } catch (err) {
+    logger.debug('⚠️ Stripe subscription sync failed (webhook may handle it):', err)
+  }
+}
+
 const redirectToAdminDashboard = () => {
   if (isWalleeSetup) {
     window.location.href = '/admin/profile?tab=payments'
@@ -287,6 +306,7 @@ const redirectToAdminDashboard = () => {
 
 if (process.client && stripeSessionId) {
   loadStripeBranding()
+  syncStripeSubscription()
   let t = setInterval(() => {
     stripeCountdown.value--
     if (stripeCountdown.value <= 0) {
