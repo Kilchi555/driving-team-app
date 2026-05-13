@@ -1,4 +1,4 @@
-import { H3Event } from 'h3'
+import { H3Event, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
@@ -212,6 +212,52 @@ export async function getAuthenticatedUser(event: H3Event) {
     console.error('❌ Error getting authenticated user:', error)
     return null
   }
+}
+
+/**
+ * Require an authenticated admin/staff/superadmin user.
+ * Throws 401 if not authenticated, 403 if insufficient role.
+ * Returns a flat profile object with id, tenant_id, role.
+ *
+ * Usage in any admin endpoint:
+ *   const profile = await requireAdminProfile(event)
+ *   // profile.tenant_id, profile.id, profile.role are guaranteed
+ */
+export async function requireAdminProfile(
+  event: H3Event,
+  allowedRoles: string[] = ['admin', 'staff', 'superadmin']
+) {
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
+
+  const role: string = authUser.role || authUser.profile?.role || ''
+  const tenantId: string = authUser.tenant_id || authUser.profile?.tenant_id || ''
+  const dbUserId: string = authUser.db_user_id || authUser.profile?.id || ''
+
+  if (!allowedRoles.includes(role)) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – insufficient role' })
+  }
+
+  if (!tenantId) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – no tenant assigned' })
+  }
+
+  return {
+    id: dbUserId,
+    tenant_id: tenantId,
+    role,
+    auth_user_id: authUser.id as string
+  }
+}
+
+/**
+ * Require an authenticated admin (not staff) user.
+ * Alias for requireAdminProfile with admin-only roles.
+ */
+export async function requireAdminOnly(event: H3Event) {
+  return requireAdminProfile(event, ['admin', 'superadmin'])
 }
 
 /**
