@@ -1,6 +1,7 @@
 import Stripe from 'stripe'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { PLANS, type SubscriptionPlan } from '~/utils/planFeatures'
+import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
 
 /**
  * Called from the success page after a Stripe checkout.
@@ -100,6 +101,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'Failed to update subscription' })
   }
 
+  // Sync feature flags in tenant_settings
+  await syncFeatureFlags(supabase, tenantId, plan, { courses: addonCourses, affiliate: addonAffiliate })
+
   console.log(`✅ sync-subscription: Tenant ${tenantId} synced → plan=${plan}`)
   return { synced: true, plan, tenantId }
 })
@@ -119,7 +123,11 @@ function resolvePlanFromPrices(sub: Stripe.Subscription): string {
 
 function parseAddonSeats(sub: Stripe.Subscription): number {
   const priceId = process.env['STRIPE_PRICE_ADDON_SEATS']
-  if (!priceId) return 0
-  const item = sub.items.data.find(i => i.price.id === priceId)
-  return item?.quantity ?? 0
+  if (priceId) {
+    const item = sub.items.data.find(i => i.price.id === priceId)
+    if (item) return item?.quantity ?? 0
+  }
+  // Fallback: read from subscription metadata set at checkout time
+  const fromMeta = parseInt(sub.metadata?.addon_seats || '0', 10)
+  return isNaN(fromMeta) ? 0 : fromMeta
 }

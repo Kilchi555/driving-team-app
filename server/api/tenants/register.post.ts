@@ -5,6 +5,7 @@ import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
+import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
 
 interface TenantRegistrationData {
   name: string
@@ -270,7 +271,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     // 5. Tenant in Datenbank erstellen
     const tenantId = crypto.randomUUID()
     const trialEndsAt = new Date()
-    trialEndsAt.setDate(trialEndsAt.getDate() + 30) // 30 Tage Trial
+    trialEndsAt.setDate(trialEndsAt.getDate() + 60) // 60 Tage Trial
 
     // Default working hours template: Mo–Fr 07:00–19:00, Sa 08:00–16:00
     const defaultWorkingDaysTemplate = {
@@ -381,6 +382,10 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         : undefined
       await copyDefaultDataToTenant(tenantId, data.business_type, selectedIds)
       logger.debug('✅ Default data copied to tenant')
+
+      // Set all feature flags explicitly for trial plan
+      await syncFeatureFlags(getSupabaseAdmin(), tenantId, 'trial', {})
+      logger.debug('✅ Trial feature flags synced to tenant_settings')
 
       // Store selected category codes on the tenant so staff-register can filter by them
       if (selectedIds && selectedIds.length > 0) {
