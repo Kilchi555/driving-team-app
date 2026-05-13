@@ -67,12 +67,28 @@ export default defineEventHandler(async (event) => {
       case 'invoice.paid':
       case 'invoice.payment_succeeded': {
         const invoice = stripeEvent.data.object as Stripe.Invoice
-        console.log(`🧾 invoice.paid: id=${invoice.id} subscription=${invoice.subscription} customer=${invoice.customer} amount=${invoice.amount_paid}`)
-        if (invoice.subscription) {
-          const sub = await stripe.subscriptions.retrieve(invoice.subscription as string)
+        const subscriptionId = (invoice as any).subscription as string | null | undefined
+        const customerId = invoice.customer as string
+        console.log(`🧾 invoice.paid: id=${invoice.id} subscription=${subscriptionId} customer=${customerId} amount=${invoice.amount_paid}`)
+
+        let sub: Stripe.Subscription | null = null
+
+        if (subscriptionId) {
+          sub = await stripe.subscriptions.retrieve(subscriptionId)
+        } else if (customerId) {
+          // Fallback: invoice has no subscription ID (common for $0 trial invoices)
+          // Look up the customer's active or trialing subscription directly
+          const [active, trialing] = await Promise.all([
+            stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 1 }),
+            stripe.subscriptions.list({ customer: customerId, status: 'trialing', limit: 1 }),
+          ])
+          sub = active.data[0] || trialing.data[0] || null
+          console.log(`🔄 invoice.paid fallback: found sub via customer=${customerId} → ${sub?.id ?? 'none'}`)
+        }
+
+        if (sub) {
           await handleSubscriptionUpsert(supabase, stripe, sub)
-          // Clear any past_due flag
-          const tenantId = await getTenantIdByCustomer(supabase, sub.customer as string)
+          const tenantId = await getTenantIdByCustomer(supabase, customerId)
           if (tenantId) {
             await supabase
               .from('tenant_settings')
