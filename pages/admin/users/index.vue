@@ -132,14 +132,46 @@
           </button>
         </template>
         <template v-else-if="activeTab === 'staff'">
-          <button @click="showInviteStaffModal = true"
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap">
+          <!-- Seat counter badge -->
+          <div v-if="totalSeats !== null" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 text-sm">
+            <span :class="seatsAtLimit ? 'text-red-600 font-bold' : 'text-gray-600'">
+              {{ usedSeats }} / {{ totalSeats }} Seats
+            </span>
+            <span v-if="seatsAtLimit" class="text-red-500 text-xs font-semibold">· Limit erreicht</span>
+          </div>
+          <button
+            @click="seatsAtLimit ? null : (showInviteStaffModal = true)"
+            :disabled="seatsAtLimit"
+            :title="seatsAtLimit ? `Seat-Limit erreicht (${usedSeats}/${totalSeats}). Upgrade unter /upgrade.` : ''"
+            :class="[
+              'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm transition-all whitespace-nowrap',
+              seatsAtLimit
+                ? 'bg-gray-300 cursor-not-allowed opacity-60'
+                : 'bg-violet-600 hover:bg-violet-700 hover:-translate-y-0.5'
+            ]"
+          >
             Fahrlehrer einladen
           </button>
-          <button @click="openCreateForCurrentTab()"
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap">
+          <button
+            @click="seatsAtLimit ? null : openCreateForCurrentTab()"
+            :disabled="seatsAtLimit"
+            :title="seatsAtLimit ? `Seat-Limit erreicht (${usedSeats}/${totalSeats}). Upgrade unter /upgrade.` : ''"
+            :class="[
+              'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm transition-all whitespace-nowrap',
+              seatsAtLimit
+                ? 'bg-gray-300 cursor-not-allowed opacity-60'
+                : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5'
+            ]"
+          >
             Neuer Fahrlehrer
           </button>
+          <NuxtLink
+            v-if="seatsAtLimit"
+            to="/upgrade"
+            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200 transition-all whitespace-nowrap"
+          >
+            Seats upgraden →
+          </NuxtLink>
         </template>
             <template v-else-if="activeTab === 'admins'">
               <button
@@ -779,6 +811,29 @@ const showCreateUserModal = ref(false)
 const currentTenant = ref<any>(null)
 const invitationFilter = ref<'all' | 'users' | 'invitations'>('all')
 
+// ── Seat limit tracking ───────────────────────────────────────────────────────
+import { PLANS } from '~/utils/planFeatures'
+
+const totalSeats = computed(() => {
+  const plan = currentTenant.value?.subscription_plan || 'trial'
+  const planDef = PLANS.find(p => p.id === plan)
+  const included = plan === 'trial' ? 3 : (planDef?.includedSeats ?? null)
+  if (included === null) return null // unlimited
+  return included + (currentTenant.value?.addon_seats || 0)
+})
+
+const usedSeats = computed(() => {
+  return users.value.filter(u =>
+    (u.role === 'staff' || u.role === 'admin') &&
+    (u.is_active !== false || u.is_invitation)
+  ).length
+})
+
+const seatsAtLimit = computed(() => {
+  if (totalSeats.value === null) return false
+  return usedSeats.value >= totalSeats.value
+})
+
 // (tabs defined above)
 
 // Staff Invitation State
@@ -995,7 +1050,7 @@ const loadUsers = async () => {
     if (tenantId) {
       const { data: tenantData } = await supabase
         .from('tenants')
-        .select('name, slug')
+        .select('name, slug, subscription_plan, addon_seats')
         .eq('id', tenantId)
         .maybeSingle()
       currentTenant.value = tenantData

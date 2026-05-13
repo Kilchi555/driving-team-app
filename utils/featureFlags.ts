@@ -52,6 +52,10 @@ export const FEATURE_ROUTE_MAP: Record<string, string[]> = {
     '/admin/courses',
     '/api/admin/courses'
   ],
+  'affiliate_enabled': [
+    '/admin/affiliate',
+    '/api/admin/affiliate'
+  ],
   'categories_enabled': [
     '/admin/categories',
     '/api/admin/categories'
