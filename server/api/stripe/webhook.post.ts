@@ -31,6 +31,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: `Webhook Error: ${err.message}` })
   }
 
+  console.log(`📨 Stripe webhook received: type="${stripeEvent.type}" livemode=${stripeEvent.livemode}`)
+
   const supabase = getSupabaseAdmin()
 
   try {
@@ -206,6 +208,7 @@ export default defineEventHandler(async (event) => {
       }
 
       default:
+        console.log(`⏭️ Stripe event type "${stripeEvent.type}" not handled — skipping`)
         break
     }
   } catch (err: any) {
