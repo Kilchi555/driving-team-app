@@ -64,6 +64,7 @@ export default defineEventHandler(async (event) => {
         break
       }
 
+      case 'invoice.paid':
       case 'invoice.payment_succeeded': {
         const invoice = stripeEvent.data.object as Stripe.Invoice
         if (invoice.subscription) {
