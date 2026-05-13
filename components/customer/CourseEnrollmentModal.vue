@@ -422,7 +422,7 @@ import { useTenant } from '~/composables/useTenant'
 import { useAffiliateRef } from '~/composables/useAffiliateRef'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
 import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
-import { useSupabaseClient } from '#imports'
+import { getSupabase } from '~/utils/supabase'
 
 interface Props {
   isOpen: boolean
@@ -522,7 +522,7 @@ const effectivePriceAfterCredit = computed(() => Math.max(0, effectivePrice.valu
 
 onMounted(async () => {
   try {
-    const supabase = useSupabaseClient()
+    const supabase = getSupabase()
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return
 
