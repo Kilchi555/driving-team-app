@@ -1495,13 +1495,13 @@
                 <div class="flex justify-between items-center">
                   <div>
                     <div class="font-medium text-gray-900">
-                      {{ participant.participant.first_name }} {{ participant.participant.last_name }}
+                      {{ participant.first_name }} {{ participant.last_name }}
                     </div>
                     <div class="text-sm text-gray-600">
-                      {{ participant.participant.email }}
+                      {{ participant.email }}
                     </div>
-                    <div v-if="participant.participant.phone" class="text-sm text-gray-600">
-                      {{ participant.participant.phone }}
+                    <div v-if="participant.phone" class="text-sm text-gray-600">
+                      {{ participant.phone }}
                     </div>
                   </div>
                 </div>
@@ -2522,431 +2522,251 @@
       </div>
     </div>
 
-    <!-- Enrollment Management Modal - SIMPLE -->
-    <div v-if="showEnrollmentModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click.self="closeEnrollmentModal">
-      <div class="bg-white rounded-lg border border-gray-200 shadow-sm max-w-4xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
-        <div class="px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <div class="flex items-center justify-between">
-            <div>
-              <h2 class="text-xl font-bold text-gray-900">Teilnehmer verwalten - {{ selectedCourse?.name }}</h2>
-              <!-- DEBUG INFO -->
-              <div class="mt-2 text-xs text-gray-500 font-mono bg-gray-50 p-2 rounded">
-                DEBUG: sari_managed = {{ selectedCourse?.sari_managed }} | 
-                sari_course_id = {{ selectedCourse?.sari_course_id }} |
-                category = {{ selectedCourse?.category }}
-              </div>
-            </div>
-            <button
-              @click="closeEnrollmentModal"
-              class="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-        
-        <!-- Content -->
-        <div class="p-6 space-y-6">
-          
-          <!-- Course Info -->
-          <div class="bg-gray-50 rounded-lg p-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <span class="font-medium text-gray-700">Maximale Teilnehmer:</span>
-                <span class="ml-2 text-green-600">{{ selectedCourse?.max_participants }}</span>
-              </div>
-              <div>
-                <span class="font-medium text-gray-700">Aktuelle Teilnehmer:</span>
-                <span class="ml-2 text-green-600">{{ currentEnrollments.length }}</span>
-              </div>
-              <div>
-                <span class="font-medium text-gray-700">Verfügbare Plätze:</span>
-                <span class="ml-2 text-blue-600">{{ (selectedCourse?.max_participants || 0) - currentEnrollments.length }}</span>
-              </div>
-            </div>
-            
-            <!-- SARI Import Button -->
-            <div v-if="selectedCourse?.sari_managed" class="mt-4 pt-4 border-t border-gray-200">
-              <div class="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                <p class="text-sm text-purple-800">
-                  ⚡ Dieser Kurs wird von SARI verwaltet. 
-                  SARI Course ID: <code class="bg-purple-100 px-2 py-1 rounded">{{ selectedCourse.sari_course_id }}</code>
-                </p>
-              </div>
-              <button
-                @click="syncSARIParticipants"
-                :disabled="isSyncingSARIParticipants"
-                class="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors"
-              >
-                <svg v-if="isSyncingSARIParticipants" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-                </svg>
-                {{ isSyncingSARIParticipants ? 'Importiere...' : 'SARI Teilnehmer importieren' }}
-              </button>
-              <p v-if="sariParticipantsSyncMessage" :class="sariParticipantsSyncSuccess ? 'text-green-600' : 'text-red-600'" class="mt-2 text-sm">
-                {{ sariParticipantsSyncMessage }}
-              </p>
-            </div>
-            
-            <!-- DEBUG: Show if course is NOT SARI managed -->
-            <div v-else class="mt-4 pt-4 border-t border-gray-200">
-              <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <p class="text-sm text-gray-600">
-                  ℹ️ Dieser Kurs wird <strong>nicht</strong> von SARI verwaltet.
-                  <span v-if="selectedCourse?.sari_managed === false">
-                    (sari_managed: false)
-                  </span>
-                  <span v-else-if="selectedCourse?.sari_managed === undefined">
-                    (sari_managed: undefined)
-                  </span>
-                </p>
-              </div>
-            </div>
-          </div>
+  </div>
+  </div>
+  </div>
 
-          <!-- Current Participants -->
-          <div>
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Aktuelle Teilnehmer ({{ currentEnrollments.length }})</h3>
-            
-            <div v-if="currentEnrollments.length === 0" class="text-center py-8 text-gray-500">
-              <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-              </svg>
-              <p>Noch keine Teilnehmer angemeldet</p>
-            </div>
-            
-            <div v-else class="space-y-3">
-              <div 
-                v-for="enrollment in currentEnrollments" 
-                :key="enrollment.id"
-                class="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
-              >
-                <div class="flex items-center space-x-4">
-                  <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span class="text-blue-600 font-medium text-sm">
-                      {{ enrollment.participant.first_name?.charAt(0) }}{{ enrollment.participant.last_name?.charAt(0) }}
-                    </span>
-                  </div>
-                  <div>
-                    <div class="font-medium text-gray-900">
-                      {{ enrollment.participant.first_name }} {{ enrollment.participant.last_name }}
-                    </div>
-                    <div class="text-sm text-gray-500">{{ enrollment.participant.email }}</div>
-                    <div v-if="enrollment.participant.phone" class="text-sm text-gray-500">{{ enrollment.participant.phone }}</div>
-                  </div>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <span class="text-xs text-gray-500">
-                    Angemeldet: {{ new Date(enrollment.created_at).toLocaleDateString('de-CH') }}
-                  </span>
-                  <button
-                    @click="removeParticipant(enrollment.id)"
-                    class="text-red-400 hover:text-red-600 transition-colors p-1"
-                    title="Teilnehmer entfernen"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+  <!-- Enrollment Modal -->
+  <div v-if="showEnrollmentModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" @click="closeEnrollmentModal">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"></div>
 
-          <!-- Add Participant Section -->
-          <div class="border-t border-gray-200 pt-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Teilnehmer hinzufügen</h3>
-            
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p class="text-sm text-blue-800 mb-3">
-                <strong>Anmelde-Link für Kunden:</strong>
-              </p>
-              <div class="flex items-center space-x-2">
-                <input 
-                  :value="enrollmentLink" 
-                  readonly 
-                  class="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600"
-                />
-                <button
-                  @click="copyEnrollmentLink"
-                  class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
-                >
-                  Kopieren
-                </button>
-              </div>
+    <!-- Panel -->
+    <div
+      class="relative bg-white w-full sm:max-w-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-screen sm:max-h-[90vh] rounded-t-2xl"
+      @click.stop
+    >
+      <!-- Header -->
+      <div class="flex-shrink-0 px-5 sm:px-6 pt-5 pb-4 border-b border-gray-100">
+        <div class="flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap mb-1">
+              <span v-if="selectedCourse?.category" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200">
+                {{ selectedCourse.category }}
+              </span>
+              <span v-if="selectedCourse?.sari_managed" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 ring-1 ring-purple-200">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>
+                SARI
+              </span>
             </div>
+            <h2 class="text-lg font-bold text-gray-900 leading-tight truncate">{{ selectedCourse?.name || 'Kurs' }}</h2>
+            <p v-if="selectedCourse?.description" class="text-sm text-gray-500 mt-0.5 line-clamp-1">{{ selectedCourse.description }}</p>
           </div>
-        </div>
-        
-        <!-- Modal Footer -->
-        <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3 sticky bottom-0 bg-white">
           <button
             @click="closeEnrollmentModal"
-            class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors"
+            class="flex-shrink-0 p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
           >
-            Schliessen
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
           </button>
         </div>
-      </div>
-    <!-- Create Category Modal -->
-        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
-          <div class="flex justify-between items-start">
-            <div>
-              <!-- Desktop: nebeneinander -->
-              <div class="hidden md:flex items-baseline space-x-4">
-                <h2 class="text-xl font-bold text-gray-900">Teilnehmer verwalten</h2>
-                <span class="text-gray-300">•</span>
-                <h3 class="text-lg text-gray-700">{{ selectedCourse?.name }}</h3>
-              </div>
-              
-              <!-- Mobile: untereinander, kleiner -->
-              <div class="md:hidden">
-                <h2 class="text-lg font-bold text-gray-900">Teilnehmer verwalten</h2>
-                <h3 class="text-base text-gray-700 mt-1">{{ selectedCourse?.name }}</h3>
-              </div>
-              
-              <p v-if="selectedCourse?.category" class="text-sm text-gray-600 mt-2">
-                Kategorie: <span class="font-medium text-blue-600">{{ selectedCourse.category }}</span>
-              </p>
+
+        <!-- Capacity bar -->
+        <div class="mt-4">
+          <div class="flex items-center justify-between text-xs text-gray-500 mb-1.5">
+            <span>Belegung</span>
+            <span class="font-semibold" :class="currentEnrollments.length >= (selectedCourse?.max_participants || 0) ? 'text-red-600' : 'text-gray-700'">
+              {{ currentEnrollments.length }} / {{ selectedCourse?.max_participants || 0 }} Plätze
+            </span>
+          </div>
+          <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              class="h-full rounded-full transition-all duration-500"
+              :class="currentEnrollments.length >= (selectedCourse?.max_participants || 0) ? 'bg-red-500' : currentEnrollments.length / (selectedCourse?.max_participants || 1) > 0.8 ? 'bg-amber-500' : 'bg-emerald-500'"
+              :style="{ width: Math.min(100, Math.round(currentEnrollments.length / (selectedCourse?.max_participants || 1) * 100)) + '%' }"
+            ></div>
+          </div>
+          <div class="flex gap-4 mt-2">
+            <div class="text-center">
+              <div class="text-lg font-bold text-gray-900">{{ currentEnrollments.length }}</div>
+              <div class="text-xs text-gray-400">Angemeldet</div>
             </div>
-            <button @click="closeEnrollmentModal" class="text-gray-400 hover:text-gray-600 transition-colors">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            <div class="w-px bg-gray-100 self-stretch"></div>
+            <div class="text-center">
+              <div class="text-lg font-bold" :class="(selectedCourse?.max_participants || 0) - currentEnrollments.length <= 0 ? 'text-red-600' : 'text-emerald-600'">
+                {{ Math.max(0, (selectedCourse?.max_participants || 0) - currentEnrollments.length) }}
+              </div>
+              <div class="text-xs text-gray-400">Frei</div>
+            </div>
+            <div class="w-px bg-gray-100 self-stretch"></div>
+            <div class="text-center">
+              <div class="text-lg font-bold text-gray-900">{{ selectedCourse?.max_participants || 0 }}</div>
+              <div class="text-xs text-gray-400">Kapazität</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scrollable content -->
+      <div class="flex-1 overflow-y-auto">
+
+        <!-- SARI sync banner -->
+        <div v-if="selectedCourse?.sari_managed" class="mx-5 sm:mx-6 mt-4 flex items-center gap-3 p-3 bg-purple-50 border border-purple-200 rounded-xl">
+          <svg class="w-4 h-4 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-medium text-purple-800">SARI-verwalteter Kurs</p>
+            <p class="text-xs text-purple-600 truncate">ID: {{ selectedCourse.sari_course_id }}</p>
+          </div>
+          <button
+            @click="syncSARIParticipants"
+            :disabled="isSyncingSARIParticipants"
+            class="flex-shrink-0 px-3 py-1.5 text-xs font-medium bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors"
+          >
+            {{ isSyncingSARIParticipants ? 'Sync...' : 'Sync' }}
+          </button>
+        </div>
+
+        <!-- Enrollment link -->
+        <div class="mx-5 sm:mx-6 mt-4">
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Anmeldelink teilen</label>
+          <div class="flex gap-2">
+            <div class="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-600 min-w-0">
+              <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
               </svg>
+              <span class="truncate text-xs">{{ enrollmentLink }}</span>
+            </div>
+            <button
+              @click="copyEnrollmentLink"
+              class="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium rounded-xl transition-colors"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              </svg>
+              Kopieren
             </button>
           </div>
         </div>
 
-        <!-- Content -->
-        <div class="p-6 space-y-6">
-          
-          <!-- Course Info -->
-          <div class="bg-gray-50 rounded-lg p-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <span class="font-medium text-gray-700">Maximale Teilnehmer:</span>
-                <span class="ml-2 text-green-600">{{ selectedCourse?.max_participants }}</span>
-              </div>
-              <div>
-                <span class="font-medium text-gray-700">Aktuelle Teilnehmer:</span>
-                <span class="ml-2 text-green-600">{{ currentEnrollments.length }}</span>
-              </div>
-              <div>
-                <span class="font-medium text-gray-700">Verfügbare Plätze:</span>
-                <span class="ml-2 text-green-600">{{ (selectedCourse?.max_participants || 0) - currentEnrollments.length }}</span>
-              </div>
-            </div>
+        <!-- Add Participant -->
+        <div class="mx-5 sm:mx-6 mt-5">
+          <div class="flex items-center justify-between mb-3">
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide">Teilnehmer hinzufügen</label>
+            <button
+              @click="toggleAddParticipantForm"
+              class="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+            >
+              <svg v-if="!showAddParticipantForm" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+              </svg>
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+              </svg>
+              {{ showAddParticipantForm ? 'Ausblenden' : 'Hinzufügen' }}
+            </button>
           </div>
 
-          <!-- Public Enrollment Link -->
-          <div class="bg-blue-50 rounded-lg p-4">
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">Öffentlicher Anmelde-Link</h3>
-            <div class="flex space-x-2">
-              <input 
-                :value="enrollmentLink" 
-                readonly 
-                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
-              />
+          <div v-if="showAddParticipantForm" class="border border-gray-200 rounded-2xl overflow-hidden">
+            <!-- Mode tabs -->
+            <div class="flex border-b border-gray-100">
               <button
-                @click="copyEnrollmentLink"
-                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                @click="enrollmentMode = 'search'"
+                :class="[
+                  'flex-1 py-2.5 text-xs font-semibold transition-colors',
+                  enrollmentMode === 'search'
+                    ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-500'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                ]"
               >
-                Kopieren
+                Bestehender Kunde
+              </button>
+              <button
+                @click="enrollmentMode = 'new'"
+                :class="[
+                  'flex-1 py-2.5 text-xs font-semibold transition-colors',
+                  enrollmentMode === 'new'
+                    ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-500'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                ]"
+              >
+                Neuer Kunde
               </button>
             </div>
-            <p class="text-sm text-gray-600 mt-2">
-              Teilen Sie diesen Link, damit sich externe Teilnehmer selbst anmelden können.
-            </p>
-          </div>
 
-          <!-- Add Participant Section -->
-          <div class="border-t border-gray-200 pt-6">
-            <div class="flex justify-between items-center mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">Teilnehmer hinzufügen</h3>
-              <button
-                @click="toggleAddParticipantForm"
-                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-              >
-                {{ showAddParticipantForm ? 'Formular ausblenden' : 'Teilnehmer hinzufügen' }}
-              </button>
-            </div>
-            
-            <!-- Add Participant Form -->
-            <div v-if="showAddParticipantForm" class="bg-gray-50 rounded-lg p-6">
-              
-              <!-- Mode Toggle (hide "Neuer Kunde" for SARI courses) -->
-              <div v-if="!selectedCourse?.sari_managed" class="flex space-x-1 bg-gray-200 rounded-lg p-1 mb-6">
-                <button
-                  @click="enrollmentMode = 'search'"
-                  :class="[
-                    'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors',
-                    enrollmentMode === 'search'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  ]"
-                >
-                  🔍 Bestehender Kunde
-                </button>
-                <button
-                  @click="enrollmentMode = 'new'"
-                  :class="[
-                    'flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors',
-                    enrollmentMode === 'new'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  ]"
-                >
-                  ➕ Neuer Kunde
-                </button>
-              </div>
-              
-              <!-- SARI Info for SARI Courses -->
-              <div v-if="selectedCourse?.sari_managed" class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
-                <h3 class="text-sm font-medium text-purple-900 mb-2">⚡ SARI-verwalteter Kurs</h3>
-                <p class="text-sm text-purple-800 mb-3">
-                  Teilnehmer können nur über SARI hinzugefügt werden. Verwende die SARI Daten laden Funktion unten.
-                </p>
-              </div>
-
-              <!-- Search Existing User Mode (hide for SARI courses) -->
-              <div v-if="enrollmentMode === 'search' && !selectedCourse?.sari_managed">
-                <div class="mb-4">
-                  <label class="block text-sm font-medium text-gray-500 mb-2">Kunde suchen</label>
-                  <div class="flex space-x-2">
-                    <input
-                      v-model="userSearchQuery"
-                      @input="searchUsers"
-                      type="text"
-                      placeholder="Name oder E-Mail eingeben..."
-                      class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
-                      @click="searchUsers"
-                      :disabled="isSearchingUsers"
-                      class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
-                    >
-                      {{ isSearchingUsers ? '...' : 'Suchen' }}
-                    </button>
-                  </div>
+            <div class="p-4">
+              <!-- Search mode -->
+              <div v-if="enrollmentMode === 'search'">
+                <div class="flex gap-2 mb-3">
+                  <input
+                    v-model="userSearchQuery"
+                    @input="searchUsers"
+                    type="text"
+                    placeholder="Name oder E-Mail..."
+                    class="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent bg-gray-50"
+                  />
+                  <button
+                    @click="searchUsers"
+                    :disabled="isSearchingUsers"
+                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-sm font-medium rounded-xl transition-colors"
+                  >
+                    {{ isSearchingUsers ? '...' : 'Suchen' }}
+                  </button>
                 </div>
-                
-                <!-- Search Results -->
-                <div v-if="searchResults.length > 0" class="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
+                <div v-if="searchResults.length > 0" class="space-y-1 max-h-48 overflow-y-auto rounded-xl border border-gray-100">
                   <div
                     v-for="user in searchResults"
                     :key="user.id"
                     @click="selectExistingUser(user)"
-                    class="px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                    class="flex items-center gap-3 px-3 py-2.5 hover:bg-indigo-50 cursor-pointer border-b border-gray-50 last:border-b-0 transition-colors"
                   >
-                    <div class="text-sm font-medium text-gray-900">{{ user.first_name }} {{ user.last_name }}</div>
-                    <div class="text-xs text-gray-600">{{ user.email }}</div>
-                    <div v-if="user.phone" class="text-xs text-gray-500">{{ user.phone }}</div>
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700 flex-shrink-0">
+                      {{ (user.first_name?.[0] || '') + (user.last_name?.[0] || '') }}
+                    </div>
+                    <div class="min-w-0">
+                      <div class="text-sm font-medium text-gray-900">{{ user.first_name }} {{ user.last_name }}</div>
+                      <div class="text-xs text-gray-500 truncate">{{ user.email }}</div>
+                    </div>
                   </div>
                 </div>
-                
-                <div v-else-if="userSearchQuery && !isSearchingUsers" class="text-center py-4 text-gray-500">
-                  Keine Kunden gefunden
-                </div>
+                <p v-else-if="userSearchQuery && !isSearchingUsers" class="text-center text-sm text-gray-400 py-4">Keine Kunden gefunden</p>
               </div>
 
-              <!-- New User Mode -->
-              <div v-if="enrollmentMode === 'new' && !selectedCourse?.sari_managed">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- New user mode -->
+              <div v-if="enrollmentMode === 'new'">
+                <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-sm font-medium text-gray-500 mb-2">Vorname *</label>
-                    <input
-                      v-model="newParticipant.first_name"
-                      type="text"
-                      required
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Vorname *</label>
+                    <input v-model="newParticipant.first_name" type="text" required class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50" />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-500 mb-2">Nachname *</label>
-                    <input
-                      v-model="newParticipant.last_name"
-                      type="text"
-                      required
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Nachname *</label>
+                    <input v-model="newParticipant.last_name" type="text" required class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50" />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-500 mb-2">E-Mail *</label>
-                    <input
-                      v-model="newParticipant.email"
-                      type="email"
-                      required
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <label class="block text-xs font-medium text-gray-500 mb-1">E-Mail *</label>
+                    <input v-model="newParticipant.email" type="email" required class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50" />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-500 mb-2">Telefon</label>
-                    <input
-                      v-model="newParticipant.phone"
-                      type="tel"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="+41 79 123 45 67"
-                    />
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Telefon</label>
+                    <input v-model="newParticipant.phone" type="tel" placeholder="+41 79 123 45 67" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50" />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-500 mb-2">Geburtsdatum</label>
-                    <input
-                      v-model="newParticipant.birthdate"
-                      type="date"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Geburtsdatum</label>
+                    <input v-model="newParticipant.birthdate" type="date" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50" />
                   </div>
-                  <div class="space-y-3">
-                    <h4 class="text-sm font-semibold text-gray-700 border-b border-gray-200 pb-1">Adresse *</h4>
-                    <div class="grid grid-cols-3 gap-3">
+                  <div class="col-span-2 pt-1 border-t border-gray-100">
+                    <p class="text-xs font-semibold text-gray-500 mb-2">Adresse *</p>
+                    <div class="grid grid-cols-3 gap-2 mb-2">
                       <div class="col-span-2">
-                        <label class="block text-sm font-medium text-gray-500 mb-1">Strasse *</label>
-                        <input
-                          v-model="newParticipant.street"
-                          type="text"
-                          required
-                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Musterstrasse"
-                        />
+                        <label class="block text-xs text-gray-400 mb-1">Strasse *</label>
+                        <input v-model="newParticipant.street" type="text" required placeholder="Musterstrasse" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50" />
                       </div>
                       <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">Nr. *</label>
-                        <input
-                          v-model="newParticipant.street_nr"
-                          type="text"
-                          required
-                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="123"
-                        />
+                        <label class="block text-xs text-gray-400 mb-1">Nr. *</label>
+                        <input v-model="newParticipant.street_nr" type="text" required placeholder="12" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50" />
                       </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-3">
+                    <div class="grid grid-cols-3 gap-2">
                       <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">PLZ *</label>
-                        <input
-                          v-model="newParticipant.zip"
-                          type="text"
-                          pattern="[0-9]{4}"
-                          required
-                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="8000"
-                        />
+                        <label class="block text-xs text-gray-400 mb-1">PLZ *</label>
+                        <input v-model="newParticipant.zip" type="text" pattern="[0-9]{4}" required placeholder="8000" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50" />
                       </div>
                       <div class="col-span-2">
-                        <label class="block text-sm font-medium text-gray-500 mb-1">Ort *</label>
-                        <input
-                          v-model="newParticipant.city"
-                          type="text"
-                          required
-                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Zürich"
-                        />
+                        <label class="block text-xs text-gray-400 mb-1">Ort *</label>
+                        <input v-model="newParticipant.city" type="text" required placeholder="Zürich" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50" />
                       </div>
                     </div>
                   </div>
@@ -2954,523 +2774,181 @@
                 <button
                   @click="addParticipant"
                   :disabled="!newParticipant.first_name || !newParticipant.last_name || !newParticipant.email || !newParticipant.street || !newParticipant.street_nr || !newParticipant.zip || !newParticipant.city || isAddingParticipant"
-                  class="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                  class="mt-4 w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
                 >
-                  {{ isAddingParticipant ? 'Hinzufügen...' : 'Neuen Teilnehmer hinzufügen' }}
+                  {{ isAddingParticipant ? 'Wird hinzugefügt...' : 'Teilnehmer hinzufügen' }}
                 </button>
               </div>
             </div>
           </div>
-
-          <!-- Current Enrollments -->
-          <div class="border-t border-gray-200 pt-6">
-            <div class="flex justify-between items-center mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">Aktuelle Teilnehmer ({{ currentEnrollments.length }})</h3>
-              <button
-                v-if="deletedEnrollments.length > 0"
-                @click="showDeletedParticipants = !showDeletedParticipants"
-                class="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                {{ showDeletedParticipants ? 'Verstecken' : 'Gelöschte anzeigen' }} ({{ deletedEnrollments.length }})
-              </button>
-            </div>
-            
-            <div v-if="currentEnrollments.length === 0" class="text-center py-12 text-gray-600 bg-gray-50 rounded-lg">
-              <div class="text-4xl mb-4">👥</div>
-              <div class="text-lg font-medium mb-2">Noch keine Teilnehmer</div>
-              <div class="text-sm">Fügen Sie Teilnehmer über das Formular oben hinzu</div>
-            </div>
-            
-            <!-- Teilnehmer Liste -->
-            <div v-else class="space-y-3">
-              <div
-                v-for="enrollment in currentEnrollments"
-                :key="enrollment.id"
-                class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
-              >
-                <div class="flex-1">
-                  <div class="font-semibold text-gray-900 text-lg">
-                    {{ enrollment.participant.first_name || enrollment.first_name }} {{ enrollment.participant.last_name || enrollment.last_name }}
-                  </div>
-                  <div class="text-sm text-gray-600">{{ enrollment.participant.email || enrollment.email }}</div>
-                  <div v-if="enrollment.participant.phone || enrollment.phone" class="text-sm text-gray-500">📞 {{ enrollment.participant.phone || enrollment.phone }}</div>
-                </div>
-                <div class="flex items-center space-x-3">
-                  <span :class="getEnrollmentStatusBadge(enrollment.status)" class="px-3 py-1 text-xs font-medium rounded-full">
-                    {{ getEnrollmentStatusText(enrollment.status) }}
-                  </span>
-                  <button
-                    @click="removeParticipant(enrollment)"
-                    class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                    title="Teilnehmer entfernen"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Deleted Participants (Admin Only) -->
-            <div v-if="showDeletedParticipants && deletedEnrollments.length > 0" class="mt-6 pt-6 border-t border-red-200">
-              <h4 class="text-md font-semibold text-red-700 mb-4">Gelöschte Teilnehmer ({{ deletedEnrollments.length }})</h4>
-              <div class="space-y-3">
-                <div
-                  v-for="enrollment in deletedEnrollments"
-                  :key="enrollment.id"
-                  class="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200 opacity-75"
-                >
-                  <div class="flex-1">
-                    <div class="font-semibold text-gray-900 text-lg">
-                      {{ enrollment.participant.first_name || enrollment.first_name }} {{ enrollment.participant.last_name || enrollment.last_name }}
-                    </div>
-                    <div class="text-sm text-gray-600">{{ enrollment.participant.email || enrollment.email }}</div>
-                    <div v-if="enrollment.participant.phone || enrollment.phone" class="text-sm text-gray-500">📞 {{ enrollment.participant.phone || enrollment.phone }}</div>
-                    <div class="text-xs text-red-600 mt-1">
-                      Gelöscht am: {{ formatDateTime(enrollment.deleted_at) }}
-                      <span v-if="enrollment.deleted_by_user">
-                        von {{ enrollment.deleted_by_user.first_name }} {{ enrollment.deleted_by_user.last_name }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="flex items-center space-x-3">
-                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                      Gelöscht
-                    </span>
-                    <button
-                      @click="restoreParticipant(enrollment)"
-                      class="text-green-600 hover:text-green-800 hover:bg-green-50 p-2 rounded-lg transition-colors"
-                      title="Teilnehmer wiederherstellen"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
         </div>
 
-        <!-- Footer -->
-        <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4">
-          <div class="flex justify-end">
-            <button
-              @click="closeEnrollmentModal"
-              class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
-            >
-              Schliessen
-            </button>
-          </div>
-        </div>
-
-
-  </div>
-  </div>
-  </div>
-  </div>
-
-  <!-- Enrollment Modal - Outside main container -->
-  <div v-if="showEnrollmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" @click="closeEnrollmentModal">
-    <div class="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col" @click.stop>
-      
-      <!-- Header -->
-      <div class="sticky top-0 bg-white border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4">
-        <div class="flex justify-between items-start sm:items-center gap-2">
-          <div class="flex-1 min-w-0">
-            <h2 class="text-lg sm:text-xl font-bold text-gray-900 truncate">Teilnehmer verwalten</h2>
-            <div v-if="selectedCourse" class="mt-1 sm:mt-2">
-              <p class="text-sm sm:text-lg font-semibold text-gray-800 truncate">{{ selectedCourse.name }}</p>
-              <p class="text-xs sm:text-sm text-gray-600 line-clamp-2">{{ selectedCourse.description }}</p>
-            </div>
-          </div>
-          <button @click="closeEnrollmentModal" class="text-gray-400 hover:text-gray-600 flex-shrink-0 p-1">
-            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Content -->
-      <div class="flex-1 overflow-y-auto px-3 sm:px-6 py-3 sm:py-6">
-        
-        <!-- Enrollment Link Section -->
-        <div class="bg-blue-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
-          <h3 class="text-sm sm:text-md font-semibold text-blue-900 mb-2">📋 Anmeldelink</h3>
-          <div class="flex flex-col sm:flex-row gap-2">
-            <input
-              :value="enrollmentLink"
-              readonly
-              class="flex-1 px-3 py-2 border border-blue-200 rounded-lg bg-white text-xs sm:text-sm"
-            />
-            <button
-              @click="copyEnrollmentLink"
-              class="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm sm:text-base whitespace-nowrap"
-            >
-              Kopieren
-            </button>
-          </div>
-          <p class="text-xs sm:text-sm text-blue-700 mt-2">
-            Teilen Sie diesen Link, damit sich externe Teilnehmer selbst anmelden können.
-          </p>
-        </div>
-
-        <!-- Add Participant Section -->
-        <div class="border-t border-gray-200 pt-4 sm:pt-6">
-          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-4">
-            <h3 class="text-base sm:text-lg font-semibold text-gray-900">Teilnehmer hinzufügen</h3>
-            <button
-              @click="toggleAddParticipantForm"
-              class="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm sm:text-base whitespace-nowrap"
-            >
-              {{ showAddParticipantForm ? 'Formular ausblenden' : 'Teilnehmer hinzufügen' }}
-            </button>
-          </div>
-          
-          <!-- Add Participant Form -->
-          <div v-if="showAddParticipantForm" class="bg-gray-50 rounded-lg p-3 sm:p-6">
-            
-            <!-- Mode Toggle -->
-            <div class="flex space-x-1 bg-gray-200 rounded-lg p-1 mb-4 sm:mb-6">
-              <button
-                @click="enrollmentMode = 'search'"
-                :class="[
-                  'flex-1 py-2 px-2 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-colors',
-                  enrollmentMode === 'search'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                ]"
-              >
-                🔍 Bestehender Kunde
-              </button>
-              <button
-                @click="enrollmentMode = 'new'"
-                :class="[
-                  'flex-1 py-2 px-2 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-colors',
-                  enrollmentMode === 'new'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                ]"
-              >
-                ➕ Neuer Kunde
-              </button>
-            </div>
-
-            <!-- Search Existing User Mode -->
-            <div v-if="enrollmentMode === 'search'">
-              <div class="mb-4">
-                <label class="block text-xs sm:text-sm font-medium text-gray-500 mb-2">Kunde suchen</label>
-                <div class="flex flex-col sm:flex-row gap-2">
-                  <input
-                    v-model="userSearchQuery"
-                    @input="searchUsers"
-                    type="text"
-                    placeholder="Name oder E-Mail eingeben..."
-                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                  <button
-                    @click="searchUsers"
-                    :disabled="isSearchingUsers"
-                    class="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors text-sm sm:text-base whitespace-nowrap"
-                  >
-                    {{ isSearchingUsers ? '...' : 'Suchen' }}
-                  </button>
-                </div>
-              </div>
-              
-              <!-- Search Results -->
-              <div v-if="searchResults.length > 0" class="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
-                <div
-                  v-for="user in searchResults"
-                  :key="user.id"
-                  @click="selectExistingUser(user)"
-                  class="px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                >
-                  <div class="text-sm font-medium text-gray-900">{{ user.first_name }} {{ user.last_name }}</div>
-                  <div class="text-xs text-gray-600">{{ user.email }}</div>
-                  <div v-if="user.phone" class="text-xs text-gray-500">{{ user.phone }}</div>
-                </div>
-              </div>
-              
-              <div v-else-if="userSearchQuery && !isSearchingUsers" class="text-center py-4 text-gray-500">
-                Keine Kunden gefunden
-              </div>
-            </div>
-
-            <!-- New User Mode -->
-            <div v-if="enrollmentMode === 'new'">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <label class="block text-xs sm:text-sm font-medium text-gray-500 mb-1 sm:mb-2">Vorname *</label>
-                  <input
-                    v-model="newParticipant.first_name"
-                    type="text"
-                    required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-                <div>
-                  <label class="block text-xs sm:text-sm font-medium text-gray-500 mb-1 sm:mb-2">Nachname *</label>
-                  <input
-                    v-model="newParticipant.last_name"
-                    type="text"
-                    required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-                <div>
-                  <label class="block text-xs sm:text-sm font-medium text-gray-500 mb-1 sm:mb-2">E-Mail *</label>
-                  <input
-                    v-model="newParticipant.email"
-                    type="email"
-                    required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-                <div>
-                  <label class="block text-xs sm:text-sm font-medium text-gray-500 mb-1 sm:mb-2">Telefon</label>
-                  <input
-                    v-model="newParticipant.phone"
-                    type="tel"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    placeholder="+41 79 123 45 67"
-                  />
-                </div>
-                <div>
-                  <label class="block text-xs sm:text-sm font-medium text-gray-500 mb-1 sm:mb-2">Geburtsdatum</label>
-                  <input
-                    v-model="newParticipant.birthdate"
-                    type="date"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-                <div class="space-y-2 sm:space-y-3">
-                  <h4 class="text-xs sm:text-sm font-semibold text-gray-700 border-b border-gray-200 pb-1">Adresse *</h4>
-                  <div class="grid grid-cols-3 gap-2 sm:gap-3">
-                    <div class="col-span-2">
-                      <label class="block text-xs font-medium text-gray-500 mb-1">Strasse *</label>
-                      <input
-                        v-model="newParticipant.street"
-                        type="text"
-                        required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        placeholder="Musterstrasse"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-gray-500 mb-1">Nr. *</label>
-                      <input
-                        v-model="newParticipant.street_nr"
-                        type="text"
-                        required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        placeholder="123"
-                      />
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-3 gap-2 sm:gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-gray-500 mb-1">PLZ *</label>
-                      <input
-                        v-model="newParticipant.zip"
-                        type="text"
-                        pattern="[0-9]{4}"
-                        required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        placeholder="8000"
-                      />
-                    </div>
-                    <div class="col-span-2">
-                      <label class="block text-xs font-medium text-gray-500 mb-1">Ort *</label>
-                      <input
-                        v-model="newParticipant.city"
-                        type="text"
-                        required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        placeholder="Zürich"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <button
-                @click="addParticipant"
-                :disabled="!newParticipant.first_name || !newParticipant.last_name || !newParticipant.email || !newParticipant.street || !newParticipant.street_nr || !newParticipant.zip || !newParticipant.city || isAddingParticipant"
-                class="mt-3 sm:mt-4 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm sm:text-base w-full sm:w-auto"
-              >
-                {{ isAddingParticipant ? 'Hinzufügen...' : 'Neuen Teilnehmer hinzufügen' }}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Current Enrollments -->
-        <div class="border-t border-gray-200 pt-4 sm:pt-6">
-          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-4">
-            <h3 class="text-base sm:text-lg font-semibold text-gray-900">Aktuelle Teilnehmer ({{ currentEnrollments.length }})</h3>
+        <!-- Current Participants -->
+        <div class="mx-5 sm:mx-6 mt-6 mb-4">
+          <div class="flex items-center justify-between mb-3">
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Teilnehmer
+              <span class="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs font-bold">{{ currentEnrollments.length }}</span>
+            </label>
             <button
               v-if="deletedEnrollments.length > 0"
               @click="showDeletedParticipants = !showDeletedParticipants"
-              class="text-xs sm:text-sm text-gray-600 hover:text-gray-900 transition-colors self-start sm:self-auto"
+              class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
             >
-              {{ showDeletedParticipants ? 'Verstecken' : 'Gelöschte anzeigen' }} ({{ deletedEnrollments.length }})
+              {{ showDeletedParticipants ? 'Gelöschte ausblenden' : `${deletedEnrollments.length} Gelöschte` }}
             </button>
           </div>
-          
-          <div v-if="currentEnrollments.length === 0" class="text-center py-8 sm:py-12 text-gray-600 bg-gray-50 rounded-lg">
-            <div class="text-3xl sm:text-4xl mb-3 sm:mb-4">👥</div>
-            <div class="text-base sm:text-lg font-medium mb-1 sm:mb-2">Noch keine Teilnehmer</div>
-            <div class="text-xs sm:text-sm">Fügen Sie Teilnehmer über das Formular oben hinzu</div>
+
+          <!-- Empty state -->
+          <div v-if="currentEnrollments.length === 0" class="flex flex-col items-center justify-center py-12 text-center">
+            <div class="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
+              <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <p class="text-sm font-medium text-gray-900 mb-1">Keine Teilnehmer</p>
+            <p class="text-xs text-gray-400">Fügen Sie Teilnehmer über das Formular oben hinzu</p>
           </div>
-          
-          <!-- Teilnehmer Liste -->
-          <div v-else class="space-y-2 sm:space-y-3">
+
+          <!-- Participant list -->
+          <div v-else class="space-y-2">
             <div
               v-for="enrollment in currentEnrollments"
               :key="enrollment.id"
-              class="flex flex-col p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors gap-2"
+              class="rounded-2xl border transition-all"
+              :class="transferringEnrollmentId === enrollment.id ? 'border-indigo-300 bg-indigo-50/50' : 'border-gray-100 bg-gray-50/50 hover:border-gray-200 hover:bg-white'"
             >
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
-                <div class="flex-1 min-w-0">
-                  <div class="font-semibold text-gray-900 text-base sm:text-lg truncate">
-                    {{ enrollment.participant.first_name || enrollment.first_name }} {{ enrollment.participant.last_name || enrollment.last_name }}
-                  </div>
-                  <div class="text-xs sm:text-sm text-gray-600 truncate">{{ enrollment.participant.email || enrollment.email }}</div>
-                  <div v-if="enrollment.participant.phone || enrollment.phone" class="text-xs sm:text-sm text-gray-500">📞 {{ enrollment.participant.phone || enrollment.phone }}</div>
+              <div class="flex items-center gap-3 p-3">
+                <!-- Avatar -->
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                  {{ (enrollment.first_name?.[0] || '').toUpperCase() + (enrollment.last_name?.[0] || '').toUpperCase() }}
                 </div>
-                <div class="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
-                  <span :class="getEnrollmentStatusBadge(enrollment.status)" class="px-2 sm:px-3 py-1 text-xs font-medium rounded-full">
-                    {{ getEnrollmentStatusText(enrollment.status) }}
-                  </span>
-                  <!-- Umplanen button (only for SARI-managed courses) -->
+                <!-- Info -->
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-sm font-semibold text-gray-900 truncate">{{ enrollment.first_name }} {{ enrollment.last_name }}</span>
+                    <span :class="getEnrollmentStatusBadge(enrollment.status)" class="px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0">
+                      {{ getEnrollmentStatusText(enrollment.status) }}
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-3 mt-0.5">
+                    <span class="text-xs text-gray-500 truncate">{{ enrollment.email }}</span>
+                    <span v-if="enrollment.phone" class="text-xs text-gray-400 truncate hidden sm:block">{{ enrollment.phone }}</span>
+                  </div>
+                </div>
+                <!-- Actions -->
+                <div class="flex items-center gap-1 flex-shrink-0">
                   <button
                     v-if="selectedCourse?.sari_managed && transferringEnrollmentId !== enrollment.id"
                     @click="startTransfer(enrollment.id)"
-                    class="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-1 sm:p-2 rounded-lg transition-colors flex-shrink-0"
+                    class="p-1.5 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-100 rounded-lg transition-colors"
                     title="Umplanen"
                   >
-                    <svg class="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                    </svg>
+                  </button>
+                  <button
+                    v-if="transferringEnrollmentId === enrollment.id"
+                    @click="cancelTransfer"
+                    class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Abbrechen"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                   </button>
                   <button
                     @click="removeParticipant(enrollment)"
-                    class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 sm:p-2 rounded-lg transition-colors flex-shrink-0"
-                    title="Teilnehmer entfernen"
+                    class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Entfernen"
                   >
-                    <svg class="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
                   </button>
                 </div>
               </div>
-              <!-- Inline transfer picker (inside v-for, same scope as enrollment) -->
-              <div
-                v-if="transferringEnrollmentId === enrollment.id"
-                class="mt-1 p-3 bg-blue-50 border border-blue-200 rounded-lg"
-              >
-                <p class="text-sm font-medium text-blue-800 mb-2">Umplanen zu:</p>
-                <div v-if="transferTargetCourses.length === 0" class="text-sm text-gray-500 mb-2">
-                  Keine verfügbaren Kurse derselben Kategorie mit freien Plätzen.
+
+              <!-- Transfer panel (inline) -->
+              <div v-if="transferringEnrollmentId === enrollment.id" class="px-3 pb-3">
+                <div class="pt-3 border-t border-indigo-200">
+                  <p class="text-xs font-semibold text-indigo-800 mb-2">Umplanen zu anderem Kurs</p>
+                  <div v-if="transferTargetCourses.length === 0" class="text-xs text-gray-500 py-2">
+                    Keine verfügbaren Kurse mit freien Plätzen in derselben Kategorie.
+                  </div>
+                  <select
+                    v-else
+                    v-model="transferTargetCourseId"
+                    class="w-full text-sm border border-indigo-200 rounded-xl px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                  >
+                    <option value="">Ziel-Kurs auswählen…</option>
+                    <option v-for="c in transferTargetCourses" :key="c.id" :value="c.id">
+                      {{ c.name }} — {{ c.max_participants - c.current_participants }} freie Plätze
+                    </option>
+                  </select>
+                  <label class="flex items-center gap-2 mb-3 cursor-pointer">
+                    <input type="checkbox" v-model="transferNotifyCustomer" class="w-4 h-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-400" />
+                    <span class="text-xs text-indigo-700">Kunde per E-Mail benachrichtigen</span>
+                  </label>
+                  <p v-if="transferError" class="text-xs text-red-600 mb-2">{{ transferError }}</p>
+                  <button
+                    @click="confirmTransfer(enrollment)"
+                    :disabled="isTransferring || !transferTargetCourseId"
+                    class="w-full py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl transition-colors"
+                  >
+                    {{ isTransferring ? 'Wird umgebucht…' : 'Umbuchen bestätigen' }}
+                  </button>
                 </div>
-                <select
-                  v-else
-                  v-model="transferTargetCourseId"
-                  class="w-full text-sm border border-blue-300 rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                >
-                  <option value="">Ziel-Kurs auswählen…</option>
-                  <option v-for="c in transferTargetCourses" :key="c.id" :value="c.id">
-                    {{ c.name }} ({{ c.max_participants - c.current_participants }} freie Plätze)
-                  </option>
-                </select>
-              <!-- Notify customer checkbox -->
-              <label class="flex items-center gap-2 mb-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  v-model="transferNotifyCustomer"
-                  class="w-4 h-4 rounded border-blue-300 text-blue-600 focus:ring-blue-400"
-                />
-                <span class="text-xs text-blue-800">Kunde per E-Mail informieren</span>
-              </label>
-              <p v-if="transferError" class="text-xs text-red-600 mb-2">{{ transferError }}</p>
-              <div class="flex gap-2">
-                <button
-                  @click="confirmTransfer(enrollment)"
-                  :disabled="isTransferring || !transferTargetCourseId"
-                  class="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {{ isTransferring ? 'Umbuchen…' : 'Umbuchen' }}
-                </button>
-                <button
-                  @click="cancelTransfer"
-                  class="px-3 py-1.5 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors"
-                >
-                  Abbrechen
-                </button>
-              </div>
               </div>
             </div>
           </div>
 
-          <!-- Deleted Participants (Admin Only) -->
-          <div v-if="showDeletedParticipants && deletedEnrollments.length > 0" class="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-red-200">
-            <h4 class="text-sm sm:text-md font-semibold text-red-700 mb-3 sm:mb-4">Gelöschte Teilnehmer ({{ deletedEnrollments.length }})</h4>
-            <div class="space-y-2 sm:space-y-3">
+          <!-- Deleted participants -->
+          <div v-if="showDeletedParticipants && deletedEnrollments.length > 0" class="mt-4 pt-4 border-t border-dashed border-red-200">
+            <p class="text-xs font-semibold text-red-500 uppercase tracking-wide mb-3">Gelöschte Teilnehmer ({{ deletedEnrollments.length }})</p>
+            <div class="space-y-2">
               <div
                 v-for="enrollment in deletedEnrollments"
                 :key="enrollment.id"
-                class="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-red-50 rounded-lg border border-red-200 opacity-75 gap-3 sm:gap-0"
+                class="flex items-center gap-3 p-3 bg-red-50 border border-red-100 rounded-2xl opacity-80"
               >
+                <div class="w-9 h-9 rounded-xl bg-red-200 flex items-center justify-center text-xs font-bold text-red-700 flex-shrink-0">
+                  {{ (enrollment.first_name?.[0] || '').toUpperCase() + (enrollment.last_name?.[0] || '').toUpperCase() }}
+                </div>
                 <div class="flex-1 min-w-0">
-                  <div class="font-semibold text-gray-900 text-base sm:text-lg truncate">
-                    {{ enrollment.participant.first_name || enrollment.first_name }} {{ enrollment.participant.last_name || enrollment.last_name }}
-                  </div>
-                  <div class="text-xs sm:text-sm text-gray-600 truncate">{{ enrollment.participant.email || enrollment.email }}</div>
-                  <div v-if="enrollment.participant.phone || enrollment.phone" class="text-xs sm:text-sm text-gray-500">📞 {{ enrollment.participant.phone || enrollment.phone }}</div>
-                  <div class="text-xs text-red-600 mt-1">
-                    Gelöscht am: {{ formatDateTime(enrollment.deleted_at) }}
-                    <span v-if="enrollment.deleted_by_user" class="block sm:inline">
-                      von {{ enrollment.deleted_by_user.first_name }} {{ enrollment.deleted_by_user.last_name }}
-                    </span>
-                  </div>
+                  <div class="text-sm font-semibold text-gray-700">{{ enrollment.first_name }} {{ enrollment.last_name }}</div>
+                  <div class="text-xs text-gray-500 truncate">{{ enrollment.email }}</div>
+                  <div class="text-xs text-red-500 mt-0.5">Gelöscht am {{ formatDateTime(enrollment.deleted_at) }}</div>
                 </div>
-                <div class="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
-                  <span class="px-2 sm:px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                    Gelöscht
-                  </span>
-                  <button
-                    @click="restoreParticipant(enrollment)"
-                    class="text-green-600 hover:text-green-800 hover:bg-green-50 p-1 sm:p-2 rounded-lg transition-colors flex-shrink-0"
-                    title="Teilnehmer wiederherstellen"
-                  >
-                    <svg class="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                    </svg>
-                  </button>
-                </div>
+                <button
+                  @click="restoreParticipant(enrollment)"
+                  class="p-1.5 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-lg transition-colors flex-shrink-0"
+                  title="Wiederherstellen"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
-        </div>
 
+          <!-- Bottom padding -->
+          <div class="h-4"></div>
+        </div>
       </div>
 
       <!-- Footer -->
-      <div class="sticky bottom-0 bg-white border-t border-gray-200 px-3 sm:px-6 py-3 sm:py-4">
-        <div class="flex justify-end">
-          <button
-            @click="closeEnrollmentModal"
-            class="px-4 sm:px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm sm:text-base w-full sm:w-auto"
-          >
-            Schliessen
-          </button>
-        </div>
+      <div class="flex-shrink-0 flex items-center justify-between gap-3 px-5 sm:px-6 py-3 border-t border-gray-100 bg-gray-50/80">
+        <span class="text-xs text-gray-400">{{ selectedCourse?.name }}</span>
+        <button
+          @click="closeEnrollmentModal"
+          class="px-5 py-2 bg-gray-900 hover:bg-gray-700 text-white text-sm font-medium rounded-xl transition-colors"
+        >
+          Schliessen
+        </button>
       </div>
-
     </div>
   </div>
 
@@ -5818,227 +5296,45 @@ const updateCourseStatus = (course: any, newStatusValue: string) => {
 }
 
 const confirmStatusChange = async () => {
-  logger.debug('🔘 confirmStatusChange clicked!')
-  logger.debug('📋 Current state before update:', {
-    statusChangeCourse: statusChangeCourse.value?.id,
-    oldStatus: oldStatus.value,
-    newStatus: newStatus.value,
-    showStatusChangeModal: showStatusChangeModal.value
-  })
-  
-  if (!statusChangeCourse.value) {
-    logger.error('❌ statusChangeCourse is null!')
-    return
-  }
-  
+  if (!statusChangeCourse.value) return
+
   try {
     isCanceling.value = true
-    
+
     const courseId = statusChangeCourse.value.id
-    const tenantId = statusChangeCourse.value.tenant_id
-    const oldStatusForLogging = oldStatus.value
     const newStatusForLogging = newStatus.value
-    
-    logger.debug('📊 Update Details:', {
-      courseId,
-      tenantId,
-      oldStatusForLogging,
-      newStatusForLogging,
-      currentUser: currentUser.value?.id,
-      userRole: currentUser.value?.role,
-      userTenantId: currentUser.value?.tenant_id
-    })
-    
-    // Verify we have valid data
-    if (!courseId) {
-      throw new Error('❌ Course ID is missing!')
-    }
-    
-    if (!newStatusForLogging) {
-      throw new Error('❌ New status is not selected!')
-    }
-    
-    if (newStatusForLogging === oldStatusForLogging) {
-      throw new Error('❌ New status is the same as old status!')
-    }
-    
-    const updateData: any = {
-      status: newStatusForLogging,
-      status_changed_at: new Date().toISOString(),
-      status_changed_by: currentUser.value.id
-    }
-    
-    // If changing to cancelled, add cancellation fields
-    if (newStatusForLogging === 'cancelled') {
-      updateData.cancelled_at = new Date().toISOString()
-      updateData.cancelled_by = currentUser.value.id
-    }
-    
-    logger.debug('📝 Preparing update:', {
-      courseId,
-      updateData,
-      updateKeys: Object.keys(updateData)
-    })
-    
-    // Step 1: Verify read access
-    logger.debug('🔍 Step 1: Testing read access...')
-    const { data: readTest, error: readError } = await supabase
-      .from('courses')
-      .select('id, status, tenant_id, name')
-      .eq('id', courseId)
-      .single()
-    
-    logger.debug('📖 Read test result:', { 
-      success: !readError,
-      courseId: readTest?.id,
-      currentStatus: readTest?.status,
-      courseName: readTest?.name,
-      readError: readError ? {
-        code: readError.code,
-        message: readError.message
-      } : null
-    })
-    
-    if (readError) {
-      logger.error('❌ Cannot read course:', readError)
-      throw new Error(`Cannot read course: ${readError.message}`)
-    }
-    
-    // Step 2: Execute update
-    logger.debug('✏️ Step 2: Executing update...')
-    logger.debug('📊 Update payload:', updateData)
-    
-    const { data: updateResult, error: updateError } = await supabase
-      .from('courses')
-      .update(updateData)
-      .eq('id', courseId)
-      .select()
-      .single()
+    const oldStatusForLogging = oldStatus.value
 
-    logger.debug('📤 Update response (raw):', { 
-      success: !updateError,
-      data: updateResult,
-      error: updateError ? {
-        code: updateError.code,
-        message: updateError.message,
-        details: updateError.details,
-        hint: updateError.hint
-      } : null
+    if (!courseId) throw new Error('Course ID is missing')
+    if (!newStatusForLogging) throw new Error('New status is not selected')
+    if (newStatusForLogging === oldStatusForLogging) throw new Error('New status is the same as old status')
+
+    const result = await $fetch('/api/courses/update-status', {
+      method: 'POST',
+      body: { courseId, status: newStatusForLogging },
     })
 
-    if (updateError) {
-      logger.error('❌ Update error:', {
-        code: updateError.code,
-        message: updateError.message,
-        details: updateError.details,
-        hint: updateError.hint
-      })
-      throw updateError
-    }
-    
-    if (!updateResult) {
-      throw new Error('Update returned no data - possibly blocked by RLS policy')
-    }
-    
-    // Step 2b: Verify the update actually changed the status in the DB
-    logger.debug('✔️ Step 2b: Verifying update was written to DB...')
-    const { data: verifyData, error: verifyError } = await supabase
-      .from('courses')
-      .select('id, status, status_changed_at, status_changed_by')
-      .eq('id', courseId)
-      .single()
-    
-    logger.debug('🔍 Verify result:', {
-      id: verifyData?.id,
-      statusInDB: verifyData?.status,
-      expectedStatus: newStatusForLogging,
-      statusMatches: verifyData?.status === newStatusForLogging,
-      verifyError: verifyError ? {
-        code: verifyError.code,
-        message: verifyError.message
-      } : null
-    })
-    
-    if (verifyError) {
-      logger.error('❌ Verify error:', verifyError)
-      throw verifyError
-    }
-    
-    if (verifyData?.status !== newStatusForLogging) {
-      logger.error('❌ CRITICAL: Update failed silently!', {
-        expectedStatus: newStatusForLogging,
-        actualStatusInDB: verifyData?.status,
-        possibleCause: 'RLS Policy blocked the update but didnt report error'
-      })
-      throw new Error(`Status in DB is still "${verifyData?.status}" - RLS policy may be blocking the update`)
-    }
-    
-    const updatedCourse = verifyData
-    
-    logger.debug('✅ Course status updated in DB:', {
-      id: updatedCourse.id,
-      oldStatus: oldStatusForLogging,
-      newStatus: updatedCourse.status,
-      timestamp: updatedCourse.status_changed_at
-    })
+    const updatedCourse = (result as any).course
 
-    // Step 3: Update local course object
-    logger.debug('🔄 Step 3: Updating local course object...')
-    const courseIndex = courses.value.findIndex(c => c.id === courseId)
-    logger.debug(`🔎 Found course at index: ${courseIndex}`)
-    
-    if (courseIndex !== -1) {
-      const oldLocalStatus = courses.value[courseIndex].status
-      
-      // Use Vue's reactivity with Object.assign to ensure proper tracking
-      courses.value[courseIndex] = Object.assign({}, courses.value[courseIndex], {
-        status: updatedCourse.status,
-        status_changed_at: updatedCourse.status_changed_at,
-        status_changed_by: updatedCourse.status_changed_by
-      })
-      
-      logger.debug('✅ Local course updated:', { 
-        courseIndex,
-        oldStatus: oldLocalStatus,
-        newStatus: courses.value[courseIndex].status,
-        name: courses.value[courseIndex].name,
-        verifyStatus: courses.value[courseIndex].status === updatedCourse.status
-      })
-    } else {
-      logger.warn('⚠️ Course not found in local array for index update!')
-    }
-    
-    // Step 4: Update UI state
-    logger.debug('🎨 Step 4: Updating UI state...')
     success.value = `Kurs-Status auf "${getStatusText({ status: updatedCourse.status })}" geändert!`
     showStatusChangeModal.value = false
     statusChangeCourse.value = null
     oldStatus.value = ''
     newStatus.value = ''
-    
-    logger.debug('✅ Final state:', {
-      successMessage: success.value,
-      modalVisible: showStatusChangeModal.value,
-      statusChangeCourse: statusChangeCourse.value
-    })
-    
-    // Step 5: Reload courses in background
-    logger.debug('🔄 Step 5: Reloading courses in background...')
+
     loadCourses().catch(err => {
       logger.error('⚠️ Error reloading courses:', err)
     })
-    
+
   } catch (err: any) {
     logger.error('❌ Error updating course status:', {
       message: err.message,
       code: err.code,
-      details: err.details,
-      stack: err.stack
+      data: err.data,
     })
-    error.value = `Fehler beim Status-Update: ${err.message}`
+    error.value = `Fehler beim Status-Update: ${err.data?.message || err.message}`
   } finally {
     isCanceling.value = false
-    logger.debug('✅ confirmStatusChange completed')
   }
 }
 
@@ -6063,17 +5359,7 @@ const loadCourseParticipants = async (courseId: string) => {
   try {
     const { data: registrations, error } = await supabase
       .from('course_registrations')
-      .select(`
-        *,
-        participant:course_participants!course_registrations_participant_id_fkey(
-          id,
-          first_name,
-          last_name,
-          email,
-          phone,
-          user_id
-        )
-      `)
+      .select('id, first_name, last_name, email, phone, user_id, status, tenant_id')
       .eq('course_id', courseId)
       .eq('status', 'confirmed')
 
@@ -6410,46 +5696,26 @@ const closeEnrollmentModal = () => {
     const courseIdToReload = selectedCourse.value.id
     
     // Use nextTick to ensure state updates are processed
-    nextTick(async () => {
-      try {
-        console.log('🔄 Reloading course after enrollment modal close:', courseIdToReload)
-        const { data: updatedCourse, error } = await getSupabase()
-          .from('courses')
-          .select(`
-            *,
-            instructor:users!courses_instructor_id_fkey(first_name, last_name),
-            registrations:course_registrations(id, status, deleted_at)
-          `)
-          .eq('id', courseIdToReload)
-          .single()
-
-        if (!error && updatedCourse) {
-          const participantCount = updatedCourse.registrations?.length || 0
-          
-          // Update in database
-          const { error: updateError } = await getSupabase()
-            .from('courses')
-            .update({ current_participants: participantCount })
-            .eq('id', courseIdToReload)
-          
-          if (!updateError) {
-            console.log(`✅ Updated course participant count in DB to ${participantCount}`)
-          }
-          
-          // Update the course in the local array
-          const courseIndex = courses.value.findIndex(c => c.id === courseIdToReload)
-          if (courseIndex !== -1) {
-            courses.value[courseIndex] = {
-              ...courses.value[courseIndex],
-              current_participants: participantCount
-            }
-            console.log(`✅ Updated course participant count in UI to ${participantCount}`)
-          }
-        }
-      } catch (err) {
-        console.error('Error reloading course:', err)
+    // Use the already-loaded enrollment count (avoids RLS-broken client query)
+    const participantCount = currentEnrollments.value.length
+    
+    // Update course in local array immediately
+    const courseIndex = courses.value.findIndex(c => c.id === courseIdToReload)
+    if (courseIndex !== -1) {
+      courses.value[courseIndex] = {
+        ...courses.value[courseIndex],
+        current_participants: participantCount
       }
-    })
+    }
+    
+    // Persist to DB in background
+    getSupabase()
+      .from('courses')
+      .update({ current_participants: participantCount })
+      .eq('id', courseIdToReload)
+      .then(({ error }) => {
+        if (error) console.error('Error updating participant count:', error)
+      })
   }
   
   selectedCourse.value = null
@@ -6580,43 +5846,24 @@ const selectExistingUser = async (user: any) => {
 const loadCourseEnrollments = async (courseId: string) => {
   logger.debug('🔍 loadCourseEnrollments called with courseId:', courseId)
   try {
-    // Use course_registrations_with_participant VIEW for clean, flat data
-    // No need to manually JOIN course_participants anymore
-    const { data, error } = await getSupabase()
-      .from('course_registrations_with_participant')
-      .select('*')
-      .eq('course_id', courseId)
-      .is('deleted_at', null) // Only load active (not soft deleted) registrations
-
-    if (error) {
-      console.error('❌ Error loading course enrollments:', error)
-      throw error
-    }
+    const data = await $fetch<any[]>(`/api/courses/enrollments?courseId=${courseId}`)
     logger.debug('🔍 Course enrollments loaded:', data)
     currentEnrollments.value = data || []
   } catch (err) {
     console.error('❌ Error in loadCourseEnrollments:', err)
+    currentEnrollments.value = []
   }
 }
 
 const loadDeletedEnrollments = async (courseId: string) => {
   logger.debug('🔍 loadDeletedEnrollments called with courseId:', courseId)
   try {
-    // Use course_registrations_with_participant VIEW for clean, flat data
-    const { data, error } = await getSupabase()
-      .from('course_registrations_with_participant')
-      .select('*')
-      .eq('course_id', courseId)
-      .not('deleted_at', 'is', null) // Only load DELETED registrations
-
-    if (error) {
-      console.error('❌ Error loading deleted enrollments:', error)
-      throw error
-    }
+    const data = await $fetch<any[]>(`/api/courses/enrollments?courseId=${courseId}&includeDeleted=true`)
     logger.debug('🔍 Deleted enrollments loaded:', data)
     deletedEnrollments.value = data || []
   } catch (err) {
     console.error('❌ Error in loadDeletedEnrollments:', err)
+    deletedEnrollments.value = []
   }
 }
 
@@ -6788,7 +6035,7 @@ const confirmTransfer = async (enrollment: any) => {
     if (!response.ok) {
       throw new Error(data?.statusMessage || data?.message || 'Umplanung fehlgeschlagen')
     }
-    success.value = `✅ ${enrollment.first_name || enrollment.participant?.first_name} ${enrollment.last_name || enrollment.participant?.last_name} wurde umgebucht zu "${data.toCourse?.name}"`
+    success.value = `✅ ${enrollment.first_name} ${enrollment.last_name} wurde umgebucht zu "${data.toCourse?.name}"`
     cancelTransfer()
     await loadCourseEnrollments(selectedCourse.value.id)
     await loadCourses()
