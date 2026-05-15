@@ -255,14 +255,49 @@
             
             <!-- Action Buttons -->
             <!-- Hide "Jetzt bezahlen" button only if appointment is cancelled with 0% charge (free cancellation) -->
-            <div v-if="payment.payment_status === 'pending' && (!isAppointmentCancelled(payment) || (isAppointmentCancelled(payment) && getCancellationChargePercentage(payment) > 0))" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
-              <!-- Jetzt bezahlen Button -->
-              <button @click="payIndividual(payment)"
-                      :disabled="processingPaymentIds.has(payment.id) || !walleeEnabled"
-                      :title="!walleeEnabled ? 'Online-Zahlung aktuell nicht verfügbar' : ''"
-                      class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base">
-                {{ !walleeEnabled ? 'Online-Zahlung nicht verfügbar' : processingPaymentIds.has(payment.id) ? 'Verarbeitung...' : 'Jetzt bezahlen' }}
-              </button>
+            <div v-if="payment.payment_status === 'pending' && (!isAppointmentCancelled(payment) || (isAppointmentCancelled(payment) && getCancellationChargePercentage(payment) > 0))">
+              <div class="flex flex-row justify-between items-center">
+                <!-- Rabattcode Link (links) – nur bei Fahrstunden-Zahlungen ohne bestehenden Rabatt -->
+                <button
+                  v-if="(!payment.discount_amount_rappen || payment.discount_amount_rappen === 0) && isDiscountEligible(payment)"
+                  @click="toggleDiscountInput(payment.id)"
+                  class="text-xs text-gray-400 hover:text-gray-600 underline transition-colors whitespace-nowrap"
+                >
+                  {{ discountOpenFor === payment.id ? 'Abbrechen' : 'Rabattcode?' }}
+                </button>
+                <span v-else />
+
+                <!-- Jetzt bezahlen Button (rechts) -->
+                <button @click="payIndividual(payment)"
+                        :disabled="processingPaymentIds.has(payment.id) || !walleeEnabled"
+                        :title="!walleeEnabled ? 'Online-Zahlung aktuell nicht verfügbar' : ''"
+                        class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base">
+                  {{ !walleeEnabled ? 'Online-Zahlung nicht verfügbar' : processingPaymentIds.has(payment.id) ? 'Verarbeitung...' : 'Jetzt bezahlen' }}
+                </button>
+              </div>
+
+              <!-- Inline Rabattcode-Eingabe -->
+              <div v-if="discountOpenFor === payment.id" class="mt-3">
+                <div class="flex gap-2">
+                  <input
+                    v-model="discountCodeInputs[payment.id]"
+                    type="text"
+                    placeholder="Code eingeben"
+                    :disabled="discountApplyingFor === payment.id"
+                    @keyup.enter="applyDiscount(payment)"
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase placeholder-normal"
+                    style="text-transform: uppercase;"
+                  />
+                  <button
+                    @click="applyDiscount(payment)"
+                    :disabled="discountApplyingFor === payment.id || !discountCodeInputs[payment.id]"
+                    class="px-4 py-2 bg-gray-700 text-white text-sm rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 font-medium whitespace-nowrap"
+                  >
+                    {{ discountApplyingFor === payment.id ? 'Prüfe...' : 'Anwenden' }}
+                  </button>
+                </div>
+                <p v-if="discountErrors[payment.id]" class="mt-1.5 text-xs text-red-600">{{ discountErrors[payment.id] }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -358,6 +393,12 @@ const showError = (title: string, message = '') => uiStore.addNotification({ typ
 const showMedicalCertificateModal = ref(false) // ✅ NEU: Modal für Arztzeugnis
 const selectedPaymentForCertificate = ref<any>(null) // ✅ NEU: Payment für Arztzeugnis-Upload
 const currentUserData = ref<any>(null) // ✅ NEW: User data from get-payment-page-data API
+
+// Discount code state
+const discountOpenFor = ref<string | null>(null)
+const discountCodeInputs = ref<Record<string, string>>({})
+const discountApplyingFor = ref<string | null>(null)
+const discountErrors = ref<Record<string, string>>({})
 
 // Computed properties
 const unpaidPayments = computed(() => 
@@ -634,6 +675,60 @@ const payIndividual = async (payment: any) => {
   }
 }
   
+const isDiscountEligible = (payment: any): boolean => {
+  const meta = typeof payment.metadata === 'string'
+    ? (() => { try { return JSON.parse(payment.metadata) } catch { return {} } })()
+    : (payment.metadata || {})
+  if (meta.is_topup) return false
+  // Muss eine Fahrstunde haben (appointment_id gesetzt oder lesson_price > 0)
+  if (!payment.appointment_id && !(payment.lesson_price_rappen > 0)) return false
+  return true
+}
+
+const toggleDiscountInput = (paymentId: string) => {
+  if (discountOpenFor.value === paymentId) {
+    discountOpenFor.value = null
+    delete discountErrors.value[paymentId]
+  } else {
+    discountOpenFor.value = paymentId
+    if (!discountCodeInputs.value[paymentId]) {
+      discountCodeInputs.value[paymentId] = ''
+    }
+    delete discountErrors.value[paymentId]
+  }
+}
+
+const applyDiscount = async (payment: any) => {
+  const code = discountCodeInputs.value[payment.id]?.trim()
+  if (!code) return
+
+  discountApplyingFor.value = payment.id
+  delete discountErrors.value[payment.id]
+
+  try {
+    const result = await $fetch('/api/appointments/apply-discount', {
+      method: 'POST',
+      body: { paymentId: payment.id, code }
+    }) as any
+
+    if (!result.isValid) {
+      discountErrors.value[payment.id] = result.error || 'Ungültiger Code'
+      return
+    }
+
+    // Update payment in-place so the UI reflects the new amounts immediately
+    payment.discount_amount_rappen = result.discount_amount_rappen
+    payment.total_amount_rappen = result.new_total_rappen
+
+    discountOpenFor.value = null
+    showSuccess('Rabatt angewendet', `CHF ${(result.discount_amount_rappen / 100).toFixed(2)} Rabatt wurde abgezogen.`)
+  } catch (err: any) {
+    discountErrors.value[payment.id] = err.data?.statusMessage || err.message || 'Fehler beim Anwenden des Rabatts'
+  } finally {
+    discountApplyingFor.value = null
+  }
+}
+
 const downloadAllReceipts = async () => {
   if (paidPayments.value.length === 0) {
     alert('Keine bezahlten Zahlungen gefunden.')

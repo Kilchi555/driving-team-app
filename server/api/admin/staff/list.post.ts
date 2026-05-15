@@ -25,6 +25,8 @@ export default defineEventHandler(async (event) => {
       .eq('tenant_id', tenantId)
       .in('role', ['admin', 'staff'])
       .eq('is_active', true)
+      .is('deleted_at', null)
+      .order('role', { ascending: false })
       .order('first_name', { ascending: true })
 
     if (err) throw err

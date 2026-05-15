@@ -76,6 +76,23 @@ export default defineNuxtPlugin((nuxtApp) => {
       // Handle 401 - Session expired or invalid token (for non-auth and non-booking endpoints)
       // DON'T redirect for booking flow - let component show modal
       if (status === 401 && !isRedirecting && !isBookingFlow && !onAffiliateDashboard) {
+        // Before triggering a logout, check if the auth store still considers the user logged in.
+        // If yes, this 401 is a permission/endpoint error — not an expired session.
+        // Logging out in that case would cause spurious logouts (e.g. EmailDomainSettings mounting
+        // while the token cookie hasn't propagated yet, or an endpoint without the right permissions).
+        try {
+          const authStore = useAuthStore()
+          if (authStore.isLoggedIn) {
+            console.debug('ℹ️ 401 received but authStore shows active session — treating as permission error, not session expiry')
+            const d = (response as any)?._data
+            throw createError({ statusCode: status, statusMessage: d?.statusMessage || response?.statusText || 'Request failed', data: d?.data ?? d ?? undefined })
+          }
+        } catch (e: any) {
+          // If it's the createError we just threw, re-throw it
+          if (e?.statusCode === 401) throw e
+          // Otherwise fall through to logout logic
+        }
+
         isRedirecting = true
         console.warn('⚠️ Session expired (401) - Redirecting to tenant login', { url })
 

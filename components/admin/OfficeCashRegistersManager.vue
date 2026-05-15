@@ -597,19 +597,8 @@ const openStaffAssignment = async (register: any) => {
 
 const loadAvailableStaff = async () => {
   try {
-    const supabase = getSupabase()
-    const tenantId = await getCurrentTenantId()
-    
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, role')
-      .eq('tenant_id', tenantId)
-      .in('role', ['staff', 'admin'])
-      .eq('is_active', true)
-      .order('first_name')
-
-    if (error) throw error
-    availableStaff.value = data || []
+    const response: any = await $fetch('/api/admin/staff-users')
+    availableStaff.value = response.data || []
   } catch (err) {
     console.error('Error loading available staff:', err)
   }

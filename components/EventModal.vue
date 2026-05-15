@@ -97,7 +97,7 @@
 
           <!-- Typ ändern Button für other event types (nur bei edit mode und zukünftigen Terminen) -->
           <!-- ✅ ENABLED: Other Event Types jetzt full supported! -->
-          <div v-if="props.mode !== 'create' && !isPastAppointment && !isLessonType(formData.eventType) && formData.eventType !== 'other'" class="py-2">
+          <div v-if="props.mode !== 'create' && !isPastAppointment && !isLessonType(formData.eventType) && formData.eventType !== 'other' && formData.selectedSpecialType !== 'vacation'" class="py-2">
             <button
               @click="changeEventType"
               class="w-full px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
@@ -107,8 +107,8 @@
             </button>
           </div>
 
-          <!-- Customer Invite Selector für andere Terminarten -->
-          <div v-if="!isLessonType(formData.eventType) && !showEventTypeSelection">
+          <!-- Customer Invite Selector für andere Terminarten (nicht bei Ferien) -->
+          <div v-if="!isLessonType(formData.eventType) && !showEventTypeSelection && formData.selectedSpecialType !== 'vacation'">
             <CustomerInviteSelector
               ref="customerInviteSelectorRef" 
               v-model="invitedCustomers"
@@ -121,8 +121,8 @@
 
 
 
-          <!-- Title Input -->
-          <div v-if="!showEventTypeSelection"> 
+          <!-- Title Input (nicht bei Ferien – Titel ist immer "Ferien") -->
+          <div v-if="!showEventTypeSelection && formData.selectedSpecialType !== 'vacation'"> 
             <TitleInput
               :title="formData.title"
               @update:title="handleTitleUpdate"
@@ -189,8 +189,8 @@
 
           </div>
 
-          <!-- Time Section -->
-          <div v-if="showTimeSection && !showEventTypeSelection" class="py-2">
+          <!-- Time Section (nicht bei Ferien) -->
+          <div v-if="showTimeSection && !showEventTypeSelection && formData.selectedSpecialType !== 'vacation'" class="py-2">
             <TimeSelector
               :start-date="formData.startDate"
               :start-time="formData.startTime"
@@ -208,8 +208,123 @@
             />
           </div>
 
-          <!-- Location Section -->
-          <div v-if="((isLessonType(formData.eventType) && selectedStudent) || (!isLessonType(formData.eventType))) && !showEventTypeSelection" class="py-2">
+          <!-- Ferien: Von / Bis Datepicker (ersetzt TimeSelector vollständig) -->
+          <div v-if="formData.selectedSpecialType === 'vacation' && props.mode === 'create' && !showEventTypeSelection" class="py-2">
+            <div
+              class="rounded-xl p-4 border space-y-4"
+              :class="vacationCapacityStatus && !vacationCapacityStatus.allowed ? 'border-red-300 bg-red-50' : 'border-green-200 bg-green-50'"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">🏖️</span>
+                  <span class="text-sm font-semibold" :class="vacationCapacityStatus && !vacationCapacityStatus.allowed ? 'text-red-800' : 'text-green-800'">Ferienperiode</span>
+                </div>
+                <!-- Saldo-Badges – nur für Monatslohn-Staff -->
+                <div v-if="vacationBalanceLoading" class="text-xs text-gray-400">Lade Saldo…</div>
+                <div v-else-if="vacationBalance && vacationBalance.is_monthly_salary" class="flex items-center gap-2 text-xs">
+                  <span
+                    class="px-2 py-0.5 rounded-full font-semibold"
+                    :class="(vacationBalance.vacation_balance_days ?? 0) >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                  >
+                    🌴 {{ (vacationBalance.vacation_balance_days ?? 0) > 0 ? '+' : '' }}{{ vacationBalance.vacation_balance_days ?? 0 }} T Ferien
+                  </span>
+                  <span
+                    class="px-2 py-0.5 rounded-full font-semibold"
+                    :class="vacationBalance.adjusted_balance >= 0 ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'"
+                  >
+                    ⏱ {{ vacationBalance.adjusted_balance >= 0 ? '+' : '' }}{{ vacationBalance.adjusted_balance.toFixed(1) }}h Überzeit
+                  </span>
+                </div>
+                <div v-else-if="vacationBalance && !vacationBalance.is_monthly_salary" class="text-xs text-green-600">
+                  Blockiert Kalender
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1">
+                  <label class="text-xs font-medium" :class="vacationCapacityStatus && !vacationCapacityStatus.allowed ? 'text-red-800' : 'text-green-800'">Von</label>
+                  <input
+                    :value="formData.startDate"
+                    type="date"
+                    class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 bg-white"
+                    :class="vacationCapacityStatus && !vacationCapacityStatus.allowed ? 'border-red-300 focus:ring-red-500' : 'border-green-300 focus:ring-green-500'"
+                    @change="handleStartDateUpdate(($event.target as HTMLInputElement).value)"
+                  />
+                </div>
+                <div class="space-y-1">
+                  <label class="text-xs font-medium" :class="vacationCapacityStatus && !vacationCapacityStatus.allowed ? 'text-red-800' : 'text-green-800'">Bis</label>
+                  <input
+                    v-model="vacationEndDate"
+                    type="date"
+                    :min="formData.startDate"
+                    class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 bg-white"
+                    :class="vacationCapacityStatus && !vacationCapacityStatus.allowed ? 'border-red-300 focus:ring-red-500' : 'border-green-300 focus:ring-green-500'"
+                  />
+                </div>
+              </div>
+
+              <!-- Tage-Info + Saldo-Check -->
+              <div v-if="vacationBlockedCount > 0" class="space-y-2">
+                <div class="text-sm space-y-1">
+                  <div class="font-medium" :class="vacationCapacityStatus && !vacationCapacityStatus.allowed ? 'text-red-700' : 'text-green-700'">
+                    {{ vacationBlockedCount }} Tag{{ vacationBlockedCount !== 1 ? 'e' : '' }} im Kalender blockiert (Mo–Sa)
+                  </div>
+                  <div :class="vacationCapacityStatus && !vacationCapacityStatus.allowed ? 'text-red-600' : 'text-green-600'">
+                    {{ vacationDayCount }} Ferientag{{ vacationDayCount !== 1 ? 'e' : '' }} abgezogen (Mo–Fr)
+                  </div>
+                </div>
+
+                <!-- Kapazitäts-Feedback – nur für Monatslohn-Staff -->
+                <div v-if="vacationCapacityStatus && !vacationCapacityStatus.isHourly">
+                  <!-- Nicht erlaubt: kein Guthaben mehr -->
+                  <div v-if="!vacationCapacityStatus.allowed" class="rounded-lg p-3 bg-red-100 border border-red-300 text-sm text-red-700 space-y-1">
+                    <div class="font-semibold">⛔ Kein Guthaben mehr vorhanden</div>
+                    <div>Ferien-Saldo und Überstunden-Konto reichen nicht aus. Es fehlen {{ vacationCapacityStatus.missing }} Tag{{ vacationCapacityStatus.missing !== 1 ? 'e' : '' }}.</div>
+                  </div>
+                  <!-- Erlaubt, aber teilweise aus Überzeit -->
+                  <div v-else-if="vacationCapacityStatus.fromOvertime > 0" class="rounded-lg p-3 bg-amber-50 border border-amber-300 text-sm text-amber-700 space-y-1">
+                    <div class="font-semibold">⚠ Ferien-Saldo aufgebraucht</div>
+                    <div>
+                      {{ vacationCapacityStatus.fromVacation }} T aus Ferien-Guthaben
+                      <template v-if="vacationCapacityStatus.fromOvertime > 0">, {{ vacationCapacityStatus.fromOvertime }} T werden von der Überzeit abgezogen</template>.
+                    </div>
+                  </div>
+                  <!-- Alles gut -->
+                  <div v-else class="text-xs text-green-600">
+                    ✓ Ausreichend Ferien-Guthaben vorhanden ({{ vacationBalance?.vacation_balance_days }} T verbleibend)
+                  </div>
+                </div>
+              </div>
+              <div v-else-if="vacationEndDate" class="text-sm text-amber-600">
+                Kein Arbeitstag im gewählten Zeitraum (nur Sonntage?)
+              </div>
+            </div>
+          </div>
+
+          <!-- Ferien: Read-only Ansicht für bestehende Ferien-Termine (view/edit mode) -->
+          <div v-if="formData.selectedSpecialType === 'vacation' && props.mode !== 'create' && !showEventTypeSelection" class="py-2">
+            <div class="rounded-xl p-4 border border-green-200 bg-green-50 space-y-3">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">🏖️</span>
+                <span class="text-sm font-semibold text-green-800">Ferientag</span>
+              </div>
+              <div class="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <div class="text-xs text-green-700 font-medium mb-1">Datum</div>
+                  <div class="font-medium text-green-900">{{ formData.startDate }}</div>
+                </div>
+                <div>
+                  <div class="text-xs text-green-700 font-medium mb-1">Zeit</div>
+                  <div class="font-medium text-green-900">{{ formData.startTime }} – {{ formData.endTime }}</div>
+                </div>
+              </div>
+              <div class="text-xs text-green-600">
+                Dieser Ferientag blockiert den Kalender. Um Ferien zu löschen, bitte alle betroffenen Tage einzeln entfernen.
+              </div>
+            </div>
+          </div>
+
+          <!-- Location Section (nicht bei Ferien) -->
+          <div v-if="((isLessonType(formData.eventType) && selectedStudent) || (!isLessonType(formData.eventType))) && !showEventTypeSelection && formData.selectedSpecialType !== 'vacation'" class="py-2">
             <LocationSelector
               :model-value="formData.location_id"
               :selected-student-id="isLessonType(formData.eventType) ? selectedStudent?.id : undefined"
@@ -311,7 +426,7 @@
           <button
             v-if="props.mode !== 'view'"
             @click="handleSaveAppointment"
-            :disabled="!isFormValid || isLoading || (props.mode === 'edit' && isPastAppointment)"
+            :disabled="!isFormValid || isLoading || (props.mode === 'edit' && isPastAppointment) || (formData.selectedSpecialType === 'vacation' && vacationCapacityStatus !== null && !vacationCapacityStatus.allowed)"
             :class="[
               'flex items-center gap-1.5 px-5 py-2 text-sm font-semibold rounded-xl transition-colors',
               (props.mode === 'edit' && isPastAppointment)
@@ -776,7 +891,94 @@ const error = ref('')
 const isLoading = ref(false)
 const isInitializing = ref(false)
 const showEventTypeSelection = ref(false)
-const selectedLessonType = ref('lesson') 
+const selectedLessonType = ref('lesson')
+
+// ── Ferien-Bereich ──────────────────────────────────────────────────────────
+const vacationEndDate = ref('')
+
+interface VacationBalance {
+  vacation_balance_days: number | null
+  vacation_balance_hours: number
+  adjusted_balance: number
+  total_vacation_capacity_days: number | null
+  total_vacation_capacity_hours: number
+  daily_hours: number
+}
+const vacationBalance = ref<VacationBalance | null>(null)
+const vacationBalanceLoading = ref(false)
+
+const loadVacationBalance = async (staffId: string) => {
+  if (!staffId) return
+  vacationBalanceLoading.value = true
+  try {
+    const data = await $fetch('/api/admin/staff-vacation-balance', {
+      query: { staffId, year: new Date().getFullYear() }
+    }) as any
+    vacationBalance.value = data
+  } catch {
+    vacationBalance.value = null
+  } finally {
+    vacationBalanceLoading.value = false
+  }
+}
+
+function iterateDays(start: string, end: string, cb: (dateStr: string, day: number) => void) {
+  if (!start || !end || end < start) return
+  let current = start
+  while (current <= end) {
+    const d = new Date(current + 'T12:00:00')
+    cb(current, d.getDay())
+    d.setDate(d.getDate() + 1)
+    current = d.toISOString().slice(0, 10)
+  }
+}
+
+// Blocked days = Mo–Sa (no Sundays)
+function countBlockedDays(start: string, end: string): number {
+  let count = 0
+  iterateDays(start, end, (_, day) => { if (day !== 0) count++ })
+  return count
+}
+
+// Vacation days for entitlement = Mo–Fr only (standard 5-day week)
+function countVacationDays(start: string, end: string): number {
+  let count = 0
+  iterateDays(start, end, (_, day) => { if (day >= 1 && day <= 5) count++ })
+  return count
+}
+
+const vacationDayCount = computed(() => {
+  if (formData.value.selectedSpecialType !== 'vacation') return 0
+  return countVacationDays(formData.value.startDate, vacationEndDate.value || formData.value.startDate)
+})
+
+const vacationBlockedCount = computed(() => {
+  if (formData.value.selectedSpecialType !== 'vacation') return 0
+  return countBlockedDays(formData.value.startDate, vacationEndDate.value || formData.value.startDate)
+})
+
+// Validation: how many days come from vacation entitlement vs. from overtime
+const vacationCapacityStatus = computed(() => {
+  const bal = vacationBalance.value
+  if (!bal || vacationDayCount.value === 0) return null
+
+  // Hourly staff: no balance tracking, vacation only blocks the calendar → always allowed
+  if (!bal.is_monthly_salary) return { allowed: true, isHourly: true, fromVacation: 0, fromOvertime: 0, missing: 0 }
+
+  const requested = vacationDayCount.value
+  const dailyHours = bal.daily_hours || 0
+  const vacDaysRemaining = Math.max(0, bal.vacation_balance_days ?? 0)
+  const overtimeDaysAvail = dailyHours > 0 ? Math.floor((Math.max(0, bal.adjusted_balance)) / dailyHours * 10) / 10 : 0
+  const totalCapacityDays = bal.total_vacation_capacity_days ?? 0
+
+  if (requested > totalCapacityDays) {
+    return { allowed: false, isHourly: false, fromVacation: vacDaysRemaining, fromOvertime: overtimeDaysAvail, missing: Math.round((requested - totalCapacityDays) * 10) / 10 }
+  }
+  const fromVacation = Math.min(requested, vacDaysRemaining)
+  const fromOvertime = Math.max(0, requested - fromVacation)
+  return { allowed: true, isHourly: false, fromVacation, fromOvertime, missing: 0 }
+})
+// ────────────────────────────────────────────────────────────────────────────
 const staffSelectorRef = ref() 
 const invitedStaffIds = ref([] as string[])
 const defaultBillingAddress = ref(null)
@@ -1032,6 +1234,41 @@ const handleCustomerInvites = async (appointmentData: any) => {
 // ✅ NEUE FUNKTION: Handle appointment save
 const handleSaveAppointment = async () => {
   const saveStartTime = performance.now()
+
+  // ── Ferien-Batch: mehrere Tage als Urlaub anlegen ────────────────────────
+  if (formData.value.selectedSpecialType === 'vacation' && props.mode === 'create') {
+    // Doppelte Sicherheitsprüfung: kein Speichern wenn kein Guthaben
+    if (vacationCapacityStatus.value !== null && !vacationCapacityStatus.value.allowed) {
+      error.value = 'Kein Ferien- oder Überstunden-Guthaben mehr vorhanden.'
+      return
+    }
+    isLoading.value = true
+    error.value = ''
+    try {
+      const startDate = formData.value.startDate
+      const endDate = vacationEndDate.value || startDate
+      const result = await $fetch('/api/appointments/create-vacation-range', {
+        method: 'POST',
+        body: {
+          startDate,
+          endDate,
+          staffId: formData.value.staff_id,
+          locationId: formData.value.location_id || null,
+        }
+      }) as any
+      logger.debug(`✅ Vacation range created: ${result.created} days`)
+      emit('appointment-saved', { vacation: true, created: result.created, days: result.days })
+      emit('close')
+    } catch (err: any) {
+      error.value = err?.data?.message || err.message || 'Fehler beim Eintragen der Ferien'
+      logger.error('❌ Error creating vacation range:', err)
+    } finally {
+      isLoading.value = false
+    }
+    return
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
   try {
     logger.debug('💾 Starting appointment save...')
     isLoading.value = true
@@ -3064,6 +3301,20 @@ const handleEventTypeSelected = (eventType: any) => {
   formData.value.type = null as any // ✅ CRITICAL: No driving category for special events (VKU, Nothelfer, etc.)!
   formData.value.duration_minutes = eventType.default_duration_minutes || 60
   calculateEndTime()
+
+  // Bei Ferien: Von/Bis auf morgen vorbelegen + Saldo laden
+  if (eventType.code === 'vacation') {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const tomorrowStr = tomorrow.toISOString().slice(0, 10)
+    if (!formData.value.startDate || formData.value.startDate < tomorrowStr) {
+      handleStartDateUpdate(tomorrowStr)
+    }
+    vacationEndDate.value = formData.value.startDate >= tomorrowStr ? formData.value.startDate : tomorrowStr
+    // Ferien-Guthaben und Überzeit laden für Validierung
+    const staffIdForBalance = formData.value.staff_id || currentUser.value?.id
+    if (staffIdForBalance) loadVacationBalance(staffIdForBalance)
+  }
   
   // ✅ EventTypeSelector ausblenden nach Auswahl
   showEventTypeSelection.value = false
@@ -4135,6 +4386,27 @@ const confirmDelete = async () => {
   if (!props.eventData?.id) return
   
   const eventType = props.eventData.type || props.eventData.event_type_code
+
+  // Ferien-Termine: direkt über unser delete-Endpoint löschen (kein cancel-staff, kein Payment)
+  if (eventType === 'vacation') {
+    isLoading.value = true
+    try {
+      await $fetch('/api/appointments/delete', {
+        method: 'POST',
+        body: { appointmentId: props.eventData.id }
+      })
+      emit('appointment-deleted', props.eventData.id)
+      emit('save-event', { type: 'deleted', id: props.eventData.id })
+      handleClose()
+    } catch (err: any) {
+      error.value = err?.data?.message || err.message || 'Fehler beim Löschen des Ferientermins'
+    } finally {
+      isLoading.value = false
+      showDeleteConfirmation.value = false
+    }
+    return
+  }
+
   const isOtherEventType = !['lesson', 'exam', 'theory'].includes(eventType)
   
   const deletionReason = isOtherEventType 

@@ -84,6 +84,22 @@
     {
       "path": "/api/cron/send-wallee-reminders",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/recalculate-staff-hours",
+      "schedule": "0 3 1 * *"
+    },
+    {
+      "path": "/api/cron/year-end-reminder",
+      "schedule": "0 8 2 1 *"
+    },
+    {
+      "path": "/api/cron/year-end-reminder-2",
+      "schedule": "0 8 9 1 *"
+    },
+    {
+      "path": "/api/cron/year-end-finalize",
+      "schedule": "0 3 15 1 *"
     }
   ],
   "rewrites": [

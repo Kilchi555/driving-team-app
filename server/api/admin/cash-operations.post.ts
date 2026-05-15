@@ -1,69 +1,57 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { requireAdminProfile } from '~/server/utils/auth'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
-  try {
-    // Get Supabase admin client
-    const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+  const profile = await requireAdminProfile(event, ['admin', 'superadmin'])
+  const supabase = getSupabaseAdmin()
 
-    // Parse request body
-    const body = await readBody<{
-      action: 'deposit' | 'withdraw'
-      register_id: string
-      amount_rappen: number
-      notes?: string
-    }>(event)
+  const body = await readBody<{
+    action: 'deposit' | 'withdraw'
+    register_id: string
+    amount_rappen: number
+    notes?: string
+  }>(event)
 
-    const { action, register_id, amount_rappen, notes } = body
+  const { action, register_id, amount_rappen, notes } = body
 
-    if (!action || !register_id || !amount_rappen) {
-      throw new Error('Missing required fields: action, register_id, amount_rappen')
-    }
-
-    logger.debug(`💰 Processing cash ${action} operation`, {
-      register_id,
-      amount_rappen,
-      action
-    })
-
-    // Call the appropriate RPC function
-    let result
-    if (action === 'deposit') {
-      result = await supabase.rpc('office_cash_deposit', {
-        p_register_id: register_id,
-        p_amount_rappen: amount_rappen,
-        p_notes: notes || null
-      })
-    } else if (action === 'withdraw') {
-      result = await supabase.rpc('office_cash_withdrawal', {
-        p_register_id: register_id,
-        p_amount_rappen: amount_rappen,
-        p_notes: notes || null
-      })
-    } else {
-      throw new Error(`Invalid action: ${action}`)
-    }
-
-    if (result.error) {
-      throw result.error
-    }
-
-    logger.debug(`✅ Cash ${action} operation successful`)
-
-    return {
-      success: true,
-      message: `Cash ${action} completed successfully`,
-      data: result.data
-    }
-  } catch (err: any) {
-    logger.error('❌ Error in cash operations endpoint:', err)
-    throw createError({
-      statusCode: err.statusCode || 400,
-      statusMessage: err.message || `Failed to process cash operation`
-    })
+  if (!action || !register_id || !amount_rappen) {
+    throw createError({ statusCode: 400, statusMessage: 'Missing required fields: action, register_id, amount_rappen' })
   }
+
+  // Verify the register belongs to the caller's tenant
+  const { data: register } = await supabase
+    .from('office_cash_registers')
+    .select('id, tenant_id')
+    .eq('id', register_id)
+    .single()
+
+  if (!register || register.tenant_id !== profile.tenant_id) {
+    throw createError({ statusCode: 404, statusMessage: 'Register not found' })
+  }
+
+  logger.debug(`💰 Processing cash ${action} operation`, { register_id, amount_rappen, action })
+
+  let result
+  if (action === 'deposit') {
+    result = await supabase.rpc('office_cash_deposit', {
+      p_register_id: register_id,
+      p_amount_rappen: amount_rappen,
+      p_notes: notes || null
+    })
+  } else if (action === 'withdraw') {
+    result = await supabase.rpc('office_cash_withdrawal', {
+      p_register_id: register_id,
+      p_amount_rappen: amount_rappen,
+      p_notes: notes || null
+    })
+  } else {
+    throw createError({ statusCode: 400, statusMessage: `Invalid action: ${action}` })
+  }
+
+  if (result.error) throw createError({ statusCode: 500, statusMessage: result.error.message })
+
+  logger.debug(`✅ Cash ${action} operation successful`)
+  return { success: true, message: `Cash ${action} completed successfully`, data: result.data }
 })

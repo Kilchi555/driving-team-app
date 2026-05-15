@@ -183,14 +183,11 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue'
-import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({
-  middleware: 'auth',
-  layout: 'default'
+  middleware: 'admin',
+  layout: 'admin'
 })
-
-const authStore = useAuthStore()
 
 // State
 const reviews = ref<any[]>([])
@@ -219,16 +216,8 @@ const loadReviews = async () => {
   try {
     isLoading.value = true
     
-    const { data, error } = await supabase
-      .from('medical_certificate_reviews')
-      .select('*')
-      .order('medical_certificate_uploaded_at', { ascending: false, nullsLast: true })
-
-    if (error) throw error
-    
-    reviews.value = (data || []).map(r => ({ ...r, notes: r.medical_certificate_notes || '' }))
-    
-    logger.debug('✅ Loaded reviews:', reviews.value.length)
+    const data = await $fetch('/api/admin/medical-certificate-reviews') as any[]
+    reviews.value = (data || []).map((r: any) => ({ ...r, notes: r.medical_certificate_notes || '' }))
     
   } catch (err: any) {
     console.error('❌ Error loading reviews:', err)

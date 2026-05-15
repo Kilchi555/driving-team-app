@@ -157,13 +157,8 @@
               <div>
                 <p class="font-bold text-gray-900 text-sm">Fahrlehrer Seats</p>
                 <p class="text-xs text-gray-400 mt-0.5">
-                  <template v-if="selectedPlan !== 'enterprise'">
-                    {{ includedSeatsForPlan }} im Plan inkl.
-                    <template v-if="addonSeats > 0"> · {{ addonSeats }} extra</template>
-                  </template>
-                  <template v-else>10 im Plan inkl.
-                    <template v-if="addonSeats > 0"> · {{ addonSeats }} extra</template>
-                  </template>
+                  {{ includedSeatsForPlan }} im Plan inkl.
+                  <template v-if="addonSeats > 0"> · {{ addonSeats }} extra</template>
                 </p>
               </div>
               <span class="text-xs font-bold px-2.5 py-1 rounded-lg"
@@ -171,10 +166,7 @@
                 {{ pricesLoading ? '…' : pricesAvailable ? `+${formatChf(addonPriceAmount('seats'))}/extra` : '–' }}
               </span>
             </div>
-            <div v-if="selectedPlan === 'enterprise'" class="text-xs text-gray-400 italic text-center py-2">
-              10 Fahrlehrer inklusive – keine weiteren Seats buchbar
-            </div>
-            <div v-else class="flex flex-col items-center gap-2">
+            <div class="flex flex-col items-center gap-2">
               <div class="flex items-center justify-center gap-4">
                 <button
                   @click="addonSeats = Math.max(0, addonSeats - 1)"
@@ -356,14 +348,10 @@
             </div>
 
             <!-- Included seats (always shown, no extra cost) -->
-            <div v-if="selectedPlan !== 'enterprise'" class="flex justify-between items-center text-gray-400 text-xs pl-3">
+            <div class="flex justify-between items-center text-gray-400 text-xs pl-3">
               <span>
                 ↳ {{ includedSeatsForPlan }} Fahrlehrer Seat{{ (includedSeatsForPlan ?? 1) !== 1 ? 's' : '' }} inklusive
               </span>
-              <span class="text-green-600 font-medium">Inklusive</span>
-            </div>
-            <div v-else class="flex justify-between items-center text-gray-400 text-xs pl-3">
-              <span>↳ 10 Fahrlehrer Seats inklusive</span>
               <span class="text-green-600 font-medium">Inklusive</span>
             </div>
 
@@ -385,7 +373,7 @@
             </div>
 
             <!-- Extra seats -->
-            <div v-if="addonSeats > 0 && selectedPlan !== 'enterprise'"
+            <div v-if="addonSeats > 0"
               class="flex justify-between items-center text-gray-600">
               <span>{{ addonSeats }} × Extra Fahrlehrer Seat</span>
               <span class="font-medium">{{ formatChf(addonSeats * addonPriceAmount('seats')) }}</span>
@@ -440,7 +428,7 @@
           </div>
 
           <!-- Seat conflict banner inside summary card -->
-          <div v-if="isLoggedIn && staffList.length > 0 && staffList.length > totalSeats && selectedPlan !== 'enterprise'"
+          <div v-if="isLoggedIn && staffList.length > 0 && staffList.length > totalSeats"
             class="px-6 py-3 text-xs text-amber-800 bg-amber-50 border-t border-amber-200 flex items-center justify-between gap-2 cursor-pointer"
             @click="scrollToSeatConflict">
             <div class="flex items-center gap-2">
@@ -499,16 +487,14 @@
         <div v-if="isLoggedIn && prefillHint" class="mt-4 bg-blue-50 border border-blue-100 rounded-2xl p-4 text-xs text-blue-700 space-y-1">
           <p class="font-semibold text-blue-800 mb-1.5">Basierend auf deinem Trial erkannt:</p>
           <p>👥 {{ prefillHint.staffCount }} aktive Fahrlehrer
-            <span v-if="selectedPlan !== 'enterprise'">
-              → {{ addonSeats > 0 ? `${addonSeats} Add-on Seat(s) vorgewählt` : 'im gewählten Plan inklusive' }}
-            </span>
+            → {{ addonSeats > 0 ? `${addonSeats} Add-on Seat(s) vorgewählt` : 'im gewählten Plan inklusive' }}
           </p>
           <p v-if="prefillHint.courses">📚 Kursbuchungsseite wird bereits genutzt → Add-on vorgewählt</p>
           <p v-if="prefillHint.affiliate">🤝 Affiliate-Programm wird bereits genutzt → Add-on vorgewählt</p>
         </div>
 
         <!-- Seat conflict: staff selection -->
-        <div id="seat-conflict-section" v-if="isLoggedIn && staffList.length > 0 && staffList.length > totalSeats && selectedPlan !== 'enterprise'"
+        <div id="seat-conflict-section" v-if="isLoggedIn && staffList.length > 0 && staffList.length > totalSeats"
           class="mt-4 rounded-2xl border-2 border-amber-300 overflow-hidden ring-2 ring-amber-100">
           <div class="bg-amber-50 px-4 py-3 flex items-start gap-2">
             <svg class="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -807,7 +793,6 @@ const includedSeatsForPlan = computed(() => {
 
 // Total seats available for the chosen plan + addons
 const totalSeats = computed(() => {
-  if (selectedPlan.value === 'enterprise') return Infinity
   return (includedSeatsForPlan.value ?? 1) + addonSeats.value
 })
 
@@ -958,7 +943,7 @@ const planPrice = computed(() => formatChf(planPriceAmount(selectedPlan.value)))
 
 const totalPrice = computed(() => {
   let total = planPriceAmount(selectedPlan.value)
-  if (selectedPlan.value !== 'enterprise') total += addonSeats.value * addonPriceAmount('seats')
+  total += addonSeats.value * addonPriceAmount('seats')
   if (addonCourses.value && !planIncludesCourses.value) total += addonPriceAmount('courses')
   if (addonAffiliate.value && !planIncludesAffiliate.value) total += addonPriceAmount('affiliate')
   return formatChf(total)
@@ -967,9 +952,7 @@ const totalPrice = computed(() => {
 watch(selectedPlan, () => {
   if (planIncludesCourses.value) addonCourses.value = false
   if (planIncludesAffiliate.value) addonAffiliate.value = false
-  if (selectedPlan.value === 'enterprise') {
-    addonSeats.value = 0
-  } else if (prefillHint.value) {
+  if (prefillHint.value) {
     // Re-calculate required extra seats for the newly selected plan
     const planDef = PLANS.find(p => p.id === selectedPlan.value)
     const included = planDef?.includedSeats ?? 1
@@ -995,7 +978,7 @@ const startCheckout = async () => {
       body: {
         plan: selectedPlan.value,
         addons: {
-          seats: selectedPlan.value !== 'enterprise' ? addonSeats.value : 0,
+          seats: addonSeats.value,
           courses: addonCourses.value && !planIncludesCourses.value,
           affiliate: addonAffiliate.value && !planIncludesAffiliate.value,
         },

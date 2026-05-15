@@ -1,85 +1,56 @@
 <!-- components/admin/CashBalanceManager.vue -->
 <template>
-  <div class="bg-white rounded-lg shadow-sm border p-6">
+  <div>
 
-
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-3 sm:space-y-0">
-      <h2 class="text-xl sm:text-lg font-semibold text-gray-900">💰 Kassen</h2>
-      <div class="flex space-x-2">
-        <button
-          class="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium"
-          @click="showTopUpModal = true"
-        >
-          <span class="hidden sm:inline">Kasse aufstocken</span>
-          <span class="sm:hidden">➕ Aufstocken</span>
-        </button>
-        <button
-          class="flex-1 sm:flex-none px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
-          @click="showWithdrawModal = true"
-        >
-          <span class="hidden sm:inline">Kasse abstocken</span>
-          <span class="sm:hidden">➖ Abstocken</span>
-        </button>
+    <!-- Staff list -->
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div v-if="staffBalances.length === 0" class="px-5 py-10 text-center text-sm text-gray-400">
+        Keine Mitarbeiter-Kassen gefunden.
       </div>
-    </div>
-
-    <!-- Staff Overview -->
-    <div class="space-y-4">
-      <div 
-        v-for="staff in staffBalances" 
-        :key="staff.id"
-        class="border rounded-lg p-4 hover:shadow-sm transition-shadow"
-      >
-        <!-- Mobile: Stacked layout, Desktop: Side by side -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-          <!-- Staff Info -->
-          <div class="flex items-center space-x-3">
-            <div class="w-12 h-12 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <span class="text-blue-600 font-medium text-sm">
-                {{ staff.first_name?.charAt(0) }}{{ staff.last_name?.charAt(0) }}
-              </span>
-            </div>
-            <div class="min-w-0 flex-1">
-              <div class="font-medium text-gray-900 text-base sm:text-sm">
-                {{ staff.first_name }} {{ staff.last_name }}
-              </div>
-              <div class="text-sm text-gray-500 truncate">
-                {{ staff.email }}
-              </div>
-            </div>
+      <div v-else>
+        <div
+          v-for="(staff, idx) in staffBalances"
+          :key="staff.id"
+          class="flex items-center px-5 py-3.5"
+          :class="{ 'border-t border-gray-100': idx > 0 }"
+        >
+          <!-- Avatar -->
+          <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+            <span class="text-xs font-semibold text-gray-600">
+              {{ staff.first_name?.charAt(0) }}{{ staff.last_name?.charAt(0) }}
+            </span>
           </div>
-          
-          <!-- Balance Info -->
-          <div class="text-left sm:text-right">
-            <div class="text-xl sm:text-lg font-semibold text-green-600">
-              {{ (getStaffCurrentBalance(staff.id) / 100).toFixed(2) }} CHF
-            </div>
-            <div class="text-sm text-gray-500 hidden sm:block">Aktueller Kassenstand</div>
-          </div>
-        </div>
 
-        <!-- Action Button - Full width on mobile -->
-        <div class="mt-4 sm:mt-4 sm:flex sm:justify-end">
-          <button
-            class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-            @click="viewStaffTransactions(staff)"
+          <!-- Name + email -->
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-900">{{ staff.first_name }} {{ staff.last_name }}</p>
+            <p class="text-xs text-gray-400 truncate">{{ staff.email }}</p>
+          </div>
+
+          <!-- Balance -->
+          <span
+            class="text-sm font-semibold tabular-nums mx-6"
+            :class="getStaffCurrentBalance(staff.id) >= 0 ? 'text-gray-900' : 'text-red-600'"
           >
-            <span class="hidden sm:inline">Transaktionen</span>
-            <span class="sm:hidden">📊 Transaktionen anzeigen</span>
-          </button>
-        </div>
-      </div>
+            {{ (getStaffCurrentBalance(staff.id) / 100).toFixed(2) }} CHF
+          </span>
 
-      <div v-if="staffBalances.length === 0" class="text-center py-8">
-        <div class="text-4xl mb-4">👥</div>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">Keine Mitarbeiter gefunden</h3>
-        <p class="text-gray-600">Es sind noch keine Kassenstände für Mitarbeiter vorhanden.</p>
-        <button
-          class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          @click="loadStaffBalances"
-        >
-          Erneut laden
-        </button>
+          <!-- Actions -->
+          <div class="flex items-center gap-2">
+            <button
+              class="text-xs px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 font-medium transition-colors whitespace-nowrap"
+              @click="openHandoverModal(staff)"
+            >
+              Kassenabgabe
+            </button>
+            <button
+              class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium transition-colors"
+              @click="viewStaffTransactions(staff)"
+            >
+              Details
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -214,150 +185,69 @@
     </div>
 
     <!-- Staff Details Modal -->
-    <div v-if="showStaffModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div class="bg-white rounded-lg w-full max-w-4xl max-h-[95vh] flex flex-col">
+    <div v-if="showStaffModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+
         <!-- Header -->
-        <div class="flex-shrink-0 p-4 sm:p-6 border-b">
+        <div class="flex-shrink-0 px-6 py-4 border-b border-gray-100">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg sm:text-xl font-semibold text-gray-900">
-              Kassenübersicht: {{ selectedStaff?.first_name }} {{ selectedStaff?.last_name }}
-            </h3>
-            <button
-              class="text-gray-400 hover:text-gray-600 p-1"
-              @click="closeStaffModal"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
+            <div>
+              <h3 class="text-base font-semibold text-gray-900">{{ selectedStaff?.first_name }} {{ selectedStaff?.last_name }}</h3>
+              <p class="text-xs text-gray-400 mt-0.5">{{ selectedStaff?.email }}</p>
+            </div>
+            <div class="flex items-center gap-4">
+              <div class="text-right">
+                <p class="text-xs text-gray-400">Kassenstand</p>
+                <p class="text-lg font-semibold" :class="calculatedCurrentBalance >= 0 ? 'text-gray-900' : 'text-red-600'">
+                  {{ (calculatedCurrentBalance / 100).toFixed(2) }} CHF
+                </p>
+              </div>
+              <button class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors" @click="closeStaffModal">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
           </div>
-          
-          <div class="mt-2 text-sm text-gray-500">
-            Aktueller Kassenstand: <span class="font-medium text-green-600">{{ (calculatedCurrentBalance / 100).toFixed(2) }} CHF</span>
+          <!-- Summary strip -->
+          <div class="flex items-center gap-6 mt-3 pt-3 border-t border-gray-50 text-xs text-gray-500">
+            <span>Einzahlungen: <span class="font-medium text-green-600">+{{ (totalDeposits / 100).toFixed(2) }}</span></span>
+            <span>Abgaben: <span class="font-medium text-red-600">-{{ (totalWithdrawals / 100).toFixed(2) }}</span></span>
+            <span>Ausstehend: <span class="font-medium text-blue-600">+{{ (totalPendingTransactions / 100).toFixed(2) }}</span></span>
           </div>
         </div>
 
-        <!-- Content -->
-        <div class="flex-1 overflow-y-auto p-4 sm:p-6">
-          <div class="space-y-4 sm:space-y-6">
-            <!-- Balance Summary -->
-            <div class="bg-gray-50 rounded-lg p-4">
-              <h4 class="font-medium text-gray-900 mb-3">Kassenübersicht</h4>
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-sm">
-                <div class="bg-white p-3 rounded border">
-                  <div class="text-gray-600 text-xs uppercase tracking-wide">Aufstockungen</div>
-                  <div class="text-lg font-semibold text-green-600">
-                    +{{ (totalDeposits / 100).toFixed(2) }} CHF
-                  </div>
+        <!-- Feed -->
+        <div class="flex-1 overflow-y-auto">
+          <div v-if="staffFeedItems.length === 0" class="px-6 py-12 text-center text-sm text-gray-400">
+            Keine Kassenbewegungen vorhanden.
+          </div>
+          <div v-else>
+            <div
+              v-for="(item, idx) in staffFeedItems"
+              :key="item.id"
+              class="flex items-start px-6 py-3"
+              :class="{ 'border-t border-gray-100': idx > 0 }"
+            >
+              <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5 mr-3" :class="getItemStatusClass(item)">
+                {{ getItemStatusIcon(item) }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-900">{{ getItemTitle(item) }}</p>
+                <div class="flex items-center gap-3 mt-0.5">
+                  <span class="text-xs text-gray-400">{{ formatDateTime(item.data.created_at) }}</span>
+                  <span v-if="item.type === 'transaction' && item.data.student_name" class="text-xs text-gray-400">{{ item.data.student_name }}</span>
                 </div>
-                <div class="bg-white p-3 rounded border">
-                  <div class="text-gray-600 text-xs uppercase tracking-wide">Abstockungen</div>
-                  <div class="text-lg font-semibold text-red-600">
-                    -{{ (totalWithdrawals / 100).toFixed(2) }} CHF
-                  </div>
-                </div>
-                <div class="bg-white p-3 rounded border">
-                  <div class="text-gray-600 text-xs uppercase tracking-wide">Pending Transaktionen</div>
-                  <div class="text-lg font-semibold text-blue-600">
-                    +{{ (totalPendingTransactions / 100).toFixed(2) }} CHF
-                  </div>
+                <p v-if="item.data.notes" class="text-xs text-gray-500 mt-1 italic">{{ item.data.notes }}</p>
+                <div v-if="item.type === 'transaction' && item.data.status === 'pending'" class="flex items-center gap-2 mt-2">
+                  <button class="text-xs px-2.5 py-1 rounded-md bg-green-50 text-green-700 hover:bg-green-100 font-medium transition-colors" @click="confirmTransaction(item.data)">Bestätigen</button>
+                  <button class="text-xs px-2.5 py-1 rounded-md bg-red-50 text-red-700 hover:bg-red-100 font-medium transition-colors" @click="disputeTransaction(item.data)">Bestreiten</button>
+                  <button class="text-xs px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium transition-colors" @click="editTransaction(item.data)">Notiz</button>
                 </div>
               </div>
-              
-              <!-- Calculation Breakdown -->
-              <div class="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
-                <div class="text-xs text-blue-800 uppercase tracking-wide font-medium mb-2">Berechnung:</div>
-                <div class="text-sm text-blue-700 space-y-1">
-                  <div>+ Aufstockungen: {{ (totalDeposits / 100).toFixed(2) }} CHF</div>
-                  <div>- Abstockungen: {{ (totalWithdrawals / 100).toFixed(2) }} CHF</div>
-                  <div>+ Pending Transaktionen: {{ (totalPendingTransactions / 100).toFixed(2) }} CHF</div>
-                  <div class="border-t border-blue-300 pt-1 mt-2 font-medium">
-                    = Kassenstand: {{ (calculatedCurrentBalance / 100).toFixed(2) }} CHF
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- All Movements and Transactions -->
-            <div class="space-y-3 sm:space-y-4">
-              <div 
-                v-for="item in staffFeedItems" 
-                :key="item.id"
-                class="border rounded-lg p-3 sm:p-4 hover:shadow-sm transition-shadow"
-                :class="getItemBackgroundClass(item)"
-              >
-                <!-- Mobile: Stacked, Desktop: Side by side -->
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-                  <!-- Item Info -->
-                  <div class="flex items-start space-x-3">
-                    <div
-class="w-10 h-10 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
-                         :class="getItemStatusClass(item)">
-                      {{ getItemStatusIcon(item) }}
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div class="font-medium text-gray-900 text-base sm:text-sm">
-                        {{ getItemTitle(item) }}
-                      </div>
-                      <div class="text-sm text-gray-500">
-                        {{ formatDateTime(item.data.created_at) }}
-                      </div>
-                      <div v-if="item.type === 'transaction'" class="text-xs text-gray-400">
-                        Student: {{ item.data.student_name }}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <!-- Amount Info -->
-                  <div class="text-left sm:text-right">
-                    <div
-class="text-xl sm:text-lg font-semibold"
-                         :class="getItemAmountClass(item)">
-                      {{ getItemAmountText(item) }}
-                    </div>
-                    <div class="text-sm text-gray-500">
-                      {{ getItemSubtitle(item) }}
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- Notes -->
-                <div v-if="item.data.notes" class="mt-3 text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                  {{ item.data.notes }}
-                </div>
-
-                <!-- Action Buttons for Pending Transactions -->
-                <div v-if="item.type === 'transaction' && item.data.status === 'pending'" class="mt-3">
-                  <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                    <button
-                      class="w-full sm:w-auto px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium"
-                      @click="confirmTransaction(item.data)"
-                    >
-                      <span class="hidden sm:inline">✅ Bestätigen</span>
-                      <span class="sm:hidden">✅ Bestätigen</span>
-                    </button>
-                    <button
-                      class="w-full sm:w-auto px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
-                      @click="disputeTransaction(item.data)"
-                    >
-                      <span class="hidden sm:inline">❌ Bestreiten</span>
-                      <span class="sm:hidden">❌ Bestreiten</span>
-                    </button>
-                    <button
-                      class="w-full sm:w-auto px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-                      @click="editTransaction(item.data)"
-                    >
-                      <span class="hidden sm:inline">✏️ Notizen bearbeiten</span>
-                      <span class="sm:hidden">✏️ Notizen</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div v-if="staffFeedItems.length === 0" class="text-center py-8">
-                <div class="text-4xl mb-4">📊</div>
-                <h3 class="text-lg font-medium text-gray-900 mb-2">Keine Einträge gefunden</h3>
-                <p class="text-gray-600">Keine Kassenbewegungen oder Transaktionen vorhanden.</p>
+              <div class="text-right ml-4 flex-shrink-0">
+                <p class="text-sm font-semibold tabular-nums" :class="getItemAmountClass(item)">{{ getItemAmountText(item) }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ getItemSubtitle(item) }}</p>
               </div>
             </div>
           </div>
@@ -412,6 +302,76 @@ class="text-xl sm:text-lg font-semibold"
       </div>
     </div>
 
+    <!-- Cash Handover Modal -->
+    <div v-if="showHandoverModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div class="bg-white rounded-lg max-w-md w-full p-4 sm:p-6">
+        <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-1">Kassenabgabe erfassen</h3>
+        <p class="text-sm text-gray-500 mb-4">Bargeld wurde von Mitarbeiter an die Fahrschule übergeben.</p>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Mitarbeiter</label>
+            <select
+              v-model="handoverStaffId"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="">Mitarbeiter auswählen</option>
+              <option
+                v-for="staff in staffBalances"
+                :key="staff.id"
+                :value="staff.id"
+              >
+                {{ staff.first_name }} {{ staff.last_name }}
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Betrag (CHF)</label>
+            <input
+              v-model="handoverAmount"
+              type="number"
+              step="0.05"
+              min="0.05"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="0.00"
+            >
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Notizen <span class="text-gray-400">(optional)</span></label>
+            <input
+              v-model="handoverNotes"
+              type="text"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="z.B. Wochenauszahlung, Monatskasse..."
+            >
+          </div>
+
+          <div class="bg-gray-50 rounded-md px-3 py-2 text-sm text-gray-500">
+            Datum: {{ new Date().toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' }) }}
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
+          <button
+            class="w-full sm:flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium"
+            @click="closeHandoverModal"
+          >
+            Abbrechen
+          </button>
+          <button
+            :disabled="!handoverStaffId || !handoverAmount || isHandoverLoading"
+            class="w-full sm:flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            @click="submitHandover"
+          >
+            <span v-if="isHandoverLoading">Wird erfasst...</span>
+            <span v-else>Kassenabgabe erfassen</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast Component -->
     <Toast
       :show="showToast"
@@ -423,7 +383,7 @@ class="text-xl sm:text-lg font-semibold"
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue'
 import { formatDateTime } from '~/utils/dateUtils'
@@ -453,6 +413,13 @@ const withdrawAmount = ref('')
 const withdrawReason = ref('')
 const isWithdrawLoading = ref(false)
 
+// Cash Handover State
+const showHandoverModal = ref(false)
+const handoverStaffId = ref('')
+const handoverAmount = ref('')
+const handoverNotes = ref('')
+const isHandoverLoading = ref(false)
+
 // Staff Details State
 const selectedStaff = ref(null)
 const staffMovements = ref([])
@@ -480,7 +447,7 @@ const totalDeposits = computed(() => {
 const totalWithdrawals = computed(() => {
   if (!selectedStaff.value) return 0
   return staffMovements.value
-    .filter(m => m.movement_type === 'withdrawal')
+    .filter(m => m.movement_type === 'withdrawal' || m.movement_type === 'cash_handover')
     .reduce((sum, m) => sum + m.amount_rappen, 0)
 })
 
@@ -558,106 +525,12 @@ const loadStaffBalances = async () => {
   isLoading.value = true
   
   try {
-    // Get current user's tenant_id first
-    const currentUserData = authStore.user // ✅ MIGRATED
-    if (!currentUserData?.user) throw new Error('Not authenticated')
-    
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUserData.user.id)
-      .single()
-    
-    if (profileError || !userProfile?.tenant_id) {
-      throw new Error('User has no tenant assigned')
-    }
-    
-    logger.debug('🔍 Loading staff balances for tenant:', userProfile.tenant_id)
-    
-    // Get only staff users (exclude admins) - FILTERED BY TENANT
-    const { data: users, error: usersError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, email, role')
-      .eq('role', 'staff')
-      .eq('tenant_id', userProfile.tenant_id)
-      .eq('is_active', true)
-      .is('deleted_at', null)
-      .order('first_name')
-
-    if (usersError) throw usersError
-    
-    logger.debug('👥 Found users:', users?.map(u => ({ name: `${u.first_name} ${u.last_name}`, role: u.role, id: u.id })))
-
-    // Load existing balances from cash_balances - FILTERED BY TENANT
-    const { data: balancesRows, error: balancesError } = await supabase
-      .from('cash_balances')
-      .select('*')
-      .eq('tenant_id', userProfile.tenant_id)
-
-    if (balancesError) throw balancesError
-    
-    logger.debug('💰 Found cash_balances rows:', balancesRows)
-
-    const instructorIdToBalance = new Map((balancesRows || []).map(row => [row.instructor_id, row]))
-
-    // Get all movements and transactions for all staff - FILTERED BY TENANT
-    const { data: movements, error: movementsError } = await supabase
-      .from('cash_movements')
-      .select('*')
-      .eq('tenant_id', userProfile.tenant_id)
-
-    if (movementsError) throw movementsError
-    
-    logger.debug('📊 Found cash_movements:', movements)
-
-    const { data: transactions, error: transactionsError } = await supabase
-      .from('cash_transactions')
-      .select('*')
-      .eq('tenant_id', userProfile.tenant_id)
-
-    if (transactionsError) throw transactionsError
-    
-    logger.debug('💳 Found cash_transactions:', transactions)
-
-    // Calculate balance for each staff member
-    staffBalances.value = users.map(user => {
-      // Start with persisted balance if available
-      const persisted = instructorIdToBalance.get(user.id)
-      let balance = persisted ? (persisted.current_balance_rappen || 0) : 0
-
-      // If no persisted balance, compute from movements + pending transactions
-      if (!persisted) {
-        movements?.forEach(movement => {
-          if (movement.instructor_id === user.id) {
-            if (movement.movement_type === 'deposit') {
-              balance += movement.amount_rappen
-            } else if (movement.movement_type === 'withdrawal') {
-              balance -= movement.amount_rappen
-            }
-          }
-        })
-
-        transactions?.forEach(transaction => {
-          if (transaction.instructor_id === user.id && transaction.status === 'pending') {
-            balance += transaction.amount_rappen
-          }
-        })
-      }
-
-      return {
-        ...user,
-        current_balance_rappen: balance,
-        last_updated: persisted?.last_updated || null,
-        notes: persisted?.notes || null
-      }
+    const response: any = await $fetch('/api/admin/cash-management', {
+      method: 'POST',
+      body: { action: 'load_staff_balances' }
     })
-
-    logger.debug('💰 Staff balances (with persisted where available):', staffBalances.value.map(s => ({
-      name: `${s.first_name} ${s.last_name}`,
-      balance: s.current_balance_rappen / 100
-    })))
-
-  } catch (err) {
+    staffBalances.value = response.data || []
+  } catch (err: any) {
     console.error('Error loading staff balances:', err)
     showErrorToast('Fehler beim Laden der Kassenstände', err.message)
     staffBalances.value = []
@@ -679,15 +552,11 @@ const viewStaffTransactions = async (staff) => {
 // Load staff movements
 const loadStaffMovements = async (staffId) => {
   try {
-    const { data, error } = await supabase
-      .from('cash_movements')
-      .select('*')
-      .eq('instructor_id', staffId)
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-    staffMovements.value = data || []
-
+    const response: any = await $fetch('/api/admin/cash-management', {
+      method: 'POST',
+      body: { action: 'load_staff_movements', instructor_id: staffId }
+    })
+    staffMovements.value = response.data || []
   } catch (err) {
     console.error('Error loading staff movements:', err)
     staffMovements.value = []
@@ -697,32 +566,11 @@ const loadStaffMovements = async (staffId) => {
 // Load staff transactions
 const loadStaffTransactions = async (staffId) => {
   try {
-    logger.debug('🔍 Loading transactions for staff:', staffId)
-    
-    const { data, error } = await supabase
-      .from('cash_transactions')
-      .select(`
-        *,
-        student:student_id(id, first_name, last_name)
-      `)
-      .eq('instructor_id', staffId)
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-
-    staffTransactions.value = (data || []).map(transaction => ({
-      ...transaction,
-      student_name: transaction.student ? `${transaction.student.first_name} ${transaction.student.last_name}` : 'Unbekannt'
-    }))
-
-    logger.debug('✅ Transactions loaded:', {
-      total: staffTransactions.value.length,
-      pending: staffTransactions.value.filter(t => t.status === 'pending').length,
-      confirmed: staffTransactions.value.filter(t => t.status === 'confirmed').length,
-      disputed: staffTransactions.value.filter(t => t.status === 'disputed').length,
-      transactions: staffTransactions.value
+    const response: any = await $fetch('/api/admin/cash-management', {
+      method: 'POST',
+      body: { action: 'load_staff_transactions', instructor_id: staffId }
     })
-
+    staffTransactions.value = response.data || []
   } catch (err) {
     console.error('Error loading staff transactions:', err)
     staffTransactions.value = []
@@ -758,99 +606,33 @@ const submitTopUp = async () => {
 
   try {
     const amountRappen = Math.round(parseFloat(topUpAmount.value) * 100)
-    
-    // Get current balance from staffBalances (already calculated)
     const staff = staffBalances.value.find(s => s.id === topUpStaffId.value)
     const currentBalance = staff ? staff.current_balance_rappen : 0
-    
-    logger.debug('💰 Topping up cash:', {
-      staffId: topUpStaffId.value,
-      amount: topUpAmount.value,
-      currentBalance: currentBalance / 100,
-      amountRappen
-    })
-    
-    // Calculate new balance after top-up
     const newBalance = currentBalance + amountRappen
-    
-    // Get current admin user ID
-    const user = authStore.user // ✅ MIGRATED: Use auth store instead
-    
-    // Insert movement
-    const { error: movementError } = await supabase
-      .from('cash_movements')
-      .insert({
+
+    await $fetch('/api/admin/cash-management', {
+      method: 'POST',
+      body: {
+        action: 'top_up_cash',
         instructor_id: topUpStaffId.value,
-        movement_type: 'deposit',
         amount_rappen: amountRappen,
         balance_before_rappen: currentBalance,
         balance_after_rappen: newBalance,
-        performed_by: user?.id,
         notes: topUpReason.value || 'Kasse aufgestockt'
-      })
-
-    if (movementError) throw movementError
+      }
+    })
 
     closeTopUpModal()
     await loadStaffBalances()
-    
-    // Refresh staff data if modal is open
     if (selectedStaff.value && selectedStaff.value.id === topUpStaffId.value) {
       await refreshStaffData(topUpStaffId.value)
     }
-
     showSuccessToast('Kasse erfolgreich aufgestockt!')
-
   } catch (err) {
     console.error('Error topping up cash:', err)
     showErrorToast('Fehler beim Aufstocken der Kasse', err.message)
   } finally {
     isTopUpLoading.value = false
-  }
-}
-
-// Helper function to calculate current balance for a specific staff member (async version for database calls)
-const calculateCurrentBalance = async (staffId) => {
-  try {
-    // Get movements for this staff member
-    const { data: movements, error: movementsError } = await supabase
-      .from('cash_movements')
-      .select('*')
-      .eq('instructor_id', staffId)
-      .order('created_at', { ascending: true })
-
-    if (movementsError) throw movementsError
-
-    // Get transactions for this staff member
-    const { data: transactions, error: transactionsError } = await supabase
-      .from('cash_transactions')
-      .select('*')
-      .eq('instructor_id', staffId)
-
-    if (transactionsError) throw transactionsError
-
-    let balance = 0
-
-    // Calculate from movements
-    movements?.forEach(movement => {
-      if (movement.movement_type === 'deposit') {
-        balance += movement.amount_rappen
-      } else if (movement.movement_type === 'withdrawal') {
-        balance -= movement.amount_rappen
-      }
-    })
-
-    // Calculate from transactions (only pending ones, confirmed ones are removed from DB)
-    transactions?.forEach(transaction => {
-      if (transaction.status === 'pending') {
-        balance += transaction.amount_rappen
-      }
-    })
-
-    return balance
-  } catch (err) {
-    console.error('Error calculating current balance:', err)
-    return 0
   }
 }
 
@@ -893,49 +675,28 @@ const submitWithdraw = async () => {
 
   try {
     const amountRappen = Math.round(parseFloat(withdrawAmount.value) * 100)
-    
-    // Get current balance from staffBalances (already calculated)
     const staff = staffBalances.value.find(s => s.id === withdrawStaffId.value)
     const currentBalance = staff ? staff.current_balance_rappen : 0
-    
-    logger.debug('💰 Withdrawing cash:', {
-      staffId: withdrawStaffId.value,
-      amount: withdrawAmount.value,
-      currentBalance: currentBalance / 100,
-      amountRappen
-    })
-    
-    // Calculate new balance after withdrawal
     const newBalance = currentBalance - amountRappen
-    
-    // Get current admin user ID
-    const user = authStore.user // ✅ MIGRATED: Use auth store instead
-    
-    // Insert movement
-    const { error: movementError } = await supabase
-      .from('cash_movements')
-      .insert({
+
+    await $fetch('/api/admin/cash-management', {
+      method: 'POST',
+      body: {
+        action: 'withdraw_cash',
         instructor_id: withdrawStaffId.value,
-        movement_type: 'withdrawal',
         amount_rappen: amountRappen,
         balance_before_rappen: currentBalance,
         balance_after_rappen: newBalance,
-        performed_by: user?.id,
         notes: withdrawReason.value || 'Kasse abgestockt'
-      })
-
-    if (movementError) throw movementError
+      }
+    })
 
     closeWithdrawModal()
     await loadStaffBalances()
-    
-    // Refresh staff data if modal is open
     if (selectedStaff.value && selectedStaff.value.id === withdrawStaffId.value) {
       await refreshStaffData(withdrawStaffId.value)
     }
-
     showSuccessToast('Kasse erfolgreich abgestockt!')
-
   } catch (err) {
     console.error('Error withdrawing cash:', err)
     showErrorToast('Fehler beim Abstocken der Kasse', err.message)
@@ -944,45 +705,63 @@ const submitWithdraw = async () => {
   }
 }
 
+// Cash Handover
+const openHandoverModal = (staff = null) => {
+  handoverStaffId.value = staff ? staff.id : ''
+  handoverAmount.value = ''
+  handoverNotes.value = ''
+  showHandoverModal.value = true
+}
+
+const closeHandoverModal = () => {
+  showHandoverModal.value = false
+  handoverStaffId.value = ''
+  handoverAmount.value = ''
+  handoverNotes.value = ''
+}
+
+const submitHandover = async () => {
+  if (!handoverStaffId.value || !handoverAmount.value) return
+  isHandoverLoading.value = true
+  try {
+    const amountRappen = Math.round(parseFloat(handoverAmount.value) * 100)
+    await $fetch('/api/admin/cash-management', {
+      method: 'POST',
+      body: {
+        action: 'staff_cash_handover',
+        instructor_id: handoverStaffId.value,
+        amount_rappen: amountRappen,
+        notes: handoverNotes.value || null
+      }
+    })
+    closeHandoverModal()
+    await loadStaffBalances()
+    if (selectedStaff.value && selectedStaff.value.id === handoverStaffId.value) {
+      await refreshStaffData(handoverStaffId.value)
+    }
+    showSuccessToast('Kassenabgabe erfolgreich erfasst!')
+  } catch (err) {
+    console.error('Error recording cash handover:', err)
+    showErrorToast('Fehler beim Erfassen der Kassenabgabe', err.message)
+  } finally {
+    isHandoverLoading.value = false
+  }
+}
+
 // Transaction actions
 const confirmTransaction = async (transaction) => {
   try {
-    const { error } = await supabase
-      .from('cash_transactions')
-      .update({
-        status: 'confirmed',
-        confirmed_by: authStore.user?.id,
-        confirmed_at: new Date().toISOString()
-      })
-      .eq('id', transaction.id)
-
-    if (error) throw error
-
-    // Update local data
-    const transactionIndex = staffTransactions.value.findIndex(t => t.id === transaction.id)
-    if (transactionIndex !== -1) {
-      // Get current user ID from API
-      const userResponse = await $fetch<any>('/api/system/secure-operations', {
-        method: 'POST',
-        body: {
-          action: 'get-current-user-id'
-        }
-      })
-
-      if (!userResponse?.success) {
-        throw new Error('Could not get current user ID')
-      }
-
-      staffTransactions.value[transactionIndex].status = 'confirmed'
-      staffTransactions.value[transactionIndex].confirmed_by = userResponse.data.userId
-      staffTransactions.value[transactionIndex].confirmed_at = new Date().toISOString()
+    await $fetch('/api/admin/cash-management', {
+      method: 'POST',
+      body: { action: 'confirm_transaction', transaction_id: transaction.id, confirmation_amount: transaction.amount_rappen, confirmation_notes: '' }
+    })
+    const idx = staffTransactions.value.findIndex(t => t.id === transaction.id)
+    if (idx !== -1) {
+      staffTransactions.value[idx].status = 'confirmed'
+      staffTransactions.value[idx].confirmed_at = new Date().toISOString()
     }
-
-    // Force reactivity
     staffTransactions.value = [...staffTransactions.value]
-
     showSuccessToast('Transaktion erfolgreich bestätigt!')
-
   } catch (err) {
     console.error('Error confirming transaction:', err)
     showErrorToast('Fehler beim Bestätigen der Transaktion', err.message)
@@ -991,26 +770,14 @@ const confirmTransaction = async (transaction) => {
 
 const disputeTransaction = async (transaction) => {
   try {
-    const { error } = await supabase
-      .from('cash_transactions')
-      .update({
-        status: 'disputed'
-      })
-      .eq('id', transaction.id)
-
-    if (error) throw error
-
-    // Update local data
-    const transactionIndex = staffTransactions.value.findIndex(t => t.id === transaction.id)
-    if (transactionIndex !== -1) {
-      staffTransactions.value[transactionIndex].status = 'disputed'
-    }
-
-    // Force reactivity
+    await $fetch('/api/admin/cash-management', {
+      method: 'POST',
+      body: { action: 'dispute_transaction', transaction_id: transaction.id }
+    })
+    const idx = staffTransactions.value.findIndex(t => t.id === transaction.id)
+    if (idx !== -1) staffTransactions.value[idx].status = 'disputed'
     staffTransactions.value = [...staffTransactions.value]
-
     showSuccessToast('Transaktion als strittig markiert!')
-
   } catch (err) {
     console.error('Error disputing transaction:', err)
     showErrorToast('Fehler beim Markieren der Transaktion', err.message)
@@ -1025,31 +792,17 @@ const editTransaction = (transaction) => {
 
 const submitEdit = async () => {
   if (!selectedTransaction.value) return
-
   isEditing.value = true
-
   try {
-    const { error } = await supabase
-      .from('cash_transactions')
-      .update({ 
-        notes: editNotes.value
-      })
-      .eq('id', selectedTransaction.value.id)
-
-    if (error) throw error
-
-    // Update local data
-    const transactionIndex = staffTransactions.value.findIndex(t => t.id === selectedTransaction.value.id)
-    if (transactionIndex !== -1) {
-      staffTransactions.value[transactionIndex].notes = editNotes.value
-    }
-
-    // Force reactivity
+    await $fetch('/api/admin/cash-management', {
+      method: 'POST',
+      body: { action: 'edit_transaction_notes', transaction_id: selectedTransaction.value.id, notes: editNotes.value }
+    })
+    const idx = staffTransactions.value.findIndex(t => t.id === selectedTransaction.value.id)
+    if (idx !== -1) staffTransactions.value[idx].notes = editNotes.value
     staffTransactions.value = [...staffTransactions.value]
-
     closeEditModal()
     showSuccessToast('Notizen erfolgreich gespeichert!')
-
   } catch (err) {
     console.error('Error editing transaction:', err)
     showErrorToast('Fehler beim Speichern der Notizen', err.message)
@@ -1089,7 +842,8 @@ const getMovementTypeClass = (type) => {
     'deposit': 'bg-green-100 text-green-600',
     'withdrawal': 'bg-red-100 text-red-600',
     'cash_transaction': 'bg-blue-100 text-blue-600',
-    'adjustment': 'bg-yellow-100 text-yellow-600'
+    'adjustment': 'bg-yellow-100 text-yellow-600',
+    'cash_handover': 'bg-purple-100 text-purple-700'
   }
   return classes[type] || 'bg-gray-100 text-gray-600'
 }
@@ -1099,7 +853,8 @@ const getMovementTypeIcon = (type) => {
     'deposit': '➕',
     'withdrawal': '➖',
     'cash_transaction': '💰',
-    'adjustment': '⚖️'
+    'adjustment': '⚖️',
+    'cash_handover': '🏦'
   }
   return icons[type] || '❓'
 }
@@ -1110,7 +865,8 @@ const getMovementTypeText = (type) => {
     'withdrawal': 'Kasse abgestockt',
     'cash_transaction': 'Bargeldtransaktion',
     'adjustment': 'Korrektur',
-    'system_init': 'Kasse eröffnet'
+    'system_init': 'Kasse eröffnet',
+    'cash_handover': 'Kassenabgabe an Fahrschule'
   }
   return texts[type] || type
 }

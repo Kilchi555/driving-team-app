@@ -433,18 +433,13 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue'
-import { definePageMeta, navigateTo } from '#imports'
-import { useUIStore } from '~/stores/ui'
-import { useAuthStore } from '~/stores/auth'
+import { definePageMeta } from '#imports'
 
 // Layout
 definePageMeta({
   middleware: 'admin',
   layout: 'admin'
 })
-
-// Composables
-const { showSuccess, showError } = useUIStore()
 
 // State
 const isLoading = ref(true)
@@ -595,118 +590,31 @@ const loadData = async () => {
   error.value = null
   
   try {
-    const authStore = useAuthStore()
-    const tenantId = (authStore.userProfile as any)?.tenant_id
-    
-    if (!tenantId) {
-      throw new Error('Kein Tenant zugeordnet')
-    }
-    
-    // Load exam results with all related data
-    const { data: examData, error: examError } = await supabase
-      .from('exam_results')
-      .select(`
-        *,
-        appointments (
-          id,
-          title,
-          type,
-          user_id,
-          staff_id,
-          users:user_id (
-            first_name,
-            last_name
-          ),
-          staff:staff_id (
-            first_name,
-            last_name
-          )
-        ),
-        examiners (
-          id,
-          first_name,
-          last_name
-        )
-      `)
-      .eq('tenant_id', tenantId)
-      .order('exam_date', { ascending: false })
-    
-    if (examError) throw examError
-    
+    const result = await $fetch('/api/admin/exam-statistics') as any
+
     // Process exam results
-    examResults.value = (examData || []).map(exam => ({
+    examResults.value = (result.examResults || []).map((exam: any) => ({
       ...exam,
-      student_name: exam.appointments?.users ? 
-        `${exam.appointments.users.first_name} ${exam.appointments.users.last_name}` : 
-        'Unbekannt',
-      staff_name: exam.appointments?.staff ? 
-        `${exam.appointments.staff.first_name} ${exam.appointments.staff.last_name}` : 
-        'Unbekannt',
+      student_name: exam.appointments?.users
+        ? `${exam.appointments.users.first_name} ${exam.appointments.users.last_name}`
+        : 'Unbekannt',
+      staff_name: exam.appointments?.staff
+        ? `${exam.appointments.staff.first_name} ${exam.appointments.staff.last_name}`
+        : 'Unbekannt',
       staff_id: exam.appointments?.staff_id,
-      examiner_name: exam.examiners ? 
-        `${exam.examiners.first_name} ${exam.examiners.last_name}` : 
-        'Unbekannt',
-      category: exam.appointments?.type || 'Unbekannt'
+      examiner_name: exam.examiners
+        ? `${exam.examiners.first_name} ${exam.examiners.last_name}`
+        : 'Unbekannt',
+      category: exam.appointments?.type || 'Unbekannt',
     }))
-    
-    // Load staff list
-    const { data: staffData, error: staffError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name')
-      .eq('tenant_id', tenantId)
-      .eq('role', 'staff')
-      .eq('is_active', true)
-    
-    if (staffError) throw staffError
-    staffList.value = staffData || []
-    
-    // Load examiner list
-    const { data: examinerData, error: examinerError } = await supabase
-      .from('examiners')
-      .select('id, first_name, last_name')
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true)
-    
-    if (examinerError) throw examinerError
-    examinerList.value = examinerData || []
-    
-    // Get tenant business_type first
-    const { data: tenantData, error: tenantError } = await supabase
-      .from('tenants')
-      .select('business_type')
-      .eq('id', tenantId)
-      .single()
 
-    if (tenantError) throw tenantError
-    
-    // Only load categories if business_type is driving_school
-    if (tenantData?.business_type !== 'driving_school') {
-      logger.debug('🚫 Categories not available for business_type:', tenantData?.business_type)
-      categories.value = []
-      isLoading.value = false
-      return
-    }
-
-    // Load categories
-    const { data: categoryData, error: categoryError } = await supabase
-      .from('categories')
-      .select('code, name')
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true)
-    
-    if (categoryError) throw categoryError
-    categoryList.value = categoryData || []
-    
-    logger.debug('✅ Exam statistics loaded:', {
-      exams: examResults.value.length,
-      staff: staffList.value.length,
-      examiners: examinerList.value.length,
-      categories: categoryList.value.length
-    })
+    staffList.value = result.staffList || []
+    examinerList.value = result.examinerList || []
+    categoryList.value = result.categoryList || []
     
   } catch (err: any) {
     console.error('❌ Error loading exam statistics:', err)
-    error.value = err.message || 'Fehler beim Laden der Prüfungsstatistiken'
+    error.value = err.data?.statusMessage || err.message || 'Fehler beim Laden der Prüfungsstatistiken'
   } finally {
     isLoading.value = false
   }
@@ -740,42 +648,8 @@ const getInitials = (firstName: string, lastName: string) => {
   return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase()
 }
 
-// Auth check
-const authStore = useAuthStore()
-
 // Lifecycle
-onMounted(async () => {
-  logger.debug('🔍 Exam statistics page mounted, checking auth...')
-  
-  // Warte kurz auf Auth-Initialisierung
-  let attempts = 0
-  while (!authStore.isInitialized && attempts < 10) {
-    await new Promise(resolve => setTimeout(resolve, 100))
-    attempts++
-  }
-  
-  logger.debug('🔍 Auth state:', {
-    isInitialized: authStore.isInitialized,
-    isLoggedIn: authStore.isLoggedIn,
-    isAdmin: authStore.isAdmin,
-    hasProfile: authStore.hasProfile
-  })
-  
-  // Prüfe ob User eingeloggt ist
-  if (!authStore.isLoggedIn) {
-    logger.debug('❌ User not logged in, redirecting to dashboard')
-    return navigateTo('/dashboard')
-  }
-  
-  // Prüfe ob User Admin ist
-  if (!authStore.isAdmin) {
-    logger.debug('❌ User not admin, redirecting to dashboard')
-    return navigateTo('/dashboard')
-  }
-  
-  logger.debug('✅ Auth check passed, loading exam statistics...')
-  
-  // Original onMounted logic
+onMounted(() => {
   loadData()
 })
 </script>

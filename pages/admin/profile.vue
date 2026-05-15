@@ -66,7 +66,7 @@
           <button
             v-for="tab in tabs"
             :key="tab.id"
-            @click="activeTab = tab.id"
+            @click="selectTab(tab.id)"
             :class="[
               'py-2 px-1 border-b-2 font-medium text-sm transition-colors',
               activeTab === tab.id
@@ -908,7 +908,7 @@
         </div>
 
         <!-- Eventtypen Tab -->
-        <div v-show="activeTab === 'eventtypes'" class="space-y-6">
+        <div v-if="activeTab === 'eventtypes'" class="space-y-6">
           <div class="bg-white rounded-lg shadow-sm border p-6">
             <EventTypesManager />
           </div>
@@ -1235,7 +1235,7 @@
         </div>
 
         <!-- Payments Tab -->
-        <div v-show="activeTab === 'payments'" class="space-y-6">
+        <div v-if="activeTab === 'payments'" class="space-y-6">
 
           <!-- ─── Online-Zahlungen Onboarding ─────────────────────────────── -->
           <WalleeOnboardingWidget />
@@ -1695,12 +1695,12 @@
         </div>
 
         <!-- Reglemente Tab -->
-        <div v-show="activeTab === 'reglemente'" class="space-y-6">
+        <div v-if="activeTab === 'reglemente'" class="space-y-6">
           <ReglementeManager />
         </div>
 
         <!-- E-Mail Domain Tab -->
-        <div v-show="activeTab === 'email'" class="space-y-6">
+        <div v-if="activeTab === 'email'" class="space-y-6">
           <EmailDomainSettings />
         </div>
 
@@ -1712,9 +1712,8 @@
 <script setup lang="ts">
 
 import { ref, onMounted, markRaw, watch, onUnmounted } from 'vue'
-import { navigateTo } from '#app'
+import { navigateTo, useRoute, useRouter } from '#app'
 import { logger } from '~/utils/logger'
-import { getSupabase } from '~/utils/supabase'
 import { compressImage, validateImageFile, getFileSizeKB } from '~/utils/imageCompression'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useUIStore } from '~/stores/ui'
@@ -1782,7 +1781,10 @@ const { showSuccess, showError } = useUIStore()
 
 // State
 const isSaving = ref(false)
-const activeTab = ref('design')
+const route = useRoute()
+const router = useRouter()
+const VALID_TABS = ['design', 'contact', 'logos', 'security', 'features', 'eventtypes', 'reminders', 'templates', 'payments', 'reglemente', 'email']
+const activeTab = ref(VALID_TABS.includes(route.query.tab as string) ? (route.query.tab as string) : 'design')
 const selectedPreset = ref('')
 const selectedFont = ref('')
 const showTabDropdown = ref(false)
@@ -1844,22 +1846,17 @@ const invoiceSettings = ref({
 })
 const isSavingInvoiceSettings = ref(false)
 
-const loadInvoiceSettings = async (tenantId: string) => {
+const loadInvoiceSettings = async (_tenantId: string) => {
   try {
-    const supabase = getSupabase()
-    const { data } = await supabase
-      .from('tenants')
-      .select('qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_number_prefix')
-      .eq('id', tenantId)
-      .maybeSingle()
+    const data = await $fetch<any>('/api/admin/invoice-settings')
     if (data) {
       invoiceSettings.value = {
-        qr_iban: (data as any).qr_iban || '',
-        invoice_street: (data as any).invoice_street || '',
-        invoice_street_nr: (data as any).invoice_street_nr || '',
-        invoice_zip: (data as any).invoice_zip || '',
-        invoice_city: (data as any).invoice_city || '',
-        invoice_number_prefix: (data as any).invoice_number_prefix || 'RE',
+        qr_iban: data.qr_iban || '',
+        invoice_street: data.invoice_street || '',
+        invoice_street_nr: data.invoice_street_nr || '',
+        invoice_zip: data.invoice_zip || '',
+        invoice_city: data.invoice_city || '',
+        invoice_number_prefix: data.invoice_number_prefix || 'RE',
       }
     }
   } catch (e) {
@@ -2017,6 +2014,7 @@ const brandingForm = ref({
 const selectTab = (tabId: string) => {
   activeTab.value = tabId
   showTabDropdown.value = false
+  router.replace({ query: { ...route.query, tab: tabId } })
 }
 
 const getCurrentTabName = () => {
@@ -2034,18 +2032,13 @@ const loadData = async () => {
     let tenantId = (authStore.userProfile as any)?.tenant_id
     
     if (!tenantId) {
-      const supabase = getSupabase()
-      const authUser = authStore.user
-
-      if (authUser?.email) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('tenant_id')
-          .eq('email', authUser.email)
-          .eq('is_active', true)
-          .single()
-
-        tenantId = userData?.tenant_id
+      // Fallback: resolve tenant_id server-side via any authenticated admin endpoint
+      try {
+        const settings = await $fetch<any[]>('/api/admin/tenant-settings')
+        // If this succeeds, tenant_id is confirmed server-side; read from auth store again
+        tenantId = (authStore.userProfile as any)?.tenant_id
+      } catch {
+        // tenant_id could not be resolved
       }
     }
     
@@ -2104,65 +2097,45 @@ const autoSaveSessionSettings = async () => {
   }
 }
 
-const loadSessionSettings = async (tenantId: string) => {
+const loadSessionSettings = async (_tenantId: string) => {
   try {
-    const supabase = getSupabase()
-    const { data, error } = await supabase
-      .from('tenant_settings')
-      .select('setting_key, setting_value')
-      .eq('tenant_id', tenantId)
-      .eq('category', 'security')
-    
-    if (error) {
-      console.warn('Warning loading session settings:', error)
-      return
-    }
-    
-    if (data) {
-      for (const setting of data) {
-        switch (setting.setting_key) {
-          case 'session_inactivity_timeout_minutes':
-            sessionSettings.value.inactivityTimeoutMinutes = parseInt(setting.setting_value) || 0
-            break
-          case 'session_force_daily_logout':
-            sessionSettings.value.forceDailyLogout = setting.setting_value === 'true'
-            break
-          case 'session_allow_remember_me':
-            sessionSettings.value.allowRememberMe = setting.setting_value !== 'false'
-            break
-          case 'session_warning_before_timeout_minutes':
-            sessionSettings.value.warningBeforeTimeoutMinutes = parseInt(setting.setting_value) || 5
-            break
-        }
+    const data = await $fetch<any[]>('/api/admin/tenant-settings')
+    const securitySettings = data.filter((s: any) => s.category === 'security')
+
+    for (const setting of securitySettings) {
+      switch (setting.setting_key) {
+        case 'session_inactivity_timeout_minutes':
+          sessionSettings.value.inactivityTimeoutMinutes = parseInt(setting.setting_value) || 0
+          break
+        case 'session_force_daily_logout':
+          sessionSettings.value.forceDailyLogout = setting.setting_value === 'true'
+          break
+        case 'session_allow_remember_me':
+          sessionSettings.value.allowRememberMe = setting.setting_value !== 'false'
+          break
+        case 'session_warning_before_timeout_minutes':
+          sessionSettings.value.warningBeforeTimeoutMinutes = parseInt(setting.setting_value) || 5
+          break
       }
     }
   } catch (error) {
-    console.error('Error loading session settings:', error)
+    console.warn('Warning loading session settings:', error)
   }
 }
 
 // Load Payment Settings
 const loadPaymentSettings = async (tenantId: string) => {
   try {
-    const supabase = getSupabase()
-    const { data, error } = await supabase
-      .from('tenant_settings')
-      .select('setting_value')
-      .eq('tenant_id', tenantId)
-      .eq('category', 'payment')
-      .eq('setting_key', 'payment_settings')
-      .maybeSingle()
-    
-    if (error && error.code !== 'PGRST116') {
-      console.warn('Warning loading payment settings:', error)
-      return
-    }
-    
-    if (data?.setting_value) {
-      const parsed = typeof data.setting_value === 'string' 
-        ? JSON.parse(data.setting_value)
-        : data.setting_value
-      
+    const data = await $fetch<any[]>('/api/admin/tenant-settings')
+    const paymentSetting = data.find(
+      (s: any) => s.category === 'payment' && s.setting_key === 'payment_settings'
+    )
+
+    if (paymentSetting?.setting_value) {
+      const parsed = typeof paymentSetting.setting_value === 'string'
+        ? JSON.parse(paymentSetting.setting_value)
+        : paymentSetting.setting_value
+
       paymentSettings.value = {
         ...paymentSettings.value,
         ...parsed
@@ -2170,29 +2143,16 @@ const loadPaymentSettings = async (tenantId: string) => {
       logger.debug('✅ Payment settings loaded:', paymentSettings.value)
     }
 
-    // Load staff members for cash payment permissions
     await loadStaffMembers(tenantId)
   } catch (error) {
     console.error('Error loading payment settings:', error)
   }
 }
 
-const loadStaffMembers = async (tenantId: string) => {
+const loadStaffMembers = async (_tenantId: string) => {
   loadingStaff.value = true
   try {
-    const supabase = getSupabase()
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, email, first_name, last_name, role, can_accept_cash')
-      .eq('tenant_id', tenantId)
-      .in('role', ['staff', 'admin'])
-      .order('first_name', { ascending: true })
-    
-    if (error) {
-      console.error('Error loading staff members:', error)
-      return
-    }
-    
+    const data = await $fetch<any[]>('/api/admin/staff-members')
     staffMembers.value = data || []
     logger.debug('✅ Staff members loaded:', staffMembers.value.length)
   } catch (error) {
@@ -2204,20 +2164,10 @@ const loadStaffMembers = async (tenantId: string) => {
 
 const updateStaffCashPermission = async (staff: any) => {
   try {
-    const supabase = getSupabase()
-    const { error } = await supabase
-      .from('users')
-      .update({ can_accept_cash: staff.can_accept_cash })
-      .eq('id', staff.id)
-    
-    if (error) {
-      console.error('Error updating staff cash permission:', error)
-      showError('Fehler beim Speichern der Berechtigung')
-      // Revert the change
-      staff.can_accept_cash = !staff.can_accept_cash
-      return
-    }
-    
+    await $fetch('/api/admin/update-staff-cash-permission', {
+      method: 'POST',
+      body: { user_id: staff.id, can_accept_cash: staff.can_accept_cash }
+    })
     logger.debug('✅ Staff cash permission updated:', staff.id, staff.can_accept_cash)
     showSuccess(`Berechtigung für ${staff.first_name} ${staff.last_name} aktualisiert`)
   } catch (error) {
@@ -2230,30 +2180,18 @@ const updateStaffCashPermission = async (staff: any) => {
 // Save Payment Settings
 const savePaymentSettings = async () => {
   try {
-    const tenantId = (authStore.userProfile as any)?.tenant_id
-    if (!tenantId) {
-      console.warn('No tenant_id for saving payment settings')
-      return
-    }
-
     logger.debug('💾 Saving payment settings...')
     showAutoSaving()
 
-    const supabase = getSupabase()
-    const { error } = await supabase
-      .from('tenant_settings')
-      .upsert({
-        tenant_id: tenantId,
+    await $fetch('/api/admin/tenant-settings', {
+      method: 'POST',
+      body: {
         category: 'payment',
         setting_key: 'payment_settings',
         setting_value: JSON.stringify(paymentSettings.value),
-        setting_type: 'json',
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'tenant_id,category,setting_key'
-      })
-
-    if (error) throw error
+        setting_type: 'json'
+      }
+    })
 
     logger.debug('✅ Payment settings saved')
     showAutoSaveSuccess('Gespeichert')
@@ -2264,27 +2202,18 @@ const savePaymentSettings = async () => {
 }
 
 // Load Reminder Settings
-const loadReminderSettings = async (tenantId: string) => {
+const loadReminderSettings = async (_tenantId: string) => {
   try {
-    const supabase = getSupabase()
-    const { data, error } = await supabase
-      .from('tenant_settings')
-      .select('setting_value')
-      .eq('tenant_id', tenantId)
-      .eq('category', 'payment')
-      .eq('setting_key', 'reminder_settings')
-      .maybeSingle()
-    
-    if (error && error.code !== 'PGRST116') {
-      console.warn('Warning loading reminder settings:', error)
-      return
-    }
-    
-    if (data?.setting_value) {
-      const parsed = typeof data.setting_value === 'string' 
-        ? JSON.parse(data.setting_value)
-        : data.setting_value
-      
+    const data = await $fetch<any[]>('/api/admin/tenant-settings')
+    const reminderSetting = data.find(
+      (s: any) => s.category === 'payment' && s.setting_key === 'reminder_settings'
+    )
+
+    if (reminderSetting?.setting_value) {
+      const parsed = typeof reminderSetting.setting_value === 'string'
+        ? JSON.parse(reminderSetting.setting_value)
+        : reminderSetting.setting_value
+
       reminderSettings.value = {
         ...reminderSettings.value,
         ...parsed
@@ -2292,61 +2221,25 @@ const loadReminderSettings = async (tenantId: string) => {
       logger.debug('✅ Reminder settings loaded:', reminderSettings.value)
     }
   } catch (error) {
-    console.error('Error loading reminder settings:', error)
+    console.warn('Warning loading reminder settings:', error)
   }
 }
 
 // Save Reminder Settings
 const saveReminderSettings = async () => {
   try {
-    const tenantId = (authStore.userProfile as any)?.tenant_id
-    if (!tenantId) {
-      console.warn('No tenant_id for saving reminder settings')
-      showError('Fehler: Tenant ID nicht gefunden')
-      return
-    }
-
     logger.debug('💾 Saving reminder settings...')
     isSaving.value = true
 
-    const supabase = getSupabase()
-    
-    // Check if settings exist
-    const { data: existing } = await supabase
-      .from('tenant_settings')
-      .select('id')
-      .eq('tenant_id', tenantId)
-      .eq('category', 'payment')
-      .eq('setting_key', 'reminder_settings')
-      .maybeSingle()
-    
-    if (existing?.id) {
-      // Update existing
-      const { error } = await supabase
-        .from('tenant_settings')
-        .update({
-          setting_value: reminderSettings.value,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existing.id)
-      
-      if (error) throw error
-    } else {
-      // Insert new
-      const { error } = await supabase
-        .from('tenant_settings')
-        .insert({
-          tenant_id: tenantId,
-          category: 'payment',
-          setting_key: 'reminder_settings',
-          setting_type: 'json',
-          setting_value: reminderSettings.value,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-      
-      if (error) throw error
-    }
+    await $fetch('/api/admin/tenant-settings', {
+      method: 'POST',
+      body: {
+        category: 'payment',
+        setting_key: 'reminder_settings',
+        setting_value: reminderSettings.value,
+        setting_type: 'json'
+      }
+    })
 
     logger.debug('✅ Reminder settings saved')
     showSuccess('Erinnerungs-Einstellungen gespeichert')
@@ -2359,20 +2252,9 @@ const saveReminderSettings = async () => {
 }
 
 // Load SARI Settings
-const loadSARISettings = async (tenantId: string) => {
+const loadSARISettings = async (_tenantId: string) => {
   try {
-    const supabase = getSupabase()
-    const { data: tenant, error } = await supabase
-      .from('tenants')
-      .select('sari_enabled, sari_environment, sari_client_id, sari_client_secret, sari_username, sari_password')
-      .eq('id', tenantId)
-      .maybeSingle()
-    
-    if (error) {
-      console.warn('Warning loading SARI settings:', error)
-      return
-    }
-    
+    const tenant = await $fetch<any>('/api/admin/sari-settings')
     if (tenant) {
       sariSettings.value = {
         sari_enabled: tenant.sari_enabled || false,
@@ -2385,32 +2267,19 @@ const loadSARISettings = async (tenantId: string) => {
       logger.debug('✅ SARI settings loaded')
     }
   } catch (error) {
-    console.error('Error loading SARI settings:', error)
+    console.warn('Warning loading SARI settings:', error)
   }
 }
 
 // Load Templates
-const loadTemplates = async (tenantId: string) => {
+const loadTemplates = async (_tenantId: string) => {
   try {
-    const supabase = getSupabase()
-    const { data, error } = await supabase
-      .from('reminder_templates')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .order('stage')
-    
-    if (error && error.code !== 'PGRST116') {
-      console.warn('Warning loading templates:', error)
-      return
-    }
-    
+    const data = await $fetch<any[]>('/api/admin/reminder-templates')
     allTemplates.value = data || []
     logger.debug('✅ Templates loaded:', allTemplates.value.length)
-    
-    // Load initial template
     loadSelectedTemplate()
   } catch (error) {
-    console.error('Error loading templates:', error)
+    console.warn('Warning loading templates:', error)
   }
 }
 
@@ -2560,52 +2429,24 @@ const previewTemplate = (template: string) => {
 // Save Template
 const saveTemplate = async () => {
   try {
-    const tenantId = (authStore.userProfile as any)?.tenant_id
-    if (!tenantId) {
-      console.warn('No tenant_id for saving template')
-      return
-    }
-
     logger.debug('💾 Saving template...')
     showAutoSaving()
 
-    const supabase = getSupabase()
-
-    const templateData = {
-      tenant_id: tenantId,
-      channel: selectedTemplateChannel.value,
-      stage: selectedTemplateStage.value,
-      language: 'de',
-      subject: selectedTemplateChannel.value === 'email' ? currentTemplate.value.subject : null,
-      body: currentTemplate.value.body,
-      updated_at: new Date().toISOString()
-    }
-
-    if (currentTemplate.value.id) {
-      // Update existing template
-      const { error } = await supabase
-        .from('reminder_templates')
-        .update(templateData)
-        .eq('id', currentTemplate.value.id)
-      
-      if (error) throw error
-    } else {
-      // Insert new template
-      const { data, error } = await supabase
-        .from('reminder_templates')
-        .insert({
-          ...templateData,
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single()
-      
-      if (error) throw error
-      
-      if (data) {
-        currentTemplate.value.id = data.id
-        allTemplates.value.push(data)
+    const result = await $fetch<any>('/api/admin/reminder-templates', {
+      method: 'POST',
+      body: {
+        id: currentTemplate.value.id,
+        channel: selectedTemplateChannel.value,
+        stage: selectedTemplateStage.value,
+        language: 'de',
+        subject: currentTemplate.value.subject,
+        body: currentTemplate.value.body
       }
+    })
+
+    if (!currentTemplate.value.id && result?.data) {
+      currentTemplate.value.id = result.data.id
+      allTemplates.value.push(result.data)
     }
 
     logger.debug('✅ Template saved')
@@ -2657,44 +2498,34 @@ const saveBranding = async () => {
 
 const saveSessionSettings = async () => {
   if (!currentTenantBranding.value) return
-  
-  const supabase = getSupabase()
-  const tenantId = currentTenantBranding.value.id
-  
+
   const settingsToSave = [
     {
       setting_key: 'session_inactivity_timeout_minutes',
-      setting_value: sessionSettings.value.inactivityTimeoutMinutes.toString()
+      setting_value: sessionSettings.value.inactivityTimeoutMinutes.toString(),
+      setting_type: 'number'
     },
     {
       setting_key: 'session_force_daily_logout',
-      setting_value: sessionSettings.value.forceDailyLogout.toString()
+      setting_value: sessionSettings.value.forceDailyLogout.toString(),
+      setting_type: 'boolean'
     },
     {
       setting_key: 'session_allow_remember_me',
-      setting_value: sessionSettings.value.allowRememberMe.toString()
+      setting_value: sessionSettings.value.allowRememberMe.toString(),
+      setting_type: 'boolean'
     },
     {
       setting_key: 'session_warning_before_timeout_minutes',
-      setting_value: sessionSettings.value.warningBeforeTimeoutMinutes.toString()
+      setting_value: sessionSettings.value.warningBeforeTimeoutMinutes.toString(),
+      setting_type: 'number'
     }
-  ]
-  
-  for (const setting of settingsToSave) {
-    const { error } = await supabase
-      .from('tenant_settings')
-      .upsert({
-        tenant_id: tenantId,
-        category: 'security',
-        setting_key: setting.setting_key,
-        setting_value: setting.setting_value,
-        setting_type: setting.setting_value === 'true' || setting.setting_value === 'false' ? 'boolean' : 'number'
-      }, {
-        onConflict: 'tenant_id,category,setting_key'
-      })
-    
-    if (error) throw error
-  }
+  ].map(s => ({ ...s, category: 'security' }))
+
+  await $fetch('/api/admin/tenant-settings', {
+    method: 'POST',
+    body: settingsToSave
+  })
 }
 
 const applySelectedPreset = () => {

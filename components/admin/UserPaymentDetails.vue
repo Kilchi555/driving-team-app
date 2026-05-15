@@ -1653,18 +1653,9 @@ const filteredAppointments = computed(() => {
 })
 
 // Methods
-const loadEventTypes = async (tenantId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from('event_types')
-      .select('code, name')
-      .eq('tenant_id', tenantId)
-    
-    if (error) throw error
-    eventTypes.value = data || []
-  } catch (err) {
-    console.warn('Could not load event types:', err)
-  }
+const loadEventTypes = async (_tenantId: string) => {
+  // Event types are already loaded via loadUserDetails() from the API
+  // This function is kept for compatibility but does nothing
 }
 
 const getEventTypeLabel = (code?: string): string => {
@@ -2548,14 +2539,11 @@ const toggleInvoiceMenuWithPosition = (appointmentId: string, event: MouseEvent)
 const downloadInvoice = async (appointment: Appointment) => {
   openInvoiceMenu.value = null
   try {
-    // Find the payment record for this appointment
-    const { data: payment, error: paymentError } = await supabase
-      .from('payments')
-      .select('id, invoice_number')
-      .eq('appointment_id', appointment.id)
-      .single()
+    // Find the payment record for this appointment via API
+    const paymentData: any = await $fetch(`/api/admin/payment-invoice-lookup?appointment_id=${appointment.id}`)
+    const payment = paymentData?.payment
     
-    if (paymentError || !payment) {
+    if (!payment) {
       console.error('❌ Payment not found for appointment:', appointment.id)
       showErrorToast('Fehler', 'Zahlung nicht gefunden')
       return
@@ -2568,14 +2556,11 @@ const downloadInvoice = async (appointment: Appointment) => {
     
     logger.debug('📥 Downloading invoice:', payment.invoice_number)
     
-    // Fetch the invoice from the invoices table
-    const { data: invoice, error: invoiceError } = await supabase
-      .from('invoices')
-      .select('*')
-      .eq('invoice_number', payment.invoice_number)
-      .single()
+    // Fetch the invoice via API
+    const invoiceData: any = await $fetch(`/api/admin/payment-invoice-lookup?invoice_number=${encodeURIComponent(payment.invoice_number)}`)
+    const invoice = invoiceData?.invoice
     
-    if (invoiceError || !invoice) {
+    if (!invoice) {
       console.error('❌ Invoice not found:', payment.invoice_number)
       showErrorToast('Fehler', 'Rechnung nicht gefunden')
       return
@@ -2584,13 +2569,10 @@ const downloadInvoice = async (appointment: Appointment) => {
     // Generate PDF for the invoice
     const result = await $fetch('/api/invoices/download', {
       method: 'POST',
-      body: {
-        invoiceId: invoice.id
-      }
+      body: { invoiceId: invoice.id }
     })
     
     if (result?.pdfUrl) {
-      // Open PDF in new window
       window.open(result.pdfUrl, '_blank')
       logger.debug('✅ Invoice downloaded')
     } else {
@@ -2858,22 +2840,10 @@ const _renderProductsList = (appointment: Appointment) => {
   }))
 }
 
-const findPaymentForAppointment = async (appointmentId: string, bypassCache: boolean = false): Promise<Payment | null> => {
+const findPaymentForAppointment = async (appointmentId: string, _bypassCache: boolean = false): Promise<Payment | null> => {
   try {
-    // Cache umgehen durch unique AbortSignal
-    const _abortController = bypassCache ? new AbortController() : undefined
-    
-    const { data: payments, error } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('appointment_id', appointmentId)
-      .single()
-    
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-      throw error
-    }
-    
-    return payments || null
+    const data: any = await $fetch(`/api/admin/payment-invoice-lookup?appointment_id=${appointmentId}`)
+    return data?.payment || null
   } catch (err) {
     console.error('Error finding payment:', err)
     return null

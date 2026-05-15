@@ -527,11 +527,9 @@
 <script setup lang="ts">
 
 import { ref, onMounted, computed } from 'vue'
-import { navigateTo } from '#app'
 import { useStudentCredits } from '~/composables/useStudentCredits'
-import { useAuthStore } from '~/stores/auth'
 import StudentCreditManager from '~/components/StudentCreditManager.vue'
-import type { StudentCredit, CreditTransactionWithDetails } from '~/types/studentCredits'
+import type { CreditTransactionWithDetails } from '~/types/studentCredits'
 
 definePageMeta({
   middleware: 'admin',
@@ -617,48 +615,13 @@ const filteredStudents = computed(() => {
 // Methods
 const loadStudents = async () => {
   try {
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id first
-    const currentUser = authStore.user // ✅ MIGRATED
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-    
-    const tenantId = userProfile?.tenant_id
-    if (!tenantId) {
-      throw new Error('User has no tenant assigned')
-    }
-    
-    logger.debug('🔍 Loading students for tenant:', tenantId)
-    
-    const { data, error: fetchError } = await supabase
-      .from('users')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        is_active,
-        created_at,
-        student_credits (
-          balance_rappen,
-          updated_at
-        )
-      `)
-      .eq('role', 'client')
-      .eq('tenant_id', tenantId)
-      .order('first_name')
-
-    if (fetchError) throw fetchError
+    const data = await $fetch('/api/admin/student-credits-list') as any[]
 
     // Flatten the credit data
-    students.value = data?.map(student => ({
+    students.value = (data || []).map((student: any) => ({
       ...student,
-      credit: student.student_credits?.[0] || null
-    })) || []
+      credit: student.student_credits?.[0] || null,
+    }))
 
   } catch (err: any) {
     console.error('❌ Error loading students:', err)
@@ -698,55 +661,20 @@ const handleCreditUpdated = async () => {
 const loadPendingWithdrawals = async () => {
   try {
     isLoadingWithdrawals.value = true
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id
-    const currentUser = authStore.user // ✅ MIGRATED
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-    
-    const tenantId = userProfile?.tenant_id
-    
-    // Get all student credits with pending withdrawals
-    const { data, error: fetchError } = await supabase
-      .from('student_credits')
-      .select(`
-        id,
-        user_id,
-        balance_rappen,
-        pending_withdrawal_rappen,
-        last_withdrawal_at,
-        users (
-          id,
-          first_name,
-          last_name,
-          email
-        ),
-        student_withdrawal_preferences (
-          iban_last4,
-          account_holder
-        )
-      `)
-      .gt('pending_withdrawal_rappen', 0)
-      .eq('users.tenant_id', tenantId)
 
-    if (fetchError) throw fetchError
+    const data = await $fetch('/api/admin/pending-withdrawals') as any[]
 
-    pendingWithdrawals.value = data?.map(credit => ({
+    pendingWithdrawals.value = (data || []).map((credit: any) => ({
       id: credit.id,
       user_id: credit.user_id,
       balance_rappen: credit.balance_rappen,
       pending_withdrawal_rappen: credit.pending_withdrawal_rappen,
       last_withdrawal_at: credit.last_withdrawal_at,
       user: credit.users,
-      iban_last4: (credit as any).student_withdrawal_preferences?.iban_last4 || null,
-      account_holder: (credit as any).student_withdrawal_preferences?.account_holder || null
-    })) || []
+      iban_last4: credit.student_withdrawal_preferences?.iban_last4 || null,
+      account_holder: credit.student_withdrawal_preferences?.account_holder || null,
+    }))
 
-    logger.debug('✅ Loaded pending withdrawals:', pendingWithdrawals.value.length)
   } catch (err: any) {
     console.error('❌ Error loading pending withdrawals:', err)
   } finally {
@@ -892,42 +820,8 @@ const getPaymentMethodText = (method: string) => {
   return methodMap[method] || method
 }
 
-// Auth check
-const authStore = useAuthStore()
-
 // Lifecycle
 onMounted(async () => {
-  logger.debug('🔍 Student credits page mounted, checking auth...')
-  
-  // Warte kurz auf Auth-Initialisierung
-  let attempts = 0
-  while (!authStore.isInitialized && attempts < 10) {
-    await new Promise(resolve => setTimeout(resolve, 100))
-    attempts++
-  }
-  
-  logger.debug('🔍 Auth state:', {
-    isInitialized: authStore.isInitialized,
-    isLoggedIn: authStore.isLoggedIn,
-    isAdmin: authStore.isAdmin,
-    hasProfile: authStore.hasProfile
-  })
-  
-  // Prüfe ob User eingeloggt ist
-  if (!authStore.isLoggedIn) {
-    logger.debug('❌ User not logged in, redirecting to dashboard')
-    return navigateTo('/dashboard')
-  }
-  
-  // Prüfe ob User Admin ist
-  if (!authStore.isAdmin) {
-    logger.debug('❌ User not admin, redirecting to dashboard')
-    return navigateTo('/dashboard')
-  }
-  
-  logger.debug('✅ Auth check passed, loading student credits...')
-  
-  // Original onMounted logic
   await loadStudents()
   await loadStatistics()
   await loadPendingWithdrawals()

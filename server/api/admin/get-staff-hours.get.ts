@@ -2,24 +2,30 @@ import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
+const TIMEZONE = 'Europe/Zurich'
+const MONTH_KEYS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
+
+/** Returns the 0-based month index of a UTC timestamp, interpreted in Europe/Zurich. */
+function zurichMonthIndex(isoString: string): number {
+  return parseInt(
+    new Intl.DateTimeFormat('en-US', { month: '2-digit', timeZone: TIMEZONE }).format(new Date(isoString))
+  ) - 1
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event)
     const startDate = query.startDate as string
     const endDate = query.endDate as string
 
-    // Get authenticated user
     const authUser = await getAuthenticatedUser(event)
     if (!authUser) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Unauthorized - No valid session'
-      })
+      throw createError({ statusCode: 401, statusMessage: 'Unauthorized - No valid session' })
     }
 
     const supabase = getSupabaseAdmin()
 
-    // Get user's tenant_id
+    // Resolve tenant
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('tenant_id')
@@ -27,16 +33,12 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (userError || !userData?.tenant_id) {
-      logger.debug('⚠️ Could not find tenant for auth user:', authUser.id)
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'User has no tenant assigned'
-      })
+      throw createError({ statusCode: 403, statusMessage: 'User has no tenant assigned' })
     }
 
     const tenantId = userData.tenant_id
 
-    // Get tenant business_type
+    // Tenant business type
     const { data: tenantData, error: tenantError } = await supabase
       .from('tenants')
       .select('business_type')
@@ -44,199 +46,199 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (tenantError) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to load tenant data'
-      })
+      throw createError({ statusCode: 500, statusMessage: 'Failed to load tenant data' })
     }
 
-    // Only load categories if business_type is driving_school
-    let availableCategories = []
+    // ── 1. Driving-school licence categories (dynamic, only for driving_school) ──
+    let availableCategories: { code: string; name: string }[] = []
     if (tenantData?.business_type === 'driving_school') {
-      const { data: categories, error: categoriesError } = await supabase
+      const { data: categories } = await supabase
         .from('categories')
         .select('code, name')
         .eq('is_active', true)
         .eq('tenant_id', tenantId)
         .order('code')
-
-      if (!categoriesError) {
-        availableCategories = categories || []
-      }
+      availableCategories = categories || []
     }
 
-    // Load all staff for this tenant
+    // ── 2. All active event types for this tenant (dynamic columns) ─────────────
+    const { data: eventTypesData } = await supabase
+      .from('event_types')
+      .select('code, name, emoji')
+      .eq('is_active', true)
+      .eq('tenant_id', tenantId)
+      .order('display_order', { ascending: true })
+
+    const availableEventTypes: { code: string; name: string; emoji: string }[] = eventTypesData || []
+
+    // ── 3. All staff for this tenant ─────────────────────────────────────────────
     const { data: staffData, error: staffError } = await supabase
       .from('users')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        role
-      `)
+      .select('id, first_name, last_name, email, role, salary_type, weekly_contracted_hours, employment_percentage, fulltime_weekly_hours_override')
       .eq('role', 'staff')
       .eq('tenant_id', tenantId)
 
     if (staffError) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to load staff data'
-      })
+      throw createError({ statusCode: 500, statusMessage: 'Failed to load staff data' })
     }
 
-    // For each staff member, calculate hours statistics
-    const staffWithHours = await Promise.all(
-      (staffData || []).map(async (staff) => {
-        // Load active appointments
-        const { data: appointments, error: appointmentsError } = await supabase
+    const staffIds = (staffData || []).map((s: any) => s.id)
+
+    // ── 4. Load ALL appointments for ALL staff in ONE query ──────────────────────
+    let allActive: any[] = []
+    let allCancelled: any[] = []
+
+    if (staffIds.length > 0) {
+      const [activeRes, cancelledRes] = await Promise.all([
+        supabase
           .from('appointments')
-          .select(`
-            id,
-            start_time,
-            duration_minutes,
-            event_type_code,
-            type,
-            status
-          `)
-          .eq('staff_id', staff.id)
+          .select('id, staff_id, start_time, duration_minutes, event_type_code, type, status')
+          .in('staff_id', staffIds)
           .eq('tenant_id', tenantId)
           .gte('start_time', startDate)
           .lt('start_time', endDate)
           .neq('status', 'cancelled')
-
-        // Load cancelled appointments
-        const { data: cancelledAppointments, error: cancelledError } = await supabase
+          .limit(10000),
+        supabase
           .from('appointments')
-          .select(`
-            id,
-            start_time,
-            duration_minutes,
-            event_type_code,
-            type,
-            status
-          `)
-          .eq('staff_id', staff.id)
+          .select('id, staff_id, start_time, duration_minutes, event_type_code, type')
+          .in('staff_id', staffIds)
           .eq('tenant_id', tenantId)
           .gte('start_time', startDate)
           .lt('start_time', endDate)
           .eq('status', 'cancelled')
+          .limit(10000),
+      ])
+      allActive = activeRes.data || []
+      allCancelled = cancelledRes.data || []
+      logger.debug(`📊 Loaded ${allActive.length} active / ${allCancelled.length} cancelled appointments`)
+    }
 
-        if (appointmentsError || cancelledError) {
-          logger.debug(`⚠️ Error loading appointments for staff ${staff.id}`)
-          return {
-            ...staff,
-            appointment_count: 0,
-            total_hours: 0,
-            average_hours: 0,
-            last_appointment: null,
-            cancelled_count: 0,
-            cancelled_hours: 0,
-            category_stats: {},
-            vku_hours: 0,
-            nhk_hours: 0,
-            pgs_hours: 0,
-            fl_wb_hours: 0,
-            rest_hours: 0
-          }
+    // Pre-group by staff_id for O(n) lookups
+    const activeByStaff: Record<string, any[]> = {}
+    const cancelledByStaff: Record<string, any[]> = {}
+    staffIds.forEach((id: string) => { activeByStaff[id] = []; cancelledByStaff[id] = [] })
+    allActive.forEach((a: any) => { activeByStaff[a.staff_id]?.push(a) })
+    allCancelled.forEach((a: any) => { cancelledByStaff[a.staff_id]?.push(a) })
+
+    // ── 5. Aggregate per-staff statistics ────────────────────────────────────────
+    const staffWithHours = (staffData || []).map((staff: any) => {
+      const apts = activeByStaff[staff.id] || []
+      const cancelled = cancelledByStaff[staff.id] || []
+
+      const totalHours = apts.reduce((s: number, a: any) => s + (a.duration_minutes || 0), 0) / 60
+
+      // Licence-category stats (driving_school only)
+      const categoryStats: Record<string, { count: number; hours: number }> = {}
+      availableCategories.forEach((cat) => { categoryStats[cat.code] = { count: 0, hours: 0 } })
+
+      // Event-type stats — dynamic, all known types initialised to 0
+      const eventTypeStats: Record<string, number> = {}
+      availableEventTypes.forEach((et) => { eventTypeStats[et.code] = 0 })
+
+      let vacationHours = 0
+
+      apts.forEach((a: any) => {
+        const hours = (a.duration_minutes || 0) / 60
+        const etCode = a.event_type_code || ''
+        const catCode = a.type || ''
+
+        // Licence-category
+        if (categoryStats[catCode]) {
+          categoryStats[catCode].count++
+          categoryStats[catCode].hours += hours
         }
 
-        const totalMinutes = (appointments || []).reduce((sum, apt) => sum + (apt.duration_minutes || 0), 0)
-        const totalHours = totalMinutes / 60
+        // Event-type (dynamic)
+        if (etCode in eventTypeStats) {
+          eventTypeStats[etCode] += hours
+        } else if (etCode) {
+          // Unknown code (not in tenant's event_types) → still track it
+          eventTypeStats[etCode] = (eventTypeStats[etCode] || 0) + hours
+        }
 
-        // Calculate hours per category
-        const categoryStats: Record<string, { count: number; hours: number }> = {}
-        availableCategories.forEach((cat: any) => {
-          categoryStats[cat.code] = { count: 0, hours: 0 }
-        })
-
-        // Initialize event-type statistics
-        let vkuHours = 0
-        let nhkHours = 0
-        let pgsHours = 0
-        let flWbHours = 0
-        let restHours = 0
-
-        // Count appointments per category and event-type
-        (appointments || []).forEach((apt) => {
-          const category = apt.type || 'unknown'
-          const eventType = apt.event_type_code || 'unknown'
-          const hours = (apt.duration_minutes || 0) / 60
-
-          if (categoryStats[category]) {
-            categoryStats[category].count++
-            categoryStats[category].hours += hours
-          }
-
-          switch (eventType) {
-            case 'vku':
-              vkuHours += hours
-              break
-            case 'nhk':
-              nhkHours += hours
-              break
-            case 'pgs':
-              pgsHours += hours
-              break
-            case 'fl-wb':
-              flWbHours += hours
-              break
-            default:
-              if (!['lesson', 'exam', 'theory'].includes(eventType)) {
-                restHours += hours
-              }
-              break
-          }
-        })
-
-        // Calculate cancelled appointments
-        const cancelledCount = (cancelledAppointments || []).length
-        const cancelledHours = (cancelledAppointments || []).reduce((sum, apt) => sum + (apt.duration_minutes || 0), 0) / 60 || 0
-
-        // Last appointment
-        const lastAppointment = (appointments || []).length > 0
-          ? (appointments || []).sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())[0]
-          : null
-
-        return {
-          ...staff,
-          appointment_count: (appointments || []).length,
-          total_hours: totalHours,
-          average_hours: (appointments || []).length > 0 ? totalHours / (appointments || []).length : 0,
-          last_appointment: lastAppointment?.start_time,
-          cancelled_count: cancelledCount,
-          cancelled_hours: cancelledHours,
-          category_stats: categoryStats,
-          vku_hours: vkuHours,
-          nhk_hours: nhkHours,
-          pgs_hours: pgsHours,
-          fl_wb_hours: flWbHours,
-          rest_hours: restHours
+        // Vacation tracked separately for salary calculations
+        if (etCode === 'vacation') {
+          vacationHours += hours
         }
       })
-    )
 
-    // Calculate summary
-    const activeStaff = staffWithHours.filter(s => s.appointment_count > 0).length
-    const totalHours = staffWithHours.reduce((sum, s) => sum + s.total_hours, 0)
-    const totalAppointments = staffWithHours.reduce((sum, s) => sum + s.appointment_count, 0)
+      // Round all event-type values
+      Object.keys(eventTypeStats).forEach((k) => {
+        eventTypeStats[k] = Math.round(eventTypeStats[k] * 100) / 100
+      })
 
-    // Calculate monthly hours for each staff
-    const months = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
+      const cancelledHours = cancelled.reduce((s: number, a: any) => s + (a.duration_minutes || 0), 0) / 60
+      const lastApt = apts.length > 0
+        ? apts.slice().sort((a: any, b: any) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())[0]
+        : null
+
+      return {
+        ...staff,
+        appointment_count: apts.length,
+        total_hours: Math.round(totalHours * 100) / 100,
+        vacation_hours: Math.round(vacationHours * 100) / 100,
+        average_hours: apts.length > 0 ? totalHours / apts.length : 0,
+        last_appointment: lastApt?.start_time || null,
+        cancelled_count: cancelled.length,
+        cancelled_hours: Math.round(cancelledHours * 100) / 100,
+        category_stats: categoryStats,
+        event_type_stats: eventTypeStats,
+      }
+    })
+
+    // ── 6. Monthly breakdown — read from staff_monthly_hours table ───────────────
+    // Extract the year from startDate for the table lookup
+    const year = new Date(startDate).getFullYear()
+
+    const { data: monthlyRecords } = await supabase
+      .from('staff_monthly_hours')
+      .select('staff_id, month, actual_hours, vacation_hours')
+      .in('staff_id', staffIds)
+      .eq('tenant_id', tenantId)
+      .eq('year', year)
+
+    // Build lookup: staffId → monthKey → hours (actual + vacation = total)
     const staffMonthlyHours: Record<string, Record<string, number>> = {}
 
-    staffWithHours.forEach((staff) => {
+    staffWithHours.forEach((staff: any) => {
       const monthlyHours: Record<string, number> = {}
-      months.forEach((_, index) => {
-        monthlyHours[months[index]] = 0
-      })
-
-      const staffAppointments = staffData.find(s => s.id === staff.id) ? (
-        staffData.find(s => s.id === staff.id)?.appointments || []
-      ) : []
-
+      MONTH_KEYS.forEach((m) => { monthlyHours[m] = 0 })
       staffMonthlyHours[staff.id] = monthlyHours
     })
+
+    if ((monthlyRecords || []).length > 0) {
+      // Data available from pre-computed table
+      ;(monthlyRecords || []).forEach((r: any) => {
+        const mKey = MONTH_KEYS[r.month - 1]
+        if (mKey && staffMonthlyHours[r.staff_id]) {
+          const total = (parseFloat(r.actual_hours) || 0) + (parseFloat(r.vacation_hours) || 0)
+          staffMonthlyHours[r.staff_id][mKey] = Math.round(total * 100) / 100
+        }
+      })
+    } else {
+      // Fallback: aggregate live from appointments (used until first recalculate)
+      logger.debug('⚠️ No staff_monthly_hours records found, falling back to live aggregation')
+      staffWithHours.forEach((staff: any) => {
+        ;(activeByStaff[staff.id] || []).forEach((apt: any) => {
+          if (!apt.start_time) return
+          const mIdx = zurichMonthIndex(apt.start_time)
+          const mKey = MONTH_KEYS[mIdx]
+          if (mKey) staffMonthlyHours[staff.id][mKey] += (apt.duration_minutes || 0) / 60
+        })
+        MONTH_KEYS.forEach((m) => {
+          staffMonthlyHours[staff.id][m] = Math.round(staffMonthlyHours[staff.id][m] * 100) / 100
+        })
+      })
+    }
+
+    // Expose whether data came from the pre-computed table (so frontend can show a "refresh" hint)
+    const monthlyHoursFromCache = (monthlyRecords || []).length > 0
+
+    // ── 7. Summary ───────────────────────────────────────────────────────────────
+    const activeStaff = staffWithHours.filter((s: any) => s.appointment_count > 0).length
+    const totalHours = staffWithHours.reduce((s: number, st: any) => s + st.total_hours, 0)
+    const totalAppointments = staffWithHours.reduce((s: number, st: any) => s + st.appointment_count, 0)
 
     logger.debug('✅ Staff hours loaded:', staffWithHours.length, 'staff members')
 
@@ -244,38 +246,30 @@ export default defineEventHandler(async (event) => {
       success: true,
       staffWithHours,
       staffMonthlyHours,
+      monthlyHoursFromCache,
       availableCategories,
+      availableEventTypes,
       summary: {
         activeStaff,
         totalHours,
         averageHours: activeStaff > 0 ? totalHours / activeStaff : 0,
-        totalAppointments
-      }
+        totalAppointments,
+      },
     }
-
   } catch (error: any) {
     logger.error('❌ Error in get-staff-hours API:', error.message)
     throw error
   }
 })
 
-// Helper function to get authenticated user
 async function getAuthenticatedUser(event: any) {
   try {
     const supabase = getSupabaseAdmin()
     const authHeader = event.node.req.headers.authorization
-
-    if (!authHeader?.startsWith('Bearer ')) {
-      return null
-    }
-
+    if (!authHeader?.startsWith('Bearer ')) return null
     const token = authHeader.substring(7)
     const { data: { user }, error } = await supabase.auth.getUser(token)
-
-    if (error || !user) {
-      return null
-    }
-
+    if (error || !user) return null
     return user
   } catch {
     return null

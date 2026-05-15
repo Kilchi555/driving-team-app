@@ -49,9 +49,7 @@ export default defineEventHandler(async (event) => {
   // Retrieve the checkout session
   let session: Stripe.Checkout.Session
   try {
-    session = await stripe.checkout.sessions.retrieve(body.sessionId, {
-      expand: ['subscription'],
-    })
+    session = await stripe.checkout.sessions.retrieve(body.sessionId)
   } catch (err: any) {
     console.error('❌ sync-subscription: Failed to retrieve session', err?.message)
     throw createError({ statusCode: 400, statusMessage: 'Invalid session ID' })
@@ -61,9 +59,21 @@ export default defineEventHandler(async (event) => {
     return { synced: false, reason: 'session_not_complete' }
   }
 
-  const sub = session.subscription as Stripe.Subscription | null
-  if (!sub) {
+  const subscriptionId = typeof session.subscription === 'string'
+    ? session.subscription
+    : (session.subscription as Stripe.Subscription | null)?.id
+
+  if (!subscriptionId) {
     return { synced: false, reason: 'no_subscription' }
+  }
+
+  // Retrieve the subscription directly to guarantee fully populated items.data and price objects
+  let sub: Stripe.Subscription
+  try {
+    sub = await stripe.subscriptions.retrieve(subscriptionId)
+  } catch (err: any) {
+    console.error('❌ sync-subscription: Failed to retrieve subscription', err?.message)
+    throw createError({ statusCode: 400, statusMessage: 'Failed to retrieve subscription' })
   }
 
   // Resolve plan from subscription metadata, fall back to price matching
@@ -85,7 +95,7 @@ export default defineEventHandler(async (event) => {
     .from('tenants')
     .update({
       stripe_subscription_id: sub.id,
-      stripe_customer_id: session.customer as string,
+      stripe_customer_id: (sub.customer as string) || (session.customer as string),
       subscription_plan: plan,
       current_period_end: currentPeriodEnd,
       is_trial: false,
@@ -122,12 +132,20 @@ function resolvePlanFromPrices(sub: Stripe.Subscription): string {
 }
 
 function parseAddonSeats(sub: Stripe.Subscription): number {
+  // Prefer metadata — always explicitly set at our checkout time and unambiguous
+  if (sub.metadata?.addon_seats !== undefined && sub.metadata.addon_seats !== '') {
+    const fromMeta = parseInt(sub.metadata.addon_seats, 10)
+    if (!isNaN(fromMeta)) return fromMeta
+  }
+  // Fallback: read from subscription line items (e.g. portal-based upgrades without our metadata)
   const priceId = process.env['STRIPE_PRICE_ADDON_SEATS']
   if (priceId) {
-    const item = sub.items.data.find(i => i.price.id === priceId)
-    if (item) return item?.quantity ?? 0
+    const item = sub.items.data.find(i => {
+      // item.price can be a string ID or an expanded Price object depending on how sub was fetched
+      const itemPriceId = typeof i.price === 'string' ? i.price : i.price?.id
+      return itemPriceId === priceId
+    })
+    if (item) return item.quantity ?? 0
   }
-  // Fallback: read from subscription metadata set at checkout time
-  const fromMeta = parseInt(sub.metadata?.addon_seats || '0', 10)
-  return isNaN(fromMeta) ? 0 : fromMeta
+  return 0
 }

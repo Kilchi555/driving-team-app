@@ -237,8 +237,8 @@ import { ref, onMounted } from 'vue'
 
 // Meta
 definePageMeta({
-  layout: 'admin',
-  middleware: 'auth'
+  layout: 'tenant-admin',
+  middleware: 'superadmin'
 })
 
 const isLoading = ref(true)

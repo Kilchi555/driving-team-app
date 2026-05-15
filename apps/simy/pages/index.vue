@@ -1748,7 +1748,7 @@ useHead({
             name: 'Welche Zahlungsarten unterstützt Simy?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Simy unterstützt TWINT, Kreditkarte, Debitkarte (Mastercard/Visa), PostFinance sowie manuelle Zahlungen per Rechnung oder Banküberweisung.',
+              text: 'Simy unterstützt TWINT, Kreditkarte, Debitkarte (Mastercard/Visa), PostFinance sowie manuelle Zahlungen per Rechnung oder Banküberweisung. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von 1.7% pro Zahlung an.',
             },
           },
           {
@@ -2199,7 +2199,7 @@ const pricingPlans = computed(() =>
 const faqs = reactive([
   { q: 'Brauche ich eine Kreditkarte für den Trial?', a: 'Nein, der 30-Tage-Trial ist vollständig kostenlos und ohne Kreditkarte. Du wirst erst nach dem Trial zur Kasse gebeten – und kannst jederzeit kündigen.', open: false },
   { q: 'Wie funktioniert die Kündigung?', a: 'Du kannst monatlich kündigen. Die Kündigungsfrist beträgt 1 Monat auf Ende des laufenden Monats. Keine Jahresbindung, keine versteckten Kosten.', open: false },
-  { q: 'Welche Zahlungsmethoden unterstützt Simy?', a: 'Für deine Schüler unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup.', open: false },
+  { q: 'Welche Zahlungsmethoden unterstützt Simy?', a: 'Für deine Schüler unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von 1.7% pro Zahlung an.', open: false },
   { q: 'Kann ich von einem Plan upgraden?', a: 'Ja, jederzeit. Dein Upgrade wird sofort aktiv und anteilig verrechnet. Du verlierst keine Daten.', open: false },
   { q: 'Sind meine Daten sicher?', a: 'Ja. Simy betreibt alle Daten auf Schweizer Servern, ist DSGVO-konform und verwendet Ende-zu-Ende-Verschlüsselung für sensible Daten.', open: false },
 ])

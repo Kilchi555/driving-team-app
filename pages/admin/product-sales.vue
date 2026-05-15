@@ -426,7 +426,6 @@ import { ref, computed, onMounted } from 'vue'
 import { navigateTo } from '#app'
 import { formatDateTime } from '~/utils/dateUtils'
 import { useAuthStore } from '~/stores/auth'
-import { getSupabase } from '~/utils/supabase'
 import ProductSaleModal from '~/components/ProductSaleModal.vue'
 
 definePageMeta({
@@ -675,68 +674,30 @@ const clearFilters = () => {
 
 const createAnonymousSale = async () => {
   try {
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id
-    const currentUser = authStore.user // ✅ MIGRATED
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
-    
-    // Bestimme den initialen Status basierend auf der Zahlungsart
-    const initialStatus = anonymousPaymentMethod.value === 'cash' ? 'completed' : 'pending'
-    
-    // Erstelle einen anonymen Verkauf
-    const { data: saleData, error: saleError } = await supabase
-      .from('product_sales')
-      .insert({
-        user_id: null, // Kein registrierter Benutzer
-        tenant_id: tenantId, // Assign to current tenant
-        total_amount_rappen: 0, // Wird später aktualisiert
-        status: initialStatus,
-        metadata: {
-          customer_name: anonymousCustomerName.value || 'Anonymer Kunde',
-          notes: anonymousCustomerNotes.value,
-          sale_type: 'anonymous',
-          payment_method: anonymousPaymentMethod.value,
-          created_by: 'staff', // Markiert als Mitarbeiter-Verkauf
-          requires_payment: anonymousPaymentMethod.value !== 'cash'
-        }
-      })
-      .select()
-      .single()
+    const response = await $fetch('/api/admin/product-sales/anonymous', {
+      method: 'POST',
+      body: {
+        customer_name: anonymousCustomerName.value || 'Anonymer Kunde',
+        notes: anonymousCustomerNotes.value,
+        payment_method: anonymousPaymentMethod.value
+      }
+    }) as any
 
-    if (saleError) throw saleError
+    const saleData = response.data
 
     if (anonymousPaymentMethod.value === 'cash') {
-      // Bei Barzahlung: Öffne das normale ProductSaleModal für die Produktauswahl
       showAnonymousSaleModal.value = false
       showProductSaleModal.value = true
-      
-      // Setze die anonymen Kundenfelder zurück
       anonymousCustomerName.value = ''
       anonymousCustomerNotes.value = ''
       anonymousPaymentMethod.value = 'cash'
-      
       console.log('✅ Anonymer Barverkauf erstellt:', saleData.id)
     } else {
-      // Bei Online-Zahlung: Erstelle eine spezielle anonyme Verkaufsseite
       showAnonymousSaleModal.value = false
-      
-      // Speichere die Verkaufs-ID für die Weiterleitung
-      const saleId = saleData.id
-      
-      // Öffne eine neue Seite für anonyme Verkäufe mit Online-Zahlung
-      window.open(`/anonymous-sale/${saleId}`, '_blank')
-      
-      // Setze die anonymen Kundenfelder zurück
+      window.open(`/anonymous-sale/${saleData.id}`, '_blank')
       anonymousCustomerName.value = ''
       anonymousCustomerNotes.value = ''
       anonymousPaymentMethod.value = 'cash'
-      
       console.log('✅ Anonymer Online-Verkauf erstellt:', saleData.id)
     }
     

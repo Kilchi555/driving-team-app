@@ -652,38 +652,15 @@ const isFormValid = computed(() => {
 const loadProducts = async () => {
   isLoading.value = true
   try {
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id
-    const currentUser = authStore.user // ✅ MIGRATED
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-    
-    const tenantId = userProfile?.tenant_id
-    if (!tenantId) {
-      throw new Error('User has no tenant assigned')
-    }
-    
-    logger.debug('🔍 Loading products for tenant:', tenantId)
-    
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
+    const response = await $fetch('/api/admin/products', {
+      method: 'GET',
+      query: { top_selling: 'true' }
+    }) as any
 
-    if (error) throw error
-
-    products.value = data || []
+    products.value = response.data || []
+    topSellingProduct.value = response.topSellingProduct || { name: '', quantity: 0 }
     logger.debug('✅ Products loaded:', products.value.length)
-
-    // Lade zusätzlich die Verkaufsstatistiken
-    await loadTopSellingProduct()
-
+    logger.debug('🏆 Top selling product:', topSellingProduct.value)
   } catch (error: any) {
     console.error('❌ Error loading products:', error)
     alert(`❌ Fehler beim Laden der Produkte: ${error.message}`)
@@ -694,67 +671,14 @@ const loadProducts = async () => {
 
 const loadTopSellingProduct = async () => {
   try {
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id
-    const currentUser = authStore.user // ✅ MIGRATED
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-    
-    const tenantId = userProfile?.tenant_id
-    if (!tenantId) {
-      console.warn('⚠️ User has no tenant assigned, skipping top selling product')
-      topSellingProduct.value = { name: '', quantity: 0 }
-      return
-    }
-    
-    // Query für meistverkauftes Produkt über product_sales (tenant-spezifisch)
-    const { data, error } = await supabase
-      .from('product_sales')
-      .select(`
-        product_id,
-        quantity,
-        products (
-          name
-        )
-      `)
-      .eq('tenant_id', tenantId)
-      .not('product_id', 'is', null) // Nur Einträge mit gültiger product_id
-    
-    if (error) throw error
-    
-    // Gruppiere nach Produkt und summiere Mengen
-    const productSales = new Map<string, { name: string; quantity: number }>()
-    
-    data?.forEach((item: any) => {
-      const productId = item.product_id
-      const productName = item.products?.name || 'Unbekannt'
-      const quantity = item.quantity || 0
-      
-      if (productSales.has(productId)) {
-        productSales.get(productId)!.quantity += quantity
-      } else {
-        productSales.set(productId, { name: productName, quantity })
-      }
-    })
-    
-    // Finde das meistverkaufte
-    let topProduct = { name: '', quantity: 0 }
-    for (const [, product] of productSales) {
-      if (product.quantity > topProduct.quantity) {
-        topProduct = product
-      }
-    }
-    
-    topSellingProduct.value = topProduct
-    logger.debug('🏆 Top selling product:', topProduct)
-    
+    const response = await $fetch('/api/admin/products', {
+      method: 'GET',
+      query: { top_selling: 'true' }
+    }) as any
+    topSellingProduct.value = response.topSellingProduct || { name: '', quantity: 0 }
+    logger.debug('🏆 Top selling product:', topSellingProduct.value)
   } catch (error: any) {
     console.error('❌ Error loading top selling product:', error)
-    // Fallback
     topSellingProduct.value = { name: '', quantity: 0 }
   }
 }
@@ -819,21 +743,6 @@ const saveProduct = async () => {
   }
 
   try {
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id
-    const currentUser = authStore.user // ✅ MIGRATED
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUser?.id)
-      .single()
-    
-    const tenantId = userProfile?.tenant_id
-    if (!tenantId) {
-      throw new Error('User has no tenant assigned')
-    }
-    
     const productData = {
       name: formData.value.name.trim(),
       description: formData.value.description.trim() || null,
@@ -846,34 +755,25 @@ const saveProduct = async () => {
       is_active: formData.value.is_active,
       is_voucher: formData.value.is_voucher,
       allow_custom_amount: formData.value.is_voucher ? formData.value.allow_custom_amount : false,
-      is_credit_product: formData.value.is_credit_product,  // ✅ NEW
-      credit_amount_rappen: formData.value.is_credit_product ? Math.round(formData.value.credit_amount * 100) : null,  // ✅ NEW
-      show_in_shop: formData.value.show_in_shop,
-      tenant_id: tenantId // ✅ Tenant ID hinzufügen
+      is_credit_product: formData.value.is_credit_product,
+      credit_amount_rappen: formData.value.is_credit_product ? Math.round(formData.value.credit_amount * 100) : null,
+      show_in_shop: formData.value.show_in_shop
     }
 
     logger.debug('📦 Product data to save:', productData)
 
     if (editingProduct.value) {
-      // Update existing product
-      const { error } = await supabase
-        .from('products')
-        .update(productData)
-        .eq('id', editingProduct.value.id)
-
-      if (error) throw error
-
+      await $fetch(`/api/admin/products/${editingProduct.value.id}`, {
+        method: 'PUT',
+        body: productData
+      })
       logger.debug('✅ Product updated:', editingProduct.value.id)
       alert('✅ Produkt erfolgreich aktualisiert!')
-
     } else {
-      // Create new product
-      const { error } = await supabase
-        .from('products')
-        .insert([productData])
-
-      if (error) throw error
-
+      await $fetch('/api/admin/products', {
+        method: 'POST',
+        body: productData
+      })
       logger.debug('✅ Product created')
       alert('✅ Produkt erfolgreich erstellt!')
     }
@@ -889,19 +789,14 @@ const saveProduct = async () => {
 
 const toggleProductStatus = async (product: Product) => {
   try {
-    const supabase = getSupabase()
     const newStatus = !product.is_active
-    
-    const { error } = await supabase
-      .from('products')
-      .update({ is_active: newStatus })
-      .eq('id', product.id)
 
-    if (error) throw error
+    await $fetch(`/api/admin/products/${product.id}`, {
+      method: 'PATCH',
+      body: { is_active: newStatus }
+    })
 
-    // Update local state
     product.is_active = newStatus
-    
     const status = newStatus ? 'aktiviert' : 'deaktiviert'
     logger.debug(`✅ Product ${status}:`, product.name)
     alert(`✅ ${product.name} wurde ${status}`)

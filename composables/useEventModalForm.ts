@@ -202,7 +202,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
     })
     
     // ✅ KORREKTE TERMINART AUS DB - Mehrere Fallbacks prüfen
-    const otherEventTypes = ['meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other', 'vku', 'nothelfer']
+    const otherEventTypes = ['meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other', 'vku', 'nothelfer', 'vacation']
     
     // Prüfe zuerst, ob appointment.type ein event type ist (falsch gespeichert)
     const isTypeAnEventType = appointment.type && otherEventTypes.includes(appointment.type.toLowerCase())
