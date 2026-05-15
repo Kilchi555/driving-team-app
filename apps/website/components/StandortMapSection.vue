@@ -127,6 +127,17 @@ const locations: Record<string, { city: string; area: string; address: string; n
     lat: '47.40641',
     lng: '8.40399',
   },
+  birmensdorf: {
+    city: 'Birmensdorf',
+    area: 'Birmensdorf & Knonaueramt',
+    name: 'Bahnhof Birmensdorf',
+    street: 'Bahnhofstrasse 2',
+    zip: '8903',
+    address: 'Bahnhofstrasse 2, 8903 Birmensdorf',
+    region: 'Birmensdorf, Uitikon, Urdorf, Stallikon, Ringlikon, Wettswil',
+    lat: '47.36021',
+    lng: '8.43100',
+  },
   spreitenbach: {
     city: 'Spreitenbach',
     area: 'Spreitenbach und Umgebung',
