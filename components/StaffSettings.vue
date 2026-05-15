@@ -120,16 +120,18 @@
 
         <!-- Nur Arbeitsstunden für 4 Monate - KEINE lessons mehr! -->
         <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <button  
-            @click="toggleSection('workingStats')" 
-            class="w-full px-4 py-3.5 text-left flex items-center gap-3 active:opacity-60 transition-opacity"
-          >
-            <div class="w-8 h-8 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            </div>
-            <span class="text-sm font-medium text-gray-900 flex-1">Arbeitsstunden</span>
-            <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.workingStats ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </button>
+          <div class="w-full px-4 py-3.5 flex items-center gap-3">
+            <button
+              @click="toggleSection('workingStats')"
+              class="flex items-center gap-3 flex-1 text-left active:opacity-60 transition-opacity"
+            >
+              <div class="w-8 h-8 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <span class="text-sm font-medium text-gray-900 flex-1">Arbeitsstunden</span>
+              <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.workingStats ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </div>
           
           <div v-if="openSections.workingStats" class="px-4 pb-4 border-t border-gray-100">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -196,6 +198,13 @@
                 </div>
               </div>
               
+            </div>
+            <!-- Detailansicht Button -->
+            <div class="mt-3 flex justify-end">
+              <button
+                @click="showMonthlyDetailModal = true; loadMonthlyHours()"
+                class="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-medium"
+              >Detaillierte Übersicht →</button>
             </div>
           </div>
         </div>
@@ -430,8 +439,169 @@
                 <div v-if="isSavingWorkingHours" class="text-sm text-blue-600 pt-2">
                   💾 Speichere...
                 </div>
+
+                <!-- ─── Monats-Stundenübersicht (nur für Monatslohn-Staff) ─── -->
+                <div v-if="monthlyHoursData.salary_type === 'monthly'" class="mt-6 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-semibold text-gray-800">Monatsübersicht</h4>
+                    <div class="flex items-center gap-2">
+                      <select
+                        v-model="monthlyHoursYear"
+                        @change="loadMonthlyHours"
+                        class="text-xs px-2 py-1 border border-gray-300 rounded-md"
+                      >
+                        <option v-for="y in monthlyHoursYears" :key="y" :value="y">{{ y }}</option>
+                      </select>
+                      <button
+                        @click="showMonthlyDetailModal = true"
+                        class="text-xs px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md font-medium"
+                      >Details →</button>
+                    </div>
+                  </div>
+
+                  <!-- Balance pills -->
+                  <div class="flex items-center flex-wrap gap-3">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs text-gray-500">Aktueller Saldo:</span>
+                      <span
+                        class="text-sm font-bold px-2 py-0.5 rounded-full"
+                        :class="monthlyHoursData.adjusted_balance >= 0 ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700'"
+                        :title="(monthlyHoursData.vacation_balance_hours ?? 0) < 0 ? `inkl. Ferien-Überschuss ${formatMonthlyBalance(monthlyHoursData.vacation_balance_hours ?? 0)}` : ''"
+                      >
+                        {{ formatMonthlyBalance(monthlyHoursData.adjusted_balance) }}
+                      </span>
+                      <span
+                        v-if="(monthlyHoursData.vacation_balance_hours ?? 0) < 0"
+                        class="text-xs text-orange-600"
+                        :title="`Ferien-Überschuss von ${formatMonthlyBalance(Math.abs(monthlyHoursData.vacation_balance_hours ?? 0))} wird von der Überzeit abgezogen`"
+                      >⚠ Ferien-Überschuss</span>
+                    </div>
+                    <div v-if="monthlyHoursData.vacation_balance_days != null" class="flex items-center gap-2">
+                      <span class="text-xs text-gray-500">Ferien-Saldo:</span>
+                      <span
+                        class="text-sm font-bold px-2 py-0.5 rounded-full"
+                        :class="monthlyHoursData.vacation_balance_days >= 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'"
+                      >
+                        {{ monthlyHoursData.vacation_balance_days > 0 ? '+' : '' }}{{ monthlyHoursData.vacation_balance_days }} T
+                      </span>
+                      <span class="text-xs text-gray-400">
+                        von {{ monthlyHoursData.vacation_entitlement_days ?? 20 }} Tagen
+                        <template v-if="(monthlyHoursData as any).vacation_carry_over_days > 0">
+                          <span class="text-green-600">(+{{ (monthlyHoursData as any).vacation_carry_over_days }} Vortrag)</span>
+                        </template>
+                      </span>
+                    </div>
+                    <span class="text-xs text-gray-400">{{ monthlyHoursData.weekly_contracted_hours }}h/Woche vertraglich</span>
+                  </div>
+
+                  <!-- Loading -->
+                  <div v-if="isLoadingMonthlyHours" class="flex justify-center py-4">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                  </div>
+
+                  <!-- Monthly table -->
+                  <div v-else-if="monthlyHoursData.months?.length" class="space-y-2">
+                    <div class="flex justify-end">
+                      <button
+                        @click="hoursTableExpanded = !hoursTableExpanded"
+                        class="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path v-if="hoursTableExpanded" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                          <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                        </svg>
+                        {{ hoursTableExpanded ? 'Kompakt' : 'Alle Spalten' }}
+                      </button>
+                    </div>
+                    <div class="overflow-x-auto rounded-lg border border-gray-200">
+                    <table class="min-w-full text-xs">
+                      <thead class="bg-gray-50 text-gray-400 uppercase">
+                        <tr>
+                          <th class="px-1.5 py-2 text-left">Monat</th>
+                          <th class="px-1.5 py-2 text-right">Soll</th>
+                          <th class="px-1.5 py-2 text-right">Ist</th>
+                          <th v-if="hoursTableExpanded" class="px-1.5 py-2 text-right">Ferien</th>
+                          <th v-if="hoursTableExpanded" class="px-1.5 py-2 text-right">Krank</th>
+                          <th v-if="hoursTableExpanded" class="px-1.5 py-2 text-right">Admin</th>
+                          <th class="px-1.5 py-2 text-right">Diff</th>
+                          <th class="px-1.5 py-2 text-right">Saldo</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-100">
+                        <tr
+                          v-for="m in monthlyHoursData.months"
+                          :key="m.month"
+                          class="hover:bg-gray-50"
+                          :class="{ 'bg-blue-50/50': m.month === currentMonthNum && monthlyHoursYear === currentYear }"
+                        >
+                          <td class="px-1.5 py-2 font-medium text-gray-700">{{ shortMonthNames[m.month - 1] }}</td>
+                          <td class="px-1.5 py-2 text-right text-gray-500">
+                            <span v-if="m.target_hours != null">{{ Math.round(m.target_hours) }}h</span>
+                            <span v-else class="text-gray-300">–</span>
+                          </td>
+                          <td class="px-1.5 py-2 text-right text-gray-900 font-medium">
+                            <span v-if="m.actual_hours != null">{{ m.actual_hours.toFixed(1) }}h</span>
+                            <span v-else class="text-gray-300">–</span>
+                          </td>
+                          <td v-if="hoursTableExpanded" class="px-1.5 py-2 text-right text-emerald-600">
+                            <span v-if="m.vacation_hours != null && m.vacation_hours > 0">{{ m.vacation_hours.toFixed(1) }}h</span>
+                            <span v-else class="text-gray-300">–</span>
+                          </td>
+                          <td v-if="hoursTableExpanded" class="px-1.5 py-2 text-right text-orange-600">{{ (m.sick_hours ?? 0) > 0 ? Number(m.sick_hours).toFixed(1) + 'h' : '–' }}</td>
+                          <td v-if="hoursTableExpanded" class="px-1.5 py-2 text-right text-purple-600">{{ (m.admin_hours ?? 0) > 0 ? Number(m.admin_hours).toFixed(1) + 'h' : '–' }}</td>
+                          <td class="px-1.5 py-2 text-right font-semibold" :class="m.overtime_hours != null && (m.cumulative_overtime !== null || m.actual_hours > 0) ? getOvertimeColor(m.overtime_hours) : 'text-gray-300'">
+                            <span v-if="m.overtime_hours != null && (m.cumulative_overtime !== null || m.actual_hours > 0)">{{ formatMonthlyBalance(m.overtime_hours) }}</span>
+                            <span v-else>–</span>
+                          </td>
+                          <td class="px-1.5 py-2 text-right font-bold" :class="m.cumulative_overtime !== null ? getOvertimeColor(m.cumulative_overtime) : 'text-gray-300'">
+                            <span v-if="m.cumulative_overtime !== null">{{ formatMonthlyBalance(m.cumulative_overtime) }}</span>
+                            <span v-else>–</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    </div>
+                  </div>
+
+                  <p v-else class="text-xs text-gray-400 text-center py-3">Noch keine Stundendaten für {{ monthlyHoursYear }}</p>
+                </div>
+
               </div>
             </div>
+          </div>
+
+          <!-- ─── Ferien-Übersicht (für Stundenlohn-Staff) ─── -->
+          <div v-if="monthlyHoursData.salary_type !== 'monthly'" class="mt-6 space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-semibold text-gray-800">🌴 Meine Ferien {{ vacationApptsYear }}</h4>
+              <select
+                v-model="vacationApptsYear"
+                @change="loadVacationAppointments"
+                class="text-xs px-2 py-1 border border-gray-300 rounded-md"
+              >
+                <option v-for="y in monthlyHoursYears" :key="y" :value="y">{{ y }}</option>
+              </select>
+            </div>
+
+            <div v-if="isLoadingVacationApts" class="flex justify-center py-4">
+              <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-green-500"></div>
+            </div>
+            <div v-else-if="vacationApptsData.periods?.length" class="space-y-2">
+              <div
+                v-for="(period, i) in vacationApptsData.periods"
+                :key="i"
+                class="flex items-center justify-between text-xs bg-green-50 border border-green-100 rounded-lg px-3 py-2"
+              >
+                <div class="font-medium text-green-800">
+                  {{ period.from === period.to ? period.from : `${period.from} – ${period.to}` }}
+                </div>
+                <div class="text-green-600">{{ period.days }} Tag{{ period.days !== 1 ? 'e' : '' }}</div>
+              </div>
+              <div class="text-xs text-gray-400 text-center pt-1">
+                {{ vacationApptsData.used_vacation_days }} Ferientag{{ vacationApptsData.used_vacation_days !== 1 ? 'e' : '' }} eingetragen
+              </div>
+            </div>
+            <p v-else class="text-xs text-gray-400 text-center py-3">Keine Ferien eingetragen für {{ vacationApptsYear }}</p>
           </div>
         </div>
       </div>
@@ -951,6 +1121,144 @@
         </div>
       </div>
     </div>
+
+  <!-- ── Detail Modal: Persönliche Monatsübersicht ─────────────────────── -->
+  <Teleport to="body">
+    <div
+      v-if="showMonthlyDetailModal"
+      class="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      @click.self="showMonthlyDetailModal = false"
+    >
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b">
+          <div>
+            <h2 class="text-lg font-bold text-gray-900">Meine Arbeitsstunden</h2>
+            <div class="flex items-center gap-2 mt-0.5">
+              <select
+                v-model="monthlyHoursYear"
+                @change="loadMonthlyHours"
+                class="text-sm px-2 py-1 border border-gray-300 rounded-md"
+              >
+                <option v-for="y in monthlyHoursYears" :key="y" :value="y">{{ y }}</option>
+              </select>
+            </div>
+          </div>
+          <button @click="showMonthlyDetailModal = false" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+        </div>
+        <!-- Balance pills -->
+        <div class="px-6 pt-4 flex items-center flex-wrap gap-4">
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-500">Aktueller Saldo:</span>
+            <span
+              class="text-sm font-bold px-2 py-0.5 rounded-full"
+              :class="monthlyHoursData.adjusted_balance >= 0 ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700'"
+            >
+              {{ formatMonthlyBalance(monthlyHoursData.adjusted_balance) }}
+            </span>
+            <span
+              v-if="(monthlyHoursData.vacation_balance_hours ?? 0) < 0"
+              class="text-xs text-orange-600"
+              title="Ferien-Überschuss wird von der Überzeit abgezogen"
+            >⚠ Ferien-Überschuss</span>
+          </div>
+          <div v-if="monthlyHoursData.vacation_balance_days != null" class="flex items-center gap-2">
+            <span class="text-sm text-gray-500">Ferien-Saldo:</span>
+            <span
+              class="text-sm font-bold px-2 py-0.5 rounded-full"
+              :class="monthlyHoursData.vacation_balance_days >= 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'"
+            >
+              {{ monthlyHoursData.vacation_balance_days > 0 ? '+' : '' }}{{ monthlyHoursData.vacation_balance_days }} T
+            </span>
+            <span class="text-xs text-gray-400">
+              von {{ monthlyHoursData.vacation_entitlement_days ?? 20 }} Tagen
+              <template v-if="(monthlyHoursData as any).vacation_carry_over_days > 0">
+                <span class="text-green-600">(+{{ (monthlyHoursData as any).vacation_carry_over_days }} Vortrag)</span>
+              </template>
+            </span>
+          </div>
+          <span class="text-xs text-gray-400">{{ monthlyHoursData.weekly_contracted_hours }}h/Woche vertraglich</span>
+        </div>
+        <!-- Body -->
+        <div class="overflow-auto flex-1 p-6 pt-3">
+          <div v-if="isLoadingMonthlyHours" class="flex justify-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          </div>
+          <div v-else-if="!monthlyHoursData.months?.length" class="text-center text-gray-400 py-8">
+            <p class="font-medium">Noch keine Stundendaten für {{ monthlyHoursYear }}</p>
+            <p class="text-xs mt-1 text-gray-400">Stunden werden automatisch jeden Monat berechnet.<br>Bitte Administrator kontaktieren falls Daten fehlen.</p>
+          </div>
+          <div v-else class="space-y-2">
+            <div class="flex justify-end">
+              <button
+                @click="hoursTableExpanded = !hoursTableExpanded"
+                class="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path v-if="hoursTableExpanded" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                  <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                </svg>
+                {{ hoursTableExpanded ? 'Kompakt' : 'Alle Spalten' }}
+              </button>
+            </div>
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="min-w-full text-sm">
+              <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+                <tr>
+                  <th class="px-2 py-2 text-left">Monat</th>
+                  <th v-if="hoursTableExpanded" class="px-2 py-2 text-right">Arbeits-<br>tage</th>
+                  <th class="px-2 py-2 text-right">Soll</th>
+                  <th class="px-2 py-2 text-right">Ist</th>
+                  <th v-if="hoursTableExpanded" class="px-2 py-2 text-right">Ferien</th>
+                  <th v-if="hoursTableExpanded" class="px-2 py-2 text-right">Krank</th>
+                  <th v-if="hoursTableExpanded" class="px-2 py-2 text-right">Admin</th>
+                  <th class="px-2 py-2 text-right">Diff</th>
+                  <th class="px-2 py-2 text-right">Saldo</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr
+                  v-for="m in monthlyHoursData.months"
+                  :key="m.month"
+                  :class="{ 'bg-blue-50/50': m.month === currentMonthNum && monthlyHoursYear === currentYear }"
+                  class="hover:bg-gray-50"
+                >
+                  <td class="px-2 py-2 font-medium text-gray-900">{{ shortMonthNames[m.month - 1] }}</td>
+                  <td v-if="hoursTableExpanded" class="px-2 py-2 text-right text-gray-500">{{ m.working_days ?? '–' }}</td>
+                  <td class="px-2 py-2 text-right text-gray-500">
+                    <span v-if="m.target_hours != null">{{ Math.round(m.target_hours) }}h</span>
+                    <span v-else class="text-gray-300">–</span>
+                  </td>
+                  <td class="px-2 py-2 text-right font-medium text-gray-900">
+                    <span v-if="m.actual_hours != null">{{ m.actual_hours.toFixed(1) }}h</span>
+                    <span v-else class="text-gray-300">–</span>
+                  </td>
+                  <td v-if="hoursTableExpanded" class="px-2 py-2 text-right text-emerald-600">
+                    <span v-if="m.vacation_hours != null && m.vacation_hours > 0">{{ m.vacation_hours.toFixed(1) }}h</span>
+                    <span v-else class="text-gray-300">–</span>
+                  </td>
+                  <td v-if="hoursTableExpanded" class="px-2 py-2 text-right text-orange-600">{{ (m.sick_hours ?? 0) > 0 ? Number(m.sick_hours).toFixed(1) + 'h' : '–' }}</td>
+                  <td v-if="hoursTableExpanded" class="px-2 py-2 text-right text-purple-600">{{ (m.admin_hours ?? 0) > 0 ? Number(m.admin_hours).toFixed(1) + 'h' : '–' }}</td>
+                  <td class="px-2 py-2 text-right font-semibold" :class="m.overtime_hours != null && (m.cumulative_overtime !== null || m.actual_hours > 0) ? getOvertimeColor(m.overtime_hours) : 'text-gray-300'">
+                    <span v-if="m.overtime_hours != null && (m.cumulative_overtime !== null || m.actual_hours > 0)">{{ formatMonthlyBalance(m.overtime_hours) }}</span>
+                    <span v-else>–</span>
+                  </td>
+                  <td class="px-2 py-2 text-right font-bold" :class="m.cumulative_overtime !== null ? getOvertimeColor(m.cumulative_overtime) : 'text-gray-300'">
+                    <span v-if="m.cumulative_overtime !== null">{{ formatMonthlyBalance(m.cumulative_overtime) }}</span>
+                    <span v-else>–</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            </div>
+          </div>
+        </div>
+        <div class="px-6 py-3 border-t flex justify-end">
+          <button @click="showMonthlyDetailModal = false" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm font-medium text-gray-700">Schliessen</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -1126,6 +1434,83 @@ const monthlyStats = ref({
   twoMonthsAgo: { worked: 0 },
   threeMonthsAgo: { worked: 0 }
 })
+
+// ── Monatliche Stundenübersicht (Monatslohn) ──────────────────────────────────
+const currentYear = new Date().getFullYear()
+const currentMonthNum = new Date().getMonth() + 1
+const monthlyHoursYear = ref(currentYear)
+const monthlyHoursYears = computed(() => [currentYear - 1, currentYear, currentYear + 1])
+const isLoadingMonthlyHours = ref(false)
+const monthlyHoursData = ref<{
+  salary_type: string
+  weekly_contracted_hours: number
+  current_balance: number
+  adjusted_balance: number
+  vacation_balance_hours?: number
+  vacation_balance_days?: number | null
+  vacation_entitlement_days?: number
+  months: any[]
+}>({ salary_type: 'hourly', weekly_contracted_hours: 0, current_balance: 0, adjusted_balance: 0, months: [] })
+
+const shortMonthNames = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
+
+const showMonthlyDetailModal = ref(false)
+const hoursTableExpanded = ref(false)
+
+const loadMonthlyHours = async () => {
+  isLoadingMonthlyHours.value = true
+  try {
+    const response = await $fetch('/api/staff/monthly-hours', {
+      query: { year: monthlyHoursYear.value }
+    }) as any
+    if (response.success) {
+      monthlyHoursData.value = response
+    }
+  } catch (err) {
+    // Silently fail – user may be hourly staff
+  } finally {
+    isLoadingMonthlyHours.value = false
+  }
+}
+
+// ── Ferien-Übersicht (Stundenlohn-Staff) ──────────────────────────────────────
+const vacationApptsYear = ref(currentYear)
+const isLoadingVacationApts = ref(false)
+const vacationApptsData = ref<{
+  periods: { from: string; to: string; days: number }[]
+  used_vacation_days: number
+  remaining_vacation_days: number
+}>({ periods: [], used_vacation_days: 0, remaining_vacation_days: 0 })
+
+const loadVacationAppointments = async () => {
+  isLoadingVacationApts.value = true
+  try {
+    const response = await $fetch('/api/staff/vacation-appointments', {
+      query: { year: vacationApptsYear.value }
+    }) as any
+    if (response.success) {
+      vacationApptsData.value = response
+    }
+  } catch {
+    // non-fatal
+  } finally {
+    isLoadingVacationApts.value = false
+  }
+}
+
+const formatMonthlyBalance = (hours: number): string => {
+  const abs = Math.abs(hours)
+  const h = Math.floor(abs)
+  const m = Math.round((abs - h) * 60)
+  const formatted = m > 0 ? `${h}h ${m}m` : `${h}h`
+  return hours >= 0 ? `+${formatted}` : `-${formatted}`
+}
+
+const getOvertimeColor = (hours: number): string => {
+  if (hours > 0.05) return 'text-blue-600'
+  if (hours < -0.05) return 'text-red-600'
+  return 'text-gray-500'
+}
 
 
 // Data
@@ -2747,6 +3132,16 @@ onMounted(async () => {
     const result = await $fetch<any>('/api/affiliate/stats')
     affiliateEnabled.value = result.data?.enabled !== false
     localStorage.setItem('staff_affiliateEnabled', String(affiliateEnabled.value))
+  } catch { /* non-fatal */ }
+
+  // Load monthly hours (visible for monthly-salary staff)
+  try {
+    await loadMonthlyHours()
+  } catch { /* non-fatal */ }
+
+  // Load vacation appointments for hourly staff overview
+  try {
+    await loadVacationAppointments()
   } catch { /* non-fatal */ }
 })
 

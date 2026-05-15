@@ -413,14 +413,22 @@ function hasAddonByEnvKey(sub: Stripe.Subscription, envKey: string): boolean {
 }
 
 function parseAddonSeats(sub: Stripe.Subscription): number {
+  // Prefer metadata — always explicitly set at our checkout time and unambiguous
+  if (sub.metadata?.addon_seats !== undefined && sub.metadata.addon_seats !== '') {
+    const fromMeta = parseInt(sub.metadata.addon_seats, 10)
+    if (!isNaN(fromMeta)) return fromMeta
+  }
+  // Fallback: read from subscription line items (e.g. portal-based upgrades without our metadata)
   const priceId = process.env['STRIPE_PRICE_ADDON_SEATS']
   if (priceId) {
-    const item = sub.items.data.find(i => i.price.id === priceId)
-    if (item) return item?.quantity ?? 0
+    const item = sub.items.data.find(i => {
+      // item.price can be a string ID or an expanded Price object depending on how sub was fetched
+      const itemPriceId = typeof i.price === 'string' ? i.price : i.price?.id
+      return itemPriceId === priceId
+    })
+    if (item) return item.quantity ?? 0
   }
-  // Fallback: read from subscription metadata set at checkout time
-  const fromMeta = parseInt(sub.metadata?.addon_seats || '0', 10)
-  return isNaN(fromMeta) ? 0 : fromMeta
+  return 0
 }
 
 async function handleWalleeWelcomeEmail(

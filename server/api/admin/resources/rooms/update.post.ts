@@ -2,20 +2,18 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
-import { getAuthenticatedUser } from '~/server/utils/auth'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
-    const user = await getAuthenticatedUser(event)
-    if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-    if (!['admin', 'staff'].includes(user.role || '')) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    const profile = await requireAdminProfile(event)
 
-    const rateLimitKey = `room_update:${user.id}`
+    const rateLimitKey = `room_update:${profile.id}`
     const rateLimitResult = await checkRateLimit(rateLimitKey, 20, 60 * 1000)
     if (!rateLimitResult.allowed) throw createError({ statusCode: 429, statusMessage: 'Too many requests' })
 
     const body = await readBody(event)
-    const { roomId, name, location, capacity, equipment, is_active } = body
+    const { roomId, name, location, capacity, description, equipment, is_public, hourly_rate_rappen } = body
 
     if (!roomId) throw createError({ statusCode: 400, statusMessage: 'Missing roomId' })
 
@@ -23,8 +21,18 @@ export default defineEventHandler(async (event) => {
 
     const { data: room, error: err } = await supabase
       .from('rooms')
-      .update({ name, location, capacity, equipment, is_active })
+      .update({
+        name,
+        location: location || null,
+        capacity: capacity || null,
+        description: description || null,
+        equipment: equipment ? { description: equipment } : null,
+        is_public: is_public ?? true,
+        hourly_rate_rappen: hourly_rate_rappen || 0,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', roomId)
+      .eq('tenant_id', profile.tenant_id)
       .select()
       .single()
 
@@ -37,4 +45,3 @@ export default defineEventHandler(async (event) => {
     return { success: false, data: null, error: error.statusMessage || 'Failed' }
   }
 })
-

@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { useCurrentUser } from '~/composables/useCurrentUser'
+import { logger } from '~/utils/logger'
 
 interface VehicleBooking {
   id: string
@@ -101,7 +102,8 @@ export const useVehicleReservations = () => {
         .select('id, start_time, end_time, purpose, driver_name')
         .eq('vehicle_id', vehicleId)
         .in('status', ['confirmed', 'in_use'])
-        .or(`start_time.lt.${endTime},end_time.gt.${startTime}`) // Overlapping bookings
+        .lt('start_time', endTime)
+        .gt('end_time', startTime)
 
       if (excludeBookingId) {
         query = query.neq('id', excludeBookingId)

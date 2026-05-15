@@ -1,219 +1,80 @@
 <template>
   <div class="min-h-screen bg-gray-50">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
+      <h1 class="text-xl font-semibold text-gray-900 mb-8">Kassenverwaltung</h1>
 
-    <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      
-      <!-- Page Header -->
-      <div class="mb-8">
-        <h2 class="text-2xl font-bold text-gray-900 mb-2">
-          Kassenverwaltung
-        </h2>
-      </div>
-
-      <!-- Loading State -->
-      <div v-if="isLoading" class="flex justify-center items-center py-12">
+      <!-- Loading -->
+      <div v-if="isLoading" class="flex justify-center items-center py-20">
         <LoadingLogo size="lg" :tenant-id="currentUser?.tenant_id" />
       </div>
 
-      <!-- Error State -->
-      <div v-else-if="error" class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-        <div class="flex items-center">
-          <svg class="w-5 h-5 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <div>
-            <h3 class="text-sm font-medium text-red-800">Fehler beim Laden</h3>
-            <p class="text-sm text-red-700 mt-1">{{ error }}</p>
-          </div>
+      <!-- Error -->
+      <div v-else-if="error" class="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-sm">
+        <svg class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <div>
+          <p class="font-medium text-red-800">Fehler beim Laden</p>
+          <p class="text-red-600 mt-0.5">{{ error }}</p>
         </div>
       </div>
 
-      <!-- Tab Navigation -->
-      <div v-else class="mb-6">
-        <nav class="flex space-x-8" aria-label="Tabs">
-          <button
-            @click="activeTab = 'overview'"
-            :class="[
-              'whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors',
-              activeTab === 'overview'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            ]"
-          >
-            📊 Gesamtübersicht
-          </button>
-          <button
-            @click="activeTab = 'office'"
-            :class="[
-              'whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors',
-              activeTab === 'office'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            ]"
-          >
-            🏢 Bürokassen
-            <span v-if="officeRegisters.length > 0" class="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
-              {{ officeRegisters.length }}
-            </span>
-          </button>
-          <button
-            @click="activeTab = 'instructor'"
-            :class="[
-              'whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors',
-              activeTab === 'instructor'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            ]"
-          >
-            👨‍🏫 Fahrlehrer-Kassen
-          </button>
-        </nav>
-      </div>
+      <div v-else class="space-y-8">
 
-      <!-- Tab Content -->
-      <div v-if="!isLoading && !error" class="tab-content">
-        
-        <!-- Gesamtübersicht Tab -->
-        <div v-if="activeTab === 'overview'" class="tab-panel">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            <!-- Total Balance Card -->
-            <div class="bg-white rounded-lg shadow-sm border p-6">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-sm text-gray-600">Bürokassen</p>
-                  <p class="text-2xl font-bold text-blue-600">{{ officeRegisters.length }}</p>
-                  <p class="text-xs text-gray-500">Aktive Kassen</p>
-                </div>
-                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <span class="text-blue-600 text-xl">🏢</span>
-                </div>
-              </div>
+        <!-- Bürokassen -->
+        <section>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Bürokassen</p>
+          <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div v-if="officeRegisters.length === 0" class="px-5 py-10 text-center text-sm text-gray-400">
+              Keine Bürokassen vorhanden.
             </div>
-
-            <!-- Debug Info Card -->
-            <div class="bg-white rounded-lg shadow-sm border p-6">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-sm text-gray-600">Debug Info</p>
-                  <p class="text-lg font-bold text-gray-900">{{ currentUser?.email || 'Kein User' }}</p>
-                  <p class="text-xs text-gray-500">{{ currentUser?.tenant_id || 'Keine Tenant-ID' }}</p>
+            <div v-else>
+              <div
+                v-for="(register, idx) in officeRegisters"
+                :key="register.id"
+                class="flex items-center px-5 py-3.5"
+                :class="{ 'border-t border-gray-100': idx > 0 }"
+              >
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-gray-900">{{ register.name }}</span>
+                    <span v-if="register.is_main_register" class="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded font-medium">Hauptkasse</span>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-0.5">{{ register.location || getRegisterTypeLabel(register.register_type) }}</p>
                 </div>
-                <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                  <span class="text-yellow-600 text-xl">🔍</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Status Card -->
-            <div class="bg-white rounded-lg shadow-sm border p-6">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-sm text-gray-600">System Status</p>
-                  <p class="text-lg font-bold text-green-600">{{ isLoading ? 'Lädt...' : 'Bereit' }}</p>
-                  <p class="text-xs text-gray-500">{{ error || 'Keine Fehler' }}</p>
-                </div>
-                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <span class="text-green-600 text-xl">✅</span>
+                <span class="text-sm font-semibold text-gray-900 tabular-nums mx-6">{{ formatCurrency(register.current_balance_rappen) }}</span>
+                <div class="flex items-center gap-2">
+                  <button @click="openDepositModal(register)" class="text-xs px-3 py-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 font-medium transition-colors">Einzahlen</button>
+                  <button @click="openWithdrawModal(register)" class="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 font-medium transition-colors">Abheben</button>
+                  <button @click="viewRegisterDetails(register)" class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium transition-colors">Details</button>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Bürokassen Tab -->
-        <div v-if="activeTab === 'office'" class="tab-panel">
-          <div class="bg-white rounded-lg shadow-sm border p-6">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="text-lg font-semibold text-gray-900">Bürokassen</h3>
-            </div>
-            
-            <div v-if="officeRegisters.length === 0" class="text-center py-12">
-              <div class="text-gray-400 text-6xl mb-4">🏢</div>
-              <h3 class="text-lg font-medium text-gray-900 mb-2">Noch keine Bürokassen</h3>
-              <p class="text-gray-600 mb-4">
-                Führen Sie zuerst die SQL-Migration aus: database_migration_multi_office_cash.sql
-              </p>
-            </div>
-            
-            <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div v-for="register in officeRegisters" :key="register.id" class="border border-gray-200 rounded-lg p-4">
-                <div class="flex items-center justify-between mb-4">
-                  <div>
-                    <h4 class="font-medium text-gray-900">{{ register.name }}</h4>
-                    <p class="text-sm text-gray-500">{{ register.location }}</p>
-                    <span v-if="register.is_main_register" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 mt-1">
-                      HAUPTKASSE
-                    </span>
-                  </div>
-                  <div class="text-right">
-                    <div class="text-xl font-bold text-gray-900">{{ formatCurrency(register.current_balance_rappen) }}</div>
-                    <div class="text-xs text-gray-500">{{ getRegisterTypeLabel(register.register_type) }}</div>
-                  </div>
-                </div>
-                
-                <!-- Action Buttons -->
-                <div class="flex space-x-2 mt-4">
-                  <button
-                    @click="openDepositModal(register)"
-                    class="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
-                  >
-                    💰 Aufstocken
-                  </button>
-                  <button
-                    @click="openWithdrawModal(register)"
-                    class="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
-                  >
-                    💸 Abheben
-                  </button>
-                  <button
-                    @click="viewRegisterDetails(register)"
-                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm font-medium transition-colors"
-                  >
-                    📊
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- Fahrlehrer-Kassen -->
+        <section>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Fahrlehrer-Kassen</p>
 
-        <!-- Fahrlehrer-Kassen Tab -->
-        <div v-if="activeTab === 'instructor'" class="tab-panel">
           <div v-if="isLoadingUser" class="flex justify-center py-12">
             <LoadingLogo size="lg" :tenant-id="currentUser?.tenant_id" />
-            <div class="ml-4 text-gray-600">Lade Benutzerdaten...</div>
           </div>
-          
-          <AdminCashBalanceManager 
+
+          <AdminCashBalanceManager
             v-else-if="manualCurrentUser"
             :current-user="manualCurrentUser"
           />
-          
-          <div v-else class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <div class="flex">
-              <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-              </div>
-              <div class="ml-3">
-                <h3 class="text-sm font-medium text-yellow-800">Benutzerdaten werden geladen...</h3>
-                <div class="mt-2 text-sm text-yellow-700">
-                  Falls das Problem bestehen bleibt, loggen Sie sich erneut ein.
-                </div>
-                <button
-                  @click="loadManualCurrentUser"
-                  class="mt-3 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors"
-                >
-                  🔄 Benutzerdaten neu laden
-                </button>
-              </div>
-            </div>
+
+          <div v-else class="bg-yellow-50 border border-yellow-200 rounded-xl p-5 text-sm">
+            <p class="font-medium text-yellow-800">Benutzerdaten werden geladen...</p>
+            <p class="text-yellow-700 mt-1">Falls das Problem bestehen bleibt, loggen Sie sich erneut ein.</p>
+            <button @click="loadManualCurrentUser" class="mt-3 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+              Neu laden
+            </button>
           </div>
-        </div>
+        </section>
 
       </div>
     </div>
@@ -482,7 +343,7 @@ const {
 } = useOfficeCashRegisters()
 
 // State
-const activeTab = ref('overview')
+const activeTab = ref('instructor')
 const isLoading = ref(false)
 const error = ref(null)
 const showDepositModal = ref(false)
@@ -695,43 +556,23 @@ const getMovementTypeLabel = (type) => {
 
 const loadManualCurrentUser = async () => {
   isLoadingUser.value = true
-  
   try {
-    const supabase = getSupabase()
-    const user = authStore.user // ✅ MIGRATED
-    
-    if (!user) {
+    const profile = authStore.userProfile
+    const user = authStore.user
+
+    if (!profile || !user) {
       throw new Error('Nicht authentifiziert')
     }
-    
-    logger.debug('🔍 Loading manual current user for:', user.email)
-    
-    const { data: userProfile, error } = await supabase
-      .from('users')
-      .select(`
-        id, email, role, first_name, last_name, phone, tenant_id,
-        is_active, preferred_payment_method
-      `)
-      .eq('auth_user_id', user.id)
-      .eq('is_active', true)
-      .single()
-    
-    if (error) {
-      console.error('❌ Error loading user profile:', error)
-      throw new Error('Benutzerprofil nicht gefunden')
-    }
-    
-    if (!userProfile.tenant_id) {
+    if (!profile.tenant_id) {
       throw new Error('Benutzer hat keine Tenant-Zuordnung')
     }
-    
+
     manualCurrentUser.value = {
-      ...userProfile,
+      ...profile,
       auth_user_id: user.id
     }
-    
-    logger.debug('✅ Manual current user loaded:', manualCurrentUser.value)
-    
+
+    logger.debug('✅ Manual current user loaded from store:', manualCurrentUser.value)
   } catch (err) {
     console.error('❌ Error loading manual current user:', err)
     alert('Fehler beim Laden der Benutzerdaten: ' + err.message)

@@ -443,6 +443,8 @@
 
 import { ref, onMounted, computed } from 'vue'
 import { useCurrentUser } from '~/composables/useCurrentUser'
+import { useAuthStore } from '~/stores/auth'
+import { getSupabase } from '~/utils/supabase'
 
 interface EventTypeRow {
   id: string
@@ -473,6 +475,7 @@ const tenantBusinessType = ref<string | null>(null)
 
 const editModel = ref<EventTypeRow | null>(null)
 const { currentUser } = useCurrentUser()
+const authStore = useAuthStore()
 
 // Check if tenant is a driving school
 const isDrivingSchool = computed(() => tenantBusinessType.value === 'driving_school')

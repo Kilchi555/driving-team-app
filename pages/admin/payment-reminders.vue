@@ -142,42 +142,8 @@ const loadReminders = async () => {
     isLoading.value = true
     error.value = null
 
-    const supabase = getSupabase()
-
-    // Get user's tenant_id
-    const user = authStore.user // ✅ MIGRATED
-    if (!user) {
-      throw new Error('Not authenticated')
-    }
-
-    const { data: userData } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (!userData?.tenant_id) {
-      throw new Error('Tenant not found')
-    }
-
-    // Get all reminders for this tenant
-    const { data: reminderData, error: reminderError } = await supabase
-      .from('payment_reminders')
-      .select(`
-        *,
-        payments!inner (
-          tenant_id
-        )
-      `)
-      .eq('payments.tenant_id', userData.tenant_id)
-      .order('sent_at', { ascending: false })
-      .limit(100)
-
-    if (reminderError) {
-      throw reminderError
-    }
-
-    reminders.value = reminderData || []
+    const data = await $fetch('/api/admin/payment-reminders') as any[]
+    reminders.value = data || []
 
     // Calculate stats
     stats.value.totalEmails = reminders.value.filter(r => r.reminder_type === 'email' && r.status === 'sent').length
@@ -186,7 +152,7 @@ const loadReminders = async () => {
 
   } catch (err: any) {
     console.error('Error loading reminders:', err)
-    error.value = err.message || 'Fehler beim Laden der Erinnerungen'
+    error.value = err.data?.statusMessage || err.message || 'Fehler beim Laden der Erinnerungen'
   } finally {
     isLoading.value = false
   }

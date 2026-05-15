@@ -263,13 +263,7 @@ const loadReminderLogs = async () => {
   isLoadingLogs.value = true
 
   try {
-    const { data, error } = await supabase
-      .from('reminder_logs')
-      .select('*')
-      .order('sent_at', { ascending: false })
-      .limit(50)
-
-    if (error) throw error
+    const data = await $fetch('/api/admin/reminder-logs') as any[]
     reminderLogs.value = data || []
   } catch (error: any) {
     console.error('Error loading reminder logs:', error)

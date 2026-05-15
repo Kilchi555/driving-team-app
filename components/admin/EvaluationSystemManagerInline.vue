@@ -1247,167 +1247,35 @@ const filteredEvaluationCriteria = computed(() => {
 // Methods
 const loadData = async () => {
   try {
-    // Get current user's tenant_id first
-    // ✅ MIGRATED: Use auth store instead
-    const user = authStore.user
-    if (!user) throw new Error('Nicht angemeldet')
+    const response: any = await $fetch('/api/admin/evaluation-system', {
+      method: 'POST',
+      body: { action: 'load-all-data' }
+    })
+    if (!response.success) throw new Error(response.error || 'Fehler beim Laden')
 
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
+    const data = response.data
+    evaluationCategories.value = data.evaluationCategories || []
+    criteria.value = data.criteria || []
+    scale.value = data.scale || []
+    tenantBusinessType.value = data.tenant?.business_type || ''
 
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-
-    logger.debug('🔍 Loading evaluation data for tenant:', userProfile.tenant_id)
-
-    // Load evaluation categories (filtered by tenant + global theory categories)
-    const { data: evalCatData, error: evalCatError } = await supabase
-      .from('evaluation_categories')
-      .select('id, name, description, color, display_order, is_active, tenant_id, is_theory')
-      .eq('is_active', true)
-      .or(`tenant_id.eq.${userProfile.tenant_id},and(is_theory.eq.true,tenant_id.is.null)`)
-      .order('display_order')
-    
-    if (evalCatError) {
-      console.error('❌ Error loading evaluation categories:', evalCatError)
-      // Fallback: try without driving_categories column
-      const { data: evalCatDataFallback, error: evalCatErrorFallback } = await supabase
-        .from('evaluation_categories')
-        .select('id, name, description, color, display_order, is_active, tenant_id, is_theory')
-        .eq('is_active', true)
-        .or(`tenant_id.eq.${userProfile.tenant_id},and(is_theory.eq.true,tenant_id.is.null)`)
-        .order('display_order')
-      
-      if (evalCatErrorFallback) {
-        console.error('❌ Fallback also failed:', evalCatErrorFallback)
-      } else {
-        // Ensure is_theory has a default value
-        evaluationCategories.value = (evalCatDataFallback || []).map(cat => ({
-          ...cat,
-          is_theory: cat.is_theory ?? false
-        }))
-        logger.debug('📊 Loaded evaluation categories (fallback):', evalCatDataFallback?.length || 0, evalCatDataFallback)
-      }
+    // For driving_school: populate drivingCategories
+    if (data.tenant?.business_type === 'driving_school') {
+      drivingCategories.value = data.drivingCategories || []
     } else {
-      // Ensure is_theory has a default value
-      evaluationCategories.value = (evalCatData || []).map(cat => ({
-        ...cat,
-        is_theory: cat.is_theory ?? false
-      }))
-      logger.debug('📊 Loaded evaluation categories:', evalCatData?.length || 0, evalCatData)
-    }
-
-    logger.debug('🔍 Getting tenant business_type for evaluation system...')
-
-    // Get tenant business_type first
-    const { data: tenantData, error: tenantError } = await supabase
-      .from('tenants')
-      .select('business_type')
-      .eq('id', userProfile.tenant_id)
-      .single()
-
-    if (tenantError) throw tenantError
-
-    logger.debug('🔍 Tenant business_type:', tenantData?.business_type)
-    tenantBusinessType.value = tenantData?.business_type || ''
-
-    // For driving_school: Load driving categories (filtered by tenant)
-    if (tenantData?.business_type === 'driving_school') {
-      logger.debug('🔍 Loading driving categories for driving school tenant:', userProfile.tenant_id)
-      const { data: drivingCatData } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('is_active', true)
-        .eq('tenant_id', userProfile.tenant_id)
-        .order('code')
-      drivingCategories.value = drivingCatData || []
-    } else {
-      logger.debug('🔍 Creating generic categories for non-driving school tenant:', tenantData?.business_type)
-      // For other business types: Create generic categories
       drivingCategories.value = [
-        { 
-          id: 1, 
-          code: 'ALL', 
-          name: 'Allgemein', 
-          description: 'Allgemeine Bewertungskriterien', 
+        {
+          id: 1,
+          code: 'ALL',
+          name: 'Allgemein',
+          description: 'Allgemeine Bewertungskriterien',
           color: null,
-          is_active: true, 
+          is_active: true,
           created_at: new Date().toISOString(),
-          tenant_id: userProfile.tenant_id 
+          tenant_id: data.tenantId
         }
       ]
     }
-
-    // Load criteria with driving categories (filtered by tenant through categories + global theory categories)
-    // First: Load tenant-specific criteria
-    const { data: tenantCritData } = await supabase
-      .from('evaluation_criteria')
-      .select(`
-        id,
-        category_id,
-        name,
-        description,
-        display_order,
-        is_active,
-        driving_categories,
-        educational_content,
-        tenant_id,
-        evaluation_categories!inner(tenant_id, is_theory, id, display_order)
-      `)
-      .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
-    
-    // Second: Load global theory criteria
-    const { data: theoryCritData } = await supabase
-      .from('evaluation_criteria')
-      .select(`
-        id,
-        category_id,
-        name,
-        description,
-        display_order,
-        is_active,
-        driving_categories,
-        educational_content,
-        tenant_id,
-        evaluation_categories!inner(tenant_id, is_theory, id, display_order)
-      `)
-      .is('evaluation_categories.tenant_id', null)
-      .eq('evaluation_categories.is_theory', true)
-    
-    // Combine and properly sort both results:
-    // 1. Primary: By evaluation_categories display_order (Schulungstyp)
-    // 2. Secondary: By evaluation_criteria display_order (within each category)
-    const allCriteria = [...(tenantCritData || []), ...(theoryCritData || [])]
-      .sort((a, b) => {
-        // Get category display_order
-        const catOrderA = a.evaluation_categories?.[0]?.display_order ?? 999
-        const catOrderB = b.evaluation_categories?.[0]?.display_order ?? 999
-        
-        // Primary sort: by category display_order
-        if (catOrderA !== catOrderB) {
-          return catOrderA - catOrderB
-        }
-        
-        // Secondary sort: by criteria display_order within same category
-        const critOrderA = a.display_order ?? 999
-        const critOrderB = b.display_order ?? 999
-        return critOrderA - critOrderB
-      })
-    
-    criteria.value = allCriteria
-    logger.debug('📊 Loaded evaluation criteria:', allCriteria.length, { tenant: tenantCritData?.length || 0, theory: theoryCritData?.length || 0 })
-
-    // Load scale (filtered by tenant)
-    const { data: scaleData } = await supabase
-      .from('evaluation_scale')
-      .select('id, rating, label, description, color, is_active, tenant_id')
-      .eq('tenant_id', userProfile.tenant_id)
-      .order('rating')
-    scale.value = scaleData || []
-    logger.debug('📊 Loaded evaluation scale:', scaleData?.length || 0, scaleData)
   } catch (error) {
     console.error('Error loading data:', error)
   }
@@ -1418,59 +1286,12 @@ const loadStandardEvaluationScale = async () => {
   isLoadingStandards.value = true
   
   try {
-    // Get current user's tenant_id
-    const user = authStore.user // ✅ MIGRATED: Use auth store
-    if (!user) throw new Error('Nicht angemeldet')
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-
-    logger.debug('📥 Loading standard evaluation scale for tenant:', userProfile.tenant_id)
-
-    // Load global evaluation scale (tenant_id IS NULL)
-    const { data: globalScale, error: fetchError } = await supabase
-      .from('evaluation_scale')
-      .select('*')
-      .is('tenant_id', null)
-      .order('rating')
-
-    if (fetchError) throw fetchError
-
-    if (!globalScale || globalScale.length === 0) {
-      uiStore.showError('Keine Standard-Skala gefunden', 'Bitte wenden Sie sich an den Administrator.')
-      return
-    }
-
-    // Copy global scale to tenant
-    const { error: insertError } = await supabase
-      .from('evaluation_scale')
-      .insert(
-        globalScale.map(item => ({
-          rating: item.rating,
-          label: item.label,
-          description: item.description,
-          color: item.color,
-          is_active: item.is_active,
-          tenant_id: userProfile.tenant_id
-          // id and created_at will be auto-generated by the database
-        }))
-      )
-
-    if (insertError) throw insertError
-
-    logger.debug('✅ Standard evaluation scale copied for tenant:', userProfile.tenant_id)
-    
-    // Reload data to show the new scale
+    await $fetch('/api/admin/evaluation-system', {
+      method: 'POST',
+      body: { action: 'copy-standard-scale' }
+    })
     await loadData()
-    
     uiStore.showSuccess('Standard-Skala geladen', 'Die Bewertungsskala wurde erfolgreich geladen.')
-    
   } catch (error: any) {
     console.error('❌ Error loading standard evaluation scale:', error)
     uiStore.showError('Fehler beim Laden', `Fehler beim Laden der Standard-Skala: ${error.message}`)
@@ -1484,127 +1305,12 @@ const loadStandardEvaluationCategories = async () => {
   isLoadingStandards.value = true
   
   try {
-    // Get current user's tenant_id
-    const user = authStore.user // ✅ MIGRATED: Use auth store
-    if (!user) throw new Error('Nicht angemeldet')
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-
-    logger.debug('📥 Loading standard evaluation categories for tenant:', userProfile.tenant_id)
-
-    // First check if tenant already has evaluation categories
-    const { data: existingCategories, error: checkError } = await supabase
-      .from('evaluation_categories')
-      .select('id')
-      .eq('tenant_id', userProfile.tenant_id)
-      .limit(1)
-
-    if (checkError) throw checkError
-
-    if (existingCategories && existingCategories.length > 0) {
-      const shouldOverwrite = confirm('Standard-Templates wurden bereits für diesen Tenant geladen. Möchten Sie sie überschreiben? (Achtung: Dies löscht alle vorhandenen Bewertungskategorien und -kriterien!)')
-      if (!shouldOverwrite) {
-        return
-      }
-      
-      // Delete existing categories and criteria for this tenant
-      logger.debug('🗑️ Deleting existing evaluation data for tenant:', userProfile.tenant_id)
-      
-      const { error: deleteCriteriaError } = await supabase
-        .from('evaluation_criteria')
-        .delete()
-        .eq('tenant_id', userProfile.tenant_id)
-      
-      if (deleteCriteriaError) throw deleteCriteriaError
-      
-      const { error: deleteCategoriesError } = await supabase
-        .from('evaluation_categories')
-        .delete()
-        .eq('tenant_id', userProfile.tenant_id)
-      
-      if (deleteCategoriesError) throw deleteCategoriesError
-      
-      logger.debug('✅ Existing evaluation data deleted')
-    }
-
-    // Load global evaluation categories (tenant_id IS NULL)
-    const { data: globalCategories, error: categoriesError } = await supabase
-      .from('evaluation_categories')
-      .select('*')
-      .is('tenant_id', null)
-      .order('display_order')
-
-    if (categoriesError) throw categoriesError
-
-    if (!globalCategories || globalCategories.length === 0) {
-      uiStore.showError('Keine Standard-Kategorien gefunden', 'Bitte wenden Sie sich an den Administrator.')
-      return
-    }
-
-    // Load global evaluation criteria (tenant_id IS NULL)
-    const { data: globalCriteria, error: criteriaError } = await supabase
-      .from('evaluation_criteria')
-      .select('id, category_id, name, description, display_order, is_active, driving_categories, tenant_id')
-      .is('tenant_id', null)
-      .order('display_order')
-
-    if (criteriaError) throw criteriaError
-
-    // Copy categories to tenant
-    const categoryMapping: Record<string, string> = {}
-    
-    for (const category of globalCategories) {
-      const { data: newCategory, error: insertError } = await supabase
-        .from('evaluation_categories')
-        .insert({
-          name: category.name,
-          description: category.description,
-          color: category.color,
-          display_order: category.display_order,
-          driving_categories: category.driving_categories,
-          is_active: category.is_active,
-          tenant_id: userProfile.tenant_id
-        })
-        .select('id')
-        .single()
-
-      if (insertError) throw insertError
-      categoryMapping[category.id] = newCategory.id
-    }
-
-    // Copy criteria to tenant with new category IDs
-    if (globalCriteria && globalCriteria.length > 0) {
-      const criteriaToInsert = globalCriteria.map(criterion => ({
-        category_id: categoryMapping[criterion.category_id],
-        name: criterion.name,
-        description: criterion.description,
-        display_order: criterion.display_order,
-        is_active: criterion.is_active,
-        driving_categories: criterion.driving_categories || [],
-        tenant_id: userProfile.tenant_id
-      }))
-
-      const { error: insertError } = await supabase
-        .from('evaluation_criteria')
-        .insert(criteriaToInsert)
-
-      if (insertError) throw insertError
-    }
-
-    logger.debug('✅ Standard evaluation categories copied for tenant:', userProfile.tenant_id)
-    
-    // Reload data to show the new categories
+    await $fetch('/api/admin/evaluation-system', {
+      method: 'POST',
+      body: { action: 'copy-standard-categories' }
+    })
     await loadData()
-    
     uiStore.showSuccess('Standard-Kategorien geladen', 'Die Bewertungskategorien wurden erfolgreich geladen.')
-    
   } catch (error: any) {
     console.error('❌ Error loading standard evaluation categories:', error)
     uiStore.showError('Fehler beim Laden', `Fehler beim Laden der Standard-Kategorien: ${error.message}`)
@@ -1616,51 +1322,12 @@ const loadStandardEvaluationCategories = async () => {
 // Load evaluation data for specific driving category
 const loadEvaluationDataForCategory = async (drivingCategoryCode: string) => {
   try {
-    // Get current user's tenant_id
-    const user = authStore.user // ✅ MIGRATED: Use auth store
-    if (!user) throw new Error('Nicht angemeldet')
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-
-    logger.debug('🔍 Loading evaluation data for driving category:', drivingCategoryCode, 'and tenant:', userProfile.tenant_id)
-
-    // Load evaluation categories that apply to this driving category
-    const { data: evalCatData, error: catError } = await supabase
-      .from('evaluation_categories')
-      .select('*')
-      .eq('is_active', true)
-      .eq('tenant_id', userProfile.tenant_id)
-      .contains('driving_categories', [drivingCategoryCode])
-      .order('display_order')
-
-    if (catError) throw catError
-
-    // Load evaluation criteria that apply to this driving category
-    const { data: critData, error: critError } = await supabase
-      .from('evaluation_criteria')
-      .select(`
-        *,
-        driving_categories,
-        evaluation_categories!inner(tenant_id)
-      `)
-      .eq('evaluation_categories.tenant_id', userProfile.tenant_id)
-      .contains('driving_categories', [drivingCategoryCode])
-      .order('display_order')
-
-    if (critError) throw critError
-
-    return {
-      categories: evalCatData || [],
-      criteria: critData || []
-    }
-
+    const response: any = await $fetch('/api/admin/evaluation-system', {
+      method: 'POST',
+      body: { action: 'load-evaluation-for-category', driving_category_code: drivingCategoryCode }
+    })
+    if (!response.success) throw new Error(response.error || 'Fehler beim Laden')
+    return { categories: response.data.categories, criteria: response.data.criteria }
   } catch (error: any) {
     console.error('❌ Error loading evaluation data for category:', error)
     throw error
@@ -1687,26 +1354,18 @@ const closeCategoryModal = () => {
 
 const saveCategory = async () => {
   try {
-    const categoryData = {
-      name: categoryForm.value.name,
-      description: categoryForm.value.description,
-      color: categoryForm.value.color,
-      display_order: categoryForm.value.display_order,
-      is_theory: categoryForm.value.is_theory
-    }
-
-    if (editingCategory.value) {
-      // Update
-      await supabase
-        .from('evaluation_categories')
-        .update(categoryData)
-        .eq('id', editingCategory.value.id)
-    } else {
-      // Insert
-      await supabase
-        .from('evaluation_categories')
-        .insert(categoryData)
-    }
+    await $fetch('/api/admin/evaluation-system', {
+      method: 'POST',
+      body: {
+        action: 'save-category',
+        id: editingCategory.value?.id || undefined,
+        name: categoryForm.value.name,
+        description: categoryForm.value.description,
+        color: categoryForm.value.color,
+        display_order: categoryForm.value.display_order,
+        is_theory: categoryForm.value.is_theory
+      }
+    })
     await loadData()
     closeCategoryModal()
   } catch (error) {
@@ -1716,12 +1375,11 @@ const saveCategory = async () => {
 
 const deleteCategory = async (id: string) => {
   if (confirm('Sind Sie sicher, dass Sie diese Kategorie löschen möchten?')) {
-    logger.debug('Deleting category:', id)
     try {
-      await supabase
-        .from('evaluation_categories')
-        .delete()
-        .eq('id', id)
+      await $fetch('/api/admin/evaluation-system', {
+        method: 'POST',
+        body: { action: 'delete-category', id }
+      })
       await loadData()
     } catch (error) {
       console.error('Error deleting category:', error)
@@ -1731,12 +1389,11 @@ const deleteCategory = async (id: string) => {
 
 const deleteCriteria = async (id: string) => {
   if (confirm('Sind Sie sicher, dass Sie dieses Kriterium löschen möchten?')) {
-    logger.debug('Deleting criteria:', id)
     try {
-      await supabase
-        .from('evaluation_criteria')
-        .delete()
-        .eq('id', id)
+      await $fetch('/api/admin/evaluation-system', {
+        method: 'POST',
+        body: { action: 'delete-criterion', id }
+      })
       await loadData()
     } catch (error) {
       console.error('Error deleting criteria:', error)
@@ -1846,20 +1503,15 @@ const toggleDrivingCategory = async (criteria: any, drivingCategory: string) => 
     let newDrivingCategories = criteria.driving_categories || []
     
     if (hasDrivingCategory(criteria, drivingCategory)) {
-      // Remove driving category
       newDrivingCategories = newDrivingCategories.filter((cat: string) => cat !== drivingCategory)
     } else {
-      // Add driving category
       newDrivingCategories = [...newDrivingCategories, drivingCategory]
     }
     
-    // Update in database
-    await supabase
-      .from('evaluation_criteria')
-      .update({ driving_categories: newDrivingCategories })
-      .eq('id', criteria.id)
-    
-    // Reload data
+    await $fetch('/api/admin/evaluation-system', {
+      method: 'POST',
+      body: { action: 'update-criteria-driving-categories', id: criteria.id, driving_categories: newDrivingCategories }
+    })
     await loadData()
   } catch (error) {
     console.error('Error toggling driving category:', error)
@@ -1871,24 +1523,14 @@ const toggleAllCategoriesForCriteria = async (criteria: any) => {
   try {
     const allDrivingCategoryCodes = drivingCategories.value.map((dc: any) => dc.code)
     const currentCategories = criteria.driving_categories || []
-    
-    // Prüfen ob alle Kategorien bereits aktiviert sind
     const hasAll = allDrivingCategoryCodes.every((code: string) => currentCategories.includes(code))
-    
-    // Alle aktivieren oder alle deaktivieren
     const newCategories = hasAll ? [] : allDrivingCategoryCodes
-    
-    // In der Datenbank aktualisieren
-    const { error } = await supabase
-      .from('evaluation_criteria')
-      .update({ driving_categories: newCategories })
-      .eq('id', criteria.id)
-    
-    if (error) throw error
-    
-    // Lokalen State aktualisieren
+
+    await $fetch('/api/admin/evaluation-system', {
+      method: 'POST',
+      body: { action: 'update-criteria-driving-categories', id: criteria.id, driving_categories: newCategories }
+    })
     criteria.driving_categories = newCategories
-    
     logger.debug(`✅ All categories ${hasAll ? 'deactivated' : 'activated'} for criteria: ${criteria.name}`)
   } catch (err: any) {
     console.error('❌ Error toggling all categories for criteria:', err)
@@ -1937,31 +1579,23 @@ const toggleAllDrivingCategories = async (event: Event) => {
   const isChecked = target.checked
   
   try {
-    // Alle Kriterien aktualisieren
     const updates = criteria.value.map((c: any) => ({
       id: c.id,
       driving_categories: isChecked ? drivingCategories.value.map((dc: any) => dc.code) : []
     }))
     
-    for (const update of updates) {
-      const { error } = await supabase
-        .from('evaluation_criteria')
-        .update({ driving_categories: update.driving_categories })
-        .eq('id', update.id)
-      
-      if (error) throw error
-    }
+    await $fetch('/api/admin/evaluation-system', {
+      method: 'POST',
+      body: { action: 'update-all-criteria-driving-categories', updates }
+    })
     
-    // Lokalen State aktualisieren
     criteria.value.forEach((c: any) => {
       c.driving_categories = isChecked ? drivingCategories.value.map((dc: any) => dc.code) : []
     })
-    
     logger.debug(`✅ All driving categories ${isChecked ? 'activated' : 'deactivated'} successfully`)
   } catch (err: any) {
     console.error('❌ Error toggling all driving categories:', err)
     uiStore.showError('Fehler beim Umschalten', `Fehler beim Umschalten aller Fahrkategorien: ${err.message}`)
-    // Checkbox zurücksetzen bei Fehler
     target.checked = !isChecked
   }
 }
@@ -2021,28 +1655,24 @@ const saveInlineCriteria = async (category: EvaluationCategory) => {
       return
     }
     
-    // Bestimme den nächsten display_order Wert für diese Kategorie
     const existingCriteria = criteria.value.filter((c: any) => c.category_id === category.id)
     const maxOrder = existingCriteria.length > 0 
       ? Math.max(...existingCriteria.map((c: any) => c.display_order || 0))
       : 0
     const nextOrder = maxOrder + 10
     
-    const criteriaData = {
-      category_id: category.id,
-      name: inlineCriteriaForm.value.name.trim(),
-      description: inlineCriteriaForm.value.description.trim(),
-      driving_categories: inlineCriteriaForm.value.driving_categories,
-      display_order: nextOrder
-    }
+    await $fetch('/api/admin/evaluation-system', {
+      method: 'POST',
+      body: {
+        action: 'save-inline-criteria',
+        category_id: category.id,
+        name: inlineCriteriaForm.value.name.trim(),
+        description: inlineCriteriaForm.value.description.trim(),
+        driving_categories: inlineCriteriaForm.value.driving_categories,
+        display_order: nextOrder
+      }
+    })
     
-    const { error } = await supabase
-      .from('evaluation_criteria')
-      .insert(criteriaData)
-    
-    if (error) throw error
-    
-    logger.debug('✅ Inline criteria created:', criteriaData.name, 'with order:', nextOrder)
     await loadData()
     cancelInlineAdd()
   } catch (err: any) {
@@ -2086,49 +1716,32 @@ const onDrop = async (event: DragEvent, targetCriteria: any, targetCategoryId: s
   event.preventDefault()
   
   if (!draggedCriteria.value || !draggedCategoryId.value) return
-  
-  // Nur innerhalb derselben Kategorie erlauben
   if (draggedCategoryId.value !== targetCategoryId) return
-  
-  // Gleiche Kriterium nicht auf sich selbst droppen
   if (draggedCriteria.value.id === targetCriteria.id) return
   
   try {
-    // Verwende die ursprüngliche Reihenfolge während des Drags
     const criteriaList = originalOrder.value[targetCategoryId] || criteria.value.filter(c => c.category_id === targetCategoryId)
     const draggedIndex = criteriaList.findIndex(c => c.id === draggedCriteria.value.id)
     const targetIndex = criteriaList.findIndex(c => c.id === targetCriteria.id)
     
     if (draggedIndex === -1 || targetIndex === -1) return
     
-    // Neue Reihenfolge berechnen
     const newOrder = [...criteriaList]
     const [draggedItem] = newOrder.splice(draggedIndex, 1)
     newOrder.splice(targetIndex, 0, draggedItem)
     
-    // display_order für alle Kriterien aktualisieren
-    const updates = newOrder.map((criteria, index) => ({
-      id: criteria.id,
-      display_order: index * 10 // 0, 10, 20, 30... für einfache Sortierung
+    const updates = newOrder.map((c, index) => ({
+      id: c.id,
+      display_order: index * 10
     }))
     
-    // Alle Updates in der Datenbank durchführen
-    for (const update of updates) {
-      const { error } = await supabase
-        .from('evaluation_criteria')
-        .update({ display_order: update.display_order })
-        .eq('id', update.id)
-      
-      if (error) throw error
-    }
+    await $fetch('/api/admin/evaluation-system', {
+      method: 'POST',
+      body: { action: 'update-criteria-order', updates }
+    })
     
     logger.debug('✅ Criteria order updated successfully')
-    
-    // Kurze Verzögerung vor dem Neuladen, um Flackern zu vermeiden
-    setTimeout(async () => {
-      await loadData()
-    }, 150)
-    
+    setTimeout(async () => { await loadData() }, 150)
   } catch (err: any) {
     console.error('❌ Error updating criteria order:', err)
     uiStore.showError('Fehler beim Aktualisieren', `Fehler beim Aktualisieren der Reihenfolge: ${err.message}`)
@@ -2167,41 +1780,21 @@ const closeCriteriaModal = () => {
 
 const saveCriteria = async () => {
   try {
-    // Get current user's tenant_id
-    const user = authStore.user // ✅ MIGRATED: Use auth store
-    if (!user) throw new Error('Nicht angemeldet')
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-
-    const criteriaData = {
-      category_id: criteriaForm.value.category_id,
-      name: criteriaForm.value.name,
-      description: criteriaForm.value.description,
-      display_order: criteriaForm.value.display_order,
-      driving_categories: criteriaForm.value.driving_categories || [],
-      always_visible: criteriaForm.value.always_visible ?? false,
-      tenant_id: userProfile.tenant_id
-    }
-
-    if (editingCriteria.value) {
-      // Update
-      await supabase
-        .from('evaluation_criteria')
-        .update(criteriaData)
-        .eq('id', editingCriteria.value.id)
-    } else {
-      // Insert
-      await supabase
-        .from('evaluation_criteria')
-        .insert(criteriaData)
-    }
+    await $fetch('/api/admin/evaluation-system', {
+      method: 'POST',
+      body: {
+        action: 'save-criterion',
+        id: editingCriteria.value?.id || undefined,
+        name: criteriaForm.value.name,
+        description: criteriaForm.value.description,
+        max_points: undefined,
+        category_id: criteriaForm.value.category_id,
+        display_order: criteriaForm.value.display_order,
+        is_theory: false,
+        driving_categories: criteriaForm.value.driving_categories || [],
+        always_visible: criteriaForm.value.always_visible ?? false
+      }
+    })
     await loadData()
     closeCriteriaModal()
   } catch (error) {
@@ -2235,40 +1828,31 @@ const closeScaleModal = () => {
 
 const saveScale = async () => {
   try {
-    const scaleData = {
-      rating: scaleForm.value.rating,
-      label: scaleForm.value.label,
-      description: scaleForm.value.description,
-      color: scaleForm.value.color
-    }
-
-    if (editingScale.value) {
-      // Update
-      await supabase
-        .from('evaluation_scale')
-        .update(scaleData)
-        .eq('id', editingScale.value.id)
-    } else {
-      // Insert
-      await supabase
-        .from('evaluation_scale')
-        .insert(scaleData)
-    }
+    await $fetch('/api/admin/evaluation-system', {
+      method: 'POST',
+      body: {
+        action: 'save-scale',
+        id: editingScale.value?.id || undefined,
+        rating: scaleForm.value.rating,
+        label: scaleForm.value.label,
+        description: scaleForm.value.description,
+        color: scaleForm.value.color
+      }
+    })
     await loadData()
     closeScaleModal()
   } catch (error) {
     console.error('Error saving scale:', error)
-    console.error('Scale data:', scaleForm.value)
   }
 }
 
 const deleteScale = async (id: string) => {
   if (confirm('Sicherheitsabfrage: Sind Sie sicher, dass Sie diese Bewertungsstufe löschen möchten?')) {
     try {
-      await supabase
-        .from('evaluation_scale')
-        .delete()
-        .eq('id', id)
+      await $fetch('/api/admin/evaluation-system', {
+        method: 'POST',
+        body: { action: 'delete-scale', id }
+      })
       await loadData()
     } catch (error) {
       console.error('Error deleting scale:', error)
@@ -2616,19 +2200,6 @@ const saveEducationalContent = async () => {
   try {
     isUploadingImage.value = true
     
-    // Get current user's tenant_id
-    const user = authStore.user // ✅ MIGRATED: Use auth store
-    if (!user) throw new Error('Nicht angemeldet')
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-    
     // Upload images for each section
     const processedSections = await Promise.all(
       educationalContentForm.value.sections.map(async (section, sectionIndex) => {
@@ -2727,15 +2298,10 @@ const saveEducationalContent = async () => {
     const contentToSave = Object.keys(existingContent).length > 0 ? existingContent : null
     
     // Update criteria in database
-    const { error: updateError } = await supabase
-      .from('evaluation_criteria')
-      .update({
-        educational_content: contentToSave,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', editingEducationalContent.value.id)
-    
-    if (updateError) throw updateError
+    await $fetch('/api/admin/evaluation-system', {
+      method: 'POST',
+      body: { action: 'save-educational-content', id: editingEducationalContent.value.id, educational_content: contentToSave }
+    })
     
     // Update local criteria
     const criteriaIndex = criteria.value.findIndex(c => c.id === editingEducationalContent.value!.id)

@@ -2,20 +2,18 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
-import { getAuthenticatedUser } from '~/server/utils/auth'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
-    const user = await getAuthenticatedUser(event)
-    if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-    if (!['admin', 'staff'].includes(user.role || '')) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    const profile = await requireAdminProfile(event)
 
-    const rateLimitKey = `vehicle_update:${user.id}`
+    const rateLimitKey = `vehicle_update:${profile.id}`
     const rateLimitResult = await checkRateLimit(rateLimitKey, 20, 60 * 1000)
     if (!rateLimitResult.allowed) throw createError({ statusCode: 429, statusMessage: 'Too many requests' })
 
     const body = await readBody(event)
-    const { vehicleId, name, license_plate, type, capacity, is_active } = body
+    const { vehicleId, marke, modell, location, description, requires_reservation, getriebe, aufbau, farbe } = body
 
     if (!vehicleId) throw createError({ statusCode: 400, statusMessage: 'Missing vehicleId' })
 
@@ -23,8 +21,19 @@ export default defineEventHandler(async (event) => {
 
     const { data: vehicle, error: err } = await supabase
       .from('vehicles')
-      .update({ name, license_plate, type, capacity, is_active })
+      .update({
+        marke: marke || null,
+        modell: modell || null,
+        location: location || null,
+        description: description || null,
+        requires_reservation: requires_reservation ?? true,
+        getriebe: getriebe || null,
+        aufbau: aufbau || null,
+        farbe: farbe || null,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', vehicleId)
+      .eq('tenant_id', profile.tenant_id)
       .select()
       .single()
 
@@ -37,4 +46,3 @@ export default defineEventHandler(async (event) => {
     return { success: false, data: null, error: error.statusMessage || 'Failed' }
   }
 })
-

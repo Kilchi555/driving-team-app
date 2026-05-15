@@ -168,8 +168,15 @@ export default defineEventHandler(async (event) => {
         .is('evaluation_criteria_id', null)
     }
 
-    // ✅ 6. AUDIT LOGGING
-    logger.debug('✅ Criteria evaluations saved:', {
+    // ✅ 6. MARK APPOINTMENT AS COMPLETED
+    await supabase
+      .from('appointments')
+      .update({ status: 'completed' })
+      .eq('id', appointment_id)
+      .eq('tenant_id', tenantId)
+
+    // ✅ 7. AUDIT LOGGING
+    logger.debug('✅ Criteria evaluations saved and appointment marked as completed:', {
       userId: user.id,
       appointmentId: appointment_id,
       evaluationCount: savedNotes?.length || 0,

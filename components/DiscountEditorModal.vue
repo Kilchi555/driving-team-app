@@ -203,10 +203,9 @@
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
+              <option value="appointments">Nur Fahrstunden / Kurse (Standard)</option>
               <option value="all">Alle (Termine + Produkte)</option>
-              <option value="appointments">Nur Termine</option>
               <option value="products">Nur Produkte</option>
-              <option value="services">Nur Services</option>
             </select>
           </div>
 
@@ -356,7 +355,7 @@ const form = ref<CreateDiscountRequest & { first_lesson_only?: boolean }>({
   valid_until: undefined,
   usage_limit: undefined,
   max_per_user: undefined,
-  applies_to: 'all',
+  applies_to: 'appointments',
   category_filter: undefined,
   is_active: true,
   first_lesson_only: false
@@ -412,7 +411,7 @@ const initializeForm = () => {
       valid_until: undefined,
       usage_limit: undefined,
       max_per_user: undefined,
-      applies_to: 'all',
+      applies_to: 'appointments',
       category_filter: undefined,
       is_active: true,
       first_lesson_only: false

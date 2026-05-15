@@ -332,124 +332,24 @@ const filteredTransactions = computed(() => {
 
 // Methods
 const loadCashTransactions = async () => {
-  // Prüfe ob der Benutzer geladen ist
   if (!props.currentUser?.id) {
     console.warn('Current user not loaded yet, skipping loadCashTransactions')
     return
   }
 
-  logger.debug('🔍 Loading cash transactions...', {
-    currentUser: props.currentUser,
-    isAdmin: props.isAdmin,
-    userId: props.currentUser.id
-  })
-
   isLoading.value = true
   error.value = null
 
   try {
-    // Get current user's tenant_id first
-    const currentUserData = authStore.user // ✅ MIGRATED
-    if (!currentUserData?.user) throw new Error('Not authenticated')
-    
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', currentUserData.user.id)
-      .single()
-    
-    if (profileError || !userProfile?.tenant_id) {
-      throw new Error('User has no tenant assigned')
-    }
-    
-    logger.debug('🔍 Loading cash transactions for tenant:', userProfile.tenant_id)
-    
-    // Lade zuerst die cash_transactions - FILTERED BY TENANT
-    let query = supabase
-      .from('cash_transactions')
-      .select('*')
-      .eq('tenant_id', userProfile.tenant_id)
-      .order('created_at', { ascending: false })
-
-    // Filter by instructor if not admin OR if staff filter is applied
+    const params = new URLSearchParams()
     if (!props.isAdmin && props.currentUser?.id) {
-      query = query.eq('instructor_id', props.currentUser.id)
-      logger.debug('🔍 Filtering by instructor_id:', props.currentUser.id)
+      params.set('instructor_id', props.currentUser.id)
     } else if (props.isAdmin && props.staffFilterId) {
-      query = query.eq('instructor_id', props.staffFilterId)
-      logger.debug('🔍 Admin filtering by specific staff_id:', props.staffFilterId)
-    } else {
-      logger.debug('🔍 Loading all transactions (admin mode)')
+      params.set('instructor_id', props.staffFilterId)
     }
 
-    logger.debug('🔍 Query:', query)
-
-    const { data: transactions, error: queryError } = await query
-
-    if (queryError) throw queryError
-
-    logger.debug('🔍 Query result:', {
-      transactions: transactions,
-      count: transactions?.length || 0,
-      error: queryError
-    })
-
-    if (!transactions || transactions.length === 0) {
-      logger.debug('🔍 No transactions found, setting empty array')
-      cashTransactions.value = []
-      return
-    }
-
-    // Sammle alle benötigten IDs
-    const userIds = new Set<string>()
-    const appointmentIds = new Set<string>()
-    
-    transactions.forEach(t => {
-      userIds.add(t.instructor_id)
-      userIds.add(t.student_id)
-      if (t.confirmed_by) userIds.add(t.confirmed_by)
-      if (t.appointment_id) appointmentIds.add(t.appointment_id)
-    })
-
-    // Lade alle benötigten Benutzerdaten - FILTERED BY TENANT
-    const { data: users, error: usersError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name')
-      .in('id', Array.from(userIds))
-      .eq('tenant_id', userProfile.tenant_id)
-
-    if (usersError) throw usersError
-
-    // Lade alle benötigten Appointment-Daten - FILTERED BY TENANT
-    const { data: appointments, error: appointmentsError } = await supabase
-      .from('appointments')
-      .select('id, start_time')
-      .in('id', Array.from(appointmentIds))
-      .eq('tenant_id', userProfile.tenant_id)
-
-    if (appointmentsError) throw appointmentsError
-
-    // Erstelle Lookup-Maps
-    const usersMap = new Map(users?.map(u => [u.id, u]) || [])
-    const appointmentsMap = new Map(appointments?.map(a => [a.id, a]) || [])
-
-    // Transform data for easier use
-    cashTransactions.value = transactions.map(transaction => {
-      const instructor = usersMap.get(transaction.instructor_id)
-      const student = usersMap.get(transaction.student_id)
-      const confirmedBy = transaction.confirmed_by ? usersMap.get(transaction.confirmed_by) : null
-      const appointment = appointmentsMap.get(transaction.appointment_id)
-
-      return {
-        ...transaction,
-        instructor_name: instructor ? `${instructor.first_name} ${instructor.last_name}` : 'Unbekannt',
-        student_name: student ? `${student.first_name} ${student.last_name}` : 'Unbekannt',
-        appointment_start_time: appointment?.start_time || null,
-        confirmed_by_name: confirmedBy ? 
-          `${confirmedBy.first_name} ${confirmedBy.last_name}` : null
-      }
-    })
-
+    const response: any = await $fetch(`/api/admin/cash-control?${params.toString()}`)
+    cashTransactions.value = response.data || []
   } catch (err: any) {
     console.error('Error loading cash transactions:', err)
     error.value = err.message || 'Fehler beim Laden der Bargeldtransaktionen'

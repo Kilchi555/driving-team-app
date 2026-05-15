@@ -362,6 +362,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useAuthStore } from '~/stores/auth'
+import { getSupabase } from '~/utils/supabase'
 import { markRaw } from 'vue'
 import { loadTenantData, replacePlaceholders, getAvailablePlaceholders } from '~/utils/reglementPlaceholders'
 
@@ -405,6 +406,7 @@ const reglementTypes = [
 ]
 
 const authStore = useAuthStore()
+const supabase = getSupabase()
 
 const isLoading = ref(false)
 const isSaving = ref(false)

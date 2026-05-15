@@ -825,66 +825,38 @@ const loadCategories = async () => {
   error.value = null
 
   try {
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id
-    const user = authStore.user // ✅ MIGRATED
-    if (!user) {
-      throw new Error('Nicht angemeldet')
-    }
+    const response = await $fetch<{ categories: any[]; pricingRules: any[]; businessType: string | null }>(
+      '/api/admin/categories'
+    )
 
-    // Get user's tenant_id
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) {
-      console.error('❌ Profile error:', profileError)
-      throw new Error('Fehler beim Laden der Benutzerinformationen')
-    }
-
-    logger.debug('🔍 User tenant_id:', userProfile.tenant_id)
-
-    // Get tenant business_type first
-    const { data: tenantData, error: tenantError } = await supabase
-      .from('tenants')
-      .select('business_type')
-      .eq('id', userProfile.tenant_id)
-      .single()
-
-    if (tenantError) throw tenantError
-    
-    // Only load categories if business_type is driving_school
-    if (tenantData?.business_type !== 'driving_school') {
-      logger.debug('🚫 Categories not available for business_type:', tenantData?.business_type)
+    if (response.businessType !== 'driving_school') {
+      logger.debug('🚫 Categories not available for business_type:', response.businessType)
       categories.value = []
-      isLoading.value = false
+      pricingCache.value = {}
       return
     }
 
-    // Load categories for the user's tenant via API endpoint
-    const response = await $fetch('/api/system/availability-data', {
-      method: 'POST',
-      body: {
-        action: 'get-categories-for-tenant',
-        tenant_id: userProfile.tenant_id
-      }
-    }) as any
-
-    if (!response?.success) {
-      throw new Error(response?.error || 'Failed to load categories')
-    }
-
-    categories.value = response.data?.categories || []
-    logger.debug('✅ Categories loaded via API:', categories.value.length, 'categories for tenant:', userProfile.tenant_id || 'standard templates')
+    categories.value = response.categories
+    buildPricingCache(response.pricingRules)
+    logger.debug('✅ Categories loaded:', categories.value.length)
   } catch (err: any) {
     console.error('❌ Error loading categories:', err)
     error.value = err.message || 'Fehler beim Laden der Kategorien'
   } finally {
     isLoading.value = false
   }
+}
+
+const buildPricingCache = (pricingRules: any[]) => {
+  const cache: Record<string, any> = {}
+  for (const rule of pricingRules) {
+    if (!cache[rule.category_code]) cache[rule.category_code] = {}
+    if (rule.rule_type === 'base_price') cache[rule.category_code].basePriceRule = rule
+    else if (rule.rule_type === 'admin_fee') cache[rule.category_code].adminFeeRule = rule
+    else if (rule.rule_type === 'theory') cache[rule.category_code].theoryRule = rule
+    else if (rule.rule_type === 'consultation') cache[rule.category_code].consultationRule = rule
+  }
+  pricingCache.value = cache
 }
 
 // Helpers for document requirements (LFA/FAK)
@@ -917,18 +889,14 @@ const isFAKEnabled = (category: Category): boolean => {
 const isSaving = (id: number): boolean => savingCategoryIds.value.has(id)
 
 const updateDocReq = async (category: Category, next: { required: any[]; optional: any[]; requirement_logic?: any }) => {
-  const supabase = getSupabase()
   savingCategoryIds.value.add(category.id)
   try {
     const payload = { required: next.required, optional: next.optional, requirement_logic: next.requirement_logic || {} }
-    const { error: updateError } = await supabase
-      .from('categories')
-      .update({ document_requirements: payload })
-      .eq('id', category.id)
+    await $fetch(`/api/admin/categories/${category.id}`, {
+      method: 'PUT',
+      body: { document_requirements: payload }
+    })
 
-    if (updateError) throw updateError
-
-    // Update local state
     const idx = categories.value.findIndex(c => c.id === category.id)
     if (idx !== -1) {
       (categories.value[idx] as any).document_requirements = payload
@@ -1016,62 +984,19 @@ const getDisabledModeText = (category: Category): string => {
 
 const loadStandardTemplatesList = async () => {
   isLoadingStandardTemplates.value = true
-  
+
   try {
-    const supabase = getSupabase()
-    
-    // Get standard templates (tenant_id IS NULL)
-    const { data: standardData, error: standardError } = await supabase
-      .from('categories')
-      .select('*')
-      .is('tenant_id', null)
-      .order('code', { ascending: true })
+    const { standardTemplates: templates, existingCodes } = await $fetch<{
+      standardTemplates: any[]
+      existingCodes: string[]
+    }>('/api/admin/standard-categories')
 
-    if (standardError) {
-      throw standardError
-    }
+    standardTemplates.value = templates
+    selectedStandardTemplates.value = templates
+      .filter(t => existingCodes.includes(t.code))
+      .map(t => t.id)
 
-    // Get current user's tenant_id
-    const user = authStore.user // ✅ MIGRATED
-    if (!user) {
-      throw new Error('Nicht angemeldet')
-    }
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) {
-      throw new Error('Fehler beim Laden der Benutzerinformationen')
-    }
-
-    // Get user's existing categories
-    let existingCategories: any[] = []
-    if (userProfile.tenant_id) {
-      const { data: existingData, error: existingError } = await supabase
-        .from('categories')
-        .select('code')
-        .eq('tenant_id', userProfile.tenant_id)
-
-      if (existingError) {
-        console.warn('Warning: Could not load existing categories:', existingError)
-      } else {
-        existingCategories = existingData || []
-      }
-    }
-
-    standardTemplates.value = standardData || []
-    
-    // Pre-select templates that already exist (by code)
-    const existingCodes = existingCategories.map(cat => cat.code)
-    selectedStandardTemplates.value = standardTemplates.value
-      .filter(template => existingCodes.includes(template.code))
-      .map(template => template.id)
-    
     showSelectStandardsModal.value = true
-
   } catch (err: any) {
     console.error('❌ Error loading standard templates list:', err)
     loadStandardsError.value = err.message || 'Fehler beim Laden der Standard-Templates'
@@ -1086,91 +1011,20 @@ const loadStandardTemplates = async () => {
   loadStandardsResult.value = null
 
   try {
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id
-    const user = authStore.user // ✅ MIGRATED
-    if (!user) {
-      throw new Error('Nicht angemeldet')
-    }
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) {
-      throw new Error('Fehler beim Laden der Benutzerinformationen')
-    }
-
-    if (!userProfile.tenant_id) {
-      throw new Error('Kein Tenant zugewiesen - Standard-Templates können nicht geladen werden')
-    }
-
-    // Get user's existing categories to avoid duplicates
-    const { data: existingData, error: existingError } = await supabase
-      .from('categories')
-      .select('code')
-      .eq('tenant_id', userProfile.tenant_id)
-
-    if (existingError) {
-      throw new Error('Fehler beim Laden der bestehenden Kategorien')
-    }
-
-    const existingCodes = (existingData || []).map(cat => cat.code)
-    
-    // Filter templates to only copy new ones (not already existing)
-    const selectedTemplates = standardTemplates.value.filter(t => 
-      selectedStandardTemplates.value.includes(t.id)
-    )
-    
-    const templatesToCopy = selectedTemplates.filter(template => 
-      !existingCodes.includes(template.code)
+    const result = await $fetch<{ success: boolean; count: number; message: string }>(
+      '/api/admin/load-standard-categories',
+      {
+        method: 'POST',
+        body: { selectedIds: selectedStandardTemplates.value }
+      }
     )
 
-    if (templatesToCopy.length === 0) {
-      loadStandardsResult.value = {
-        message: 'Alle ausgewählten Kategorien existieren bereits',
-        count: 0
-      }
-    } else {
-      const { error: insertError } = await supabase
-        .from('categories')
-        .insert(
-          templatesToCopy.map(template => ({
-            code: template.code,
-            name: template.name,
-            description: template.description,
-            color: template.color,
-            lesson_duration_minutes: template.lesson_duration_minutes,
-            exam_duration_minutes: template.exam_duration_minutes,
-            tenant_id: userProfile.tenant_id
-          }))
-        )
+    loadStandardsResult.value = { message: result.message, count: result.count }
 
-      if (insertError) {
-        throw insertError
-      }
-
-      // Copy pricing rules for each template
-      for (const template of templatesToCopy) {
-        await copyStandardPricingRules(template.code, userProfile.tenant_id)
-      }
-
-      loadStandardsResult.value = {
-        message: `${templatesToCopy.length} neue Standard-Templates erfolgreich geladen`,
-        count: templatesToCopy.length
-      }
-    }
-    
-    // Close modal after 2 seconds and reload categories
     setTimeout(async () => {
       closeLoadStandardsModal()
       await loadCategories()
-      await loadPricingData() // Reload pricing data for table
     }, 2000)
-
   } catch (err: any) {
     console.error('❌ Error loading standard templates:', err)
     loadStandardsError.value = err.data?.message || err.message || 'Fehler beim Laden der Standard-Templates'
@@ -1253,78 +1107,30 @@ const onCategorySaved = async () => {
 
 const saveCategory = async () => {
   try {
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id
-    const user = authStore.user // ✅ MIGRATED
-    if (!user) throw new Error('Nicht angemeldet')
+    await $fetch('/api/admin/categories', {
+      method: 'POST',
+      body: {
+        id: editingCategory.value?.id,
+        code: categoryForm.value.code,
+        name: categoryForm.value.name,
+        description: categoryForm.value.description,
+        color: categoryForm.value.color,
+        lesson_duration_minutes: categoryForm.value.lesson_duration_minutes,
+        exam_duration_minutes: categoryForm.value.exam_duration_minutes,
+        price_per_lesson_chf: categoryForm.value.price_per_lesson_chf,
+        admin_fee_chf: categoryForm.value.admin_fee_chf,
+        admin_fee_applies_from: categoryForm.value.admin_fee_applies_from,
+        theory_enabled: categoryForm.value.theory_enabled,
+        theory_price_chf: categoryForm.value.theory_price_chf,
+        theory_duration_minutes: categoryForm.value.theory_duration_minutes,
+        consultation_enabled: categoryForm.value.consultation_enabled,
+        consultation_price_chf: categoryForm.value.consultation_price_chf,
+        consultation_duration_minutes: categoryForm.value.consultation_duration_minutes
+      }
+    })
 
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-
-    // Extract pricing fields and create clean category data for database
-    const price_per_lesson_chf = categoryForm.value.price_per_lesson_chf
-    const admin_fee_chf = categoryForm.value.admin_fee_chf
-    const admin_fee_applies_from = categoryForm.value.admin_fee_applies_from
-    const theory_enabled = categoryForm.value.theory_enabled
-    const theory_price_chf = categoryForm.value.theory_price_chf
-    const theory_duration_minutes = categoryForm.value.theory_duration_minutes
-    const consultation_enabled = categoryForm.value.consultation_enabled
-    const consultation_price_chf = categoryForm.value.consultation_price_chf
-    const consultation_duration_minutes = categoryForm.value.consultation_duration_minutes
-    
-    // Create clean category data (only fields that exist in categories table)
-    const categoryData = {
-      code: categoryForm.value.code,
-      name: categoryForm.value.name,
-      description: categoryForm.value.description,
-      color: categoryForm.value.color,
-      lesson_duration_minutes: categoryForm.value.lesson_duration_minutes,
-      exam_duration_minutes: categoryForm.value.exam_duration_minutes
-    }
-    
-    if (editingCategory.value) {
-      // Update category
-      const { error: updateError } = await supabase
-        .from('categories')
-        .update(categoryData)
-        .eq('id', editingCategory.value.id)
-      
-      if (updateError) throw updateError
-      logger.debug('✅ Category updated:', categoryForm.value.code)
-    } else {
-      // Insert category
-      const { error: insertError } = await supabase
-        .from('categories')
-        .insert({ ...categoryData, tenant_id: userProfile.tenant_id })
-      
-      if (insertError) throw insertError
-      logger.debug('✅ Category created:', categoryForm.value.code)
-    }
-
-    // Sync pricing rules
-    await syncPricingRules(
-      categoryForm.value.code, 
-      price_per_lesson_chf, 
-      admin_fee_chf, 
-      admin_fee_applies_from, 
-      theory_enabled,
-      theory_price_chf, 
-      theory_duration_minutes, 
-      consultation_enabled,
-      consultation_price_chf, 
-      consultation_duration_minutes, 
-      userProfile.tenant_id
-    )
-    
+    logger.debug('✅ Category saved:', categoryForm.value.code)
     await loadCategories()
-    await loadPricingData() // Reload pricing data for table
     closeModal()
   } catch (err: any) {
     console.error('❌ Error saving category:', err)
@@ -1333,288 +1139,45 @@ const saveCategory = async () => {
 }
 
 const loadCategoryPricing = async (categoryCode: string) => {
-  try {
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id
-    const user = authStore.user // ✅ MIGRATED
-    if (!user) return
+  // Reads from the already-loaded pricingCache (populated by loadCategories)
+  const pricing = pricingCache.value[categoryCode]
 
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
+  const basePriceRule = pricing?.basePriceRule
+  const adminFeeRule = pricing?.adminFeeRule
+  const theoryRule = pricing?.theoryRule
+  const consultationRule = pricing?.consultationRule
 
-    if (!userProfile?.tenant_id) return
-    
-    // Get pricing rules for this category
-    const { data: pricingRules, error } = await supabase
-      .from('pricing_rules')
-      .select('*')
-      .eq('category_code', categoryCode)
-      .eq('tenant_id', userProfile.tenant_id)
-      .eq('is_active', true)
-    
-    if (error) {
-      console.warn('⚠️ Could not load pricing rules:', error)
-      return
-    }
-    
-    // Extract pricing data
-    const basePriceRule = pricingRules?.find(rule => rule.rule_type === 'base_price')
-    const adminFeeRule = pricingRules?.find(rule => rule.rule_type === 'admin_fee')
-    const theoryRule = pricingRules?.find(rule => rule.rule_type === 'theory')
-    const consultationRule = pricingRules?.find(rule => rule.rule_type === 'consultation')
-    
-    if (basePriceRule) {
-      // Calculate price per lesson from price per minute
-      // IMPORTANT: Base price is ALWAYS calculated for 45 minutes (standard lesson duration)
-      const baseDurationMinutes = 45
-      const pricePerMinuteChf = basePriceRule.price_per_minute_rappen / 100
-      const pricePerLesson = pricePerMinuteChf * baseDurationMinutes
-      
-      // Rundung auf ganze Franken (CHF)
-      categoryForm.value.price_per_lesson_chf = Math.round(pricePerLesson)
-    }
-    
-    if (adminFeeRule) {
-      const adminFeeChf = adminFeeRule.admin_fee_rappen / 100
-      
-      // Rundung auf ganze Franken (CHF)
-      categoryForm.value.admin_fee_chf = Math.round(adminFeeChf)
-      categoryForm.value.admin_fee_applies_from = adminFeeRule.admin_fee_applies_from
-    }
-    
-    if (theoryRule) {
-      // Calculate theory price from pricing rule
-      const theoryDurationMinutes = theoryRule.base_duration_minutes || 45
-      const theoryPricePerMinuteChf = theoryRule.price_per_minute_rappen / 100
-      const theoryTotalPrice = theoryPricePerMinuteChf * theoryDurationMinutes
-      
-      categoryForm.value.theory_enabled = true
-      categoryForm.value.theory_price_chf = Math.round(theoryTotalPrice)
-      categoryForm.value.theory_duration_minutes = theoryDurationMinutes
-    } else {
-      // No theory rule found - set to disabled
-      categoryForm.value.theory_enabled = false
-      logger.debug('ℹ️ No theory rule found for category:', categoryCode)
-    }
-    
-    if (consultationRule) {
-      // Calculate consultation price from pricing rule
-      const consultationDurationMinutes = consultationRule.base_duration_minutes || 60
-      const consultationPricePerMinuteChf = consultationRule.price_per_minute_rappen / 100
-      const consultationTotalPrice = consultationPricePerMinuteChf * consultationDurationMinutes
-      
-      categoryForm.value.consultation_enabled = true
-      categoryForm.value.consultation_price_chf = Math.round(consultationTotalPrice)
-      categoryForm.value.consultation_duration_minutes = consultationDurationMinutes
-    } else {
-      // No consultation rule found - set to disabled
-      categoryForm.value.consultation_enabled = false
-      logger.debug('ℹ️ No consultation rule found for category:', categoryCode)
-    }
-    
-    logger.debug('✅ Loaded pricing data for category:', categoryCode)
-    
-  } catch (err: any) {
-    console.error('❌ Error loading category pricing:', err)
+  if (basePriceRule) {
+    const pricePerMinuteChf = basePriceRule.price_per_minute_rappen / 100
+    categoryForm.value.price_per_lesson_chf = Math.round(pricePerMinuteChf * 45)
   }
+
+  if (adminFeeRule) {
+    categoryForm.value.admin_fee_chf = Math.round(adminFeeRule.admin_fee_rappen / 100)
+    categoryForm.value.admin_fee_applies_from = adminFeeRule.admin_fee_applies_from
+  }
+
+  if (theoryRule) {
+    const theoryDurationMinutes = theoryRule.base_duration_minutes || 45
+    categoryForm.value.theory_enabled = true
+    categoryForm.value.theory_price_chf = Math.round((theoryRule.price_per_minute_rappen / 100) * theoryDurationMinutes)
+    categoryForm.value.theory_duration_minutes = theoryDurationMinutes
+  } else {
+    categoryForm.value.theory_enabled = false
+  }
+
+  if (consultationRule) {
+    const consultationDurationMinutes = consultationRule.base_duration_minutes || 60
+    categoryForm.value.consultation_enabled = true
+    categoryForm.value.consultation_price_chf = Math.round((consultationRule.price_per_minute_rappen / 100) * consultationDurationMinutes)
+    categoryForm.value.consultation_duration_minutes = consultationDurationMinutes
+  } else {
+    categoryForm.value.consultation_enabled = false
+  }
+
+  logger.debug('✅ Loaded pricing data for category from cache:', categoryCode)
 }
 
-const copyStandardPricingRules = async (categoryCode: string, tenantId: string) => {
-  try {
-    const supabase = getSupabase()
-    
-    // Get standard pricing rules for this category (tenant_id = NULL)
-    const { data: standardRules, error: fetchError } = await supabase
-      .from('pricing_rules')
-      .select('*')
-      .eq('category_code', categoryCode)
-      .is('tenant_id', null)
-      .eq('is_active', true)
-    
-    if (fetchError) throw fetchError
-    
-    if (!standardRules || standardRules.length === 0) {
-      console.warn(`⚠️ No standard pricing rules found for category: ${categoryCode}`)
-      return
-    }
-    
-    // Copy rules with new tenant_id
-    const copiedRules = standardRules.map(rule => ({
-      ...rule,
-      tenant_id: tenantId,
-      id: undefined, // Let database generate new ID
-      created_at: undefined, // Let database generate new timestamp
-      updated_at: undefined // Let database generate new timestamp
-    }))
-    
-    // Remove undefined properties
-    copiedRules.forEach(rule => {
-      delete rule.id
-      delete rule.created_at
-      delete rule.updated_at
-    })
-    
-    const { error: insertError } = await supabase
-      .from('pricing_rules')
-      .insert(copiedRules)
-    
-    if (insertError) throw insertError
-    
-    logger.debug(`✅ Copied ${copiedRules.length} pricing rules for category: ${categoryCode}`)
-    
-  } catch (err: any) {
-    console.error(`❌ Error copying pricing rules for ${categoryCode}:`, err)
-    throw err
-  }
-}
-
-const syncPricingRules = async (
-  categoryCode: string, 
-  pricePerLessonChf: number, 
-  adminFeeChf: number, 
-  adminFeeAppliesFrom: number, 
-  theoryEnabled: boolean,
-  theoryPriceChf: number, 
-  theoryDurationMinutes: number, 
-  consultationEnabled: boolean,
-  consultationPriceChf: number, 
-  consultationDurationMinutes: number, 
-  tenantId: string
-) => {
-  try {
-    logger.debug('🔄 Syncing pricing rules for category:', categoryCode, {
-      pricePerLessonChf,
-      adminFeeChf,
-      adminFeeAppliesFrom,
-      theoryEnabled,
-      theoryPriceChf,
-      theoryDurationMinutes,
-      consultationEnabled,
-      consultationPriceChf,
-      consultationDurationMinutes,
-      tenantId
-    })
-    
-    const supabase = getSupabase()
-    
-    // Calculate price per minute from lesson price (always based on 45min for consistency)
-    const baseDurationMinutes = categoryForm.value.lesson_duration_minutes[0] || 45
-    const pricePerMinuteRappen = (pricePerLessonChf / 45) * 100 // Decimal – stored as NUMERIC in DB
-    const adminFeeRappen = Math.round(adminFeeChf * 100)
-    
-    // Delete existing pricing rules for this category
-    logger.debug('🗑️ Deleting existing pricing rules for:', categoryCode, 'tenant:', tenantId)
-    
-    const { data: deletedRules, error: deleteError } = await supabase
-      .from('pricing_rules')
-      .delete()
-      .eq('category_code', categoryCode)
-      .eq('tenant_id', tenantId)
-      .select()
-    
-    if (deleteError) {
-      console.error('❌ Error deleting pricing rules:', deleteError)
-      throw deleteError
-    }
-    
-    logger.debug('🗑️ Deleted', deletedRules?.length || 0, 'existing pricing rules')
-    
-    // Create new pricing rules
-    // IMPORTANT: Base price is ALWAYS calculated for 45 minutes (standard lesson duration)
-    const pricingRules = [
-      {
-        rule_name: `Kategorie ${categoryCode} - Grundpreis`,
-        rule_type: 'base_price',
-        category_code: categoryCode,
-        price_per_minute_rappen: pricePerMinuteRappen,
-        base_duration_minutes: 45, // ALWAYS 45 minutes for base price
-        admin_fee_rappen: 0,
-        admin_fee_applies_from: 999,
-        valid_from: new Date().toISOString().split('T')[0],
-        valid_until: null,
-        is_active: true,
-        tenant_id: tenantId
-      }
-    ]
-    
-    // Add admin fee rule (except for motorcycles)
-    const motorcycleCategories = ['A', 'A1', 'A35kW']
-    if (!motorcycleCategories.includes(categoryCode) && adminFeeChf > 0) {
-      pricingRules.push({
-        rule_name: `Kategorie ${categoryCode} - Versicherung`,
-        rule_type: 'admin_fee',
-        category_code: categoryCode,
-        price_per_minute_rappen: 0,
-        base_duration_minutes: baseDurationMinutes,
-        admin_fee_rappen: adminFeeRappen,
-        admin_fee_applies_from: adminFeeAppliesFrom,
-        valid_from: new Date().toISOString().split('T')[0],
-        valid_until: null,
-        is_active: true,
-        tenant_id: tenantId
-      })
-    }
-    
-    // Add theory pricing rule ONLY if enabled
-    if (theoryEnabled && theoryPriceChf > 0) {
-      const theoryPricePerMinuteRappen = (theoryPriceChf / theoryDurationMinutes) * 100
-      pricingRules.push({
-        rule_name: `Kategorie ${categoryCode} - Theorielektion`,
-        rule_type: 'theory',
-        category_code: categoryCode,
-        price_per_minute_rappen: theoryPricePerMinuteRappen,
-        base_duration_minutes: theoryDurationMinutes,
-        admin_fee_rappen: 0,
-        admin_fee_applies_from: 999,
-        valid_from: new Date().toISOString().split('T')[0],
-        valid_until: null,
-        is_active: true,
-        tenant_id: tenantId
-      })
-    }
-    
-    // Add consultation pricing rule ONLY if enabled
-    if (consultationEnabled && consultationPriceChf > 0) {
-      const consultationPricePerMinuteRappen = (consultationPriceChf / consultationDurationMinutes) * 100
-      pricingRules.push({
-        rule_name: `Kategorie ${categoryCode} - Beratung`,
-        rule_type: 'consultation',
-        category_code: categoryCode,
-        price_per_minute_rappen: consultationPricePerMinuteRappen,
-        base_duration_minutes: consultationDurationMinutes,
-        admin_fee_rappen: 0,
-        admin_fee_applies_from: 999,
-        valid_from: new Date().toISOString().split('T')[0],
-        valid_until: null,
-        is_active: true,
-        tenant_id: tenantId
-      })
-    }
-    
-    // Insert pricing rules
-    logger.debug('📊 Inserting pricing rules:', pricingRules)
-    
-    const { data: insertedRules, error: insertError } = await supabase
-      .from('pricing_rules')
-      .insert(pricingRules)
-      .select()
-    
-    if (insertError) {
-      console.error('❌ Error inserting pricing rules:', insertError)
-      throw insertError
-    }
-    
-    logger.debug('✅ Pricing rules synced for category:', categoryCode, 'Inserted:', insertedRules?.length || 0, 'rules')
-    
-  } catch (err: any) {
-    console.error('❌ Error syncing pricing rules:', err)
-    throw err
-  }
-}
 
 const addNewLessonDuration = () => {
   const duration = parseInt(newLessonDuration.value)
@@ -1650,44 +1213,14 @@ const deleteCategory = async (category: Category) => {
   }
 
   try {
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id
-    const user = authStore.user // ✅ MIGRATED
-    if (!user) throw new Error('Nicht angemeldet')
+    await $fetch(`/api/admin/categories/${category.id}`, { method: 'DELETE' })
 
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-
-    // Delete pricing rules first
-    const { error: pricingDeleteError } = await supabase
-      .from('pricing_rules')
-      .delete()
-      .eq('category_code', category.code)
-      .eq('tenant_id', userProfile.tenant_id)
-
-    if (pricingDeleteError) {
-      console.warn('⚠️ Could not delete pricing rules:', pricingDeleteError)
-      // Continue with category deletion even if pricing rules deletion fails
-    }
-
-    // Delete category
-    const { error: deleteError } = await supabase
-      .from('categories')
-      .delete()
-      .eq('id', category.id)
-
-    if (deleteError) throw deleteError
-
-    // Remove from local state
     categories.value = categories.value.filter(c => c.id !== category.id)
-    await loadPricingData() // Reload pricing data for table
+    // Remove from pricing cache too
+    const newCache = { ...pricingCache.value }
+    delete newCache[category.code]
+    pricingCache.value = newCache
+
     logger.debug('✅ Category and pricing rules deleted:', category.code)
   } catch (err: any) {
     console.error('❌ Error deleting category:', err)
@@ -1760,60 +1293,9 @@ const getCategoryAdminFeeFrom = (categoryCode: string): string => {
   return pricing.adminFeeRule.admin_fee_applies_from.toString()
 }
 
-// Load pricing data for all categories
+// Pricing data is now loaded as part of loadCategories via buildPricingCache.
 const loadPricingData = async () => {
-  try {
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id
-    const user = authStore.user // ✅ MIGRATED
-    if (!user) return
-
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (!userProfile?.tenant_id) return
-    
-    // Get all pricing rules for current tenant
-    const { data: pricingRules, error } = await supabase
-      .from('pricing_rules')
-      .select('*')
-      .eq('tenant_id', userProfile.tenant_id)
-      .eq('is_active', true)
-    
-    if (error) {
-      console.warn('⚠️ Could not load pricing rules:', error)
-      return
-    }
-    
-    // Group pricing rules by category
-    const pricingByCategory: Record<string, any> = {}
-    
-    pricingRules?.forEach(rule => {
-      if (!pricingByCategory[rule.category_code]) {
-        pricingByCategory[rule.category_code] = {}
-      }
-      
-      if (rule.rule_type === 'base_price') {
-        pricingByCategory[rule.category_code].basePriceRule = rule
-      } else if (rule.rule_type === 'admin_fee') {
-        pricingByCategory[rule.category_code].adminFeeRule = rule
-      } else if (rule.rule_type === 'theory') {
-        pricingByCategory[rule.category_code].theoryRule = rule
-      } else if (rule.rule_type === 'consultation') {
-        pricingByCategory[rule.category_code].consultationRule = rule
-      }
-    })
-    
-    pricingCache.value = pricingByCategory
-    logger.debug('✅ Pricing data loaded for table display')
-    
-  } catch (err: any) {
-    console.error('❌ Error loading pricing data:', err)
-  }
+  // no-op: pricingCache is populated by loadCategories → buildPricingCache
 }
 
 // Auth check

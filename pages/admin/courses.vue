@@ -3584,7 +3584,6 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { navigateTo, useNuxtApp } from '#app'
 import { useAuthStore } from '~/stores/auth'
-import { getSupabase } from '~/utils/supabase'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useCourseCategories } from '~/composables/useCourseCategories'
 import { useInstructorInvitations } from '~/composables/useInstructorInvitations'
@@ -3618,9 +3617,6 @@ const showErrorToast = (title: string, message: string = '') => {
 definePageMeta({
   layout: 'admin'
 })
-
-// Supabase client (used throughout this page)
-const supabase = getSupabase()
 
 // Composables
 const { currentUser, fetchCurrentUser } = useCurrentUser()
@@ -4147,40 +4143,11 @@ const canSaveCategory = computed(() => {
 
 // Methods
 const loadCourses = async () => {
-  if (!currentUser.value?.tenant_id) return
-
   isLoading.value = true
   error.value = null
 
   try {
-    // Load courses with related data
-    const { data: coursesData, error: coursesError } = await getSupabase()
-      .from('courses')
-      .select(`
-        *,
-        instructor:users!courses_instructor_id_fkey(first_name, last_name),
-        room:rooms(name, location, capacity),
-        vehicle:vehicles(name, location),
-        course_category:course_categories(name, icon),
-        sessions:course_sessions(
-          id, 
-          session_number, 
-          start_time, 
-          end_time, 
-          instructor_type,
-          staff_id,
-          external_instructor_name,
-          external_instructor_email,
-          external_instructor_phone,
-          staff:users!staff_id(id, first_name, last_name)
-        ),
-        registrations:course_registrations(id, status, deleted_at),
-        waitlist:course_waitlist(id)
-      `)
-      .eq('tenant_id', currentUser.value.tenant_id)
-      .eq('is_active', true)
-
-    if (coursesError) throw coursesError
+    const coursesData = await $fetch<any[]>('/api/admin/courses/full-list')
 
     // Sort sessions within each course and sort courses by earliest session start_time
     if (coursesData) {
@@ -4225,20 +4192,9 @@ const loadCourses = async () => {
 }
 
 const loadStaff = async () => {
-  if (!currentUser.value?.tenant_id) return
-
   try {
-    const { data, error: staffError } = await getSupabase()
-      .from('users')
-      .select('id, first_name, last_name, email, role')
-      .eq('tenant_id', currentUser.value.tenant_id)
-      .in('role', ['staff', 'admin'])
-      .eq('is_active', true)
-      .is('deleted_at', null)
-      .order('role', { ascending: false }) // Admins first, then staff
-
-    if (staffError) throw staffError
-    availableStaff.value = data || []
+    const result = await $fetch<{ success: boolean; data: any[] }>('/api/admin/staff/list', { method: 'POST' })
+    availableStaff.value = result.data || []
   } catch (err) {
     console.error('Error loading staff:', err)
   }
@@ -4276,69 +4232,17 @@ const createCourse = async () => {
       courseData = restData
     }
 
-    let courseResult
-    if (editingCourse.value) {
-      // Update existing course
-      courseResult = await getSupabase()
-        .from('courses')
-        .update(courseData)
-        .eq('id', editingCourse.value.id)
-        .select()
-        .single()
-      
-      logger.debug('✅ Course updated:', editingCourse.value.id)
-    } else {
-      // Create new course
-      courseResult = await getSupabase()
-        .from('courses')
-        .insert(courseData)
-        .select()
-        .single()
-      
-      logger.debug('✅ Course created:', courseResult.data?.id)
-    }
+    await $fetch('/api/admin/courses/upsert', {
+      method: 'POST',
+      body: {
+        courseData,
+        sessions: courseSessions.value,
+        courseId: editingCourse.value?.id,
+      },
+    })
 
-    if (courseResult.error) throw courseResult.error
-    const createdCourse = courseResult.data
-
-    // Handle course sessions
-    if (courseSessions.value.length > 0) {
-      if (editingCourse.value) {
-        // Delete existing sessions and create new ones
-        await getSupabase()
-          .from('course_sessions')
-          .delete()
-          .eq('course_id', createdCourse.id)
-      }
-
-    const sessionData = courseSessions.value.map((session, index) => ({
-      course_id: createdCourse.id,
-      session_number: index + 1,
-      start_time: `${session.date}T${session.start_time}:00`,
-      end_time: `${session.date}T${session.end_time}:00`,
-      description: session.description || `Session ${index + 1}`,
-      instructor_type: session.instructor_type,
-      staff_id: session.instructor_type === 'internal' ? session.staff_id : null,
-      external_instructor_name: session.instructor_type === 'external' ? session.external_instructor_name : null,
-      external_instructor_email: session.instructor_type === 'external' ? session.external_instructor_email : null,
-      external_instructor_phone: session.instructor_type === 'external' ? session.external_instructor_phone : null,
-      tenant_id: currentUser.value.tenant_id
-      // created_by: currentUser.value.id // Temporarily disabled until migration is run
-    }))
-
-      const { error: sessionsError } = await getSupabase()
-        .from('course_sessions')
-        .insert(sessionData)
-
-      if (sessionsError) {
-        console.error('Error creating sessions:', sessionsError)
-        throw new Error(`Sessions konnten nicht erstellt werden: ${sessionsError.message}`)
-      }
-
-      logger.debug(`✅ ${editingCourse.value ? 'Updated' : 'Created'} ${sessionData.length} course sessions`)
-    }
-
-      success.value = editingCourse.value ? 'Kurs erfolgreich aktualisiert!' : 'Kurs erfolgreich erstellt!'
+    logger.debug(`✅ Course ${editingCourse.value ? 'updated' : 'created'}`)
+    success.value = editingCourse.value ? 'Kurs erfolgreich aktualisiert!' : 'Kurs erfolgreich erstellt!'
 
     showCreateCourseModal.value = false
     resetNewCourse()
@@ -4563,13 +4467,7 @@ const generateSessionsFromCategory = () => {
 // Load existing course sessions for editing
 const loadCourseSessions = async (courseId: string) => {
   try {
-    const { data: sessions, error } = await getSupabase()
-      .from('course_sessions')
-      .select('*, staff:users!staff_id(id, first_name, last_name)')
-      .eq('course_id', courseId)
-      .order('session_number', { ascending: true })
-
-    if (error) throw error
+    const sessions = await $fetch<any[]>(`/api/admin/courses/sessions-for-course?courseId=${courseId}`)
 
       courseSessions.value = (sessions || []).map(session => {
         // Convert UTC times to local time (Europe/Zurich)
@@ -4877,22 +4775,15 @@ const createVehicle = async () => {
   error.value = null
 
   try {
-    const { data, error: createError } = await getSupabase()
-      .from('vehicles')
-      .insert({
-        ...vehicleForm.value,
-        tenant_id: currentUser.value.tenant_id,
-        created_by: currentUser.value.id
-      })
-      .select()
-      .single()
-
-    if (createError) throw createError
+    await $fetch('/api/admin/resources/vehicles/create', {
+      method: 'POST',
+      body: vehicleForm.value,
+    })
 
     success.value = 'Fahrzeug erfolgreich erstellt!'
     showCreateVehicleModal.value = false
     resetVehicleForm()
-    await loadVehicles(currentUser.value.tenant_id)
+    await loadVehicles(currentUser.value?.tenant_id)
 
   } catch (err: any) {
     console.error('Error creating vehicle:', err)
@@ -4909,23 +4800,10 @@ const createRoom = async () => {
   error.value = null
 
   try {
-    const { data, error: createError } = await getSupabase()
-      .from('rooms')
-      .insert({
-        name: roomForm.value.name,
-        location: roomForm.value.location,
-        capacity: roomForm.value.capacity,
-        description: roomForm.value.description,
-        equipment: roomForm.value.equipment ? { description: roomForm.value.equipment } : null,
-        is_public: roomForm.value.is_public,
-        hourly_rate_rappen: roomForm.value.hourly_rate_rappen,
-        tenant_id: currentUser.value.tenant_id,
-        created_by: currentUser.value.id
-      })
-      .select()
-      .single()
-
-    if (createError) throw createError
+    await $fetch('/api/admin/resources/rooms/create', {
+      method: 'POST',
+      body: roomForm.value,
+    })
 
     success.value = 'Raum erfolgreich erstellt!'
     showCreateRoomModal.value = false
@@ -5002,31 +4880,16 @@ const updateVehicle = async () => {
   error.value = null
 
   try {
-    const { data, error: updateError } = await getSupabase()
-      .from('vehicles')
-      .update({
-        marke: vehicleForm.value.marke,
-        modell: vehicleForm.value.modell,
-        location: vehicleForm.value.location,
-        description: vehicleForm.value.description,
-        requires_reservation: vehicleForm.value.requires_reservation,
-        getriebe: vehicleForm.value.getriebe,
-        aufbau: vehicleForm.value.aufbau,
-        farbe: vehicleForm.value.farbe,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', editingVehicle.value.id)
-      .eq('tenant_id', currentUser.value.tenant_id)
-      .select()
-      .single()
-
-    if (updateError) throw updateError
+    await $fetch('/api/admin/resources/vehicles/update', {
+      method: 'POST',
+      body: { vehicleId: editingVehicle.value.id, ...vehicleForm.value },
+    })
 
     success.value = 'Fahrzeug erfolgreich aktualisiert!'
     showEditVehicleModal.value = false
     editingVehicle.value = null
     resetVehicleForm()
-    await loadVehicles(currentUser.value.tenant_id)
+    await loadVehicles(currentUser.value?.tenant_id)
 
   } catch (err: any) {
     console.error('Error updating vehicle:', err)
@@ -5043,23 +4906,10 @@ const updateRoom = async () => {
   error.value = null
 
   try {
-    const { data, error: updateError } = await getSupabase()
-      .from('rooms')
-      .update({
-        name: roomForm.value.name,
-        location: roomForm.value.location,
-        capacity: roomForm.value.capacity,
-        description: roomForm.value.description,
-        equipment: roomForm.value.equipment ? { description: roomForm.value.equipment } : null,
-        is_public: roomForm.value.is_public,
-        hourly_rate_rappen: roomForm.value.hourly_rate_rappen,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', editingRoom.value.id)
-      .select()
-      .single()
-
-    if (updateError) throw updateError
+    await $fetch('/api/admin/resources/rooms/update', {
+      method: 'POST',
+      body: { roomId: editingRoom.value.id, ...roomForm.value },
+    })
 
     success.value = 'Raum erfolgreich aktualisiert!'
     showEditRoomModal.value = false
@@ -5092,13 +4942,11 @@ const deleteVehicle = async (vehicleId: string) => {
   if (!confirm('Sind Sie sicher, dass Sie dieses Fahrzeug löschen möchten?')) return
   
   try {
-    const { error } = await getSupabase()
-      .from('vehicles')
-      .delete()
-      .eq('id', vehicleId)
-    
-    if (error) throw error
-    
+    await $fetch('/api/admin/resources/vehicles/delete', {
+      method: 'POST',
+      body: { vehicleId },
+    })
+
     success.value = 'Fahrzeug erfolgreich gelöscht!'
     await loadVehicles()
   } catch (err: any) {
@@ -5111,13 +4959,11 @@ const deleteRoom = async (roomId: string) => {
   if (!confirm('Sind Sie sicher, dass Sie diesen Raum löschen möchten?')) return
   
   try {
-    const { error } = await getSupabase()
-      .from('rooms')
-      .delete()
-      .eq('id', roomId)
-    
-    if (error) throw error
-    
+    await $fetch('/api/admin/resources/rooms/delete', {
+      method: 'POST',
+      body: { roomId },
+    })
+
     success.value = 'Raum erfolgreich gelöscht!'
     await loadRooms()
   } catch (err: any) {
@@ -5357,18 +5203,11 @@ const cancelCourse = (course: any) => {
 // Load course participants for cancellation
 const loadCourseParticipants = async (courseId: string) => {
   try {
-    const { data: registrations, error } = await supabase
-      .from('course_registrations')
-      .select('id, first_name, last_name, email, phone, user_id, status, tenant_id')
-      .eq('course_id', courseId)
-      .eq('status', 'confirmed')
-
-    if (error) throw error
-
-    courseParticipants.value = registrations || []
+    const data = await $fetch<any[]>(`/api/admin/courses/course-participants?courseId=${courseId}`)
+    courseParticipants.value = data || []
     logger.debug(`✅ Loaded ${courseParticipants.value.length} participants for cancellation`)
-  } catch (error) {
-    console.error('Error loading course participants:', error)
+  } catch (err) {
+    console.error('Error loading course participants:', err)
     courseParticipants.value = []
   }
 }
@@ -5381,36 +5220,16 @@ const executeCourseCancellation = async () => {
   error.value = null
 
   try {
-    // Update course status to cancelled
-    const { error: updateError } = await supabase
-      .from('courses')
-      .update({ 
-        status: 'cancelled',
-        cancelled_at: new Date().toISOString(),
-        cancelled_by: currentUser.value.id,
-        status_changed_at: new Date().toISOString(),
-        status_changed_by: currentUser.value.id
-      })
-      .eq('id', cancelingCourse.value.id)
-
-    if (updateError) throw updateError
-
-    // Cancel all registrations
-    const { error: cancelRegistrationsError } = await supabase
-      .from('course_registrations')
-      .update({ 
-        status: 'cancelled',
-        cancelled_at: new Date().toISOString()
-      })
-      .eq('course_id', cancelingCourse.value.id)
-      .eq('status', 'confirmed')
-
-    if (cancelRegistrationsError) throw cancelRegistrationsError
-
-    // Send notifications if requested
-    if (notifyByEmail.value || notifyBySMS.value) {
-      await sendCancellationNotifications()
-    }
+    await $fetch('/api/admin/courses/cancel-course', {
+      method: 'POST',
+      body: {
+        courseId: cancelingCourse.value.id,
+        courseName: cancelingCourse.value.name,
+        notifyByEmail: notifyByEmail.value,
+        notifyBySMS: notifyBySMS.value,
+        participants: courseParticipants.value.map((p: any) => ({ user_id: p.user_id })),
+      },
+    })
 
     success.value = `Kurs "${cancelingCourse.value.name}" erfolgreich abgesagt!`
     
@@ -5428,33 +5247,6 @@ const executeCourseCancellation = async () => {
   }
 }
 
-// Send cancellation notifications
-const sendCancellationNotifications = async () => {
-  try {
-    const notifications = courseParticipants.value.map(participant => ({
-      course_id: cancelingCourse.value.id,
-      user_id: participant.user_id,
-      notification_type: 'course_cancelled',
-      title: `Kurs abgesagt: ${cancelingCourse.value.name}`,
-      message: `Der Kurs "${cancelingCourse.value.name}" wurde leider abgesagt.`,
-      send_email: notifyByEmail.value,
-      send_sms: notifyBySMS.value,
-      sent_at: new Date().toISOString(),
-      created_by: currentUser.value.id
-    }))
-
-    const { error } = await getSupabase()
-      .from('course_notifications')
-      .insert(notifications)
-
-    if (error) throw error
-
-    logger.debug(`✅ Sent ${notifications.length} cancellation notifications`)
-  } catch (error) {
-    console.error('Error sending notifications:', error)
-    // Don't throw - course cancellation should succeed even if notifications fail
-  }
-}
 
 // Watchers
 watch(coursePrice, (newPrice) => {
@@ -5557,16 +5349,13 @@ onMounted(async () => {
   logger.debug('✅ Current user loaded:', currentUser.value)
   
   // Load tenant business type
-  if (currentUser.value?.tenant_id) {
-    const { data: tenantData } = await getSupabase()
-      .from('tenants')
-      .select('business_type')
-      .eq('id', currentUser.value.tenant_id)
-      .single()
-    
-    if (tenantData) {
+  try {
+    const tenantData = await $fetch<{ business_type: string | null }>('/api/admin/tenant-business-type')
+    if (tenantData?.business_type) {
       tenantBusinessType.value = tenantData.business_type
     }
+  } catch (err) {
+    console.error('Error loading tenant business type:', err)
   }
   
   // Load categories first (depends on currentUser)
@@ -5709,13 +5498,12 @@ const closeEnrollmentModal = () => {
     }
     
     // Persist to DB in background
-    getSupabase()
-      .from('courses')
-      .update({ current_participants: participantCount })
-      .eq('id', courseIdToReload)
-      .then(({ error }) => {
-        if (error) console.error('Error updating participant count:', error)
-      })
+    $fetch('/api/admin/courses/update-participant-count', {
+      method: 'POST',
+      body: { courseId: courseIdToReload, count: participantCount },
+    }).catch((err) => {
+      console.error('Error updating participant count:', err)
+    })
   }
   
   selectedCourse.value = null
@@ -5770,15 +5558,7 @@ const searchUsers = async () => {
 
   try {
     isSearchingUsers.value = true
-    const { data, error } = await getSupabase()
-      .from('users')
-      .select('id, first_name, last_name, email, phone, role')
-      .or(`first_name.ilike.%${userSearchQuery.value}%,last_name.ilike.%${userSearchQuery.value}%,email.ilike.%${userSearchQuery.value}%`)
-      .eq('tenant_id', currentUser.value.tenant_id)
-      .eq('role', 'student')
-      .limit(10)
-
-    if (error) throw error
+    const data = await $fetch<any[]>(`/api/admin/users/search?q=${encodeURIComponent(userSearchQuery.value)}`)
     searchResults.value = data || []
   } catch (err) {
     console.error('Error searching users:', err)
@@ -5807,25 +5587,10 @@ const selectExistingUser = async (user: any) => {
     }
 
     // Create enrollment
-    const { error: enrollmentError } = await supabase
-      .from('course_registrations')
-      .insert({
-        course_id: selectedCourse.value.id,
-        user_id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        phone: user.phone,
-        status: 'confirmed',
-        registered_at: new Date().toISOString(),
-        tenant_id: currentUser.value.tenant_id,
-        registered_by: currentUser.value.id
-      })
-
-    if (enrollmentError) {
-      console.error('Enrollment failed:', enrollmentError)
-      throw new Error(`Anmeldung konnte nicht erstellt werden: ${enrollmentError.message}`)
-    }
+    await $fetch('/api/admin/courses/enroll-user', {
+      method: 'POST',
+      body: { courseId: selectedCourse.value.id, userId: user.id },
+    })
 
     // Reload enrollments and hide form
     await loadCourseEnrollments(selectedCourse.value.id)
@@ -5880,73 +5645,15 @@ const addParticipant = async () => {
       return
     }
 
-    // Try to create user directly first (might work for admins)
-    let userId = null
-    
-    // Check if user exists
-    const { data: existingUser } = await getSupabase()
-      .from('users')
-      .select('id')
-      .eq('email', newParticipant.value.email)
-      .eq('tenant_id', currentUser.value.tenant_id)
-      .single()
-
-    if (existingUser) {
-      userId = existingUser.id
-      logger.debug('User exists:', userId)
-    } else {
-      // Try to create user
-      logger.debug('Creating new user...')
-      const { data: newUser, error: userError } = await getSupabase()
-        .from('users')
-        .insert({
-          first_name: newParticipant.value.first_name,
-          last_name: newParticipant.value.last_name,
-          email: newParticipant.value.email,
-          phone: newParticipant.value.phone || null,
-          birthdate: newParticipant.value.birthdate || null,
-          street: newParticipant.value.street,
-          street_nr: newParticipant.value.street_nr,
-          zip: newParticipant.value.zip,
-          city: newParticipant.value.city,
-          role: 'student',
-          tenant_id: currentUser.value.tenant_id,
-          is_active: true,
-          created_by: currentUser.value.id
-        })
-        .select()
-        .single()
-
-      if (userError) {
-        console.error('User creation failed:', userError)
-        throw new Error(`Benutzer konnte nicht erstellt werden: ${userError.message}`)
-      }
-
-      userId = newUser.id
-      logger.debug('User created:', userId)
-    }
-
-    // Create enrollment
-    logger.debug('Creating enrollment...')
-    const { error: enrollmentError } = await supabase
-      .from('course_registrations')
-      .insert({
-        course_id: selectedCourse.value.id,
-        user_id: userId,
-        first_name: newParticipant.value.first_name,
-        last_name: newParticipant.value.last_name,
-        email: newParticipant.value.email,
-        phone: newParticipant.value.phone || null,
-        status: 'confirmed',
-        registered_at: new Date().toISOString(),
-        tenant_id: currentUser.value.tenant_id,
-        registered_by: currentUser.value.id
-      })
-
-    if (enrollmentError) {
-      console.error('Enrollment failed:', enrollmentError)
-      throw new Error(`Anmeldung konnte nicht erstellt werden: ${enrollmentError.message}`)
-    }
+    // Create user (if not exists) + enrollment via server endpoint
+    logger.debug('Adding participant via API...')
+    await $fetch('/api/admin/courses/add-participant', {
+      method: 'POST',
+      body: {
+        courseId: selectedCourse.value.id,
+        participant: newParticipant.value,
+      },
+    })
 
     logger.debug('Enrollment created successfully')
 
@@ -5981,16 +5688,10 @@ const removeParticipant = async (enrollment: any) => {
   if (!confirm('Möchten Sie diesen Teilnehmer wirklich entfernen?')) return
 
   try {
-    // Soft delete: Set deleted_at and deleted_by instead of hard delete
-    const { error } = await getSupabase()
-      .from('course_registrations')
-      .update({
-        deleted_at: new Date().toISOString(),
-        deleted_by: currentUser.value?.id
-      })
-      .eq('id', enrollment.id)
-
-    if (error) throw error
+    await $fetch('/api/admin/courses/remove-participant', {
+      method: 'POST',
+      body: { enrollmentId: enrollment.id },
+    })
 
     // Reload enrollments
     await loadCourseEnrollments(selectedCourse.value.id)
@@ -6072,16 +5773,10 @@ const restoreParticipant = async (enrollment: any) => {
   if (!confirm('Möchten Sie diesen Teilnehmer wiederherstellen?')) return
 
   try {
-    // Restore: Clear deleted_at and deleted_by
-    const { error } = await getSupabase()
-      .from('course_registrations')
-      .update({
-        deleted_at: null,
-        deleted_by: null
-      })
-      .eq('id', enrollment.id)
-
-    if (error) throw error
+    await $fetch('/api/admin/courses/restore-participant', {
+      method: 'POST',
+      body: { enrollmentId: enrollment.id },
+    })
 
     // Reload enrollments
     await loadCourseEnrollments(selectedCourse.value.id)

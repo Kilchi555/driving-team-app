@@ -13,6 +13,12 @@ type CashAction =
   | 'create_cash_transaction'
   | 'create_office_register'
   | 'assign_staff_to_register'
+  | 'staff_cash_handover'
+  | 'load_staff_balances'
+  | 'load_staff_movements'
+  | 'load_staff_transactions'
+  | 'top_up_cash'
+  | 'withdraw_cash'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -64,6 +70,14 @@ export default defineEventHandler(async (event) => {
       staff_id?: string
       access_level?: string
       time_restrictions?: any
+      // load_staff_balances / load_staff_movements / load_staff_transactions
+      instructor_id?: string
+      // top_up_cash / withdraw_cash
+      movement_type?: string
+      amount_rappen?: number
+      performed_by?: string
+      balance_before_rappen?: number
+      balance_after_rappen?: number
     }>(event)
 
     const { action } = body
@@ -283,6 +297,161 @@ export default defineEventHandler(async (event) => {
       if (error) throw error
 
       await logAudit({ user_id: authUser.id, action: 'assign_staff_to_cash_register', resource_type: 'office_cash_register', resource_id: register_id, status: 'success', ip_address: clientIP, details: { staff_id, access_level } })
+      return { success: true }
+    }
+
+    // ─── load_staff_balances ─────────────────────────────────────────────────
+    if (action === 'load_staff_balances') {
+      const [{ data: users, error: usersError }, { data: balancesRows, error: balancesError }, { data: movements, error: movementsError }] =
+        await Promise.all([
+          supabase.from('users').select('id, first_name, last_name, email, role').eq('role', 'staff').eq('tenant_id', callerUser.tenant_id).eq('is_active', true).is('deleted_at', null).order('first_name'),
+          supabase.from('cash_balances').select('*').eq('tenant_id', callerUser.tenant_id),
+          supabase.from('cash_movements').select('*').eq('tenant_id', callerUser.tenant_id),
+        ])
+      if (usersError) throw createError({ statusCode: 500, statusMessage: usersError.message })
+      if (balancesError) throw createError({ statusCode: 500, statusMessage: balancesError.message })
+      if (movementsError) throw createError({ statusCode: 500, statusMessage: movementsError.message })
+
+      // Load cash_transactions per staff without tenant_id filter —
+      // older rows may have no tenant_id set; we scope via instructor_id instead.
+      const staffIds = (users || []).map(u => u.id)
+      const { data: transactions } = staffIds.length
+        ? await supabase.from('cash_transactions').select('instructor_id, amount_rappen, status').in('instructor_id', staffIds)
+        : { data: [] }
+
+      const instructorIdToBalance = new Map((balancesRows || []).map(row => [row.instructor_id, row]))
+      const WITHDRAWAL_TYPES = ['withdrawal', 'cash_handover']
+      const staffBalances = (users || []).map(user => {
+        const persisted = instructorIdToBalance.get(user.id)
+        let balance = 0
+        movements?.forEach(m => {
+          if (m.instructor_id !== user.id) return
+          if (m.movement_type === 'deposit') balance += m.amount_rappen
+          else if (WITHDRAWAL_TYPES.includes(m.movement_type)) balance -= m.amount_rappen
+        })
+        transactions?.forEach(t => {
+          if (t.instructor_id === user.id && t.status === 'pending') balance += t.amount_rappen
+        })
+        return { ...user, current_balance_rappen: balance, last_updated: persisted?.last_updated || null, notes: persisted?.notes || null }
+      })
+      return { success: true, data: staffBalances }
+    }
+
+    // ─── load_staff_movements ─────────────────────────────────────────────────
+    if (action === 'load_staff_movements') {
+      const { instructor_id } = body
+      if (!instructor_id) throw createError({ statusCode: 400, statusMessage: 'Missing instructor_id' })
+      const { data: staffCheck } = await supabase.from('users').select('id').eq('id', instructor_id).eq('tenant_id', callerUser.tenant_id).single()
+      if (!staffCheck) throw createError({ statusCode: 403, statusMessage: 'Staff not found' })
+      const { data, error } = await supabase.from('cash_movements').select('*').eq('instructor_id', instructor_id).order('created_at', { ascending: false })
+      if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+      return { success: true, data: data || [] }
+    }
+
+    // ─── load_staff_transactions ──────────────────────────────────────────────
+    if (action === 'load_staff_transactions') {
+      const { instructor_id } = body
+      if (!instructor_id) throw createError({ statusCode: 400, statusMessage: 'Missing instructor_id' })
+      const { data: staffCheck } = await supabase.from('users').select('id').eq('id', instructor_id).eq('tenant_id', callerUser.tenant_id).single()
+      if (!staffCheck) throw createError({ statusCode: 403, statusMessage: 'Staff not found' })
+      const { data, error } = await supabase
+        .from('cash_transactions')
+        .select('*, student:student_id(id, first_name, last_name)')
+        .eq('instructor_id', instructor_id)
+        .order('created_at', { ascending: false })
+      if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+      const txns = (data || []).map(t => ({
+        ...t,
+        student_name: t.student ? `${(t.student as any).first_name} ${(t.student as any).last_name}` : 'Unbekannt'
+      }))
+      return { success: true, data: txns }
+    }
+
+    // ─── top_up_cash ──────────────────────────────────────────────────────────
+    if (action === 'top_up_cash') {
+      const { instructor_id, amount_rappen, balance_before_rappen, balance_after_rappen, notes } = body
+      if (!instructor_id || amount_rappen === undefined) throw createError({ statusCode: 400, statusMessage: 'Missing instructor_id or amount_rappen' })
+      const { data: staffCheck } = await supabase.from('users').select('id').eq('id', instructor_id).eq('tenant_id', callerUser.tenant_id).single()
+      if (!staffCheck) throw createError({ statusCode: 403, statusMessage: 'Staff not found' })
+      const { error } = await supabase.from('cash_movements').insert({
+        instructor_id,
+        tenant_id: callerUser.tenant_id,
+        movement_type: 'deposit',
+        amount_rappen,
+        balance_before_rappen: balance_before_rappen || 0,
+        balance_after_rappen: balance_after_rappen || 0,
+        performed_by: callerUser.id,
+        notes: notes || 'Kasse aufgestockt'
+      })
+      if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+      await logAudit({ user_id: authUser.id, action: 'top_up_cash', resource_type: 'cash_movement', resource_id: instructor_id, status: 'success', ip_address: clientIP })
+      return { success: true }
+    }
+
+    // ─── withdraw_cash ────────────────────────────────────────────────────────
+    if (action === 'withdraw_cash') {
+      const { instructor_id, amount_rappen, balance_before_rappen, balance_after_rappen, notes } = body
+      if (!instructor_id || amount_rappen === undefined) throw createError({ statusCode: 400, statusMessage: 'Missing instructor_id or amount_rappen' })
+      const { data: staffCheck } = await supabase.from('users').select('id').eq('id', instructor_id).eq('tenant_id', callerUser.tenant_id).single()
+      if (!staffCheck) throw createError({ statusCode: 403, statusMessage: 'Staff not found' })
+      const { error } = await supabase.from('cash_movements').insert({
+        instructor_id,
+        tenant_id: callerUser.tenant_id,
+        movement_type: 'withdrawal',
+        amount_rappen,
+        balance_before_rappen: balance_before_rappen || 0,
+        balance_after_rappen: balance_after_rappen || 0,
+        performed_by: callerUser.id,
+        notes: notes || 'Kasse abgestockt'
+      })
+      if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+      await logAudit({ user_id: authUser.id, action: 'withdraw_cash', resource_type: 'cash_movement', resource_id: instructor_id, status: 'success', ip_address: clientIP })
+      return { success: true }
+    }
+
+    // ─── staff_cash_handover ─────────────────────────────────────────────────
+    if (action === 'staff_cash_handover') {
+      if (!['admin', 'super_admin'].includes(callerUser.role)) {
+        throw createError({ statusCode: 403, statusMessage: 'Admin role required' })
+      }
+
+      const { instructor_id, amount_rappen, notes } = body
+      if (!instructor_id || amount_rappen === undefined) {
+        throw createError({ statusCode: 400, statusMessage: 'Missing instructor_id or amount_rappen' })
+      }
+      if (typeof amount_rappen !== 'number' || amount_rappen <= 0) {
+        throw createError({ statusCode: 400, statusMessage: 'Invalid amount' })
+      }
+
+      const { data: staffCheck } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', instructor_id)
+        .eq('tenant_id', callerUser.tenant_id)
+        .single()
+      if (!staffCheck) throw createError({ statusCode: 404, statusMessage: 'Staff not found' })
+
+      const { error } = await supabase.from('cash_movements').insert({
+        instructor_id,
+        tenant_id: callerUser.tenant_id,
+        movement_type: 'cash_handover',
+        amount_rappen,
+        balance_before_rappen: 0,
+        balance_after_rappen: 0,
+        performed_by: callerUser.id,
+        notes: notes || null
+      })
+      if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+
+      await logAudit({
+        user_id: authUser.id,
+        action: 'staff_cash_handover',
+        resource_type: 'cash_movement',
+        resource_id: instructor_id,
+        status: 'success',
+        ip_address: clientIP,
+        details: { amount_rappen }
+      })
       return { success: true }
     }
 

@@ -262,8 +262,6 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue'
-import { navigateTo } from '#imports'
-import { useAuthStore } from '~/stores/auth'
 import SkeletonLoader from '~/components/SkeletonLoader.vue'
 
 // Configure page meta for admin layout
@@ -308,54 +306,20 @@ const loadExaminers = async () => {
   isLoading.value = true
   
   try {
-    const supabase = getSupabase()
+    const data = await $fetch('/api/admin/examiners-list') as any[]
     
-    // Get current user's tenant_id
-    const user = authStore.user // ✅ MIGRATED
-    if (!user) throw new Error('Nicht angemeldet')
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-
-    logger.debug('🔍 Loading examiners for tenant:', userProfile.tenant_id)
-    
-    // Load examiners with their average ratings (filtered by tenant)
-    const { data, error } = await supabase
-      .from('examiners')
-      .select(`
-        *,
-        exam_results(
-          examiner_behavior_rating
-        )
-      `)
-      .eq('tenant_id', userProfile.tenant_id)
-      .order('last_name')
-    
-    if (error) throw error
-    
-    // Calculate average ratings
-    const examinersWithRatings = (data || []).map(examiner => {
+    // Calculate average ratings from exam_results
+    examiners.value = (data || []).map(examiner => {
       const ratings = examiner.exam_results
         ?.map((r: any) => r.examiner_behavior_rating)
         .filter((r: number) => r && r > 0) || []
       
-      const average = ratings.length > 0 
-        ? ratings.reduce((sum: number, r: number) => sum + r, 0) / ratings.length 
+      const average = ratings.length > 0
+        ? ratings.reduce((sum: number, r: number) => sum + r, 0) / ratings.length
         : 0
       
-      return {
-        ...examiner,
-        average_rating: average
-      }
+      return { ...examiner, average_rating: average }
     })
-    
-    examiners.value = examinersWithRatings
     
   } catch (err: any) {
     console.error('❌ Error loading examiners:', err)
@@ -396,133 +360,48 @@ const saveExaminer = async () => {
   }
   
   try {
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id
-    const user = authStore.user // ✅ MIGRATED
-    if (!user) throw new Error('Nicht angemeldet')
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-    
-    const examinerData = {
-      first_name: formData.value.first_name.trim(),
-      last_name: formData.value.last_name.trim(),
-      contact_info: {
-        email: formData.value.email.trim() || null,
-        phone: formData.value.phone.trim() || null
-      }
-    }
-    
-    if (editingExaminer.value) {
-      // Update existing
-      const { error } = await supabase
-        .from('examiners')
-        .update(examinerData)
-        .eq('id', editingExaminer.value.id)
-        .eq('tenant_id', userProfile.tenant_id) // Ensure tenant can only update their own examiners
-      
-      if (error) throw error
-      
-    } else {
-      // Create new
-      const { error } = await supabase
-        .from('examiners')
-        .insert({
-          ...examinerData,
-          tenant_id: userProfile.tenant_id,
-          is_active: true
-        })
-      
-      if (error) throw error
-    }
+    await $fetch('/api/admin/examiners-manage', {
+      method: 'POST',
+      body: {
+        action: editingExaminer.value ? 'update' : 'create',
+        examiner_id: editingExaminer.value?.id,
+        first_name: formData.value.first_name,
+        last_name: formData.value.last_name,
+        email: formData.value.email,
+        phone: formData.value.phone,
+      },
+    })
     
     await loadExaminers()
     cancelEdit()
     
   } catch (err: any) {
     console.error('❌ Error saving examiner:', err)
-    alert(`Fehler beim Speichern: ${err.message}`)
+    alert(`Fehler beim Speichern: ${err.data?.statusMessage || err.message}`)
   }
 }
 
 const toggleExaminerStatus = async (examiner: any) => {
   try {
-    const supabase = getSupabase()
-    
-    // Get current user's tenant_id
-    const user = authStore.user // ✅ MIGRATED
-    if (!user) throw new Error('Nicht angemeldet')
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-    if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
-    
-    const { error } = await supabase
-      .from('examiners')
-      .update({ is_active: !examiner.is_active })
-      .eq('id', examiner.id)
-      .eq('tenant_id', userProfile.tenant_id) // Ensure tenant can only toggle their own examiners
-    
-    if (error) throw error
+    await $fetch('/api/admin/examiners-manage', {
+      method: 'POST',
+      body: {
+        action: 'toggle_status',
+        examiner_id: examiner.id,
+        is_active: !examiner.is_active,
+      },
+    })
     
     await loadExaminers()
     
   } catch (err: any) {
     console.error('❌ Error toggling examiner status:', err)
-    alert(`Fehler beim Ändern des Status: ${err.message}`)
+    alert(`Fehler beim Ändern des Status: ${err.data?.statusMessage || err.message}`)
   }
 }
 
 // Lifecycle
-// Load data immediately when component is created (not waiting for mount)
-loadExaminers()
-
-// Auth check
-const authStore = useAuthStore()
-
-onMounted(async () => {
-  logger.debug('🔍 Examiners page mounted, checking auth...')
-  
-  // Warte kurz auf Auth-Initialisierung
-  let attempts = 0
-  while (!authStore.isInitialized && attempts < 10) {
-    await new Promise(resolve => setTimeout(resolve, 100))
-    attempts++
-  }
-  
-  logger.debug('🔍 Auth state:', {
-    isInitialized: authStore.isInitialized,
-    isLoggedIn: authStore.isLoggedIn,
-    isAdmin: authStore.isAdmin,
-    hasProfile: authStore.hasProfile
-  })
-  
-  // Prüfe ob User eingeloggt ist
-  if (!authStore.isLoggedIn) {
-    logger.debug('❌ User not logged in, redirecting to dashboard')
-    return navigateTo('/dashboard')
-  }
-  
-  // Prüfe ob User Admin ist
-  if (!authStore.isAdmin) {
-    logger.debug('❌ User not admin, redirecting to dashboard')
-    return navigateTo('/dashboard')
-  }
-  
-  logger.debug('✅ Auth check passed, loading examiners...')
-  // Page is already displayed, data loads in background
-  logger.debug('👨‍🏫 Examiners page mounted, data loading in background')
+onMounted(() => {
+  loadExaminers()
 })
 </script>

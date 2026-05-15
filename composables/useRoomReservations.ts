@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { useCurrentUser } from '~/composables/useCurrentUser'
+import { logger } from '~/utils/logger'
 
 interface RoomBooking {
   id: string
@@ -39,46 +40,37 @@ interface Room {
 export const useRoomReservations = () => {
   const supabase = getSupabase()
   const { currentUser } = useCurrentUser()
-  
+
   const rooms = ref<Room[]>([])
   const bookings = ref<RoomBooking[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
-  // Load available rooms (public + tenant rooms)
+  // Load available rooms for the current tenant
   const loadRooms = async () => {
     logger.debug('🔄 loadRooms called')
-    
+
+    const tenantId = currentUser.value?.tenant_id
+    if (!tenantId) {
+      logger.debug('⚠️ loadRooms: no tenant_id yet, skipping')
+      return
+    }
+
     isLoading.value = true
     error.value = null
 
     try {
-      // Get current user's tenant_id
-      const authStore = useAuthStore()
-    if (!authStore.user) throw new Error('Not authenticated')
-
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', user.id)
-        .single()
-
-      if (!userProfile?.tenant_id) throw new Error('Kein Tenant zugewiesen')
-
       const { data, error: roomsError } = await supabase
         .from('rooms')
         .select('*')
         .eq('is_active', true)
-        .eq('tenant_id', userProfile.tenant_id)
+        .eq('tenant_id', tenantId)
         .order('location', { ascending: true })
 
       if (roomsError) throw roomsError
-      
-      logger.debug('✅ Rooms loaded for tenant:', userProfile.tenant_id, 'count:', data?.length || 0)
-      logger.debug('🏢 Rooms data:', data)
-      
-      rooms.value = data || []
 
+      logger.debug('✅ Rooms loaded for tenant:', tenantId, 'count:', data?.length ?? 0)
+      rooms.value = data || []
     } catch (err: any) {
       console.error('❌ Error loading rooms:', err)
       error.value = 'Fehler beim Laden der Räume'
@@ -89,8 +81,8 @@ export const useRoomReservations = () => {
 
   // Check room availability for a time slot
   const checkRoomAvailability = async (
-    roomId: string, 
-    startTime: string, 
+    roomId: string,
+    startTime: string,
     endTime: string,
     excludeBookingId?: string
   ) => {
@@ -100,7 +92,8 @@ export const useRoomReservations = () => {
         .select('id, start_time, end_time, purpose')
         .eq('room_id', roomId)
         .eq('status', 'confirmed')
-        .or(`start_time.lt.${endTime},end_time.gt.${startTime}`) // Overlapping bookings
+        .lt('start_time', endTime)
+        .gt('end_time', startTime)
 
       if (excludeBookingId) {
         query = query.neq('id', excludeBookingId)
@@ -114,7 +107,6 @@ export const useRoomReservations = () => {
         available: !conflicts || conflicts.length === 0,
         conflicts: conflicts || []
       }
-
     } catch (err: any) {
       console.error('Error checking room availability:', err)
       return { available: false, conflicts: [] }
@@ -136,7 +128,6 @@ export const useRoomReservations = () => {
   }) => {
     if (!currentUser.value?.tenant_id) throw new Error('Kein Tenant verfügbar')
 
-    // Check availability first
     const availability = await checkRoomAvailability(
       bookingData.room_id,
       bookingData.start_time,
@@ -186,7 +177,6 @@ export const useRoomReservations = () => {
 
       if (loadError) throw loadError
       return data || []
-
     } catch (err: any) {
       console.error('Error loading room bookings:', err)
       return []
@@ -216,7 +206,7 @@ export const useRoomReservations = () => {
     const endDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
 
     try {
-      const { data: bookings, error: statsError } = await supabase
+      const { data: bookingData, error: statsError } = await supabase
         .from('room_bookings')
         .select('start_time, end_time, purpose')
         .eq('room_id', roomId)
@@ -226,49 +216,37 @@ export const useRoomReservations = () => {
 
       if (statsError) throw statsError
 
-      const totalHours = bookings?.reduce((sum, booking) => {
+      const totalHours = bookingData?.reduce((sum, booking) => {
         const start = new Date(booking.start_time)
         const end = new Date(booking.end_time)
         return sum + (end.getTime() - start.getTime()) / (1000 * 60 * 60)
       }, 0) || 0
 
-      const availableHours = days * 12 // Assume 12 hours per day available
+      const availableHours = days * 12
       const utilizationPercent = availableHours > 0 ? (totalHours / availableHours) * 100 : 0
 
       return {
-        totalBookings: bookings?.length || 0,
+        totalBookings: bookingData?.length || 0,
         totalHours: Math.round(totalHours * 10) / 10,
         utilizationPercent: Math.round(utilizationPercent * 10) / 10,
-        bookings: bookings || []
+        bookings: bookingData || []
       }
-
     } catch (err: any) {
       console.error('Error calculating room utilization:', err)
-      return {
-        totalBookings: 0,
-        totalHours: 0,
-        utilizationPercent: 0,
-        bookings: []
-      }
+      return { totalBookings: 0, totalHours: 0, utilizationPercent: 0, bookings: [] }
     }
   }
 
   // Computed
-  const publicRooms = computed(() => 
+  const availableRooms = computed(() => rooms.value)
+
+  const publicRooms = computed(() =>
     rooms.value.filter(room => room.is_public)
   )
 
-  const tenantRooms = computed(() => 
+  const tenantRooms = computed(() =>
     rooms.value.filter(room => room.tenant_id === currentUser.value?.tenant_id)
   )
-
-  const availableRooms = computed(() => {
-    // Fallback: Wenn currentUser nicht verfügbar ist, zeige alle geladenen Räume
-    // (da loadRooms bereits nach tenant_id gefiltert hat)
-    return currentUser.value?.tenant_id 
-      ? rooms.value.filter(room => room.tenant_id === currentUser.value?.tenant_id)
-      : rooms.value // Alle Räume, da bereits gefiltert
-  })
 
   return {
     rooms,

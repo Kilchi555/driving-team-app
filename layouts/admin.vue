@@ -10,9 +10,9 @@
     >
       <div class="mx-auto px-3 sm:px-5 h-14 flex items-center justify-between gap-3">
 
-        <!-- Hamburger (always left) -->
+        <!-- Hamburger (hidden on desktop ≥1200px) -->
         <button @click="showMobileMenu = !showMobileMenu"
-          class="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/20 transition-colors flex-shrink-0"
+          class="hamburger-btn w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/20 transition-colors flex-shrink-0"
           type="button">
           <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path v-if="!showMobileMenu" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
@@ -161,8 +161,6 @@
               class="drawer-link" :class="isActive('/admin/affiliate') ? 'drawer-active' : ''">Affiliate</NuxtLink>
             <NuxtLink to="/admin/pricing" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/pricing') ? 'drawer-active' : ''">Preise</NuxtLink>
-            <NuxtLink to="/admin/cron-status" @click="showMobileMenu = false; onNav('/admin/cron-status')"
-              class="drawer-link" :class="isActive('/admin/cron-status') ? 'drawer-active' : ''">Cron Status</NuxtLink>
           </template>
           <div v-else class="flex items-center justify-center py-8 text-white/50 text-sm gap-2">
             <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
@@ -186,10 +184,87 @@
       </div>
     </Transition>
 
-    <!-- ═══ MAIN CONTENT ═══ -->
-    <main class="flex-1 bg-gray-50/60">
-      <slot />
-    </main>
+    <!-- ═══ BODY: Desktop Sidebar + Main ═══ -->
+    <div class="flex flex-1">
+
+      <!-- ═══ DESKTOP SIDEBAR (≥1200px) ═══ -->
+      <aside class="desktop-sidebar flex-shrink-0 w-64 flex flex-col"
+        :style="{ background: `linear-gradient(180deg, ${primaryColor || '#1e293b'} 0%, ${secondaryColor || '#334155'} 100%)` }"
+      >
+        <!-- Sidebar Nav -->
+        <nav class="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
+          <template v-if="!featuresLoading">
+            <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-2 pb-1">Hauptbereich</p>
+            <NuxtLink to="/admin"
+              class="drawer-link" :class="route.path === '/admin' ? 'drawer-active' : ''">Dashboard</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/payment-overview"
+              class="drawer-link" :class="isActive('/admin/payment-overview') ? 'drawer-active' : ''">Zahlungen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/invoices"
+              class="drawer-link" :class="isActive('/admin/invoices') ? 'drawer-active' : ''">Rechnungen</NuxtLink>
+            <NuxtLink to="/admin/users"
+              class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">Schüler</NuxtLink>
+            <NuxtLink to="/admin/student-credits"
+              class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
+
+            <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Verwaltung</p>
+            <NuxtLink v-if="shouldShowNavLink('courses_enabled')" to="/admin/courses"
+              class="drawer-link" :class="isActive('/admin/courses') ? 'drawer-active' : ''">Kurse</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('cash_management_enabled')" to="/admin/cash-management"
+              class="drawer-link" :class="isActive('/admin/cash-management') ? 'drawer-active' : ''">Kassen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('cancellation_management_enabled')" to="/admin/cancellation-management"
+              class="drawer-link" :class="isActive('/admin/cancellation-management') ? 'drawer-active' : ''">Absagen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('staff_hours_enabled')" to="/admin/staff-hours"
+              class="drawer-link" :class="isActive('/admin/staff-hours') ? 'drawer-active' : ''">Stunden</NuxtLink>
+            <NuxtLink to="/admin/payment-reminders"
+              class="drawer-link" :class="isActive('/admin/payment-reminders') ? 'drawer-active' : ''">Erinnerungen</NuxtLink>
+
+            <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Weitere</p>
+            <NuxtLink v-if="shouldShowNavLink('product_sales_enabled')" to="/admin/products"
+              class="drawer-link" :class="isActive('/admin/products') ? 'drawer-active' : ''">Produkte</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('data_management_enabled')" to="/admin/data-management"
+              class="drawer-link" :class="isActive('/admin/data-management') ? 'drawer-active' : ''">Datenverwaltung</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('discounts_enabled')" to="/admin/discounts"
+              class="drawer-link" :class="isActive('/admin/discounts') ? 'drawer-active' : ''">Rabatte</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('categories_enabled')" to="/admin/categories"
+              class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">Kategorien</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('examiners_enabled')" to="/admin/examiners"
+              class="drawer-link" :class="isActive('/admin/examiners') ? 'drawer-active' : ''">Experten</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('evaluations_enabled')" to="/admin/evaluation-system"
+              class="drawer-link" :class="isActive('/admin/evaluation-system') ? 'drawer-active' : ''">Bewertungen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('exams_enabled')" to="/admin/exam-statistics"
+              class="drawer-link" :class="isActive('/admin/exam-statistics') ? 'drawer-active' : ''">Prüfungen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('affiliate_enabled')" to="/admin/affiliate"
+              class="drawer-link" :class="isActive('/admin/affiliate') ? 'drawer-active' : ''">Affiliate</NuxtLink>
+            <NuxtLink to="/admin/pricing"
+              class="drawer-link" :class="isActive('/admin/pricing') ? 'drawer-active' : ''">Preise</NuxtLink>
+          </template>
+          <div v-else class="flex items-center justify-center py-8 text-white/50 text-sm gap-2">
+            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            Lade Navigation…
+          </div>
+        </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="border-t border-white/10 p-3 space-y-1">
+          <NuxtLink to="/admin/profile"
+            class="drawer-link" :class="isActive('/admin/profile') ? 'drawer-active' : ''">
+            <svg class="w-4 h-4 mr-2 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/></svg>
+            Einstellungen
+          </NuxtLink>
+          <button @click="handleLogout"
+            class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-colors text-left">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Abmelden
+          </button>
+        </div>
+      </aside>
+
+      <!-- ═══ MAIN CONTENT ═══ -->
+      <main class="flex-1 bg-gray-50/60 min-w-0">
+        <slot />
+      </main>
+
+    </div>
 
     <!-- ═══ FOOTER ═══ -->
     <footer class="border-t border-white/10 py-3"
@@ -372,22 +447,20 @@ watchEffect(async () => {
 
 // Logout function
 const handleLogout = async () => {
+  // Slug VOR dem logout lesen, da clearAuthState() den Branding-State leert
+  const { getLoginPath } = await import('~/utils/redirect-to-login')
+  const slug = currentTenantBranding.value?.slug
+  const loginPath = getLoginPath(slug)
+
   try {
     logger.debug('🚪 Logging out user...')
     await logout()
     showSuccess('Abgemeldet', 'Sie wurden erfolgreich abgemeldet.')
-    
-    // Weiterleitung zur Tenant-Login-Seite (immer tenant-spezifisch)
-    const { getLoginPath } = await import('~/utils/redirect-to-login')
-    const slug = currentTenantBranding.value?.slug
-    await navigateTo(getLoginPath(slug))
+    await navigateTo(loginPath)
   } catch (error) {
     console.error('❌ Logout error:', error)
     showError('Fehler', 'Fehler beim Abmelden. Bitte versuchen Sie es erneut.')
-    // Trotzdem weiterleiten (Tenant falls verfügbar)
-    const { getLoginPath } = await import('~/utils/redirect-to-login')
-    const slug = currentTenantBranding.value?.slug
-    await navigateTo(getLoginPath(slug))
+    await navigateTo(loginPath)
   }
 }
 
@@ -704,6 +777,27 @@ div.admin-layout textarea,
   color: white !important;
   background-color: #374151 !important; /* gray-700 */
   border-color: #6b7280 !important; /* gray-500 */
+}
+
+/* ═══ DESKTOP SIDEBAR ═══ */
+.desktop-sidebar {
+  display: none;
+}
+
+@media (min-width: 1200px) {
+  .desktop-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 256px;
+    position: sticky;
+    top: 56px; /* header h-14 = 56px */
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+  }
+
+  .hamburger-btn {
+    display: none;
+  }
 }
 
 </style>

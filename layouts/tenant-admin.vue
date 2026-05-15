@@ -61,6 +61,13 @@
             </svg>
             Business Types
           </NuxtLink>
+          <NuxtLink to="/admin/cron-status" class="sa-nav-link" :class="{ 'sa-nav-active': $route.path === '/admin/cron-status' }">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Cron Status
+          </NuxtLink>
         </nav>
 
         <!-- Right: live badge + user -->
@@ -122,13 +129,17 @@ const userMenuOpen = ref(false)
 const userMenuRef = ref(null)
 
 const handleLogout = async () => {
+  // Slug VOR dem logout lesen, da logout() clearAuthState() aufruft
+  const { getLoginPath } = await import('~/utils/redirect-to-login')
+  const loginPath = getLoginPath()
+
   try {
     await logout()
     showSuccess('Erfolgreich abgemeldet')
-    const { getLoginPath } = await import('~/utils/redirect-to-login')
-    await navigateTo(getLoginPath())
+    await navigateTo(loginPath)
   } catch (error) {
     showError('Fehler beim Abmelden: ' + (error?.message || 'Unbekannter Fehler'))
+    await navigateTo(loginPath)
   }
 }
 

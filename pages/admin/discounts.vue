@@ -826,30 +826,8 @@ const getTypeBadgeClass = (type: string) => {
 const loadVouchers = async () => {
   isLoadingVouchers.value = true
   try {
-    const supabase = getSupabase()
-    
-    // Get tenant_id
-    const user = authStore.user // ✅ MIGRATED
-    if (!user) throw new Error('Not authenticated')
-    
-    const { data: userData } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-    
-    const tenantId = userData?.tenant_id
-    
-    // Load vouchers
-    const { data, error } = await supabase
-      .from('voucher_codes')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-    
-    if (error) throw error
-    
-    vouchers.value = data || []
+    const response = await $fetch('/api/admin/voucher-codes', { method: 'GET' }) as any
+    vouchers.value = response.data || []
     logger.debug('✅ Loaded vouchers:', vouchers.value.length)
   } catch (error) {
     console.error('❌ Error loading vouchers:', error)
@@ -885,46 +863,19 @@ const saveVoucher = async () => {
 
   isSavingVoucher.value = true
   try {
-    const supabase = getSupabase()
-    
-    // Get tenant_id and user_id
-    const user = authStore.user // ✅ MIGRATED
-    if (!user) throw new Error('Not authenticated')
-    
-    const { data: userData } = await supabase
-      .from('users')
-      .select('id, tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-    
-    const voucherData = {
-      code: voucherFormData.value.code.toUpperCase(),
-      description: voucherFormData.value.description || null,
-      credit_amount_rappen: Math.round(voucherFormData.value.credit_amount * 100),
-      valid_from: voucherFormData.value.valid_from || new Date().toISOString(),
-      valid_until: voucherFormData.value.valid_until || null,
-      max_redemptions: voucherFormData.value.max_redemptions,
-      is_active: voucherFormData.value.is_active,
-      created_by: userData?.id,
-      tenant_id: userData?.tenant_id
-    }
-
-    if (editingVoucher.value) {
-      // Update
-      const { error } = await supabase
-        .from('voucher_codes')
-        .update(voucherData)
-        .eq('id', editingVoucher.value.id)
-      
-      if (error) throw error
-    } else {
-      // Create
-      const { error } = await supabase
-        .from('voucher_codes')
-        .insert(voucherData)
-      
-      if (error) throw error
-    }
+    await $fetch('/api/admin/voucher-codes', {
+      method: 'POST',
+      body: {
+        id: editingVoucher.value?.id || undefined,
+        code: voucherFormData.value.code,
+        description: voucherFormData.value.description || null,
+        credit_amount_rappen: Math.round(voucherFormData.value.credit_amount * 100),
+        valid_from: voucherFormData.value.valid_from || new Date().toISOString(),
+        valid_until: voucherFormData.value.valid_until || null,
+        max_redemptions: voucherFormData.value.max_redemptions,
+        is_active: voucherFormData.value.is_active
+      }
+    })
 
     await loadVouchers()
     closeVoucherModal()
@@ -938,13 +889,10 @@ const saveVoucher = async () => {
 
 const toggleVoucherStatus = async (voucher: any) => {
   try {
-    const supabase = getSupabase()
-    const { error } = await supabase
-      .from('voucher_codes')
-      .update({ is_active: !voucher.is_active })
-      .eq('id', voucher.id)
-    
-    if (error) throw error
+    await $fetch(`/api/admin/voucher-codes/${voucher.id}`, {
+      method: 'PATCH',
+      body: { is_active: !voucher.is_active }
+    })
     await loadVouchers()
   } catch (error) {
     console.error('❌ Error toggling voucher:', error)
@@ -955,13 +903,7 @@ const deleteVoucher = async (voucher: any) => {
   if (!confirm(`Gutschein "${voucher.code}" wirklich löschen?`)) return
   
   try {
-    const supabase = getSupabase()
-    const { error } = await supabase
-      .from('voucher_codes')
-      .delete()
-      .eq('id', voucher.id)
-    
-    if (error) throw error
+    await $fetch(`/api/admin/voucher-codes/${voucher.id}`, { method: 'DELETE' })
     await loadVouchers()
   } catch (error) {
     console.error('❌ Error deleting voucher:', error)
