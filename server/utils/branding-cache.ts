@@ -13,7 +13,7 @@ interface CacheEntry {
   expiresAt: number
 }
 
-const TTL_MS = 60_000 // 60 seconds
+const TTL_MS = 5 * 60_000 // 5 minutes — branding data changes rarely
 const cache = new Map<string, CacheEntry>()
 
 export function getBrandingCache(key: string): any | null {

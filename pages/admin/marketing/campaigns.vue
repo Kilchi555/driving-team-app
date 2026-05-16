@@ -1,0 +1,368 @@
+<template>
+  <div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <NuxtLink to="/admin/marketing" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </NuxtLink>
+            <h1 class="text-2xl font-bold text-gray-900">Kampagnen</h1>
+          </div>
+          <button
+            @click="openCreate"
+            :disabled="templates.length === 0"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            :title="templates.length === 0 ? 'Erstelle zuerst ein Email-Template' : ''"
+          >
+            + Neue Kampagne
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+
+      <!-- No templates warning -->
+      <div v-if="!loading && templates.length === 0" class="bg-orange-50 border border-orange-200 rounded-xl p-4 flex gap-3">
+        <svg class="w-5 h-5 text-orange-600 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+        <div>
+          <p class="text-sm font-medium text-orange-800">Kein Email-Template vorhanden</p>
+          <p class="text-sm text-orange-700 mt-0.5">
+            Erstelle zuerst ein Email-Template, bevor du eine Kampagne startest.
+          </p>
+          <NuxtLink to="/admin/marketing/templates" class="inline-block mt-1 text-sm font-medium text-orange-800 underline">
+            Template erstellen →
+          </NuxtLink>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div v-if="loading" class="text-center py-12">
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else-if="campaigns.length === 0" class="text-center py-16 bg-white rounded-xl border">
+        <svg class="mx-auto w-12 h-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+        </svg>
+        <p class="text-gray-500 mb-4">Noch keine Kampagnen vorhanden</p>
+        <button v-if="templates.length > 0" @click="openCreate" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+          Erste Kampagne erstellen
+        </button>
+      </div>
+
+      <!-- Campaigns List -->
+      <div v-else class="space-y-3">
+        <div
+          v-for="c in campaigns"
+          :key="c.id"
+          class="bg-white rounded-xl border p-5"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-3 flex-wrap">
+                <h3 class="font-semibold text-gray-900">{{ c.name }}</h3>
+                <span :class="statusBadge(c.status)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                  {{ statusLabel(c.status) }}
+                </span>
+              </div>
+              <p class="text-sm text-gray-500 mt-1">
+                Template: <span class="font-medium text-gray-700">{{ c.email_templates?.name ?? '—' }}</span>
+                <span v-if="c.subject_override" class="ml-2 text-gray-400">· Betreff-Override: "{{ c.subject_override }}"</span>
+              </p>
+              <div v-if="c.status === 'sent'" class="flex gap-4 mt-2">
+                <span class="text-sm text-gray-600"><strong class="text-gray-900">{{ c.total_recipients.toLocaleString('de-CH') }}</strong> Empfänger</span>
+                <span class="text-sm text-gray-600"><strong class="text-gray-900">{{ c.sent_count.toLocaleString('de-CH') }}</strong> gesendet</span>
+                <span v-if="c.bounce_count > 0" class="text-sm text-red-600"><strong>{{ c.bounce_count }}</strong> Bounces</span>
+                <span v-if="c.unsubscribe_count > 0" class="text-sm text-gray-500"><strong>{{ c.unsubscribe_count }}</strong> Abmeldungen</span>
+              </div>
+              <div class="flex flex-wrap gap-1 mt-2">
+                <span
+                  v-for="cat in (c.segment_filter?.categories || [])"
+                  :key="cat"
+                  class="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-xs"
+                >{{ cat }}</span>
+                <span v-if="!(c.segment_filter?.categories?.length)" class="text-xs text-gray-400">Alle aktiven Leads</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-xs text-gray-400">{{ formatDate(c.created_at) }}</span>
+              <button
+                v-if="c.status === 'draft'"
+                @click="openSendConfirm(c)"
+                class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-1.5"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                Senden
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Campaign Modal -->
+    <div v-if="createModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full">
+        <div class="flex items-center justify-between p-6 border-b">
+          <h2 class="text-lg font-semibold text-gray-900">Neue Kampagne</h2>
+          <button @click="createModalOpen = false" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Kampagnen-Name <span class="text-red-500">*</span></label>
+            <input v-model="createForm.name" type="text" placeholder="z.B. Motorrad-Saison 2026" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email-Template <span class="text-red-500">*</span></label>
+            <select v-model="createForm.template_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">Template auswählen...</option>
+              <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Betreff-Override <span class="text-gray-400 font-normal">(optional)</span></label>
+            <input v-model="createForm.subject_override" type="text" placeholder="Leer = Betreff aus Template verwenden" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Segment — Kategorien</label>
+            <p class="text-xs text-gray-500 mb-2">Leer = alle aktiven Leads erhalten die Email</p>
+            <div class="flex flex-wrap gap-3">
+              <label v-for="cat in CATEGORIES" :key="cat.value" class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" :value="cat.value" v-model="createForm.categories" class="rounded" />
+                <span class="text-sm text-gray-700">{{ cat.label }}</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Estimated recipients -->
+          <div v-if="estimatedCount !== null" class="bg-blue-50 rounded-lg p-3 text-sm">
+            <span class="text-blue-800">
+              Geschätzte Empfänger: <strong>{{ estimatedCount.toLocaleString('de-CH') }}</strong> aktive Leads
+              <span v-if="createForm.categories.length"> in den Kategorien {{ createForm.categories.join(', ') }}</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 p-6 border-t">
+          <button @click="createModalOpen = false" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+            Abbrechen
+          </button>
+          <button
+            @click="createCampaign"
+            :disabled="saving || !createForm.name || !createForm.template_id"
+            class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            {{ saving ? 'Erstelle...' : 'Kampagne erstellen' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Send Confirmation Modal -->
+    <div v-if="sendConfirmCampaign" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">Kampagne senden?</h2>
+            <p class="text-sm text-gray-600 mt-1">
+              <strong>{{ sendConfirmCampaign.name }}</strong><br>
+              Die Emails werden sofort in die Versand-Warteschlange eingereiht und vom Cron-Job versendet.
+              <span class="text-orange-600 font-medium">Dieser Vorgang kann nicht rückgängig gemacht werden.</span>
+            </p>
+          </div>
+        </div>
+
+        <div v-if="sendResult" class="mt-4 bg-green-50 rounded-lg p-4">
+          <p class="text-sm font-medium text-green-800">
+            Erfolgreich: {{ sendResult.queuedCount }} Emails in die Warteschlange eingereiht.
+          </p>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-6">
+          <button @click="sendConfirmCampaign = null; sendResult = null" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+            {{ sendResult ? 'Schliessen' : 'Abbrechen' }}
+          </button>
+          <button
+            v-if="!sendResult"
+            @click="sendCampaign"
+            :disabled="sending"
+            class="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+          >
+            <svg v-if="sending" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {{ sending ? 'Sendet...' : 'Ja, jetzt senden' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { useAuthStore } from '~/stores/auth'
+
+definePageMeta({ layout: 'admin', middleware: 'admin' })
+useHead({ title: 'Kampagnen - Marketing - Admin' })
+
+const authStore = useAuthStore()
+
+const CATEGORIES = [
+  { value: 'auto', label: 'Auto (B)' },
+  { value: 'motorrad', label: 'Motorrad (A)' },
+  { value: 'lkw', label: 'LKW (C/CE)' },
+  { value: 'fahrlehrer', label: 'Fahrlehrer' },
+  { value: 'bus', label: 'Bus (D)' },
+  { value: 'traktor', label: 'Traktor' },
+]
+
+const campaigns = ref<any[]>([])
+const templates = ref<any[]>([])
+const loading = ref(true)
+
+const createModalOpen = ref(false)
+const saving = ref(false)
+const createForm = reactive({ name: '', template_id: '', subject_override: '', categories: [] as string[] })
+
+const sendConfirmCampaign = ref<any>(null)
+const sending = ref(false)
+const sendResult = ref<any>(null)
+
+const estimatedCount = ref<number | null>(null)
+
+function formatDate(d: string) {
+  return new Date(d).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
+
+function statusLabel(status: string) {
+  return { draft: 'Entwurf', sending: 'Wird gesendet', sent: 'Gesendet', failed: 'Fehlgeschlagen' }[status] ?? status
+}
+
+function statusBadge(status: string) {
+  return {
+    draft: 'bg-gray-100 text-gray-600',
+    sending: 'bg-blue-100 text-blue-700',
+    sent: 'bg-green-100 text-green-700',
+    failed: 'bg-red-100 text-red-700',
+  }[status] ?? 'bg-gray-100 text-gray-600'
+}
+
+async function loadData() {
+  const tenantId = authStore.userProfile?.tenant_id
+  if (!tenantId) return
+  loading.value = true
+  try {
+    const [c, t] = await Promise.all([
+      $fetch<any>('/api/marketing/campaigns', { query: { tenantId } }),
+      $fetch<any>('/api/marketing/templates', { query: { tenantId } }),
+    ])
+    campaigns.value = c.campaigns
+    templates.value = t.templates
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadEstimatedCount() {
+  const tenantId = authStore.userProfile?.tenant_id
+  if (!tenantId) return
+  try {
+    const res = await $fetch<any>('/api/marketing/leads', {
+      query: {
+        tenantId,
+        status: 'active',
+        category: createForm.categories[0] || undefined,
+        limit: 1,
+      },
+    })
+    estimatedCount.value = res.total
+  } catch {
+    estimatedCount.value = null
+  }
+}
+
+function openCreate() {
+  createForm.name = ''
+  createForm.template_id = ''
+  createForm.subject_override = ''
+  createForm.categories = []
+  estimatedCount.value = null
+  createModalOpen.value = true
+  loadEstimatedCount()
+}
+
+watch(() => createForm.categories, loadEstimatedCount, { deep: true })
+
+async function createCampaign() {
+  const tenantId = authStore.userProfile?.tenant_id
+  const userId = authStore.userProfile?.id
+  if (!tenantId || !createForm.name || !createForm.template_id) return
+  saving.value = true
+  try {
+    await $fetch('/api/marketing/campaigns', {
+      method: 'POST',
+      body: {
+        tenantId,
+        createdBy: userId,
+        name: createForm.name,
+        template_id: createForm.template_id,
+        subject_override: createForm.subject_override || null,
+        segment_filter: createForm.categories.length ? { categories: createForm.categories } : {},
+      },
+    })
+    createModalOpen.value = false
+    await loadData()
+  } finally {
+    saving.value = false
+  }
+}
+
+function openSendConfirm(campaign: any) {
+  sendConfirmCampaign.value = campaign
+  sendResult.value = null
+}
+
+async function sendCampaign() {
+  if (!sendConfirmCampaign.value) return
+  const tenantId = authStore.userProfile?.tenant_id
+  if (!tenantId) return
+  sending.value = true
+  try {
+    const res = await $fetch<any>(`/api/marketing/campaigns/${sendConfirmCampaign.value.id}/send`, {
+      method: 'POST',
+      body: { tenantId },
+    })
+    sendResult.value = res
+    await loadData()
+  } catch (err: any) {
+    alert(`Fehler beim Senden: ${err.message || 'Unbekannter Fehler'}`)
+  } finally {
+    sending.value = false
+  }
+}
+
+onMounted(loadData)
+</script>

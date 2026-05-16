@@ -261,6 +261,28 @@
             </p>
           </div>
 
+          <!-- Auto-Apply (Dauerrabatt) -->
+          <div class="p-4 bg-green-50 border border-green-200 rounded-lg space-y-2">
+            <div class="flex items-center gap-3">
+              <input
+                v-model="form.auto_apply"
+                type="checkbox"
+                id="auto_apply"
+                :disabled="form.first_lesson_only"
+                class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-40"
+              />
+              <label for="auto_apply" class="text-sm font-medium text-gray-800 cursor-pointer" :class="{ 'opacity-40': form.first_lesson_only }">
+                Dauerrabatt (automatisch anwenden)
+              </label>
+            </div>
+            <p class="text-xs text-green-700 pl-7">
+              Kunden können diesen Code einmalig registrieren. Er wird dann automatisch auf jede Buchung angewendet – egal ob online oder telefonisch über den Staff.
+            </p>
+            <p v-if="form.first_lesson_only" class="text-xs text-amber-700 pl-7 font-medium">
+              Nicht kombinierbar mit "Nur für Erstkunden".
+            </p>
+          </div>
+
           <!-- Status -->
           <div class="flex items-center space-x-3">
             <label for="is_active" class="text-sm font-medium text-gray-700">
@@ -344,7 +366,7 @@ const { currentUser } = useCurrentUser()
 
 // State
 const isLoading = ref(false)
-const form = ref<CreateDiscountRequest & { first_lesson_only?: boolean }>({
+const form = ref<CreateDiscountRequest & { first_lesson_only?: boolean; auto_apply?: boolean }>({
   name: '',
   code: '',
   discount_type: 'percentage',
@@ -358,7 +380,8 @@ const form = ref<CreateDiscountRequest & { first_lesson_only?: boolean }>({
   applies_to: 'appointments',
   category_filter: undefined,
   is_active: true,
-  first_lesson_only: false
+  first_lesson_only: false,
+  auto_apply: false
 })
 
 // Computed
@@ -396,7 +419,8 @@ const initializeForm = () => {
       applies_to: props.discount.applies_to,
       category_filter: props.discount.category_filter,
       is_active: props.discount.is_active !== undefined ? props.discount.is_active : true,
-      first_lesson_only: (props.discount as any).first_lesson_only ?? false
+      first_lesson_only: (props.discount as any).first_lesson_only ?? false,
+      auto_apply: (props.discount as any).auto_apply ?? false
     }
   } else {
     // Reset form for new discount
@@ -414,7 +438,8 @@ const initializeForm = () => {
       applies_to: 'appointments',
       category_filter: undefined,
       is_active: true,
-      first_lesson_only: false
+      first_lesson_only: false,
+      auto_apply: false
     }
   }
 }
@@ -481,4 +506,9 @@ onMounted(() => {
 watch(() => props.discount, () => {
   initializeForm()
 }, { immediate: true })
+
+// first_lesson_only and auto_apply are mutually exclusive
+watch(() => form.value.first_lesson_only, (val) => {
+  if (val) form.value.auto_apply = false
+})
 </script>

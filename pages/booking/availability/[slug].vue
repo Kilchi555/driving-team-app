@@ -910,6 +910,7 @@
               :amount-rappen="previewPriceRappen"
               :category-code="selectedCategory?.code"
               :primary-color="getBrandPrimary()"
+              context="appointment"
               @applied="(d) => bookingDiscount = d"
               @removed="bookingDiscount = null"
             />

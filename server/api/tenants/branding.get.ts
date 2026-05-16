@@ -36,44 +36,61 @@ interface TenantBrandingResponse {
 export default defineEventHandler(async (event): Promise<TenantBrandingResponse> => {
   const startTime = Date.now()
   const ipAddress = getClientIP(event)
-  
-  try {
-    // ============ LAYER 1: RATE LIMITING ============
-    // IP-based rate limiting (for anonymous users)
-    const ipRateLimitResult = await checkRateLimit(
-      ipAddress,
-      'get_tenant_branding_ip',
-      30, // 30 requests per minute per IP
-      60 * 1000
-    )
+  const query = getQuery(event)
+  const slug = query.slug as string
+  const id = query.id as string
 
-    if (!ipRateLimitResult.allowed) {
-      logger.warn('⚠️ IP rate limit exceeded:', ipAddress)
-      throw createError({
-        statusCode: 429,
-        statusMessage: 'Too many requests from this IP. Please try again later.'
-      })
+  try {
+    // ============ LAYER 1: INPUT VALIDATION (fast, no DB) ============
+    if (!slug && !id) {
+      throw createError({ statusCode: 400, statusMessage: 'Either slug or id parameter is required' })
+    }
+    if (slug && !/^[a-z0-9-]+$/.test(slug)) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid slug format' })
+    }
+    if (id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid ID format' })
+    }
+
+    const authHeader = event.node.req.headers.authorization
+    const isAnonymous = !authHeader?.startsWith('Bearer ')
+    const cacheKey = slug ? `slug:${slug}` : `id:${id}`
+
+    // ============ LAYER 2: CACHE CHECK — before any DB call ============
+    // Anonymous requests get cached responses instantly. Authenticated admins
+    // bypass cache to always receive fresh custom CSS/JS.
+    if (isAnonymous) {
+      const cached = getBrandingCache(cacheKey)
+      if (cached) {
+        setHeader(event, 'Cache-Control', 'public, max-age=300, stale-while-revalidate=60')
+        setHeader(event, 'X-Cache', 'HIT')
+        return { success: true, data: cached }
+      }
     }
 
     const supabaseAdmin = getSupabaseAdmin()
-    const query = getQuery(event)
-    
-    // ============ LAYER 2: AUTHENTICATION (Optional) ============
+
+    // ============ LAYER 3: AUTH + RATE LIMIT — parallel for anon fast path ============
     let isAuthenticated = false
     let isAdmin = false
     let userId: string | undefined
     let userTenantId: string | undefined
 
-    try {
-      const authHeader = event.node.req.headers.authorization
-      if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.substring(7)
-        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    if (!isAnonymous) {
+      // Only do full auth check when a token is actually present
+      try {
+        const token = authHeader!.substring(7)
+        const [{ data: { user }, error: authError }, rateLimitResult] = await Promise.all([
+          supabaseAdmin.auth.getUser(token),
+          checkRateLimit(ipAddress, 'get_tenant_branding_ip', 30, 60 * 1000),
+        ])
+
+        if (!rateLimitResult.allowed) {
+          throw createError({ statusCode: 429, statusMessage: 'Too many requests from this IP. Please try again later.' })
+        }
 
         if (!authError && user) {
           isAuthenticated = true
-          
-          // Get user profile
           const { data: userProfile } = await supabaseAdmin
             .from('users')
             .select('id, tenant_id, role')
@@ -84,77 +101,21 @@ export default defineEventHandler(async (event): Promise<TenantBrandingResponse>
             userId = userProfile.id
             userTenantId = userProfile.tenant_id
             isAdmin = ['admin', 'staff', 'super_admin'].includes(userProfile.role)
-
-            // User-based rate limiting (higher limit)
-            const userRateLimitResult = await checkRateLimit(
-              userId,
-              'get_tenant_branding_user',
-              120, // 120 requests per minute per user
-              60 * 1000
-            )
-
-            if (!userRateLimitResult.allowed) {
-              throw createError({
-                statusCode: 429,
-                statusMessage: 'Too many requests. Please try again later.'
-              })
-            }
           }
         }
+      } catch (e: any) {
+        if (e.statusCode) throw e
+        logger.debug('Auth check failed, continuing as anonymous')
       }
-    } catch (e) {
-      // Authentication is optional, continue as anonymous
-      logger.debug('No valid authentication, continuing as anonymous')
+    } else {
+      // Anonymous: fire-and-forget rate limit (don't block the response)
+      checkRateLimit(ipAddress, 'get_tenant_branding_ip', 30, 60 * 1000).catch(() => {})
     }
 
-    // ============ LAYER 3: INPUT VALIDATION ============
-    const slug = query.slug as string
-    const id = query.id as string
-
-    if (!slug && !id) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Either slug or id parameter is required'
-      })
-    }
-
-    // Validate slug format (alphanumeric + hyphens only)
-    if (slug && !/^[a-z0-9-]+$/.test(slug)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid slug format'
-      })
-    }
-
-    // Validate UUID format
-    if (id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid ID format'
-      })
-    }
-
-    // ============ CACHE: Return early for anonymous public requests ============
-    // Authenticated requests (admins) bypass cache so they get custom CSS/JS fresh.
-    if (!isAuthenticated) {
-      const cacheKey = slug ? `slug:${slug}` : `id:${id}`
-      const cached = getBrandingCache(cacheKey)
-      if (cached) {
-        logger.debug(`🚀 Branding cache HIT for ${cacheKey}`)
-        return { success: true, data: cached }
-      }
-    }
-
-    logger.debug('🎨 Fetching tenant branding:', {
-      slug,
-      id,
-      isAuthenticated,
-      isAdmin,
-      ipAddress
-    })
-
-    // ============ LAYER 4: DATA LOADING ============
-    let query_builder = supabaseAdmin
+    // ============ LAYER 4: PARALLEL DB QUERIES ============
+    // Tenant query + affiliate setting run in parallel by using the slug directly
+    // on affiliate query (no need to wait for tenant.id).
+    let tenantQuery = supabaseAdmin
       .from('tenants')
       .select(`
         id, name, slug,
@@ -172,13 +133,27 @@ export default defineEventHandler(async (event): Promise<TenantBrandingResponse>
       `)
       .eq('is_active', true)
 
-    if (slug) {
-      query_builder = query_builder.eq('slug', slug)
-    } else if (id) {
-      query_builder = query_builder.eq('id', id)
-    }
+    if (slug) tenantQuery = tenantQuery.eq('slug', slug)
+    else tenantQuery = tenantQuery.eq('id', id)
 
-    const { data: tenant, error: tenantError } = await query_builder.maybeSingle()
+    // Fetch tenant and affiliate setting in parallel.
+    // For slug-based requests, we query tenant_settings joined to tenants by slug
+    // so we don't need tenant.id first. Falls back to a sequential query if the join
+    // returns an error (schema relationship not configured).
+    const affiliateParallelQuery = slug
+      ? supabaseAdmin
+          .from('tenant_settings')
+          .select('setting_value, tenants!inner(id)')
+          .eq('tenants.slug', slug)
+          .eq('category', 'affiliate')
+          .eq('setting_key', 'enabled')
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: { message: 'id-based lookup' } as any })
+
+    const [
+      { data: tenant, error: tenantError },
+      { data: affiliateSetting, error: affiliateError },
+    ] = await Promise.all([tenantQuery.maybeSingle(), affiliateParallelQuery])
 
     if (tenantError) {
       logger.error('❌ Error fetching tenant:', tenantError)
@@ -186,149 +161,75 @@ export default defineEventHandler(async (event): Promise<TenantBrandingResponse>
     }
 
     if (!tenant) {
-      logger.warn('⚠️ Tenant not found:', { slug, id })
-      
-      await logAudit({
-        user_id: userId,
-        action: 'get_tenant_branding',
-        resource_type: 'tenant',
-        status: 'failed',
-        error_message: 'Tenant not found',
-        ip_address: ipAddress,
-        details: {
-          slug,
-          id,
-          duration_ms: Date.now() - startTime
-        }
-      })
-
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Tenant not found'
-      })
+      logAudit({ action: 'get_tenant_branding', resource_type: 'tenant', status: 'failed', error_message: 'Tenant not found', ip_address: ipAddress, details: { slug, id } }).catch(() => {})
+      throw createError({ statusCode: 404, statusMessage: 'Tenant not found' })
     }
 
-    // ============ LAYER 4B: LOAD AFFILIATE SETTINGS ============
-    const { data: affiliateEnabledSetting } = await supabaseAdmin
-      .from('tenant_settings')
-      .select('setting_value')
-      .eq('tenant_id', tenant.id)
-      .eq('category', 'affiliate')
-      .eq('setting_key', 'enabled')
-      .maybeSingle()
-
-    const affiliateEnabled = affiliateEnabledSetting?.setting_value !== 'false'
-    tenant.features = {
-      affiliate_enabled: affiliateEnabled
+    // If the parallel affiliate join failed or was skipped (id-based), fall back to
+    // sequential query now that we have tenant.id. Only one extra round-trip in that case.
+    let affiliateEnabled = true
+    if (!affiliateError) {
+      // Parallel query succeeded: null means no row → default true (enabled)
+      affiliateEnabled = affiliateSetting?.setting_value !== 'false'
+    } else {
+      const { data: fallback } = await supabaseAdmin
+        .from('tenant_settings')
+        .select('setting_value')
+        .eq('tenant_id', tenant.id)
+        .eq('category', 'affiliate')
+        .eq('setting_key', 'enabled')
+        .maybeSingle()
+      affiliateEnabled = fallback?.setting_value !== 'false'
     }
+
+    tenant.features = { affiliate_enabled: affiliateEnabled }
 
     // ============ LAYER 5: FIELD FILTERING & XSS PREVENTION ============
-    
-    // Determine if user can access sensitive fields
-    const canAccessSensitiveFields = isAuthenticated && (
-      isAdmin || 
-      (userTenantId === tenant.id) // User belongs to this tenant
-    )
+    const canAccessSensitiveFields = isAuthenticated && (isAdmin || userTenantId === tenant.id)
 
-    // For non-authenticated or non-authorized users:
-    // Remove custom CSS/JS (XSS risk) and limit contact info
     if (!canAccessSensitiveFields) {
       tenant.custom_css = null
       tenant.custom_js = null
-      // Keep basic contact info but remove sensitive details
-      // (contact_email, contact_phone can stay for public info)
     }
 
-    // Always sanitize custom CSS/JS even for admins (basic validation)
     if (tenant.custom_css) {
-      // Check for obvious XSS patterns
-      const dangerousPatterns = [
-        /<script/i,
-        /javascript:/i,
-        /on\w+=/i, // onclick, onerror, etc.
-        /data:text\/html/i,
-        /@import.*javascript/i
-      ]
-
-      for (const pattern of dangerousPatterns) {
-        if (pattern.test(tenant.custom_css)) {
-          logger.warn('🚨 Dangerous CSS pattern detected:', {
-            tenantId: tenant.id,
-            pattern: pattern.toString()
-          })
-          tenant.custom_css = null
-          break
-        }
+      const dangerousPatterns = [/<script/i, /javascript:/i, /on\w+=/i, /data:text\/html/i, /@import.*javascript/i]
+      if (dangerousPatterns.some(p => p.test(tenant.custom_css))) {
+        logger.warn('🚨 Dangerous CSS pattern detected for tenant:', tenant.id)
+        tenant.custom_css = null
       }
     }
 
-    if (tenant.custom_js) {
-      // For custom JS, require admin access and log usage
-      if (!canAccessSensitiveFields) {
-        tenant.custom_js = null
-      } else {
-        logger.warn('⚠️ Custom JS loaded:', {
-          tenantId: tenant.id,
-          userId,
-          isAdmin
-        })
-      }
+    if (tenant.custom_js && !canAccessSensitiveFields) {
+      tenant.custom_js = null
     }
 
-    // ============ LAYER 6: AUDIT LOGGING ============
-    await logAudit({
+    // ============ LAYER 6: CACHE + AUDIT (fire-and-forget) ============
+    if (isAnonymous) {
+      setBrandingCache(cacheKey, tenant)
+      setHeader(event, 'Cache-Control', 'public, max-age=300, stale-while-revalidate=60')
+      setHeader(event, 'X-Cache', 'MISS')
+    }
+
+    // Audit log is fire-and-forget — never blocks the response
+    logAudit({
       user_id: userId,
       action: 'get_tenant_branding',
       resource_type: 'tenant',
       resource_id: tenant.id,
       status: 'success',
       ip_address: ipAddress,
-      details: {
-        tenant_slug: tenant.slug,
-        is_authenticated: isAuthenticated,
-        is_admin: isAdmin,
-        has_custom_css: !!tenant.custom_css,
-        has_custom_js: !!tenant.custom_js,
-        duration_ms: Date.now() - startTime
-      }
-    })
+      details: { tenant_slug: tenant.slug, is_authenticated: isAuthenticated, duration_ms: Date.now() - startTime }
+    }).catch(() => {})
 
-    logger.debug('✅ Tenant branding fetched successfully:', {
-      tenantId: tenant.id,
-      slug: tenant.slug,
-      isAuthenticated,
-      durationMs: Date.now() - startTime
-    })
+    logger.debug(`✅ Branding fetched in ${Date.now() - startTime}ms (authenticated: ${isAuthenticated})`)
 
-    logger.debug('🖼️ Logos in response:', {
-      logo_url: tenant.logo_url,
-      logo_square_url: tenant.logo_square_url,
-      logo_wide_url: tenant.logo_wide_url,
-      logo_dark_url: tenant.logo_dark_url,
-      favicon_url: tenant.favicon_url
-    })
+    return { success: true, data: tenant }
 
-    // Store in cache for anonymous requests (authenticated responses may differ)
-    if (!isAuthenticated) {
-      const cacheKey = slug ? `slug:${slug}` : `id:${id}`
-      setBrandingCache(cacheKey, tenant)
-    }
-
-    return {
-      success: true,
-      data: tenant
-    }
   } catch (error: any) {
     logger.error('❌ Error in get tenant branding API:', error)
-
-    if (error.statusCode) {
-      throw error
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Internal server error'
-    })
+    if (error.statusCode) throw error
+    throw createError({ statusCode: 500, statusMessage: 'Internal server error' })
   }
 })
 

@@ -364,11 +364,46 @@ const useEventModalForm = (currentUser?: any, refs?: {
         selectedStudent.value = student
         logger.debug('✅ Student loaded for existing appointment:', student.first_name, student.last_name)
         logger.debug('🎯 selectedStudent.value now set to:', selectedStudent.value?.id)
+
+        // Auto-apply sticky discount if no discount is already set (create mode only)
+        if (!formData.value.discount || formData.value.discount === 0) {
+          await loadStudentAutoDiscount(student.id)
+        }
       } else {
         logger.debug('⚠️ No student found with ID:', userId)
       }
     } catch (err) {
       console.error('❌ Error in loadStudentById:', err)
+    }
+  }
+
+  // Load and auto-apply a student's registered sticky discount codes
+  const loadStudentAutoDiscount = async (studentUserId: string) => {
+    try {
+      const { discounts: autoDiscounts } = await $fetch('/api/staff/get-user-auto-discounts', {
+        query: { user_id: studentUserId }
+      }) as any
+
+      if (!autoDiscounts?.length) return
+
+      // Take the first active auto-discount (highest priority: first registered)
+      const udc = autoDiscounts[0]
+      const d = udc.discounts
+      if (!d) return
+
+      if (d.discount_type === 'percentage') {
+        formData.value.discount = d.discount_value // e.g. 10 for 10%
+        formData.value.discount_type = 'percentage'
+      } else if (d.discount_type === 'fixed') {
+        formData.value.discount = parseFloat(d.discount_value) // CHF value
+        formData.value.discount_type = 'fixed'
+      } else {
+        return
+      }
+      formData.value.discount_reason = `Code: ${udc.code} (automatisch)`
+      logger.debug('🎁 Auto-discount applied for student:', studentUserId, 'code:', udc.code)
+    } catch (err: any) {
+      logger.debug('ℹ️ No auto-discount found for student (non-critical):', err.message)
     }
   }
 
