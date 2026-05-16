@@ -12,6 +12,7 @@ import { buildConsentLink, buildUnsubscribeLink, wrapMarketingEmail } from '~/se
 export interface TenantEmailContext {
   tenantName: string
   primaryColor: string
+  logoUrl: string | null
   drivingCats: { name: string; color?: string | null }[]
   courseCats: { name: string; color?: string | null }[]
   affiliateEnabled: boolean
@@ -22,7 +23,7 @@ export async function fetchTenantEmailContext(tenantId: string): Promise<TenantE
   const supabase = getSupabaseAdmin()
 
   const [tenantResult, drivingResult, courseResult, affiliateResult] = await Promise.all([
-    supabase.from('tenants').select('name, primary_color').eq('id', tenantId).single(),
+    supabase.from('tenants').select('name, primary_color, logo_square_url').eq('id', tenantId).single(),
     // Fetch ALL categories (no limit) so parent/child filtering works correctly
     supabase.from('categories').select('id, name, color, parent_category_id').eq('tenant_id', tenantId).eq('is_active', true).order('name'),
     supabase.from('course_categories').select('name, color').eq('tenant_id', tenantId).eq('is_active', true).order('name'),
@@ -41,9 +42,14 @@ export async function fetchTenantEmailContext(tenantId: string): Promise<TenantE
     c.parent_category_id !== null || !parentIdsWithChildren.has(c.id)
   )
 
+  // Only use logo if it's a real hosted URL — base64 data URIs bloat emails and get clipped/blocked
+  const rawLogo = tenantResult.data?.logo_square_url ?? null
+  const logoUrl = rawLogo?.startsWith('https://') ? rawLogo : null
+
   return {
     tenantName: tenantResult.data?.name || 'Fahrschule',
     primaryColor: tenantResult.data?.primary_color || '#1e293b',
+    logoUrl,
     drivingCats,
     courseCats: courseResult.data || [],
     affiliateEnabled: affiliateResult.data?.setting_value === 'true' || affiliateResult.data?.setting_value === true,
@@ -104,7 +110,8 @@ function buildEmailHtml(
     <h2 style="margin:0 0 16px;color:#111827;font-size:22px;font-weight:800">Bleib auf dem Laufenden! 👋</h2>
     <p style="margin:0 0 4px;color:#374151;font-size:15px;line-height:1.7">${greeting}</p>
     <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.7">
-      Wir würden dir gerne Neuigkeiten, Aktionen und Tipps von <strong>${tenantName}</strong> senden.
+      Wir würden dir gerne Neuigkeiten, Aktionen und nützliche Tipps von <strong>${tenantName}</strong> senden —
+      darunter Infos zu Fahrausbildung, Kursen, Versicherungen, Verkehrsregeln und aktuellen Angeboten.
       Melde dich jetzt an — kostenlos und jederzeit kündbar.
     </p>
     ${extrasSection}
@@ -112,12 +119,14 @@ function buildEmailHtml(
       style="display:block;background:${primaryColor};color:#fff;text-decoration:none;text-align:center;padding:18px 28px;border-radius:14px;font-weight:800;font-size:17px;margin:28px 0;letter-spacing:0.01em">
       ✅ Ja, ich melde mich an!
     </a>
-    <p style="margin:0;font-size:13px;color:#9ca3af;text-align:center">
-      Kein Interesse? Dann ignoriere diese Email einfach — du wirst nicht erneut kontaktiert.
+    <p style="margin:0;font-size:13px;color:#6b7280;text-align:center;line-height:1.6">
+      Möchtest du keine Mails erhalten?
+      <a href="${unsubscribeLink}" style="color:#6b7280;text-decoration:underline">Hier abmelden</a>
+      — danach wirst du nicht mehr kontaktiert.
     </p>
   `
 
-  return wrapMarketingEmail(content, tenantName, unsubscribeLink, primaryColor)
+  return wrapMarketingEmail(content, tenantName, unsubscribeLink, primaryColor, logoUrl)
 }
 
 /** Send a consent email using pre-fetched context (for bulk — no extra DB queries). */
