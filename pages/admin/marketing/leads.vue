@@ -17,6 +17,25 @@
             </div>
           </div>
 
+          <!-- Resend Consent -->
+          <div class="shrink-0 flex items-center gap-2">
+            <button @click="resendConsentEmails" :disabled="resendingConsent"
+              class="flex items-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-sm font-medium hover:bg-amber-100 transition-colors disabled:opacity-50"
+              title="Erinnerung an alle Kontakte mit ausstehendem Consent senden">
+              <svg v-if="!resendingConsent" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              <svg v-else class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+              <span class="hidden sm:inline">{{ resendingConsent ? 'Sendet…' : 'Erinnerung senden' }}</span>
+            </button>
+            <span v-if="resendConsentResult" class="hidden sm:inline text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">
+              {{ resendConsentResult }}
+            </span>
+          </div>
+
           <!-- Import Dropdown -->
           <div class="relative shrink-0" ref="importMenuRef">
             <button @click="importMenuOpen = !importMenuOpen"
@@ -717,6 +736,25 @@ async function runImportFromUsers() {
 
 // ── Newsletter Link ──────────────────────────────────────────
 const newsletterLinkCopied = ref(false)
+
+// ── Resend Consent ───────────────────────────────────────────
+const resendingConsent = ref(false)
+const resendConsentResult = ref<string | null>(null)
+
+async function resendConsentEmails() {
+  if (!confirm('Erinnerungs-Email an alle Kontakte mit ausstehendem Consent senden?')) return
+  resendingConsent.value = true
+  resendConsentResult.value = null
+  try {
+    const res = await $fetch<any>('/api/marketing/resend-consent', { method: 'POST' })
+    resendConsentResult.value = res.message
+    setTimeout(() => { resendConsentResult.value = null }, 5000)
+  } catch (e: any) {
+    alert('Fehler: ' + (e?.data?.statusMessage || e.message))
+  } finally {
+    resendingConsent.value = false
+  }
+}
 
 async function copyNewsletterLink() {
   const tenantId = authStore.userProfile?.tenant_id
