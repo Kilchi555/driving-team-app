@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
 
   const tenantName = tenant?.name ?? 'Fahrschule'
   const primaryColor = tenant?.primary_color ?? '#1e293b'
-  const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000'
+  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL || 'http://localhost:3000'
 
   // Upsert a test lead so we always have a valid id + token
   const { data: existing } = await supabase

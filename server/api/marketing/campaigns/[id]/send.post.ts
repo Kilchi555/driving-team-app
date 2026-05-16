@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
 
   const tenantName = tenant?.name ?? 'Fahrschule'
   const primaryColor = tenant?.primary_color || '#1e293b'
-  const baseUrl = process.env.APP_BASE_URL || 'https://app.simy.ch'
+  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL || 'https://app.simy.ch'
 
   // Build lead query from segment_filter
   const filter = campaign.segment_filter || {}
