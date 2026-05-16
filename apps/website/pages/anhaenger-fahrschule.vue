@@ -111,7 +111,7 @@
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Wir unterrichten dich direkt in den gängigen Prüfungsgebieten. Für unsere Fahrschule in Zürich sind das Albisgütli, Regensdorf und Wettingen (Aargau). In Lachen lernst du in den dortigen Prüfungsgebieten.</p>
-                <p class="text-sm text-gray-600 mt-2">In unseren Anhänger Fahrstunden schauen wir uns sämtliche Prüfungsanforderungen detailliert an, üben sie gründlich und festigen dein Können. Egal, ob du schon viel oder wenig Erfahrung hast – wir passen uns an dein Niveau an.</p>
+                <p class="text-sm text-gray-600 mt-2">In unseren Anhänger Fahrstunden schauen wir uns sämtliche Prüfungsanforderungen detailliert an, üben sie gründlich und festigen dein Können. Egal, ob du schon viel oder wenig Erfahrung hast – wir passen uns an deinem Niveau an.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Sobald du den Lernfahrausweis BE hast, kannst du bereits privat mit Anhängern üben. Diese zusätzliche Fahrpraxis ist Gold wert!</p>
             </div>
           </details>
@@ -128,7 +128,7 @@
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Wir begleiten dich selbstverständlich zur Anhängerfahrprüfung. Du musst dir keine Gedanken um das Fahrzeug machen, denn wir stellen dir das Prüfungsfahrzeug. Als deine Anhängerfahrschule sorgen wir zudem von Anfang an für einen positiven ersten Eindruck beim Prüfungsexperten.</p>
-                <p class="text-sm text-gray-500 mt-2 italic">Für den BE-Führerausweis brauchst du lediglich den Lernfahrausweis der Kategorie BE – keine Theorieprüfung nötig!</p>
+                <p class="text-sm text-gray-500 mt-2 italic">Für den BE Führerausweis brauchst du lediglich den Lernfahrausweis der Kategorie BE – keine Theorieprüfung nötig!</p>
             </div>
           </details>
         </div>
@@ -387,7 +387,7 @@ const jsonLdScripts = [
       "image": "https://drivingteam.ch/images/categories/anhaenger-fahrschule-new-hero.webp",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Vulkanstrasse 130b",
+        "streetAddress": "Baslerstrasse 145",
         "addressLocality": "Zürich",
         "postalCode": "8048",
         "addressCountry": "CH"
@@ -405,7 +405,7 @@ const jsonLdScripts = [
       "aggregateRating": {
         "@type": "AggregateRating",
         "ratingValue": "4.9",
-        "reviewCount": "414",
+        "reviewCount": "368",
         "bestRating": "5",
         "worstRating": "1"
       },

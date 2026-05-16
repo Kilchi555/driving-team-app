@@ -247,12 +247,40 @@
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">Kategorien</label>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-medium text-gray-700">Kategorien</label>
+            <button type="button" @click="showNewCategory = !showNewCategory" class="text-xs text-blue-600 hover:text-blue-700 font-medium">
+              + Neue Kategorie
+            </button>
+          </div>
+          <!-- Inline new category form -->
+          <div v-if="showNewCategory" class="mb-2 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+              <input v-model="newCategoryForm.name" type="text" placeholder="Name (z.B. Interessent)" class="px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-400" />
+              <input v-model="newCategoryForm.code" type="text" placeholder="Code (z.B. INTERE)" class="px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-400" />
+            </div>
+            <div class="flex items-center gap-2">
+              <input v-model="newCategoryForm.color" type="color" class="w-7 h-7 rounded border border-gray-300 cursor-pointer p-0" />
+              <span class="text-xs text-gray-500">Farbe wählen</span>
+              <div class="flex-1" />
+              <button type="button" @click="showNewCategory = false" class="text-xs text-gray-500 hover:text-gray-700">Abbrechen</button>
+              <button type="button" @click="saveNewCategory" :disabled="newCategorySaving || !newCategoryForm.name || !newCategoryForm.code"
+                class="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-medium disabled:opacity-50">
+                {{ newCategorySaving ? '…' : 'Erstellen' }}
+              </button>
+            </div>
+            <div v-if="newCategoryError" class="text-xs text-red-600">{{ newCategoryError }}</div>
+          </div>
+          <!-- Category chips -->
           <div class="flex flex-wrap gap-2">
-            <label v-for="cat in CATEGORIES" :key="cat.value" class="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" :value="cat.value" v-model="manualForm.categories" class="rounded border-gray-300 text-blue-600" />
-              <span class="text-sm text-gray-700">{{ cat.label }}</span>
+            <label v-for="cat in CATEGORIES" :key="cat.value"
+              class="flex items-center gap-1.5 cursor-pointer px-2.5 py-1 rounded-full border text-xs font-medium transition"
+              :class="manualForm.categories.includes(cat.value) ? 'border-transparent text-white' : 'border-gray-200 text-gray-600 bg-white hover:border-gray-300'"
+              :style="manualForm.categories.includes(cat.value) ? { background: cat.color } : {}">
+              <input type="checkbox" :value="cat.value" v-model="manualForm.categories" class="sr-only" />
+              {{ cat.label }}
             </label>
+            <span v-if="CATEGORIES.length === 0" class="text-xs text-gray-400">Werden geladen…</span>
           </div>
         </div>
 
@@ -327,9 +355,12 @@
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-2">Kategorien zuweisen (optional)</label>
             <div class="flex flex-wrap gap-2">
-              <label v-for="cat in CATEGORIES" :key="cat.value" class="flex items-center gap-1.5 cursor-pointer">
-                <input type="checkbox" :value="cat.value" v-model="importUsersCategories" class="rounded border-gray-300 text-purple-600" />
-                <span class="text-sm text-gray-700">{{ cat.label }}</span>
+              <label v-for="cat in CATEGORIES" :key="cat.value"
+                class="flex items-center gap-1.5 cursor-pointer px-2.5 py-1 rounded-full border text-xs font-medium transition"
+                :class="importUsersCategories.includes(cat.value) ? 'border-transparent text-white' : 'border-gray-200 text-gray-600 bg-white hover:border-gray-300'"
+                :style="importUsersCategories.includes(cat.value) ? { background: cat.color } : {}">
+                <input type="checkbox" :value="cat.value" v-model="importUsersCategories" class="sr-only" />
+                {{ cat.label }}
               </label>
             </div>
             <p class="text-xs text-gray-400 mt-1.5">Leer lassen = keine Kategorie (Lead erhält alle Kampagnen)</p>
@@ -387,9 +418,12 @@
         <div>
           <label class="block text-xs font-medium text-gray-700 mb-2">Kategorien</label>
           <div class="flex flex-wrap gap-2">
-            <label v-for="cat in CATEGORIES" :key="cat.value" class="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" :value="cat.value" v-model="editForm.categories" class="rounded" />
-              <span class="text-sm text-gray-700">{{ cat.label }}</span>
+            <label v-for="cat in CATEGORIES" :key="cat.value"
+              class="flex items-center gap-1.5 cursor-pointer px-2.5 py-1 rounded-full border text-xs font-medium transition"
+              :class="editForm.categories.includes(cat.value) ? 'border-transparent text-white' : 'border-gray-200 text-gray-600 bg-white hover:border-gray-300'"
+              :style="editForm.categories.includes(cat.value) ? { background: cat.color } : {}">
+              <input type="checkbox" :value="cat.value" v-model="editForm.categories" class="sr-only" />
+              {{ cat.label }}
             </label>
           </div>
         </div>
@@ -421,14 +455,48 @@ useHead({ title: 'Leads - Marketing - Admin' })
 
 const authStore = useAuthStore()
 
-const CATEGORIES = [
-  { value: 'auto', label: 'Auto (B)' },
-  { value: 'motorrad', label: 'Motorrad (A)' },
-  { value: 'lkw', label: 'LKW (C/CE)' },
-  { value: 'fahrlehrer', label: 'Fahrlehrer' },
-  { value: 'bus', label: 'Bus (D)' },
-  { value: 'traktor', label: 'Traktor' },
-]
+// Dynamic categories loaded from DB (categories + course_categories + custom lead_categories)
+const CATEGORIES = ref<{ value: string; label: string; color: string; source: string }[]>([])
+
+async function loadCategories() {
+  const tenantId = authStore.userProfile?.tenant_id
+  if (!tenantId) return
+  const res = await $fetch<any>('/api/marketing/lead-categories', { query: { tenantId } }).catch(() => null)
+  if (res?.categories) {
+    CATEGORIES.value = res.categories.map((c: any) => ({
+      value: c.code,
+      label: c.name,
+      color: c.color,
+      source: c.source,
+    }))
+  }
+}
+
+// New custom category inline form
+const showNewCategory = ref(false)
+const newCategoryForm = reactive({ name: '', code: '', color: '#6366f1' })
+const newCategorySaving = ref(false)
+const newCategoryError = ref('')
+
+async function saveNewCategory() {
+  const tenantId = authStore.userProfile?.tenant_id
+  if (!tenantId || !newCategoryForm.name || !newCategoryForm.code) return
+  newCategorySaving.value = true
+  newCategoryError.value = ''
+  try {
+    await $fetch('/api/marketing/lead-categories', {
+      method: 'POST',
+      body: { tenantId, ...newCategoryForm },
+    })
+    showNewCategory.value = false
+    Object.assign(newCategoryForm, { name: '', code: '', color: '#6366f1' })
+    await loadCategories()
+  } catch (e: any) {
+    newCategoryError.value = e?.data?.statusMessage || 'Fehler beim Speichern'
+  } finally {
+    newCategorySaving.value = false
+  }
+}
 
 const leads = ref<any[]>([])
 const total = ref(0)
@@ -617,6 +685,7 @@ async function copyNewsletterLink() {
 
 onMounted(() => {
   loadLeads()
+  loadCategories()
   document.addEventListener('click', handleClickOutside)
 })
 
