@@ -1,9 +1,17 @@
 /**
  * POST /api/marketing/import-from-users
- * Imports existing users/students into the leads table and sends each a consent invitation email.
+ *
+ * Imports existing users into the leads table, then sends each a consent invitation.
+ *
+ * Scalability notes:
+ * - Tenant email context is fetched ONCE regardless of import size.
+ * - DB inserts are batched in chunks of 500.
+ * - Consent emails are sent fire-and-forget with concurrency cap.
+ *   For very large imports (>500 leads) the email queue may outlive the serverless
+ *   function. A "Consent-Mails erneut senden" button on the leads page handles this.
  */
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { sendConsentEmail } from '~/server/utils/send-consent-email'
+import { fetchTenantEmailContext, sendConsentEmailWithContext } from '~/server/utils/send-consent-email'
 
 export default defineEventHandler(async (event) => {
   const { tenantId, categories = [], onlyWithEmail = true } = await readBody(event)
@@ -14,7 +22,8 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdmin()
 
-  const [usersResult, tenantResult] = await Promise.all([
+  // ── 1. Fetch users + tenant context in parallel ──────────────────
+  const [usersResult, emailCtx] = await Promise.all([
     (() => {
       let q = supabase
         .from('users')
@@ -24,18 +33,15 @@ export default defineEventHandler(async (event) => {
       if (onlyWithEmail) q = q.not('email', 'is', null).neq('email', '')
       return q
     })(),
-    supabase.from('tenants').select('name, primary_color').eq('id', tenantId).single(),
+    fetchTenantEmailContext(tenantId),
   ])
 
   if (usersResult.error) throw createError({ statusCode: 500, statusMessage: usersResult.error.message })
   const users = usersResult.data || []
-  const tenant = tenantResult.data
-  const tenantName = tenant?.name || 'Fahrschule'
-  const primaryColor = tenant?.primary_color || '#1e293b'
 
   if (users.length === 0) return { success: true, imported: 0, skipped: 0, total: 0 }
 
-  // Deduplicate against existing leads
+  // ── 2. Skip leads that already exist ────────────────────────────
   const { data: existingLeads } = await supabase
     .from('leads')
     .select('email')
@@ -48,13 +54,13 @@ export default defineEventHandler(async (event) => {
     return { success: true, imported: 0, skipped: users.length, total: users.length }
   }
 
-  // Batch insert in chunks of 500, collect inserted leads for email sending
-  const CHUNK = 500
+  // ── 3. Batch insert (500 rows per chunk) ─────────────────────────
+  const INSERT_CHUNK = 500
   let imported = 0
   const insertedLeads: { id: string; email: string; first_name: string | null; unsubscribe_token: string }[] = []
 
-  for (let i = 0; i < toImport.length; i += CHUNK) {
-    const chunk = toImport.slice(i, i + CHUNK).map((u: any) => ({
+  for (let i = 0; i < toImport.length; i += INSERT_CHUNK) {
+    const chunk = toImport.slice(i, i + INSERT_CHUNK).map((u: any) => ({
       tenant_id: tenantId,
       email: u.email.toLowerCase().trim(),
       first_name: u.first_name || null,
@@ -78,29 +84,30 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Send consent emails fire-and-forget (rate-limited: max 5 concurrent)
-  const CONCURRENCY = 5
+  // ── 4. Send consent emails (fire-and-forget, context reused) ─────
+  // Tenant context was fetched ONCE above — no extra DB calls per email.
+  // Concurrency of 20 is safe for Resend; adjust if you see 429 errors.
+  const CONCURRENCY = 20
+
   ;(async () => {
     for (let i = 0; i < insertedLeads.length; i += CONCURRENCY) {
       const batch = insertedLeads.slice(i, i + CONCURRENCY)
       await Promise.allSettled(
         batch.map(lead =>
-          sendConsentEmail({
+          sendConsentEmailWithContext(emailCtx, {
             leadId: lead.id,
             token: lead.unsubscribe_token,
             email: lead.email,
             firstName: lead.first_name,
-            tenantId,
-            tenantName,
-            primaryColor,
           })
         )
       )
-      // Small delay between batches to avoid overwhelming the email provider
+      // 50ms breathing room between batches (≈ 400 emails/s theoretical max)
       if (i + CONCURRENCY < insertedLeads.length) {
-        await new Promise(r => setTimeout(r, 200))
+        await new Promise(r => setTimeout(r, 50))
       }
     }
+    console.log(`[import-from-users] Sent ${insertedLeads.length} consent emails for tenant ${tenantId}`)
   })().catch(e => console.error('Batch consent email error:', e))
 
   return {
