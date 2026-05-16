@@ -28,7 +28,7 @@
             </button>
             <div v-if="importMenuOpen" class="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 z-30 overflow-hidden">
               <div class="p-2 space-y-0.5">
-                <button @click="openManualAdd; importMenuOpen = false"
+                <button @click="() => { openManualAdd(); importMenuOpen = false }"
                   class="w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 text-left transition">
                   <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
                     <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,7 +54,7 @@
                   </div>
                 </NuxtLink>
 
-                <button @click="openImportFromUsers; importMenuOpen = false"
+                <button @click="() => { openImportFromUsers(); importMenuOpen = false }"
                   class="w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 text-left transition">
                   <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center shrink-0 mt-0.5">
                     <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,7 +69,7 @@
 
                 <div class="border-t border-gray-100 my-1" />
 
-                <button @click="copyNewsletterLink; importMenuOpen = false"
+                <button @click="() => { copyNewsletterLink(); importMenuOpen = false }"
                   class="w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 text-left transition">
                   <div class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0 mt-0.5">
                     <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
