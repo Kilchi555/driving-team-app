@@ -90,6 +90,7 @@ export default defineEventHandler(async (event) => {
             token: lead.unsubscribe_token,
             email: lead.email,
             firstName: lead.first_name,
+            tenantId,
             tenantName,
             primaryColor,
           })
