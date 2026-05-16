@@ -122,7 +122,7 @@
           </button>
         </div>
 
-        <div class="p-6 space-y-4">
+        <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Kampagnen-Name <span class="text-red-500">*</span></label>
             <input v-model="createForm.name" type="text" placeholder="z.B. Motorrad-Saison 2026" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -152,6 +152,63 @@
             </div>
           </div>
 
+          <!-- Discount code section -->
+          <div class="border border-gray-200 rounded-xl overflow-hidden">
+            <button
+              type="button"
+              @click="createForm.showDiscount = !createForm.showDiscount"
+              class="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition text-sm font-medium text-gray-700"
+            >
+              <span class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                Rabattcode anhängen
+                <span class="text-gray-400 font-normal">(optional)</span>
+              </span>
+              <span v-if="createForm.discount_code" class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-mono font-bold">{{ createForm.discount_code }}</span>
+              <svg class="w-4 h-4 text-gray-400 transition-transform" :class="createForm.showDiscount ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            <div v-if="createForm.showDiscount" class="p-4 space-y-3">
+              <p class="text-xs text-gray-500">
+                Wähle einen bestehenden Code oder erstelle direkt einen neuen.
+                Im Template mit <code class="bg-gray-100 px-1 rounded font-mono">&#123;&#123;discount_code&#125;&#125;</code> einfügen.
+              </p>
+
+              <!-- Existing discount codes -->
+              <div v-if="discounts.length > 0">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Bestehender Code</label>
+                <select
+                  v-model="createForm.discount_code"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">— Kein Code —</option>
+                  <option v-for="d in discounts" :key="d.id" :value="d.code">
+                    {{ d.code }} · {{ d.name }} · {{ d.discount_type === 'percentage' ? d.discount_value + '%' : 'CHF ' + (d.discount_value / 100).toFixed(2) }}
+                  </option>
+                </select>
+              </div>
+
+              <div v-else class="text-sm text-gray-500 bg-gray-50 rounded-lg p-3">
+                Noch keine Rabattcodes vorhanden.
+              </div>
+
+              <button
+                type="button"
+                @click="quickCreateDiscountOpen = true"
+                class="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Neuen Rabattcode erstellen
+              </button>
+            </div>
+          </div>
+
           <!-- Estimated recipients -->
           <div v-if="estimatedCount !== null" class="bg-blue-50 rounded-lg p-3 text-sm">
             <span class="text-blue-800">
@@ -175,6 +232,14 @@
         </div>
       </div>
     </div>
+
+    <!-- Quick-Create Discount Modal (nested) -->
+    <DiscountEditorModal
+      v-if="quickCreateDiscountOpen"
+      :is-edit="false"
+      @close="quickCreateDiscountOpen = false"
+      @saved="onDiscountSaved"
+    />
 
     <!-- Send Confirmation Modal -->
     <div v-if="sendConfirmCampaign" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -223,6 +288,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { useHead } from '#app'
 import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
@@ -241,11 +308,20 @@ const CATEGORIES = [
 
 const campaigns = ref<any[]>([])
 const templates = ref<any[]>([])
+const discounts = ref<any[]>([])
 const loading = ref(true)
 
 const createModalOpen = ref(false)
+const quickCreateDiscountOpen = ref(false)
 const saving = ref(false)
-const createForm = reactive({ name: '', template_id: '', subject_override: '', categories: [] as string[] })
+const createForm = reactive({
+  name: '',
+  template_id: '',
+  subject_override: '',
+  categories: [] as string[],
+  showDiscount: false,
+  discount_code: '',
+})
 
 const sendConfirmCampaign = ref<any>(null)
 const sending = ref(false)
@@ -286,6 +362,24 @@ async function loadData() {
   }
 }
 
+async function loadDiscounts() {
+  try {
+    const res = await $fetch<any>('/api/discounts/list')
+    discounts.value = (res.discounts ?? res ?? []).filter((d: any) => d.is_active && d.code)
+  } catch {
+    discounts.value = []
+  }
+}
+
+async function onDiscountSaved() {
+  quickCreateDiscountOpen.value = false
+  await loadDiscounts()
+  // Auto-select the newest code
+  if (discounts.value.length > 0) {
+    createForm.discount_code = discounts.value[discounts.value.length - 1].code
+  }
+}
+
 async function loadEstimatedCount() {
   const tenantId = authStore.userProfile?.tenant_id
   if (!tenantId) return
@@ -309,9 +403,12 @@ function openCreate() {
   createForm.template_id = ''
   createForm.subject_override = ''
   createForm.categories = []
+  createForm.showDiscount = false
+  createForm.discount_code = ''
   estimatedCount.value = null
   createModalOpen.value = true
   loadEstimatedCount()
+  loadDiscounts()
 }
 
 watch(() => createForm.categories, loadEstimatedCount, { deep: true })
@@ -322,6 +419,10 @@ async function createCampaign() {
   if (!tenantId || !createForm.name || !createForm.template_id) return
   saving.value = true
   try {
+    const segment_filter: Record<string, any> = {}
+    if (createForm.categories.length) segment_filter.categories = createForm.categories
+    if (createForm.discount_code) segment_filter.discount_code = createForm.discount_code
+
     await $fetch('/api/marketing/campaigns', {
       method: 'POST',
       body: {
@@ -330,7 +431,7 @@ async function createCampaign() {
         name: createForm.name,
         template_id: createForm.template_id,
         subject_override: createForm.subject_override || null,
-        segment_filter: createForm.categories.length ? { categories: createForm.categories } : {},
+        segment_filter,
       },
     })
     createModalOpen.value = false
@@ -365,4 +466,5 @@ async function sendCampaign() {
 }
 
 onMounted(loadData)
+
 </script>

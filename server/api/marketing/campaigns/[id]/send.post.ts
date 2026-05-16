@@ -37,8 +37,10 @@ export default defineEventHandler(async (event) => {
   const primaryColor = tenant?.primary_color || '#1e293b'
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL || 'https://app.simy.ch'
 
-  // Build lead query from segment_filter
+  // Extract discount code from segment_filter (non-filtering metadata)
   const filter = campaign.segment_filter || {}
+  const discountCode: string = filter.discount_code || ''
+
   let leadsQuery = supabase
     .from('leads')
     .select('id, email, first_name, last_name, unsubscribe_token')
@@ -78,6 +80,7 @@ export default defineEventHandler(async (event) => {
       consent_link: consentLink,
       tenant_name: tenantName,
       primary_color: primaryColor,
+      discount_code: discountCode,
     })
 
     const renderedSubject = renderTemplate(subject, {

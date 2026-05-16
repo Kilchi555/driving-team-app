@@ -10,6 +10,7 @@ export interface TemplateVariables {
   consent_link?: string
   tenant_name?: string
   primary_color?: string
+  discount_code?: string
 }
 
 export function renderTemplate(template: string, variables: TemplateVariables): string {
@@ -21,6 +22,7 @@ export function renderTemplate(template: string, variables: TemplateVariables): 
     .replace(/\{\{consent_link\}\}/g, variables.consent_link || '#')
     .replace(/\{\{tenant_name\}\}/g, variables.tenant_name || '')
     .replace(/\{\{primary_color\}\}/g, variables.primary_color || '#1e293b')
+    .replace(/\{\{discount_code\}\}/g, variables.discount_code || '')
 }
 
 export function buildUnsubscribeLink(baseUrl: string, leadId: string, token: string): string {
