@@ -63,7 +63,7 @@
                   </div>
                   <div>
                     <div class="font-medium text-gray-900 text-sm">Aus bestehenden Schülern</div>
-                    <div class="text-xs text-gray-500">Schüler aus dem System übernehmen</div>
+                    <div class="text-xs text-gray-500">Registrierte Schüler aus dem System übernehmen</div>
                   </div>
                 </button>
 
