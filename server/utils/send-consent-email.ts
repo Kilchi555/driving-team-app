@@ -62,7 +62,7 @@ function buildEmailHtml(
   consentLink: string,
   unsubscribeLink: string,
 ): string {
-  const { tenantName, primaryColor, drivingCats, courseCats, affiliateEnabled } = ctx
+  const { tenantName, primaryColor, logoUrl, drivingCats, courseCats, affiliateEnabled } = ctx
 
   let categoriesBlock = ''
   if (drivingCats.length > 0) {
