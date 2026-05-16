@@ -143,6 +143,8 @@
               class="drawer-link" :class="isActive('/admin/payment-reminders') ? 'drawer-active' : ''">Erinnerungen</NuxtLink>
 
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Weitere</p>
+            <NuxtLink to="/admin/marketing" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/marketing') ? 'drawer-active' : ''">Marketing</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('product_sales_enabled')" to="/admin/products" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/products') ? 'drawer-active' : ''">Produkte</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('data_management_enabled')" to="/admin/data-management" @click="showMobileMenu = false"
@@ -219,6 +221,8 @@
               class="drawer-link" :class="isActive('/admin/payment-reminders') ? 'drawer-active' : ''">Erinnerungen</NuxtLink>
 
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Weitere</p>
+            <NuxtLink to="/admin/marketing"
+              class="drawer-link" :class="isActive('/admin/marketing') ? 'drawer-active' : ''">Marketing</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('product_sales_enabled')" to="/admin/products"
               class="drawer-link" :class="isActive('/admin/products') ? 'drawer-active' : ''">Produkte</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('data_management_enabled')" to="/admin/data-management"

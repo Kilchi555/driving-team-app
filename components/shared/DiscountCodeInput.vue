@@ -67,6 +67,7 @@ interface Props {
   amountRappen: number         // full price in rappen (to calculate % discounts)
   categoryCode?: string        // optional category filter
   primaryColor?: string
+  context?: 'appointment' | 'product'  // enforces applies_to restriction on voucher_codes
 }
 
 interface DiscountResult {
@@ -113,7 +114,8 @@ const applyCode = async () => {
         code: trimmed,
         amount_rappen: props.amountRappen,
         categoryCode: props.categoryCode,
-        tenant_id: props.tenantId
+        tenant_id: props.tenantId,
+        ...(props.context ? { context: props.context } : {})
       }
     }) as any
 

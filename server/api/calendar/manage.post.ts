@@ -11,6 +11,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
+  let action: string | undefined
   try {
     // ============ LAYER 1: AUTHENTICATION (Server-side) ============
     const authUser = await getAuthenticatedUser(event)
@@ -23,7 +24,7 @@ export default defineEventHandler(async (event) => {
 
     const body = await readBody(event)
     const { 
-      action,
+      action: _action,
       tenant_id,
       staff_id,
       user_id,
@@ -33,6 +34,7 @@ export default defineEventHandler(async (event) => {
       end_date,
       category
     } = body
+    action = _action
 
     const supabase = getSupabaseAdmin()
 

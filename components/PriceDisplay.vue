@@ -244,6 +244,44 @@
                 </div>
               </div>
               
+              <!-- Code eingeben -->
+              <div class="border-t border-gray-200 pt-3">
+                <p class="text-xs font-medium text-gray-500 mb-2">Rabattcode eingeben</p>
+                <div class="flex gap-2">
+                  <input
+                    v-model="discountCodeInput"
+                    type="text"
+                    placeholder="Code eingeben"
+                    :disabled="isValidatingCode"
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 uppercase tracking-wider"
+                    style="focus:ring-color: var(--color-primary, #111827)"
+                    @keydown.enter.prevent="applyDiscountCode"
+                    @input="codeError = null"
+                  />
+                  <button
+                    type="button"
+                    @click="applyDiscountCode"
+                    :disabled="!discountCodeInput.trim() || isValidatingCode"
+                    class="px-3 py-2 text-sm font-medium rounded-lg border-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                    :style="{ borderColor: 'var(--color-primary, #111827)', color: 'var(--color-primary, #111827)' }"
+                  >
+                    <span v-if="isValidatingCode" class="flex items-center gap-1">
+                      <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                    </span>
+                    <span v-else>Prüfen</span>
+                  </button>
+                </div>
+                <p v-if="codeError" class="mt-2 text-sm text-red-600 flex items-center gap-1">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  {{ codeError }}
+                </p>
+              </div>
+
               <div class="flex justify-end space-x-3 pt-2 border-t border-gray-300">
                 <button
                   @click="closeDiscountSelector"
@@ -685,6 +723,11 @@ const showDiscountSelector = ref(false) // ✅ NEU: Für Gutschein-Auswahl
 const availableDiscounts = ref<any[]>([]) // ✅ NEU: Verfügbare Gutscheine
 const isLoadingDiscounts = ref(false) // ✅ NEU: Loading state für Gutscheine
 
+// Rabattcode-Eingabe
+const discountCodeInput = ref('')
+const isValidatingCode = ref(false)
+const codeError = ref<string | null>(null)
+
 // ✅ NEU: Payment State für Edit-Modus
 const existingPayment = ref<any>(null)
 const isLoadingPayment = ref(false)
@@ -1109,6 +1152,44 @@ const closeDiscountSelector = () => {
   // Reset manual discount form
   manualDiscountAmount.value = 0
   manualDiscountReason.value = ''
+  // Reset code input
+  discountCodeInput.value = ''
+  codeError.value = null
+}
+
+// ✅ NEUE METHODE: Rabattcode validieren und anwenden
+const applyDiscountCode = async () => {
+  const code = discountCodeInput.value.trim()
+  if (!code) return
+
+  isValidatingCode.value = true
+  codeError.value = null
+
+  try {
+    const amountRappen = Math.round(getBasePrice() * 100)
+    const res = await $fetch('/api/discounts/validate', {
+      method: 'POST',
+      body: {
+        code,
+        amount_rappen: amountRappen,
+        context: 'appointment'
+      }
+    }) as any
+
+    if (res.isValid && res.discount_amount_rappen > 0) {
+      const discountChf = res.discount_amount_rappen / 100
+      emit('discount-changed', discountChf, 'fixed', `Code: ${code.toUpperCase()}`)
+      showDiscountSelector.value = false
+      discountCodeInput.value = ''
+      codeError.value = null
+    } else {
+      codeError.value = res.error || 'Ungültiger Code'
+    }
+  } catch (err: any) {
+    codeError.value = err?.data?.statusMessage || 'Code konnte nicht geprüft werden'
+  } finally {
+    isValidatingCode.value = false
+  }
 }
 
 const removeDiscount = () => {

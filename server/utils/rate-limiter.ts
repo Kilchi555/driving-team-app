@@ -152,97 +152,66 @@ export async function checkRateLimit(
   
   try {
     const windowStart = new Date(now - baseWindow).toISOString()
-    
-    // Count ALL requests (both allowed and blocked) in the window
-    const { data: logs, error } = await supabase
-      .from('rate_limit_logs')
-      .select('status, created_at')
-      .eq('operation', operation)
-      .eq('ip_address', ipAddress)
-      .gte('created_at', windowStart)
-      .order('created_at', { ascending: true })
-    
+
+    // Run request count + consecutive block count in parallel (two DB reads at once)
+    const [{ data: logs, error }, blockCount] = await Promise.all([
+      supabase
+        .from('rate_limit_logs')
+        .select('status, created_at')
+        .eq('operation', operation)
+        .eq('ip_address', ipAddress)
+        .gte('created_at', windowStart)
+        .order('created_at', { ascending: true }),
+      getConsecutiveBlockCount(supabase, operation, ipAddress),
+    ])
+
     if (error) {
       console.warn('⚠️ Failed to query rate limit logs:', error.message)
-      // Don't block on query failure
       return allowed
     }
-    
+
     const count = logs?.length || 0
     const isAllowed = count < max
     const remaining = Math.max(0, max - count - 1)
-    
-    // Get backoff level for this IP (based on consecutive blocks)
-    const blockCount = await getConsecutiveBlockCount(supabase, operation, ipAddress)
     const backoffMultiplier = getBackoffMultiplier(blockCount)
-    
-    // Calculate window with exponential backoff
     const effectiveWindow = baseWindow * backoffMultiplier
-    
-    // Calculate reset time based on the oldest request in the window
+
     let resetTime = new Date(windowStart).getTime() + effectiveWindow
     if (logs && logs.length > 0 && logs[0].created_at) {
-      // The reset time is when the oldest request expires from the window
-      const oldestRequestTime = new Date(logs[0].created_at).getTime()
-      resetTime = oldestRequestTime + effectiveWindow
+      resetTime = new Date(logs[0].created_at).getTime() + effectiveWindow
     }
-    
+
     const reset = Math.max(0, resetTime - now)
-    
-    console.log(`📊 Rate limit check for ${operation} from ${ipAddress}: ${count}/${max} requests (backoff: ${backoffMultiplier}x, ${Math.ceil(effectiveWindow / 1000 / 60)}min window)`)
+
     if (!isAllowed) {
-      console.warn(`⛔ Rate limit exceeded for ${operation} from ${ipAddress} (${blockCount} consecutive blocks, waiting ${Math.ceil(reset / 1000)}s)`)
+      console.warn(`⛔ Rate limit exceeded for ${operation} from ${ipAddress} (${blockCount} consecutive blocks)`)
     }
-    
-    // Update cache with backoff level
+
     requestCache.set(key, {
       count: isAllowed ? count + 1 : count,
-      resetTime: resetTime,
+      resetTime,
       backoffLevel: blockCount
     })
-    
-    // Log this attempt to Supabase
-    if (isAllowed) {
-      try {
-        await supabase
-          .from('rate_limit_logs')
-          .insert({
-            operation,
-            ip_address: ipAddress,
-            email: email || null,
-            status: 'allowed',
-            request_count: count + 1,
-            max_requests: max,
-            window_seconds: Math.floor(baseWindow / 1000),
-            tenant_id: tenantId || null
-          })
-      } catch (logError) {
-        console.warn('⚠️ Failed to log rate limit event:', logError)
-      }
-    } else {
-      // Log blocked attempt
-      try {
-        await supabase
-          .from('rate_limit_logs')
-          .insert({
-            operation,
-            ip_address: ipAddress,
-            email: email || null,
-            status: 'blocked',
-            request_count: count + 1,
-            max_requests: max,
-            window_seconds: Math.floor(baseWindow / 1000),
-            tenant_id: tenantId || null
-          })
-      } catch (logError) {
-        console.warn('⚠️ Failed to log blocked attempt:', logError)
-      }
-    }
-    
+
+    // Fire-and-forget: DB log insert never blocks the caller
+    supabase
+      .from('rate_limit_logs')
+      .insert({
+        operation,
+        ip_address: ipAddress,
+        email: email || null,
+        status: isAllowed ? 'allowed' : 'blocked',
+        request_count: count + 1,
+        max_requests: max,
+        window_seconds: Math.floor(baseWindow / 1000),
+        tenant_id: tenantId || null
+      })
+      .then(() => {})
+      .catch(() => {})
+
     return { allowed: isAllowed, remaining, limit: max, reset }
   } catch (err: any) {
     console.warn('⚠️ Rate limit check error:', err.message)
-    // Fail open - don't block requests if there's an error
     return allowed
   }
 }

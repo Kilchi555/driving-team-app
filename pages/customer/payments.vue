@@ -57,6 +57,7 @@
     <div v-else class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       
       <CustomerCreditWalletPanel ref="creditWalletRef" class="mb-6" />
+      <CustomerAutoDiscountPanel class="mb-6" />
 
       <!-- Payment List -->
       <div class="bg-white rounded-xl shadow-lg border border-gray-200">
@@ -338,6 +339,7 @@ import { useCustomerPayments } from '~/composables/useCustomerPayments'
 import CustomerCancellationModal from '~/components/customer/CustomerCancellationModal.vue'
 import CustomerMedicalCertificateModal from '~/components/customer/CustomerMedicalCertificateModal.vue' // ✅ NEU
 import CustomerCreditWalletPanel from '~/components/customer/CustomerCreditWalletPanel.vue'
+import CustomerAutoDiscountPanel from '~/components/customer/CustomerAutoDiscountPanel.vue'
 import { formatDateTime as formatDateTimeUtil } from '~/utils/dateUtils'
 
 // Components (these would need to be created)

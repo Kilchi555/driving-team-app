@@ -415,58 +415,176 @@ export default defineEventHandler(async (event: H3Event) => {
     auditDetails.appointment_id = newAppointment.id
     logger.debug('✅ Appointment created successfully:', newAppointment.id)
 
-    // ============ LAYER 7b: VALIDATE DISCOUNT (if provided) ============
+    // ============ LAYER 7b: VALIDATE DISCOUNT (manual code or auto-apply) ============
     let validatedDiscountAmount = 0
+
+    // Auto-apply: load registered sticky discounts for this user if no manual code given
+    let autoDiscountCode: string | null = null
+    if (!body.discount_code) {
+      try {
+        const now = new Date().toISOString()
+        const { data: userCodes } = await supabase
+          .from('user_discount_codes')
+          .select(`
+            code,
+            expires_at,
+            discounts (
+              id, discount_type, discount_value, max_discount_rappen,
+              valid_until, is_active, auto_apply, usage_limit, usage_count
+            )
+          `)
+          .eq('user_id', userData.id)
+          .eq('tenant_id', tenantId!)
+          .eq('is_active', true)
+
+        const activeAutoCode = (userCodes || []).find((udc: any) => {
+          const d = udc.discounts
+          if (!d?.is_active || !d?.auto_apply) return false
+          const expiresAt = udc.expires_at ? new Date(udc.expires_at) : null
+          if (expiresAt && expiresAt < new Date()) return false
+          const discountValidUntil = d.valid_until ? new Date(d.valid_until) : null
+          if (!expiresAt && discountValidUntil && discountValidUntil < new Date()) return false
+          if (d.usage_limit && (d.usage_count ?? 0) >= d.usage_limit) return false
+          return true
+        })
+
+        if (activeAutoCode) {
+          const d = activeAutoCode.discounts
+          if (d.discount_type === 'percentage') {
+            validatedDiscountAmount = Math.round((totalAmountRappen * d.discount_value) / 100)
+            if (d.max_discount_rappen) validatedDiscountAmount = Math.min(validatedDiscountAmount, d.max_discount_rappen)
+          } else if (d.discount_type === 'fixed') {
+            validatedDiscountAmount = Math.round((d.discount_value || 0) * 100)
+          } else if (d.discount_type === 'free_lesson') {
+            validatedDiscountAmount = totalAmountRappen
+          }
+          validatedDiscountAmount = Math.min(validatedDiscountAmount, totalAmountRappen)
+          autoDiscountCode = activeAutoCode.code
+          logger.debug('🎁 Auto-applied user discount:', autoDiscountCode, 'amount:', validatedDiscountAmount)
+        }
+      } catch (autoErr: any) {
+        logger.warn('⚠️ Auto-discount lookup failed (non-critical):', autoErr.message)
+      }
+    }
+
     if (body.discount_code && body.discount_amount_rappen && body.discount_amount_rappen > 0) {
       try {
+        const discountCode = body.discount_code
+        let discountFound = false
+
+        // 1. Try voucher_codes table (type must be 'discount', not 'credit'; applies to appointments)
         const { data: voucherData } = await supabase
           .from('voucher_codes')
-          .select('discount_type, discount_value, max_discount_rappen, valid_until, is_active')
-          .ilike('code', body.discount_code)
+          .select('discount_type, discount_value, max_discount_rappen, valid_from, valid_until, is_active, type, applies_to, max_redemptions, current_redemptions')
+          .ilike('code', discountCode)
           .eq('tenant_id', tenantId!)
           .eq('is_active', true)
           .maybeSingle()
 
-        let discountRow: any = voucherData
+        if (voucherData) {
+          const isDiscountType = voucherData.type && voucherData.type !== 'credit'
+          const appliesTo = voucherData.applies_to || 'appointments'
+          const appliesToAppointments = appliesTo === 'all' || appliesTo === 'appointments'
+          const now = new Date()
+          const validFrom = voucherData.valid_from ? new Date(voucherData.valid_from) : null
+          const validUntil = voucherData.valid_until ? new Date(voucherData.valid_until) : null
+          const withinPeriod = (!validFrom || now >= validFrom) && (!validUntil || now <= validUntil)
+          const withinLimit = !voucherData.max_redemptions || (voucherData.current_redemptions ?? 0) < voucherData.max_redemptions
 
-        if (!discountRow) {
-          const { data: discountData } = await supabase
-            .from('discounts')
-            .select('discount_type, discount_value, max_discount_rappen, valid_until, is_active, first_lesson_only')
-            .ilike('code', body.discount_code)
+          if (isDiscountType && appliesToAppointments && withinPeriod && withinLimit) {
+            if (voucherData.discount_type === 'percentage') {
+              validatedDiscountAmount = Math.round((totalAmountRappen * voucherData.discount_value) / 100)
+              if (voucherData.max_discount_rappen) {
+                validatedDiscountAmount = Math.min(validatedDiscountAmount, voucherData.max_discount_rappen)
+              }
+            } else if (voucherData.discount_type === 'fixed') {
+              // voucher_codes.discount_value is stored in Rappen
+              validatedDiscountAmount = voucherData.discount_value || 0
+            }
+            discountFound = true
+          }
+        }
+
+        // 2. Try vouchers table (purchased gift cards from shop – full amount as discount)
+        if (!discountFound) {
+          const { data: giftCard } = await supabase
+            .from('vouchers')
+            .select('amount_rappen, redeemed_at, valid_until, is_active')
+            .ilike('code', discountCode)
             .eq('tenant_id', tenantId!)
             .eq('is_active', true)
             .maybeSingle()
-          if (discountData) discountRow = discountData
-        }
 
-        if (discountRow) {
-          const now = new Date()
-          const validUntil = discountRow.valid_until ? new Date(discountRow.valid_until) : null
-          if (!validUntil || now <= validUntil) {
-            if (discountRow.discount_type === 'percentage') {
-              validatedDiscountAmount = Math.round((totalAmountRappen * discountRow.discount_value) / 100)
-              if (discountRow.max_discount_rappen) {
-                validatedDiscountAmount = Math.min(validatedDiscountAmount, discountRow.max_discount_rappen)
-              }
-            } else if (discountRow.discount_type === 'fixed') {
-              validatedDiscountAmount = discountRow.discount_value || 0
+          if (giftCard && !giftCard.redeemed_at) {
+            const now = new Date()
+            const withinPeriod = !giftCard.valid_until || new Date(giftCard.valid_until) >= now
+            if (withinPeriod) {
+              validatedDiscountAmount = giftCard.amount_rappen
+              discountFound = true
             }
-            validatedDiscountAmount = Math.min(validatedDiscountAmount, totalAmountRappen)
           }
         }
-        logger.debug('💸 Discount validated:', { code: body.discount_code, amount: validatedDiscountAmount })
+
+        // 3. Try discounts table
+        if (!discountFound) {
+          const { data: discountData } = await supabase
+            .from('discounts')
+            .select('discount_type, discount_value, max_discount_rappen, valid_from, valid_until, is_active, first_lesson_only, usage_limit, usage_count')
+            .ilike('code', discountCode)
+            .eq('tenant_id', tenantId!)
+            .eq('is_active', true)
+            .maybeSingle()
+
+          if (discountData) {
+            const now = new Date()
+            const validFrom = discountData.valid_from ? new Date(discountData.valid_from) : null
+            const validUntil = discountData.valid_until ? new Date(discountData.valid_until) : null
+            const withinPeriod = (!validFrom || now >= validFrom) && (!validUntil || now <= validUntil)
+            const withinLimit = !discountData.usage_limit || (discountData.usage_count ?? 0) < discountData.usage_limit
+
+            if (withinPeriod && withinLimit) {
+              // Check first_lesson_only: appointment just inserted counts, so <= 1 means first lesson
+              let firstLessonOk = true
+              if (discountData.first_lesson_only) {
+                const { count: apptCount } = await supabase
+                  .from('appointments')
+                  .select('id', { count: 'exact', head: true })
+                  .eq('user_id', userData.id)
+                  .eq('tenant_id', tenantId!)
+                  .in('status', ['confirmed', 'completed'])
+                firstLessonOk = (apptCount ?? 0) <= 1
+              }
+
+              if (firstLessonOk) {
+                if (discountData.discount_type === 'percentage') {
+                  validatedDiscountAmount = Math.round((totalAmountRappen * discountData.discount_value) / 100)
+                  if (discountData.max_discount_rappen) {
+                    validatedDiscountAmount = Math.min(validatedDiscountAmount, discountData.max_discount_rappen)
+                  }
+                } else if (discountData.discount_type === 'fixed') {
+                  // discounts.discount_value is stored in Franken → convert to Rappen
+                  validatedDiscountAmount = Math.round((discountData.discount_value || 0) * 100)
+                } else if (discountData.discount_type === 'free_lesson') {
+                  validatedDiscountAmount = totalAmountRappen
+                }
+                discountFound = true
+              }
+            }
+          }
+        }
+
+        validatedDiscountAmount = Math.min(validatedDiscountAmount, totalAmountRappen)
+        logger.debug('💸 Discount validated:', { code: discountCode, amount: validatedDiscountAmount, found: discountFound })
       } catch (discountErr: any) {
         logger.warn('⚠️ Discount validation failed (non-critical):', discountErr.message)
       }
     }
 
     // ============ LAYER 7b.5: INCREMENT USAGE COUNT ============
-    // Done after appointment creation but we increment optimistically here —
-    // appointment creation is next and any error there rolls back the booking.
-    // For discounts table: increment usage_count. For voucher_codes: increment current_redemptions.
-    // We do this in a fire-and-forget after appointment creation (see below).
-    const discountCodeToTrack = validatedDiscountAmount > 0 ? body.discount_code : null
+    const discountCodeToTrack = validatedDiscountAmount > 0
+      ? (body.discount_code || autoDiscountCode)
+      : null
+    const effectiveDiscountCode = body.discount_code || autoDiscountCode
 
     const netAmountRappen = Math.max(0, totalAmountRappen - validatedDiscountAmount)
 
@@ -496,7 +614,7 @@ export default defineEventHandler(async (event: H3Event) => {
       description: appointmentTitle,
       metadata: {
         category: body.category_code || null,
-        ...(body.discount_code ? { discount_code: body.discount_code } : {})
+        ...(effectiveDiscountCode ? { discount_code: effectiveDiscountCode, discount_auto_applied: !body.discount_code } : {})
       },
       currency: 'CHF',
       created_by: newAppointment.user_id

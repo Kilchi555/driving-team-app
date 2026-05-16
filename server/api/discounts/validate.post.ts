@@ -10,7 +10,8 @@ import { logger } from '~/utils/logger'
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { code, amount_rappen, categoryCode, tenant_id: bodyTenantId } = body
+    const { code, amount_rappen, categoryCode, tenant_id: bodyTenantId, context } = body
+    // context: 'appointment' | 'product' | undefined – used to enforce applies_to restrictions
 
     if (!code) {
       throw createError({ statusCode: 400, statusMessage: 'Discount code is required' })
@@ -73,6 +74,19 @@ export default defineEventHandler(async (event) => {
           isValid: false,
           discount_amount_rappen: 0,
           error: 'Dieser Code ist ein Guthaben-Gutschein. Bitte lösen Sie ihn unter "Guthaben" → "Code einlösen" ein.'
+        }
+      }
+
+      // applies_to check: if caller specifies context, enforce the restriction
+      if (context) {
+        const appliesTo = voucherData.applies_to || 'appointments'
+        if (appliesTo !== 'all') {
+          if (context === 'appointment' && appliesTo !== 'appointments') {
+            return { isValid: false, discount_amount_rappen: 0, error: 'Dieser Code gilt nur für Produktkäufe' }
+          }
+          if (context === 'product' && appliesTo !== 'products') {
+            return { isValid: false, discount_amount_rappen: 0, error: 'Dieser Code gilt nur für Fahrstunden-Buchungen' }
+          }
         }
       }
 
