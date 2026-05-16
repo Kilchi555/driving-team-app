@@ -287,8 +287,8 @@
               class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div v-if="manualError" class="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">{{ manualError }}</div>
-          <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
-            <strong>Hinweis:</strong> Lead wird mit Status «Consent ausstehend» erstellt.
+          <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800">
+            <strong>📧 Consent-Email wird automatisch gesendet.</strong> Der Lead erhält sofort eine Einladung zum Anmelden.
           </div>
         </div>
         <div class="p-5 border-t flex gap-3 shrink-0">
@@ -332,15 +332,15 @@
                 <div class="text-xs text-blue-600 font-medium mt-0.5">Total</div>
               </div>
             </div>
-            <p class="text-sm text-gray-600 text-center leading-relaxed">
-              Alle importierten Leads haben Status <strong>«Consent ausstehend»</strong>.<br/>
-              Starte eine Kampagne mit Consent-Link um sie zu aktivieren.
-            </p>
+          <p class="text-sm text-gray-600 text-center leading-relaxed">
+            Alle importierten Leads erhalten automatisch eine <strong>Consent-Einladung per Email</strong>.<br/>
+            Sobald sie klicken, werden sie aktiviert.
+          </p>
           </div>
           <!-- Form -->
           <template v-else>
             <div class="bg-purple-50 border border-purple-200 rounded-xl p-4 text-sm text-purple-800 leading-relaxed">
-              Alle Schüler mit Email werden ohne Duplikate als Leads übernommen — mit Status «Consent ausstehend».
+              Alle Schüler mit Email werden ohne Duplikate als Leads übernommen. Jeder erhält automatisch eine <strong>Consent-Einladung per Email</strong>.
             </div>
             <MarketingCategoryDropdown
               v-model="importUsersCategories"

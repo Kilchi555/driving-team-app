@@ -141,24 +141,9 @@
             <input v-model="createForm.subject_override" type="text" placeholder="Leer = Betreff aus Template verwenden" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
 
-          <!-- Target Status -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Zielgruppe</label>
-            <div class="grid grid-cols-3 gap-2">
-              <label v-for="opt in TARGET_STATUS_OPTIONS" :key="opt.value"
-                class="flex flex-col items-center gap-1 p-3 border-2 rounded-xl cursor-pointer transition text-center"
-                :class="createForm.target_status === opt.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'">
-                <input type="radio" :value="opt.value" v-model="createForm.target_status" class="sr-only" />
-                <span class="text-lg">{{ opt.icon }}</span>
-                <span class="text-xs font-medium" :class="createForm.target_status === opt.value ? 'text-blue-700' : 'text-gray-700'">{{ opt.label }}</span>
-                <span class="text-xs text-gray-400 leading-tight">{{ opt.desc }}</span>
-              </label>
-            </div>
-          </div>
-
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Segment — Kategorien</label>
-            <p class="text-xs text-gray-500 mb-2">Leer = alle Leads der Zielgruppe</p>
+            <p class="text-xs text-gray-500 mb-2">Leer = alle aktiven Leads erhalten die Email</p>
             <div class="flex flex-wrap gap-3">
               <label v-for="cat in CATEGORIES" :key="cat.value" class="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" :value="cat.value" v-model="createForm.categories" class="rounded" />
@@ -381,18 +366,11 @@ const loading = ref(true)
 const createModalOpen = ref(false)
 const quickCreateDiscountOpen = ref(false)
 const saving = ref(false)
-const TARGET_STATUS_OPTIONS = [
-  { value: 'active', icon: '✅', label: 'Aktiv', desc: 'Haben Consent erteilt' },
-  { value: 'pending_consent', icon: '⏳', label: 'Consent ausstehend', desc: 'Erste Einladung' },
-  { value: 'all', icon: '📋', label: 'Alle', desc: 'Aktiv + Ausstehend' },
-]
-
 const createForm = reactive({
   name: '',
   template_id: '',
   subject_override: '',
   categories: [] as string[],
-  target_status: 'active',
   showDiscount: false,
   discount_code: '',
 })
@@ -461,11 +439,10 @@ async function loadEstimatedCount() {
   const tenantId = authStore.userProfile?.tenant_id
   if (!tenantId) return
   try {
-    const targetStatus = createForm.target_status || 'active'
     const res = await $fetch<any>('/api/marketing/leads', {
       query: {
         tenantId,
-        status: targetStatus === 'all' ? undefined : targetStatus,
+        status: 'active',
         category: createForm.categories[0] || undefined,
         limit: 1,
       },
@@ -481,7 +458,6 @@ function openCreate() {
   createForm.template_id = ''
   createForm.subject_override = ''
   createForm.categories = []
-  createForm.target_status = 'active'
   createForm.showDiscount = false
   createForm.discount_code = ''
   estimatedCount.value = null
@@ -491,7 +467,6 @@ function openCreate() {
 }
 
 watch(() => createForm.categories, loadEstimatedCount, { deep: true })
-watch(() => createForm.target_status, loadEstimatedCount)
 
 async function createCampaign() {
   const tenantId = authStore.userProfile?.tenant_id
@@ -502,7 +477,6 @@ async function createCampaign() {
     const segment_filter: Record<string, any> = {}
     if (createForm.categories.length) segment_filter.categories = createForm.categories
     if (createForm.discount_code) segment_filter.discount_code = createForm.discount_code
-    segment_filter.target_status = createForm.target_status || 'active'
 
     await $fetch('/api/marketing/campaigns', {
       method: 'POST',
@@ -532,11 +506,10 @@ async function openSendConfirm(campaign: any) {
   try {
     const tenantId = authStore.userProfile?.tenant_id
     const filter = campaign.segment_filter || {}
-    const targetStatus = filter.target_status || 'active'
     const res = await $fetch<any>('/api/marketing/leads', {
       query: {
         tenantId,
-        status: targetStatus === 'all' ? undefined : targetStatus,
+        status: 'active',
         category: filter.categories?.[0] || undefined,
         limit: 50,
       },

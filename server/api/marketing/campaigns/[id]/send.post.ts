@@ -41,19 +41,11 @@ export default defineEventHandler(async (event) => {
   const filter = campaign.segment_filter || {}
   const discountCode: string = filter.discount_code || ''
 
-  // target_status: 'active' (default), 'pending_consent', or 'all'
-  const targetStatus: string = filter.target_status || 'active'
-
   let leadsQuery = supabase
     .from('leads')
     .select('id, email, first_name, last_name, unsubscribe_token')
     .eq('tenant_id', tenantId)
-
-  if (targetStatus === 'all') {
-    leadsQuery = leadsQuery.in('status', ['active', 'pending_consent'])
-  } else {
-    leadsQuery = leadsQuery.eq('status', targetStatus)
-  }
+    .eq('status', 'active')
 
   if (filter.categories?.length) leadsQuery = leadsQuery.overlaps('categories', filter.categories)
   if (filter.tags?.length) leadsQuery = leadsQuery.overlaps('tags', filter.tags)
