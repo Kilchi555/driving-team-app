@@ -102,54 +102,121 @@
           </button>
         </div>
 
-        <div class="p-6 space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-red-500">*</span></label>
-            <input v-model="form.name" type="text" placeholder="z.B. Willkommens-Email Motorrad" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <div class="p-6 space-y-5">
+
+          <!-- Template Name + Subject -->
+          <div class="grid grid-cols-1 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Interner Name <span class="text-red-500">*</span></label>
+              <input v-model="form.name" type="text" placeholder="z.B. Willkommens-Email Motorrad" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email-Betreff <span class="text-red-500">*</span></label>
+              <input v-model="form.subject" type="text" placeholder="z.B. Ein Angebot für dich 🎉" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <p class="text-xs text-gray-400 mt-1">Du kannst <span class="font-mono">&#123;&#123;first_name&#125;&#125;</span> im Betreff verwenden.</p>
+            </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Betreff <span class="text-red-500">*</span></label>
-            <input v-model="form.subject" type="text" placeholder="z.B. Hallo {{first_name}}, wir haben ein Angebot für dich" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <!-- Mode toggle -->
+          <div class="flex items-center gap-2 border-b pb-3">
+            <button
+              @click="editorMode = 'simple'"
+              class="px-3 py-1.5 rounded-lg text-sm font-medium transition"
+              :class="editorMode === 'simple' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'"
+            >
+              ✏️ Einfacher Editor
+            </button>
+            <button
+              @click="editorMode = 'html'"
+              class="px-3 py-1.5 rounded-lg text-sm font-medium transition"
+              :class="editorMode === 'html' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'"
+            >
+              🧑‍💻 HTML (Profi)
+            </button>
+            <button
+              @click="editorMode = 'preview'"
+              class="px-3 py-1.5 rounded-lg text-sm font-medium transition"
+              :class="editorMode === 'preview' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'"
+            >
+              👁 Vorschau
+            </button>
           </div>
 
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="block text-sm font-medium text-gray-700">HTML-Inhalt <span class="text-red-500">*</span></label>
-              <button @click="viewMode = viewMode === 'edit' ? 'preview' : 'edit'" class="text-xs text-blue-600 hover:underline">
-                {{ viewMode === 'edit' ? 'Vorschau' : 'Editor' }}
-              </button>
+          <!-- SIMPLE EDITOR -->
+          <div v-if="editorMode === 'simple'" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Überschrift im Email</label>
+              <input v-model="simple.headline" type="text" placeholder="z.B. Verdiene bis zu CHF 70.– pro Empfehlung" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
 
-            <!-- Editor -->
-            <div v-if="viewMode === 'edit'">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nachricht <span class="text-red-500">*</span></label>
               <textarea
-                v-model="form.html_body"
-                rows="14"
-                placeholder="<h2>Hallo {{first_name}},</h2><p>...</p>"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                v-model="simple.body"
+                rows="6"
+                placeholder="Schreib hier deine Nachricht. Drücke Enter für einen neuen Absatz.&#10;&#10;Du kannst {{first_name}} für den Vornamen verwenden."
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
               />
-              <p class="text-xs text-gray-400 mt-1">HTML + Variablen wie <code>&#123;&#123;first_name&#125;&#125;</code>, <code>&#123;&#123;consent_link&#125;&#125;</code>. Abmelde-Link: <code>&#123;&#123;unsubscribe_link&#125;&#125;</code></p>
+              <p class="text-xs text-gray-400 mt-1">Tipp: <span class="font-mono">&#123;&#123;first_name&#125;&#125;</span> wird durch den Vornamen der Person ersetzt.</p>
             </div>
 
-            <!-- Preview -->
-            <div v-else class="border rounded-lg bg-gray-50 p-4 min-h-48">
-              <iframe
-                v-if="form.html_body"
-                :srcdoc="form.html_body"
-                class="w-full h-64 border-0 rounded"
-                sandbox="allow-same-origin"
-              />
-              <p v-else class="text-sm text-gray-400 text-center py-8">Kein Inhalt zum Anzeigen</p>
+            <div class="bg-gray-50 rounded-xl p-4 space-y-3">
+              <div class="flex items-center gap-2">
+                <input type="checkbox" v-model="simple.showCta" id="showCta" class="rounded" />
+                <label for="showCta" class="text-sm font-medium text-gray-700">Button hinzufügen (z.B. "Jetzt anmelden")</label>
+              </div>
+              <div v-if="simple.showCta" class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs text-gray-500 mb-1">Button-Text</label>
+                  <input v-model="simple.ctaText" type="text" placeholder="Jetzt Partner werden →" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-500 mb-1">Link (URL)</label>
+                  <input v-model="simple.ctaUrl" type="url" placeholder="https://..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-gray-50 rounded-xl p-4 space-y-3">
+              <div class="flex items-center gap-2">
+                <input type="checkbox" v-model="simple.showConsent" id="showConsent" class="rounded" />
+                <label for="showConsent" class="text-sm font-medium text-gray-700">Opt-in / Opt-out Sektion anzeigen</label>
+              </div>
+              <p v-if="simple.showConsent" class="text-xs text-gray-500">
+                Fügt automatisch einen "Ja, ich bin dabei" Button und einen Abmelde-Link ein. Pflicht für Re-Consent Kampagnen.
+              </p>
             </div>
           </div>
+
+          <!-- HTML EDITOR -->
+          <div v-else-if="editorMode === 'html'">
+            <textarea
+              v-model="form.html_body"
+              rows="16"
+              placeholder="<h2>Hallo {{first_name}},</h2><p>...</p>"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+            />
+            <p class="text-xs text-gray-400 mt-1">Variablen: <code>&#123;&#123;first_name&#125;&#125;</code> <code>&#123;&#123;tenant_name&#125;&#125;</code> <code>&#123;&#123;consent_link&#125;&#125;</code> <code>&#123;&#123;unsubscribe_link&#125;&#125;</code></p>
+          </div>
+
+          <!-- PREVIEW -->
+          <div v-else class="border rounded-xl bg-gray-50 overflow-hidden">
+            <iframe
+              v-if="previewHtml"
+              :srcdoc="previewHtml"
+              class="w-full h-96 border-0"
+              sandbox="allow-same-origin"
+            />
+            <p v-else class="text-sm text-gray-400 text-center py-12">Kein Inhalt zum Anzeigen</p>
+          </div>
+
         </div>
 
         <div class="flex justify-end gap-2 p-6 border-t">
           <button @click="closeModal" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
             Abbrechen
           </button>
-          <button @click="saveTemplate" :disabled="saving || !form.name || !form.subject || !form.html_body" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+          <button @click="saveTemplate" :disabled="saving || !form.name || !form.subject || !finalHtml" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
             {{ saving ? 'Speichere...' : 'Speichern' }}
           </button>
         </div>
@@ -159,6 +226,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useHead } from '#app'
 import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
@@ -170,9 +239,72 @@ const loading = ref(true)
 const modalOpen = ref(false)
 const editingTemplate = ref<any>(null)
 const saving = ref(false)
-const viewMode = ref<'edit' | 'preview'>('edit')
+const editorMode = ref<'simple' | 'html' | 'preview'>('simple')
 
 const form = reactive({ name: '', subject: '', html_body: '' })
+
+// Simple editor fields — generate HTML automatically
+const simple = reactive({
+  headline: '',
+  body: '',
+  showCta: false,
+  ctaText: 'Mehr erfahren →',
+  ctaUrl: '',
+  showConsent: true,
+})
+
+// Converts the simple form fields into a clean HTML email body
+const generatedHtml = computed(() => {
+  const paragraphs = simple.body
+    .split('\n\n')
+    .map(p => p.trim())
+    .filter(Boolean)
+    .map(p => `<p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.7">${p.replace(/\n/g, '<br/>')}</p>`)
+    .join('\n')
+
+  const headline = simple.headline
+    ? `<h2 style="margin:0 0 20px;color:#111827;font-size:22px;font-weight:800">${simple.headline}</h2>`
+    : ''
+
+  const cta = simple.showCta && simple.ctaText
+    ? `<a href="${simple.ctaUrl || '#'}" style="display:block;background:{{primary_color}};color:#fff;text-decoration:none;text-align:center;padding:14px 28px;border-radius:12px;font-weight:700;font-size:15px;margin:28px 0">${simple.ctaText}</a>`
+    : ''
+
+  const consent = simple.showConsent
+    ? `<div style="background:#f0f9ff;border:2px solid {{primary_color}};border-radius:16px;padding:28px;margin:32px 0;text-align:center">
+        <h3 style="margin:0 0 8px;color:#111827;font-size:18px;font-weight:700">Darf ich dir ab und zu solche Infos schicken?</h3>
+        <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Du kannst dich jederzeit wieder abmelden.</p>
+        <a href="{{consent_link}}" style="display:inline-block;background:{{primary_color}};color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px">✅ Ja, ich bin dabei!</a>
+        <a href="{{unsubscribe_link}}" style="display:block;margin-top:14px;color:#9ca3af;font-size:13px;text-decoration:underline">Nein danke, abmelden</a>
+      </div>`
+    : ''
+
+  return `${headline}${paragraphs}${cta}${consent}`
+})
+
+// The final HTML that gets saved — either from simple generator or raw HTML editor
+const finalHtml = computed(() => {
+  if (editorMode.value === 'html') return form.html_body
+  return generatedHtml.value
+})
+
+// Preview wraps the content in the marketing email shell
+const previewHtml = computed(() => {
+  const content = finalHtml.value
+  if (!content) return ''
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+body{margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.wrap{max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden}
+.header{background:#6366f1;padding:24px 32px}
+.header h1{margin:0;color:#fff;font-size:18px;font-weight:600}
+.body{padding:32px}
+.footer{border-top:1px solid #f3f4f6;padding:20px 32px;font-size:12px;color:#9ca3af;text-align:center}
+</style></head><body><div class="wrap">
+<div class="header"><h1>{{tenant_name}}</h1></div>
+<div class="body">${content.replace(/\{\{primary_color\}\}/g, '#6366f1')}</div>
+<div class="footer">{{tenant_name}} &middot; <a href="#" style="color:#9ca3af">Abmelden</a></div>
+</div></body></html>`
+})
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: '2-digit' })
@@ -195,7 +327,13 @@ function openCreate() {
   form.name = ''
   form.subject = ''
   form.html_body = ''
-  viewMode.value = 'edit'
+  simple.headline = ''
+  simple.body = ''
+  simple.showCta = false
+  simple.ctaText = 'Mehr erfahren →'
+  simple.ctaUrl = ''
+  simple.showConsent = true
+  editorMode.value = 'simple'
   modalOpen.value = true
 }
 
@@ -204,7 +342,8 @@ function openEdit(t: any) {
   form.name = t.name
   form.subject = t.subject
   form.html_body = t.html_body
-  viewMode.value = 'edit'
+  // Open in HTML mode when editing existing templates (they may have custom HTML)
+  editorMode.value = 'html'
   modalOpen.value = true
 }
 
@@ -219,15 +358,16 @@ async function saveTemplate() {
   if (!tenantId) return
   saving.value = true
   try {
+    const html_body = finalHtml.value
     if (editingTemplate.value) {
       await $fetch(`/api/marketing/templates/${editingTemplate.value.id}`, {
         method: 'PATCH',
-        body: { tenantId, ...form },
+        body: { tenantId, name: form.name, subject: form.subject, html_body },
       })
     } else {
       await $fetch('/api/marketing/templates', {
         method: 'POST',
-        body: { tenantId, createdBy: userId, ...form },
+        body: { tenantId, createdBy: userId, name: form.name, subject: form.subject, html_body },
       })
     }
     closeModal()
