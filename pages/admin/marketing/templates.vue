@@ -296,6 +296,8 @@ const previewHtml = computed(() => {
   const name = tenantName.value
   const content = finalHtml.value
   if (!content) return ''
+
+  // Replace all template variables with realistic preview values
   const rendered = content
     .replace(/\{\{primary_color\}\}/g, color)
     .replace(/\{\{tenant_name\}\}/g, name)
@@ -304,6 +306,13 @@ const previewHtml = computed(() => {
     .replace(/\{\{email\}\}/g, 'max@beispiel.ch')
     .replace(/\{\{consent_link\}\}/g, '#')
     .replace(/\{\{unsubscribe_link\}\}/g, '#')
+
+  // If template is already a complete HTML document, render it directly
+  if (/^\s*<!DOCTYPE/i.test(rendered) || /^\s*<html/i.test(rendered)) {
+    return rendered
+  }
+
+  // Otherwise wrap the fragment in the standard marketing email shell
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
 body{margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 .wrap{max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden}
