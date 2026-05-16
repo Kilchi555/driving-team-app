@@ -4,7 +4,7 @@
 
       <!-- Header -->
       <div class="p-8 text-center" :style="{ background: tenant?.primary_color || '#6366f1' }">
-        <img v-if="tenant?.logo_square_url" :src="tenant.logo_square_url" class="h-12 w-auto mx-auto mb-4 object-contain" />
+        <img v-if="tenant?.logo_square_url" :src="tenant.logo_square_url" class="h-14 w-auto mx-auto mb-4 object-contain" style="mix-blend-mode: multiply;" />
         <h1 class="text-2xl font-black text-white">Newsletter anmelden</h1>
         <p class="text-white/80 text-sm mt-1">{{ tenant?.name || 'Fahrschule' }}</p>
       </div>
