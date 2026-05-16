@@ -236,6 +236,8 @@ useHead({ title: 'Email-Templates - Admin' })
 const authStore = useAuthStore()
 const templates = ref<any[]>([])
 const loading = ref(true)
+const tenantName = ref('Fahrschule')
+const tenantColor = ref('#6366f1')
 const modalOpen = ref(false)
 const editingTemplate = ref<any>(null)
 const saving = ref(false)
@@ -290,19 +292,29 @@ const finalHtml = computed(() => {
 
 // Preview wraps the content in the marketing email shell
 const previewHtml = computed(() => {
+  const color = tenantColor.value
+  const name = tenantName.value
   const content = finalHtml.value
   if (!content) return ''
+  const rendered = content
+    .replace(/\{\{primary_color\}\}/g, color)
+    .replace(/\{\{tenant_name\}\}/g, name)
+    .replace(/\{\{first_name\}\}/g, 'Max')
+    .replace(/\{\{last_name\}\}/g, 'Mustermann')
+    .replace(/\{\{email\}\}/g, 'max@beispiel.ch')
+    .replace(/\{\{consent_link\}\}/g, '#')
+    .replace(/\{\{unsubscribe_link\}\}/g, '#')
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
 body{margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 .wrap{max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden}
-.header{background:#6366f1;padding:24px 32px}
+.header{background:${color};padding:24px 32px}
 .header h1{margin:0;color:#fff;font-size:18px;font-weight:600}
 .body{padding:32px}
 .footer{border-top:1px solid #f3f4f6;padding:20px 32px;font-size:12px;color:#9ca3af;text-align:center}
 </style></head><body><div class="wrap">
-<div class="header"><h1>{{tenant_name}}</h1></div>
-<div class="body">${content.replace(/\{\{primary_color\}\}/g, '#6366f1')}</div>
-<div class="footer">{{tenant_name}} &middot; <a href="#" style="color:#9ca3af">Abmelden</a></div>
+<div class="header"><h1>${name}</h1></div>
+<div class="body">${rendered}</div>
+<div class="footer">${name} &middot; <a href="#" style="color:#9ca3af">Abmelden</a></div>
 </div></body></html>`
 })
 
@@ -388,5 +400,18 @@ async function confirmDelete(t: any) {
   await loadTemplates()
 }
 
-onMounted(loadTemplates)
+onMounted(async () => {
+  await loadTemplates()
+  // Load tenant branding for realistic preview (cached on server, fast)
+  const tenantId = authStore.userProfile?.tenant_id
+  if (tenantId) {
+    try {
+      const res = await $fetch<any>('/api/tenants/branding', { query: { id: tenantId } })
+      if (res?.data) {
+        tenantName.value = res.data.brand_name || res.data.name || 'Fahrschule'
+        tenantColor.value = res.data.primary_color || '#6366f1'
+      }
+    } catch {}
+  }
+})
 </script>
