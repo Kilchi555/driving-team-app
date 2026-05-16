@@ -42,15 +42,19 @@ export default defineEventHandler(async (event) => {
 
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
 
-  // Fire-and-forget consent email
-  sendConsentEmail({
-    leadId: lead.id,
-    token: lead.unsubscribe_token,
-    email: lead.email,
-    firstName: lead.first_name,
-    tenantName: tenant?.name || 'Fahrschule',
-    primaryColor: tenant?.primary_color || '#1e293b',
-  }).catch((e) => console.error('Consent email failed:', e))
+  // Send consent email (awaited — serverless functions terminate on return)
+  try {
+    await sendConsentEmail({
+      leadId: lead.id,
+      token: lead.unsubscribe_token,
+      email: lead.email,
+      firstName: lead.first_name,
+      tenantName: tenant?.name || 'Fahrschule',
+      primaryColor: tenant?.primary_color || '#1e293b',
+    })
+  } catch (e) {
+    console.error('Consent email failed:', e)
+  }
 
   return { success: true, lead: { id: lead.id, email: lead.email, status: lead.status } }
 })
