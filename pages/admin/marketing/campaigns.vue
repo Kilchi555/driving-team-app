@@ -242,9 +242,10 @@
     />
 
     <!-- Send Confirmation Modal -->
-    <div v-if="sendConfirmCampaign" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-        <div class="flex items-start gap-4">
+    <div v-if="sendConfirmCampaign" class="fixed inset-0 bg-black/40 flex items-start justify-center z-50 p-4 overflow-y-auto">
+      <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full my-8">
+
+        <div class="p-6 border-b flex items-start gap-4">
           <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
             <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -254,32 +255,83 @@
             <h2 class="text-lg font-semibold text-gray-900">Kampagne senden?</h2>
             <p class="text-sm text-gray-600 mt-1">
               <strong>{{ sendConfirmCampaign.name }}</strong><br>
-              Die Emails werden sofort in die Versand-Warteschlange eingereiht und vom Cron-Job versendet.
-              <span class="text-orange-600 font-medium">Dieser Vorgang kann nicht rückgängig gemacht werden.</span>
+              Die Emails werden sofort in die Versand-Warteschlange eingereiht.
+              <span class="text-orange-600 font-medium">Nicht rückgängig machbar.</span>
             </p>
+            <div v-if="sendConfirmCampaign.segment_filter?.discount_code" class="mt-2 inline-flex items-center gap-1.5 bg-orange-50 border border-orange-200 rounded-lg px-2.5 py-1 text-xs font-medium text-orange-700">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+              Rabattcode: {{ sendConfirmCampaign.segment_filter.discount_code }}
+            </div>
           </div>
         </div>
 
-        <div v-if="sendResult" class="mt-4 bg-green-50 rounded-lg p-4">
+        <!-- Recipients preview -->
+        <div class="px-6 py-4">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm font-semibold text-gray-700">Empfänger</span>
+            <span v-if="!recipientsLoading" class="text-sm font-bold text-gray-900">
+              {{ recipients.length }} Lead{{ recipients.length !== 1 ? 's' : '' }}
+            </span>
+          </div>
+
+          <div v-if="recipientsLoading" class="flex items-center gap-2 text-sm text-gray-400 py-4 justify-center">
+            <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Lade Empfänger...
+          </div>
+
+          <div v-else-if="recipients.length === 0" class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm text-yellow-800">
+            ⚠️ Keine aktiven Leads für dieses Segment gefunden. Die Kampagne wird niemanden erreichen.
+          </div>
+
+          <div v-else class="border border-gray-200 rounded-xl overflow-hidden">
+            <div class="max-h-52 overflow-y-auto divide-y divide-gray-100">
+              <div
+                v-for="r in recipients"
+                :key="r.id"
+                class="flex items-center gap-3 px-4 py-2.5"
+              >
+                <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-500 shrink-0">
+                  {{ (r.first_name?.[0] || r.email[0]).toUpperCase() }}
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-medium text-gray-900 truncate">
+                    {{ r.first_name ? `${r.first_name} ${r.last_name || ''}`.trim() : r.email }}
+                  </div>
+                  <div class="text-xs text-gray-400 truncate">{{ r.email }}</div>
+                </div>
+                <div class="flex gap-1 shrink-0">
+                  <span v-for="cat in (r.categories || []).slice(0, 2)" :key="cat" class="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">{{ cat }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-if="recipientsTotal > recipients.length" class="px-4 py-2 bg-gray-50 text-xs text-gray-400 text-center border-t">
+              + {{ recipientsTotal - recipients.length }} weitere Empfänger (nur erste 50 angezeigt)
+            </div>
+          </div>
+        </div>
+
+        <div v-if="sendResult" class="mx-6 mb-4 bg-green-50 rounded-xl p-4">
           <p class="text-sm font-medium text-green-800">
-            Erfolgreich: {{ sendResult.queuedCount }} Emails in die Warteschlange eingereiht.
+            ✅ {{ sendResult.queuedCount }} Emails erfolgreich in die Warteschlange eingereiht.
           </p>
         </div>
 
-        <div class="flex justify-end gap-2 mt-6">
-          <button @click="sendConfirmCampaign = null; sendResult = null" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+        <div class="flex justify-end gap-2 p-6 border-t">
+          <button @click="sendConfirmCampaign = null; sendResult = null; recipients = []" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
             {{ sendResult ? 'Schliessen' : 'Abbrechen' }}
           </button>
           <button
             v-if="!sendResult"
             @click="sendCampaign"
-            :disabled="sending"
+            :disabled="sending || recipients.length === 0"
             class="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
           >
             <svg v-if="sending" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            {{ sending ? 'Sendet...' : 'Ja, jetzt senden' }}
+            {{ sending ? 'Sendet...' : `Ja, an ${recipients.length} Leads senden` }}
           </button>
         </div>
       </div>
@@ -326,6 +378,9 @@ const createForm = reactive({
 const sendConfirmCampaign = ref<any>(null)
 const sending = ref(false)
 const sendResult = ref<any>(null)
+const recipients = ref<any[]>([])
+const recipientsTotal = ref(0)
+const recipientsLoading = ref(false)
 
 const estimatedCount = ref<number | null>(null)
 
@@ -441,9 +496,36 @@ async function createCampaign() {
   }
 }
 
-function openSendConfirm(campaign: any) {
+async function openSendConfirm(campaign: any) {
   sendConfirmCampaign.value = campaign
   sendResult.value = null
+  recipients.value = []
+  recipientsTotal.value = 0
+  recipientsLoading.value = true
+
+  try {
+    const tenantId = authStore.userProfile?.tenant_id
+    const filter = campaign.segment_filter || {}
+    const res = await $fetch<any>('/api/marketing/leads', {
+      query: {
+        tenantId,
+        status: 'active',
+        category: filter.categories?.[0] || undefined,
+        limit: 50,
+      },
+    })
+    // If multiple categories, filter client-side from the returned list
+    const cats: string[] = filter.categories || []
+    const all: any[] = res.leads ?? []
+    recipients.value = cats.length
+      ? all.filter((l: any) => cats.some((c: string) => l.categories?.includes(c)))
+      : all
+    recipientsTotal.value = res.total ?? recipients.value.length
+  } catch {
+    recipients.value = []
+  } finally {
+    recipientsLoading.value = false
+  }
 }
 
 async function sendCampaign() {
