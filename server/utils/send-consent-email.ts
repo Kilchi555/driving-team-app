@@ -23,15 +23,28 @@ export async function fetchTenantEmailContext(tenantId: string): Promise<TenantE
 
   const [tenantResult, drivingResult, courseResult, affiliateResult] = await Promise.all([
     supabase.from('tenants').select('name, primary_color').eq('id', tenantId).single(),
-    supabase.from('categories').select('name, color').eq('tenant_id', tenantId).eq('is_active', true).order('name').limit(10),
-    supabase.from('course_categories').select('name, color').eq('tenant_id', tenantId).eq('is_active', true).order('name').limit(8),
+    // Fetch ALL categories (no limit) so parent/child filtering works correctly
+    supabase.from('categories').select('id, name, color, parent_category_id').eq('tenant_id', tenantId).eq('is_active', true).order('name'),
+    supabase.from('course_categories').select('name, color').eq('tenant_id', tenantId).eq('is_active', true).order('name'),
     supabase.from('tenant_settings').select('setting_value').eq('tenant_id', tenantId).eq('category', 'affiliate').eq('setting_key', 'enabled').maybeSingle(),
   ])
+
+  // Parent/child logic:
+  // - If a parent has at least one child → show children only, hide that parent
+  // - If a parent has no children → show the parent itself
+  const allCats = drivingResult.data || []
+  const parentIdsWithChildren = new Set(
+    allCats.filter((c: any) => c.parent_category_id).map((c: any) => c.parent_category_id)
+  )
+  const drivingCats = allCats.filter((c: any) =>
+    // Keep children (has parent_category_id) OR parents that have no children
+    c.parent_category_id !== null || !parentIdsWithChildren.has(c.id)
+  )
 
   return {
     tenantName: tenantResult.data?.name || 'Fahrschule',
     primaryColor: tenantResult.data?.primary_color || '#1e293b',
-    drivingCats: drivingResult.data || [],
+    drivingCats,
     courseCats: courseResult.data || [],
     affiliateEnabled: affiliateResult.data?.setting_value === 'true' || affiliateResult.data?.setting_value === true,
   }
