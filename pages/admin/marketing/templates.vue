@@ -129,7 +129,7 @@
                 placeholder="<h2>Hallo {{first_name}},</h2><p>...</p>"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
               />
-              <p class="text-xs text-gray-400 mt-1">HTML + Variablen wie {{ '{{first_name}}' }}. Der Abmelde-Link wird automatisch per {{ '{{unsubscribe_link}}' }} eingefügt.</p>
+              <p class="text-xs text-gray-400 mt-1">HTML + Variablen wie <code>&#123;&#123;first_name&#125;&#125;</code>, <code>&#123;&#123;consent_link&#125;&#125;</code>. Abmelde-Link: <code>&#123;&#123;unsubscribe_link&#125;&#125;</code></p>
             </div>
 
             <!-- Preview -->
