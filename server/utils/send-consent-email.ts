@@ -12,7 +12,8 @@ import { buildConsentLink, buildUnsubscribeLink, wrapMarketingEmail } from '~/se
 export interface TenantEmailContext {
   tenantName: string
   primaryColor: string
-  logoUrl: string | null
+  logoUrl: string | null       // wide logo (preferred for email header)
+  logoSquareUrl: string | null // square logo (fallback)
   drivingCats: { name: string; color?: string | null }[]
   courseCats: { name: string; color?: string | null }[]
   affiliateEnabled: boolean
@@ -23,7 +24,7 @@ export async function fetchTenantEmailContext(tenantId: string): Promise<TenantE
   const supabase = getSupabaseAdmin()
 
   const [tenantResult, drivingResult, courseResult, affiliateResult] = await Promise.all([
-    supabase.from('tenants').select('name, primary_color, logo_square_url').eq('id', tenantId).single(),
+    supabase.from('tenants').select('name, primary_color, logo_url, logo_square_url').eq('id', tenantId).single(),
     // Fetch ALL categories (no limit) so parent/child filtering works correctly
     supabase.from('categories').select('id, name, color, parent_category_id').eq('tenant_id', tenantId).eq('is_active', true).order('name'),
     supabase.from('course_categories').select('name, color').eq('tenant_id', tenantId).eq('is_active', true).order('name'),
@@ -42,14 +43,15 @@ export async function fetchTenantEmailContext(tenantId: string): Promise<TenantE
     c.parent_category_id !== null || !parentIdsWithChildren.has(c.id)
   )
 
-  // Only use logo if it's a real hosted URL — base64 data URIs bloat emails and get clipped/blocked
-  const rawLogo = tenantResult.data?.logo_square_url ?? null
-  const logoUrl = rawLogo?.startsWith('https://') ? rawLogo : null
+  const isHttps = (v?: string | null) => !!v && v.startsWith('https://')
+  const logoUrl = isHttps(tenantResult.data?.logo_url) ? tenantResult.data!.logo_url! : null
+  const logoSquareUrl = isHttps(tenantResult.data?.logo_square_url) ? tenantResult.data!.logo_square_url! : null
 
   return {
     tenantName: tenantResult.data?.name || 'Fahrschule',
     primaryColor: tenantResult.data?.primary_color || '#1e293b',
     logoUrl,
+    logoSquareUrl,
     drivingCats,
     courseCats: courseResult.data || [],
     affiliateEnabled: affiliateResult.data?.setting_value === 'true' || affiliateResult.data?.setting_value === true,
@@ -62,7 +64,7 @@ function buildEmailHtml(
   consentLink: string,
   unsubscribeLink: string,
 ): string {
-  const { tenantName, primaryColor, logoUrl, drivingCats, courseCats, affiliateEnabled } = ctx
+  const { tenantName, primaryColor, logoUrl, logoSquareUrl, drivingCats, courseCats, affiliateEnabled } = ctx
 
   let categoriesBlock = ''
   if (drivingCats.length > 0) {
@@ -126,7 +128,7 @@ function buildEmailHtml(
     </p>
   `
 
-  return wrapMarketingEmail(content, tenantName, unsubscribeLink, primaryColor, logoUrl)
+  return wrapMarketingEmail(content, tenantName, unsubscribeLink, primaryColor, logoUrl, logoSquareUrl)
 }
 
 /** Send a consent email using pre-fetched context (for bulk — no extra DB queries). */

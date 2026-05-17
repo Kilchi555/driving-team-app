@@ -38,23 +38,26 @@ export function wrapMarketingEmail(
   tenantName: string,
   unsubscribeLink: string,
   primaryColor = '#1e293b',
-  logoUrl?: string | null,
+  logoUrl?: string | null,        // wide logo — replaces the colored bar when present
+  logoSquareUrl?: string | null,  // square logo — shown in bar alongside tenant name when no wide logo
 ): string {
-  // Only use logo if it's a real hosted URL (not a base64 data URI)
-  const showLogo = logoUrl && logoUrl.startsWith('https://')
+  const hasWideLogo = !!logoUrl
+  const hasSquareLogo = !!logoSquareUrl
 
-  const logoSection = showLogo
-    ? `<div style="background:#fff;padding:20px 32px 0;text-align:center">
-        <img src="${logoUrl}" alt="${tenantName}" style="max-height:56px;max-width:180px;object-fit:contain" />
+  // Wide logo replaces the colored header bar entirely
+  const header = hasWideLogo
+    ? `<div style="background:#fff;padding:28px 32px 20px;text-align:center;border-bottom:3px solid ${primaryColor}">
+        <img src="${logoUrl}" alt="${tenantName}" style="max-height:64px;max-width:260px;object-fit:contain;display:block;margin:0 auto" />
       </div>`
-    : ''
+    : `<div style="background:${primaryColor};padding:20px 32px;display:flex;align-items:center;gap:14px">
+        ${hasSquareLogo ? `<img src="${logoSquareUrl}" alt="${tenantName}" style="height:40px;width:40px;object-fit:contain;border-radius:8px;background:#fff;padding:4px;flex-shrink:0" />` : ''}
+        <h1 style="margin:0;color:#fff;font-size:18px;font-weight:600">${tenantName}</h1>
+      </div>`
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 body{margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 .wrap{max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden}
-.header{background:${primaryColor};padding:20px 32px}
-.header h1{margin:0;color:#fff;font-size:18px;font-weight:600}
 .body{padding:32px;color:#374151;font-size:15px;line-height:1.6}
 .body h2{color:#111827;font-size:18px;font-weight:600;margin:0 0 16px}
 .body p{margin:0 0 16px}
@@ -62,8 +65,7 @@ body{margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSys
 .footer{border-top:1px solid #f3f4f6;padding:20px 32px;font-size:12px;color:#9ca3af;text-align:center}
 </style></head>
 <body><div class="wrap">
-${logoSection}
-<div class="header"><h1>${tenantName}</h1></div>
+${header}
 <div class="body">${content}</div>
 <div class="footer">
   ${tenantName} &middot;
