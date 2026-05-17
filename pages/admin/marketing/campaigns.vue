@@ -142,13 +142,58 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Segment — Kategorien</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Segment — Kategorien</label>
             <p class="text-xs text-gray-500 mb-2">Leer = alle aktiven Leads erhalten die Email</p>
-            <div class="flex flex-wrap gap-3">
-              <label v-for="cat in drivingCategories" :key="cat.value" class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" :value="cat.value" v-model="createForm.categories" class="rounded" />
-                <span class="text-sm text-gray-700">{{ cat.label }}</span>
-              </label>
+
+            <!-- Multi-select dropdown -->
+            <div class="relative" ref="catDropdownRef">
+              <button
+                type="button"
+                @click="catDropdownOpen = !catDropdownOpen"
+                class="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition min-h-[38px]"
+              >
+                <span class="flex flex-wrap gap-1 flex-1 text-left">
+                  <template v-if="createForm.categories.length === 0">
+                    <span class="text-gray-400">Alle Kategorien</span>
+                  </template>
+                  <template v-else>
+                    <span
+                      v-for="v in createForm.categories"
+                      :key="v"
+                      class="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full"
+                    >
+                      {{ drivingCategories.find(d => d.value === v)?.label || v }}
+                      <span
+                        @click.stop="createForm.categories = createForm.categories.filter(c => c !== v)"
+                        class="cursor-pointer hover:text-blue-600 leading-none"
+                      >×</span>
+                    </span>
+                  </template>
+                </span>
+                <svg class="w-4 h-4 text-gray-400 shrink-0 ml-2 transition-transform" :class="catDropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              <!-- Dropdown list -->
+              <div
+                v-if="catDropdownOpen"
+                class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg py-1 max-h-56 overflow-y-auto"
+              >
+                <label
+                  v-for="cat in drivingCategories"
+                  :key="cat.value"
+                  class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    :value="cat.value"
+                    v-model="createForm.categories"
+                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span class="text-sm text-gray-700">{{ cat.label }}</span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -340,7 +385,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useHead } from '#app'
 import { useAuthStore } from '~/stores/auth'
 
@@ -350,6 +395,8 @@ useHead({ title: 'Kampagnen - Marketing - Admin' })
 const authStore = useAuthStore()
 
 const drivingCategories = ref<{ value: string; label: string }[]>([])
+const catDropdownOpen = ref(false)
+const catDropdownRef = ref<HTMLElement | null>(null)
 
 const campaigns = ref<any[]>([])
 const templates = ref<any[]>([])
@@ -556,6 +603,19 @@ async function sendCampaign() {
   }
 }
 
-onMounted(loadData)
+function onClickOutsideCatDropdown(e: MouseEvent) {
+  if (catDropdownRef.value && !catDropdownRef.value.contains(e.target as Node)) {
+    catDropdownOpen.value = false
+  }
+}
+
+onMounted(() => {
+  loadData()
+  document.addEventListener('mousedown', onClickOutsideCatDropdown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('mousedown', onClickOutsideCatDropdown)
+})
 
 </script>
