@@ -145,7 +145,7 @@
             <label class="block text-sm font-medium text-gray-700 mb-2">Segment — Kategorien</label>
             <p class="text-xs text-gray-500 mb-2">Leer = alle aktiven Leads erhalten die Email</p>
             <div class="flex flex-wrap gap-3">
-              <label v-for="cat in CATEGORIES" :key="cat.value" class="flex items-center gap-2 cursor-pointer">
+              <label v-for="cat in drivingCategories" :key="cat.value" class="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" :value="cat.value" v-model="createForm.categories" class="rounded" />
                 <span class="text-sm text-gray-700">{{ cat.label }}</span>
               </label>
@@ -349,14 +349,7 @@ useHead({ title: 'Kampagnen - Marketing - Admin' })
 
 const authStore = useAuthStore()
 
-const CATEGORIES = [
-  { value: 'auto', label: 'Auto (B)' },
-  { value: 'motorrad', label: 'Motorrad (A)' },
-  { value: 'lkw', label: 'LKW (C/CE)' },
-  { value: 'fahrlehrer', label: 'Fahrlehrer' },
-  { value: 'bus', label: 'Bus (D)' },
-  { value: 'traktor', label: 'Traktor' },
-]
+const drivingCategories = ref<{ value: string; label: string }[]>([])
 
 const campaigns = ref<any[]>([])
 const templates = ref<any[]>([])
@@ -406,10 +399,14 @@ async function loadData() {
   if (!tenantId) return
   loading.value = true
   try {
-    const [c, t] = await Promise.all([
+    const [c, t, cats] = await Promise.all([
       $fetch<any>('/api/marketing/campaigns', { query: { tenantId } }),
       $fetch<any>('/api/marketing/templates', { query: { tenantId } }),
+      $fetch<any>('/api/admin/categories').catch(() => ({ categories: [] })),
     ])
+    drivingCategories.value = (cats?.categories || [])
+      .filter((c: any) => c.is_active !== false)
+      .map((c: any) => ({ value: c.name, label: c.name }))
     campaigns.value = c.campaigns
     templates.value = t.templates
   } finally {
