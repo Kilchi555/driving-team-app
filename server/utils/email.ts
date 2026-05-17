@@ -28,6 +28,11 @@ function getResend(): Resend {
   return _resend
 }
 
+export interface EmailAttachment {
+  filename: string
+  content: Buffer
+}
+
 export interface SendEmailOptions {
   to: string | string[]
   subject: string
@@ -42,6 +47,8 @@ export interface SendEmailOptions {
   domainVerified?: boolean
   /** Override the whole From header (skips fromName/fromEmail logic). */
   from?: string
+  /** File attachments sent inline with the email */
+  attachments?: EmailAttachment[]
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<{ messageId: string }> {
@@ -66,6 +73,12 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ messageId:
     to: options.to,
     subject: options.subject,
     html: options.html,
+    ...(options.attachments?.length ? {
+      attachments: options.attachments.map(a => ({
+        filename: a.filename,
+        content: a.content,
+      })),
+    } : {}),
   })
 
   if (error) throw error

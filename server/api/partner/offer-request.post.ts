@@ -110,34 +110,11 @@ export default defineEventHandler(async (event) => {
     // Non-fatal — continue with email sending
   }
 
-  const requestId = request?.id || crypto.randomUUID()
-
-  // ── 5. Upload documents ─────────────────────────────────────
-  const uploadedPaths: string[] = []
-  const signedUrls: { name: string; url: string }[] = []
-
-  for (const part of fileParts) {
-    const safeName = (part.filename || 'dokument').replace(/[^a-zA-Z0-9._-]/g, '_')
-    const path = `${tenantId}/${requestId}/${safeName}`
-    const { error: uploadError } = await supabase.storage
-      .from('partner-documents')
-      .upload(path, part.data, {
-        contentType: part.type || 'application/octet-stream',
-        upsert: true,
-      })
-    if (uploadError) {
-      console.error('Document upload error:', uploadError.message)
-      continue
-    }
-    uploadedPaths.push(path)
-
-    const { data: signed } = await supabase.storage
-      .from('partner-documents')
-      .createSignedUrl(path, 48 * 60 * 60) // 48h
-    if (signed?.signedUrl) {
-      signedUrls.push({ name: part.filename || safeName, url: signed.signedUrl })
-    }
-  }
+  // ── 5. Prepare attachments directly from uploaded file data ──
+  const attachments = fileParts.map(part => ({
+    filename: (part.filename || 'dokument').replace(/[^a-zA-Z0-9._-]/g, '_'),
+    content: part.data as Buffer,
+  }))
 
   // ── 6. Build email content ───────────────────────────────────
   const fullName = [firstName, lastName].filter(Boolean).join(' ')
@@ -145,11 +122,11 @@ export default defineEventHandler(async (event) => {
     .map(t => INSURANCE_LABELS[t] || t)
     .join(', ')
 
-  const docsHtml = signedUrls.length > 0
+  const docsHtml = attachments.length > 0
     ? `<div style="margin:20px 0;padding:16px 20px;background:#f0f9ff;border-radius:12px;border:1px solid #bae6fd">
-        <div style="font-size:12px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">📎 Hochgeladene Dokumente (Zugriff 48h)</div>
+        <div style="font-size:12px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">📎 Dokumente im Anhang (${attachments.length})</div>
         <ul style="margin:0;padding:0;list-style:none">
-          ${signedUrls.map(d => `<li style="margin:6px 0"><a href="${d.url}" style="color:#0369a1;text-decoration:underline;font-size:14px">📄 ${d.name}</a></li>`).join('')}
+          ${attachments.map(a => `<li style="margin:6px 0;font-size:14px;color:#0369a1">📄 ${a.filename}</li>`).join('')}
         </ul>
       </div>`
     : ''
@@ -193,7 +170,7 @@ export default defineEventHandler(async (event) => {
     <h2 style="margin:0 0 8px;color:#111827;font-size:20px;font-weight:800">Ihre Anfrage ist eingegangen!</h2>
     <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.7">
       Liebe/r ${firstName || 'Kunde'},<br/><br/>
-      vielen Dank für Ihre Anfrage. Wir haben Ihre Offerten-Anfrage an <strong>Helvetia Glarus</strong> weitergeleitet.
+      vielen Dank für Ihre Anfrage. Wir haben Ihre Offerten-Anfrage an <strong>Helvetia</strong> weitergeleitet.
       Ein Berater wird sich in Kürze bei Ihnen melden — in der Regel innert 1–2 Arbeitstagen.
     </p>
     <div style="padding:20px;background:#f0fdf4;border-radius:12px;border:1px solid #bbf7d0;margin:0 0 20px">
@@ -202,7 +179,7 @@ export default defineEventHandler(async (event) => {
     </div>
     <div style="padding:16px 20px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;font-size:13px;color:#64748b">
       <p style="margin:0 0 8px"><strong style="color:#374151">Ihr Ansprechpartner</strong></p>
-      <p style="margin:0 0 4px;color:#374151;font-weight:600">Michele Cecio · Helvetia Glarus</p>
+      <p style="margin:0 0 4px;color:#374151;font-weight:600">Michele Cecio · Helvetia</p>
       <p style="margin:0 0 3px">📞 <a href="tel:+41582806051" style="color:#2563eb;text-decoration:none">+41 58 280 60 51</a></p>
       <p style="margin:0">✉️ <a href="mailto:michele.cecio@helvetia.ch" style="color:#2563eb;text-decoration:none">michele.cecio@helvetia.ch</a></p>
     </div>
@@ -214,13 +191,14 @@ export default defineEventHandler(async (event) => {
     fromName: tenantName,
   })
 
-  // ── 8. Email to Helvetia ────────────────────────────────────
+  // ── 8. Email to Helvetia (with document attachments) ────────
   const helvetiaTo = DEV_OVERRIDE_EMAIL ?? PARTNER_EMAIL_HELVETIA
   await sendEmail({
     to: helvetiaTo,
     subject: `${DEV_OVERRIDE_EMAIL ? '[TEST — Helvetia] ' : ''}Offerten-Anfrage: ${fullName || email} — ${insuranceList}`,
     html: wrapMarketingEmail(helvetiaContent, 'Simy Partner-Portal', '#', '#0f172a', null, null),
     fromName: 'Simy Partner-Portal',
+    attachments: attachments.length > 0 ? attachments : undefined,
   })
 
   // ── 8. Confirmation to tenant (minimal) ─────────────────────
@@ -245,22 +223,28 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // ── 9. CC to Simy ───────────────────────────────────────────
+  // ── 9. CC to Simy (no documents — confidential to Helvetia only) ───
+  const simyContent = `
+    <h2 style="margin:0 0 6px;color:#111827;font-size:20px;font-weight:800">Neuer Helvetia Lead</h2>
+    <p style="margin:0 0 24px;color:#6b7280;font-size:14px">via ${tenantName} · ${new Date().toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+    <div style="margin:0 0 20px;padding:20px;background:#f9fafb;border-radius:12px;border:1px solid #e5e7eb;font-size:14px">
+      <table style="width:100%;border-collapse:collapse">
+        <tr><td style="padding:4px 0;color:#6b7280;width:120px">Name</td><td style="color:#111827;font-weight:600">${fullName || '—'}</td></tr>
+        <tr><td style="padding:4px 0;color:#6b7280">Email</td><td><a href="mailto:${email}" style="color:#2563eb">${email}</a></td></tr>
+        <tr><td style="padding:4px 0;color:#6b7280">Telefon</td><td style="color:#111827">${phone || '—'}</td></tr>
+        <tr><td style="padding:4px 0;color:#6b7280">Offerten</td><td style="color:#111827;font-weight:600">${insuranceList}</td></tr>
+        ${notes ? `<tr><td style="padding:4px 0;color:#6b7280;vertical-align:top">Notiz</td><td style="color:#111827">${notes}</td></tr>` : ''}
+      </table>
+    </div>
+    ${referralHtml}
+  `
   const simyTo = DEV_OVERRIDE_EMAIL ?? SIMY_CC_EMAIL
   await sendEmail({
     to: simyTo,
     subject: `${DEV_OVERRIDE_EMAIL ? '[TEST — Simy CC] ' : ''}[Helvetia Lead] ${fullName || email} via ${tenantName}`,
-    html: wrapMarketingEmail(helvetiaContent, 'Simy Partner-Portal', '#', '#0f172a', null, null),
+    html: wrapMarketingEmail(simyContent, 'Simy Partner-Portal', '#', '#0f172a', null, null),
     fromName: 'Simy Partner-Portal',
   })
-
-  // ── 10. Delete documents from Storage ───────────────────────
-  if (uploadedPaths.length > 0) {
-    const { error: deleteError } = await supabase.storage
-      .from('partner-documents')
-      .remove(uploadedPaths)
-    if (deleteError) console.error('Document cleanup error:', deleteError.message)
-  }
 
   return { success: true }
 })

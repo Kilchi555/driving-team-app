@@ -39,7 +39,7 @@
         <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-5">✅</div>
         <h2 class="text-2xl font-black text-gray-900 mb-3">Anfrage gesendet!</h2>
         <p class="text-gray-500 leading-relaxed text-sm mb-6">
-          Ihre Anfrage wurde an <strong>Helvetia Glarus</strong> weitergeleitet.<br/>
+          Ihre Anfrage wurde an <strong>Helvetia</strong> weitergeleitet.<br/>
           Michele Cecio oder ein Berater meldet sich bei Ihnen — in der Regel innert 1–2 Arbeitstagen.
         </p>
         <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-left text-sm text-blue-800 space-y-1">
@@ -56,7 +56,7 @@
         <!-- Intro -->
         <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900">
           <p class="font-semibold mb-1">💰 Unsere Kunden sparen durchschnittlich CHF 1'200 – 3'800 pro Jahr</p>
-          <p class="text-amber-800 text-xs leading-relaxed">Dank der Zusammenarbeit mit Helvetia erhalten Sie als Fahrschul-Kunde exklusive Konditionen — bei vollem Schutz.</p>
+          <p class="text-amber-800 text-xs leading-relaxed">Helvetia überzeugt mit einem hervorragenden Preis-Leistungs-Verhältnis — top Versicherungsschutz zu einem fairen Preis.</p>
         </div>
 
         <!-- Insurance types -->
@@ -64,21 +64,24 @@
           <label class="block text-xs font-bold text-gray-700 mb-2.5 uppercase tracking-wider">
             Für welche Versicherungen möchten Sie eine Offerte? <span class="text-red-500">*</span>
           </label>
-          <div class="grid grid-cols-2 gap-2">
+          <div class="flex flex-wrap gap-2">
             <label v-for="type in insuranceTypes" :key="type.value"
-              class="flex items-center gap-2.5 p-3 border rounded-xl cursor-pointer transition-all text-sm"
+              class="flex items-center gap-2 px-3 py-2.5 border rounded-xl cursor-pointer transition-all text-sm"
               :class="form.insurance_types.includes(type.value)
                 ? 'border-blue-500 bg-blue-50 text-blue-800'
                 : 'border-gray-200 hover:border-gray-300 text-gray-700'">
               <input type="checkbox" :value="type.value" v-model="form.insurance_types" class="hidden" />
               <span class="text-base shrink-0">{{ type.icon }}</span>
-              <span class="font-medium leading-tight">{{ type.label }}</span>
-              <svg v-if="form.insurance_types.includes(type.value)" class="w-4 h-4 text-blue-600 ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span class="font-medium whitespace-nowrap">{{ type.label }}</span>
+              <svg v-if="form.insurance_types.includes(type.value)" class="w-3.5 h-3.5 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
               </svg>
             </label>
           </div>
           <p v-if="validationError && form.insurance_types.length === 0" class="text-red-600 text-xs mt-1.5">Bitte mindestens eine Versicherung auswählen.</p>
+          <p v-if="form.insurance_types.includes('andere')" class="text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs mt-2">
+            Bitte beschreiben Sie im Feld «Anmerkungen» unten, für welche Versicherung Sie eine Offerte wünschen.
+          </p>
         </div>
 
         <!-- Contact fields -->
