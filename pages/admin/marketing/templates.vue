@@ -205,7 +205,7 @@
               v-if="previewHtml"
               :srcdoc="previewHtml"
               class="w-full h-96 border-0"
-              sandbox="allow-same-origin"
+              sandbox="allow-same-origin allow-scripts"
             />
             <p v-else class="text-sm text-gray-400 text-center py-12">Kein Inhalt zum Anzeigen</p>
           </div>
@@ -284,9 +284,15 @@ const generatedHtml = computed(() => {
   return `${headline}${paragraphs}${cta}${consent}`
 })
 
-// The final HTML that gets saved — either from simple generator or raw HTML editor
+// The final HTML that gets saved — either from simple generator or raw HTML editor.
+// When in simple/preview mode and the simple fields haven't been filled yet
+// (e.g. complex HTML that couldn't be fully parsed), fall back to the raw html_body
+// so the preview stays accurate until the user actually starts editing.
+const simpleHasContent = computed(() => !!(simple.headline || simple.body))
+
 const finalHtml = computed(() => {
   if (editorMode.value === 'html') return form.html_body
+  if (!simpleHasContent.value && form.html_body) return form.html_body
   return generatedHtml.value
 })
 
@@ -358,13 +364,59 @@ function openCreate() {
   modalOpen.value = true
 }
 
+function parseHtmlToSimple(html: string) {
+  const div = document.createElement('div')
+  div.innerHTML = html
+
+  // Headline: first <h2>
+  const h2 = div.querySelector('h2')
+  simple.headline = h2?.textContent?.trim() || ''
+  if (h2) h2.remove()
+
+  // CTA button: <a> with inline background style (not unsubscribe/consent)
+  const links = Array.from(div.querySelectorAll('a'))
+  const ctaLink = links.find(a =>
+    a.style.background && !a.href?.includes('unsubscribe') && !a.href?.includes('consent') && a.href !== '#'
+  )
+  if (ctaLink) {
+    simple.showCta = true
+    simple.ctaText = ctaLink.textContent?.trim() || ''
+    simple.ctaUrl = ctaLink.getAttribute('href') || ''
+    ctaLink.closest('div')?.remove() || ctaLink.remove()
+  } else {
+    simple.showCta = false
+    simple.ctaText = 'Mehr erfahren →'
+    simple.ctaUrl = ''
+  }
+
+  // Consent section: detect {{consent_link}}
+  simple.showConsent = html.includes('{{consent_link}}')
+  if (simple.showConsent) {
+    div.querySelectorAll('div').forEach(d => {
+      if (d.innerHTML.includes('consent_link')) d.remove()
+    })
+  }
+
+  // Body: remaining <p> text joined with double newlines
+  const paragraphs = Array.from(div.querySelectorAll('p'))
+    .map(p => p.textContent?.trim())
+    .filter(Boolean)
+  simple.body = paragraphs.join('\n\n')
+}
+
 function openEdit(t: any) {
   editingTemplate.value = t
   form.name = t.name
   form.subject = t.subject
   form.html_body = t.html_body
-  // Open in HTML mode when editing existing templates (they may have custom HTML)
-  editorMode.value = 'html'
+  simple.headline = ''
+  simple.body = ''
+  simple.showCta = false
+  simple.ctaText = 'Mehr erfahren →'
+  simple.ctaUrl = ''
+  simple.showConsent = false
+  parseHtmlToSimple(t.html_body)
+  editorMode.value = 'simple'
   modalOpen.value = true
 }
 

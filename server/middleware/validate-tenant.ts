@@ -1,6 +1,9 @@
 export default defineEventHandler(async (event) => {
   const url = event.node.req.url || ''
   
+  // API routes are never subject to tenant-slug validation
+  if (url.startsWith('/api/')) return
+
   // List of routes that require tenant validation
   const protectedRoutes = ['/partner/', '/affiliate-dashboard', '/register']
   

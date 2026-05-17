@@ -20,18 +20,23 @@ import { sendEmail } from '~/server/utils/email'
 import { wrapMarketingEmail } from '~/server/utils/email-template'
 
 const SIMY_IBAN = 'CH2706300508265621908'
-const PARTNER_EMAIL_HELVETIA = 'michele.cecio@helvetia.ch'
-const SIMY_CC_EMAIL = 'info@simy.ch'
+const PARTNER_EMAIL_HELVETIA = 'pascal_kilchenmann@icloud.com' // TODO: change to michele.cecio@helvetia.ch before go-live
+const SIMY_CC_EMAIL = 'pascal_kilchenmann@icloud.com' // TODO: change to info@simy.ch before go-live
+
+// In development, all emails are redirected to this address instead of real recipients
+const DEV_OVERRIDE_EMAIL = process.env.NODE_ENV !== 'production'
+  ? 'pascal_kilchenmann@icloud.com'
+  : null
 
 const INSURANCE_LABELS: Record<string, string> = {
-  auto: 'Autoversicherung',
-  motorrad: 'Motorrad',
+  fahrzeug: 'Fahrzeugversicherung',
   hausrat: 'Hausrat',
   privathaftpflicht: 'Privathaftpflicht',
   rechtsschutz: 'Rechtsschutz',
   krankenversicherung: 'Krankenversicherung',
   lebensversicherung: 'Lebensversicherung',
   reise: 'Reiseversicherung',
+  andere: 'Andere',
 }
 
 export default defineEventHandler(async (event) => {
@@ -183,39 +188,68 @@ export default defineEventHandler(async (event) => {
     ${referralHtml}
   `
 
-  // ── 7. Email to Helvetia ────────────────────────────────────
+  // ── 7. Confirmation to customer ─────────────────────────────
+  const customerContent = `
+    <h2 style="margin:0 0 8px;color:#111827;font-size:20px;font-weight:800">Ihre Anfrage ist eingegangen!</h2>
+    <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.7">
+      Liebe/r ${firstName || 'Kunde'},<br/><br/>
+      vielen Dank für Ihre Anfrage. Wir haben Ihre Offerten-Anfrage an <strong>Helvetia Glarus</strong> weitergeleitet.
+      Ein Berater wird sich in Kürze bei Ihnen melden — in der Regel innert 1–2 Arbeitstagen.
+    </p>
+    <div style="padding:20px;background:#f0fdf4;border-radius:12px;border:1px solid #bbf7d0;margin:0 0 20px">
+      <div style="font-size:12px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">🛡️ Ihre gewünschten Offerten</div>
+      <div style="font-size:15px;color:#166534;font-weight:600">${insuranceList}</div>
+    </div>
+    <div style="padding:16px 20px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;font-size:13px;color:#64748b">
+      <p style="margin:0 0 8px"><strong style="color:#374151">Ihr Ansprechpartner</strong></p>
+      <p style="margin:0 0 4px;color:#374151;font-weight:600">Michele Cecio · Helvetia Glarus</p>
+      <p style="margin:0 0 3px">📞 <a href="tel:+41582806051" style="color:#2563eb;text-decoration:none">+41 58 280 60 51</a></p>
+      <p style="margin:0">✉️ <a href="mailto:michele.cecio@helvetia.ch" style="color:#2563eb;text-decoration:none">michele.cecio@helvetia.ch</a></p>
+    </div>
+  `
   await sendEmail({
-    to: PARTNER_EMAIL_HELVETIA,
-    subject: `Offerten-Anfrage: ${fullName || email} — ${insuranceList}`,
+    to: DEV_OVERRIDE_EMAIL ?? email,
+    subject: `${DEV_OVERRIDE_EMAIL ? '[TEST — Kunden-Bestätigung] ' : ''}Ihre Helvetia-Offerten-Anfrage ist eingegangen`,
+    html: wrapMarketingEmail(customerContent, tenantName, '#', primaryColor, logoUrl, null),
+    fromName: tenantName,
+  })
+
+  // ── 8. Email to Helvetia ────────────────────────────────────
+  const helvetiaTo = DEV_OVERRIDE_EMAIL ?? PARTNER_EMAIL_HELVETIA
+  await sendEmail({
+    to: helvetiaTo,
+    subject: `${DEV_OVERRIDE_EMAIL ? '[TEST — Helvetia] ' : ''}Offerten-Anfrage: ${fullName || email} — ${insuranceList}`,
     html: wrapMarketingEmail(helvetiaContent, 'Simy Partner-Portal', '#', '#0f172a', null, null),
     fromName: 'Simy Partner-Portal',
   })
 
   // ── 8. Confirmation to tenant (minimal) ─────────────────────
-  if (tenantEmail) {
-    const tenantContent = `
-      <h2 style="margin:0 0 16px;color:#111827;font-size:20px;font-weight:800">Neue Offerten-Anfrage eingegangen</h2>
-      <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.7">
-        Ein Interessent hat via Ihr Partner-Portal eine unverbindliche Offerte angefragt und wurde an Helvetia weitergeleitet.
-      </p>
-      <div style="padding:16px 20px;background:#f9fafb;border-radius:12px;border:1px solid #e5e7eb;font-size:14px">
-        <p style="margin:0 0 6px;color:#6b7280">Name: <strong style="color:#111827">${fullName || '—'}</strong></p>
-        <p style="margin:0 0 6px;color:#6b7280">Email: <strong style="color:#111827">${email}</strong></p>
-        <p style="margin:0;color:#6b7280">Gewünschte Offerten: <strong style="color:#111827">${insuranceList}</strong></p>
-      </div>
-    `
+  const tenantContent = `
+    <h2 style="margin:0 0 16px;color:#111827;font-size:20px;font-weight:800">Neue Offerten-Anfrage eingegangen</h2>
+    <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.7">
+      Ein Interessent hat via Ihr Partner-Portal eine unverbindliche Offerte angefragt und wurde an Helvetia weitergeleitet.
+    </p>
+    <div style="padding:16px 20px;background:#f9fafb;border-radius:12px;border:1px solid #e5e7eb;font-size:14px">
+      <p style="margin:0 0 6px;color:#6b7280">Name: <strong style="color:#111827">${fullName || '—'}</strong></p>
+      <p style="margin:0 0 6px;color:#6b7280">Email: <strong style="color:#111827">${email}</strong></p>
+      <p style="margin:0;color:#6b7280">Gewünschte Offerten: <strong style="color:#111827">${insuranceList}</strong></p>
+    </div>
+  `
+  const tenantTo = DEV_OVERRIDE_EMAIL ?? tenantEmail
+  if (tenantTo) {
     await sendEmail({
-      to: tenantEmail,
-      subject: `Neue Helvetia-Offerten-Anfrage von ${fullName || email}`,
+      to: tenantTo,
+      subject: `${DEV_OVERRIDE_EMAIL ? '[TEST — Tenant-Bestätigung] ' : ''}Neue Helvetia-Offerten-Anfrage von ${fullName || email}`,
       html: wrapMarketingEmail(tenantContent, tenantName, '#', primaryColor, logoUrl, null),
       fromName: 'Simy Partner-Portal',
     })
   }
 
   // ── 9. CC to Simy ───────────────────────────────────────────
+  const simyTo = DEV_OVERRIDE_EMAIL ?? SIMY_CC_EMAIL
   await sendEmail({
-    to: SIMY_CC_EMAIL,
-    subject: `[Helvetia Lead] ${fullName || email} via ${tenantName}`,
+    to: simyTo,
+    subject: `${DEV_OVERRIDE_EMAIL ? '[TEST — Simy CC] ' : ''}[Helvetia Lead] ${fullName || email} via ${tenantName}`,
     html: wrapMarketingEmail(helvetiaContent, 'Simy Partner-Portal', '#', '#0f172a', null, null),
     fromName: 'Simy Partner-Portal',
   })
