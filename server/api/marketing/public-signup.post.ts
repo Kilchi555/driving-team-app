@@ -28,13 +28,15 @@ export default defineEventHandler(async (event) => {
 
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL || 'https://app.simy.ch'
 
-  // Upsert lead
-  const { data: lead, error } = await supabase
+  const normalizedEmail = email.toLowerCase().trim()
+
+  // Try to insert; if duplicate, fetch the existing lead
+  const { error: insertError } = await supabase
     .from('leads')
     .upsert(
       {
         tenant_id: tenant.id,
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         first_name: first_name?.trim() || null,
         last_name: last_name?.trim() || null,
         categories,
@@ -43,10 +45,17 @@ export default defineEventHandler(async (event) => {
       },
       { onConflict: 'tenant_id,email', ignoreDuplicates: true }
     )
+
+  if (insertError) throw createError({ statusCode: 500, statusMessage: insertError.message })
+
+  const { data: lead, error: selectError } = await supabase
+    .from('leads')
     .select('id, unsubscribe_token, status')
+    .eq('tenant_id', tenant.id)
+    .eq('email', normalizedEmail)
     .single()
 
-  if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+  if (selectError || !lead) throw createError({ statusCode: 500, statusMessage: 'Lead nicht gefunden' })
 
   // Send double opt-in confirmation email
   const consentLink = buildConsentLink(baseUrl, lead.id, lead.unsubscribe_token)

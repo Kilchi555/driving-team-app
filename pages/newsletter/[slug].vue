@@ -3,10 +3,18 @@
     <div class="bg-white rounded-2xl shadow-lg w-full max-w-md overflow-hidden">
 
       <!-- Header -->
-      <div class="p-8 text-center" :style="{ background: tenant?.primary_color || '#6366f1' }">
-        <img v-if="tenant?.logo_square_url" :src="tenant.logo_square_url" class="h-14 w-auto mx-auto mb-4 object-contain" style="mix-blend-mode: multiply;" />
-        <h1 class="text-2xl font-black text-white">Newsletter anmelden</h1>
-        <p class="text-white/80 text-sm mt-1">{{ tenant?.name || 'Fahrschule' }}</p>
+      <div>
+        <!-- Wide logo on white background -->
+        <div class="px-8 pt-7 pb-5 flex items-center justify-center bg-white">
+          <img v-if="tenant?.logo_url" :src="tenant.logo_url"
+            class="h-14 w-auto object-contain" style="max-width:240px" :alt="tenant.name" />
+          <span v-else class="text-gray-900 text-xl font-bold">{{ tenant?.name }}</span>
+        </div>
+        <!-- Colored title bar -->
+        <div class="px-6 py-4 text-center" :style="{ background: tenant?.primary_color || '#6366f1' }">
+          <h1 class="text-lg font-black text-white">Newsletter anmelden</h1>
+          <p class="text-white/70 text-xs mt-0.5">{{ tenant?.name || 'Fahrschule' }}</p>
+        </div>
       </div>
 
       <!-- Success -->
@@ -80,6 +88,7 @@ const tenant = computed(() => {
   return {
     name: d.brand_name || d.name,
     primary_color: d.primary_color || '#6366f1',
+    logo_url: d.logo_wide_url || d.logo_url || '',
     logo_square_url: d.logo_square_url || '',
   }
 })
