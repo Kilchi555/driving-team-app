@@ -43,9 +43,10 @@ export async function fetchTenantEmailContext(tenantId: string): Promise<TenantE
     c.parent_category_id !== null || !parentIdsWithChildren.has(c.id)
   )
 
-  const isHttps = (v?: string | null) => !!v && v.startsWith('https://')
-  const logoUrl = isHttps(tenantResult.data?.logo_url) ? tenantResult.data!.logo_url! : null
-  const logoSquareUrl = isHttps(tenantResult.data?.logo_square_url) ? tenantResult.data!.logo_square_url! : null
+  // Accept https:// URLs and data: URIs (small base64 logos are fine for email)
+  const isUsable = (v?: string | null) => !!v && (v.startsWith('https://') || v.startsWith('data:'))
+  const logoUrl = isUsable(tenantResult.data?.logo_url) ? tenantResult.data!.logo_url! : null
+  const logoSquareUrl = isUsable(tenantResult.data?.logo_square_url) ? tenantResult.data!.logo_square_url! : null
 
   return {
     tenantName: tenantResult.data?.name || 'Fahrschule',
