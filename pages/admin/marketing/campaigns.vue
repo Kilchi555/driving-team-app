@@ -213,7 +213,7 @@
           <div v-if="estimatedCount !== null" class="bg-blue-50 rounded-lg p-3 text-sm">
             <span class="text-blue-800">
               Geschätzte Empfänger: <strong>{{ estimatedCount.toLocaleString('de-CH') }}</strong> aktive Leads
-              <span v-if="createForm.categories.length"> in den Kategorien {{ createForm.categories.join(', ') }}</span>
+              <span v-if="createForm.categories.length"> in den Kategorien {{ createForm.categories.map(v => drivingCategories.find(d => d.value === v)?.label || v).join(', ') }}</span>
             </span>
           </div>
         </div>
@@ -402,11 +402,10 @@ async function loadData() {
     const [c, t, cats] = await Promise.all([
       $fetch<any>('/api/marketing/campaigns', { query: { tenantId } }),
       $fetch<any>('/api/marketing/templates', { query: { tenantId } }),
-      $fetch<any>('/api/admin/categories').catch(() => ({ categories: [] })),
+      $fetch<any>('/api/marketing/lead-categories', { query: { tenantId } }).catch(() => ({ categories: [] })),
     ])
     drivingCategories.value = (cats?.categories || [])
-      .filter((c: any) => c.is_active !== false)
-      .map((c: any) => ({ value: c.name, label: c.name }))
+      .map((c: any) => ({ value: c.code, label: c.name }))
     campaigns.value = c.campaigns
     templates.value = t.templates
   } finally {
@@ -436,15 +435,29 @@ async function loadEstimatedCount() {
   const tenantId = authStore.userProfile?.tenant_id
   if (!tenantId) return
   try {
-    const res = await $fetch<any>('/api/marketing/leads', {
-      query: {
-        tenantId,
-        status: 'active',
-        category: createForm.categories[0] || undefined,
-        limit: 1,
-      },
-    })
-    estimatedCount.value = res.total
+    const cats = createForm.categories
+    if (cats.length === 0) {
+      // No filter — get total active leads
+      const res = await $fetch<any>('/api/marketing/leads', {
+        query: { tenantId, status: 'active', limit: 1 },
+      })
+      estimatedCount.value = res.total
+    } else if (cats.length === 1) {
+      // Single category — use API filter directly
+      const res = await $fetch<any>('/api/marketing/leads', {
+        query: { tenantId, status: 'active', category: cats[0], limit: 1 },
+      })
+      estimatedCount.value = res.total
+    } else {
+      // Multiple categories — fetch all active leads and count client-side
+      const res = await $fetch<any>('/api/marketing/leads', {
+        query: { tenantId, status: 'active', limit: 1000 },
+      })
+      const all: any[] = res.leads ?? []
+      estimatedCount.value = all.filter((l: any) =>
+        cats.some((c: string) => l.categories?.includes(c))
+      ).length
+    }
   } catch {
     estimatedCount.value = null
   }
