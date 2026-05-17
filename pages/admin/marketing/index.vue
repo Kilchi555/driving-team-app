@@ -19,7 +19,14 @@
         <div class="bg-white rounded-xl border p-5">
           <div class="text-sm font-medium text-gray-500">Warten auf Consent</div>
           <div class="text-3xl font-bold text-yellow-600 mt-1">{{ stats?.leads.pendingConsent ?? '—' }}</div>
-          <div class="text-xs text-gray-400 mt-1">Re-Consent ausstehend</div>
+          <NuxtLink
+            v-if="stats && stats.leads.pendingConsent > 0"
+            to="/admin/marketing/campaigns"
+            class="inline-block mt-1 text-xs font-medium text-yellow-700 underline hover:text-yellow-900"
+          >
+            Kampagne erstellen →
+          </NuxtLink>
+          <div v-else class="text-xs text-gray-400 mt-1">Re-Consent ausstehend</div>
         </div>
         <div class="bg-white rounded-xl border p-5">
           <div class="text-sm font-medium text-gray-500">Emails versendet</div>
@@ -30,23 +37,6 @@
           <div class="text-sm font-medium text-gray-500">Templates</div>
           <div class="text-3xl font-bold text-gray-900 mt-1">{{ stats?.templates.total ?? '—' }}</div>
           <div class="text-xs text-gray-400 mt-1">Email-Vorlagen</div>
-        </div>
-      </div>
-
-      <!-- GDPR Banner if pending consent leads exist -->
-      <div v-if="stats && stats.leads.pendingConsent > 0" class="bg-yellow-50 border border-yellow-200 rounded-xl p-5 flex items-start gap-4">
-        <svg class="w-5 h-5 text-yellow-600 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-        </svg>
-        <div>
-          <div class="font-semibold text-yellow-800">{{ stats.leads.pendingConsent.toLocaleString('de-CH') }} Leads warten auf Re-Consent</div>
-          <p class="text-sm text-yellow-700 mt-1">
-            Diese Kontakte dürfen gemäss DSGVO / UWG §7 noch keine Marketing-Emails erhalten.
-            Erstelle eine Re-Consent-Kampagne und sende sie an alle Leads mit Status "Consent ausstehend".
-          </p>
-          <NuxtLink to="/admin/marketing/campaigns" class="inline-block mt-2 text-sm font-medium text-yellow-800 underline">
-            Kampagne erstellen
-          </NuxtLink>
         </div>
       </div>
 
