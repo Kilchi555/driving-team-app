@@ -46,12 +46,14 @@ export function wrapMarketingEmail(
 
   // Wide logo replaces the colored header bar entirely
   const header = hasWideLogo
-    ? `<div style="background:#fff;padding:28px 32px 20px;text-align:center;border-bottom:3px solid ${primaryColor}">
-        <img src="${logoUrl}" alt="${tenantName}" style="max-height:64px;max-width:260px;object-fit:contain;display:block;margin:0 auto" />
+    ? `<div style="background:${primaryColor};padding:24px 32px;text-align:center">
+        <img src="${logoUrl}" alt="${tenantName}" style="max-height:64px;max-width:280px;display:block;margin:0 auto" />
       </div>`
-    : `<div style="background:${primaryColor};padding:20px 32px;display:flex;align-items:center;gap:14px">
-        ${hasSquareLogo ? `<img src="${logoSquareUrl}" alt="${tenantName}" style="height:40px;width:40px;object-fit:contain;border-radius:8px;background:#fff;padding:4px;flex-shrink:0" />` : ''}
-        <h1 style="margin:0;color:#fff;font-size:18px;font-weight:600">${tenantName}</h1>
+    : `<div style="background:${primaryColor};padding:20px 32px">
+        <table cellpadding="0" cellspacing="0" border="0"><tr>
+          ${hasSquareLogo ? `<td style="padding-right:12px;vertical-align:middle"><img src="${logoSquareUrl}" alt="${tenantName}" style="height:40px;width:40px;border-radius:8px;background:#fff;padding:4px;display:block" /></td>` : ''}
+          <td style="vertical-align:middle"><span style="color:#fff;font-size:18px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,sans-serif">${tenantName}</span></td>
+        </tr></table>
       </div>`
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
