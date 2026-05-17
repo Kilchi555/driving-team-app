@@ -2,34 +2,36 @@
   <div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-start justify-center p-4 py-8">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
 
-      <!-- Header -->
-      <div class="relative p-8 text-center overflow-hidden" :style="{ background: tenant?.primary_color || '#0f172a' }">
-        <!-- Background pattern -->
-        <div class="absolute inset-0 opacity-10" style="background-image:radial-gradient(circle at 20% 50%, white 1px, transparent 1px),radial-gradient(circle at 80% 20%, white 1px, transparent 1px);background-size:30px 30px"></div>
-
-        <!-- Logos side by side -->
-        <div class="relative flex items-center justify-center gap-4 mb-5">
-          <img v-if="tenant?.logo_square_url && tenant.logo_square_url.startsWith('data:')"
-            :src="tenant.logo_square_url"
-            class="h-12 w-auto object-contain"
+      <!-- Header: white logo area -->
+      <div class="bg-white px-8 pt-7 pb-6">
+        <!-- Tenant wide logo -->
+        <div class="flex items-center justify-center mb-5">
+          <img v-if="tenant?.logo_url"
+            :src="tenant.logo_url"
+            class="h-14 w-auto object-contain"
+            style="max-width:260px"
             :alt="tenant.name" />
-          <img v-else-if="tenant?.logo_square_url"
-            :src="tenant.logo_square_url"
-            class="h-12 w-auto object-contain bg-white/20 rounded-lg p-1"
-            :alt="tenant.name" />
-          <div v-if="tenant?.logo_square_url" class="w-px h-10 bg-white/30"></div>
-          <!-- Helvetia logo (white version via CSS) -->
-          <div class="flex items-center gap-2">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <rect width="32" height="32" rx="6" fill="white" fill-opacity="0.2"/>
-              <text x="16" y="22" text-anchor="middle" fill="white" font-size="11" font-weight="bold" font-family="serif">H</text>
-            </svg>
-            <span class="text-white font-bold text-lg tracking-tight">Helvetia</span>
-          </div>
+          <span v-else class="text-gray-900 text-xl font-bold">{{ tenant?.name }}</span>
         </div>
 
-        <h1 class="relative text-2xl font-black text-white leading-tight">Kostenlose Versicherungs-Offerte</h1>
-        <p class="relative text-white/80 text-sm mt-2">Unverbindlich · In Zusammenarbeit mit Helvetia Versicherungen</p>
+        <!-- Divider + "In Zusammenarbeit mit" -->
+        <div class="flex items-center gap-3 mb-5">
+          <div class="flex-1 h-px bg-gray-200"></div>
+          <span class="text-gray-400 text-xs font-medium whitespace-nowrap">In Zusammenarbeit mit</span>
+          <div class="flex-1 h-px bg-gray-200"></div>
+        </div>
+
+        <!-- Real Helvetia logo -->
+        <div class="flex items-center justify-center">
+          <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAxNi4yLjEsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+DQo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkViZW5lXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB3aWR0aD0iMTY5LjkzOXB4IiBoZWlnaHQ9IjM5Ljg0NnB4IiB2aWV3Qm94PSIwIDAgMTY5LjkzOSAzOS44NDYiIGVuYWJsZS1iYWNrZ3JvdW5kPSJuZXcgMCAwIDE2OS45MzkgMzkuODQ2Ig0KCSB4bWw6c3BhY2U9InByZXNlcnZlIj4NCjxnPg0KCTxwYXRoIGZpbGw9IiMxODE3MTYiIGQ9Ik02LjAxNSw5LjV2MTAuMDUzaDAuMDY2YzEuMzktMS44NSwzLjA3NS0yLjcxMSw1LjQyNC0yLjcxMWM0LjI5NSwwLDYuMzc5LDIuODQ0LDYuMzc5LDcuMTQzdjEwLjM4MWgtNi4wMTYNCgkJdi04LjY5NGMwLTEuOTg1LTAuMjk4LTQuMDMyLTIuNzEyLTQuMDMyYy0yLjM3OSwwLTMuMTQxLDIuMDQ3LTMuMTQxLDQuMDMydjguNjk0SDBWOS41SDYuMDE1eiIvPg0KCTxwYXRoIGZpbGw9IiMxODE3MTYiIGQ9Ik0zOC4yODIsMjYuODk2SDI1LjYyYzAsMi40NDQsMS4yOTEsMy43NjgsMy43NywzLjc2OGMxLjI5LDAsMi4yMTQtMC40MzEsMi44NzYtMS41NTNoNS43ODUNCgkJYy0wLjk2LDQtNC43NjEsNS44MTgtOC42MjksNS44MThjLTUuNjIsMC05LjgxOS0zLjE3My05LjgxOS05LjAyNWMwLTUuNjU1LDMuODY3LTkuMDYxLDkuMzg5LTkuMDYxDQoJCWM1Ljg4NSwwLDkuMjg5LDMuNjM4LDkuMjg5LDkuNDI0VjI2Ljg5NnogTTMyLjY5NiwyMy40MjNjLTAuMjk5LTEuNjIxLTEuNzg2LTIuNjgtMy40MDYtMi42OGMtMS43NTIsMC0zLjIwNiwwLjkyOC0zLjU3MiwyLjY4DQoJCUgzMi42OTZ6Ii8+DQoJPHBhdGggZmlsbD0iIzE4MTcxNiIgZD0iTTQ2LjA1LDM0LjM2NmgtNi4wMTVWOS41aDYuMDE1VjM0LjM2NnoiLz4NCgk8cGF0aCBmaWxsPSIjMTgxNzE2IiBkPSJNNTcuNDY1LDI2LjEwM2w0LjAzNC04LjY5OGg2Ljc0NWwtOC44NjEsMTYuOTYyaC0zLjgzNWwtOC44OTMtMTYuOTYyaDYuNzQ0TDU3LjQ2NSwyNi4xMDN6Ii8+DQoJPHBhdGggZmlsbD0iIzE4MTcxNiIgZD0iTTg1LjQzNywyNi44OTZINzIuNzc1YzAsMi40NDQsMS4yODksMy43NjgsMy43NywzLjc2OGMxLjI4OSwwLDIuMjE1LTAuNDMxLDIuODc1LTEuNTUzaDUuNzg1DQoJCWMtMC45NTgsNC00Ljc2MSw1LjgxOC04LjYyNiw1LjgxOGMtNS42MiwwLTkuODE5LTMuMTczLTkuODE5LTkuMDI1YzAtNS42NTUsMy44NjktOS4wNjEsOS4zODgtOS4wNjENCgkJYzUuODg0LDAsOS4yOSwzLjYzOCw5LjI5LDkuNDI0VjI2Ljg5NnogTTc5Ljg0OSwyMy40MjNjLTAuMjk2LTEuNjIxLTEuNzg0LTIuNjgtMy40MDMtMi42OGMtMS43NTMsMC0zLjIwOCwwLjkyOC0zLjU3MSwyLjY4DQoJCUg3OS44NDl6Ii8+DQoJPHBhdGggZmlsbD0iIzE4MTcxNiIgZD0iTTk0LjMxLDM0LjM2NmgtNi4wMTZ2LTEyaC0xLjk1di00Ljk2MmgxLjk1di01LjA5aDYuMDE2djUuMDloMy40MDV2NC45NjJIOTQuMzFWMzQuMzY2eiIvPg0KCTxwYXRoIGZpbGw9IiMxODE3MTYiIGQ9Ik0xMDUuMjM3LDEyLjA1YzAsMS44NTEtMS41MTgsMy4zNzEtMy4zNzEsMy4zNzFjLTEuODUsMC0zLjM3Mi0xLjUyLTMuMzcyLTMuMzcxDQoJCWMwLTEuODUyLDEuNTIyLTMuMzcyLDMuMzcyLTMuMzcyQzEwMy43Miw4LjY3OCwxMDUuMjM3LDEwLjE5OCwxMDUuMjM3LDEyLjA1eiBNMTA0Ljg3NSwzNC4zNjZoLTYuMDE5VjE3LjQwNGg2LjAxOVYzNC4zNjZ6Ii8+DQoJPHBhdGggZmlsbD0iIzE4MTcxNiIgZD0iTTEyNi4zOTcsMzQuMzY2aC02LjAyVjMyLjQ4aC0wLjA2NGMtMS4wNiwxLjY4OC0zLjE0MSwyLjQ0OC01LjEyNCwyLjQ0OGMtNS4wMjYsMC04LjU2My00LjE5OS04LjU2My05LjA2DQoJCWMwLTQuODYyLDMuNDcyLTkuMDI3LDguNDk4LTkuMDI3YzEuOTQ4LDAsMy45OTcsMC43MjgsNS4yNTQsMi4yMTZ2LTEuNjU0aDYuMDJWMzQuMzY2eiBNMTEyLjg0MywyNS45MDMNCgkJYzAsMi4xNDgsMS40MiwzLjgsMy44NjYsMy44czMuODY4LTEuNjUxLDMuODY4LTMuOGMwLTIuMDgzLTEuNDIyLTMuODM2LTMuODY4LTMuODM2UzExMi44NDMsMjMuODIsMTEyLjg0MywyNS45MDN6Ii8+DQoJPGc+DQoJCTxnPg0KCQkJPGc+DQoJCQkJPHBvbHlnb24gZmlsbD0iIzU2M0I2QyIgcG9pbnRzPSIxNDcuODMyLDI3LjIzOCAxNDAuMTExLDI5LjIyMSAxNDYuMTExLDE1LjM1NSAxNTMuODYsMTMuNTA3IAkJCQkiLz4NCgkJCTwvZz4NCgkJPC9nPg0KCQk8Zz4NCgkJCTxwb2x5Z29uIGZpbGw9IiM3MTUxOEMiIHBvaW50cz0iMTQ1LjcyNiwxLjY5OSAxNTMuNTA2LDAgMTU2LjYzOCw3LjE4MSAxNDguODc5LDguOTY3IAkJCSIvPg0KCQk8L2c+DQoJCTxnPg0KCQkJPHBvbHlnb24gZmlsbD0iIzg3NjFBOCIgcG9pbnRzPSIxMzQuMzc5LDI4LjIzOSAxNDUuNzI2LDEuNjk5IDE0OC44NzksOC45NjcgMTQwLjExMSwyOS4yMjEgCQkJIi8+DQoJCTwvZz4NCgk8L2c+DQoJPGc+DQoJCTxwb2x5Z29uIGZpbGw9IiMxMTgyODkiIHBvaW50cz0iMTQwLjExMSwyOS4yMjEgMTQ3LjgzMiwyNy4yMzggMTYwLjc3LDI5LjM5OCAxNTMuMDY5LDMxLjQzOCAJCSIvPg0KCQk8Zz4NCgkJCTxwb2x5Z29uIGZpbGw9IiM0NkE4QjMiIHBvaW50cz0iMTU2LjIzNiwzOC43NjIgMTMxLjc2NCwzNC4zNjYgMTM0LjM3OSwyOC4yMzkgMTUzLjA2OSwzMS40MzggCQkJIi8+DQoJCTwvZz4NCgk8L2c+DQoJPGc+DQoJCTxnPg0KCQkJPHBvbHlnb24gZmlsbD0iIzlGMTcxNyIgcG9pbnRzPSIxNDguODc5LDguOTY3IDE1Ni42MzgsNy4xODEgMTY5LjkzOSwzNy42ODkgMTYyLjI3NywzOS44NDYgCQkJIi8+DQoJCTwvZz4NCgkJPGc+DQoJCQk8cG9seWdvbiBmaWxsPSIjQzIxOTI0IiBwb2ludHM9IjE0Ni4xMTEsMTUuMzU1IDE0OC44NzksOC45NjcgMTYyLjI3NywzOS44NDYgMTU2LjIzNiwzOC43NjIgCQkJIi8+DQoJCTwvZz4NCgk8L2c+DQo8L2c+DQo8L3N2Zz4NCg=="
+            alt="Helvetia" class="h-8 w-auto object-contain" />
+        </div>
+      </div>
+
+      <!-- Title bar in tenant color -->
+      <div class="px-6 py-4 text-center" :style="{ background: tenant?.primary_color || '#0f172a' }">
+        <h1 class="text-lg font-black text-white">Kostenlose Versicherungs-Offerte</h1>
+        <p class="text-white/70 text-xs mt-0.5">Unverbindlich · Nur 2 Minuten</p>
       </div>
 
       <!-- Success -->
@@ -200,19 +202,20 @@ const tenant = computed(() => {
     id: d.id,
     name: d.name,
     primary_color: d.primary_color || '#0f172a',
+    logo_url: d.logo_wide_url || d.logo_url,
     logo_square_url: d.logo_square_url,
   }
 })
 
 const insuranceTypes = [
-  { value: 'auto', label: 'Autoversicherung', icon: '🚗' },
-  { value: 'motorrad', label: 'Motorrad', icon: '🏍️' },
+  { value: 'fahrzeug', label: 'Fahrzeugversicherung', icon: '🚗' },
   { value: 'hausrat', label: 'Hausrat', icon: '🏠' },
   { value: 'privathaftpflicht', label: 'Privathaftpflicht', icon: '🤝' },
   { value: 'rechtsschutz', label: 'Rechtsschutz', icon: '⚖️' },
-  { value: 'krankenversicherung', label: 'Kranken-versicherung', icon: '🏥' },
-  { value: 'lebensversicherung', label: 'Lebens-versicherung', icon: '❤️' },
+  { value: 'krankenversicherung', label: 'Krankenversicherung', icon: '🏥' },
+  { value: 'lebensversicherung', label: 'Lebensversicherung', icon: '❤️' },
   { value: 'reise', label: 'Reise', icon: '✈️' },
+  { value: 'andere', label: 'Andere', icon: '➕' },
 ]
 
 const form = reactive({
