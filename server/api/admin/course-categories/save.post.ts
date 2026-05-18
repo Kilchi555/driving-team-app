@@ -18,9 +18,25 @@ export default defineEventHandler(async (event) => {
     if (!tenantId) throw createError({ statusCode: 400, statusMessage: 'No tenant' })
 
     const body = await readBody(event)
-    const { categoryId, name, description } = body
+    const { categoryId, ...rest } = body
 
-    if (!name) throw createError({ statusCode: 400, statusMessage: 'Missing name' })
+    if (!rest.name) throw createError({ statusCode: 400, statusMessage: 'Missing name' })
+
+    // Whitelist of allowed columns (prevents arbitrary field injection)
+    const ALLOWED = [
+      'name', 'description', 'code', 'icon', 'color', 'sort_order',
+      'default_max_participants', 'default_price_rappen',
+      'default_requires_room', 'default_requires_vehicle',
+      'default_room_id', 'default_vehicle_id',
+      'requires_sari_sync', 'sari_category_code',
+      'session_count', 'hours_per_session', 'total_duration_hours', 'session_structure',
+      'allow_partial_enrollment', 'partial_start_position', 'partial_price_rappen',
+      'is_active',
+    ]
+    const fields: Record<string, any> = { updated_at: new Date().toISOString() }
+    for (const key of ALLOWED) {
+      if (rest[key] !== undefined) fields[key] = rest[key]
+    }
 
     const supabase = getSupabaseAdmin()
 
@@ -28,8 +44,9 @@ export default defineEventHandler(async (event) => {
     if (categoryId) {
       const { data, error: err } = await supabase
         .from('course_categories')
-        .update({ name, description, updated_at: new Date().toISOString() })
+        .update(fields)
         .eq('id', categoryId)
+        .eq('tenant_id', tenantId)
         .select()
         .single()
       if (err) throw err
@@ -37,7 +54,7 @@ export default defineEventHandler(async (event) => {
     } else {
       const { data, error: err } = await supabase
         .from('course_categories')
-        .insert({ tenant_id: tenantId, name, description })
+        .insert({ tenant_id: tenantId, created_by: user.id, ...fields })
         .select()
         .single()
       if (err) throw err

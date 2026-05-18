@@ -308,8 +308,8 @@
                       ? 'bg-orange-50 hover:bg-orange-100' 
                       : 'hover:bg-gray-50'
                   ]"
-                  @click="editCourse(course)"
-                  :title="course.sari_managed ? 'SARI-verwalteter Kurs (Grunddaten nicht bearbeitbar)' : 'Kurs bearbeiten'"
+                  @click="openCourseDetail(course)"
+                  :title="course.sari_managed ? 'SARI-verwalteter Kurs – Details öffnen' : 'Kurs öffnen'"
                 >
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="flex items-start">
@@ -407,37 +407,10 @@
                     </select>
                   </td>
                   
-                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div class="flex items-center justify-end space-x-2">
-                      <button
-                        @click.stop="manageEnrollments(course)"
-                        class="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
-                        :title="course.sari_managed ? 'SARI-Teilnehmer verwalten' : 'Teilnehmer verwalten'"
-                      >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                        </svg>
-                      </button>
-                      <button
-                        @click.stop="editCourse(course)"
-                        class="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-colors"
-                        :title="course.sari_managed ? 'Kurs bearbeiten (SARI-Grunddaten geschützt)' : 'Kurs bearbeiten'"
-                      >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                        </svg>
-                      </button>
-                      <button
-                        v-if="!course.sari_managed"
-                        @click.stop="cancelCourse(course)"
-                        class="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Kurs absagen"
-                      >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                      </button>
-                    </div>
+                  <td class="px-4 py-4 whitespace-nowrap text-right" @click.stop>
+                    <svg class="w-4 h-4 text-gray-400 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
                   </td>
                 </tr>
               </tbody>
@@ -778,8 +751,8 @@
     <div v-if="showCreateCourseModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click.self="closeCreateCourseModal">
       <div class="bg-white rounded-lg border border-gray-200 shadow-sm max-w-6xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
         <div class="px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <div class="flex items-center justify-between">
-            <h2 class="text-xl font-bold text-gray-900">{{ editingCourse ? 'Kurs bearbeiten' : 'Neuer Kurs erstellen' }}</h2>
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xl font-bold text-gray-900">{{ editingCourse ? editingCourse.name : 'Neuer Kurs erstellen' }}</h2>
             <button
               @click="closeCreateCourseModal"
               class="text-gray-400 hover:text-gray-600 transition-colors"
@@ -787,6 +760,32 @@
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
+            </button>
+          </div>
+          <!-- Tab strip (only when editing an existing course) -->
+          <div v-if="editingCourse" class="flex gap-1 bg-gray-100 rounded-xl p-1">
+            <button
+              @click="switchToParticipantsTab"
+              :class="courseDetailTab === 'participants'
+                ? 'bg-white shadow-sm text-gray-900 font-semibold'
+                : 'text-gray-500 hover:text-gray-700'"
+              class="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              Teilnehmer
+            </button>
+            <button
+              :class="courseDetailTab === 'edit'
+                ? 'bg-white shadow-sm text-gray-900 font-semibold'
+                : 'text-gray-500 hover:text-gray-700'"
+              class="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all cursor-default"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+              </svg>
+              Kurs bearbeiten
             </button>
           </div>
         </div>
@@ -2585,6 +2584,34 @@
           </button>
         </div>
 
+        <!-- Tab strip -->
+        <div class="mt-4 flex gap-1 bg-gray-100 rounded-xl p-1">
+          <button
+            @click="courseDetailTab = 'participants'"
+            :class="courseDetailTab === 'participants'
+              ? 'bg-white shadow-sm text-gray-900 font-semibold'
+              : 'text-gray-500 hover:text-gray-700'"
+            class="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            Teilnehmer
+          </button>
+          <button
+            @click="switchToEditTab"
+            :class="courseDetailTab === 'edit'
+              ? 'bg-white shadow-sm text-gray-900 font-semibold'
+              : 'text-gray-500 hover:text-gray-700'"
+            class="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+            </svg>
+            Kurs bearbeiten
+          </button>
+        </div>
+
         <!-- Capacity bar -->
         <div class="mt-4">
           <div class="flex items-center justify-between text-xs text-gray-500 mb-1.5">
@@ -3641,7 +3668,8 @@ const showErrorToast = (title: string, message: string = '') => {
 }
 
 definePageMeta({
-  layout: 'admin'
+  layout: 'admin',
+  middleware: 'admin'
 })
 
 // Composables
@@ -3840,6 +3868,7 @@ const editingGeneralResource = ref<any>(null)
 // Enrollment Management
 const showEnrollmentModal = ref(false)
 const selectedCourse = ref<any>(null)
+const courseDetailTab = ref<'participants' | 'edit'>('participants')
 const currentEnrollments = ref<any[]>([])
 const deletedEnrollments = ref<any[]>([])
 const showDeletedParticipants = ref(false)
@@ -4161,9 +4190,12 @@ const filteredCourses = computed(() => {
 
 const canCreateCourse = computed(() => {
   const isWaitlist = newCourse.value.status === 'waitlist'
-  return newCourse.value.name && 
+  const isEditing  = !!editingCourse.value
+  // When editing an existing course, sessions are already saved in the DB –
+  // don't block the button while they're still loading asynchronously.
+  return newCourse.value.name &&
          newCourse.value.max_participants > 0 &&
-         (isWaitlist || courseSessions.value.length > 0)
+         (isEditing || isWaitlist || courseSessions.value.length > 0)
 })
 
 const canSaveCategory = computed(() => {
@@ -5064,8 +5096,6 @@ const openCreateCourseModal = async () => {
 
 // Edit Course Function
 const editCourse = (course: any) => {
-  // DEBUG: Log call stack to find who is calling this
-  console.trace('🔴 editCourse CALLED - STACK TRACE:')
   logger.debug('Edit course:', course.id)
   
   // TEMPORARY: If status modal is open, don't open edit modal
@@ -5480,21 +5510,8 @@ const testOpenModal = () => {
 }
 
 const manageEnrollments = (course: any) => {
-  // DEBUG: Log course details
-  console.log('🔍 manageEnrollments called with course:', {
-    id: course.id,
-    name: course.name,
-    sari_managed: course.sari_managed,
-    sari_course_id: course.sari_course_id,
-    category: course.category,
-    fullCourse: course
-  })
-  
-  // Set course and open modal immediately
   selectedCourse.value = course
   showEnrollmentModal.value = true
-  
-  // Load enrollments asynchronously after modal is open
   nextTick(async () => {
     try {
       await Promise.all([
@@ -5505,6 +5522,29 @@ const manageEnrollments = (course: any) => {
       console.error('❌ Error loading enrollments:', error)
     }
   })
+}
+
+const openCourseDetail = (course: any, tab: 'participants' | 'edit' = 'participants') => {
+  courseDetailTab.value = tab
+  if (tab === 'edit') {
+    editCourse(course)
+  } else {
+    manageEnrollments(course)
+  }
+}
+
+const switchToEditTab = () => {
+  if (!selectedCourse.value) return
+  courseDetailTab.value = 'edit'
+  showEnrollmentModal.value = false
+  editCourse(selectedCourse.value)
+}
+
+const switchToParticipantsTab = () => {
+  courseDetailTab.value = 'participants'
+  const course = editingCourse.value || selectedCourse.value
+  showCreateCourseModal.value = false
+  if (course) manageEnrollments(course)
 }
 
 // Sync SARI participants for the current course
@@ -5553,6 +5593,7 @@ const syncSARIParticipants = async () => {
 
 const closeEnrollmentModal = () => {
   showEnrollmentModal.value = false
+  courseDetailTab.value = 'participants'
   
   // Reload just the selected course to update participant count
   if (selectedCourse.value) {
