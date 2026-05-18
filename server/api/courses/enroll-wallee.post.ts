@@ -80,6 +80,14 @@ const handler = defineEventHandler(async (event) => {
       })
     }
 
+    // 2b. Validate partial enrollment: only allowed if category explicitly enables it.
+    // Always use partial_start_position from DB — never trust client-provided value.
+    if ((isPartialEnrollment || course.is_partial_only) && !course.is_partial_only) {
+      if (!course.course_category?.allow_partial_enrollment) {
+        throw createError({ statusCode: 400, statusMessage: 'Teilbuchung ist für diesen Kurs nicht erlaubt.' })
+      }
+    }
+
     // 3. Get SARI credentials
     let sariSecrets
     try {
@@ -504,7 +512,8 @@ const handler = defineEventHandler(async (event) => {
             custom_sessions: customSessions || null,
             referral_code: referralCode || null,
             is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
-            partial_start_position: partialStartPosition ?? null,
+            // Always use DB value — never trust client-provided partialStartPosition
+            partial_start_position: course.course_category?.partial_start_position ?? 3,
             // Discount tracking for webhook
             discount_code: validatedDiscountCode,
             discount_amount_rappen: validatedDiscountAmount,

@@ -812,7 +812,7 @@ const openSessionSwapModal = async (session: any) => {
           ...firstSession,
           startTime: firstSession.startTime,
           endTime: lastSession.endTime,
-          displayTimeRange: `${firstSession.startTime.split('T')[1].substring(0, 5)} - ${lastSession.endTime.split('T')[1].substring(0, 5)}`,
+          displayTimeRange: `${formatTime(firstSession.startTime)} - ${formatTime(lastSession.endTime)}`,
           // Store ALL session IDs for this group (for grouped sessions)
           sariSessionIds: sorted.map((s: any) => s.sariSessionId),
           isSelected: customSessions.value[session.position.toString()]?.sariSessionIds?.[0] === firstSession.sariSessionId,
@@ -1022,10 +1022,13 @@ const formatSessionDate = (dateStr: string) => {
 const formatTime = (isoString: string) => {
   try {
     if (!isoString) return ''
-    const parts = isoString.split('T')
-    if (parts.length < 2) return ''
-    const timeWithZone = parts[1]
-    return timeWithZone.substring(0, 5)
+    const date = new Date(isoString.replace(' ', 'T'))
+    return date.toLocaleTimeString('de-CH', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Europe/Zurich'
+    })
   } catch {
     return ''
   }
@@ -1110,8 +1113,7 @@ const submitEnrollment = async () => {
         referralCode: getStoredRefCode() ?? undefined,
         discountCode: appliedDiscount.value?.code ?? undefined,
         discountAmountRappen: appliedDiscount.value?.discountAmountRappen ?? 0,
-        isPartialEnrollment: isPartial || undefined,
-        partialStartPosition: isPartial ? partialStartPosition.value : undefined
+        isPartialEnrollment: isPartial || undefined
       }
     }) as any
     

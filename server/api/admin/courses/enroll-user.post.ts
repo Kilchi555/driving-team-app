@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
   if (userError || !user) throw createError({ statusCode: 404, statusMessage: 'User not found' })
 
   // Create enrollment
-  const { error: enrollError } = await supabase
+  const { data: enrollment, error: enrollError } = await supabase
     .from('course_registrations')
     .insert({
       course_id: courseId,
@@ -55,10 +55,26 @@ export default defineEventHandler(async (event) => {
       tenant_id: profile.tenant_id,
       registered_by: profile.id,
     })
+    .select('id')
+    .single()
 
-  if (enrollError) {
+  if (enrollError || !enrollment) {
     logger.error('❌ Error creating enrollment:', enrollError)
-    throw createError({ statusCode: 500, statusMessage: `Anmeldung konnte nicht erstellt werden: ${enrollError.message}` })
+    throw createError({ statusCode: 500, statusMessage: `Anmeldung konnte nicht erstellt werden: ${enrollError?.message}` })
+  }
+
+  // Send confirmation email to the customer (non-fatal)
+  try {
+    await $fetch('/api/emails/send-course-enrollment-confirmation', {
+      method: 'POST',
+      body: {
+        courseRegistrationId: enrollment.id,
+        paymentMethod: 'wallee' // Admin bookings are treated as already paid/confirmed
+      }
+    })
+    logger.debug('✅ Confirmation email queued for:', user.email)
+  } catch (emailErr: any) {
+    logger.warn('⚠️ Confirmation email failed (non-fatal):', emailErr.message)
   }
 
   logger.debug('✅ User enrolled:', userId)

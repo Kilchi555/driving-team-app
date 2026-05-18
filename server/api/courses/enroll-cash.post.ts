@@ -66,7 +66,7 @@ const handler = defineEventHandler(async (event) => {
     // 2. Get course details
     const { data: course, error: courseError } = await supabase
       .from('courses')
-      .select('*, course_sessions(*)')
+      .select('*, course_sessions(*), course_category:course_categories(allow_partial_enrollment, partial_start_position, partial_price_rappen)')
       .eq('id', courseId)
       .eq('tenant_id', tenantId)
       .single()
@@ -243,8 +243,16 @@ const handler = defineEventHandler(async (event) => {
       // For partial enrollment, only keep session IDs from partial_start_position onwards.
       // Session IDs are ordered, so we resolve position from course_sessions by date grouping.
       const isPartial = isPartialEnrollment || course.is_partial_only
-      if (isPartial && (partialStartPosition ?? 1) > 1 && course.course_sessions?.length > 0) {
-        const startPos = partialStartPosition ?? 3
+
+      // Validate: partial enrollment must be explicitly allowed by the category.
+      // Always use partial_start_position from the DB — never trust the client value.
+      if (isPartial && !course.is_partial_only && !course.course_category?.allow_partial_enrollment) {
+        throw createError({ statusCode: 400, statusMessage: 'Teilbuchung ist für diesen Kurs nicht erlaubt.' })
+      }
+      const dbStartPos: number = course.course_category?.partial_start_position ?? 3
+
+      if (isPartial && dbStartPos > 1 && course.course_sessions?.length > 0) {
+        const startPos = dbStartPos
         const sortedSessions = [...course.course_sessions].sort((a: any, b: any) =>
           a.start_time.localeCompare(b.start_time)
         )
