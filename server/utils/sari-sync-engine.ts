@@ -331,11 +331,9 @@ export class SARISyncEngine {
       }
       courseId = existing.id
       
-      // Delete old sessions to replace with fresh data
-      await this.supabase
-        .from('course_sessions')
-        .delete()
-        .eq('course_id', courseId)
+      // Sessions are updated in-place below (upsert by sari_session_id)
+      // so we no longer delete-all here — that would lose instructor assignments
+      // and trigger unique-constraint errors on re-insert.
     } else {
       // Create new course — use partial price if applicable
       const insertData = {
@@ -358,12 +356,19 @@ export class SARISyncEngine {
       courseId = newCourse.id
     }
 
-    // Create sessions for each Teil
-    let sessionsCreated = 0
+    // Upsert sessions by sari_session_id:
+    //   - Existing sessions are updated (times, location, description) while
+    //     instructor fields set via the admin UI are intentionally preserved.
+    //   - New sessions are inserted.
+    //   - Sessions that SARI no longer includes are deleted afterwards.
+    let sessionsUpserted = 0
+    const sariSessionIds: string[] = []
+
     for (let i = 0; i < sessions.length; i++) {
       const sariSession = sessions[i]
-      
-      // Debug: Log what fields SARI sends
+      const sariSessionIdStr = String(sariSession.id)
+      sariSessionIds.push(sariSessionIdStr)
+
       if (i === 0) {
         logger.debug(`📋 SARI session structure (first session):`, {
           id: sariSession.id,
@@ -372,57 +377,81 @@ export class SARISyncEngine {
           fields: Object.keys(sariSession)
         })
       }
-      
+
       // Parse session date (format from SARI: "2026-01-10 08:00")
-      // SARI sends times already in Swiss local time (CET in winter, CEST in summer).
-      // Convert the local Swiss time to proper UTC for storage so that display
-      // functions (which convert UTC → Europe/Zurich) show the correct time.
-      const localTimeStr = sariSession.date.replace(' ', 'T') + ':00' // "2026-01-10T08:00:00"
-      // Step 1: treat as UTC temporarily to get a reference point
+      // SARI sends times in Swiss local time → convert to UTC for storage.
+      const localTimeStr = sariSession.date.replace(' ', 'T') + ':00'
       const approxUtc = new Date(localTimeStr + 'Z')
-      // Step 2: find what Zurich clock shows for that reference UTC moment
       const zurichStr = approxUtc.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
       const zurichFake = new Date(zurichStr.replace(' ', 'T') + 'Z')
-      // Step 3: offset = approxUtc − zurichFake (negative, Zurich is ahead of UTC)
-      // e.g. 08:00UTC − 10:00UTC(fake) = −2h  →  08:00 + (−2h) = 06:00 UTC ✓
       const offsetMs = approxUtc.getTime() - zurichFake.getTime()
       const startDate = new Date(approxUtc.getTime() + offsetMs)
-      
-      // Calculate duration based on course type
-      // VKU = 2 hours, PGS = 4 hours
-      const durationHours = courseType === 'VKU' ? 2 : 4
-      const endDate = new Date(new Date(startDate).getTime() + durationHours * 60 * 60 * 1000)
 
-      const sessionData = {
-        course_id: courseId,
-        tenant_id: this.tenantId,
+      const durationHours = courseType === 'VKU' ? 2 : 4
+      const endDate = new Date(startDate.getTime() + durationHours * 60 * 60 * 1000)
+
+      // Build address string, avoiding double zip+city if address.address already contains it
+      const buildLocation = (addr: any): string | null => {
+        if (!addr) return null
+        const zipCity = `${addr.zip} ${addr.city}`.trim()
+        const street = (addr.address || '').trim()
+        if (street.includes(zipCity)) return street
+        return zipCity ? `${street}, ${zipCity}` : street || null
+      }
+
+      // Fields updated from SARI on every sync
+      const sariFields = {
         session_number: i + 1,
         title: sariSession.name,
         description: `SARI ID: ${sariSession.id} | Freie Plätze: ${sariSession.freeplaces}`,
         start_time: startDate.toISOString(),
         end_time: endDate.toISOString(),
-        // instructor_type, staff_id, external_instructor_name/email intentionally left null —
-        // must be set manually in the admin UI after sync
-        custom_location: sariSession.address 
-          ? `${sariSession.address.address}, ${sariSession.address.zip} ${sariSession.address.city}`
-          : null,
+        custom_location: buildLocation(sariSession.address),
         is_active: true,
-        sari_session_id: String(sariSession.id)
+        updated_at: new Date().toISOString(),
       }
 
-      const { error: sessionError } = await this.supabase
+      // Check if this session already exists for this course
+      const { data: existing } = await this.supabase
         .from('course_sessions')
-        .insert(sessionData)
+        .select('id')
+        .eq('course_id', courseId)
+        .eq('sari_session_id', sariSessionIdStr)
+        .maybeSingle()
 
-      if (sessionError) {
-        logger.error(`Failed to create session: ${sessionError.message}`, { 
-          course_id: courseId, 
-          session: sariSession.name 
-        })
+      if (existing) {
+        // Update — keep instructor fields as-is
+        const { error } = await this.supabase
+          .from('course_sessions')
+          .update(sariFields)
+          .eq('id', existing.id)
+        if (error) logger.error(`Failed to update session ${sariSessionIdStr}: ${error.message}`)
+        else sessionsUpserted++
       } else {
-        sessionsCreated++
+        // Insert new session (instructor fields default to null → set manually in admin UI)
+        const { error } = await this.supabase
+          .from('course_sessions')
+          .insert({
+            course_id: courseId,
+            tenant_id: this.tenantId,
+            sari_session_id: sariSessionIdStr,
+            ...sariFields,
+          })
+        if (error) logger.error(`Failed to insert session ${sariSessionIdStr}: ${error.message}`)
+        else sessionsUpserted++
       }
     }
+
+    // Remove sessions that are no longer in SARI (e.g. cancelled sessions)
+    if (sariSessionIds.length > 0) {
+      await this.supabase
+        .from('course_sessions')
+        .delete()
+        .eq('course_id', courseId)
+        .not('sari_session_id', 'in', `(${sariSessionIds.join(',')})`)
+    }
+
+    const sessionsCreated = sessionsUpserted
 
     // Sync participants from SARI for all sessions in this group.
     // Duplicate protection: syncCourseParticipants checks both participant_id

@@ -1,6 +1,5 @@
 // composables/useCourseCategories.ts
-import { ref, computed, watch } from 'vue'
-import { getSupabase } from '~/utils/supabase'
+import { ref, computed } from 'vue'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 
 interface CourseCategory {
@@ -30,7 +29,6 @@ interface CourseCategory {
 }
 
 export const useCourseCategories = () => {
-  const supabase = getSupabase()
   const { currentUser } = useCurrentUser()
   
   const categories = ref<CourseCategory[]>([])
@@ -52,37 +50,15 @@ export const useCourseCategories = () => {
 
   // Methods
   const loadCategories = async (forceTenantId?: string) => {
-    const tenantId = forceTenantId || currentUser.value?.tenant_id
-    
-    logger.debug('🔄 loadCategories called', {
-      currentUser: currentUser.value,
-      forceTenantId,
-      effectiveTenantId: tenantId
-    })
-    
-    if (!tenantId) {
-      console.warn('⚠️ No tenant_id available, skipping category load')
-      return
-    }
+    logger.debug('🔄 loadCategories called (via server API)')
 
-    logger.debug('📥 Loading categories for tenant:', tenantId)
     isLoading.value = true
     error.value = null
 
     try {
-      const { data, error: loadError } = await supabase
-        .from('course_categories')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .order('sort_order', { ascending: true })
-
-      if (loadError) throw loadError
-      
-      logger.debug('✅ Categories loaded:', data?.length || 0, 'items')
-      logger.debug('📋 Categories data:', data)
-      
-      categories.value = data || []
-
+      const response = await $fetch<{ categories: CourseCategory[] }>('/api/admin/course-categories')
+      logger.debug('✅ Categories loaded:', response.categories?.length || 0, 'items')
+      categories.value = response.categories || []
     } catch (err: any) {
       console.error('❌ Error loading course categories:', err)
       error.value = 'Fehler beim Laden der Kurskategorien'
@@ -92,81 +68,26 @@ export const useCourseCategories = () => {
   }
 
   const createCategory = async (categoryData: Partial<CourseCategory>, tenantId?: string, userId?: string) => {
-    // Debug logging
-    logger.debug('🔍 createCategory called with:', {
-      categoryData,
-      tenantId,
-      userId,
-      currentUser: currentUser.value
+    logger.debug('🔍 createCategory called (via server API)')
+    const { data } = await $fetch<{ success: boolean; data: CourseCategory }>('/api/admin/course-categories/save', {
+      method: 'POST',
+      body: categoryData
     })
-    
-    const effectiveTenantId = tenantId || currentUser.value?.tenant_id
-    const effectiveUserId = userId || currentUser.value?.id
-    
-    logger.debug('🔍 Effective IDs:', {
-      effectiveTenantId,
-      effectiveUserId
-    })
-    
-    if (!effectiveTenantId) {
-      console.error('❌ No tenant ID available:', {
-        tenantId,
-        currentUserTenantId: currentUser.value?.tenant_id,
-        currentUser: currentUser.value
-      })
-      throw new Error('Kein Tenant verfügbar')
-    }
-
-    const { data, error: createError } = await supabase
-      .from('course_categories')
-      .insert({
-        ...categoryData,
-        tenant_id: effectiveTenantId,
-        created_by: effectiveUserId
-      })
-      .select()
-      .single()
-
-    if (createError) throw createError
-    
-    // Reload categories
     await loadCategories()
     return data
   }
 
   const updateCategory = async (id: string, updates: Partial<CourseCategory>, forceTenantId?: string) => {
-    const tenantId = forceTenantId || currentUser.value?.tenant_id
-    
-    logger.debug('🔍 updateCategory called', {
-      id,
-      updates,
-      currentUser: currentUser.value,
-      forceTenantId,
-      effectiveTenantId: tenantId
+    logger.debug('🔍 updateCategory called (via server API)', { id })
+    const { data } = await $fetch<{ success: boolean; data: CourseCategory }>('/api/admin/course-categories/save', {
+      method: 'POST',
+      body: { categoryId: id, ...updates }
     })
-    
-    if (!tenantId) {
-      console.error('❌ No tenant ID available for update')
-      throw new Error('Kein Tenant verfügbar')
-    }
-
-    const { data, error: updateError } = await supabase
-      .from('course_categories')
-      .update(updates)
-      .eq('id', id)
-      .eq('tenant_id', tenantId)
-      .select()
-      .single()
-
-    if (updateError) throw updateError
-    
-    // Reload categories with explicit tenant ID
-    await loadCategories(tenantId)
+    await loadCategories()
     return data
   }
 
   const deleteCategory = async (id: string, forceTenantId?: string) => {
-    // Soft delete by setting is_active to false
     await updateCategory(id, { is_active: false }, forceTenantId)
   }
 

@@ -562,3 +562,68 @@ export function generateAdminWaitlistNotificationEmail(data: {
 
   return { subject, html }
 }
+
+export function generateCourseRegistrationCancellationEmail(data: {
+  firstName: string
+  lastName: string
+  courseName: string
+  courseDate?: string
+  location?: string
+  tenantName?: string
+  tenantEmail?: string
+}): { subject: string; html: string } {
+  const {
+    firstName,
+    lastName,
+    courseName,
+    courseDate,
+    location,
+    tenantName = 'Driving Team',
+    tenantEmail
+  } = data
+
+  const subject = `Ihre Kursanmeldung wurde storniert: ${courseName}`
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          <tr>
+            <td style="background:#dc2626;padding:32px 40px;">
+              <p style="margin:0;font-size:22px;font-weight:700;color:#ffffff;">${tenantName}</p>
+              <p style="margin:6px 0 0;font-size:14px;color:#fca5a5;">Stornierungsbestätigung</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <p style="margin:0 0 8px;font-size:16px;color:#111827;">Guten Tag ${firstName} ${lastName}</p>
+              <p style="margin:0 0 24px;font-size:15px;color:#6b7280;">Ihre Anmeldung für den folgenden Kurs wurde storniert:</p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin-bottom:24px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 4px;font-size:18px;font-weight:700;color:#111827;">${courseName}</p>
+                    ${courseDate ? '<p style="margin:4px 0 0;font-size:14px;color:#6b7280;">📅 ' + courseDate + '</p>' : ''}
+                    ${location ? '<p style="margin:4px 0 0;font-size:14px;color:#6b7280;">📍 ' + location + '</p>' : ''}
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">Falls Sie Fragen haben oder sich erneut anmelden möchten, kontaktieren Sie uns bitte direkt.</p>
+              ${tenantEmail ? '<table cellpadding="0" cellspacing="0" style="margin-bottom:24px;"><tr><td style="background:#dc2626;border-radius:8px;padding:12px 24px;"><a href="mailto:' + tenantEmail + '" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">' + tenantEmail + '</a></td></tr></table>' : ''}
+              <p style="margin:0;font-size:14px;color:#9ca3af;">${tenantName} · Automatisch generierte E-Mail</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `
+
+  return { subject, html }
+}

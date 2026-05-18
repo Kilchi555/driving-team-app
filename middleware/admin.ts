@@ -11,7 +11,12 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   
   const authStore = useAuthStore()
   
-  // Warte auf Auth-Initialisierung UND User-Profil
+  // Initialisiere sofort wenn Profil noch nicht geladen
+  if (!authStore.isInitialized || !authStore.hasProfile) {
+    await authStore.initializeAuthStore()
+  }
+
+  // Warte auf Auth-Initialisierung UND User-Profil (max. 5s als Fallback)
   let attempts = 0
   while ((!authStore.isInitialized || !authStore.hasProfile) && attempts < 50) {
     await new Promise(resolve => setTimeout(resolve, 100))
