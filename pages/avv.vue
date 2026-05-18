@@ -54,7 +54,7 @@
           <div class="grid sm:grid-cols-2 gap-4">
             <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
               <p class="text-xs font-bold text-blue-500 uppercase tracking-wide mb-2">Auftragsverarbeiter</p>
-              <p class="font-semibold text-gray-900">Simy IT Systems, Pascal Kilchenmann</p>
+              <p class="font-semibold text-gray-900">Simy IT Systems Kilchenmann</p>
               <p class="text-gray-600">Weiherweg 2, 8610 Uster</p>
               <p class="text-gray-600">info@simy.ch</p>
               <p class="text-xs text-blue-600 mt-2">(im Folgenden: «Simy»)</p>
@@ -208,7 +208,7 @@
 
         <!-- Footer -->
         <div class="pt-6 border-t border-gray-100 text-xs text-gray-400">
-          <p>Simy IT Systems, Pascal Kilchenmann · Weiherweg 2 · 8610 Uster · Schweiz</p>
+          <p>Simy IT Systems Kilchenmann · Weiherweg 2 · 8610 Uster · Schweiz</p>
           <p class="mt-1">Stand: 1. April 2026 · Version 1.0</p>
           <div class="flex gap-4 mt-3">
             <NuxtLink to="/agb" class="text-blue-500 hover:underline">AGB</NuxtLink>
