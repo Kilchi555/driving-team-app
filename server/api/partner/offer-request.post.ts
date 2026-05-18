@@ -155,11 +155,10 @@ export default defineEventHandler(async (event) => {
       <div style="border-top:1px solid #e2e8f0;padding-top:14px">
         <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Plattform</div>
         <table style="border-collapse:collapse;font-size:13px;width:100%">
-          <tr><td style="padding:2px 0;color:#6b7280;width:130px">Firmenname</td><td style="color:#111827;font-weight:600">Simy IT Systems GmbH</td></tr>
-          <tr><td style="padding:2px 0;color:#6b7280">Adresse</td><td style="color:#374151">Zürich, Schweiz</td></tr>
+          <tr><td style="padding:2px 0;color:#6b7280;width:130px">Firmenname</td><td style="color:#111827;font-weight:600">Simy IT Systems Kilchenmann</td></tr>
+          <tr><td style="padding:2px 0;color:#6b7280">Adresse</td><td style="color:#374151">Weiherweg 2, 8610 Uster</td></tr>
           <tr><td style="padding:2px 0;color:#6b7280">Email</td><td><a href="mailto:info@simy.ch" style="color:#2563eb">info@simy.ch</a></td></tr>
           <tr><td style="padding:2px 0;color:#6b7280">IBAN</td><td><code style="background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:12px">${SIMY_IBAN}</code></td></tr>
-          <tr><td style="padding:2px 0;color:#6b7280">Bank</td><td style="color:#374151">Migros Bank AG</td></tr>
         </table>
       </div>
     </div>`

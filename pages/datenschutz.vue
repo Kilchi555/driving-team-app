@@ -52,7 +52,7 @@
         <section id="d1">
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">1. Verantwortlicher</h2>
           <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 text-sm space-y-1">
-            <p><strong>Simy IT Systems, Pascal Kilchenmann</strong></p>
+            <p><strong>Simy IT Systems Kilchenmann</strong></p>
             <p>Weiherweg 2, 8610 Uster, Schweiz</p>
             <p>E-Mail: <a href="mailto:info@simy.ch" class="text-blue-600 hover:underline">info@simy.ch</a></p>
             <p>Website: <a href="https://www.simy.ch" class="text-blue-600 hover:underline">www.simy.ch</a></p>
@@ -264,7 +264,7 @@
 
         <!-- Footer -->
         <div class="pt-6 border-t border-gray-100 text-xs text-gray-400">
-          <p>Simy IT Systems, Pascal Kilchenmann · Weiherweg 2 · 8610 Uster · Schweiz</p>
+          <p>Simy IT Systems Kilchenmann · Weiherweg 2 · 8610 Uster · Schweiz</p>
           <p class="mt-1">Stand: 1. April 2026 · Version 1.0</p>
           <div class="flex gap-4 mt-3">
             <NuxtLink to="/agb" class="text-blue-500 hover:underline">AGB</NuxtLink>
