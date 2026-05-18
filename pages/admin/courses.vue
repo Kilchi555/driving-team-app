@@ -4631,32 +4631,35 @@ const closeCreateCategoryModal = () => {
 
 // Helper functions
 const getCourseStatus = (course: any) => {
-  // Always use the database status if it's set
-  if (course.status) {
-    return course.status
+  // Manual overrides always win (admin explicitly set these)
+  const manualStatus = course.status
+  if (manualStatus === 'cancelled' || manualStatus === 'waitlist' || manualStatus === 'full') {
+    return manualStatus
   }
-  
-  // Fallback: Automatic status calculation if no status is set
+
+  // Time-based status takes precedence over stored draft/active/running
+  if (course.sessions && course.sessions.length > 0) {
+    const now = new Date()
+
+    // Currently running: at least one session is active right now
+    const activeSession = course.sessions.find((s: any) => {
+      const startTime = new Date(s.start_time)
+      const endTime = new Date(s.end_time)
+      return startTime <= now && endTime >= now
+    })
+    if (activeSession) return 'running'
+
+    // All sessions finished → completed
+    const allFinished = course.sessions.every((s: any) => new Date(s.end_time) < now)
+    if (allFinished) return 'completed'
+  }
+
+  // Fall back to stored DB status (covers active, draft, scheduled, etc.)
+  if (manualStatus) return manualStatus
+
+  // Last-resort auto-detection when no status stored
   if (course.current_participants >= course.max_participants) return 'full'
   if (!course.sessions || course.sessions.length === 0) return 'draft'
-  
-  // Check if course is currently running (has active session)
-  const now = new Date()
-  const activeSession = course.sessions?.find((s: any) => {
-    const startTime = new Date(s.start_time)
-    const endTime = new Date(s.end_time)
-    return startTime <= now && endTime >= now
-  })
-  if (activeSession) return 'running'
-  
-  // Check if course is completed (all sessions finished)
-  const allSessionsFinished = course.sessions?.every((s: any) => new Date(s.end_time) < now)
-  if (allSessionsFinished) return 'completed'
-  
-  // Check if course is upcoming (first session in future)
-  const firstSession = course.sessions?.[0]
-  if (firstSession && new Date(firstSession.start_time) > now) return 'upcoming'
-  
   return 'draft'
 }
 

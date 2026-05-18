@@ -2,6 +2,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { SARIClient } from '~/utils/sariClient'
+import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
 import { generateCourseRegistrationCancellationEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
 
@@ -64,7 +65,9 @@ export default defineEventHandler(async (event) => {
 
   if (course?.sari_managed && course?.sari_course_id && faberid) {
     try {
-      const sari = new SARIClient()
+      const credentials = await getSARICredentialsSecure(reg.tenant_id, 'ADMIN_REMOVE_PARTICIPANT')
+      if (!credentials) throw new Error('SARI not configured for this tenant')
+      const sari = new SARIClient(credentials)
       const sessions: any[] = course.course_sessions || []
 
       // For partial enrollments only de-enroll from sessions the user was enrolled in.
