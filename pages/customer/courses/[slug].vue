@@ -582,18 +582,14 @@ const formatSessionDate = (dateStr: string) => {
 
 const formatTime = (isoString: string) => {
   try {
-    // Handle both "2026-01-20T18:00:00+00:00" and "2026-01-20 18:00:00+00" formats
-    let hours, minutes
-    
-    if (isoString.includes('T')) {
-      const timePart = isoString.split('T')[1]
-      ;[hours, minutes] = timePart.split(':')
-    } else {
-      const timePart = isoString.split(' ')[1]
-      ;[hours, minutes] = timePart.split(':')
-    }
-    
-    return `${hours}:${minutes}`
+    // Always convert to Swiss local time (Europe/Zurich) before displaying
+    const date = new Date(isoString.replace(' ', 'T'))
+    return date.toLocaleTimeString('de-CH', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Europe/Zurich'
+    })
   } catch {
     return ''
   }

@@ -1642,12 +1642,14 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
 
     // For partial enrollment, filter session IDs using payment metadata's partial_start_position
     if (registration.is_partial_enrollment) {
-      const { data: paymentMeta } = await supabase
-        .from('payments')
-        .select('metadata')
-        .eq('id', registration.payment_id)
+      // Use partial_start_position from course_category in DB — not from payment metadata
+      // (payment metadata originates from the client and must not be trusted for access control)
+      const { data: categoryConfig } = await supabase
+        .from('courses')
+        .select('course_category:course_categories(partial_start_position)')
+        .eq('id', registration.course_id)
         .maybeSingle()
-      const startPos: number = paymentMeta?.metadata?.partial_start_position ?? 3
+      const startPos: number = (categoryConfig as any)?.course_category?.partial_start_position ?? 3
       const courseSessions: any[] = course.course_sessions || []
       if (courseSessions.length > 0) {
         const sortedSessions = [...courseSessions].sort((a: any, b: any) =>
