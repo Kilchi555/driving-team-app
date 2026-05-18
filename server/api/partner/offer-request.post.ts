@@ -73,13 +73,19 @@ export default defineEventHandler(async (event) => {
   // ── 3. Fetch tenant ─────────────────────────────────────────
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, email, iban, primary_color, logo_url, logo_square_url')
+    .select('id, name, contact_email, iban, bank_name, legal_company_name, invoice_street, invoice_street_nr, invoice_zip, invoice_city, primary_color, logo_url, logo_wide_url, logo_square_url')
     .eq('id', tenantId)
     .maybeSingle()
 
   const tenantName = tenant?.name || 'Fahrschule'
-  const tenantEmail = tenant?.email || null
+  const tenantEmail = tenant?.contact_email || null
   const tenantIban = tenant?.iban || '—'
+  const tenantBankName = tenant?.bank_name || null
+  const tenantLegalName = tenant?.legal_company_name || tenantName
+  const tenantAddress = [
+    [tenant?.invoice_street, tenant?.invoice_street_nr].filter(Boolean).join(' '),
+    [tenant?.invoice_zip, tenant?.invoice_city].filter(Boolean).join(' '),
+  ].filter(Boolean).join(', ')
   const primaryColor = tenant?.primary_color || '#0f172a'
   const logoUrl = (() => {
     const v = tenant?.logo_url
@@ -133,12 +139,28 @@ export default defineEventHandler(async (event) => {
 
   const referralHtml = `
     <div style="margin:28px 0 0;padding:20px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;font-size:13px;color:#64748b">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-bottom:10px">Kontaktvermittlung</div>
-      <p style="margin:0 0 4px"><strong style="color:#374151">${tenantName}</strong></p>
-      <p style="margin:0 0 12px">IBAN: <code style="background:#e2e8f0;padding:2px 6px;border-radius:4px">${tenantIban}</code></p>
-      <div style="border-top:1px solid #e2e8f0;padding-top:10px">
-        <p style="margin:0 0 4px"><strong style="color:#374151">Simy IT Systems</strong></p>
-        <p style="margin:0">IBAN: <code style="background:#e2e8f0;padding:2px 6px;border-radius:4px">${SIMY_IBAN}</code></p>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-bottom:14px">Kontaktvermittlung — Zahlungsangaben</div>
+
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Fahrschule</div>
+        <table style="border-collapse:collapse;font-size:13px;width:100%">
+          <tr><td style="padding:2px 0;color:#6b7280;width:130px">Firmenname</td><td style="color:#111827;font-weight:600">${tenantLegalName}</td></tr>
+          ${tenantAddress ? `<tr><td style="padding:2px 0;color:#6b7280">Adresse</td><td style="color:#374151">${tenantAddress}</td></tr>` : ''}
+          ${tenantEmail ? `<tr><td style="padding:2px 0;color:#6b7280">Email</td><td><a href="mailto:${tenantEmail}" style="color:#2563eb">${tenantEmail}</a></td></tr>` : ''}
+          <tr><td style="padding:2px 0;color:#6b7280">IBAN</td><td><code style="background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:12px">${tenantIban}</code></td></tr>
+          ${tenantBankName ? `<tr><td style="padding:2px 0;color:#6b7280">Bank</td><td style="color:#374151">${tenantBankName}</td></tr>` : ''}
+        </table>
+      </div>
+
+      <div style="border-top:1px solid #e2e8f0;padding-top:14px">
+        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Plattform</div>
+        <table style="border-collapse:collapse;font-size:13px;width:100%">
+          <tr><td style="padding:2px 0;color:#6b7280;width:130px">Firmenname</td><td style="color:#111827;font-weight:600">Simy IT Systems GmbH</td></tr>
+          <tr><td style="padding:2px 0;color:#6b7280">Adresse</td><td style="color:#374151">Zürich, Schweiz</td></tr>
+          <tr><td style="padding:2px 0;color:#6b7280">Email</td><td><a href="mailto:info@simy.ch" style="color:#2563eb">info@simy.ch</a></td></tr>
+          <tr><td style="padding:2px 0;color:#6b7280">IBAN</td><td><code style="background:#e2e8f0;padding:2px 6px;border-radius:4px;font-size:12px">${SIMY_IBAN}</code></td></tr>
+          <tr><td style="padding:2px 0;color:#6b7280">Bank</td><td style="color:#374151">Migros Bank AG</td></tr>
+        </table>
       </div>
     </div>`
 
