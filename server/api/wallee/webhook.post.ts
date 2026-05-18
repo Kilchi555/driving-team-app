@@ -563,6 +563,7 @@ export default defineEventHandler(async (event) => {
                     status: registrationStatus,
                     payment_status: paymentStatusUpdate,
                     custom_sessions: payment.metadata?.custom_sessions || null,
+                    is_partial_enrollment: !!(payment.metadata?.is_partial_enrollment),
                     sari_synced: paymentStatus === 'completed',
                     sari_synced_at: paymentStatus === 'completed' ? new Date().toISOString() : null,
                     created_at: new Date().toISOString(),
@@ -1568,11 +1569,13 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
         course_id,
         payment_id,
         custom_sessions,
+        is_partial_enrollment,
         courses!inner(
           id,
           sari_managed,
           sari_course_id,
-          tenant_id
+          tenant_id,
+          course_sessions(id, start_time, sari_session_id)
         )
       `)
       .eq('id', registrationId)
@@ -1635,6 +1638,32 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
     if (sariCourseIds.length === 0) {
       logger.error('❌ Invalid SARI course ID format:', course.sari_course_id)
       return
+    }
+
+    // For partial enrollment, filter session IDs using payment metadata's partial_start_position
+    if (registration.is_partial_enrollment) {
+      const { data: paymentMeta } = await supabase
+        .from('payments')
+        .select('metadata')
+        .eq('id', registration.payment_id)
+        .maybeSingle()
+      const startPos: number = paymentMeta?.metadata?.partial_start_position ?? 3
+      const courseSessions: any[] = course.course_sessions || []
+      if (courseSessions.length > 0) {
+        const sortedSessions = [...courseSessions].sort((a: any, b: any) =>
+          a.start_time.localeCompare(b.start_time)
+        )
+        let pos = 0
+        let lastDate = ''
+        const sessionPosMap: Record<string, number> = {}
+        for (const s of sortedSessions) {
+          const d = s.start_time.split('T')[0]
+          if (d !== lastDate) { pos++; lastDate = d }
+          if (s.sari_session_id) sessionPosMap[s.sari_session_id] = pos
+        }
+        sariCourseIds = sariCourseIds.filter(id => (sessionPosMap[id] ?? pos) >= startPos)
+        logger.info(`🎯 Partial enrollment: SARI will receive ${sariCourseIds.length} session(s) from position ${startPos}`)
+      }
     }
     
     // Apply custom sessions if any were selected

@@ -61,6 +61,16 @@ export class SARISyncEngine {
         tenant_id: this.tenantId
       })
 
+      // 0. Load partial enrollment config for this category type (once per sync run)
+      const { data: categoryConfig } = await this.supabase
+        .from('course_categories')
+        .select('allow_partial_enrollment, partial_start_position, partial_price_rappen')
+        .eq('tenant_id', this.tenantId)
+        .eq('code', courseType)
+        .maybeSingle()
+
+      const partialConfig = categoryConfig || null
+
       // 1. Fetch course GROUPS from SARI (each group = 1 course with multiple sessions)
       const courseGroups = await this.sari.getCourseGroups(courseType)
       logger.debug(`📥 Fetched ${courseGroups.length} course groups from SARI`)
@@ -73,7 +83,7 @@ export class SARISyncEngine {
       // 2. Process each course GROUP
       for (const group of courseGroups) {
         try {
-          const result = await this.mapAndStoreCourseGroup(group, courseType)
+          const result = await this.mapAndStoreCourseGroup(group, courseType, partialConfig)
           if (result) {
             syncedCourses++
             syncedSessions += result.sessionsCreated
@@ -220,7 +230,8 @@ export class SARISyncEngine {
    */
   private async mapAndStoreCourseGroup(
     group: SARICourseGroup,
-    courseType: 'VKU' | 'PGS'
+    courseType: 'VKU' | 'PGS',
+    partialConfig?: { allow_partial_enrollment: boolean; partial_start_position: number; partial_price_rappen: number } | null
   ): Promise<{ courseId: string; sessionsCreated: number; participantsSynced: number } | null> {
     const sessions = group.courses || []
     if (sessions.length === 0) {
@@ -273,10 +284,17 @@ export class SARISyncEngine {
       sari_last_sync: new Date().toISOString()
     }
 
+    // Determine if this is a partial-only course (SARI created a course with only the final session(s))
+    const isPartialOnly = !!(
+      partialConfig?.allow_partial_enrollment &&
+      sessions.length > 0 &&
+      sessions.length < (partialConfig.partial_start_position ?? 3)
+    )
+
     // Check if course already exists
     const { data: existing } = await this.supabase
       .from('courses')
-      .select('id, current_participants')
+      .select('id, current_participants, price_per_participant_rappen, is_partial_only')
       .eq('sari_course_id', groupSariId)
       .eq('tenant_id', this.tenantId)
       .maybeSingle()
@@ -284,10 +302,23 @@ export class SARISyncEngine {
     let courseId: string
 
     if (existing) {
-      // Update existing course - but preserve current_participants
+      // Update existing course - preserve manually-set fields
       const updateData = {
         ...courseData,
-        current_participants: existing.current_participants // Keep existing participant count
+        current_participants: existing.current_participants,
+        // Preserve price if already set manually (SARI doesn't provide pricing).
+        // Exception: if this is a partial-only course and has no manual price yet,
+        // use the category's partial_price_rappen.
+        price_per_participant_rappen: (() => {
+          if ((existing.price_per_participant_rappen ?? 0) > 0) {
+            return existing.price_per_participant_rappen
+          }
+          if (isPartialOnly && (partialConfig?.partial_price_rappen ?? 0) > 0) {
+            return partialConfig!.partial_price_rappen
+          }
+          return existing.price_per_participant_rappen ?? 0
+        })(),
+        is_partial_only: isPartialOnly
       }
       
       const { error: updateError } = await this.supabase
@@ -306,10 +337,18 @@ export class SARISyncEngine {
         .delete()
         .eq('course_id', courseId)
     } else {
-      // Create new course
+      // Create new course — use partial price if applicable
+      const insertData = {
+        ...courseData,
+        is_partial_only: isPartialOnly,
+        price_per_participant_rappen: (isPartialOnly && (partialConfig?.partial_price_rappen ?? 0) > 0)
+          ? partialConfig!.partial_price_rappen
+          : 0
+      }
+
       const { data: newCourse, error: insertError } = await this.supabase
         .from('courses')
-        .insert(courseData)
+        .insert(insertData)
         .select('id')
         .single()
 

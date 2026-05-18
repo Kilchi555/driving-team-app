@@ -1926,6 +1926,44 @@
               />
             </div>
 
+            <!-- Partial Enrollment (Teil-3-only / Upgrade path) -->
+            <div class="space-y-4 border border-amber-200 rounded-lg p-4 bg-amber-50">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h5 class="text-sm font-semibold text-amber-900">Teilbuchung (z.B. nur Teil 3)</h5>
+                  <p class="text-xs text-amber-700 mt-0.5">Für Kunden die den Kurs als Upgrade bereits kennen (z.B. A1 → A35kW)</p>
+                </div>
+                <ToggleSwitch
+                  v-model="categoryForm.allow_partial_enrollment"
+                  label=""
+                />
+              </div>
+
+              <div v-if="categoryForm.allow_partial_enrollment" class="grid grid-cols-2 gap-4 mt-3">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Ab welchem Teil?</label>
+                  <input
+                    v-model.number="categoryForm.partial_start_position"
+                    type="number"
+                    min="2"
+                    max="10"
+                    class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <p class="text-xs text-gray-500 mt-1">z.B. 3 = nur Teil 3 buchbar</p>
+                </div>
+                <div>
+                  <label class="block text-sm font-bold text-gray-900 mb-1">Preis Teilbuchung (CHF)</label>
+                  <input
+                    v-model.number="partialCategoryPrice"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div>
               <label class="block text-sm font-medium text-gray-500 mb-2">Sortierung</label>
               <input
@@ -2814,6 +2852,9 @@
                     <span class="text-sm font-semibold text-gray-900 truncate">{{ enrollment.first_name }} {{ enrollment.last_name }}</span>
                     <span :class="getEnrollmentStatusBadge(enrollment.status)" class="px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0">
                       {{ getEnrollmentStatusText(enrollment.status) }}
+                    </span>
+                    <span v-if="enrollment.is_partial_enrollment" class="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 border border-amber-200 flex-shrink-0">
+                      Nur Teil 3
                     </span>
                   </div>
                   <div class="flex items-center gap-3 mt-0.5">
@@ -3780,6 +3821,7 @@ const showEditCategoryModal = ref(false)
 const isSavingCategory = ref(false)
 const editingCategory = ref<any>(null)
 const defaultCategoryPrice = ref(0)
+const partialCategoryPrice = ref(0)
 
 // Create Resource Modals
 const showCreateVehicleModal = ref(false)
@@ -3975,7 +4017,11 @@ const categoryForm = ref({
   // Duration fields
   total_duration_hours: 8.0,
   session_count: 1,
-  hours_per_session: 8.0
+  hours_per_session: 8.0,
+  // Partial enrollment (Teil-3-only / upgrade path)
+  allow_partial_enrollment: false,
+  partial_start_position: 3,
+  partial_price_rappen: 0
 })
 
 const vehicleForm = ref({
@@ -4666,9 +4712,14 @@ const editCategoryItem = (category: any) => {
     // Duration fields
     total_duration_hours: category.total_duration_hours || 8.0,
     session_count: category.session_count || 1,
-    hours_per_session: category.hours_per_session || 8.0
+    hours_per_session: category.hours_per_session || 8.0,
+    // Partial enrollment
+    allow_partial_enrollment: category.allow_partial_enrollment || false,
+    partial_start_position: category.partial_start_position || 3,
+    partial_price_rappen: category.partial_price_rappen || 0
   }
   defaultCategoryPrice.value = category.default_price_rappen / 100
+  partialCategoryPrice.value = (category.partial_price_rappen || 0) / 100
   showEditCategoryModal.value = true
 }
 
@@ -4704,8 +4755,9 @@ const saveCategory = async () => {
       categoryForm: categoryForm.value
     })
 
-    // Update price in rappen
+    // Update prices in rappen
     categoryForm.value.default_price_rappen = Math.round(defaultCategoryPrice.value * 100)
+    categoryForm.value.partial_price_rappen = Math.round(partialCategoryPrice.value * 100)
 
     // Prepare session structure JSON
     const sessionStructure = {
@@ -4769,12 +4821,17 @@ const resetCategoryForm = () => {
     color: '#3B82F6',
     icon: '📚',
     sort_order: 0,
-  // Duration fields
-  total_duration_hours: 8.0,
-  session_count: 1,
-  hours_per_session: 8.0
+    // Duration fields
+    total_duration_hours: 8.0,
+    session_count: 1,
+    hours_per_session: 8.0,
+    // Partial enrollment
+    allow_partial_enrollment: false,
+    partial_start_position: 3,
+    partial_price_rappen: 0
   }
   defaultCategoryPrice.value = 0
+  partialCategoryPrice.value = 0
 }
 
 // Duration calculation function

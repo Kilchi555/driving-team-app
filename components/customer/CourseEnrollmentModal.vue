@@ -49,12 +49,34 @@
         <div class="p-6">
           <!-- Course Info -->
           <div class="rounded-lg p-4 mb-6" :style="{ backgroundColor: getTenantBackgroundColor() }">
-            <h3 class="font-semibold text-gray-800">{{ course.name.split(' - ')[0] }}</h3>
-            <p class="text-sm mt-1 text-gray-500">{{ course.description }}</p>
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <h3 class="font-semibold text-gray-800">{{ course.name.split(' - ')[0] }}</h3>
+                <p class="text-sm mt-1 text-gray-500">{{ course.description }}</p>
+              </div>
+              <span v-if="isForcedPartial || isPartialMode" class="shrink-0 text-xs font-semibold px-2 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">Nur Teil {{ partialStartPosition }}</span>
+            </div>
+
+            <!-- Partial mode toggle (only for full courses whose category allows it) -->
+            <div v-if="categoryAllowsPartial && !isForcedPartial && course.course_sessions?.length >= partialStartPosition" class="mt-3 flex items-center justify-between bg-white/60 rounded-lg px-3 py-2 border border-amber-200">
+              <div>
+                <p class="text-sm font-medium text-amber-900">Nur Teil {{ partialStartPosition }} buchen</p>
+                <p class="text-xs text-amber-700">Für Kunden mit bestehendem A1-Kursnachweis</p>
+              </div>
+              <button
+                type="button"
+                @click="isPartialMode = !isPartialMode; partialConfirmed = false"
+                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none"
+                :class="isPartialMode ? 'bg-amber-500' : 'bg-gray-300'"
+              >
+                <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200" :class="isPartialMode ? 'translate-x-5' : 'translate-x-0'" />
+              </button>
+            </div>
+
             <div class="mt-2 flex items-center gap-3 flex-wrap">
               <p class="text-lg font-bold text-gray-800"
                 :class="(appliedDiscount || userCreditRappen > 0) ? 'line-through text-gray-400 text-base' : ''">
-                CHF {{ formatPrice(course.price_per_participant_rappen) }}
+                CHF {{ formatPrice(activeBasePrice) }}
               </p>
               <p v-if="appliedDiscount && !userCreditRappen" class="text-lg font-bold text-green-700">
                 CHF {{ formatPrice(effectivePrice) }}
@@ -362,6 +384,20 @@
               {{ enrollmentError }}
             </div>
 
+            <!-- A1-confirmation checkbox (only for partial enrollments) -->
+            <div v-if="isForcedPartial || isPartialMode" class="mt-4 flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <input
+                id="partial-confirm-checkbox"
+                v-model="partialConfirmed"
+                type="checkbox"
+                class="mt-1 h-4 w-4 rounded border-amber-400 focus:ring-amber-500"
+                style="accent-color: #d97706"
+              />
+              <label for="partial-confirm-checkbox" class="text-sm text-amber-900">
+                Ich bestätige, dass ich die Kategorie A1 durch einen <strong>Kursbesuch</strong> erworben habe (nicht als Schenkung). Nur dann ist die Teilbuchung zulässig.
+              </label>
+            </div>
+
             <!-- AGB Checkbox -->
             <div class="mt-6 flex items-start gap-3">
               <input 
@@ -509,9 +545,14 @@ const agbAccepted = ref(false)
 // Discount
 const appliedDiscount = ref<{ code: string; discountAmountRappen: number; discountData: any } | null>(null)
 
-const effectivePrice = computed(() => {
+const activeBasePrice = computed(() => {
   if (!props.course) return 0
-  return Math.max(0, props.course.price_per_participant_rappen - (appliedDiscount.value?.discountAmountRappen ?? 0))
+  if (isForcedPartial.value || isPartialMode.value) return partialPriceRappen.value
+  return props.course.price_per_participant_rappen ?? 0
+})
+
+const effectivePrice = computed(() => {
+  return Math.max(0, activeBasePrice.value - (appliedDiscount.value?.discountAmountRappen ?? 0))
 })
 
 // Credit wallet for logged-in users
@@ -545,6 +586,22 @@ const swappingSession = ref<any>(null)
 const availableSwapSessions = ref<any[]>([])
 const isLoadingSwapOptions = ref(false)
 
+// Partial enrollment (Teil-3-only / upgrade path)
+const isPartialMode = ref(false)
+const partialConfirmed = ref(false)
+
+const categoryAllowsPartial = computed(() =>
+  !!(props.course?.course_category?.allow_partial_enrollment)
+)
+const partialStartPosition = computed(() =>
+  props.course?.course_category?.partial_start_position ?? 3
+)
+const partialPriceRappen = computed(() =>
+  props.course?.course_category?.partial_price_rappen ?? 0
+)
+// A SARI-synced course that already only contains Teil 3 is always in partial mode
+const isForcedPartial = computed(() => !!props.course?.is_partial_only)
+
 // Warning toast for session order issues
 const showSessionWarning = ref(false)
 const sessionWarningMessage = ref('')
@@ -561,7 +618,9 @@ const hasCustomSessions = computed(() => {
 })
 
 const canSubmit = computed(() => {
-  return isValidEmail.value && isValidPhone.value && sariData.value && agbAccepted.value
+  const baseOk = isValidEmail.value && isValidPhone.value && sariData.value && agbAccepted.value
+  if (isForcedPartial.value || isPartialMode.value) return baseOk && partialConfirmed.value
+  return baseOk
 })
 
 const groupedSessions = computed(() => {
@@ -654,6 +713,10 @@ const sessionGroups = computed(() => {
     })
   }
   
+  // In partial mode, filter to sessions at or after partial_start_position
+  if (isForcedPartial.value || isPartialMode.value) {
+    return groups.filter(g => g.position >= partialStartPosition.value)
+  }
   return groups
 })
 
@@ -1032,6 +1095,8 @@ const submitEnrollment = async () => {
     // Build custom sessions object if any sessions were swapped
     const hasCustomSessions = Object.keys(customSessions.value).length > 0
     
+    const isPartial = isForcedPartial.value || isPartialMode.value
+
     const response = await $fetch(endpoint, {
       method: 'POST',
       body: {
@@ -1044,7 +1109,9 @@ const submitEnrollment = async () => {
         customSessions: hasCustomSessions ? customSessions.value : null,
         referralCode: getStoredRefCode() ?? undefined,
         discountCode: appliedDiscount.value?.code ?? undefined,
-        discountAmountRappen: appliedDiscount.value?.discountAmountRappen ?? 0
+        discountAmountRappen: appliedDiscount.value?.discountAmountRappen ?? 0,
+        isPartialEnrollment: isPartial || undefined,
+        partialStartPosition: isPartial ? partialStartPosition.value : undefined
       }
     }) as any
     
@@ -1086,6 +1153,8 @@ watch(() => props.isOpen, (isOpen) => {
     availableSwapSessions.value = []
     formData.value = { faberid: '', birthdate: '', email: '', phone: '' }
     appliedDiscount.value = null
+    isPartialMode.value = false
+    partialConfirmed.value = false
   }
 })
 
