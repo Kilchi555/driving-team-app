@@ -1110,11 +1110,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Instruktor-Typ</label>
                     <select
                       v-model="session.instructor_type"
-                      :disabled="editingCourse && editingCourse.sari_managed"
-                      :class="[
-                        'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500',
-                        editingCourse && editingCourse.sari_managed ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
-                      ]"
+                      class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Kein Instruktor</option>
                       <option value="internal">Interner Staff</option>
@@ -1144,35 +1140,24 @@
                   
                   <!-- External Instructor Fields -->
                   <template v-if="session.instructor_type === 'external'">
-                    <div class="col-span-full">
-                      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div class="flex items-center justify-between">
-                          <div>
-                            <h4 class="text-sm font-medium text-blue-900">Externer Instruktor</h4>
-                            <p class="text-xs text-blue-700 mt-1">
-                              Erstellen Sie einen Benutzer-Account für den externen Instruktor
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            @click="openExternalInstructorModal(session, index)"
-                            class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-                          >
-                            {{ session.staff_id ? 'Bearbeiten' : 'Benutzer erstellen' }}
-                          </button>
-                        </div>
-                        <div v-if="session.staff_id" class="mt-3 p-3 bg-white rounded border">
-                          <div class="text-sm text-gray-900">
-                            <strong>{{ session.external_instructor_name }}</strong>
-                          </div>
-                          <div class="text-xs text-gray-600">
-                            {{ session.external_instructor_email }}
-                          </div>
-                          <div v-if="session.external_instructor_phone" class="text-xs text-gray-600">
-                            📞 {{ session.external_instructor_phone }}
-                          </div>
-                        </div>
-                      </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-2">Name (optional)</label>
+                      <input
+                        v-model="session.external_instructor_name"
+                        type="text"
+                        placeholder="z.B. Fahrschule Bisig"
+                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-2">E-Mail für Erinnerung</label>
+                      <input
+                        v-model="session.external_instructor_email"
+                        type="email"
+                        placeholder="info@example.ch"
+                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <p class="text-xs text-gray-500 mt-1">Erhält die Teilnehmerliste 1 Tag vor dem Kurs</p>
                     </div>
                   </template>
                 </div>
@@ -4232,14 +4217,44 @@ const createCourse = async () => {
       courseData = restData
     }
 
-    await $fetch('/api/admin/courses/upsert', {
-      method: 'POST',
-      body: {
-        courseData,
-        sessions: courseSessions.value,
-        courseId: editingCourse.value?.id,
-      },
-    })
+    const isSariCourse = editingCourse.value?.sari_managed === true
+
+    if (isSariCourse && editingCourse.value?.id) {
+      // For SARI-managed courses: only update course metadata (no sessions) and then
+      // patch instructor fields individually to avoid deleting/recreating SARI sessions.
+      await $fetch('/api/admin/courses/upsert', {
+        method: 'POST',
+        body: {
+          courseData,
+          sessions: [],
+          courseId: editingCourse.value.id,
+        },
+      })
+
+      if (courseSessions.value.length > 0) {
+        await $fetch('/api/admin/courses/update-session-instructors', {
+          method: 'POST',
+          body: {
+            sessions: courseSessions.value.map((s: any) => ({
+              id: s.id,
+              instructor_type: s.instructor_type || null,
+              staff_id: s.staff_id || null,
+              external_instructor_name: s.external_instructor_name || null,
+              external_instructor_email: s.external_instructor_email || null,
+            })),
+          },
+        })
+      }
+    } else {
+      await $fetch('/api/admin/courses/upsert', {
+        method: 'POST',
+        body: {
+          courseData,
+          sessions: courseSessions.value,
+          courseId: editingCourse.value?.id,
+        },
+      })
+    }
 
     logger.debug(`✅ Course ${editingCourse.value ? 'updated' : 'created'}`)
     success.value = editingCourse.value ? 'Kurs erfolgreich aktualisiert!' : 'Kurs erfolgreich erstellt!'
@@ -4492,6 +4507,8 @@ const loadCourseSessions = async (courseId: string) => {
         })
         
         return {
+          id: session.id,
+          sari_session_id: session.sari_session_id || null,
           date: localDate,
           start_time: localStartTime,
           end_time: localEndTime,
@@ -4500,7 +4517,7 @@ const loadCourseSessions = async (courseId: string) => {
           staff_id: session.staff_id || null,
           external_instructor_name: session.external_instructor_name || null,
           external_instructor_email: session.external_instructor_email || null,
-          external_instructor_phone: session.external_instructor_phone || null
+          external_instructor_phone: null
         }
       })
 
