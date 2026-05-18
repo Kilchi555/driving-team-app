@@ -46,10 +46,12 @@ const handler = defineEventHandler(async (event) => {
       tenantId,
       email,
       phone,
-      customSessions // Support for swapped sessions
+      customSessions, // Support for swapped sessions
+      isPartialEnrollment,  // True when customer books only Teil-3
+      partialStartPosition  // Which session position to start from (e.g. 3)
     } = body
 
-    logger.debug('💵 Cash enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions })
+    logger.debug('💵 Cash enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions, isPartialEnrollment })
 
     // 1. Validate inputs
     if (!courseId || !faberid || !birthdate || !tenantId) {
@@ -237,6 +239,27 @@ const handler = defineEventHandler(async (event) => {
       // Extract ALL session IDs from the group
       const sariCourseIdParts = String(course.sari_course_id).split('_')
       let sariSessionIds = sariCourseIdParts.slice(1).filter((id: string) => id && !isNaN(parseInt(id)))
+
+      // For partial enrollment, only keep session IDs from partial_start_position onwards.
+      // Session IDs are ordered, so we resolve position from course_sessions by date grouping.
+      const isPartial = isPartialEnrollment || course.is_partial_only
+      if (isPartial && (partialStartPosition ?? 1) > 1 && course.course_sessions?.length > 0) {
+        const startPos = partialStartPosition ?? 3
+        const sortedSessions = [...course.course_sessions].sort((a: any, b: any) =>
+          a.start_time.localeCompare(b.start_time)
+        )
+        // Map date → position
+        let pos = 0
+        let lastDate = ''
+        const sessionPosMap: Record<string, number> = {}
+        for (const s of sortedSessions) {
+          const d = s.start_time.split('T')[0]
+          if (d !== lastDate) { pos++; lastDate = d }
+          if (s.sari_session_id) sessionPosMap[s.sari_session_id] = pos
+        }
+        sariSessionIds = sariSessionIds.filter(id => (sessionPosMap[id] ?? pos) >= startPos)
+        logger.info(`🎯 Partial enrollment: keeping ${sariSessionIds.length} session(s) from position ${startPos}`)
+      }
       
       if (sariSessionIds.length === 0) {
         logger.error('❌ Invalid SARI course ID format:', course.sari_course_id)
@@ -385,6 +408,7 @@ const handler = defineEventHandler(async (event) => {
         payment_method: 'cash_on_site',
         // Store custom sessions if any were selected
         custom_sessions: customSessions || null,
+        is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
         // Mark as SARI synced (enrollment happened before DB save)
         sari_synced: course.sari_managed ? true : null,
         sari_synced_at: course.sari_managed ? new Date().toISOString() : null

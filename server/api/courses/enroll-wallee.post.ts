@@ -45,13 +45,15 @@ const handler = defineEventHandler(async (event) => {
       tenantId,
       email,
       phone,
-      customSessions,      // Optional: for flexible session selection
-      referralCode,        // Optional: affiliate referral code
-      discountCode,        // Optional: discount/voucher code
-      discountAmountRappen // Optional: client-computed discount (re-validated server-side)
+      customSessions,       // Optional: for flexible session selection
+      referralCode,         // Optional: affiliate referral code
+      discountCode,         // Optional: discount/voucher code
+      discountAmountRappen, // Optional: client-computed discount (re-validated server-side)
+      isPartialEnrollment,  // True when customer books only Teil-3
+      partialStartPosition  // Which session position to start from (e.g. 3)
     } = body
 
-    logger.debug('📝 Wallee enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions })
+    logger.debug('📝 Wallee enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions, isPartialEnrollment })
 
     // 1. Validate inputs
     if (!courseId || !faberid || !birthdate || !tenantId) {
@@ -66,7 +68,7 @@ const handler = defineEventHandler(async (event) => {
     // 2. Get course details
     const { data: course, error: courseError } = await supabase
       .from('courses')
-      .select('*, course_sessions(*)')
+      .select('*, course_sessions(*), course_category:course_categories(allow_partial_enrollment, partial_start_position, partial_price_rappen)')
       .eq('id', courseId)
       .eq('tenant_id', tenantId)
       .single()
@@ -466,6 +468,7 @@ const handler = defineEventHandler(async (event) => {
           firstname: customerData.firstname,
           lastname: customerData.lastname,
           custom_sessions: customSessions || null,
+          is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
           created_at: new Date().toISOString()
         })
 
@@ -500,6 +503,8 @@ const handler = defineEventHandler(async (event) => {
             phone: finalPhone,
             custom_sessions: customSessions || null,
             referral_code: referralCode || null,
+            is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
+            partial_start_position: partialStartPosition ?? null,
             // Discount tracking for webhook
             discount_code: validatedDiscountCode,
             discount_amount_rappen: validatedDiscountAmount,

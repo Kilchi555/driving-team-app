@@ -129,11 +129,19 @@ export default defineEventHandler(async (event) => {
         current_participants,
         is_public,
         status,
+        is_partial_only,
+        course_category:course_categories (
+          id,
+          allow_partial_enrollment,
+          partial_start_position,
+          partial_price_rappen
+        ),
         course_sessions (
           id,
           start_time,
           end_time,
-          session_number
+          session_number,
+          sari_session_id
         )
       `)
       .eq('tenant_id', tenant.id)
