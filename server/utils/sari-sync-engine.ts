@@ -354,9 +354,6 @@ export class SARISyncEngine {
       const durationHours = courseType === 'VKU' ? 2 : 4
       const endDate = new Date(new Date(startDate).getTime() + durationHours * 60 * 60 * 1000)
 
-      // Extract instructor for this session
-      const sessionInstructor = sariSession.instructor || sariSession.teacher || sariSession.address?.name || 'SARI Kursleiter'
-      
       const sessionData = {
         course_id: courseId,
         tenant_id: this.tenantId,
@@ -365,13 +362,13 @@ export class SARISyncEngine {
         description: `SARI ID: ${sariSession.id} | Freie Plätze: ${sariSession.freeplaces}`,
         start_time: startDate.toISOString(),
         end_time: endDate.toISOString(),
-        instructor_type: 'external' as const,
-        external_instructor_name: sessionInstructor,
+        // instructor_type, staff_id, external_instructor_name/email intentionally left null —
+        // must be set manually in the admin UI after sync
         custom_location: sariSession.address 
           ? `${sariSession.address.address}, ${sariSession.address.zip} ${sariSession.address.city}`
           : null,
         is_active: true,
-        sari_session_id: String(sariSession.id) // Store SARI course ID for enrollment
+        sari_session_id: String(sariSession.id)
       }
 
       const { error: sessionError } = await this.supabase
