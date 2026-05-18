@@ -20,8 +20,8 @@ import { sendEmail } from '~/server/utils/email'
 import { wrapMarketingEmail } from '~/server/utils/email-template'
 
 const SIMY_IBAN = 'CH2706300508265621908'
-const PARTNER_EMAIL_HELVETIA = 'pascal_kilchenmann@icloud.com' // TODO: change to michele.cecio@helvetia.ch before go-live
-const SIMY_CC_EMAIL = 'pascal_kilchenmann@icloud.com' // TODO: change to info@simy.ch before go-live
+const PARTNER_EMAIL_HELVETIA = 'michele.cecio@helvetia.ch'
+const SIMY_CC_EMAIL = 'info@simy.ch'
 
 // In development, all emails are redirected to this address instead of real recipients
 const DEV_OVERRIDE_EMAIL = process.env.NODE_ENV !== 'production'
