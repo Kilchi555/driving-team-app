@@ -37,6 +37,7 @@ export default defineEventHandler(async (event) => {
     const customer = client.Customer({
       customer_id: customerId,
       refresh_token: refreshToken,
+      login_customer_id: '9509957201', // Manager Account (Driving Team Manager)
     })
 
     const rows = await customer.query(`
