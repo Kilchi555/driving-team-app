@@ -1,9 +1,8 @@
-import { GoogleAdsApi } from 'google-ads-api'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
-// Fetches the last 7 days of Google Ads campaign performance and upserts
-// into marketing_google_ads_daily. Runs daily at 04:10 via Vercel Cron.
+// Fetches the last 7 days of Google Ads campaign performance via REST API
+// and upserts into marketing_google_ads_daily. Runs daily at 04:10 via Vercel Cron.
 export default defineEventHandler(async (event) => {
   // ============ LAYER 1: CRON AUTH ============
   const authHeader = getHeader(event, 'authorization')
@@ -18,6 +17,7 @@ export default defineEventHandler(async (event) => {
   const clientSecret = process.env.GOOGLE_ADS_CLIENT_SECRET
   const refreshToken = process.env.GOOGLE_ADS_REFRESH_TOKEN
   const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID
+  const managerCustomerId = '9509957201'
 
   if (!developerToken || !clientId || !clientSecret || !refreshToken || !customerId) {
     logger.warn('sync-marketing-google-ads: missing credentials, skipping')
@@ -26,21 +26,26 @@ export default defineEventHandler(async (event) => {
 
   logger.info('sync-marketing-google-ads: starting sync')
 
-  // ============ LAYER 3: FETCH FROM GOOGLE ADS ============
   try {
-    const client = new GoogleAdsApi({
-      client_id: clientId,
-      client_secret: clientSecret,
-      developer_token: developerToken,
+    // ============ LAYER 3: GET ACCESS TOKEN ============
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token',
+      }),
     })
+    const tokenData = await tokenRes.json() as any
+    if (!tokenData.access_token) {
+      return { success: false, reason: 'token_error', detail: tokenData }
+    }
+    const accessToken = tokenData.access_token
 
-    const customer = client.Customer({
-      customer_id: customerId,
-      refresh_token: refreshToken,
-      login_customer_id: '9509957201', // Manager Account (Driving Team Manager)
-    })
-
-    const rows = await customer.query(`
+    // ============ LAYER 4: QUERY GOOGLE ADS REST API ============
+    const query = `
       SELECT
         campaign.id,
         campaign.name,
@@ -54,23 +59,45 @@ export default defineEventHandler(async (event) => {
       WHERE segments.date DURING LAST_7_DAYS
         AND campaign.status != 'REMOVED'
       ORDER BY segments.date DESC
-    `)
+    `
 
-    logger.info(`sync-marketing-google-ads: fetched ${rows.length} rows`)
+    const adsRes = await fetch(
+      `https://googleads.googleapis.com/v18/customers/${customerId}/googleAds:search`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'developer-token': developerToken,
+          'login-customer-id': managerCustomerId,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: query.trim() }),
+      }
+    )
 
-    // ============ LAYER 4: UPSERT INTO SUPABASE ============
+    const adsData = await adsRes.json() as any
+
+    if (!adsRes.ok) {
+      logger.error('sync-marketing-google-ads: API error', adsData)
+      return { success: false, reason: 'ads_api_error', detail: adsData }
+    }
+
+    const apiRows: any[] = adsData.results ?? []
+    logger.info(`sync-marketing-google-ads: fetched ${apiRows.length} rows`)
+
+    // ============ LAYER 5: UPSERT INTO SUPABASE ============
     const supabase = getSupabaseAdmin()
 
-    const records = rows.map((row: any) => ({
-      date: row.segments.date,
-      campaign_id: String(row.campaign.id),
-      campaign_name: row.campaign.name ?? '',
-      cost_micros: row.metrics.cost_micros ?? 0,
-      clicks: row.metrics.clicks ?? 0,
-      impressions: row.metrics.impressions ?? 0,
-      conversions: row.metrics.conversions ?? 0,
-      cpc_micros: row.metrics.average_cpc ?? 0,
-    }))
+    const records = apiRows.map((row: any) => ({
+      date: row.segments?.date ?? '',
+      campaign_id: String(row.campaign?.id ?? ''),
+      campaign_name: row.campaign?.name ?? '',
+      cost_micros: row.metrics?.costMicros ?? 0,
+      clicks: row.metrics?.clicks ?? 0,
+      impressions: row.metrics?.impressions ?? 0,
+      conversions: row.metrics?.conversions ?? 0,
+      cpc_micros: row.metrics?.averageCpc ?? 0,
+    })).filter(r => r.date && r.campaign_id)
 
     if (records.length > 0) {
       const { error } = await supabase
@@ -86,8 +113,8 @@ export default defineEventHandler(async (event) => {
     logger.info(`sync-marketing-google-ads: upserted ${records.length} rows`)
     return { success: true, rows: records.length }
   } catch (err: any) {
-    const detail = err?.errors ?? err?.response?.data ?? err?.message ?? String(err)
-    logger.error('sync-marketing-google-ads: error', detail)
-    return { success: false, reason: 'error', detail }
+    const detail = err?.message ?? String(err)
+    logger.error('sync-marketing-google-ads: unexpected error', detail)
+    return { success: false, reason: 'unexpected_error', detail }
   }
 })
