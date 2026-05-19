@@ -8,7 +8,7 @@ import { sendEmail } from '~/server/utils/email'
 import { buildConsentLink, buildUnsubscribeLink, wrapMarketingEmail } from '~/server/utils/email-template'
 
 export default defineEventHandler(async (event) => {
-  const { tenantSlug, email, first_name, last_name, categories = [] } = await readBody(event)
+  const { tenantSlug, email, first_name, last_name, categories = [], source_label } = await readBody(event)
 
   if (!tenantSlug || !email) {
     throw createError({ statusCode: 400, statusMessage: 'tenantSlug and email required' })
@@ -42,6 +42,7 @@ export default defineEventHandler(async (event) => {
         categories,
         status: 'pending_consent',
         source: 'public_signup_form',
+        source_label: source_label || null,
       },
       { onConflict: 'tenant_id,email', ignoreDuplicates: true }
     )

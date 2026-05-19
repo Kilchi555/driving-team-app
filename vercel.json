@@ -104,6 +104,22 @@
     {
       "path": "/api/cron/year-end-finalize",
       "schedule": "0 3 15 1 *"
+    },
+    {
+      "path": "/api/cron/sync-marketing-ga4",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/sync-marketing-gsc",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/sync-marketing-google-ads",
+      "schedule": "10 4 * * *"
+    },
+    {
+      "path": "/api/cron/sync-marketing-meta-ads",
+      "schedule": "20 4 * * *"
     }
   ],
   "rewrites": [
