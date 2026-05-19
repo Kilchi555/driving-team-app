@@ -38,29 +38,36 @@ export default defineEventHandler(async (event) => {
     refresh_token: refreshToken,
   })
 
-  // GAQL query: last 3 days, all enabled/paused campaigns
-  const { data } = await customer.query(`
-    SELECT
-      campaign.id,
-      campaign.name,
-      segments.date,
-      metrics.cost_micros,
-      metrics.clicks,
-      metrics.impressions,
-      metrics.conversions,
-      metrics.average_cpc
-    FROM campaign
-    WHERE segments.date DURING LAST_7_DAYS
-      AND campaign.status != 'REMOVED'
-    ORDER BY segments.date DESC
-  `)
+  let data: any[] = []
+  try {
+    const result = await customer.query(`
+      SELECT
+        campaign.id,
+        campaign.name,
+        segments.date,
+        metrics.cost_micros,
+        metrics.clicks,
+        metrics.impressions,
+        metrics.conversions,
+        metrics.average_cpc
+      FROM campaign
+      WHERE segments.date DURING LAST_7_DAYS
+        AND campaign.status != 'REMOVED'
+      ORDER BY segments.date DESC
+    `)
+    data = result as any[]
+  } catch (adsErr: any) {
+    const detail = adsErr?.errors ?? adsErr?.message ?? String(adsErr)
+    logger.error('sync-marketing-google-ads: API error', detail)
+    return { success: false, reason: 'ads_api_error', detail }
+  }
 
   logger.info(`sync-marketing-google-ads: fetched ${data.length} rows from Google Ads`)
 
   // ============ LAYER 4: UPSERT INTO SUPABASE ============
   const supabase = getSupabaseAdmin()
 
-  const records = data.map((row: any) => ({
+  const records = (data as any[]).map((row: any) => ({
     date: row.segments.date,
     campaign_id: String(row.campaign.id),
     campaign_name: row.campaign.name ?? '',
