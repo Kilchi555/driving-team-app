@@ -358,7 +358,7 @@ export default defineEventHandler(async (event) => {
         )[0]
         const courseDate = firstSession?.start_time
           ? new Date(firstSession.start_time).toLocaleDateString('de-CH', {
-              weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric'
+              weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Zurich'
             })
           : undefined
         const price = course?.price_per_participant_rappen
@@ -429,66 +429,65 @@ function formatSessionsForEmail(sessions: any[]): string {
     new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
   )
   
-  // Group sessions by date
+  // Group sessions by date in Europe/Zurich timezone
   const sessionsByDate: Record<string, any[]> = {}
-  
+
   for (const session of sortedSessions) {
     const date = new Date(session.start_time)
-    const dateKey = date.toISOString().split('T')[0] // YYYY-MM-DD
-    
+    // Use Zurich date as key so midnight-crossing sessions land on the correct calendar day
+    const dateKey = date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Zurich' }) // YYYY-MM-DD
+
     if (!sessionsByDate[dateKey]) {
       sessionsByDate[dateKey] = []
     }
     sessionsByDate[dateKey].push(session)
   }
-  
+
+  // Helper: convert UTC ISO string to HH:MM in Europe/Zurich
+  const extractTime = (isoString: string) => {
+    if (!isoString) return ''
+    return new Date(isoString).toLocaleTimeString('de-CH', {
+      timeZone: 'Europe/Zurich',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
   // Format each day
   const formattedDays: string[] = []
-  
+
   for (const [dateKey, daySessions] of Object.entries(sessionsByDate)) {
-    const date = new Date(dateKey + 'T12:00:00') // Noon to avoid timezone issues
-    
-    // Format date: "Fr. 24.01.2026"
-    const weekdays = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
-    const weekday = weekdays[date.getDay()]
-    const day = date.getDate().toString().padStart(2, '0')
-    const month = (date.getMonth() + 1).toString().padStart(2, '0')
-    const year = date.getFullYear()
-    const formattedDate = `${weekday}. ${day}.${month}.${year}`
-    
-    // Extract time directly from ISO string (already local time from SARI)
-    // Format: "2026-03-14T18:00:00" → "18:00"
-    const extractTime = (isoString: string) => {
-      if (!isoString) return ''
-      const timePart = isoString.split('T')[1]
-      if (!timePart) return ''
-      return timePart.substring(0, 5) // "18:00:00" → "18:00"
-    }
-    
+    // Parse YYYY-MM-DD at noon Zurich to avoid any day shift
+    const date = new Date(`${dateKey}T12:00:00`)
+
+    // Format date: "Fr. 24.01.2026" using Zurich locale
+    const formattedDate = date.toLocaleDateString('de-CH', {
+      timeZone: 'Europe/Zurich',
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).replace(',', '.')
+
     // Get time range for this day
     const times = daySessions.map(s => {
       const startTime = extractTime(s.start_time)
       const endTime = s.end_time ? extractTime(s.end_time) : null
-      
-      if (endTime) {
-        return `${startTime} - ${endTime}`
-      }
-      return startTime
+      return endTime ? `${startTime} - ${endTime}` : startTime
     })
-    
+
     // If multiple sessions on same day, show range from first start to last end
     if (daySessions.length > 1) {
       const startTime = extractTime(daySessions[0].start_time)
       const lastSession = daySessions[daySessions.length - 1]
       const endTime = lastSession.end_time ? extractTime(lastSession.end_time) : null
-      
+
       if (endTime) {
         formattedDays.push(`<li>${formattedDate}, ${startTime} - ${endTime}</li>`)
       } else {
         formattedDays.push(`<li>${formattedDate}, ${startTime}</li>`)
       }
     } else {
-      // Single session
       formattedDays.push(`<li>${formattedDate}, ${times[0]}</li>`)
     }
   }

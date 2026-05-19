@@ -345,34 +345,23 @@ const formatLessonDate = (dateString: string) => {
   }
 }
 
-const formatTimeRange = (startTime: string, endTime: string, isCourseSession: boolean = false) => {
-  // For course sessions: time is already in local time, just extract HH:MM
-  if (isCourseSession) {
-    // ISO string like "2026-02-01T18:30:00+00:00" - extract time directly
-    const startMatch = startTime.match(/T(\d{2}:\d{2})/)
-    const endMatch = endTime.match(/T(\d{2}:\d{2})/)
-    
-    if (startMatch && endMatch) {
-      return `${startMatch[1]} - ${endMatch[1]}`
-    }
-  }
-  
-  // For appointments: Convert UTC times to Zurich local time
+const formatTimeRange = (startTime: string, endTime: string, _isCourseSession: boolean = false) => {
+  // Always convert UTC times to Zurich local time (Europe/Zurich = CET/CEST)
   const start = new Date(startTime)
   const end = new Date(endTime)
-  
+
   const startStr = start.toLocaleTimeString('de-CH', {
     timeZone: 'Europe/Zurich',
     hour: '2-digit',
     minute: '2-digit'
   })
-  
+
   const endStr = end.toLocaleTimeString('de-CH', {
     timeZone: 'Europe/Zurich',
     hour: '2-digit',
     minute: '2-digit'
   })
-  
+
   return `${startStr} - ${endStr}`
 }
 
