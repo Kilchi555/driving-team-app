@@ -4,9 +4,7 @@ import { logger } from '~/utils/logger'
 
 // Fetches the top 100 Search Console queries for the last 3 days and upserts
 // into marketing_gsc_daily. Runs daily at 04:00 via Vercel Cron.
-// Note: Search Console data has a ~2-day delay, so yesterday's data may be incomplete.
-// Auth: uses OAuth2 refresh token (GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN) so that a
-// regular Google account with Search Console access can be used instead of a service account.
+// Auth: uses OAuth2 refresh token (GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN).
 export default defineEventHandler(async (event) => {
   // ============ LAYER 1: CRON AUTH ============
   const authHeader = getHeader(event, 'authorization')
@@ -23,7 +21,7 @@ export default defineEventHandler(async (event) => {
 
   if (!clientId || !clientSecret || !refreshToken || !siteUrl) {
     logger.warn('sync-marketing-gsc: missing credentials, skipping')
-    return { success: false, reason: 'missing_credentials' }
+    return { success: false, reason: 'missing_credentials', present: { clientId: !!clientId, clientSecret: !!clientSecret, refreshToken: !!refreshToken, siteUrl: !!siteUrl } }
   }
 
   logger.info('sync-marketing-gsc: starting sync for last 3 days')
@@ -31,11 +29,9 @@ export default defineEventHandler(async (event) => {
   // ============ LAYER 3: FETCH FROM SEARCH CONSOLE ============
   const oauth2Client = new google.auth.OAuth2(clientId, clientSecret)
   oauth2Client.setCredentials({ refresh_token: refreshToken })
-  const auth = oauth2Client
 
-  const searchConsole = google.searchconsole({ version: 'v1', auth })
+  const searchConsole = google.searchconsole({ version: 'v1', auth: oauth2Client })
 
-  // Build date range: 5 days ago to 2 days ago (GSC has ~2-day delay)
   const endDate = new Date()
   endDate.setDate(endDate.getDate() - 2)
   const startDate = new Date()
@@ -43,18 +39,25 @@ export default defineEventHandler(async (event) => {
 
   const fmt = (d: Date) => d.toISOString().split('T')[0]
 
-  const { data } = await searchConsole.searchanalytics.query({
-    siteUrl,
-    requestBody: {
-      startDate: fmt(startDate),
-      endDate: fmt(endDate),
-      dimensions: ['date', 'query', 'page'],
-      rowLimit: 100,
-      type: 'web',
-    },
-  })
+  let apiRows: any[] = []
+  try {
+    const res = await searchConsole.searchanalytics.query({
+      siteUrl,
+      requestBody: {
+        startDate: fmt(startDate),
+        endDate: fmt(endDate),
+        dimensions: ['date', 'query', 'page'],
+        rowLimit: 100,
+        type: 'web',
+      },
+    })
+    apiRows = res.data.rows ?? []
+  } catch (gscErr: any) {
+    const detail = gscErr?.response?.data ?? gscErr?.message ?? String(gscErr)
+    logger.error('sync-marketing-gsc: Google API error', detail)
+    return { success: false, reason: 'gsc_api_error', detail }
+  }
 
-  const apiRows = data.rows ?? []
   logger.info(`sync-marketing-gsc: fetched ${apiRows.length} rows from Search Console`)
 
   // ============ LAYER 4: UPSERT INTO SUPABASE ============
