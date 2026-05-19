@@ -57,7 +57,6 @@
     <div v-else class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       
       <CustomerCreditWalletPanel ref="creditWalletRef" class="mb-6" />
-      <CustomerAutoDiscountPanel class="mb-6" />
 
       <!-- Payment List -->
       <div class="bg-white rounded-xl shadow-lg border border-gray-200">
@@ -337,9 +336,8 @@ import { useWalleeStatus } from '~/composables/useWalleeStatus'
 import { storeToRefs } from 'pinia'
 import { useCustomerPayments } from '~/composables/useCustomerPayments'
 import CustomerCancellationModal from '~/components/customer/CustomerCancellationModal.vue'
-import CustomerMedicalCertificateModal from '~/components/customer/CustomerMedicalCertificateModal.vue' // ✅ NEU
+import CustomerMedicalCertificateModal from '~/components/customer/CustomerMedicalCertificateModal.vue'
 import CustomerCreditWalletPanel from '~/components/customer/CustomerCreditWalletPanel.vue'
-import CustomerAutoDiscountPanel from '~/components/customer/CustomerAutoDiscountPanel.vue'
 import { formatDateTime as formatDateTimeUtil } from '~/utils/dateUtils'
 
 // Components (these would need to be created)
@@ -723,7 +721,11 @@ const applyDiscount = async (payment: any) => {
     payment.total_amount_rappen = result.new_total_rappen
 
     discountOpenFor.value = null
-    showSuccess('Rabatt angewendet', `CHF ${(result.discount_amount_rappen / 100).toFixed(2)} Rabatt wurde abgezogen.`)
+    if (result.isAutoApply) {
+      showSuccess('Dauerrabatt aktiviert 🎉', `CHF ${(result.discount_amount_rappen / 100).toFixed(2)} Rabatt wurde abgezogen und für alle zukünftigen Buchungen gespeichert.`)
+    } else {
+      showSuccess('Rabatt angewendet', `CHF ${(result.discount_amount_rappen / 100).toFixed(2)} Rabatt wurde abgezogen.`)
+    }
   } catch (err: any) {
     discountErrors.value[payment.id] = err.data?.statusMessage || err.message || 'Fehler beim Anwenden des Rabatts'
   } finally {

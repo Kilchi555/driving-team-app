@@ -92,6 +92,101 @@
         </div>
       </div>
 
+      <!-- Import from Users -->
+      <div class="bg-white rounded-xl border p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div>
+            <div class="font-semibold text-gray-900">Bestehende Kunden importieren</div>
+            <p class="text-sm text-gray-500">Alle aktiven User als Leads importieren und automatisch Consent-Mails versenden</p>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Kategorien zuweisen</label>
+          <div class="flex flex-wrap gap-3">
+            <label v-for="cat in userImportCategories" :key="cat.value" class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" :value="cat.value" v-model="userImportSelectedCategories" class="rounded" />
+              <span class="text-sm text-gray-700">{{ cat.label }}</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button
+            @click="importFromUsers"
+            :disabled="userImportLoading"
+            class="px-5 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 transition whitespace-nowrap flex items-center gap-2"
+          >
+            <svg v-if="userImportLoading" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {{ userImportLoading ? 'Importiere…' : 'Kunden importieren' }}
+          </button>
+        </div>
+
+        <div v-if="userImportResult" class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800">
+          <span class="font-semibold">{{ userImportResult.imported }} importiert</span>
+          · {{ userImportResult.skipped }} bereits vorhanden
+          · {{ userImportResult.total }} User total
+          <span v-if="userImportResult.imported > 0"> — Consent-Mails werden gerade versendet.</span>
+          <div v-if="userImportResult.error" class="mt-2 text-red-700 font-medium">Fehler: {{ userImportResult.error }}</div>
+        </div>
+        <div v-if="userImportError" class="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+          {{ userImportError }}
+        </div>
+      </div>
+
+      <!-- Import from imported_customers -->
+      <div class="bg-white rounded-xl border p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div>
+            <div class="font-semibold text-gray-900">Importierte Kunden als Leads übernehmen</div>
+            <p class="text-sm text-gray-500">E-Mails aus der Kundendatenbank (Legacy-Import) übernehmen — <strong>ohne</strong> Consent-Mails zu versenden</p>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Kategorien zuweisen</label>
+          <div class="flex flex-wrap gap-3">
+            <label v-for="cat in userImportCategories" :key="'c-' + cat.value" class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" :value="cat.value" v-model="customerImportSelectedCategories" class="rounded" />
+              <span class="text-sm text-gray-700">{{ cat.label }}</span>
+            </label>
+          </div>
+        </div>
+
+        <button
+          @click="importFromCustomers"
+          :disabled="customerImportLoading"
+          class="px-5 py-2.5 bg-orange-600 text-white text-sm font-semibold rounded-lg hover:bg-orange-700 disabled:opacity-50 transition whitespace-nowrap flex items-center gap-2"
+        >
+          <svg v-if="customerImportLoading" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {{ customerImportLoading ? 'Importiere…' : 'Kunden übernehmen (ohne Mails)' }}
+        </button>
+
+        <div v-if="customerImportResult" class="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-4 text-sm text-orange-800">
+          <span class="font-semibold">{{ customerImportResult.imported }} neu importiert</span>
+          · {{ customerImportResult.skipped }} bereits vorhanden
+          · {{ customerImportResult.total }} mit E-Mail gefunden
+          <div v-if="customerImportResult.error" class="mt-2 text-red-700 font-medium">Fehler: {{ customerImportResult.error }}</div>
+        </div>
+        <div v-if="customerImportError" class="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+          {{ customerImportError }}
+        </div>
+      </div>
+
       <!-- Quick Actions -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <NuxtLink
@@ -124,6 +219,62 @@ useHead({ title: 'Marketing - Admin' })
 
 const authStore = useAuthStore()
 const stats = ref<any>(null)
+
+// ── User import ───────────────────────────────────────────────────────────────
+const { data: categoriesData } = await useFetch('/api/marketing/lead-categories', {
+  query: { tenantId: computed(() => authStore.userProfile?.tenant_id) },
+})
+const userImportCategories = computed(() =>
+  (categoriesData.value?.categories ?? []).map((c: any) => ({ value: c.code, label: c.name }))
+)
+const userImportSelectedCategories = ref<string[]>([])
+const userImportLoading = ref(false)
+const userImportResult = ref<{ imported: number; skipped: number; total: number } | null>(null)
+const userImportError = ref('')
+
+async function importFromUsers() {
+  userImportError.value = ''
+  userImportResult.value = null
+  userImportLoading.value = true
+  try {
+    const tenantId = authStore.userProfile?.tenant_id
+    const res = await $fetch('/api/marketing/import-from-users', {
+      method: 'POST',
+      body: { tenantId, categories: userImportSelectedCategories.value },
+    }) as any
+    userImportResult.value = res
+    stats.value = await $fetch('/api/marketing/stats', { query: { tenantId } })
+  } catch (e: any) {
+    userImportError.value = e?.data?.statusMessage || 'Fehler beim Importieren'
+  } finally {
+    userImportLoading.value = false
+  }
+}
+
+// ── Import from imported_customers (no consent emails) ────────────────────────
+const customerImportSelectedCategories = ref<string[]>([])
+const customerImportLoading = ref(false)
+const customerImportResult = ref<{ imported: number; skipped: number; total: number; error?: string } | null>(null)
+const customerImportError = ref('')
+
+async function importFromCustomers() {
+  customerImportError.value = ''
+  customerImportResult.value = null
+  customerImportLoading.value = true
+  try {
+    const tenantId = authStore.userProfile?.tenant_id
+    const res = await $fetch('/api/marketing/import-from-customers', {
+      method: 'POST',
+      body: { tenantId, categories: customerImportSelectedCategories.value },
+    }) as any
+    customerImportResult.value = res
+    stats.value = await $fetch('/api/marketing/stats', { query: { tenantId } })
+  } catch (e: any) {
+    customerImportError.value = e?.data?.statusMessage || 'Fehler beim Importieren'
+  } finally {
+    customerImportLoading.value = false
+  }
+}
 
 const quickActions = [
   {

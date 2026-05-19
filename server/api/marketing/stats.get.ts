@@ -7,29 +7,26 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdmin()
 
-  const [leadsRes, campaignsRes, templatesRes] = await Promise.all([
-    supabase
-      .from('leads')
-      .select('status')
-      .eq('tenant_id', tenantId),
-    supabase
-      .from('email_campaigns')
-      .select('status, sent_count, bounce_count, unsubscribe_count')
-      .eq('tenant_id', tenantId),
-    supabase
-      .from('email_templates')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId),
+  const [
+    totalRes, activeRes, pendingRes, unsubRes, bouncedRes,
+    campaignsRes, templatesRes,
+  ] = await Promise.all([
+    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active'),
+    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'pending_consent'),
+    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'unsubscribed'),
+    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'bounced'),
+    supabase.from('email_campaigns').select('status, sent_count, bounce_count, unsubscribe_count').eq('tenant_id', tenantId),
+    supabase.from('email_templates').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
   ])
 
-  const leads = leadsRes.data ?? []
   const campaigns = campaignsRes.data ?? []
 
-  const leadsTotal = leads.length
-  const leadsActive = leads.filter(l => l.status === 'active').length
-  const leadsPendingConsent = leads.filter(l => l.status === 'pending_consent').length
-  const leadsUnsubscribed = leads.filter(l => l.status === 'unsubscribed').length
-  const leadsBounced = leads.filter(l => l.status === 'bounced').length
+  const leadsTotal = totalRes.count ?? 0
+  const leadsActive = activeRes.count ?? 0
+  const leadsPendingConsent = pendingRes.count ?? 0
+  const leadsUnsubscribed = unsubRes.count ?? 0
+  const leadsBounced = bouncedRes.count ?? 0
 
   const campaignsSent = campaigns.filter(c => c.status === 'sent').length
   const totalEmailsSent = campaigns.reduce((s, c) => s + (c.sent_count || 0), 0)
