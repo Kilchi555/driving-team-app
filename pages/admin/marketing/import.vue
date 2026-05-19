@@ -198,14 +198,13 @@ useHead({ title: 'Leads importieren - Admin' })
 
 const authStore = useAuthStore()
 
-const CATEGORIES = [
-  { value: 'auto', label: 'Auto (B)' },
-  { value: 'motorrad', label: 'Motorrad (A)' },
-  { value: 'lkw', label: 'LKW (C/CE)' },
-  { value: 'fahrlehrer', label: 'Fahrlehrer' },
-  { value: 'bus', label: 'Bus (D)' },
-  { value: 'traktor', label: 'Traktor' },
-]
+const tenantId = computed(() => authStore.userProfile?.tenant_id)
+const { data: categoriesData } = await useFetch('/api/marketing/lead-categories', {
+  query: { tenantId },
+})
+const CATEGORIES = computed(() =>
+  (categoriesData.value?.categories ?? []).map((c: any) => ({ value: c.code, label: c.name }))
+)
 
 const FIELD_MAP = [
   { key: 'email', label: 'E-Mail-Adresse', required: true },
@@ -305,9 +304,8 @@ function reset() {
 }
 
 async function startImport() {
-  const tenantId = authStore.userProfile?.tenant_id
   const userId = authStore.userProfile?.id
-  if (!tenantId || !rows.value.length || !mapping.email) return
+  if (!tenantId.value || !rows.value.length || !mapping.email) return
 
   importing.value = true
   importResult.value = null
@@ -323,7 +321,7 @@ async function startImport() {
     const res = await $fetch('/api/marketing/import-leads', {
       method: 'POST',
       body: {
-        tenantId,
+        tenantId: tenantId.value,
         createdBy: userId,
         leads,
         sourceLabel: sourceLabel.value,

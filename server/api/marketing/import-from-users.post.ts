@@ -41,23 +41,19 @@ export default defineEventHandler(async (event) => {
 
   if (users.length === 0) return { success: true, imported: 0, skipped: 0, total: 0 }
 
-  // ── 2. Skip leads that already exist ────────────────────────────
-  const { data: existingLeads } = await supabase
-    .from('leads')
-    .select('email')
-    .eq('tenant_id', tenantId)
-
-  const existingEmails = new Set((existingLeads || []).map((l: any) => l.email.toLowerCase()))
-  const toImport = users.filter((u: any) => u.email && !existingEmails.has(u.email.toLowerCase()))
+  // ── 2. Filter users without email ────────────────────────────────
+  const toImport = users.filter((u: any) => u.email?.trim())
 
   if (toImport.length === 0) {
     return { success: true, imported: 0, skipped: users.length, total: users.length }
   }
 
-  // ── 3. Batch insert (500 rows per chunk) ─────────────────────────
+  // ── 3. Batch upsert (ignoreDuplicates) — 500 rows per chunk ──────
   const INSERT_CHUNK = 500
   let imported = 0
+  let skipped = 0
   const insertedLeads: { id: string; email: string; first_name: string | null; unsubscribe_token: string }[] = []
+  let lastInsertError = ''
 
   for (let i = 0; i < toImport.length; i += INSERT_CHUNK) {
     const chunk = toImport.slice(i, i + INSERT_CHUNK).map((u: any) => ({
@@ -73,13 +69,15 @@ export default defineEventHandler(async (event) => {
 
     const { data: inserted, error } = await supabase
       .from('leads')
-      .insert(chunk)
+      .upsert(chunk, { onConflict: 'tenant_id,email', ignoreDuplicates: true })
       .select('id, email, first_name, unsubscribe_token')
 
     if (error) {
-      console.error('Chunk insert error:', error.message)
+      console.error('Chunk upsert error:', error.message)
+      lastInsertError = error.message
     } else if (inserted) {
       imported += inserted.length
+      skipped += chunk.length - inserted.length
       insertedLeads.push(...inserted)
     }
   }
@@ -113,7 +111,8 @@ export default defineEventHandler(async (event) => {
   return {
     success: true,
     imported,
-    skipped: users.length - toImport.length,
+    skipped: skipped + (toImport.length - imported - skipped),
     total: users.length,
+    error: lastInsertError || undefined,
   }
 })

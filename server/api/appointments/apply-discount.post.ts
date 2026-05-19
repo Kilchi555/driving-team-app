@@ -244,6 +244,42 @@ export default defineEventHandler(async (event) => {
     )
 
     // ── Persist changes ───────────────────────────────────────────────────────
+    // Check if this is a Dauerrabatt (auto_apply) — register it for the user automatically
+    let isAutoApply = false
+    const discountRecord = await supabase
+      .from('discounts')
+      .select('id, auto_apply, valid_until, first_lesson_only')
+      .ilike('code', discountCode)
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (discountRecord.data?.auto_apply && !discountRecord.data.first_lesson_only) {
+      isAutoApply = true
+      // Register silently – ignore if already registered
+      const { data: existingUdc } = await supabase
+        .from('user_discount_codes')
+        .select('id, is_active')
+        .eq('user_id', userProfile.id)
+        .eq('tenant_id', tenantId)
+        .ilike('code', discountCode)
+        .maybeSingle()
+
+      if (!existingUdc) {
+        await supabase.from('user_discount_codes').insert({
+          user_id: userProfile.id,
+          tenant_id: tenantId,
+          code: discountCode.toUpperCase(),
+          discount_id: discountRecord.data.id,
+          expires_at: discountRecord.data.valid_until ?? null,
+        })
+      } else if (!existingUdc.is_active) {
+        await supabase.from('user_discount_codes')
+          .update({ is_active: true })
+          .eq('id', existingUdc.id)
+      }
+    }
+
     const [paymentUpdate, appointmentUpdate] = await Promise.all([
       supabase
         .from('payments')
@@ -275,7 +311,8 @@ export default defineEventHandler(async (event) => {
       isValid: true,
       discount_amount_rappen: discountAmountRappen,
       new_total_rappen: newTotal,
-      code: discountCode
+      code: discountCode,
+      isAutoApply,
     }
   } catch (err: any) {
     logger.error('❌ Error in POST /api/appointments/apply-discount:', err.message)
