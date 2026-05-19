@@ -75,11 +75,17 @@ export default defineEventHandler(async (event) => {
       }
     )
 
-    const adsData = await adsRes.json() as any
+    const adsRawText = await adsRes.text()
+    let adsData: any
+    try {
+      adsData = JSON.parse(adsRawText)
+    } catch {
+      return { success: false, reason: 'ads_api_non_json', status: adsRes.status, body: adsRawText.substring(0, 500) }
+    }
 
     if (!adsRes.ok) {
       logger.error('sync-marketing-google-ads: API error', adsData)
-      return { success: false, reason: 'ads_api_error', detail: adsData }
+      return { success: false, reason: 'ads_api_error', status: adsRes.status, detail: adsData }
     }
 
     const apiRows: any[] = adsData.results ?? []
