@@ -68,7 +68,6 @@ export default defineEventHandler(async (event) => {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'developer-token': developerToken,
-          'login-customer-id': managerCustomerId,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ query: query.trim() }),
