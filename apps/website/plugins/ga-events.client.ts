@@ -1,4 +1,4 @@
-// Tracks conversion events for Google Analytics 4.
+// Tracks conversion events for Google Analytics 4, Meta Pixel, and Google Ads.
 // Uses event delegation so there's no per-component boilerplate needed.
 // Events tracked:
 //   booking_click  – clicks on simy.ch booking links
@@ -7,6 +7,20 @@
 export default defineNuxtPlugin(() => {
   if (process.server) return
   const { gtag } = useGtag()
+  const config = useRuntimeConfig()
+
+  function fireMetaEvent(event: string, params?: Record<string, unknown>) {
+    if (typeof window !== 'undefined' && (window as any).fbq) {
+      ;(window as any).fbq('track', event, params)
+    }
+  }
+
+  function fireGoogleAdsConversion() {
+    const { googleAdsId, googleAdsConversionLabel } = config.public
+    if (googleAdsId && googleAdsConversionLabel) {
+      gtag('event', 'conversion', { send_to: `${googleAdsId}/${googleAdsConversionLabel}` })
+    }
+  }
 
   document.addEventListener('click', (e: MouseEvent) => {
     const target = (e.target as HTMLElement).closest('a')
@@ -21,6 +35,10 @@ export default defineNuxtPlugin(() => {
         event_label: service,
         page_path: window.location.pathname,
       })
+      // Meta Pixel: Lead event on booking click (proxy conversion for app.simy.ch bookings)
+      fireMetaEvent('Lead', { content_name: service, content_category: 'booking' })
+      // Google Ads: fire conversion tag
+      fireGoogleAdsConversion()
     }
 
     if (href.startsWith('tel:')) {
@@ -29,6 +47,8 @@ export default defineNuxtPlugin(() => {
         event_label: href.replace('tel:', ''),
         page_path: window.location.pathname,
       })
+      // Meta Pixel: Contact event on phone click
+      fireMetaEvent('Contact')
     }
   }, { passive: true })
 
@@ -41,5 +61,7 @@ export default defineNuxtPlugin(() => {
       event_label: formId,
       page_path: window.location.pathname,
     })
+    // Meta Pixel: Lead event on form submit
+    fireMetaEvent('Lead', { content_name: formId, content_category: 'form' })
   }, { passive: true })
 })

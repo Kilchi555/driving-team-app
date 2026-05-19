@@ -33,6 +33,11 @@ export default defineNuxtConfig({
       // Place IDs sind öffentlich – kein Sicherheitsrisiko
       placesIdZuerich: process.env.GOOGLE_PLACE_ID_ZUERICH ?? '',
       placesIdLachen: process.env.GOOGLE_PLACE_ID_LACHEN ?? '',
+      // Meta Pixel – set NUXT_PUBLIC_META_PIXEL_ID in Vercel environment variables
+      metaPixelId: process.env.NUXT_PUBLIC_META_PIXEL_ID ?? '',
+      // Google Ads – set NUXT_PUBLIC_GOOGLE_ADS_ID (AW-XXXXXXXXX) and conversion label
+      googleAdsId: process.env.NUXT_PUBLIC_GOOGLE_ADS_ID ?? '',
+      googleAdsConversionLabel: process.env.NUXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL ?? '',
     },
   },
 

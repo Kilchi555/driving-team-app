@@ -9,7 +9,7 @@
       <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <div class="flex-1 text-sm text-gray-200 leading-relaxed">
           <span class="text-lg mr-2">🍪</span>
-          Wir verwenden Google Analytics, um zu verstehen wie Besucher unsere Website nutzen und sie zu verbessern.
+          Wir verwenden Google Analytics und Meta Pixel, um unsere Website zu verbessern und relevante Werbung auszuspielen.
           Ihre Daten werden anonymisiert verarbeitet.
           <a href="/datenschutz/" class="underline text-primary-300 hover:text-white ml-1">Datenschutz</a>
         </div>
@@ -34,6 +34,7 @@
 
 <script setup lang="ts">
 const STORAGE_KEY = 'dt_cookie_consent'
+const config = useRuntimeConfig()
 
 const visible = ref(false)
 
@@ -43,13 +44,18 @@ onMounted(() => {
     // Small delay so banner doesn't flash on initial load
     setTimeout(() => { visible.value = true }, 800)
   }
+  // Re-initialize pixels if user previously accepted (page reload)
+  if (stored === 'accepted') {
+    loadAnalytics()
+    loadMetaPixel()
+  }
 })
 
 function accept() {
   localStorage.setItem(STORAGE_KEY, 'accepted')
   visible.value = false
-  // Dynamically load GA4 after consent
   loadAnalytics()
+  loadMetaPixel()
 }
 
 function decline() {
@@ -68,6 +74,32 @@ function loadAnalytics() {
   function gtag(...args: any[]) { window.dataLayer.push(args) }
   gtag('js', new Date())
   gtag('config', GA_ID)
+}
+
+function loadMetaPixel() {
+  const pixelId = config.public.metaPixelId
+  if (!pixelId || (window as any).fbq) return
+
+  // Standard Meta Pixel base code
+  ;(function(w: any) {
+    if (w.fbq) return
+    const n: any = w.fbq = function() {
+      n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+    }
+    if (!w._fbq) w._fbq = n
+    n.push = n
+    n.loaded = true
+    n.version = '2.0'
+    n.queue = []
+    const t = document.createElement('script')
+    t.async = true
+    t.src = 'https://connect.facebook.net/en_US/fbevents.js'
+    const s = document.getElementsByTagName('script')[0]
+    s.parentNode?.insertBefore(t, s)
+  })(window)
+
+  ;(window as any).fbq('init', pixelId)
+  ;(window as any).fbq('track', 'PageView')
 }
 </script>
 
