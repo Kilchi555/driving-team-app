@@ -1,7 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Lachen SZ | Auto, Anhänger & Lastwagen</Title>
+      <!-- A/B Title Test:
+           Test A (Wochen 1-2, Start: 19.05.2026): Online buchen CTA
+           Test B (Wochen 3-4): <Title>Fahrschule Lachen | Schnell zum Führerschein – Driving Team</Title>
+      -->
+      <Title>Fahrschule Lachen | Online buchen – Driving Team</Title>
       <Meta name="description" content="Fahrschule Lachen SZ ✓ ab CHF 95.-/Lektion ✓ Auto, Motorrad, Anhänger, Lastwagen, Bus ✓ 85% Erfolgsquote ✓ Kanton Schwyz. Jetzt anmelden!" />
       <Meta name="keywords" content="Fahrschule Lachen, Fahrschule Lachen SZ, Fahrstunden Lachen, Führerschein Lachen, Auto Fahrschule Lachen, Motorrad Fahrschule Lachen, Fahrlehrer Lachen SZ" />
       <Meta property="og:title" content="Fahrschule Lachen SZ | ab CHF 95.- | Auto, Motorrad & mehr | Driving Team" />
