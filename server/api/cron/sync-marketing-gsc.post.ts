@@ -5,6 +5,8 @@ import { logger } from '~/utils/logger'
 // Fetches the top 100 Search Console queries for the last 3 days and upserts
 // into marketing_gsc_daily. Runs daily at 04:00 via Vercel Cron.
 // Note: Search Console data has a ~2-day delay, so yesterday's data may be incomplete.
+// Auth: uses OAuth2 refresh token (GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN) so that a
+// regular Google account with Search Console access can be used instead of a service account.
 export default defineEventHandler(async (event) => {
   // ============ LAYER 1: CRON AUTH ============
   const authHeader = getHeader(event, 'authorization')
@@ -14,11 +16,12 @@ export default defineEventHandler(async (event) => {
   }
 
   // ============ LAYER 2: ENV CHECK ============
-  const clientEmail = process.env.GOOGLE_SA_CLIENT_EMAIL
-  const privateKey = process.env.GOOGLE_SA_PRIVATE_KEY?.replace(/\\n/g, '\n')
+  const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID
+  const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET
+  const refreshToken = process.env.GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN
   const siteUrl = process.env.GOOGLE_SEARCH_CONSOLE_SITE_URL
 
-  if (!clientEmail || !privateKey || !siteUrl) {
+  if (!clientId || !clientSecret || !refreshToken || !siteUrl) {
     logger.warn('sync-marketing-gsc: missing credentials, skipping')
     return { success: false, reason: 'missing_credentials' }
   }
@@ -26,9 +29,9 @@ export default defineEventHandler(async (event) => {
   logger.info('sync-marketing-gsc: starting sync for last 3 days')
 
   // ============ LAYER 3: FETCH FROM SEARCH CONSOLE ============
-  const auth = new google.auth.JWT(clientEmail, undefined, privateKey, [
-    'https://www.googleapis.com/auth/webmasters.readonly',
-  ])
+  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret)
+  oauth2Client.setCredentials({ refresh_token: refreshToken })
+  const auth = oauth2Client
 
   const searchConsole = google.searchconsole({ version: 'v1', auth })
 
