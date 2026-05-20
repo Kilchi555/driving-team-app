@@ -29,7 +29,10 @@ export default defineNuxtPlugin(() => {
     const href = target.getAttribute('href') ?? ''
 
     if (href.includes('simy.ch/booking')) {
-      const service = new URL(href, window.location.href).searchParams.get('service') ?? 'unknown'
+      const parsedUrl = new URL(href, window.location.href)
+      const service = parsedUrl.searchParams.get('service') ?? 'unknown'
+      const category = parsedUrl.searchParams.get('category') || service
+
       gtag('event', 'booking_click', {
         event_category: 'conversion',
         event_label: service,
@@ -39,6 +42,23 @@ export default defineNuxtPlugin(() => {
       fireMetaEvent('Lead', { content_name: service, content_category: 'booking' })
       // Google Ads: fire conversion tag
       fireGoogleAdsConversion()
+
+      // First-party server-side logging — independent of GA4/consent/ad-blockers
+      const sessionId = (window as any).__analyticsSessionId || 'unknown'
+      const pageParams = new URLSearchParams(window.location.search)
+      fetch('/api/booking-redirect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          category,
+          referrer_page: window.location.pathname,
+          utm_source: pageParams.get('utm_source') || null,
+          utm_medium: pageParams.get('utm_medium') || null,
+          utm_campaign: pageParams.get('utm_campaign') || null,
+          utm_content: pageParams.get('utm_content') || null,
+        }),
+      }).catch(() => {})
     }
 
     if (href.startsWith('tel:')) {
