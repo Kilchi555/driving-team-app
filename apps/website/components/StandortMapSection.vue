@@ -61,6 +61,14 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
 import { useHead } from '#app'
+import {
+  LOCATION_ZUERICH,
+  LOCATION_LACHEN,
+  LOCATION_PFAEFFIKON,
+  LOCATION_SPREITENBACH,
+  LOCATION_USTER,
+  buildLocationSchema,
+} from '~/business.config'
 
 const props = defineProps<{ locationKey: string }>()
 
@@ -82,13 +90,28 @@ onMounted(() => {
   }
 })
 
-const locations: Record<string, { city: string; area: string; address: string; name: string; street: string; zip: string; lat: string; lng: string; region: string }> = {
+// GBP-Locations: Schema kommt aus business.config.ts (rating passt zum echten GBP)
+const gbpLocationMap: Record<string, typeof LOCATION_ZUERICH> = {
+  zuerich: LOCATION_ZUERICH,
+  lachen: LOCATION_LACHEN,
+  pfaeffikon: LOCATION_PFAEFFIKON,
+  spreitenbach: LOCATION_SPREITENBACH,
+  uster: LOCATION_USTER,
+}
+
+// Nicht-GBP Standorte (Kurspartner, Treffpunkte) – kein aggregateRating
+const locations: Record<string, {
+  city: string; area: string; address: string; name: string
+  street: string; zip: string; lat: string; lng: string
+  region: string; canton: string; addressLocality?: string
+}> = {
   zuerich: {
     city: 'Zürich-Altstetten',
     area: 'Zürich-Altstetten & Umgebung',
     name: 'Bahnhof Altstetten',
     street: 'Altstetterplatz 1',
     zip: '8048',
+    canton: 'ZH',
     address: 'Altstetterplatz 1, 8048 Zürich-Altstetten',
     region: 'Zürich-Altstetten, Schlieren, Albisrieden, Höngg, Urdorf, Uitikon etc.',
     lat: '47.39113',
@@ -100,10 +123,11 @@ const locations: Record<string, { city: string; area: string; address: string; n
     name: 'Fahrschule Driving Team Lachen',
     street: 'Herrengasse 17',
     zip: '8853',
+    canton: 'SZ',
     address: 'Herrengasse 17, 8853 Lachen SZ',
     region: 'Lachen, Altendorf, Pfäffikon/SZ, Galgenen, Wangen/SZ, Siebnen, Schübelbach',
-    lat: '47.1990',
-    lng: '8.8551',
+    lat: '47.19211',
+    lng: '8.85303',
   },
   uster: {
     city: 'Uster',
@@ -111,6 +135,7 @@ const locations: Record<string, { city: string; area: string; address: string; n
     name: 'Bahnhof Uster',
     street: 'Bankstrasse 11',
     zip: '8610',
+    canton: 'ZH',
     address: 'Bankstrasse 11, 8610 Uster',
     region: 'Uster, Dübendorf, Volketswil, Wetzikon, Hinwil',
     lat: '47.3506',
@@ -122,6 +147,7 @@ const locations: Record<string, { city: string; area: string; address: string; n
     name: 'Bahnhof Dietikon',
     street: 'Neumattstrasse 22',
     zip: '8953',
+    canton: 'ZH',
     address: 'Neumattstrasse 22, 8953 Dietikon',
     region: 'Dietikon, Schlieren, Urdorf, Geroldswil, Spreitenbach, Wettingen',
     lat: '47.40641',
@@ -133,6 +159,7 @@ const locations: Record<string, { city: string; area: string; address: string; n
     name: 'Bahnhof Birmensdorf',
     street: 'Bahnhofstrasse 2',
     zip: '8903',
+    canton: 'ZH',
     address: 'Bahnhofstrasse 2, 8903 Birmensdorf',
     region: 'Birmensdorf, Uitikon, Urdorf, Stallikon, Ringlikon, Wettswil',
     lat: '47.36021',
@@ -144,6 +171,7 @@ const locations: Record<string, { city: string; area: string; address: string; n
     name: 'Spreitenbach Sternenplatz',
     street: 'Dorfstrasse 67',
     zip: '8957',
+    canton: 'AG',
     address: 'Dorfstrasse 67, 8957 Spreitenbach',
     region: 'Spreitenbach, Würenlos, Wettingen, Neuenhof',
     lat: '47.4179',
@@ -155,6 +183,7 @@ const locations: Record<string, { city: string; area: string; address: string; n
     name: 'Reichenburg Bahnhof',
     street: 'Bahnhofstrasse 57',
     zip: '8864',
+    canton: 'SZ',
     address: 'Bahnhofstrasse 57, 8864 Reichenburg',
     region: 'Reichenburg, Siebnen, Schübelbach, Buttikon, Benken, Bilten',
     lat: '47.1723',
@@ -166,17 +195,19 @@ const locations: Record<string, { city: string; area: string; address: string; n
     name: 'Bahnhof Uznach',
     street: 'Bahnhofstrasse 4',
     zip: '8730',
+    canton: 'SG',
     address: 'Bahnhofstrasse 4, 8730 Uznach',
     region: 'Rapperswil, Uznach, Kaltbrunn, Benken, Ziegelbrücke',
     lat: '47.2242',
     lng: '8.9819',
   },
   pfaeffikon: {
-    city: 'Pfäffikon/SZ',
+    city: 'Pfäffikon SZ',
     area: 'Pfäffikon/SZ & Umgebung',
     name: 'Fahrschule Driving Team Pfäffikon/SZ',
     street: 'Herrengasse 17',
     zip: '8808',
+    canton: 'SZ',
     address: 'Herrengasse 17, 8808 Pfäffikon SZ',
     region: 'Pfäffikon/SZ, Lachen, Altendorf, Galgenen, Wangen/SZ, Siebnen, Schübelbach',
     lat: '47.1990',
@@ -188,6 +219,7 @@ const locations: Record<string, { city: string; area: string; address: string; n
     name: 'Transportschule AG',
     street: 'Barzloostrasse 9',
     zip: '8330',
+    canton: 'ZH',
     address: 'Barzloostrasse 9, 8330 Pfäffikon ZH',
     region: 'Pfäffikon ZH, Illnau-Effretikon, Fehraltorf, Wetzikon, Volketswil',
     lat: '47.3678',
@@ -199,6 +231,7 @@ const locations: Record<string, { city: string; area: string; address: string; n
     name: 'Verkehrszentrum Tuggen AG',
     street: 'Betti 80',
     zip: '8856',
+    canton: 'SZ',
     address: 'Betti 80, 8856 Tuggen SZ',
     region: 'Tuggen, Schübelbach, Lachen, Reichenburg, Siebnen, Galgenen',
     lat: '47.1658',
@@ -210,6 +243,8 @@ const locations: Record<string, { city: string; area: string; address: string; n
     name: 'Motorradschule Zug',
     street: 'Sennweidstrasse 30',
     zip: '6312',
+    canton: 'ZG',
+    addressLocality: 'Steinhausen',
     address: 'Sennweidstrasse 30, 6312 Steinhausen',
     region: 'Zug, Steinhausen, Cham, Hünenberg',
     lat: '47.1697',
@@ -221,6 +256,7 @@ const locations: Record<string, { city: string; area: string; address: string; n
     name: 'Motorradschule Einsiedeln',
     street: 'Klosterstr. 10',
     zip: '8840',
+    canton: 'SZ',
     address: 'Klosterstr. 10, 8840 Einsiedeln',
     region: 'Einsiedeln, Schwyz, Steinen, Gersau',
     lat: '47.1344',
@@ -230,33 +266,37 @@ const locations: Record<string, { city: string; area: string; address: string; n
 
 const location = computed(() => locations[props.locationKey] ?? locations.zuerich)
 
-const structuredData = computed(() => JSON.stringify({
-  '@context': 'https://schema.org',
-  '@type': 'LocalBusiness',
-  'name': `Fahrschule Driving Team ${location.value.city}`,
-  'description': `Professionelle Fahrschule in ${location.value.city}. Auto, Motorrad, Lastwagen, Taxi und Motorboot Ausbildung.`,
-  'address': {
-    '@type': 'PostalAddress',
-    'streetAddress': location.value.street,
-    'postalCode': location.value.zip,
-    'addressLocality': location.value.city,
-    'addressCountry': 'CH',
-  },
-  'telephone': '+41444310033',
-  'email': 'info@drivingteam.ch',
-  'url': 'https://drivingteam.ch',
-  'openingHours': 'Mo-Fr 08:00-12:00,13:00-17:00',
-  'geo': {
-    '@type': 'GeoCoordinates',
-    'latitude': location.value.lat,
-    'longitude': location.value.lng,
-  },
-  'aggregateRating': {
-    '@type': 'AggregateRating',
-    'ratingValue': '4.8',
-    'reviewCount': '150',
-  },
-}))
+const structuredData = computed(() => {
+  const gbpLocation = gbpLocationMap[props.locationKey]
+  if (gbpLocation) {
+    return JSON.stringify(buildLocationSchema(gbpLocation))
+  }
+
+  // Kein GBP vorhanden → einfaches LocalBusiness ohne aggregateRating
+  const loc = location.value
+  return JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    'name': `Fahrschule Driving Team ${loc.city}`,
+    'description': `Professionelle Fahrschule in ${loc.city}. Auto, Motorrad, Lastwagen, Taxi und Motorboot Ausbildung.`,
+    'address': {
+      '@type': 'PostalAddress',
+      'streetAddress': loc.street,
+      'postalCode': loc.zip,
+      'addressLocality': loc.addressLocality ?? loc.city,
+      'addressRegion': loc.canton,
+      'addressCountry': 'CH',
+    },
+    'telephone': '+41444310033',
+    'email': 'info@drivingteam.ch',
+    'url': 'https://drivingteam.ch',
+    'geo': {
+      '@type': 'GeoCoordinates',
+      'latitude': loc.lat,
+      'longitude': loc.lng,
+    },
+  })
+})
 
 useHead(computed(() => ({
   script: [{

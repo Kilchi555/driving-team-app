@@ -369,18 +369,22 @@ const jsonLdScripts = [
       description: 'Mandatory WAB refresher course in English for new category B drivers in Switzerland. One-day course at two locations in Zurich and Schwyz canton.',
       url: 'https://drivingteam.ch/wab-course-english/',
       inLanguage: 'en',
-      provider: { '@type': 'Organization', name: 'Driving Team Fahrschule', url: 'https://drivingteam.ch' },
-      offers: { '@type': 'Offer', price: '490', priceCurrency: 'CHF', availability: 'https://schema.org/InStock' },
+      courseWorkload: 'PT8H',
+      category: 'WAB Refresher Course',
+      provider: { '@type': 'Organization', name: 'Driving Team Fahrschule', url: 'https://drivingteam.ch', telephone: '+41444310033', address: { '@type': 'PostalAddress', streetAddress: 'Vulkanstrasse 130b', addressLocality: 'Zürich', postalCode: '8048', addressCountry: 'CH' } },
+      offers: { '@type': 'Offer', price: '490', priceCurrency: 'CHF', availability: 'https://schema.org/InStock', url: 'https://drivingteam.ch/wab-course-english/' },
       hasCourseInstance: [
         {
           '@type': 'CourseInstance',
           courseMode: 'onsite',
-          location: { '@type': 'Place', name: 'Transportschule AG', address: { '@type': 'PostalAddress', streetAddress: 'Barzloostrasse 9', addressLocality: 'Pfäffikon', postalCode: '8330', addressCountry: 'CH' } }
+          courseSchedule: { '@type': 'Schedule', repeatFrequency: 'P1W', duration: 'PT8H' },
+          location: { '@type': 'Place', name: 'Transportschule AG', address: { '@type': 'PostalAddress', streetAddress: 'Barzloostrasse 9', addressLocality: 'Pfäffikon', addressRegion: 'ZH', postalCode: '8330', addressCountry: 'CH' } }
         },
         {
           '@type': 'CourseInstance',
           courseMode: 'onsite',
-          location: { '@type': 'Place', name: 'Verkehrszentrum Tuggen AG', address: { '@type': 'PostalAddress', streetAddress: 'Betti 80', addressLocality: 'Tuggen', postalCode: '8856', addressCountry: 'CH' } }
+          courseSchedule: { '@type': 'Schedule', repeatFrequency: 'P1W', duration: 'PT8H' },
+          location: { '@type': 'Place', name: 'Verkehrszentrum Tuggen AG', address: { '@type': 'PostalAddress', streetAddress: 'Betti 80', addressLocality: 'Tuggen', addressRegion: 'SZ', postalCode: '8856', addressCountry: 'CH' } }
         }
       ]
     })

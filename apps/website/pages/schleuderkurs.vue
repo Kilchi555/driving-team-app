@@ -342,10 +342,11 @@ const jsonLdScripts = [
     "name": "Schleuderkurs Zürich – Obligatorischer WAB Kurs",
     "description": "Der obligatorische Weiterausbildungskurs (WAB) für Neulenker in Zürich. Pflicht innerhalb 12 Monate nach Fahrprüfung für Kategorie A und B. Fahrsicherheitstraining bei Transportschule AG in Pfäffikon ZH.",
     "url": "https://drivingteam.ch/schleuderkurs/",
-    "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" },
+    "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "streetAddress": "Barzloostrasse 9", "addressLocality": "Pfäffikon ZH", "postalCode": "8330", "addressRegion": "ZH", "addressCountry": "CH" } },
     "offers": { "@type": "Offer", "price": "249", "priceCurrency": "CHF", "availability": "https://schema.org/InStock" },
-    "timeRequired": "PT7H",
-    "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Transportschule AG Pfäffikon ZH", "address": { "@type": "PostalAddress", "streetAddress": "Barzloostrasse 9", "postalCode": "8330", "addressLocality": "Pfäffikon ZH", "addressCountry": "CH" } } }]
+    "courseWorkload": "PT7H",
+    "category": "WAB Fahrsicherheitstraining",
+    "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "courseSchedule": { "@type": "Schedule", "repeatFrequency": "P1W", "duration": "PT7H" }, "location": { "@type": "Place", "name": "Transportschule AG Pfäffikon ZH", "address": { "@type": "PostalAddress", "streetAddress": "Barzloostrasse 9", "postalCode": "8330", "addressLocality": "Pfäffikon ZH", "addressRegion": "ZH", "addressCountry": "CH" } } }]
   }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({
     "@context": "https://schema.org",

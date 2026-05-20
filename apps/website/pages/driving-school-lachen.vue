@@ -398,7 +398,7 @@ const jsonLdScripts = [
         postalCode: '8853',
         addressCountry: { '@type': 'Country', name: 'CH' }
       },
-      geo: { '@type': 'GeoCoordinates', latitude: 47.1967, longitude: 8.8540 },
+      geo: { '@type': 'GeoCoordinates', latitude: 47.19211, longitude: 8.85303 },
       areaServed: ['Lachen SZ', 'Rapperswil-Jona', 'Pfäffikon SZ', 'Wädenswil', 'Schindellegi', 'Altendorf', 'Siebnen', 'Richterswil', 'Ziegelbrücke'],
       inLanguage: 'en',
       openingHoursSpecification: [

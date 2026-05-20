@@ -34,7 +34,7 @@ export const instructorData: Record<string, Instructor[]> = {
       title: 'Auto & Motorrad Fahrlehrer',
       bio: 'Pascal mag keinen Streit und probiert es allen recht zu machen. Probleme gibt es für ihn nicht, nur Lösungen. Seine positive, ausgeglichene und geduldige Art wird sehr geschätzt.',
       image: '/images/team/pascal.webp',
-      yearsExperience: yearsFrom(2009),
+      yearsExperience: yearsFrom(2011),
       specialties: ['Auto Automatik', 'Motorrad'],
       teachingStyle: 'Geduldig, positiv und ausgeglichen. Ich glaube daran, dass Fahren lernen Spass machen kann.',
       lessonsGiven: lessonsFrom(2026, 32000),
@@ -132,7 +132,7 @@ export const instructorData: Record<string, Instructor[]> = {
       teachingStyle: 'Ruhig, souverän und verständnisvoll. Ich schaffe eine entspannte Atmosphäre zum Lernen.',
       lessonsGiven: lessonsFrom(2026, 23000),
       successRate: 84,
-      languages: ['Deutsch'],
+      languages: ['Deutsch', 'Englisch'],
       diplomas: [
         { title: 'Eidg. dipl. Fahrlehrerin Kat. B', category: 'B', image: '' },
       ]
@@ -146,7 +146,7 @@ export const instructorData: Record<string, Instructor[]> = {
       title: 'Auto & Motorrad Fahrlehrer',
       bio: 'Pascal mag keinen Streit und probiert es allen recht zu machen. Probleme gibt es für ihn nicht, nur Lösungen. Seine positive, ausgeglichene und geduldige Art wird sehr geschätzt.',
       image: '/images/team/pascal.webp',
-      yearsExperience: yearsFrom(2009),
+      yearsExperience: yearsFrom(2011),
       specialties: ['Auto Automatik', 'Motorrad'],
       teachingStyle: 'Geduldig, positiv und ausgeglichen. Ich glaube daran, dass Fahren lernen Spass machen kann.',
       lessonsGiven: lessonsFrom(2026, 32000),

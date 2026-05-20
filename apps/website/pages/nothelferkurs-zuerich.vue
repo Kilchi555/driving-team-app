@@ -455,18 +455,22 @@ const jsonLdScripts = [
         "url": "https://drivingteam.ch/nothelferkurs-buchen/nothelfer/"
       },
       "educationalLevel": "Beginner",
-      "timeRequired": "PT10H",
+      "courseWorkload": "PT10H",
+      "category": "Erste Hilfe Kurs",
       "hasCourseInstance": [
         {
           "@type": "CourseInstance",
           "courseMode": "onsite",
+          "courseSchedule": { "@type": "Schedule", "repeatFrequency": "P1W", "duration": "PT10H" },
           "location": {
             "@type": "Place",
             "name": "Zürich-Altstetten",
             "address": {
               "@type": "PostalAddress",
+              "streetAddress": "Vulkanstrasse 130b",
               "addressLocality": "Zürich",
               "postalCode": "8048",
+              "addressRegion": "ZH",
               "addressCountry": "CH"
             }
           }
