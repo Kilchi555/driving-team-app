@@ -6,6 +6,10 @@ interface BookingRedirectPayload {
   category: string
   session_id: string
   referrer_page: string
+  utm_source?: string | null
+  utm_medium?: string | null
+  utm_campaign?: string | null
+  utm_content?: string | null
 }
 
 export default defineEventHandler(async (event) => {
@@ -36,6 +40,10 @@ export default defineEventHandler(async (event) => {
       category: body.category,
       referrer_page: body.referrer_page,
       date: new Date().toISOString().split('T')[0],
+      utm_source: body.utm_source || null,
+      utm_medium: body.utm_medium || null,
+      utm_campaign: body.utm_campaign || null,
+      utm_content: body.utm_content || null,
     })
 
     if (error) {
