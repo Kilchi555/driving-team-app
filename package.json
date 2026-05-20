@@ -57,6 +57,7 @@
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^3.0.1",
     "nuxt": "^3.17.7",
+    "nuxt-gtag": "^4.1.0",
     "pdfkit": "^0.18.0",
     "pinia": "^2.2.6",
     "puppeteer": "^24.23.0",

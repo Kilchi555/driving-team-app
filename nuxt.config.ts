@@ -36,8 +36,16 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@pinia/nuxt',
     '@nuxt/eslint',
-    '@nuxtjs/i18n'
+    '@nuxtjs/i18n',
+    'nuxt-gtag'
   ],
+
+  gtag: {
+    id: process.env.NUXT_PUBLIC_GA_ID ?? '',
+    initCommands: [
+      ['consent', 'default', { analytics_storage: 'denied' }]
+    ]
+  },
   
   // --- Build Configuration ---
   build: {

@@ -3239,6 +3239,15 @@ const confirmBooking = async () => {
         slot_id: selectedSlot.value.id,
       })
     }
+
+    // Fire GA4 booking_completed conversion event
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      ;(window as any).gtag('event', 'booking_completed', {
+        event_category: 'conversion',
+        event_label: selectedCategory.value?.code ?? 'unknown',
+        appointment_id: result.appointment_id,
+      })
+    }
     
     isCreatingBooking.value = false
     
