@@ -10,7 +10,7 @@
         <div ref="mapContainer" class="lg:col-span-2 h-72 lg:h-[380px]">
           <iframe
             v-if="mapLoaded"
-            :src="`https://maps.google.com/maps?q=${encodeURIComponent(location.address)}&output=embed&hl=de&z=15`"
+            :src="`https://maps.google.com/maps?q=${location.lat},${location.lng}&output=embed&hl=de&z=15`"
             class="w-full h-full border-0"
             referrerpolicy="no-referrer-when-downgrade"
             :title="`Fahrschule Driving Team ${location.city} – Karte`"
@@ -44,7 +44,7 @@
             <p class="text-gray-600 text-sm leading-relaxed">{{ location.region }}</p>
           </div>
           <a
-            :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.address)}`"
+            :href="`https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`"
             target="_blank"
             rel="noopener noreferrer"
             class="inline-flex items-center gap-2 bg-primary-600 text-white font-bold px-5 py-2.5 rounded-lg hover:bg-primary-700 transition text-sm w-fit"
