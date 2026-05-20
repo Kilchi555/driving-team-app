@@ -113,6 +113,8 @@ export default defineEventHandler(async (event) => {
         type,
         location_id,
         user_id,
+        created_at,
+        updated_at,
         users:users!appointments_user_id_fkey (
           first_name,
           last_name,
@@ -201,6 +203,14 @@ export default defineEventHandler(async (event) => {
           ? `${studentFullName} - Kategorie ${vehicleType}`
           : apt.title || 'Appointment'
 
+        // Use appointment timestamps when available; fall back to "now" so the
+        // ICS output is always RFC 5545 compliant. The previous implementation
+        // accidentally fed the UUID into `new Date()` which produced
+        // `CREATED:NaNNaNNaNTNaNNaNNaNZ` and made strict parsers (Google
+        // Calendar) drop the event silently.
+        const createdDate = apt.created_at ? new Date(apt.created_at) : new Date()
+        const modifiedDate = apt.updated_at ? new Date(apt.updated_at) : new Date()
+
         // Build event with proper iOS-compatible formatting
         const event = `BEGIN:VEVENT
 UID:${eventUid}
@@ -213,8 +223,8 @@ LOCATION:${sanitizeText(eventLocation)}
 TRANSP:OPAQUE
 STATUS:${apt.status === 'confirmed' ? 'CONFIRMED' : 'TENTATIVE'}
 SEQUENCE:0
-CREATED:${formatICSDateTime(new Date(apt.id))}
-LAST-MODIFIED:${formatICSDateTime(new Date())}
+CREATED:${formatICSDateTime(createdDate)}
+LAST-MODIFIED:${formatICSDateTime(modifiedDate)}
 X-MICROSOFT-CDO-BUSYSTATUS:BUSY
 CATEGORIES:Driving Lesson
 END:VEVENT`
