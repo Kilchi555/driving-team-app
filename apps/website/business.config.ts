@@ -156,7 +156,7 @@ export const LOCATION_LACHEN: Location = {
     canton: 'SZ',
     country: 'CH',
   },
-  geo: { lat: 47.1994, lng: 8.8534 },
+  geo: { lat: 47.19211, lng: 8.85303 },
 
   phone: '+41554420041',
   phoneFormatted: '055 442 00 41',

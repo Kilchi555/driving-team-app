@@ -178,8 +178,12 @@ useHead({
         "name": "Motorrad Weiterbildung",
         "description": "Motorrad Weiterbildung: Schräglagen-Training und Prüfungsvorbereitungskurs.",
         "url": "https://drivingteam.ch/motorrad-weiterbildung/",
-        "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" },
-        "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF" }
+        "courseWorkload": "PT4H",
+        "educationalLevel": "Intermediate",
+        "category": "Motorrad Weiterbildung",
+        "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "streetAddress": "Vulkanstrasse 130b", "addressLocality": "Zürich", "postalCode": "8048", "addressRegion": "ZH", "addressCountry": "CH" } },
+        "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF", "availability": "https://schema.org/InStock", "url": "https://drivingteam.ch/motorrad-weiterbildung/" },
+        "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "courseSchedule": { "@type": "Schedule", "repeatFrequency": "P1W", "duration": "PT4H" }, "location": { "@type": "Place", "name": "Zürich-Altstetten", "address": { "@type": "PostalAddress", "streetAddress": "Vulkanstrasse 130b", "addressLocality": "Zürich", "postalCode": "8048", "addressRegion": "ZH", "addressCountry": "CH" } } }]
       })
     },
     {

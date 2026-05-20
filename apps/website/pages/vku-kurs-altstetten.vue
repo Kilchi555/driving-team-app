@@ -268,8 +268,9 @@ const jsonLdScripts = [
     "name": "VKU Kurs Altstetten – Verkehrskundeunterricht",
     "description": "Obligatorischer Verkehrskundeunterricht (VKU) in Altstetten, Zürich. 8 Stunden (2×4h), CHF 190.- inkl. Dokumentation und Kursbestätigung. Voraussetzung für die praktische Fahrprüfung. Direkt beim Bahnhof Zürich-Altstetten.",
     "url": "https://drivingteam.ch/vku-kurs-altstetten/",
-    "timeRequired": "PT8H",
+    "courseWorkload": "PT8H",
     "educationalLevel": "Beginner",
+    "category": "Verkehrskundeunterricht",
     "provider": {
       "@type": "Organization",
       "name": "Driving Team Fahrschule",
@@ -294,6 +295,7 @@ const jsonLdScripts = [
     "hasCourseInstance": [{
       "@type": "CourseInstance",
       "courseMode": "onsite",
+      "courseSchedule": { "@type": "Schedule", "repeatFrequency": "P1W", "duration": "PT4H" },
       "location": {
         "@type": "Place",
         "name": "Zürich-Altstetten",

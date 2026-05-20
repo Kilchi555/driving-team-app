@@ -243,16 +243,19 @@ const jsonLdScripts = [
         "url": "https://drivingteam.ch/nothelferkurs-buchen/nothelfer/"
       },
       "educationalLevel": "Beginner",
-      "timeRequired": "PT10H",
+      "courseWorkload": "PT10H",
+      "category": "Erste Hilfe Kurs",
       "hasCourseInstance": [
         {
           "@type": "CourseInstance",
           "courseMode": "onsite",
+          "courseSchedule": { "@type": "Schedule", "repeatFrequency": "P1W", "duration": "PT10H" },
           "location": {
             "@type": "Place",
             "name": "Lachen SZ",
             "address": {
               "@type": "PostalAddress",
+              "streetAddress": "Herrengasse 17",
               "addressLocality": "Lachen",
               "addressRegion": "SZ",
               "addressCountry": "CH"
