@@ -138,7 +138,7 @@
     <div class="bg-gray-50"><GutscheinSection /></div>
     <CtaSection title="Bereit? Jetzt Termin buchen!" />
     <StandorteSection exclude="uitikon" />
-    <WarumSection category="zuerich" />
+    <WarumSection category="uitikon" />
   </div>
 </template>
 

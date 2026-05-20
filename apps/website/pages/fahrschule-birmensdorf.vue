@@ -22,7 +22,7 @@
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
           <h1 class="heading-lg text-white mb-4">Fahrschule Birmensdorf</h1>
-          <p class="text-base xs:text-xl text-white mb-6">Skender kennt alle Prüfungsrouten in Birmensdorf – vom Whiskeypass über die Alte Waldegg bis zu den berüchtigten Rechtsvortrittssituationen in Ringlikon. Auf Deutsch, Englisch und Albanisch.</p>
+          <p class="text-base xs:text-xl text-white mb-6">Unsere Fahrlehrer kennen alle Prüfungsrouten in Birmensdorf – vom Whiskeypass über die Alte Waldegg bis zu den berüchtigten Rechtsvortrittssituationen in Ringlikon. Auf Deutsch, Englisch und Albanisch.</p>
           <div class="flex flex-wrap gap-2 mb-6">
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">🚉 Bhf Birmensdorf · Whiskeypass</span>
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">⭐ 5.0 · 414 Bewertungen</span>
@@ -63,12 +63,12 @@
     <section class="section-container py-12">
       <div class="max-w-3xl mx-auto">
         <h2 class="heading-md mb-4">Prüfungsgebiet Birmensdorf – Was du wissen musst</h2>
-        <p class="text-gray-700 mb-4">Birmensdorf ist ein anspruchsvolles Prüfungsgebiet – und genau deshalb üben wir dort intensiv. Prüfer lieben die Region, weil sie viele Situationen enthält, in denen unerfahrene Fahrschüler typische Fehler machen. Mit dem richtigen Training weisst du genau was dich erwartet.</p>
+        <p class="text-gray-700 mb-4">Birmensdorf ist ein anspruchsvolles Prüfungsgebiet – und genau deshalb üben wir dort intensiv. Die Verkehrsexperten lieben die Region, weil sie viele Situationen enthält, in denen unerfahrene Fahrschüler typische Fehler machen. Mit dem richtigen Training weisst du genau was dich erwartet.</p>
 
         <!-- Whiskeypass Box -->
         <div class="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6">
           <h3 class="font-bold text-amber-900 mb-2">🏔️ Der Whiskeypass – Prüfungs-Klassiker</h3>
-          <p class="text-amber-800 text-sm leading-relaxed">Der sogenannte Whiskeypass ist eine kurvenreiche Strecke, die bei Verkehrsexperten und Prüfern sehr beliebt ist. Viele Fahrschüler unterschätzen die Kombination aus enger Kurvenführung, wechselnden Geschwindigkeitslimits und unerwarteten Kreuzungssituationen. Wir fahren diese Route regelmässig in der Ausbildung – damit du an der Prüfung keine Überraschungen erlebst.</p>
+          <p class="text-amber-800 text-sm leading-relaxed">Der sogenannte Whiskeypass ist eine kurvenreiche Strecke, die bei Verkehrsexperten sehr beliebt ist. Viele Fahrschüler unterschätzen die Kombination aus enger Kurvenführung, wechselnden Geschwindigkeitslimits und unerwarteten Kreuzungssituationen. Wir fahren diese Route regelmässig in der Ausbildung – damit du an der Prüfung keine Überraschungen erlebst.</p>
         </div>
 
         <!-- Rechtsvortritte Box -->
@@ -82,8 +82,8 @@
           <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> <strong>Alte Waldegg</strong> – kurvenreiche Waldstrecke, Parkplatz Waldegg als Übungsort</li>
           <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> <strong>Autobahnauffahrten</strong> Birmensdorf (A3) – Einfahren und Ausfahren auf die Autobahn</li>
           <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> <strong>Stallikon → Uitikon</strong> – kurvenreiche Überlandstrecke mit Gegenverkehr</li>
-          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> <strong>Urdorf → Birmensdorf</strong> – Üetlibergtunnel-Zubringer</li>
-          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> <strong>Richtung Albisgütli</strong> – Prüfungsgebiet StVA Zürich</li>
+          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> <strong>Urdorf → Birmensdorf</strong> – Üetlibergtunnel-Autobahnzubringer</li>
+          <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> <strong>Richtung Albisgütli</strong> – Prüfungsgebiet Strassenverkehrsamt Zürich-Albisgütli</li>
         </ul>
         <div class="flex flex-wrap gap-2 text-sm">
           <span class="bg-primary-50 text-primary-700 px-3 py-1 rounded-full">📍 Birmensdorf, Uitikon, Ringlikon</span>
@@ -142,7 +142,7 @@
     <div class="bg-gray-50"><GutscheinSection /></div>
     <CtaSection title="Bereit? Jetzt Termin buchen!" />
     <StandorteSection exclude="birmensdorf" />
-    <WarumSection category="zuerich" />
+    <WarumSection category="birmensdorf" />
   </div>
 </template>
 
