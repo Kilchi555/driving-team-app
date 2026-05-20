@@ -142,7 +142,7 @@
     <div class="bg-gray-50"><GutscheinSection /></div>
     <CtaSection title="Bereit? Jetzt Termin buchen!" />
     <StandorteSection exclude="urdorf" />
-    <WarumSection category="zuerich" />
+    <WarumSection category="urdorf" />
   </div>
 </template>
 

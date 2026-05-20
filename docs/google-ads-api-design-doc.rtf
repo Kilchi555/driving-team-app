@@ -1,0 +1,51 @@
+{\rtf1\ansi
+# Google Ads API Tool – Design Document\par
+## Driving Team (drivingteam.ch)\par
+\par
+### Company Overview\par
+Driving Team is a driving school based in Birmensdorf, Switzerland. We offer driving lessons for students aged 17–25 in the Birmensdorf/Zurich area.\par
+\par
+### Tool Description\par
+We are building an internal marketing analytics dashboard integrated into our web application (app.simy.ch). The tool automatically fetches Google Ads campaign performance data daily and stores it in our private database for internal reporting.\par
+\par
+### Technical Architecture\par
+- **Backend:** Nuxt 3 / Node.js running on Vercel (serverless)\par
+- **Database:** Supabase (PostgreSQL)\par
+- **Scheduling:** Vercel Cron – runs once daily at 04:10 UTC\par
+- **API usage:** Google Ads API (via `google-ads-api` Node.js library)\par
+\par
+### API Usage\par
+The tool calls the Google Ads API once per day to fetch the following metrics for each campaign:\par
+- Date\par
+- Campaign name & ID\par
+- Impressions\par
+- Clicks\par
+- Cost (in CHF)\par
+- Conversions\par
+\par
+This data is upserted into our private Supabase database table `marketing_google_ads_daily`.\par
+\par
+### Data Flow\par
+1. Vercel Cron triggers the sync endpoint (`/api/cron/sync-marketing-google-ads`) at 04:10 UTC\par
+2. The endpoint authenticates using OAuth2 (our own Google Cloud project)\par
+3. It queries the Google Ads API for the last 7 days of campaign data\par
+4. Data is upserted into Supabase\par
+\par
+### Access Scope\par
+- **Internal use only** – no external users, no clients\par
+- Only the owner (Pascal Kilchenmann, pascal@drivingteam.ch) has access to the dashboard\par
+- The tool is not offered as a service to third parties\par
+\par
+### Accounts Managed\par
+- 1 Google Ads account: Customer ID 191-669-8119 (our own advertising account)\par
+- Manager account: 950-995-7201\par
+\par
+### Data Storage & Privacy\par
+- All data is stored in our own private Supabase instance\par
+- No data is shared with third parties\par
+- Data is used exclusively for internal campaign optimization\par
+\par
+### Purpose\par
+Replace manual monthly reporting from the Google Ads UI with automated daily data collection, enabling faster campaign optimization decisions.\par
+\par
+}

@@ -70,6 +70,12 @@ const categoryTitles: Record<string, string> = {
   motorboot: 'Warum die Motorboot Fahrschule Driving Team?',
   anhaenger: 'Warum die Anhänger Fahrschule Driving Team?',
   zuerich: 'Warum die Fahrschule Driving Team Zürich?',
+  altstetten: 'Warum die Fahrschule Driving Team Altstetten?',
+  birmensdorf: 'Warum die Fahrschule Driving Team Birmensdorf?',
+  uitikon: 'Warum die Fahrschule Driving Team Uitikon?',
+  urdorf: 'Warum die Fahrschule Driving Team Urdorf?',
+  wettswil: 'Warum die Fahrschule Driving Team Wettswil?',
+  schlieren: 'Warum die Fahrschule Driving Team Schlieren?',
   lachen: 'Warum die Fahrschule Driving Team Lachen?',
   uster: 'Warum die Fahrschule Driving Team Uster?',
   stgallen: 'Warum die Fahrschule Driving Team St.Gallen?',
@@ -82,6 +88,12 @@ const categoryTitles: Record<string, string> = {
 
 const locationLabels: Record<string, string> = {
   zuerich: 'in Zürich',
+  altstetten: 'in Zürich-Altstetten',
+  birmensdorf: 'in Birmensdorf',
+  uitikon: 'in Uitikon Waldegg',
+  urdorf: 'in Urdorf',
+  wettswil: 'in Wettswil am Albis',
+  schlieren: 'in Schlieren',
   lachen: 'in Lachen',
   uster: 'in Uster',
   stgallen: 'in St. Gallen',
@@ -111,6 +123,12 @@ const categoryWords: Record<string, string> = {
 
 const locationWords: Record<string, string> = {
   zuerich: 'Zürich',
+  altstetten: 'Altstetten',
+  birmensdorf: 'Birmensdorf',
+  uitikon: 'Uitikon',
+  urdorf: 'Urdorf',
+  wettswil: 'Wettswil',
+  schlieren: 'Schlieren',
   lachen: 'Lachen',
   uster: 'Uster',
   stgallen: 'St. Gallen',

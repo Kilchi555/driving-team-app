@@ -199,6 +199,7 @@
     <CtaSection title="Fahrschule Altstetten – jetzt Termin sichern!" />
 
     <StandorteSection exclude="zuerich" />
+    <WarumSection category="altstetten" />
   </div>
 </template>
 
