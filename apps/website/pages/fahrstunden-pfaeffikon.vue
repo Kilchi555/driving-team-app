@@ -221,7 +221,7 @@ const jsonLdScripts = [
       "telephone": "+41444310033",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Hofacker 2",
+        "streetAddress": "Herrengasse 17",
         "addressLocality": "Pfäffikon",
         "postalCode": "8808",
         "addressRegion": "SZ",
