@@ -66,7 +66,7 @@
                 <span class="mt-0.5 text-base">📍</span>
                 <div>
                   <p class="font-semibold">Pfäffikon / SZ</p>
-                  <p class="text-gray-500">Bahnweg 4, 8808 Pfäffikon SZ</p>
+                  <p class="text-gray-500">Bahnweg 4, 8808 Pfäffikon SZ <span class="text-xs">(Treffpunkt)</span></p>
                 </div>
               </div>
             </div>

@@ -43,8 +43,10 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div class="bg-gray-50 rounded-2xl p-6 text-center">
             <div class="text-3xl mb-3">📍</div>
-            <h3 class="font-bold text-gray-900 mb-2">Standort Pfäffikon SZ</h3>
-            <p class="text-gray-600 text-sm">Bahnweg 4, 8808 Pfäffikon SZ</p>
+            <h3 class="font-bold text-gray-900 mb-2">Treffpunkt Pfäffikon SZ</h3>
+            <p class="text-gray-600 text-sm font-semibold">Bahnweg 4, 8808 Pfäffikon SZ</p>
+            <p class="text-gray-500 text-xs mt-1">(Bahnhof Pfäffikon SZ)</p>
+            <p class="text-gray-400 text-xs mt-2">Offizielle Adresse: Hofacker 2, 8808 Pfäffikon</p>
           </div>
           <div class="bg-gray-50 rounded-2xl p-6 text-center">
             <div class="text-3xl mb-3">🏛️</div>
