@@ -2,10 +2,10 @@
   <div>
     <Head>
       <Title>Fahrstunden Pfäffikon SZ | Ab CHF 95.- | Driving Team</Title>
-      <Meta name="description" content="Fahrstunden Pfäffikon SZ ✓ Prüfung direkt am StVA Pfäffikon ✓ Flexible Treffpunkte ✓ Auto & Motorrad ✓ Eidg. diplomierte Fahrlehrer ✓ Ab CHF 95.-/Lektion. Jetzt buchen!" />
+      <Meta name="description" content="Fahrstunden Pfäffikon SZ ✓ Prüfung direkt am StVA Pfäffikon ✓ Flexible Treffpunkte ✓ Auto & Motorrad ✓ Fahrlehrer mit eidg. Fachausweis ✓ Ab CHF 95.-/Lektion. Jetzt buchen!" />
       <Meta name="keywords" content="Fahrstunden Pfäffikon SZ, Fahrstunden Pfäffikon, Fahrstunden buchen Pfäffikon, Fahrlektion Pfäffikon SZ, Autofahrstunden Pfäffikon, Führerschein Pfäffikon SZ" />
       <Meta property="og:title" content="Fahrstunden Pfäffikon SZ | Ab CHF 95.- | Driving Team" />
-      <Meta property="og:description" content="Fahrstunden in Pfäffikon SZ mit eidg. diplomierten Fahrlehrern. Prüfung direkt am StVA Pfäffikon SZ. Flexible Treffpunkte im Kanton Schwyz. Ab CHF 95.-/45 Min." />
+      <Meta property="og:description" content="Fahrstunden in Pfäffikon SZ mit Fahrlehrern mit eidg. Fachausweis. Prüfung direkt am StVA Pfäffikon SZ. Flexible Treffpunkte im Kanton Schwyz. Ab CHF 95.-/45 Min." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrstunden-pfaeffikon/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrstunden-pfaeffikon/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/pfaeffikon-hero.webp" />
@@ -84,7 +84,7 @@
     <section class="py-14 bg-gray-50">
       <div class="section-container">
         <h2 class="heading-md text-center mb-3">Deine Fahrlehrer in Pfäffikon SZ</h2>
-        <p class="text-center text-gray-600 mb-8">Alle eidgenössisch diplomiert, mit dem Kanton Schwyz bestens vertraut.</p>
+        <p class="text-center text-gray-600 mb-8">Alle mit eidg. Fachausweis, mit dem Kanton Schwyz bestens vertraut.</p>
         <div class="flex flex-wrap justify-center gap-4 max-w-3xl mx-auto mb-6">
           <div class="bg-white border border-gray-200 rounded-xl px-5 py-4 flex items-center gap-4 shadow-sm">
             <img src="/images/team/marc.webp" alt="Marc – Fahrlehrer Pfäffikon" class="w-14 h-14 rounded-full object-cover object-top" loading="lazy" />
@@ -212,7 +212,7 @@ const jsonLdScripts = [
     "@type": "Service",
     "name": "Fahrstunden Pfäffikon SZ",
     "serviceType": "Fahrunterricht",
-    "description": "Professionelle Fahrstunden in Pfäffikon SZ mit eidgenössisch diplomierten Fahrlehrern. Prüfung direkt am StVA Pfäffikon SZ. Flexible Treffpunkte im Kanton Schwyz.",
+    "description": "Professionelle Fahrstunden in Pfäffikon SZ mit Fahrlehrern mit eidg. Fachausweis. Prüfung direkt am StVA Pfäffikon SZ. Flexible Treffpunkte im Kanton Schwyz.",
     "url": "https://drivingteam.ch/fahrstunden-pfaeffikon/",
     "provider": {
       "@type": "DrivingSchool",
