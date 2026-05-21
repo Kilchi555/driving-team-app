@@ -44,7 +44,7 @@
           <div class="bg-gray-50 rounded-2xl p-6 text-center">
             <div class="text-3xl mb-3">📍</div>
             <h3 class="font-bold text-gray-900 mb-2">Standort Pfäffikon SZ</h3>
-            <p class="text-gray-600 text-sm">Hofacker 2, 8808 Pfäffikon SZ – zentral im Bezirk Höfe, direkt am Zürichsee.</p>
+            <p class="text-gray-600 text-sm">Bahnweg 4, 8808 Pfäffikon SZ</p>
           </div>
           <div class="bg-gray-50 rounded-2xl p-6 text-center">
             <div class="text-3xl mb-3">🏛️</div>
