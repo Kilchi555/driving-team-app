@@ -208,7 +208,7 @@ export const LOCATION_PFAEFFIKON: Location = {
     canton: 'SZ',
     country: 'CH',
   },
-  geo: { lat: 47.2091, lng: 8.7823 },
+  geo: { lat: 47.202904, lng: 8.778039 },
 
   phone: '+41444310033',
   phoneFormatted: '044 431 00 33',
