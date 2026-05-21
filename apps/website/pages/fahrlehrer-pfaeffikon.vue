@@ -8,7 +8,7 @@
       <Meta property="og:description" content="3 eidgenössisch diplomierte Fahrlehrer in Pfäffikon SZ. Marc (Motorboot, Anhänger), Peter (Lastwagen, Bus), Rahel. 56'000+ Lektionen. Jetzt Termin buchen." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrlehrer-pfaeffikon/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrlehrer-pfaeffikon/" />
-      <Meta property="og:image" content="https://drivingteam.ch/images/locations/lachen-hero.webp" />
+      <Meta property="og:image" content="https://drivingteam.ch/images/locations/pfaeffikon-hero.webp" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
@@ -16,7 +16,7 @@
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/locations/lachen-hero.webp" alt="Fahrlehrer Pfäffikon SZ – Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" fetchpriority="high" loading="eager" width="1920" height="1080" />
+      <img src="/images/locations/pfaeffikon-hero.webp" alt="Fahrlehrer Pfäffikon SZ – Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" fetchpriority="high" loading="eager" width="1920" height="1080" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
