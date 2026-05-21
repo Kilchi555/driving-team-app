@@ -202,12 +202,14 @@ export const LOCATION_PFAEFFIKON: Location = {
   placeId: '',
 
   address: {
-    street: 'Bahnweg 4',
+    street: 'Hofacker 2',
     city: 'Pfäffikon SZ',
     zip: '8808',
     canton: 'SZ',
     country: 'CH',
   },
+  /** Treffpunkt für Fahrstunden – Bahnhof Pfäffikon SZ */
+  meetingPoint: 'Bahnweg 4, 8808 Pfäffikon SZ (Bahnhof Pfäffikon SZ)',
   geo: { lat: 47.202904, lng: 8.778039 },
 
   phone: '+41444310033',
