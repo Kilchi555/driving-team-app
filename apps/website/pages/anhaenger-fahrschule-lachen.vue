@@ -172,7 +172,7 @@
             <div class="flex items-center justify-center w-12 h-12 bg-orange-500 text-white rounded-full font-black text-lg flex-shrink-0">2</div>
             <div>
               <h3 class="font-bold text-gray-900 text-lg mb-2">Anhänger Fahrstunden in Lachen SZ</h3>
-              <p class="text-sm text-gray-600 leading-relaxed">Wir üben alle Prüfungsmanöver und Strassenszenarien im Prüfungsgebiet. Treffpunkt: Bahnhof Lachen SZ. Alle Fahrzeuge werden von uns gestellt.</p>
+              <p class="text-sm text-gray-600 leading-relaxed">Wir üben alle Prüfungsmanöver und Strassenszenarien im Prüfungsgebiet. Treffpunkt: Herrengasse 17, 8853 Lachen. Alle Fahrzeuge werden von uns gestellt.</p>
             </div>
           </div>
           <div class="flex items-start gap-5 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -265,7 +265,7 @@
               <span>📍 Wo finden die Fahrstunden in Lachen statt?</span>
               <span class="text-orange-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Treffpunkt ist der Bahnhof Lachen SZ. Wir fahren dann ins Prüfungsgebiet und üben alle notwendigen Manöver und Strassenszenarien.</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Treffpunkt ist Herrengasse 17, 8853 Lachen. Wir fahren dann ins Prüfungsgebiet und üben alle notwendigen Manöver und Strassenszenarien.</p>
           </details>
           <details class="group bg-gray-50 border border-gray-200 rounded-xl overflow-hidden hover:border-orange-300 transition cursor-pointer">
             <summary class="font-bold text-gray-900 flex justify-between items-center px-6 py-5 select-none group-open:bg-orange-50">

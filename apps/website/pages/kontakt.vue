@@ -59,7 +59,7 @@
                 <span class="mt-0.5 text-base">📍</span>
                 <div>
                   <p class="font-semibold">Lachen / SZ</p>
-                  <p class="text-gray-500">Bahnhofstrasse, 8853 Lachen</p>
+                  <p class="text-gray-500">Herrengasse 17, 8853 Lachen</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
