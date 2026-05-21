@@ -2,10 +2,10 @@
   <div>
     <Head>
       <Title>Fahrlehrer Pfäffikon SZ | Marc, Peter & Rahel | Driving Team</Title>
-      <Meta name="description" content="Fahrlehrer Pfäffikon SZ ✓ Marc (Motorboot) ✓ Peter (Lastwagen & Bus) ✓ Rahel ✓ Eidg. diplomiert ✓ Prüfung am StVA Pfäffikon ✓ 56'000+ Lektionen. Jetzt buchen!" />
-      <Meta name="keywords" content="Fahrlehrer Pfäffikon SZ, Fahrlehrer Pfäffikon, Fahrlehrer Kanton Schwyz, Fahrlehrer Lastwagen Pfäffikon, eidg. dipl. Fahrlehrer Pfäffikon SZ" />
+      <Meta name="description" content="Fahrlehrer Pfäffikon SZ ✓ Marc (Motorboot) ✓ Peter (Lastwagen & Bus) ✓ Rahel ✓ Eidg. Fachausweis ✓ Prüfung am StVA Pfäffikon ✓ 56'000+ Lektionen. Jetzt buchen!" />
+      <Meta name="keywords" content="Fahrlehrer Pfäffikon SZ, Fahrlehrer Pfäffikon, Fahrlehrer Kanton Schwyz, Fahrlehrer Lastwagen Pfäffikon, Fahrlehrer mit eidg. Fachausweis Pfäffikon SZ" />
       <Meta property="og:title" content="Fahrlehrer Pfäffikon SZ – Marc, Peter & Rahel | Driving Team" />
-      <Meta property="og:description" content="3 eidgenössisch diplomierte Fahrlehrer in Pfäffikon SZ. Marc (Motorboot, Anhänger), Peter (Lastwagen, Bus), Rahel. 56'000+ Lektionen. Jetzt Termin buchen." />
+      <Meta property="og:description" content="3 Fahrlehrer mit eidg. Fachausweis in Pfäffikon SZ. Marc (Motorboot, Anhänger), Peter (Lastwagen, Bus), Rahel. 56'000+ Lektionen. Jetzt Termin buchen." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrlehrer-pfaeffikon/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrlehrer-pfaeffikon/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/pfaeffikon-hero.webp" />
@@ -22,9 +22,9 @@
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Driving Team Pfäffikon SZ</p>
           <h1 class="heading-lg text-white mb-4">Fahrlehrer Pfäffikon SZ</h1>
-          <p class="text-base xs:text-xl text-white mb-6">Drei eidgenössisch diplomierte Fahrlehrer im Kanton Schwyz – gemeinsam mit über 56'000 Lektionen Erfahrung. Prüfung direkt am StVA Pfäffikon SZ.</p>
+          <p class="text-base xs:text-xl text-white mb-6">Drei Fahrlehrer mit eidg. Fachausweis im Kanton Schwyz – gemeinsam mit über 56'000 Lektionen Erfahrung. Prüfung direkt am StVA Pfäffikon SZ.</p>
           <div class="flex flex-wrap gap-2 mb-6">
-            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">🎓 Eidg. diplomiert</span>
+            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">🎓 Eidg. Fachausweis</span>
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">🚢 Motorboot · 🚛 Lastwagen · 🚌 Bus</span>
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">🏛️ Prüfung am StVA Pfäffikon</span>
           </div>
@@ -158,7 +158,7 @@
           <span class="text-5xl flex-shrink-0">🚛</span>
           <div>
             <h2 class="text-xl font-bold text-orange-900 mb-2">Lastwagen & Bus Fahrlehrer Pfäffikon SZ – Peter</h2>
-            <p class="text-orange-800 leading-relaxed">Peter ist eidg. diplomierter Fahrlehrer für <strong>Kat. C (Lastwagen)</strong> und <strong>Kat. D (Bus)</strong>. Mit seiner Erfahrung als ehemaliger Lastwagenchauffeur bringt er dir nicht nur die Theorie, sondern echtes Praxis-Know-how.</p>
+            <p class="text-orange-800 leading-relaxed">Peter ist Fahrlehrer mit eidg. Fachausweis für <strong>Kat. C (Lastwagen)</strong> und <strong>Kat. D (Bus)</strong>. Mit seiner Erfahrung als ehemaliger Lastwagenchauffeur bringt er dir nicht nur die Theorie, sondern echtes Praxis-Know-how.</p>
             <a href="/lastwagen-fahrschule/" class="inline-block mt-4 bg-orange-600 hover:bg-orange-700 text-white font-semibold px-5 py-2 rounded-lg transition text-sm">
               🚛 Lastwagen Fahrschule →
             </a>
@@ -186,7 +186,7 @@
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Gibt es einen Lastwagen-Fahrlehrer in Pfäffikon SZ?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja – Peter ist eidg. diplomierter Fahrlehrer für Kat. C (Lastwagen) und Kat. D (Bus) in Pfäffikon SZ.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja – Peter ist Fahrlehrer mit eidg. Fachausweis für Kat. C (Lastwagen) und Kat. D (Bus) in Pfäffikon SZ.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Gibt es einen Motorboot-Fahrlehrer in Pfäffikon SZ?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
@@ -231,7 +231,7 @@ const jsonLdScripts = [
     "@context": "https://schema.org",
     "@type": "ItemList",
     "name": "Fahrlehrer Pfäffikon SZ – Driving Team",
-    "description": "Eidgenössisch diplomierte Fahrlehrer in Pfäffikon SZ. Auto, Motorboot, Lastwagen und Bus.",
+    "description": "Fahrlehrer mit eidg. Fachausweis in Pfäffikon SZ. Auto, Motorboot, Lastwagen und Bus.",
     "url": "https://drivingteam.ch/fahrlehrer-pfaeffikon/",
     "numberOfItems": 3,
     "itemListElement": [
@@ -242,7 +242,7 @@ const jsonLdScripts = [
           "@type": "Person",
           "@id": "https://drivingteam.ch/fahrlehrer-pfaeffikon/#marc",
           "name": "Marc",
-          "jobTitle": "Eidg. diplomierter Fahrlehrer Kat. B, BE & Boot",
+          "jobTitle": "Fahrlehrer mit eidg. Fachausweis Kat. B, BE & Boot",
           "description": "Fahrlehrer seit 2016. Spezialisiert auf Auto, Anhänger und Motorboot. SVEB-zertifizierter Kursleiter. Unterrichtet auf Deutsch und Englisch.",
           "image": "https://drivingteam.ch/images/team/marc.webp",
           "worksFor": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" },
@@ -262,7 +262,7 @@ const jsonLdScripts = [
           "@type": "Person",
           "@id": "https://drivingteam.ch/fahrlehrer-pfaeffikon/#peter",
           "name": "Peter",
-          "jobTitle": "Eidg. diplomierter Fahrlehrer Kat. B, C & D",
+          "jobTitle": "Fahrlehrer mit eidg. Fachausweis Kat. B, C & D",
           "description": "Fahrlehrer seit 2022. Spezialisiert auf Lastwagen (Kat. C) und Bus (Kat. D). SVEB-zertifizierter Kursleiter. Unterrichtet auf Deutsch.",
           "image": "https://drivingteam.ch/images/team/peter.webp",
           "worksFor": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" },
@@ -282,7 +282,7 @@ const jsonLdScripts = [
           "@type": "Person",
           "@id": "https://drivingteam.ch/fahrlehrer-pfaeffikon/#rahel",
           "name": "Rahel",
-          "jobTitle": "Eidg. diplomierte Fahrlehrerin Kat. B",
+          "jobTitle": "Fahrlehrerin mit eidg. Fachausweis Kat. B",
           "description": "Fahrlehrerin seit 2012. Spezialisiert auf Auto und Automatik. Unterrichtet auf Deutsch und Englisch.",
           "image": "https://drivingteam.ch/images/team/rahel.webp",
           "worksFor": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" },
@@ -299,7 +299,7 @@ const jsonLdScripts = [
     "@type": "FAQPage",
     "mainEntity": [
       { "@type": "Question", "name": "Kann ich meinen Fahrlehrer in Pfäffikon SZ selbst wählen?", "acceptedAnswer": { "@type": "Answer", "text": "Ja – bei der Buchung kannst du direkt Marc, Peter oder Rahel auswählen." } },
-      { "@type": "Question", "name": "Gibt es einen Lastwagen-Fahrlehrer in Pfäffikon SZ?", "acceptedAnswer": { "@type": "Answer", "text": "Ja – Peter ist eidg. diplomierter Fahrlehrer für Kat. C (Lastwagen) und Kat. D (Bus) in Pfäffikon SZ." } },
+      { "@type": "Question", "name": "Gibt es einen Lastwagen-Fahrlehrer in Pfäffikon SZ?", "acceptedAnswer": { "@type": "Answer", "text": "Ja – Peter ist Fahrlehrer mit eidg. Fachausweis für Kat. C (Lastwagen) und Kat. D (Bus) in Pfäffikon SZ." } },
       { "@type": "Question", "name": "Gibt es einen Motorboot-Fahrlehrer in Pfäffikon SZ?", "acceptedAnswer": { "@type": "Answer", "text": "Ja – Marc hat den Bootsführerausweis Kat. A und bietet Motorbootkurse am Zürichsee und Obersee an." } }
     ]
   }) },
