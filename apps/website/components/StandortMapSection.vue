@@ -210,8 +210,8 @@ const locations: Record<string, {
     canton: 'SZ',
     address: 'Bahnweg 4, 8808 Pfäffikon SZ',
     region: 'Pfäffikon/SZ, Lachen, Altendorf, Galgenen, Wangen/SZ, Siebnen, Schübelbach',
-    lat: '47.1990',
-    lng: '8.8551',
+    lat: '47.202904',
+    lng: '8.778039',
   },
   pfaeffikon_zh: {
     city: 'Pfäffikon ZH',
