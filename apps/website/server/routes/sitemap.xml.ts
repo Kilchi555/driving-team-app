@@ -74,6 +74,12 @@ export default defineEventHandler((event) => {
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://drivingteam.ch/fahrlehrer-zuerich/</loc>
+    <lastmod>2026-05-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://drivingteam.ch/auto-fahrschule-zuerich/</loc>
     <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>
@@ -94,6 +100,18 @@ export default defineEventHandler((event) => {
   <url>
     <loc>https://drivingteam.ch/fahrschule-lachen/</loc>
     <lastmod>2026-04-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/fahrstunden-lachen/</loc>
+    <lastmod>2026-05-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/fahrlehrer-lachen/</loc>
+    <lastmod>2026-05-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -154,6 +172,18 @@ export default defineEventHandler((event) => {
   <url>
     <loc>https://drivingteam.ch/fahrschule-pfaeffikon-sz/</loc>
     <lastmod>2026-04-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/fahrstunden-pfaeffikon/</loc>
+    <lastmod>2026-05-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/fahrlehrer-pfaeffikon/</loc>
+    <lastmod>2026-05-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
