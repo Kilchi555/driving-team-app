@@ -202,7 +202,7 @@ export const LOCATION_PFAEFFIKON: Location = {
   placeId: '',
 
   address: {
-    street: 'Hofacker 2',
+    street: 'Bahnweg 4',
     city: 'Pfäffikon SZ',
     zip: '8808',
     canton: 'SZ',

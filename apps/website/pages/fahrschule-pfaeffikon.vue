@@ -79,7 +79,7 @@
       <div class="max-w-3xl mx-auto">
         <h2 class="heading-md mb-4">Prüfungsgebiet & Übungsrouten Pfäffikon/SZ</h2>
         <p class="text-gray-700 mb-4">Pfäffikon/SZ hat einen entscheidenden Vorteil: Die Fahrprüfung findet direkt hier am <strong>Strassenverkehrsamt Pfäffikon/SZ</strong> statt. Wir fahren in der Ausbildung die echten Prüfungsrouten – nach der Ausbildung kennst du sie auswendig.</p>
-        <p class="text-gray-700 mb-6">Das Gebiet bietet eine perfekte Mischung aus Seestrassen, Dorfrouten und Schnellstrassen. Treffpunkt ist der <strong>Bahnhof Pfäffikon/SZ</strong> oder flexibel nach Absprache.</p>
+        <p class="text-gray-700 mb-6">Das Gebiet bietet eine perfekte Mischung aus Seestrassen, Dorfrouten und Schnellstrassen. Treffpunkt ist <strong>Bahnweg 4, 8808 Pfäffikon SZ</strong> oder flexibel nach Absprache.</p>
         <h3 class="font-bold text-gray-900 mb-3">Typische Prüfungsrouten ab Pfäffikon/SZ</h3>
         <ul class="space-y-2 text-gray-700 mb-6">
           <li class="flex gap-2"><span class="text-primary-600 font-bold">→</span> Feusisberg / Schindellegi</li>
@@ -118,7 +118,7 @@
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wo bietet Ihr Fahrstunden an?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Das Tätigkeitsgebiet des Driving Team Pfäffikon/SZ erstreckt sich von Hinwil bis nach Schwyz und von Horgen bis nach Ziegelbrücke. Die Treffpunkte für die Autofahrstunden sind flexibel – Bahnhof Pfäffikon/SZ oder nach Absprache direkt bei dir. Ein entscheidender Vorteil: Die Fahrprüfung findet direkt am Strassenverkehrsamt Pfäffikon/SZ statt. Die Routen, die wir in der Ausbildung fahren, sind die echten Prüfungsrouten.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Das Tätigkeitsgebiet des Driving Team Pfäffikon/SZ erstreckt sich von Hinwil bis nach Schwyz und von Horgen bis nach Ziegelbrücke. Die Treffpunkte für die Autofahrstunden sind flexibel – Bahnweg 4, 8808 Pfäffikon SZ oder nach Absprache direkt bei dir. Ein entscheidender Vorteil: Die Fahrprüfung findet direkt am Strassenverkehrsamt Pfäffikon/SZ statt. Die Routen, die wir in der Ausbildung fahren, sind die echten Prüfungsrouten.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Soll ich geschaltet oder automatisch fahren lernen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>

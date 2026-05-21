@@ -64,7 +64,7 @@
           <div class="text-center">
             <div class="w-14 h-14 bg-primary-100 rounded-full flex items-center justify-center text-2xl mx-auto mb-3">📍</div>
             <h3 class="font-bold text-gray-900 mb-1 text-sm">2. Treffpunkt</h3>
-            <p class="text-xs text-gray-600">Fixer Treffpunkt: Bahnhof Pfäffikon SZ oder flexibel nach Absprache.</p>
+            <p class="text-xs text-gray-600">Fixer Treffpunkt: Bahnweg 4, 8808 Pfäffikon SZ oder flexibel nach Absprache.</p>
           </div>
           <div class="text-center">
             <div class="w-14 h-14 bg-primary-100 rounded-full flex items-center justify-center text-2xl mx-auto mb-3">🚗</div>
@@ -157,7 +157,7 @@
         <div class="faq-masonry">
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wo treffe ich meinen Fahrlehrer in Pfäffikon SZ?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Fixer Treffpunkt ist der <strong>Bahnhof Pfäffikon SZ</strong>. Wir holen dich wenn möglich auch zu Hause oder bei der Arbeit ab – flexibel nach Absprache.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Fixer Treffpunkt ist <strong>Bahnweg 4, 8808 Pfäffikon SZ</strong>. Wir holen dich wenn möglich auch zu Hause oder bei der Arbeit ab – flexibel nach Absprache.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wo findet die Fahrprüfung statt?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
@@ -221,7 +221,7 @@ const jsonLdScripts = [
       "telephone": "+41444310033",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "Herrengasse 17",
+        "streetAddress": "Bahnweg 4",
         "addressLocality": "Pfäffikon",
         "postalCode": "8808",
         "addressRegion": "SZ",
@@ -255,7 +255,7 @@ const jsonLdScripts = [
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
-      { "@type": "Question", "name": "Wo treffe ich meinen Fahrlehrer in Pfäffikon SZ?", "acceptedAnswer": { "@type": "Answer", "text": "Fixer Treffpunkt ist der Bahnhof Pfäffikon SZ. Wir holen dich wenn möglich auch zu Hause oder bei der Arbeit ab." } },
+      { "@type": "Question", "name": "Wo treffe ich meinen Fahrlehrer in Pfäffikon SZ?", "acceptedAnswer": { "@type": "Answer", "text": "Fixer Treffpunkt ist Bahnweg 4, 8808 Pfäffikon SZ. Wir holen dich wenn möglich auch zu Hause oder bei der Arbeit ab." } },
       { "@type": "Question", "name": "Wo findet die Fahrprüfung statt?", "acceptedAnswer": { "@type": "Answer", "text": "Die Fahrprüfung findet am StVA Pfäffikon SZ statt. Prüfungsrouten: Feusisberg/Schindellegi, Wollerau/Samstagern, Freienbach, Rapperswil/Jona." } },
       { "@type": "Question", "name": "Was kostet eine Fahrstunde in Pfäffikon SZ?", "acceptedAnswer": { "@type": "Answer", "text": "Eine Fahrstunde (45 Min.) kostet CHF 95.-. Einmalige Admin- & Versicherungspauschale CHF 120.-. WarmUp inkl. Prüfungsfahrt CHF 285.-." } }
     ]
