@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Auto Theorieprüfung | Jetzt für Theoriestunden anmelden | Driving Team</Title>
+      <Title>Auto Theorieprüfung Zürich | Anmeldung & Kurse | Driving Team</Title>
       <Meta name="description" content="Auto Theorieprüfung mit Driving Team ✓ CHF 85.- pro 45 Min. ✓ Praxisorientierte Lektionen ✓ Zürich-Altstetten & Lachen SZ. Jetzt online anmelden!" />
       <Meta property="og:title" content="Auto Theorie – Vorbereitung auf die Theorieprüfung | Driving Team" />
       <Meta property="og:description" content="Auto Theorieprüfung optimal vorbereiten. CHF 85.- pro 45 Minuten. Standorte Zürich & Lachen." />

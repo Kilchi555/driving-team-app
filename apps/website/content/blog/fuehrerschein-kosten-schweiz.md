@@ -1,6 +1,6 @@
 ---
 title: "Führerschein Kosten Schweiz 2026 – Der vollständige Überblick"
-seoTitle: "Führerschein Kosten Schweiz 2026 – Überblick"
+seoTitle: "Führerschein Kosten Schweiz 2026 | Überblick"
 description: "Alle Kosten für den Führerschein Schweiz 2026: Fahrstunden, Kurse, StVA-Gebühren. Kostenbeispiele von CHF 2'250 bis CHF 3'530."
 slug: "fuehrerschein-kosten-schweiz"
 date: "2026-03-25"
@@ -13,7 +13,7 @@ keywords: "Führerschein Kosten Schweiz, was kostet Führerschein Schweiz, Fahra
 readingTime: 9
 ---
 
-# Führerschein Kosten Schweiz 2026 – Der vollständige Überblick
+## Führerschein Kosten Schweiz 2026 – Der vollständige Überblick
 
 Wie viel kostet ein Führerschein in der Schweiz? Das ist die Frage, die fast jede Fahrschülerin und jeder Fahrschüler – und häufig auch deren Eltern – als erstes stellt. Die ehrliche Antwort: Es kommt auf mehrere Faktoren an. Aber mit dem richtigen Überblick kannst du die Kosten gut planen.
 

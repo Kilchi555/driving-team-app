@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Driving School Lachen – English Lessons from CHF 95 | Driving Team</Title>
+      <Title>Driving School Lachen | English Lessons | Driving Team</Title>
       <Meta name="description" content="Driving School Lachen SZ ✓ English lessons from CHF 95/session ✓ Lachen, Rapperswil, Pfäffikon, Wädenswil ✓ 4.9★ reviews ✓ Car & motorcycle. Book online!" />
       <Meta name="keywords" content="driving school lachen, driving lessons lachen, english driving school lachen, driving school rapperswil, driving lessons rapperswil, driving school pfäffikon english, fahrschule lachen english, driving school schwyz" />
       <Meta property="og:title" content="Driving School Lachen – English Lessons from CHF 95 | Driving Team" />

@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>AGB | Allgemeine Geschäftsbedingungen | Driving Team Fahrschule</Title>
+      <Title>AGB | Allgemeine Geschäftsbedingungen | Driving Team</Title>
       <Meta name="description" content="Allgemeine Geschäftsbedingungen der Fahrschule Driving Team – Fahrausweis, Versicherung, Zahlungskonditionen und mehr." />
       <Meta property="og:title" content="AGB | Driving Team Fahrschule" />
       <Meta property="og:description" content="Allgemeine Geschäftsbedingungen der Fahrschule Driving Team." />

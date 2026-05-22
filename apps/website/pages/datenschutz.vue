@@ -16,7 +16,7 @@
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16">
       <div class="section-container text-center">
-        <h1 class="heading-lg text-white mb-4">Datenschutz</h1>
+        <h1 class="heading-lg text-white mb-4">Datenschutzerklärung Driving Team</h1>
         <p class="text-white">Stand: 1. Januar 2025</p>
       </div>
     </section>

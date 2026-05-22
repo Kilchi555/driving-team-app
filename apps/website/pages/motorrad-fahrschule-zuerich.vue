@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Motorrad Fahrschule Zürich | A1 A35kW A ab CHF 95.- | Driving Team</Title>
+      <Title>Motorrad Fahrschule Zürich | A1, A35kW, A | Driving Team</Title>
       <Meta name="description" content="Motorrad Fahrschule Zürich ✓ Kategorien A1, A35kW & A ✓ Fahrschul-Motorrad verfügbar ✓ Grundkurs Zürich ✓ 85% Erfolgsquote ✓ Prüfung Albisgütli. Jetzt buchen!" />
       <Meta name="keywords" content="Motorrad Fahrschule Zürich, Motorrad Fahrstunden Zürich, Motorrad Führerschein Zürich, A1 Zürich, A35kW Zürich, Motorrad Grundkurs Zürich, Motorrad Prüfung Albisgütli, Fahrschule Motorrad Zürich-Altstetten" />
       <Meta property="og:title" content="Motorrad Fahrschule Zürich | A1, A35kW, A | Driving Team" />

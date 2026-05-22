@@ -1,6 +1,6 @@
 ---
 title: "Wie man sich auf die Theorieprüfung in Zürich vorbereitet – Dein Leitfaden"
-seoTitle: "Theorieprüfung Zürich – Dein Leitfaden"
+seoTitle: "Theorieprüfung Zürich: Vorbereitung & Tipps"
 description: "Alles was du über die Auto Theorieprüfung wissen musst – von der Anmeldung bis zur richtigen Lernstrategie. Tipps von erfahrenen Fahrlehrern."
 slug: "theorieprufung-tipps-zuerich"
 date: "2023-09-22"
@@ -13,7 +13,7 @@ keywords: "Theorieprüfung Zürich, Theorieprüfung vorbereiten, Lernstrategie F
 readingTime: 7
 ---
 
-# Wie man sich auf die Theorieprüfung in Zürich vorbereitet – Dein Leitfaden
+## Wie man sich auf die Theorieprüfung in Zürich vorbereitet – Dein Leitfaden
 
 Die Theorieprüfung ist der erste wichtige Schritt auf dem Weg zum Führerschein. Viele Fahrschülerinnen und Fahrschüler unterschätzen jedoch den Aufwand – und fallen durch. Mit der richtigen Vorbereitung bist du bestens gerüstet.
 

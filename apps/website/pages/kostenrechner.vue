@@ -17,7 +17,7 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24 text-center">
       <div class="section-container">
         <p class="text-4xl mb-4">💰</p>
-        <h1 class="heading-lg text-white mb-4">Kostenrechner</h1>
+        <h1 class="heading-lg text-white mb-4">Fahrstunden Kosten berechnen</h1>
         <p class="text-xl text-primary-100 max-w-2xl mx-auto">Berechne in 3 Schritten, was deine Fahrausbildung ungefähr kosten wird.</p>
       </div>
     </section>

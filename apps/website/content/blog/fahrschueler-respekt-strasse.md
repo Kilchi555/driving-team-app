@@ -1,6 +1,6 @@
 ---
 title: "Fahrschüler & Respekt auf der Strasse: Ein Appell zur Geduld"
-seoTitle: "Fahrschüler & Respekt auf der Strasse – Appell"
+seoTitle: "Fahrschüler & Respekt auf der Strasse"
 description: "Warum Geduld gegenüber Fahrschülern wichtig ist und wie wir gemeinsam die Strassen sicherer machen können. Ein Appell von der Driving Team Fahrschule."
 slug: "fahrschueler-respekt-strasse"
 date: "2023-09-26"
@@ -13,7 +13,7 @@ keywords: "Fahrschüler Strasse, Respekt Fahrschüler, Geduld Strassenverkehr, F
 readingTime: 5
 ---
 
-# Fahrschüler & Respekt auf der Strasse: Ein Appell zur Geduld
+## Fahrschüler & Respekt auf der Strasse: Ein Appell zur Geduld
 
 Stell dir vor, du nimmst heute dein erstes Mal am Strassenverkehr teil – nicht als Beifahrer, sondern selbst am Steuer. Du bist nervös, konzentrierst dich auf jede Bewegung des Lenkrads, prüfst dreimal die Spiegel, und dann: ein Hupzeichen von hinten, weil du an der Ampel eine halbe Sekunde zu lange gewartet hast.
 

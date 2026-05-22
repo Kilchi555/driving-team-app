@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Zürich – Standort, Kurse & Team | Driving Team</Title>
+      <Title>Fahrschule Zürich | Kurse, Standort & Preise | Driving Team</Title>
       <Meta name="description" content="Fahrschule Driving Team in Zürich ✓ Auto, Motorrad, Anhänger, Lastwagen ✓ Hauptstandort Zürich-Altstetten ✓ 85% Erfolgsquote ✓ ab CHF 95.- ✓ Jetzt buchen!" />
       <Meta name="keywords" content="Fahrschule Zürich, Fahrstunden Zürich, Auto Fahrschule Zürich, Motorrad Fahrschule Zürich, Driving Team Zürich, Fahrschule Zürich-Altstetten" />
       <Meta property="og:title" content="Fahrschule Zürich – Standort & Kurse | Driving Team" />

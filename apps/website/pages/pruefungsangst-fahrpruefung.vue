@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Prüfungsangst Fahrprüfung – Mit Mental Coach Pascal | Driving Team</Title>
+      <Title>Prüfungsangst Fahrprüfung | Mental Coaching | Driving Team</Title>
       <Meta name="description" content="Prüfungsangst bei der Fahrprüfung? Pascal – Fahrlehrer & Dipl. Mentaltrainer – begleitet dich mental und praktisch zur bestandenen Prüfung." />
       <Meta property="og:title" content="Prüfungsangst Fahrprüfung überwinden – Mit Mental Coach Pascal Kilchenmann" />
       <Meta property="og:description" content="Prüfungsangst ist normal – aber lösbar. Pascal ist Fahrlehrer UND Dipl. Mentaltrainer. Er weiss, wie du die Angst vor der Fahrprüfung überwindest." />

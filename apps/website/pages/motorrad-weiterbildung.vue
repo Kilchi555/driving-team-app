@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Motorrad Weiterbildung | Kurse die Dich sicherer machen | Driving Team</Title>
+      <Title>Motorrad Weiterbildung Zürich | Sicherheitskurse | Driving Team</Title>
       <Meta name="description" content="Motorrad Weiterbildung beim Driving Team. Schräglagen-Training und Prüfungsvorbereitungskurs. CHF 190.- pro Kurs, max. 5 Teilnehmer. Jetzt anmelden!" />
       <Meta property="og:title" content="Motorrad Weiterbildung – Schräglagen & Prüfungsvorbereitung | Driving Team" />
       <Meta property="og:description" content="Motorrad Weiterbildung beim Driving Team. Schräglagen-Training & Prüfungsvorbereitung. CHF 190.- pro Kurs, max. 5 Teilnehmer." />

@@ -18,7 +18,7 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container">
         <div class="max-w-3xl">
-          <h1 class="heading-lg text-white mb-6">Fahrlehrer-Weiterbildung</h1>
+          <h1 class="heading-lg text-white mb-6">Fahrlehrer Weiterbildung – Obligatorisch & Online</h1>
           <p class="text-xl text-white mb-8">Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis. Bei uns findest Kurse die Spass machen.</p>
           <button type="button" @click="openPicker" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✉️ Anmelden

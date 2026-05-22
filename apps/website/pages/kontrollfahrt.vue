@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Kontrollfahrt Zürich | In 3 Schritten zur Kontrollfahrt | Driving Team</Title>
+      <Title>Kontrollfahrt Zürich | In 3 Schritten | Driving Team</Title>
       <Meta name="description" content="Kontrollfahrt in Zürich – professionelle Vorbereitung mit Driving Team. Individuelle Ausbildung, entspanntes Lernen, beste Vorbereitung für die Kontrollfahrt." />
       <Meta name="keywords" content="Kontrollfahrt Zürich, Kontrollfahrt Vorbereitung, Fahrtüchtigkeit, Führerausweis umschreiben, Driving Team" />
       <Meta property="og:title" content="Kontrollfahrt Zürich – Professionelle Vorbereitung | Driving Team" />
@@ -20,7 +20,7 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
       <img src="/images/categories/kontrollfahrt-hero.webp" alt="Kontrollfahrt – Fahrprüfungsvorbereitung für alle Kategorien mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-20" />
       <div class="section-container text-center relative z-10">
-        <h1 class="heading-lg text-white mb-6">Kontrollfahrt</h1>
+        <h1 class="heading-lg text-white mb-6">Kontrollfahrt Zürich – In 3 Schritten</h1>
         <p class="text-xl text-white max-w-3xl mx-auto mb-8">Jetzt in 3 Schritten zu Deiner Kontrollfahrt</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">

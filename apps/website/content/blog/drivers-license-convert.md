@@ -1,6 +1,6 @@
 ---
 title: "Drivers License: 7 Steps to Convert Your Foreign License to a Swiss One"
-seoTitle: "Foreign License to Swiss: 7 Steps – Driving Team"
+seoTitle: "Foreign Drivers License Switzerland: 7 Steps"
 description: "Step-by-step guide to converting your foreign driving license to a Swiss one. Who qualifies, documents needed, and processing time explained."
 slug: "drivers-license-convert"
 date: "2023-09-25"
@@ -14,7 +14,7 @@ readingTime: 8
 lang: "en"
 ---
 
-# Drivers License: 7 Steps to Convert Your Foreign License to a Swiss One
+## Drivers License: 7 Steps to Convert Your Foreign License to a Swiss One
 
 Moving to Switzerland and wondering whether your foreign driving license is still valid? You're not alone. Every year, thousands of expats and new residents face this exact question. The good news: Switzerland has a clear process for converting foreign driving licenses – and in many cases, you don't even need to retake the full driving test.
 
