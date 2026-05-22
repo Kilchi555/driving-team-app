@@ -162,7 +162,6 @@ export default defineEventHandler(async (event) => {
                 attributionModelSettings: {
                   attributionModel: 'GOOGLE_SEARCH_ATTRIBUTION_DATA_DRIVEN',
                 },
-                includeInConversionsMetric: true,
               },
             },
           ],
