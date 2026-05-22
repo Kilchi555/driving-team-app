@@ -15,8 +15,8 @@
             </svg>
           </div>
           <div>
-            <h1 class="text-lg sm:text-xl font-bold tracking-tight">Fahrschule registrieren</h1>
-            <p class="text-blue-200 text-xs sm:text-sm mt-0.5">Deine Fahrschule auf Autopilot – in wenigen Minuten startklar</p>
+            <h1 class="text-lg sm:text-xl font-bold tracking-tight">{{ isWebsiteMode ? 'Website-Kunde anlegen' : 'Fahrschule registrieren' }}</h1>
+            <p class="text-blue-200 text-xs sm:text-sm mt-0.5">{{ isWebsiteMode ? 'Kundendaten erfassen – Website wird automatisch generiert' : 'Deine Fahrschule auf Autopilot – in wenigen Minuten startklar' }}</p>
           </div>
         </div>
         <div class="absolute -right-4 -top-4 w-32 h-32 bg-white/5 rounded-full pointer-events-none"></div>
@@ -559,6 +559,10 @@
                     class="text-red-400 hover:text-red-600 text-xs mt-1 block mx-auto transition-colors" type="button">
                     Entfernen
                   </button>
+                  <p v-if="logoError" class="text-xs text-red-500 mt-2 flex items-center justify-center gap-1">
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                    {{ logoError }}
+                  </p>
                 </div>
               </div>
 
@@ -592,6 +596,10 @@
                     class="text-red-400 hover:text-red-600 text-xs mt-1 block mx-auto transition-colors" type="button">
                     Entfernen
                   </button>
+                  <p v-if="logoSquareError" class="text-xs text-red-500 mt-2 flex items-center justify-center gap-1">
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                    {{ logoSquareError }}
+                  </p>
                 </div>
               </div>
             </div>
@@ -666,37 +674,47 @@
             </div>
           </div>
 
-          <!-- E-Mail Absender -->
+          <!-- Erweiterte Einstellungen (E-Mail + SMS Absender) -->
           <div class="pt-2 border-t border-gray-100">
-            <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-              E-Mail Absender
-              <span class="normal-case font-normal text-gray-400 ml-1">(optional)</span>
-            </p>
-            <p class="text-xs text-gray-400 mb-3">
-              Damit E-Mails von deiner eigenen Domain kommen, z. B.
-              <code class="bg-gray-100 px-1 rounded">info@deine-fahrschule.ch</code>.
-              Die DNS-Verifizierung erledigst du nach der Registrierung unter
-              <strong>Einstellungen → E-Mail Domain</strong>.
-            </p>
-            <input
-              v-model="formData.from_email"
-              type="email"
-              placeholder="info@deine-fahrschule.ch"
-              class="w-full sm:w-80 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm"
-            />
-          </div>
+            <button type="button" @click="showAdvancedBranding = !showAdvancedBranding"
+              class="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors w-full text-left group">
+              <svg class="w-4 h-4 transition-transform duration-200" :class="showAdvancedBranding ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+              Erweiterte Einstellungen
+              <span class="text-xs font-normal text-gray-400">(E-Mail & SMS Absender — optional, kann nach dem Login gesetzt werden)</span>
+            </button>
 
-          <!-- SMS Absender -->
-          <div class="pt-2 border-t border-gray-100">
-            <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-              SMS Absender
-              <span class="normal-case font-normal text-gray-400 ml-1">(optional)</span>
-            </p>
-            <p class="text-xs text-gray-400 mb-3">
-              Name der bei SMS-Nachrichten als Absender erscheint, z. B.
-              <code class="bg-gray-100 px-1 rounded">Fahrschule</code>.
-              <span class="text-amber-600 font-medium">Maximal 11 Zeichen</span> – Einschränkung des SMS-Providers.
-              Leer lassen = Fahrschulname wird automatisch verwendet.
+            <div v-if="showAdvancedBranding" class="mt-4 space-y-5">
+            <!-- E-Mail Absender -->
+            <div>
+              <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                E-Mail Absender
+              </p>
+              <p class="text-xs text-gray-400 mb-3">
+                Damit E-Mails von deiner eigenen Domain kommen, z. B.
+                <code class="bg-gray-100 px-1 rounded">info@deine-fahrschule.ch</code>.
+                Die DNS-Verifizierung erledigst du nach der Registrierung unter
+                <strong>Einstellungen → E-Mail Domain</strong>.
+              </p>
+              <input
+                v-model="formData.from_email"
+                type="email"
+                placeholder="info@deine-fahrschule.ch"
+                class="w-full sm:w-80 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm"
+              />
+            </div>
+
+            <!-- SMS Absender -->
+            <div class="border-t border-gray-100 pt-4">
+              <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                SMS Absender
+              </p>
+              <p class="text-xs text-gray-400 mb-3">
+                Name der bei SMS-Nachrichten als Absender erscheint, z. B.
+                <code class="bg-gray-100 px-1 rounded">Fahrschule</code>.
+                <span class="text-amber-600 font-medium">Maximal 11 Zeichen</span> – Einschränkung des SMS-Providers.
+                Leer lassen = Fahrschulname wird automatisch verwendet.
             </p>
             <div class="relative w-full sm:w-80">
               <input
@@ -711,7 +729,9 @@
                 {{ formData.twilio_from_sender?.length || 0 }}/11
               </span>
             </div>
-          </div>
+            </div><!-- /SMS Absender -->
+            </div><!-- /showAdvancedBranding -->
+          </div><!-- /Erweiterte Einstellungen wrapper -->
         </div>
 
         <!-- ═══ STEP 5: Admin-Konto ═══ -->
@@ -817,10 +837,42 @@
         <div v-if="currentStep === 6" class="space-y-5">
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-0.5">Fahrlehrer hinzufügen</h2>
-            <p class="text-sm text-gray-500">Mindestens 1 Fahrlehrer – weitere können jederzeit hinzugefügt werden.</p>
+            <p class="text-sm text-gray-500">Weitere können jederzeit nach der Registrierung eingeladen werden.</p>
           </div>
 
-          <div class="flex items-start gap-3 bg-blue-50 rounded-xl p-3.5 text-sm text-blue-700">
+          <!-- Toggle: Admin = Fahrlehrer -->
+          <div class="flex items-center justify-between bg-green-50 rounded-2xl px-4 py-3 border border-green-100">
+            <div class="flex items-center gap-2.5">
+              <div class="w-7 h-7 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+              </div>
+              <div>
+                <span class="text-sm font-medium text-green-800">Meine Daten übernehmen</span>
+                <p class="text-xs text-green-600 mt-0.5">
+                  {{ staffAdminIsSelf ? 'Deine Admin-Daten wurden vorausgefüllt – du erhältst einen separaten Fahrlehrer-Login.' : 'Admin-Daten in den ersten Fahrlehrer-Eintrag kopieren.' }}
+                </p>
+              </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" v-model="staffAdminIsSelf" @change="applyAdminToStaff" class="sr-only peer">
+              <div class="relative w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+            </label>
+          </div>
+
+          <!-- Warning wenn Admin = Fahrlehrer: andere E-Mail erforderlich -->
+          <div v-if="staffAdminIsSelf" class="flex items-start gap-3 bg-amber-50 rounded-xl p-3.5 border border-amber-200">
+            <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/>
+            </svg>
+            <div class="text-sm text-amber-800">
+              <p class="font-semibold mb-0.5">Wichtig: Zwei separate Logins</p>
+              <p class="text-xs leading-relaxed">Dein Admin-Dashboard (<span class="font-mono font-medium">{{ adminForm.email }}</span>) und deine Fahrlehrer-Plattform sind getrennte Accounts. Trage unten eine <strong>andere E-Mail</strong> für den Fahrlehrer-Login ein.</p>
+            </div>
+          </div>
+
+          <div v-else class="flex items-start gap-3 bg-blue-50 rounded-xl p-3.5 text-sm text-blue-700">
             <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
             </svg>
@@ -858,13 +910,29 @@
                   <input v-model="staff.last_name" type="text" placeholder="Mustermann"
                     class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-colors">
                 </div>
-                <div class="sm:col-span-2">
+                <div>
                   <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
                     Telefon
                     <span class="normal-case font-normal text-blue-500 ml-1">für Einladungs-SMS</span>
                   </label>
                   <input v-model="staff.phone" type="tel" placeholder="+41 79 123 45 67"
                     class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-colors">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                    E-Mail
+                    <span class="normal-case font-normal text-gray-400 ml-1">für Einladungs-E-Mail</span>
+                  </label>
+                  <input v-model="staff.email" type="email" placeholder="fahrlehrer@beispiel.ch"
+                    :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-white text-sm transition-colors',
+                      staff.email && staff.email.toLowerCase() === adminForm.email.toLowerCase()
+                        ? 'border-red-300 focus:ring-red-400'
+                        : 'border-gray-200 focus:ring-blue-500']">
+                  <p v-if="staff.email && staff.email.toLowerCase() === adminForm.email.toLowerCase()"
+                    class="text-xs text-red-600 mt-1 font-medium flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                    Diese E-Mail ist bereits dein Admin-Login — der Fahrlehrer-Account braucht eine andere E-Mail.
+                  </p>
                 </div>
               </div>
             </div>
@@ -1113,6 +1181,17 @@
             </div>
           </div>
 
+          <!-- Website-Mode: Zurück zum Superadmin -->
+          <div v-if="isWebsiteMode && createdTenantId" class="mb-4 p-4 bg-indigo-50 border border-indigo-200 rounded-2xl">
+            <p class="text-sm font-semibold text-indigo-800 mb-2">🌐 Website-Demo wurde generiert</p>
+            <p class="text-xs text-indigo-600 mb-3">Prüfe und passe die Website im Superadmin an, bevor du den Link an den Kunden sendest.</p>
+            <a :href="`/tenant-admin/websites/${createdTenantId}`"
+              class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-white"
+              :style="{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' }">
+              🔍 Website jetzt prüfen
+            </a>
+          </div>
+
           <button @click="goToLogin"
             class="w-full text-white font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm hover:opacity-90"
             :style="{ background: `linear-gradient(135deg, ${formData.primary_color || '#3B82F6'}, ${formData.secondary_color || '#6366F1'})` }">
@@ -1172,6 +1251,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { compressImage } from '~/utils/imageCompression'
+import { getSupabase } from '~/utils/supabase'
 
 definePageMeta({ layout: false })
 
@@ -1399,11 +1479,25 @@ const prefillFirstLocation = () => {
 }
 
 // ─── Staff ─────────────────────────────────────────────────────────────────
-interface StaffEntry { first_name: string; last_name: string; phone: string }
+interface StaffEntry { first_name: string; last_name: string; phone: string; email: string }
 
-const staffList = ref<StaffEntry[]>([{ first_name: '', last_name: '', phone: '' }])
-const addStaff = () => staffList.value.push({ first_name: '', last_name: '', phone: '' })
+const staffList = ref<StaffEntry[]>([{ first_name: '', last_name: '', phone: '', email: '' }])
+const addStaff = () => staffList.value.push({ first_name: '', last_name: '', phone: '', email: '' })
 const removeStaff = (index: number) => staffList.value.splice(index, 1)
+const staffAdminIsSelf = ref(false)
+
+const applyAdminToStaff = () => {
+  if (staffAdminIsSelf.value) {
+    staffList.value[0] = {
+      first_name: adminForm.value.first_name || formData.value.contact_person_first_name,
+      last_name:  adminForm.value.last_name  || formData.value.contact_person_last_name,
+      phone:      adminForm.value.phone      || formData.value.contact_phone,
+      email:      '', // intentionally empty — must be a DIFFERENT email than admin login
+    }
+  } else {
+    staffList.value[0] = { first_name: '', last_name: '', phone: '', email: '' }
+  }
+}
 const staffInviteResults = ref<Array<{ name: string; status: string; message: string; invite_link?: string }> | null>(null)
 
 // ─── State ─────────────────────────────────────────────────────────────────
@@ -1413,8 +1507,11 @@ const logoFile    = ref<File | null>(null)
 const logoPreview = ref<string | null>(null)
 const logoSquareFile    = ref<File | null>(null)
 const logoSquarePreview = ref<string | null>(null)
+const logoError       = ref<string | null>(null)
+const logoSquareError = ref<string | null>(null)
 const error       = ref<string | null>(null)
 const createdTenantSlug    = ref('')
+const createdTenantId      = ref('')
 const createdCustomerNumber = ref('')
 const logoInput = ref<HTMLInputElement>()
 const logoSquareInput = ref<HTMLInputElement>()
@@ -1438,6 +1535,7 @@ const adminForm = ref({
   passwordConfirm: ''
 })
 const adminSameAsCompany = ref(false)
+const showAdvancedBranding = ref(false)
 
 // adminEmailEarly: entered on step 0 for early validation; synced to adminForm.email
 const adminEmailEarly = ref('')
@@ -1517,8 +1615,14 @@ const canProceed = computed(() => {
                 adminForm.value.passwordConfirm && passwordValid.value &&
                 !passwordMismatch.value && hibpStatus.value !== 'pwned' && hibpStatus.value !== 'checking' &&
                 emailCheck.value !== 'taken')
-    case 6:
-      return staffList.value.some(s => s.first_name.trim() && s.last_name.trim())
+    case 6: {
+      const hasValidStaff = staffList.value.some(s => s.first_name.trim() && s.last_name.trim())
+      const adminEmail = adminForm.value.email?.toLowerCase().trim()
+      const hasEmailConflict = staffList.value.some(
+        s => s.email?.trim().toLowerCase() === adminEmail && !!adminEmail
+      )
+      return hasValidStaff && !hasEmailConflict
+    }
     default:
       return true
   }
@@ -1603,27 +1707,29 @@ const onSlugInput = () => {
 
 const handleLogoSelect = async (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
+  logoError.value = null
   if (!file) return
-  if (!file.type.startsWith('image/')) { alert('Nur Bilddateien sind erlaubt'); return }
-  if (file.size > 5 * 1024 * 1024) { alert('Datei zu gross! Maximum 5MB'); return }
+  if (!file.type.startsWith('image/')) { logoError.value = 'Nur Bilddateien erlaubt (PNG, JPG, WebP)'; return }
+  if (file.size > 5 * 1024 * 1024) { logoError.value = 'Datei zu gross — Maximum 5 MB'; return }
   try {
     logoPreview.value = await compressImage(file, 'wide')
     logoFile.value = base64ToFile(logoPreview.value, `logo-${Date.now()}.webp`)
   } catch {
-    alert('Dieses Bildformat wird nicht unterstützt. Bitte PNG, JPG oder WebP hochladen.')
+    logoError.value = 'Bildformat wird nicht unterstützt — bitte PNG, JPG oder WebP verwenden'
   }
 }
 
 const handleLogoSquareSelect = async (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
+  logoSquareError.value = null
   if (!file) return
-  if (!file.type.startsWith('image/')) { alert('Nur Bilddateien sind erlaubt'); return }
-  if (file.size > 5 * 1024 * 1024) { alert('Datei zu gross! Maximum 5MB'); return }
+  if (!file.type.startsWith('image/')) { logoSquareError.value = 'Nur Bilddateien erlaubt (PNG, JPG, WebP)'; return }
+  if (file.size > 5 * 1024 * 1024) { logoSquareError.value = 'Datei zu gross — Maximum 5 MB'; return }
   try {
     logoSquarePreview.value = await compressImage(file, 'square')
     logoSquareFile.value = base64ToFile(logoSquarePreview.value, `logo-square-${Date.now()}.webp`)
   } catch {
-    alert('Dieses Bildformat wird nicht unterstützt. Bitte PNG, JPG oder WebP hochladen.')
+    logoSquareError.value = 'Bildformat wird nicht unterstützt — bitte PNG, JPG oder WebP verwenden'
   }
 }
 
@@ -1710,6 +1816,17 @@ const submitRegistration = async () => {
 
     createdTenantSlug.value     = response.tenant.slug
     createdCustomerNumber.value = response.tenant.customer_number
+    createdTenantId.value       = response.tenant.id
+
+    // If website mode: set website_status to pending_review
+    if (isWebsiteMode.value && response.tenant.id) {
+      try {
+        await getSupabase()
+          .from('tenants')
+          .update({ website_status: 'pending_review' })
+          .eq('id', response.tenant.id)
+      } catch (_) {}
+    }
 
     // 2. Create admin user (dedicated endpoint)
     let adminRes: any
@@ -1752,7 +1869,9 @@ const submitRegistration = async () => {
     }
 
     // 3. Invite staff (non-critical)
-    const filledStaff = staffList.value.filter(s => s.first_name.trim() && s.last_name.trim() && s.phone.trim())
+    const filledStaff = staffList.value.filter(s =>
+      s.first_name.trim() && s.last_name.trim() && (s.phone.trim() || s.email.trim())
+    )
     if (filledStaff.length > 0) {
       try {
         const inviteRes = await $fetch('/api/tenants/invite-staff-batch', {
@@ -1780,8 +1899,12 @@ const submitRegistration = async () => {
 
   } catch (err: any) {
     console.error('Registration failed:', err)
-    error.value = err.data?.statusMessage || err.statusMessage || err.message || 'Registrierung fehlgeschlagen'
-    currentStep.value = 6
+    // Only expose known user-facing messages; hide internal server details
+    const knownMessage = err.data?.statusMessage || err.statusMessage
+    error.value = knownMessage && knownMessage.length < 200 && err.status < 500
+      ? knownMessage
+      : 'Ein technischer Fehler ist aufgetreten. Bitte versuche es erneut oder kontaktiere support@simy.ch'
+    currentStep.value = 7 // Back to confirmation so the user can retry without re-entering everything
   }
 }
 
@@ -1812,7 +1935,8 @@ const saveToStorage = () => {
   if (typeof window === 'undefined') return
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     formData: formData.value,
-    adminForm: adminForm.value,
+    // Never persist passwords — security risk (localStorage readable by extensions, XSS, shared machines)
+    adminForm: { ...adminForm.value, password: '', passwordConfirm: '' },
     adminEmailEarly: adminEmailEarly.value,
     adminSameAsCompany: adminSameAsCompany.value,
     currentStep: currentStep.value,
@@ -1820,6 +1944,7 @@ const saveToStorage = () => {
     logoPreview: logoPreview.value,
     logoSquarePreview: logoSquarePreview.value,
     staffList: staffList.value,
+    staffAdminIsSelf: staffAdminIsSelf.value,
     locationsList: locationsList.value,
     selectedCategoryIds: Array.from(selectedCategoryIds.value),
     pricingItems: pricingRows.value,
@@ -1833,7 +1958,7 @@ const loadFromStorage = () => {
   try {
     const d = JSON.parse(saved)
     formData.value            = { ...formData.value, ...d.formData }
-    adminForm.value           = { ...adminForm.value, ...d.adminForm }
+    adminForm.value           = { ...adminForm.value, ...d.adminForm, password: '', passwordConfirm: '' }
     adminEmailEarly.value     = d.adminEmailEarly || d.adminForm?.email || ''
     adminSameAsCompany.value  = d.adminSameAsCompany || false
     currentStep.value         = d.currentStep || 0
@@ -1849,6 +1974,7 @@ const loadFromStorage = () => {
       logoSquareFile.value = base64ToFile(logoSquarePreview.value, `logo-square-${Date.now()}.webp`)
     }
     if (d.staffList)    staffList.value    = d.staffList
+    if (typeof d.staffAdminIsSelf === 'boolean') staffAdminIsSelf.value = d.staffAdminIsSelf
     if (d.locationsList) locationsList.value = d.locationsList
     if (Array.isArray(d.selectedCategoryIds)) selectedCategoryIds.value = new Set<number>(d.selectedCategoryIds)
     if (d.pricingItems && typeof d.pricingItems === 'object') pricingRows.value = d.pricingItems
@@ -1856,11 +1982,10 @@ const loadFromStorage = () => {
   } catch { /* ignore */ }
 }
 
-watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, staffList, selectedCategoryIds, pricingRows], saveToStorage, { deep: true })
+watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, staffList, staffAdminIsSelf, selectedCategoryIds, pricingRows], saveToStorage, { deep: true })
 
 const route = useRoute()
-
-// ─── Page Background ────────────────────────────────────────────────────────
+const isWebsiteMode = computed(() => route.query.mode === 'website')
 function darkenHex(hex: string, amount: number): string {
   const h = hex.replace('#', '')
   const r = Math.round(parseInt(h.slice(0, 2), 16) * (1 - amount))
@@ -1883,15 +2008,12 @@ onMounted(async () => {
   if (q.secondary_color && typeof q.secondary_color === 'string') formData.value.secondary_color = q.secondary_color
   if (q.accent_color && typeof q.accent_color === 'string') formData.value.accent_color = q.accent_color
 
-  // Pre-populate logo: URL param takes priority (works cross-origin), sessionStorage as fallback
-  if (q.logo_data && typeof q.logo_data === 'string' && q.logo_data.startsWith('data:image/')) {
-    logoPreview.value = q.logo_data
-  } else {
-    const savedLogo = sessionStorage.getItem('simy_preview_logo')
-    if (savedLogo) {
-      logoPreview.value = savedLogo
-      sessionStorage.removeItem('simy_preview_logo')
-    }
+  // Pre-populate logo from sessionStorage only — never from URL params
+  // (URL params end up in browser history, server logs, analytics, referrer headers)
+  const savedLogo = sessionStorage.getItem('simy_preview_logo')
+  if (savedLogo) {
+    logoPreview.value = savedLogo
+    sessionStorage.removeItem('simy_preview_logo')
   }
 
   // Pre-populate brand colors from sessionStorage (fallback for same-origin)

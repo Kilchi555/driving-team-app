@@ -226,4 +226,5 @@ export const ALL_FEATURE_FLAGS = [
   'cash_management_enabled',
   'discounts_enabled',
   'product_sales_enabled',
+  'website_enabled',
 ]
