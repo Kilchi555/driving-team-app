@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Nothelferkurs Zürich & Lachen | ab CHF 99 | Driving Team</Title>
-      <Meta name="description" content="Nothelferkurs ✓ Lachen ab CHF 99.- ✓ Zürich CHF 120.- ✓ 10 Stunden ✓ inkl. Nothelferausweis ✓ Obligatorisch für alle Kategorien. Jetzt Platz sichern!" />
-      <Meta property="og:title" content="Nothelferkurs Zürich – CHF 99.- | Obligatorisch für Führerschein | Driving Team" />
-      <Meta property="og:description" content="Nothelferkurs in Zürich-Altstetten & Lachen. CHF 99.- inkl. Nothelferausweis. 10 Stunden. Obligatorisch für alle Fahrzeugkategorien. Jetzt anmelden!" />
+      <Title>Nothelferkurs Zürich & Lachen | CHF 99.- | 6 Jahre gültig | Driving Team</Title>
+      <Meta name="description" content="Nothelferkurs ✓ Zürich ab CHF 120.- ✓ Lachen ab CHF 99.- ✓ 10 Stunden ✓ 6 Jahre gültig ✓ Obligatorisch für Führerschein ✓ inkl. Nothelferausweis. Jetzt Platz sichern!" />
+      <Meta property="og:title" content="Nothelferkurs Zürich & Lachen | Ab CHF 99.- | 6 Jahre gültig | Driving Team" />
+      <Meta property="og:description" content="Nothelferkurs in Zürich & Lachen. Ab CHF 99.-. 10 Stunden. 6 Jahre gültig. Obligatorisch für alle Führerschein-Kategorien. inkl. Nothelferausweis. Jetzt anmelden!" />
       <Meta property="og:url" content="https://drivingteam.ch/nothelferkurs/" />
       <Link rel="canonical" href="https://drivingteam.ch/nothelferkurs/" />
       
