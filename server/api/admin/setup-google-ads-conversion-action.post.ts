@@ -41,7 +41,9 @@ export default defineEventHandler(async (event) => {
   const clientSecret = process.env.GOOGLE_ADS_CLIENT_SECRET
   const refreshToken = process.env.GOOGLE_ADS_REFRESH_TOKEN
   const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID
-  const managerCustomerId = process.env.GOOGLE_ADS_MANAGER_CUSTOMER_ID || '9509957201'
+  // login-customer-id mirrors what sync-marketing-google-ads uses successfully —
+  // it's set to the customer ID itself (the OAuth user has direct access).
+  const loginCustomerId = customerId
 
   if (!developerToken || !clientId || !clientSecret || !refreshToken || !customerId) {
     return { success: false, reason: 'missing_credentials' }
@@ -68,7 +70,7 @@ export default defineEventHandler(async (event) => {
     const baseHeaders: Record<string, string> = {
       'Authorization': `Bearer ${accessToken}`,
       'developer-token': developerToken,
-      'login-customer-id': managerCustomerId,
+      'login-customer-id': loginCustomerId,
       'Content-Type': 'application/json',
     }
 
