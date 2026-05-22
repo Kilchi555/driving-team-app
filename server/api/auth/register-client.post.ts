@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
+import { sendWelcomeEmail } from '~/server/utils/send-welcome-email'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateRegistrationEmail } from '~/server/utils/email-validator'
 import { logger } from '~/utils/logger'
@@ -440,14 +441,17 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 4. Send verification email via Supabase (confirmation email automatically sent)
-    logger.debug('Register', '📧 Sending verification email...')
+    // 4. Send welcome email
     try {
-      // Supabase automatically sends a confirmation email after user creation
-      // No need to manually resend - just log it
-      logger.debug('Register', '✅ Verification email will be sent by Supabase automatically')
+      await sendWelcomeEmail({
+        role: 'client',
+        to: email.toLowerCase().trim(),
+        firstName: sanitizedFirstName,
+        tenantId,
+      })
+      logger.debug('Register', '✅ Welcome email sent to new client')
     } catch (emailErr: any) {
-      console.warn('⚠️ Email send error:', emailErr.message)
+      logger.warn('Register', '⚠️ Welcome email failed (non-critical):', emailErr.message)
     }
 
     // 5. Audit logging

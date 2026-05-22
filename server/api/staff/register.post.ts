@@ -2,6 +2,7 @@
 // ✅ SECURITY HARDENED: Rate limiting, XSS protection, audit logging
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { sendWelcomeEmail } from '~/server/utils/send-welcome-email'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString, validateBasicPassword, validateEmail } from '~/server/utils/validators'
@@ -372,9 +373,21 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Invitation marked as accepted')
 
+    // 9. Send welcome email
+    try {
+      await sendWelcomeEmail({
+        role: 'staff',
+        to: email.toLowerCase().trim(),
+        firstName: sanitizedFirstName,
+        tenantId: invitation.tenant_id,
+      })
+      logger.debug('✅ Welcome email sent to new staff member')
+    } catch (emailErr: any) {
+      logger.warn('⚠️ Welcome email failed (non-critical):', emailErr.message)
+    }
+
     // ✅ LAYER 8: Audit logging - Success
     await logAudit({
-      action: 'staff_registration',
       user_id: newUser.id,
       tenant_id: invitation.tenant_id,
       resource_type: 'user',

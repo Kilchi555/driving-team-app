@@ -2,6 +2,7 @@
 // ✅ SECURITY HARDENED: Rate limiting, XSS protection, audit logging
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { sendWelcomeEmail } from '~/server/utils/send-welcome-email'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
@@ -487,6 +488,22 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     } catch (notifyError) {
       // Non-critical - don't fail registration if notification fails
       logger.warn('⚠️ Failed to notify super admins (non-critical):', notifyError)
+    }
+
+    // ✅ LAYER 6b: Send welcome email to new tenant admin
+    try {
+      await sendWelcomeEmail({
+        role: 'admin',
+        to: newTenant.contact_email,
+        firstName: sanitizedFirstName,
+        tenantId: newTenant.id,
+        tenantName: newTenant.name,
+        tenantSlug: newTenant.slug,
+        tenantPrimaryColor: newTenant.primary_color,
+      })
+      logger.debug('✅ Welcome email sent to new tenant admin')
+    } catch (emailErr: any) {
+      logger.warn('⚠️ Welcome email failed (non-critical):', emailErr)
     }
 
     // ✅ LAYER 5: Audit logging - Success
