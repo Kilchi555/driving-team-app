@@ -1,14 +1,19 @@
 /**
- * Cross-domain session tracking plugin
- * Carries session ID from drivingteam.ch to simy.ch
- * Allows complete funnel tracking: Views → Calculator → Booking → Payment
+ * Cross-domain session tracking plugin.
+ * Carries session ID + marketing attribution (gclid, UTMs) from drivingteam.ch
+ * to app.simy.ch and persists them in localStorage + the marketing_attributions
+ * table so server-side conversion upload can attribute the resulting booking.
+ *
+ * Funnel: Views (drivingteam.ch) → Buchungs-Klick → Booking Page → Booking Confirmed
  */
 
 import { defineNuxtPlugin } from '#app'
+import { decodeAttribution, type DecodedAttribution } from '~/utils/attribution-decode'
 
 declare global {
   interface Window {
     __analyticsSessionId: string
+    __marketingAttribution?: DecodedAttribution | null
     __trackBookingEvent: (eventType: 'viewed' | 'started' | 'completed' | 'abandoned', data: Record<string, any>) => Promise<void>
   }
 }
@@ -47,6 +52,38 @@ export default defineNuxtPlugin(() => {
   }
 
   const sessionId = getSessionId()
+
+  // ─── Marketing attribution: read from URL blob OR localStorage ──────────────
+  const ATTR_KEY = 'sm_marketing_attribution'
+  const urlParams = new URLSearchParams(window.location.search)
+  let attribution: DecodedAttribution | null = null
+
+  const dtAttr = urlParams.get('dt_attr')
+  if (dtAttr) {
+    attribution = decodeAttribution(dtAttr)
+    if (attribution) {
+      try {
+        localStorage.setItem(ATTR_KEY, JSON.stringify(attribution))
+      } catch {
+        // localStorage may be unavailable — fail silently
+      }
+      // Persist server-side so it can be joined to the appointment later.
+      fetch('/api/marketing-attribution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, attribution }),
+      }).catch(() => {})
+    }
+  } else {
+    try {
+      const stored = localStorage.getItem(ATTR_KEY)
+      if (stored) attribution = JSON.parse(stored) as DecodedAttribution
+    } catch {
+      // ignore
+    }
+  }
+
+  window.__marketingAttribution = attribution
 
   // Track booking events — only fire when on a valid booking/availability page
   const trackBookingEvent = async (eventType: 'viewed' | 'started' | 'completed' | 'abandoned', data: Record<string, any>) => {

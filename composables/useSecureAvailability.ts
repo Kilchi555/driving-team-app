@@ -59,6 +59,19 @@ interface CreateAppointmentOptions {
   notes?: string
   discount_code?: string
   discount_amount_rappen?: number
+  /** Cross-domain marketing session ID (from drivingteam.ch). */
+  marketing_session_id?: string
+  /** Decoded marketing attribution blob — used for server-side Google Ads conversion. */
+  marketing_attribution?: {
+    gclid?: string | null
+    gbraid?: string | null
+    wbraid?: string | null
+    utm_source?: string | null
+    utm_medium?: string | null
+    utm_campaign?: string | null
+    utm_content?: string | null
+    utm_term?: string | null
+  } | null
 }
 
 export const useSecureAvailability = () => {
@@ -162,7 +175,9 @@ export const useSecureAvailability = () => {
           category_code: options.category_code,
           notes: options.notes,
           discount_code: options.discount_code,
-          discount_amount_rappen: options.discount_amount_rappen ?? 0
+          discount_amount_rappen: options.discount_amount_rappen ?? 0,
+          marketing_session_id: options.marketing_session_id,
+          marketing_attribution: options.marketing_attribution,
         }
       })
 

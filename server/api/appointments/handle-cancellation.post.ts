@@ -7,6 +7,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { logAudit } from '~/server/utils/audit'
 import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-manager'
+import { uploadConversionAdjustment } from '~/server/utils/google-ads-conversion'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -63,6 +64,63 @@ export default defineEventHandler(async (event) => {
       chargePercentage: chargePercentage || 0,
       shouldCreditHours: shouldCreditHours || false
     })
+
+    // ====== GOOGLE ADS CONVERSION ADJUSTMENT (fire-and-forget) ======
+    // If this booking was previously uploaded to Google Ads as a conversion AND
+    // the cancellation reduces or removes revenue, send a conversion adjustment
+    // so Smart Bidding learns from actual outcomes only.
+    //   chargePercentage === 0   → RETRACT (full cancellation, no revenue)
+    //   0 < chargePercentage < 100 → RESTATEMENT to the kept portion
+    //   chargePercentage === 100  → no adjustment (we keep all revenue)
+    if ((chargePercentage ?? 0) < 100) {
+      ;(async () => {
+        try {
+          const { data: prevUpload } = await supabase
+            .from('google_ads_conversion_uploads')
+            .select('id, conversion_date_time, conversion_value_chf, upload_status')
+            .eq('appointment_id', appointmentId)
+            .eq('upload_status', 'success')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          if (!prevUpload) {
+            // Nothing was uploaded — no adjustment needed.
+            return
+          }
+
+          const originalValue = Number(prevUpload.conversion_value_chf ?? 0)
+          const adjustmentType: 'RETRACT' | 'RESTATEMENT' =
+            (chargePercentage ?? 0) === 0 ? 'RETRACT' : 'RESTATEMENT'
+
+          const result = await uploadConversionAdjustment({
+            appointment_id: appointmentId,
+            original_conversion_date_time: prevUpload.conversion_date_time,
+            adjustment_type: adjustmentType,
+            adjustment_date_time: new Date(),
+            new_conversion_value_chf:
+              adjustmentType === 'RESTATEMENT'
+                ? Number((originalValue * (chargePercentage ?? 0) / 100).toFixed(2))
+                : undefined,
+          })
+
+          if (result.uploaded) {
+            await supabase
+              .from('google_ads_conversion_uploads')
+              .update({
+                upload_status: 'adjusted_retracted',
+                error_message: `Adjustment: ${adjustmentType} via cancellation (${chargePercentage}% charge)`,
+              })
+              .eq('id', prevUpload.id)
+            logger.info(`google-ads-conversion: ${adjustmentType} sent for appointment ${appointmentId}`)
+          } else {
+            logger.warn(`google-ads-conversion: ${adjustmentType} failed for appointment ${appointmentId} — ${result.reason}`)
+          }
+        } catch (err: any) {
+          logger.warn('⚠️ Google Ads adjustment failed (non-critical):', err?.message ?? err)
+        }
+      })()
+    }
 
     // ✅ NEW: Release all overlapping availability slots immediately
     // This makes slots available again for other bookings

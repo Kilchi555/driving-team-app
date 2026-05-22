@@ -3226,8 +3226,11 @@ const confirmBooking = async () => {
       category_code: selectedCategory.value.code,
       notes: bookingNotes.value || undefined,
       discount_code: bookingDiscount.value?.code,
-      discount_amount_rappen: bookingDiscount.value?.discountAmountRappen ?? 0
-    })
+      discount_amount_rappen: bookingDiscount.value?.discountAmountRappen ?? 0,
+      // Cross-domain marketing attribution — forwarded from drivingteam.ch
+      marketing_session_id: (typeof window !== 'undefined' && (window as any).__analyticsSessionId) || undefined,
+      marketing_attribution: (typeof window !== 'undefined' && (window as any).__marketingAttribution) || undefined,
+    } as any)
 
     logger.debug('✅ Appointment created:', result.appointment_id)
     
