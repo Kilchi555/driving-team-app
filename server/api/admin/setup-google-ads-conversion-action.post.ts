@@ -118,7 +118,6 @@ export default defineEventHandler(async (event) => {
     const loginCustomerIdToUse = usedLabel === 'managerCustomerId' ? '9509957201' : (usedLabel === 'customerId' ? customerId : null)
 
     const baseHeaders = tryHeaders(loginCustomerIdToUse)
-    const searchText = await searchRes.text()
     let searchData: any = null
     try { searchData = JSON.parse(searchText) } catch { /* non-JSON */ }
 
@@ -138,33 +137,23 @@ export default defineEventHandler(async (event) => {
     }
 
     // ============ CREATE CONVERSION ACTION ============
+    // Minimal create body — Google rejects optional fields like
+    // include_in_conversions_metric as immutable depending on account state.
+    // We set just the essentials; the rest can be edited in the UI later.
+    const createBody: Record<string, any> = {
+      name: CONVERSION_ACTION_NAME,
+      category: 'BOOK_APPOINTMENT',
+      type: 'UPLOAD_CLICKS',
+      status: 'ENABLED',
+    }
+
     const createRes = await fetch(
       `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers/${customerId}/conversionActions:mutate`,
       {
         method: 'POST',
         headers: baseHeaders,
         body: JSON.stringify({
-          operations: [
-            {
-              create: {
-                name: CONVERSION_ACTION_NAME,
-                category: 'BOOK_APPOINTMENT',
-                type: 'UPLOAD_CLICKS',
-                status: 'ENABLED',
-                valueSettings: {
-                  defaultValue: 95.0,
-                  defaultCurrencyCode: 'CHF',
-                  alwaysUseDefaultValue: false,
-                },
-                countingType: 'ONE_PER_CLICK',
-                clickThroughLookbackWindowDays: 30,
-                viewThroughLookbackWindowDays: 1,
-                attributionModelSettings: {
-                  attributionModel: 'GOOGLE_SEARCH_ATTRIBUTION_DATA_DRIVEN',
-                },
-              },
-            },
-          ],
+          operations: [{ create: createBody }],
           partialFailure: false,
           validateOnly: false,
         }),
