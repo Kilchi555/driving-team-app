@@ -4,7 +4,7 @@
 
       <!-- Logo -->
       <a href="/" class="flex-shrink-0">
-        <img src="/simy-logo.png" alt="simy – Fahrschulsoftware Schweiz" class="h-8 max-w-[120px] object-contain" />
+        <img :src="'/simy-logo.png'" alt="simy – Fahrschulsoftware Schweiz" class="h-8 max-w-[120px] object-contain" />
       </a>
 
       <!-- Desktop nav -->
