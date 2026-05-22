@@ -2,8 +2,10 @@ import { google } from 'googleapis'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
-// Fetches the top 100 Search Console queries for the last 3 days and upserts
-// into marketing_gsc_daily. Runs daily at 04:00 via Vercel Cron.
+// Fetches Search Console data and upserts into marketing_gsc_daily.
+// Runs daily at 04:00 via Vercel Cron (last 5 days).
+// Supports full backfill via body: { startDate: '2025-01-01' } or { days: 90 }.
+// GSC API supports up to ~16 months of history.
 // Auth: uses OAuth2 refresh token (GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN).
 export default defineEventHandler(async (event) => {
   // ============ LAYER 1: CRON AUTH ============
@@ -24,53 +26,79 @@ export default defineEventHandler(async (event) => {
     return { success: false, reason: 'missing_credentials', present: { clientId: !!clientId, clientSecret: !!clientSecret, refreshToken: !!refreshToken, siteUrl: !!siteUrl } }
   }
 
-  // Optional body: { days: 30 } to backfill more history
+  // ============ LAYER 3: RESOLVE DATE RANGE ============
+  // Body options:
+  //   { days: 30 }              → last N days (max 500 for backfill)
+  //   { startDate: '2025-01-01' } → from that date until 2 days ago
+  //   (empty)                   → last 5 days (daily cron default)
   const body = await readBody(event).catch(() => ({}))
-  const lookbackDays = Math.min(Number(body?.days) || 5, 90)
-
-  logger.info(`sync-marketing-gsc: starting sync for last ${lookbackDays} days`)
-
-  // ============ LAYER 3: FETCH FROM SEARCH CONSOLE ============
-  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret)
-  oauth2Client.setCredentials({ refresh_token: refreshToken })
-
-  const searchConsole = google.searchconsole({ version: 'v1', auth: oauth2Client })
-
-  const endDate = new Date()
-  endDate.setDate(endDate.getDate() - 2)
-  const startDate = new Date()
-  startDate.setDate(startDate.getDate() - lookbackDays)
-
   const fmt = (d: Date) => d.toISOString().split('T')[0]
 
-  let apiRows: any[] = []
-  try {
-    const res = await searchConsole.searchanalytics.query({
-      siteUrl,
-      requestBody: {
-        startDate: fmt(startDate),
-        endDate: fmt(endDate),
-        dimensions: ['date', 'query', 'page'],
-        rowLimit: 1000,
-        type: 'web',
-      },
-    })
-    apiRows = res.data.rows ?? []
-  } catch (gscErr: any) {
-    const detail = gscErr?.response?.data ?? gscErr?.message ?? String(gscErr)
-    logger.error('sync-marketing-gsc: Google API error', detail)
-    return { success: false, reason: 'gsc_api_error', detail }
+  const rangeEnd = new Date()
+  rangeEnd.setDate(rangeEnd.getDate() - 2) // GSC data has ~2 day lag
+
+  let rangeStart: Date
+  if (body?.startDate) {
+    rangeStart = new Date(body.startDate)
+  } else {
+    const lookbackDays = Math.min(Number(body?.days) || 5, 500)
+    rangeStart = new Date()
+    rangeStart.setDate(rangeStart.getDate() - lookbackDays)
   }
 
-  logger.info(`sync-marketing-gsc: fetched ${apiRows.length} rows from Search Console`)
+  // GSC API max history: ~500 days (16 months)
+  const maxStart = new Date()
+  maxStart.setDate(maxStart.getDate() - 500)
+  if (rangeStart < maxStart) rangeStart = maxStart
 
-  // ============ LAYER 4: UPSERT INTO SUPABASE ============
+  logger.info(`sync-marketing-gsc: syncing ${fmt(rangeStart)} → ${fmt(rangeEnd)}`)
+
+  // ============ LAYER 4: FETCH IN MONTHLY CHUNKS ============
+  // Large ranges are split into 30-day chunks to stay within rowLimit safely.
+  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret)
+  oauth2Client.setCredentials({ refresh_token: refreshToken })
+  const searchConsole = google.searchconsole({ version: 'v1', auth: oauth2Client })
+
+  const allRows: any[] = []
+  let chunkStart = new Date(rangeStart)
+
+  while (chunkStart <= rangeEnd) {
+    const chunkEnd = new Date(chunkStart)
+    chunkEnd.setDate(chunkEnd.getDate() + 29) // 30-day window
+    if (chunkEnd > rangeEnd) chunkEnd.setTime(rangeEnd.getTime())
+
+    try {
+      const res = await searchConsole.searchanalytics.query({
+        siteUrl,
+        requestBody: {
+          startDate: fmt(chunkStart),
+          endDate: fmt(chunkEnd),
+          dimensions: ['date', 'query', 'page'],
+          rowLimit: 5000,
+          type: 'web',
+        },
+      })
+      const rows = res.data.rows ?? []
+      allRows.push(...rows)
+      logger.info(`sync-marketing-gsc: chunk ${fmt(chunkStart)}→${fmt(chunkEnd)}: ${rows.length} rows`)
+    } catch (gscErr: any) {
+      const detail = gscErr?.response?.data ?? gscErr?.message ?? String(gscErr)
+      logger.error(`sync-marketing-gsc: chunk ${fmt(chunkStart)} error`, detail)
+      return { success: false, reason: 'gsc_api_error', chunk: fmt(chunkStart), detail }
+    }
+
+    chunkStart.setDate(chunkStart.getDate() + 30)
+  }
+
+  logger.info(`sync-marketing-gsc: total fetched ${allRows.length} rows`)
+
+  // ============ LAYER 5: UPSERT INTO SUPABASE ============
   const supabase = getSupabaseAdmin()
 
-  const records = apiRows.map((row) => {
+  const records = allRows.map((row) => {
     const [date, query, page] = row.keys ?? []
     return {
-      date: date ?? fmt(endDate),
+      date: date ?? fmt(rangeEnd),
       query: query ?? '',
       page: page ?? '/',
       clicks: row.clicks ?? 0,
@@ -81,16 +109,25 @@ export default defineEventHandler(async (event) => {
   })
 
   if (records.length > 0) {
-    const { error } = await supabase
-      .from('marketing_gsc_daily')
-      .upsert(records, { onConflict: 'date,query,page' })
+    // Upsert in batches of 1000 to avoid payload limits
+    const batchSize = 1000
+    for (let i = 0; i < records.length; i += batchSize) {
+      const batch = records.slice(i, i + batchSize)
+      const { error } = await supabase
+        .from('marketing_gsc_daily')
+        .upsert(batch, { onConflict: 'date,query,page' })
 
-    if (error) {
-      logger.error('sync-marketing-gsc: upsert error', error)
-      throw createError({ statusCode: 500, statusMessage: `DB upsert failed: ${error.message}` })
+      if (error) {
+        logger.error('sync-marketing-gsc: upsert error', error)
+        throw createError({ statusCode: 500, statusMessage: `DB upsert failed: ${error.message}` })
+      }
     }
   }
 
   logger.info(`sync-marketing-gsc: upserted ${records.length} rows`)
-  return { success: true, rows: records.length }
+  return {
+    success: true,
+    rows: records.length,
+    range: { from: fmt(rangeStart), to: fmt(rangeEnd) },
+  }
 })
