@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>VKU Kurs Zürich & Lachen | Verkehrskundeunterricht | Driving Team</Title>
+      <Title>VKU Kurs Zürich & Lachen | Obligatorisch | Driving Team</Title>
       <Meta name="description" content="VKU Kurs Zürich & Lachen ✓ CHF 190.- inkl. Dokumentation ✓ 8 Stunden (2×4h) ✓ Obligatorisch vor Fahrprüfung ✓ Zürich & Lachen SZ. Jetzt anmelden!" />
       <Meta property="og:title" content="VKU Kurs Zürich & Lachen | Verkehrskundeunterricht | Driving Team" />
       <Meta property="og:description" content="Obligatorischer VKU Kurs in Zürich & Lachen. 8 Stunden, CHF 190.- inkl. Dokumentation. Standorte Zürich-Altstetten & Lachen SZ." />

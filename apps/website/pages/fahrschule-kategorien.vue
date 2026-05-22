@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Kategorien Vergleich | Auto, Motorrad, LKW | Driving Team</Title>
+      <Title>Fahrschule Kategorien | Auto, Motorrad & LKW | Driving Team</Title>
       <Meta name="description" content="Fahrschule Kategorien Vergleich - Auto, Motorrad, Lastwagen, Bus, Taxi, Anhänger, Motorboot. Kosten, Dauer, Anforderungen. Welche passt zu dir?" />
       <Meta property="og:title" content="Fahrschule Kategorien - Vergleich aller Kategorien" />
       <Meta property="og:description" content="Vergleich aller Fahrschule Kategorien: Kosten, Dauer, Anforderungen. Finde die richtige Ausbildung für dich." />

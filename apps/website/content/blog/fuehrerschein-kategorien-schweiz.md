@@ -1,6 +1,6 @@
 ---
 title: "Alle Führerausweis-Kategorien Schweiz erklärt – A, B, BE, C, D und mehr"
-seoTitle: "Alle Führerausweis-Kategorien Schweiz 2026"
+seoTitle: "Führerausweis-Kategorien Schweiz | A, B, BE, C, D"
 description: "Alle Führerausweis-Kategorien der Schweiz: Was erlaubt A, B, BE, C, D? Für Motorrad, Anhänger, Lastwagen & Boot. Vollständige Übersicht 2026."
 slug: "fuehrerschein-kategorien-schweiz"
 date: "2026-04-08"
@@ -13,7 +13,7 @@ keywords: "Führerausweis Kategorien Schweiz, Kategorie B Schweiz, Kategorie A M
 readingTime: 10
 ---
 
-# Alle Führerschein-Kategorien Schweiz erklärt – A, B, BE, C, D und mehr
+## Alle Führerschein-Kategorien Schweiz erklärt – A, B, BE, C, D und mehr
 
 Wer in der Schweiz ein Fahrzeug führen möchte, braucht den richtigen Führerausweis – und der hängt davon ab, was für ein Fahrzeug du fahren willst. Das schweizerische System unterscheidet verschiedene **Fahrzeugkategorien**, für die jeweils eine eigene Prüfung notwendig ist.
 

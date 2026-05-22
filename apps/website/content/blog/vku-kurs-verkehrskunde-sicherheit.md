@@ -1,6 +1,6 @@
 ---
 title: "Verkehrskunde VKU Kurs: Ein obligatorischer Kurs für mehr Sicherheit"
-seoTitle: "VKU Kurs Schweiz – obligatorisch & wichtig"
+seoTitle: "VKU Kurs: Verkehrskunde & Sicherheit"
 description: "Was ist der VKU Kurs, warum ist er obligatorisch und wie bereitest du dich optimal vor? Alles Wichtige zum Verkehrskundeunterricht in der Schweiz."
 slug: "vku-kurs-verkehrskunde-sicherheit"
 date: "2023-09-27"
@@ -13,7 +13,7 @@ keywords: "VKU Kurs Zürich, Verkehrskundeunterricht, VKU obligatorisch, Fahraus
 readingTime: 6
 ---
 
-# Verkehrskunde VKU Kurs: Ein obligatorischer Kurs für mehr Sicherheit
+## Verkehrskunde VKU Kurs: Ein obligatorischer Kurs für mehr Sicherheit
 
 Der **Verkehrskundeunterricht (VKU)** ist ein Pflichtbestandteil der Fahrausbildung in der Schweiz. Doch was genau passiert an diesen zwei Halbtagen? Und warum ist er so wichtig für die Sicherheit im Strassenverkehr?
 

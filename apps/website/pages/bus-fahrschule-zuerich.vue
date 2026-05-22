@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Bus Fahrschule Zürich | D1/D Berufliche Ausbildung | Driving Team</Title>
+      <Title>Bus Fahrschule Zürich | D1 & D Ausbildung | Driving Team</Title>
       <Meta name="description" content="Bus Fahrschule Zürich ✓ D1 & D Kategorien ✓ Prüfung StVA Regensdorf ✓ Prüfungsgebiet Zürich kennen ✓ Erfahrene Fahrlehrer ✓ Flexible Termine. Jetzt anmelden!" />
       <Meta name="keywords" content="Bus Fahrschule Zürich, Buschauffeur Ausbildung Zürich, Kategorie D Zürich, D1 Führerschein Zürich, Bus Führerschein Zürich, Busfahrer Ausbildung Zürich" />
       <Meta property="og:title" content="Bus Fahrschule Zürich | D1/D Berufliche Ausbildung | Driving Team" />

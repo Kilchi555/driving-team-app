@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Anhängerprüfung Zürich – Kategorie BE | Regensdorf & Wettingen</Title>
+      <Title>Anhängerprüfung Zürich | Kat. BE | Driving Team</Title>
       <Meta name="description" content="Anhängerprüfung Zürich Kategorie BE ✓ Prüfungsort Regensdorf & Wettingen ✓ Kein Theorietest ✓ 2–4 Fahrstunden genügen ✓ Fahrzeug gestellt ✓ Jetzt buchen!" />
       <Meta name="keywords" content="Anhängerprüfung Zürich, Anhänger Prüfung Zürich, Kategorie BE Zürich, BE Prüfung Regensdorf, Anhänger Führerschein Zürich" />
       <Meta property="og:title" content="Anhängerprüfung Zürich – Kategorie BE | Driving Team" />
