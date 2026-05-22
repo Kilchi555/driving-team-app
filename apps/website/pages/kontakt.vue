@@ -56,9 +56,9 @@
                 </div>
               </div>
               <div class="flex items-start gap-3">
-                <span class="mt-0.5 text-base">📍</span>
+                <span class="mt-0.5 text-base">🏢</span>
                 <div>
-                  <p class="font-semibold">Lachen / SZ</p>
+                  <p class="font-semibold">Lachen / SZ – Büro & Kurslokal</p>
                   <p class="text-gray-500">Herrengasse 17, 8853 Lachen</p>
                 </div>
               </div>
@@ -67,6 +67,13 @@
                 <div>
                   <p class="font-semibold">Pfäffikon / SZ</p>
                   <p class="text-gray-500">Bahnweg 4, 8808 Pfäffikon SZ <span class="text-xs">(Treffpunkt)</span></p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <span class="mt-0.5 text-base">🚗</span>
+                <div>
+                  <p class="font-semibold">Limmattal – Treffpunkte Fahrstunden</p>
+                  <p class="text-gray-400 text-xs">Bahnhof Birmensdorf · Bahnhof Urdorf · Bahnhof Schlieren · Bahnhof Dietikon · Bahnhof Spreitenbach</p>
                 </div>
               </div>
             </div>

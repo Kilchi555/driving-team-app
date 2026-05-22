@@ -80,15 +80,23 @@ export default defineNuxtPlugin(() => {
   })
 
   // Track if user leaves without completing booking
+  let bookingCompleted = false
+  const originalTrack = window.__trackBookingEvent
+  window.__trackBookingEvent = async (eventType, data) => {
+    if (eventType === 'completed') bookingCompleted = true
+    return originalTrack(eventType, data)
+  }
+
   window.addEventListener('beforeunload', () => {
-    // Simple check: if we're still on booking page, track abandonment
+    if (bookingCompleted) return
     if (window.location.pathname.includes('booking') || window.location.pathname.includes('availability')) {
-      // Use navigator.sendBeacon for reliability (fires even on page close)
-      const data = new FormData()
-      data.append('session_id', sessionId)
-      data.append('event_type', 'abandoned')
-      data.append('page', window.location.pathname)
-      navigator.sendBeacon('/api/booking-events', data)
+      // sendBeacon requires a Blob with explicit content-type so the server can parse it as JSON
+      const payload = JSON.stringify({
+        session_id: sessionId,
+        event_type: 'abandoned',
+        page: window.location.pathname,
+      })
+      navigator.sendBeacon('/api/booking-events', new Blob([payload], { type: 'application/json' }))
     }
   })
 })
