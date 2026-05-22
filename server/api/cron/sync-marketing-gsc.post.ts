@@ -24,7 +24,11 @@ export default defineEventHandler(async (event) => {
     return { success: false, reason: 'missing_credentials', present: { clientId: !!clientId, clientSecret: !!clientSecret, refreshToken: !!refreshToken, siteUrl: !!siteUrl } }
   }
 
-  logger.info('sync-marketing-gsc: starting sync for last 3 days')
+  // Optional body: { days: 30 } to backfill more history
+  const body = await readBody(event).catch(() => ({}))
+  const lookbackDays = Math.min(Number(body?.days) || 5, 90)
+
+  logger.info(`sync-marketing-gsc: starting sync for last ${lookbackDays} days`)
 
   // ============ LAYER 3: FETCH FROM SEARCH CONSOLE ============
   const oauth2Client = new google.auth.OAuth2(clientId, clientSecret)
@@ -35,7 +39,7 @@ export default defineEventHandler(async (event) => {
   const endDate = new Date()
   endDate.setDate(endDate.getDate() - 2)
   const startDate = new Date()
-  startDate.setDate(startDate.getDate() - 5)
+  startDate.setDate(startDate.getDate() - lookbackDays)
 
   const fmt = (d: Date) => d.toISOString().split('T')[0]
 
@@ -47,7 +51,7 @@ export default defineEventHandler(async (event) => {
         startDate: fmt(startDate),
         endDate: fmt(endDate),
         dimensions: ['date', 'query', 'page'],
-        rowLimit: 100,
+        rowLimit: 1000,
         type: 'web',
       },
     })
