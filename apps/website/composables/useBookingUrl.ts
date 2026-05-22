@@ -1,7 +1,13 @@
 /**
  * Composable für die Generierung von Simy Booking URLs mit vorgewählten Parametern
  * Unterstützt: Standort, Kategorie, Fahrlehrer, etc.
+ *
+ * Zusätzlich wird die Marketing-Attribution (gclid, UTMs) als kompaktes
+ * `dt_attr` Blob an die URL gehängt, damit die Cross-Domain-Conversion
+ * auf app.simy.ch zugeordnet werden kann.
  */
+
+import { encodeAttribution } from '~/utils/attribution-encode'
 
 interface BookingParams {
   location?: string // z.B. 'zuerich', 'lachen'
@@ -93,6 +99,12 @@ export const useBookingUrl = () => {
       queryParams.append('session_id', (window as any).__analyticsSessionId)
     } else if (params.sessionId) {
       queryParams.append('session_id', params.sessionId)
+    }
+
+    // Marketing attribution (gclid + UTMs) — encoded blob for cross-domain forwarding
+    if (typeof window !== 'undefined' && (window as any).__dtMarketingAttribution) {
+      const encoded = encodeAttribution((window as any).__dtMarketingAttribution)
+      if (encoded) queryParams.append('dt_attr', encoded)
     }
 
     const queryString = queryParams.toString()

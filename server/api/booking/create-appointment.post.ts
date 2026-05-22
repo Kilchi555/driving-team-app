@@ -35,6 +35,18 @@ import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
 import { toLocalTimeString } from '~/utils/dateUtils'
+import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
+
+interface MarketingAttributionPayload {
+  gclid?: string | null
+  gbraid?: string | null
+  wbraid?: string | null
+  utm_source?: string | null
+  utm_medium?: string | null
+  utm_campaign?: string | null
+  utm_content?: string | null
+  utm_term?: string | null
+}
 
 interface CreateAppointmentRequest {
   slot_id: string
@@ -50,6 +62,10 @@ interface CreateAppointmentRequest {
   category_code: string
   discount_code?: string
   discount_amount_rappen?: number
+  /** Cross-domain marketing session ID (set on drivingteam.ch, forwarded via URL). */
+  marketing_session_id?: string
+  /** Decoded marketing attribution blob (gclid + UTMs). */
+  marketing_attribution?: MarketingAttributionPayload | null
 }
 
 export default defineEventHandler(async (event: H3Event) => {
@@ -380,6 +396,18 @@ export default defineEventHandler(async (event: H3Event) => {
       original_price_rappen: totalAmountRappen // Add default price
     })
     
+    // Marketing attribution: prefer payload from client, fall back to a DB
+    // lookup via marketing_session_id (the session_id used cross-domain).
+    let marketingAttr: MarketingAttributionPayload | null = body.marketing_attribution ?? null
+    if (!marketingAttr && body.marketing_session_id) {
+      const { data: attrRow } = await supabase
+        .from('marketing_attributions')
+        .select('gclid, gbraid, wbraid, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
+        .eq('session_id', body.marketing_session_id)
+        .maybeSingle()
+      if (attrRow) marketingAttr = attrRow as MarketingAttributionPayload
+    }
+
     const { data: newAppointment, error: createAppointmentError } = await supabase
       .from('appointments')
       .insert({
@@ -397,7 +425,17 @@ export default defineEventHandler(async (event: H3Event) => {
         status: 'confirmed', // Status: confirmed (not booked)
         original_price_rappen: totalAmountRappen, // Add default price
         source: 'online',
-        created_by: userData.id
+        created_by: userData.id,
+        // Marketing attribution (denormalized — used by server-side Google Ads upload)
+        marketing_session_id: body.marketing_session_id ?? null,
+        gclid: marketingAttr?.gclid ?? null,
+        gbraid: marketingAttr?.gbraid ?? null,
+        wbraid: marketingAttr?.wbraid ?? null,
+        utm_source: marketingAttr?.utm_source ?? null,
+        utm_medium: marketingAttr?.utm_medium ?? null,
+        utm_campaign: marketingAttr?.utm_campaign ?? null,
+        utm_content: marketingAttr?.utm_content ?? null,
+        utm_term: marketingAttr?.utm_term ?? null,
       })
       .select()
       .single()
@@ -757,6 +795,60 @@ export default defineEventHandler(async (event: H3Event) => {
     }).catch((err: any) => {
       logger.warn('⚠️ Could not send appointment confirmation email (non-critical):', err.message)
     })
+
+    // ============ LAYER 11: SERVER-SIDE GOOGLE ADS CONVERSION UPLOAD ============
+    // Fire-and-forget. Never blocks or fails the booking. If any of:
+    //   - GOOGLE_ADS_* env vars missing
+    //   - no gclid/gbraid/wbraid attached to the booking
+    //   - Google Ads API rejects
+    // then the upload is skipped/logged; the booking itself is unaffected.
+    if (marketingAttr?.gclid || marketingAttr?.gbraid || marketingAttr?.wbraid) {
+      ;(async () => {
+        try {
+          // Hash email/phone for Enhanced Conversions (improves match rate).
+          const normalizedEmail = (userData.email ?? '').trim().toLowerCase()
+          const normalizedPhone = (userData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+          const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
+          const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+
+          // Conversion value: net amount after discount, fallback to gross.
+          const conversionValueChf = (netAmountRappen > 0 ? netAmountRappen : totalAmountRappen) / 100
+
+          await recordAndUploadConversion({
+            appointment_id: newAppointment.id,
+            gclid: marketingAttr.gclid ?? null,
+            gbraid: marketingAttr.gbraid ?? null,
+            wbraid: marketingAttr.wbraid ?? null,
+            conversion_value_chf: conversionValueChf,
+            conversion_date_time: new Date(),
+            hashed_email: hashedEmail,
+            hashed_phone: hashedPhone,
+          })
+        } catch (err: any) {
+          logger.warn('⚠️ Server-side Google Ads conversion upload failed (non-critical):', err?.message ?? err)
+        }
+      })()
+    } else {
+      logger.debug('ℹ️ Skipping Google Ads conversion upload — no click ID for this booking')
+    }
+
+    // ============ LAYER 12: LINK booking_events.completed TO APPOINTMENT ============
+    // Closes the first-party funnel so we can answer "which marketing session
+    // produced which appointment?" with a single join.
+    if (body.marketing_session_id) {
+      ;(async () => {
+        try {
+          await supabase
+            .from('booking_events')
+            .update({ appointment_id: newAppointment.id })
+            .eq('session_id', body.marketing_session_id)
+            .eq('event_type', 'completed')
+            .is('appointment_id', null)
+        } catch (err: any) {
+          logger.warn('⚠️ Could not link booking_events to appointment (non-critical):', err?.message ?? err)
+        }
+      })()
+    }
 
     // ============ LAYER 10: RETURN RESPONSE ============
     return {
