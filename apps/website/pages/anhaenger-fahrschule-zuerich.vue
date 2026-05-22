@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Anhänger Fahrschule Zürich | BE ab CHF 120.- | 3 Prüforte</Title>
-      <Meta name="description" content="Anhänger Fahrschule Zürich ✓ Kat. BE ab CHF 120.- ✓ Keine Theorieprüfung ✓ Prüfung Albisgütli/Regensdorf ✓ Günstig zum Führerschein. Jetzt buchen!" />
+      <Title>Anhänger Fahrschule Zürich | Keine Theorieprüfung | Kat. BE ab CHF 120.-</Title>
+      <Meta name="description" content="Anhänger Fahrschule Zürich ✓ Keine Theorieprüfung nötig ✓ Kat. BE ab CHF 120.- ✓ 5–8 Fahrstunden genügen ✓ Prüfung Albisgütli & Regensdorf ✓ Online buchbar. Jetzt starten!" />
       <Meta name="keywords" content="Anhänger Fahrschule Zürich, Kategorie BE Zürich, Anhänger Fahrstunden Zürich, BE Führerschein Zürich, Anhängerprüfung Zürich, Anhänger Fahrschule Zürich-Altstetten" />
-      <Meta property="og:title" content="Anhänger Fahrschule Zürich | Kategorie BE | Driving Team" />
-      <Meta property="og:description" content="Anhänger Fahrschule in Zürich für Kategorie BE. Ab CHF 120.-/Lektion. Keine Theorieprüfung. Schnellster Weg zum Anhänger-Führerschein. Prüfung in Regensdorf & Zürich." />
+      <Meta property="og:title" content="Anhänger Fahrschule Zürich | Keine Theorieprüfung | Kat. BE | Driving Team" />
+      <Meta property="og:description" content="Anhänger Fahrschule Zürich: Kategorie BE ohne Theorieprüfung. Ab CHF 120.-/Lektion. Nur 5–8 Fahrstunden. Prüfung Regensdorf & Zürich. Jetzt online buchen!" />
       <Meta property="og:url" content="https://drivingteam.ch/anhaenger-fahrschule-zuerich/" />
       <Meta property="og:type" content="website" />
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-fahrschule-zuerich/" />
