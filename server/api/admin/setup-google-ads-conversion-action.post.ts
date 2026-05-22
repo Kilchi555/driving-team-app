@@ -41,9 +41,6 @@ export default defineEventHandler(async (event) => {
   const clientSecret = process.env.GOOGLE_ADS_CLIENT_SECRET
   const refreshToken = process.env.GOOGLE_ADS_REFRESH_TOKEN
   const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID
-  // login-customer-id mirrors what sync-marketing-google-ads uses successfully —
-  // it's set to the customer ID itself (the OAuth user has direct access).
-  const loginCustomerId = customerId
 
   if (!developerToken || !clientId || !clientSecret || !refreshToken || !customerId) {
     return { success: false, reason: 'missing_credentials' }
@@ -67,37 +64,63 @@ export default defineEventHandler(async (event) => {
     }
     const accessToken = tokenData.access_token
 
-    const baseHeaders: Record<string, string> = {
-      'Authorization': `Bearer ${accessToken}`,
-      'developer-token': developerToken,
-      'login-customer-id': loginCustomerId,
-      'Content-Type': 'application/json',
+    // Probe both common header configurations to defeat MCC quirks.
+    const tryHeaders = (loginCid: string | null): Record<string, string> => {
+      const h: Record<string, string> = {
+        'Authorization': `Bearer ${accessToken}`,
+        'developer-token': developerToken,
+        'Content-Type': 'application/json',
+      }
+      if (loginCid) h['login-customer-id'] = loginCid
+      return h
     }
 
-    // ============ IDEMPOTENCY CHECK ============
-    // Search for an existing action with our name; reuse it if present.
-    const searchRes = await fetch(
-      `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers/${customerId}/googleAds:search`,
-      {
-        method: 'POST',
-        headers: baseHeaders,
-        body: JSON.stringify({
-          query: `
-            SELECT conversion_action.id, conversion_action.resource_name, conversion_action.name, conversion_action.status
-            FROM conversion_action
-            WHERE conversion_action.name = '${CONVERSION_ACTION_NAME.replace(/'/g, "\\'")}'
-          `.trim(),
-        }),
+    const probes = [
+      { label: 'customerId',         loginCid: customerId },
+      { label: 'managerCustomerId',  loginCid: '9509957201' },
+      { label: 'no_login_header',    loginCid: null as string | null },
+    ]
+
+    let searchRes: Response | null = null
+    let searchText = ''
+    let usedLabel = ''
+    let allProbeErrors: Array<{ label: string; status: number; detail: string }> = []
+
+    for (const probe of probes) {
+      const res = await fetch(
+        `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers/${customerId}/googleAds:search`,
+        {
+          method: 'POST',
+          headers: tryHeaders(probe.loginCid),
+          body: JSON.stringify({
+            query: `
+              SELECT conversion_action.id, conversion_action.resource_name, conversion_action.name, conversion_action.status
+              FROM conversion_action
+              WHERE conversion_action.name = '${CONVERSION_ACTION_NAME.replace(/'/g, "\\'")}'
+            `.trim(),
+          }),
+        }
+      )
+      const text = await res.text()
+      if (res.ok) {
+        searchRes = res
+        searchText = text
+        usedLabel = probe.label
+        break
       }
-    )
+      allProbeErrors.push({ label: probe.label, status: res.status, detail: text.slice(0, 300) })
+    }
+
+    if (!searchRes) {
+      return { success: false, reason: 'all_probes_failed', probes: allProbeErrors }
+    }
+    logger.info(`setup-google-ads-conversion-action: search succeeded with login-customer-id = ${usedLabel}`)
+    const loginCustomerIdToUse = usedLabel === 'managerCustomerId' ? '9509957201' : (usedLabel === 'customerId' ? customerId : null)
+
+    const baseHeaders = tryHeaders(loginCustomerIdToUse)
     const searchText = await searchRes.text()
     let searchData: any = null
     try { searchData = JSON.parse(searchText) } catch { /* non-JSON */ }
-
-    if (!searchRes.ok) {
-      logger.warn('setup-google-ads-conversion-action: search failed', searchData ?? searchText.slice(0, 500))
-      return { success: false, reason: 'search_failed', status: searchRes.status, detail: searchData ?? searchText.slice(0, 500) }
-    }
 
     const existing = (searchData?.results ?? [])[0]
     if (existing) {
