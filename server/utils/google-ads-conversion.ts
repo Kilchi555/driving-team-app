@@ -97,9 +97,11 @@ async function getAccessToken(creds: GoogleAdsCreds): Promise<string | null> {
 
 function toRfc3339(value: Date | string): string {
   const d = typeof value === 'string' ? new Date(value) : value
-  // Google Ads expects e.g. "2026-05-22 16:30:00+02:00" (note the space).
-  // ISO format "2026-05-22T16:30:00+02:00" also accepted in v23.
-  return d.toISOString().replace('Z', '+00:00')
+  // Google Ads API requires exactly "yyyy-mm-dd HH:mm:ss+HH:mm" (with space, no ms).
+  // ISO 8601 with milliseconds or "T" separator is rejected as INVALID_STRING_DATE_TIME.
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ` +
+         `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}+00:00`
 }
 
 /**
