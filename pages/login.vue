@@ -185,6 +185,34 @@
             <span v-else-if="isLoading">Wird angemeldet...</span>
             <span v-else>Anmelden</span>
           </button>
+
+          <!-- Face ID / Touch ID (native only, shown once credentials are saved) -->
+          <template v-if="isNativeApp && biometricAvailable && biometricCredentialsStored">
+            <div class="relative">
+              <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-gray-100"></div>
+              </div>
+              <div class="relative flex justify-center">
+                <span class="px-3 bg-white text-xs text-gray-400">oder</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              @click="handleBiometricLogin"
+              :disabled="isLoading"
+              class="w-full py-3 px-4 rounded-xl border-2 border-gray-200 bg-white font-semibold text-gray-700 transition-all hover:border-violet-300 hover:bg-violet-50 disabled:opacity-50 flex items-center justify-center gap-3"
+            >
+              <!-- Face ID icon -->
+              <svg v-if="biometricType === 2" class="w-6 h-6 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 3.75H6A2.25 2.25 0 003.75 6v1.5M16.5 3.75H18A2.25 2.25 0 0120.25 6v1.5m0 9V18A2.25 2.25 0 0118 20.25h-1.5m-9 0H6A2.25 2.25 0 013.75 18v-1.5M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              <!-- Fingerprint icon -->
+              <svg v-else class="w-6 h-6 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 018 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"/>
+              </svg>
+              <span>{{ biometricType === 2 ? 'Mit Face ID anmelden' : 'Mit Touch ID anmelden' }}</span>
+            </button>
+          </template>
         </form>
 
 
@@ -451,6 +479,43 @@
         </div>
       </div>
     </div>
+
+    <!-- Save Biometric Credentials Prompt (native only, shown after first successful login) -->
+    <Transition name="biometric-slide">
+      <div v-if="showSaveBiometricPrompt" class="fixed inset-0 z-50 flex items-end justify-center px-4 pb-8">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="dismissSaveBiometric"></div>
+        <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+          <div class="flex items-center justify-center w-16 h-16 bg-violet-100 rounded-2xl mx-auto">
+            <svg class="w-8 h-8 text-violet-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
+            </svg>
+          </div>
+          <div class="text-center">
+            <h3 class="text-xl font-bold text-gray-900">
+              {{ biometricType === 2 ? 'Face ID aktivieren?' : 'Touch ID aktivieren?' }}
+            </h3>
+            <p class="text-sm text-gray-500 mt-2 leading-relaxed">
+              Beim nächsten Öffnen einfach {{ biometricType === 2 ? 'mit Face ID' : 'mit Touch ID' }} einloggen — kein Passwort nötig.
+            </p>
+          </div>
+          <button
+            type="button"
+            @click="confirmSaveBiometric"
+            class="w-full py-3.5 rounded-2xl text-white font-semibold text-base"
+            style="background: #7C3AED"
+          >
+            {{ biometricType === 2 ? 'Face ID aktivieren' : 'Touch ID aktivieren' }}
+          </button>
+          <button
+            type="button"
+            @click="dismissSaveBiometric"
+            class="w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            Nicht jetzt
+          </button>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -539,6 +604,75 @@ const pendingAccount = ref({
   error: null as string | null,
   success: null as string | null
 })
+
+// ─── Biometric Login (native only) ────────────────────────────────────────
+const BIOMETRIC_SERVER = 'simy.ch'
+const biometricAvailable = ref(false)
+const biometricType = ref(0) // 2 = Face ID, 3 = Touch ID / Fingerprint
+const biometricCredentialsStored = ref(false)
+const showSaveBiometricPrompt = ref(false)
+const pendingRedirectPath = ref('')
+const loginViaBiometric = ref(false)
+
+const checkBiometric = async () => {
+  if (process.server || !isNativeApp.value) return
+  try {
+    const { BiometricAuth, BiometryType } = await import('@aparajita/capacitor-biometric-auth')
+    const result = await BiometricAuth.checkBiometry()
+    biometricAvailable.value = result.isAvailable
+    biometricType.value = result.biometryType
+    if (result.isAvailable) {
+      const { Preferences } = await import('@capacitor/preferences')
+      const { value } = await Preferences.get({ key: BIOMETRIC_SERVER })
+      biometricCredentialsStored.value = !!value
+    }
+  } catch {
+    biometricAvailable.value = false
+  }
+}
+
+const handleBiometricLogin = async () => {
+  isLoading.value = true
+  loginError.value = null
+  loginViaBiometric.value = true
+  try {
+    const { BiometricAuth } = await import('@aparajita/capacitor-biometric-auth')
+    await BiometricAuth.authenticate({ reason: 'Einloggen' })
+    const { Preferences } = await import('@capacitor/preferences')
+    const { value } = await Preferences.get({ key: BIOMETRIC_SERVER })
+    if (!value) throw new Error('no credentials')
+    const creds = JSON.parse(value)
+    loginForm.value.email = creds.email
+    loginForm.value.password = creds.password
+    await handleLogin()
+  } catch (e: any) {
+    const msg = (e?.message || '').toLowerCase()
+    if (!msg.includes('cancel') && !msg.includes('dismiss') && !msg.includes('user cancel') && !msg.includes('no credentials')) {
+      loginError.value = 'Biometrische Authentifizierung fehlgeschlagen. Bitte mit Passwort anmelden.'
+    }
+  } finally {
+    loginViaBiometric.value = false
+    isLoading.value = false
+  }
+}
+
+const confirmSaveBiometric = async () => {
+  try {
+    const { Preferences } = await import('@capacitor/preferences')
+    await Preferences.set({
+      key: BIOMETRIC_SERVER,
+      value: JSON.stringify({ email: loginForm.value.email, password: loginForm.value.password })
+    })
+    biometricCredentialsStored.value = true
+  } catch { /* silent */ }
+  showSaveBiometricPrompt.value = false
+  router.push(pendingRedirectPath.value)
+}
+
+const dismissSaveBiometric = () => {
+  showSaveBiometricPrompt.value = false
+  router.push(pendingRedirectPath.value)
+}
 
 const resetForm = ref({
   email: '',
@@ -759,7 +893,12 @@ const handleLogin = async () => {
     
     // Keine Toast-Meldung nötig - Benutzer wird weitergeleitet
     logger.debug('🔄 Redirecting to:', redirectPath)
-    router.push(redirectPath)
+    if (isNativeApp.value && biometricAvailable.value && !biometricCredentialsStored.value && !loginViaBiometric.value) {
+      pendingRedirectPath.value = redirectPath
+      showSaveBiometricPrompt.value = true
+    } else {
+      router.push(redirectPath)
+    }
     
   } catch (error: any) {
     console.error('Login error:', error)
@@ -1034,7 +1173,8 @@ const handleLogout = async () => {
 
 // Lifecycle
 onMounted(async () => {
-  // Check WebAuthn support
+  // Check biometric availability (native only, no-op on web)
+  checkBiometric()
 
   // Warte kurz damit Auth-State nach Logout vollständig gelöscht ist
   await new Promise(resolve => setTimeout(resolve, 100))
@@ -1137,6 +1277,17 @@ input[type="checkbox"]:checked {
 
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+/* Biometric save prompt slide-up */
+.biometric-slide-enter-active,
+.biometric-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.biometric-slide-enter-from,
+.biometric-slide-leave-to {
+  opacity: 0;
+  transform: translateY(100px);
 }
 </style>
 
