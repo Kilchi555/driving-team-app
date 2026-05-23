@@ -49,5 +49,9 @@
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Für schnelles und sicheres Einloggen ohne Passwort.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>Um Fahrstunden direkt in deinen Kalender zu speichern.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Um Fahrstunden direkt in deinen Kalender zu speichern.</string>
 </dict>
 </plist>

@@ -156,9 +156,23 @@
                 </div>
               </div>
 
-              <!-- Termin absagen — dezenter Link am Kartenende -->
-              <div v-if="lesson.event_type_code !== 'course' && lesson.id" class="pt-2 mt-1 border-t border-gray-100 flex justify-end">
+              <!-- Footer: Kalender + Termin absagen -->
+              <div class="pt-2 mt-1 border-t border-gray-100 flex items-center justify-between">
+                <!-- Zum Kalender hinzufügen -->
                 <button
+                  @click.stop="addLessonToCalendar(lesson)"
+                  class="group flex items-center gap-1 text-xs font-medium transition-colors"
+                  :style="{ color: primaryColor }"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Kalender
+                </button>
+
+                <!-- Termin absagen -->
+                <button
+                  v-if="lesson.event_type_code !== 'course' && lesson.id"
                   @click.stop="openCancellationModal(lesson)"
                   class="group flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
                 >
@@ -190,6 +204,7 @@
 import { computed, ref, watch } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { logger } from '~/utils/logger'
+import { useCalendarSync } from '~/composables/useCalendarSync'
 import CustomerCancellationModal from './CustomerCancellationModal.vue'
 
 // Props & Emits
@@ -201,6 +216,27 @@ interface Props {
 
 const props = defineProps<Props>()
 const emit = defineEmits(['close', 'transfer-done', 'appointment-cancelled'])
+
+const { addToCalendar } = useCalendarSync()
+
+async function addLessonToCalendar(lesson: any) {
+  const staffName = lesson.staff
+    ? `${lesson.staff.first_name} ${lesson.staff.last_name}`
+    : null
+  const locationStr =
+    lesson.location_details?.address ||
+    lesson.location_details?.formatted_address ||
+    lesson.location_name ||
+    ''
+  await addToCalendar({
+    title: lesson.type ? `Fahrlektion (${lesson.type})` : 'Fahrlektion',
+    startDate: new Date(lesson.start_time),
+    endDate: new Date(lesson.end_time),
+    location: locationStr,
+    notes: staffName ? `Fahrlehrer: ${staffName}` : undefined,
+    appointmentId: lesson.id,
+  })
+}
 
 // Cancellation state
 const showCancellationModal = ref(false)

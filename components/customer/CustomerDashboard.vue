@@ -112,6 +112,46 @@
       </div>
     </div>
 
+    <!-- BANNER: Buchung erfolgreich + Kalender -->
+    <Transition name="slide-down">
+      <div
+        v-if="showBookingSuccessCard"
+        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3"
+      >
+        <div class="bg-green-50 border border-green-300 rounded-xl p-4 flex items-start justify-between gap-3">
+          <div class="flex items-start gap-3 flex-1 min-w-0">
+            <span class="text-2xl shrink-0">✅</span>
+            <div class="min-w-0">
+              <p class="font-semibold text-green-900 text-sm">Buchung bestätigt!</p>
+              <p v-if="nextAppointment" class="text-green-700 text-xs mt-0.5 truncate">
+                {{ formatNextAppointmentDate(nextAppointment.start_time) }} · {{ formatNextAppointmentTime(nextAppointment.start_time) }} Uhr
+              </p>
+              <button
+                v-if="nextAppointment"
+                @click="addNextAppointmentToCalendar"
+                class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-lg transition-colors"
+                :style="{ backgroundColor: primaryColor }"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Zum Kalender hinzufügen
+              </button>
+            </div>
+          </div>
+          <button
+            @click="showBookingSuccessCard = false"
+            class="text-green-500 hover:text-green-700 transition-colors shrink-0 p-1"
+            aria-label="Schliessen"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </Transition>
+
     <!-- BANNER: Lernfahrausweis fehlt -->
     <div 
       v-if="showContent && documentsLoaded && userDocumentCategories.length > 0 && userDocumentCategories[0]?.documents?.length === 0"
@@ -1267,6 +1307,7 @@ import { useTenant } from '~/composables/useTenant'
 import { replacePlaceholders } from '~/utils/reglementPlaceholders'
 import { checkFeatureFlag } from '~/utils/featureFlags'
 import ProfileModal from './ProfileModal.vue'
+import { useCalendarSync } from '~/composables/useCalendarSync'
 
 // Composables
 const authStore = useAuthStore()
@@ -1314,7 +1355,9 @@ const staff = ref<any[]>([])
 const lessons = ref<any[]>([]) 
 const showEvaluationsModal = ref(false) 
 const showUpcomingLessonsModal = ref(false)
+const showBookingSuccessCard = ref(false)
 const isLoggingOut = ref(false)
+const { addToCalendar } = useCalendarSync()
 const instructors = ref<any[]>([])
 const showInstructorModal = ref(false)
 const selectedInstructor = ref<any>(null)
@@ -1593,6 +1636,24 @@ const upcomingAppointments = computed(() => {
 })
 
 const nextAppointment = computed(() => upcomingAppointments.value[0] || null)
+
+async function addNextAppointmentToCalendar() {
+  const apt = nextAppointment.value
+  if (!apt) return
+  const staffName = apt.staff ? `${apt.staff.first_name} ${apt.staff.last_name}` : null
+  const locationStr = apt.location_details?.address
+    || apt.location_details?.formatted_address
+    || apt.location_name
+    || ''
+  await addToCalendar({
+    title: apt.type ? `Fahrlektion (${apt.type})` : 'Fahrlektion',
+    startDate: new Date(apt.start_time),
+    endDate: new Date(apt.end_time),
+    location: locationStr,
+    notes: staffName ? `Fahrlehrer: ${staffName}` : undefined,
+    appointmentId: apt.id,
+  })
+}
 
 function formatNextAppointmentDate(isoString: string): string {
   const date = new Date(isoString)
@@ -2831,9 +2892,7 @@ onMounted(async () => {
     
     if (bookingSuccess) {
       logger.debug('✅ Booking success detected!')
-      alert('✅ Buchung erfolgreich! Dein Termin wurde bestätigt.')
-      // Small delay to ensure data is loaded before showing success
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      showBookingSuccessCard.value = true
     }
     
     if (paymentSuccess) {
@@ -3082,5 +3141,22 @@ const handlePayLater = async () => {
 
 .shadow-lg {
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+.slide-down-enter-from,
+.slide-down-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.slide-down-enter-to,
+.slide-down-leave-from {
+  max-height: 200px;
 }
 </style>
