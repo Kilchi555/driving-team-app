@@ -76,10 +76,8 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Install Fastlane
-        run: |
-          gem install fastlane --no-document
-          gem install fastlane-plugin-match --no-document || true
+      - name: Install Fastlane (pinned via Gemfile)
+        run: bundle install --jobs 4 --retry 3
 
       - name: Setup App Store Connect API Key
         run: |
@@ -97,6 +95,9 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           NODE_ENV: production
         run: npx nuxt generate
+
+      - name: Generate Capacitor config for client
+        run: CLIENT="${{ matrix.client }}" node scripts/gen-cap-config.mjs
 
       - name: Add iOS platform (if not present)
         run: |
@@ -127,7 +128,7 @@ jobs:
           DEPLOY_TARGET: ${{ github.event.inputs.environment || 'testflight' }}
         run: |
           cd ios/App
-          fastlane ios deploy
+          bundle exec fastlane ios deploy
 
       - name: Notify on failure
         if: failure()

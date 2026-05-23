@@ -1,0 +1,15 @@
+Die offizielle App der Driving Team Fahrschule in Zürich und Umgebung.
+
+Als Fahrschüler kannst du:
+• Fahrstunden einfach online buchen
+• Deinen Lernfortschritt verfolgen
+• Direkt mit deinem Fahrlehrer kommunizieren
+• Prüfungsresultate einsehen
+• Zahlungen und Rechnungen verwalten
+
+Für Fahrlehrer:
+• Terminkalender verwalten
+• Schüler und Fortschritt im Überblick
+• Einfache Abrechnung
+
+Dein Zugang wird direkt von deiner Fahrschule eingerichtet.

@@ -16,6 +16,29 @@ const clientId = process.env.CLIENT || process.argv[2] || 'driving-team'
 const configPath = join(root, `clients/${clientId}/config.json`)
 const client = JSON.parse(readFileSync(configPath, 'utf-8'))
 
+const plugins = {
+  SplashScreen: {
+    launchShowDuration: 2000,
+    backgroundColor: client.backgroundColor || '#ffffff',
+    showSpinner: false,
+    androidSpinnerStyle: 'small',
+    splashFullScreen: true,
+    splashImmersive: true,
+  },
+  StatusBar: {
+    style: 'Default',
+    backgroundColor: client.backgroundColor || '#ffffff',
+  },
+}
+
+// Only enable push if the client has explicitly opted in and configured APNs/FCM.
+// Without APNs entitlements and google-services.json the app will crash on startup.
+if (client.features?.push === true) {
+  plugins.PushNotifications = {
+    presentationOptions: ['badge', 'sound', 'alert'],
+  }
+}
+
 const config = {
   appId: client.bundleId,
   appName: client.appName,
@@ -23,31 +46,15 @@ const config = {
   server: client.serverUrl ? { url: client.serverUrl } : {},
   ios: {
     scheme: client.scheme,
-    backgroundColor: client.backgroundColor,
+    backgroundColor: client.backgroundColor || '#ffffff',
     deploymentTarget: client.ios?.deploymentTarget || '16.0',
-    contentInset: 'never',
+    contentInset: 'automatic',
   },
   android: {
-    backgroundColor: client.backgroundColor,
+    backgroundColor: client.backgroundColor || '#ffffff',
     allowMixedContent: false,
   },
-  plugins: {
-    SplashScreen: {
-      launchShowDuration: 2000,
-      backgroundColor: client.backgroundColor,
-      showSpinner: false,
-      androidSpinnerStyle: 'small',
-      splashFullScreen: true,
-      splashImmersive: true,
-    },
-    PushNotifications: {
-      presentationOptions: ['badge', 'sound', 'alert'],
-    },
-    StatusBar: {
-      style: 'Dark',
-      backgroundColor: client.backgroundColor,
-    },
-  },
+  plugins,
 }
 
 const outPath = join(root, 'capacitor.config.json')
