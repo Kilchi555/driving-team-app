@@ -107,9 +107,16 @@ platform :ios do
       xcodeproj: 'ios/App/App.xcodeproj'
     )
 
-    # 3. Build the app
+    # 2b. Patch per-client display name in Info.plist
+    set_info_plist_value(
+      path: 'ios/App/App/Info.plist',
+      key: 'CFBundleDisplayName',
+      value: app_name
+    )
+
+    # 3. Build the app (SPM-based project — no .xcworkspace)
     build_app(
-      workspace:            'ios/App/App.xcworkspace',
+      project:              'ios/App/App.xcodeproj',
       scheme:               'App',
       configuration:        'Release',
       export_method:        'app-store',

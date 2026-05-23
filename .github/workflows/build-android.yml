@@ -84,6 +84,9 @@ jobs:
           NODE_ENV: production
         run: npx nuxt generate
 
+      - name: Generate Capacitor config for client
+        run: CLIENT="${{ matrix.client }}" node scripts/gen-cap-config.mjs
+
       - name: Add Android platform (if not present)
         run: |
           CLIENT="${{ matrix.client }}" npx cap add android 2>/dev/null || true

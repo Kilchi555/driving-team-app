@@ -1,0 +1,15 @@
+The official app of Driving Team driving school in Zurich and surrounding areas.
+
+As a student, you can:
+• Book lessons easily online
+• Track your learning progress
+• Communicate directly with your instructor
+• View test results
+• Manage payments and invoices
+
+For instructors:
+• Manage your calendar
+• Overview of students and progress
+• Easy billing
+
+Your access is set up directly by your driving school.
