@@ -3311,7 +3311,9 @@ const createAppointmentSecure = async (userData: any) => {
         customer_package_id: userData.customer_package_id,
         appointment_type: userData.appointment_type,
         category_code: userData.category_code || '',
-        notes: userData.notes || undefined
+        notes: userData.notes || undefined,
+        marketing_session_id: userData.marketing_session_id,
+        marketing_attribution: userData.marketing_attribution,
       }
     )
     
