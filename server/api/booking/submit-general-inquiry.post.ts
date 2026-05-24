@@ -5,6 +5,13 @@
 
 import { defineEventHandler, readBody, createError, getRequestHeader, getRequestIP } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { recordAndUploadInquiryConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
+
+interface MarketingAttributionPayload {
+  gclid?: string | null
+  gbraid?: string | null
+  wbraid?: string | null
+}
 
 // Simple in-memory rate limiter: max 3 submissions per IP per 10 minutes
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -54,7 +61,8 @@ export default defineEventHandler(async (event) => {
       phone,
       notes,
       created_by_user_id,
-      preferred_time_slots = [] // Empty for general inquiries
+      preferred_time_slots = [], // Empty for general inquiries
+      marketing_attribution,
     } = body
 
     // Validate required fields
@@ -182,6 +190,30 @@ export default defineEventHandler(async (event) => {
     }
 
     console.log('✅ General inquiry created:', proposal.id)
+
+    const marketingAttr: MarketingAttributionPayload | null = marketing_attribution ?? null
+    if (marketingAttr?.gclid || marketingAttr?.gbraid || marketingAttr?.wbraid) {
+      ;(async () => {
+        try {
+          const normalizedEmail = email.trim().toLowerCase()
+          const normalizedPhone = phone.replace(/\s+/g, '').replace(/^00/, '+')
+          const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
+          const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+
+          await recordAndUploadInquiryConversion({
+            proposal_id: proposal.id,
+            gclid: marketingAttr!.gclid ?? null,
+            gbraid: marketingAttr!.gbraid ?? null,
+            wbraid: marketingAttr!.wbraid ?? null,
+            conversion_date_time: new Date(),
+            hashed_email: hashedEmail,
+            hashed_phone: hashedPhone,
+          })
+        } catch (err: any) {
+          console.warn('⚠️ Server-side Google Ads inquiry conversion upload failed (non-critical):', err?.message ?? err)
+        }
+      })()
+    }
 
     // Send emails to customer and staff
     try {

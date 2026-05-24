@@ -29,6 +29,9 @@ export default defineNuxtConfig({
     /** Öffentliche Website-APIs (Kurse, Tracking, Kontakt). Alternativ: NUXT_SUPABASE_URL / NUXT_SUPABASE_SERVICE_ROLE_KEY */
     supabaseUrl: process.env.SUPABASE_URL ?? '',
     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
+    /** Shared secret for server-to-server calls to app.simy.ch (inquiry conversion upload). */
+    internalApiSecret: process.env.NUXT_INTERNAL_API_SECRET ?? '',
+    simyApiBaseUrl: process.env.NUXT_SIMY_API_BASE_URL ?? 'https://app.simy.ch',
     public: {
       // Place IDs sind öffentlich – kein Sicherheitsrisiko
       placesIdZuerich: process.env.GOOGLE_PLACE_ID_ZUERICH ?? '',

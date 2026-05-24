@@ -11,8 +11,9 @@
  *   GOOGLE_ADS_CLIENT_SECRET
  *   GOOGLE_ADS_REFRESH_TOKEN          (must have `https://www.googleapis.com/auth/adwords` write scope)
  *   GOOGLE_ADS_CUSTOMER_ID            (no dashes, e.g. 1916698119)
- *   GOOGLE_ADS_CONVERSION_ACTION_ID   (numeric ID of the "Server: Booking Completed" action)
- *   GOOGLE_ADS_MANAGER_CUSTOMER_ID    (optional, for MCC accounts — e.g. 9509957201)
+ *   GOOGLE_ADS_CONVERSION_ACTION_ID          (numeric ID of the "Server: Booking Completed" action)
+ *   GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID  (optional — "Server: Inquiry Submitted" for proposal forms)
+ *   GOOGLE_ADS_MANAGER_CUSTOMER_ID           (optional, for MCC accounts — e.g. 9509957201)
  *
  * Reference:
  *   https://developers.google.com/google-ads/api/rest/reference/rest/v23/customers/uploadClickConversions
@@ -36,6 +37,8 @@ export interface ConversionUploadInput {
   hashed_phone?: string | null
   /** Optional custom order id to dedupe in Google Ads. Defaults to appointment_id. */
   order_id?: string
+  /** Override conversion action (defaults to GOOGLE_ADS_CONVERSION_ACTION_ID). */
+  conversion_action_id?: string
 }
 
 export interface ConversionUploadResult {
@@ -55,13 +58,13 @@ interface GoogleAdsCreds {
   managerCustomerId?: string
 }
 
-function readCreds(): GoogleAdsCreds | null {
+function readCreds(conversionActionIdOverride?: string): GoogleAdsCreds | null {
   const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN
   const clientId = process.env.GOOGLE_ADS_CLIENT_ID
   const clientSecret = process.env.GOOGLE_ADS_CLIENT_SECRET
   const refreshToken = process.env.GOOGLE_ADS_REFRESH_TOKEN
   const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID
-  const conversionActionId = process.env.GOOGLE_ADS_CONVERSION_ACTION_ID
+  const conversionActionId = conversionActionIdOverride || process.env.GOOGLE_ADS_CONVERSION_ACTION_ID
   const managerCustomerId = process.env.GOOGLE_ADS_MANAGER_CUSTOMER_ID
 
   if (!developerToken || !clientId || !clientSecret || !refreshToken || !customerId || !conversionActionId) {
@@ -121,7 +124,7 @@ export async function sha256Hex(input: string): Promise<string> {
  * Fire-and-forget: never throws — returns a structured result so callers can log.
  */
 export async function uploadClickConversion(input: ConversionUploadInput): Promise<ConversionUploadResult> {
-  const creds = readCreds()
+  const creds = readCreds(input.conversion_action_id)
   if (!creds) {
     return { uploaded: false, reason: 'missing_credentials' }
   }
@@ -257,6 +260,49 @@ export async function recordAndUploadConversion(input: ConversionUploadInput): P
     logger.info(`google-ads-conversion: uploaded for appointment ${input.appointment_id} (CHF ${input.conversion_value_chf})`)
   } else {
     logger.warn(`google-ads-conversion: upload skipped/failed for appointment ${input.appointment_id} — ${result.reason}${result.error ? `: ${result.error.slice(0, 200)}` : ''}`)
+  }
+}
+
+/** Default lead value for inquiry/proposal conversions (CHF). Override via env. */
+const INQUIRY_CONVERSION_VALUE_CHF = Number(process.env.GOOGLE_ADS_INQUIRY_CONVERSION_VALUE_CHF ?? '10')
+
+/**
+ * Upload a booking-proposal (inquiry) conversion to Google Ads.
+ * Uses GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID — no audit row (proposals ≠ appointments).
+ */
+export async function recordAndUploadInquiryConversion(input: {
+  proposal_id: string
+  gclid?: string | null
+  gbraid?: string | null
+  wbraid?: string | null
+  conversion_value_chf?: number
+  conversion_date_time?: Date | string
+  hashed_email?: string | null
+  hashed_phone?: string | null
+}): Promise<void> {
+  const conversionActionId = process.env.GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID
+  if (!conversionActionId) {
+    logger.debug('google-ads-conversion: skipping inquiry upload — GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID not set')
+    return
+  }
+
+  const result = await uploadClickConversion({
+    appointment_id: input.proposal_id,
+    order_id: `inquiry-${input.proposal_id}`,
+    conversion_action_id: conversionActionId,
+    gclid: input.gclid,
+    gbraid: input.gbraid,
+    wbraid: input.wbraid,
+    conversion_value_chf: input.conversion_value_chf ?? INQUIRY_CONVERSION_VALUE_CHF,
+    conversion_date_time: input.conversion_date_time ?? new Date(),
+    hashed_email: input.hashed_email,
+    hashed_phone: input.hashed_phone,
+  })
+
+  if (result.uploaded) {
+    logger.info(`google-ads-conversion: inquiry uploaded for proposal ${input.proposal_id}`)
+  } else {
+    logger.warn(`google-ads-conversion: inquiry upload skipped/failed for proposal ${input.proposal_id} — ${result.reason}${result.error ? `: ${result.error.slice(0, 200)}` : ''}`)
   }
 }
 

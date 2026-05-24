@@ -1,4 +1,5 @@
 import { defineEventHandler, readBody, createError } from 'h3'
+import type { H3Event } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { formatResendFrom } from '~/server/utils/format-resend-from'
 import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
@@ -8,10 +9,57 @@ const TEAM_EMAIL = 'info@drivingteam.ch'
 const PRIMARY_COLOR = '#1C64F2'
 const TENANT_NAME = 'Driving Team Fahrschule'
 
+interface MarketingAttributionPayload {
+  gclid?: string | null
+  gbraid?: string | null
+  wbraid?: string | null
+}
+
+async function uploadInquiryConversionViaSimy(
+  event: H3Event,
+  input: {
+    proposal_id: string
+    marketing_attribution?: MarketingAttributionPayload | null
+    email: string
+    phone: string
+  },
+): Promise<void> {
+  const attr = input.marketing_attribution
+  if (!attr?.gclid && !attr?.gbraid && !attr?.wbraid) return
+
+  const cfg = useRuntimeConfig(event)
+  const internalSecret = cfg.internalApiSecret as string
+  const baseUrl = (cfg.simyApiBaseUrl as string) || 'https://app.simy.ch'
+  if (!internalSecret) {
+    console.warn('⚠️ NUXT_INTERNAL_API_SECRET not set — skipping Google Ads inquiry upload')
+    return
+  }
+
+  try {
+    await fetch(`${baseUrl.replace(/\/$/, '')}/api/internal/upload-inquiry-conversion`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Api-Secret': internalSecret,
+      },
+      body: JSON.stringify({
+        proposal_id: input.proposal_id,
+        gclid: attr.gclid ?? null,
+        gbraid: attr.gbraid ?? null,
+        wbraid: attr.wbraid ?? null,
+        email: input.email,
+        phone: input.phone,
+      }),
+    })
+  } catch (err: any) {
+    console.warn('⚠️ Google Ads inquiry upload failed (non-critical):', err?.message ?? err)
+  }
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { first_name, last_name, email, phone, notes, company } = body
+    const { first_name, last_name, email, phone, notes, company, marketing_attribution } = body
 
     // Validate required fields
     if (!first_name?.trim() || !last_name?.trim() || !email?.trim() || !phone?.trim()) {
@@ -95,6 +143,16 @@ export default defineEventHandler(async (event) => {
     } catch (emailErr: any) {
       console.warn('⚠️ Failed to send contact emails:', emailErr.message)
     }
+
+    // Server-side Google Ads inquiry conversion (fire-and-forget)
+    ;(async () => {
+      await uploadInquiryConversionViaSimy(event, {
+        proposal_id: proposal.id,
+        marketing_attribution: marketing_attribution ?? null,
+        email: email.trim(),
+        phone: phone.trim(),
+      })
+    })()
 
     return { success: true, proposal_id: proposal.id }
   } catch (err: any) {
