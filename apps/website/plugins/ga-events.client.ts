@@ -1,4 +1,4 @@
-// Tracks conversion events for Google Analytics 4, Meta Pixel, and Google Ads.
+// Tracks conversion events for Google Analytics 4 and Meta Pixel.
 // Uses event delegation so there's no per-component boilerplate needed.
 // Events tracked:
 //   booking_click  – clicks on simy.ch booking links
@@ -7,18 +7,10 @@
 export default defineNuxtPlugin(() => {
   if (process.server) return
   const { gtag } = useGtag()
-  const config = useRuntimeConfig()
 
   function fireMetaEvent(event: string, params?: Record<string, unknown>) {
     if (typeof window !== 'undefined' && (window as any).fbq) {
       ;(window as any).fbq('track', event, params)
-    }
-  }
-
-  function fireGoogleAdsConversion() {
-    const { googleAdsId, googleAdsConversionLabel } = config.public
-    if (googleAdsId && googleAdsConversionLabel) {
-      gtag('event', 'conversion', { send_to: `${googleAdsId}/${googleAdsConversionLabel}` })
     }
   }
 
@@ -40,8 +32,7 @@ export default defineNuxtPlugin(() => {
       })
       // Meta Pixel: Lead event on booking click (proxy conversion for app.simy.ch bookings)
       fireMetaEvent('Lead', { content_name: service, content_category: 'booking' })
-      // Google Ads: fire conversion tag
-      fireGoogleAdsConversion()
+      // Google Ads booking conversion: server-side only (create-appointment) — no browser tag here
 
       // First-party server-side logging — independent of GA4/consent/ad-blockers
       const sessionId = (window as any).__analyticsSessionId || 'unknown'
@@ -75,6 +66,7 @@ export default defineNuxtPlugin(() => {
   // Track form submissions (contact, lead magnet, etc.)
   document.addEventListener('submit', (e: SubmitEvent) => {
     const form = e.target as HTMLFormElement
+    if (form.dataset.skipGaSubmit !== undefined) return
     const formId = form.id || form.dataset.category || 'unknown'
     gtag('event', 'form_submit', {
       event_category: 'conversion',

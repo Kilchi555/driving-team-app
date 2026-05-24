@@ -3,6 +3,18 @@
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { recordAndUploadInquiryConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
+
+interface MarketingAttributionPayload {
+  gclid?: string | null
+  gbraid?: string | null
+  wbraid?: string | null
+  utm_source?: string | null
+  utm_medium?: string | null
+  utm_campaign?: string | null
+  utm_content?: string | null
+  utm_term?: string | null
+}
 
 export default defineEventHandler(async (event) => {
   try {
@@ -23,7 +35,9 @@ export default defineEventHandler(async (event) => {
       postal_code,
       city,
       notes,
-      created_by_user_id
+      created_by_user_id,
+      marketing_session_id,
+      marketing_attribution,
     } = body
 
     // Validate required fields
@@ -215,6 +229,40 @@ export default defineEventHandler(async (event) => {
     }
 
     console.log('✅ Booking proposal created:', proposal.id)
+
+    // Marketing attribution for server-side Google Ads inquiry conversion
+    let marketingAttr: MarketingAttributionPayload | null = marketing_attribution ?? null
+    if (!marketingAttr && marketing_session_id) {
+      const { data: attrRow } = await supabase
+        .from('marketing_attributions')
+        .select('gclid, gbraid, wbraid, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
+        .eq('session_id', marketing_session_id)
+        .maybeSingle()
+      if (attrRow) marketingAttr = attrRow as MarketingAttributionPayload
+    }
+
+    if (marketingAttr?.gclid || marketingAttr?.gbraid || marketingAttr?.wbraid) {
+      ;(async () => {
+        try {
+          const normalizedEmail = (email ?? '').trim().toLowerCase()
+          const normalizedPhone = (phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+          const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
+          const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+
+          await recordAndUploadInquiryConversion({
+            proposal_id: proposal.id,
+            gclid: marketingAttr!.gclid ?? null,
+            gbraid: marketingAttr!.gbraid ?? null,
+            wbraid: marketingAttr!.wbraid ?? null,
+            conversion_date_time: new Date(),
+            hashed_email: hashedEmail,
+            hashed_phone: hashedPhone,
+          })
+        } catch (err: any) {
+          console.warn('⚠️ Server-side Google Ads inquiry conversion upload failed (non-critical):', err?.message ?? err)
+        }
+      })()
+    }
 
     // Send emails to customer and staff
     try {

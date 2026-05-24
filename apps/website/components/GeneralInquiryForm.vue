@@ -8,7 +8,12 @@
     </div>
 
     <!-- Form Card -->
-    <div class="bg-white shadow rounded-lg p-4 sm:p-6 space-y-6">
+    <form
+      id="general-inquiry-form"
+      data-skip-ga-submit
+      class="bg-white shadow rounded-lg p-4 sm:p-6 space-y-6"
+      @submit.prevent="submitInquiry"
+    >
       <!-- Category Selection (only if isSpecificRequest) -->
       <div v-if="isSpecificRequest" class="space-y-3">
         <label class="block text-sm font-semibold text-gray-900">
@@ -210,7 +215,7 @@
 
       <!-- Submit Button -->
       <button
-        @click="submitInquiry"
+        type="submit"
         :disabled="isSubmitting || !isFormValid"
         :class="{
           'opacity-50 cursor-not-allowed': isSubmitting || !isFormValid
@@ -222,7 +227,7 @@
       >
         {{ isSubmitting ? 'Wird gesendet...' : 'Anfrage absenden' }}
       </button>
-    </div>
+    </form>
 
     <!-- Success Modal -->
     <Teleport to="body">
@@ -266,6 +271,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+
+const { gtag } = useGtag()
 
 // Driving Team primary color (used directly in website app)
 const getBrandPrimary = () => '#1C64F2'
@@ -497,7 +504,10 @@ const submitInquiry = async () => {
       phone: phone.value.trim(),
       notes: company.value.trim()
         ? `Firma: ${company.value.trim()}\n\n${message.value.trim()}`
-        : message.value.trim()
+        : message.value.trim(),
+      marketing_attribution: typeof window !== 'undefined'
+        ? (window as any).__dtMarketingAttribution ?? null
+        : null,
     }
 
     if (isSpecificRequest.value) {
@@ -523,6 +533,18 @@ const submitInquiry = async () => {
     if (response?.success) {
       console.log('✅ Inquiry submitted:', response.proposal_id)
       showSuccessModal.value = true
+
+      gtag('event', 'form_submit', {
+        event_category: 'conversion',
+        event_label: isSpecificRequest.value ? 'specific-inquiry' : 'general-inquiry',
+        page_path: window.location.pathname,
+      })
+      if (typeof window !== 'undefined' && (window as any).fbq) {
+        ;(window as any).fbq('track', 'Lead', {
+          content_name: isSpecificRequest.value ? 'specific-inquiry' : 'general-inquiry',
+          content_category: 'form',
+        })
+      }
 
       // Auto-close after 3 seconds
       setTimeout(() => {
