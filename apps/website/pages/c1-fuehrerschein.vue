@@ -50,7 +50,7 @@
         <div class="flex flex-wrap justify-center gap-6 text-sm text-gray-600">
           <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Zürich & Lachen</span>
           <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> LKW & Wohnmobil</span>
-          <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Eidg. dipl. Fahrlehrer</span>
+          <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Fahrlehrer mit eidg. Fachausweis</span>
           <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Ab CHF 150.- / 45 Min</span>
           <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Seit 1994</span>
         </div>
@@ -311,7 +311,7 @@
                 <div class="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold flex-shrink-0">3</div>
                 <div>
                   <h3 class="font-semibold mb-1">Praktische Fahrstunden mit Begleitperson</h3>
-                  <p class="text-gray-600 text-sm">Fahrstunden mit eidg. dipl. Fahrlehrer – oder Lernfahrten mit einer Begleitperson (mind. 23 Jahre alt, mind. 3 Jahre C1, nicht auf Probe). In der Regel 15–25 Stunden je nach Vorkenntnissen.</p>
+                  <p class="text-gray-600 text-sm">Fahrstunden mit Fahrlehrer mit eidg. Fachausweis – oder Lernfahrten mit einer Begleitperson (mind. 23 Jahre alt, mind. 3 Jahre C1, nicht auf Probe). In der Regel 15–25 Stunden je nach Vorkenntnissen.</p>
                 </div>
               </div>
               <div class="flex gap-4 items-start">

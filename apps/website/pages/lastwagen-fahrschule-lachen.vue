@@ -48,8 +48,8 @@
     <section class="bg-white border-b border-gray-100 py-4">
       <div class="section-container">
         <div class="flex flex-wrap justify-center gap-6 text-sm text-gray-600">
-          <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> 30+ Jahre Erfahrung</span>
-          <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Eidg. dipl. Fahrlehrer</span>
+          <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> 15 Jahre Lastwagenfahrer, 5 Jahre Fahrlehrer</span>
+          <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Fahrlehrer mit eidg. Fachausweis</span>
           <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Moderner Fahrschul-LKW</span>
           <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Kategorie C1, C & CE</span>
           <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> 5.0 Google-Bewertung</span>
@@ -82,7 +82,7 @@
           />
           <h3 class="font-bold text-xl mb-1">Peter Thoma</h3>
           <p class="text-primary-600 font-semibold text-sm mb-3">LKW Fahrlehrer · Standort Lachen</p>
-          <p class="text-gray-600 text-sm mb-4">Eidg. dipl. Fahrlehrer mit Spezialisierung auf die Kategorien C1, C und CE. Langjährige Erfahrung im Raum Zürichsee und Oberer Zürichsee.</p>
+          <p class="text-gray-600 text-sm mb-4">Fahrlehrer mit eidg. Fachausweis, spezialisiert auf C1, C und CE. 15 Jahre Erfahrung als Lastwagenfahrer, seit 5 Jahren als Fahrlehrer tätig.</p>
           <div class="flex flex-col gap-2 w-full">
             <a href="tel:+41444310033" class="text-sm bg-primary-100 text-primary-700 px-4 py-2 rounded-lg hover:bg-primary-200 transition font-semibold">
               044 431 00 33
