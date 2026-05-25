@@ -34,12 +34,33 @@
       </div>
     </section>
 
-    <!-- Hier befindet sich die Bootsfahrschule -->
-    <section class="section-container">
-      <h2 class="heading-md mb-8 text-center">Hier befindet sich die Bootsfahrschule des Driving Team Zürich</h2>
-      <div class="max-w-3xl mx-auto bg-gray-50 rounded-lg p-8">
-        <p class="text-gray-700 mb-4">Unsere Bootsfahrschule ist am unteren Zürichsee tätig. Ob Thalwil, Wädenswil, Richterswil, Oberrieden oder Zürich direkt – wir vereinbaren einen Treffpunkt direkt bei dir. Einfach beim Anmelden den gewünschten Treffpunkt angeben.</p>
-        <p class="text-gray-700">Wir bieten das ganze Jahr über Motorbootsfahrstunden an – den See gibt es immer!</p>
+    <!-- Standort & Partner -->
+    <section class="section-container py-12">
+      <h2 class="heading-md mb-8 text-center">Bootsfahrschule am unteren Zürichsee</h2>
+      <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div>
+          <h3 class="font-bold text-lg mb-3">Treffpunkt Hafen Wollishofen</h3>
+          <p class="text-gray-700 mb-4">Am unteren Zürichsee arbeiten wir mit der <strong>Fahrschule Schoch</strong> zusammen. Treffpunkt ist der <strong>Hafen Wollishofen</strong> in Zürich – mit grossem Parkplatz direkt am See. Alternativ auch Tiefenbrunnen möglich.</p>
+          <p class="text-gray-700 mb-4">Das Fahrschulboot – eine <strong>Faeton Moraga 620</strong> mit Volvo Penta Diesel (130 PS, Z-Antrieb) – ist speziell für die Fahrausbildung geeignet und bietet dank erhöhter Sitzposition gute Übersicht beim Manövrieren.</p>
+          <p class="text-gray-600 text-sm">Ganzjährig · auch abends & samstags · keine Vorkenntnisse nötig</p>
+        </div>
+        <div class="bg-gray-50 rounded-xl p-6">
+          <h3 class="font-bold text-lg mb-4">Dein Einzugsgebiet</h3>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1 font-medium">Zürich</span>
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1 font-medium">Hafen Wollishofen</span>
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1 font-medium">Tiefenbrunnen</span>
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1 font-medium">Thalwil</span>
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1 font-medium">Oberrieden</span>
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1 font-medium">Wädenswil</span>
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1 font-medium">Richterswil</span>
+          </div>
+          <div class="bg-white border border-gray-200 rounded-lg p-4 text-sm text-gray-600">
+            <p class="font-semibold text-gray-800 mb-1">Fahrschulboot</p>
+            <p>Faeton Moraga 620 · Volvo Penta D3-130 · 130 PS · Diesel · Z-Antrieb</p>
+            <p class="text-xs text-gray-400 mt-1">Heimathafen: Wollishofen, Zürichsee</p>
+          </div>
+        </div>
       </div>
     </section>
 
