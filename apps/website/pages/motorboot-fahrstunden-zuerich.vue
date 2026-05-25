@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Motorboot Fahrstunden Zürich | ab CHF 120.- | Driving Team</Title>
-      <Meta name="description" content="Motorboot Fahrstunden am Zürichsee mit Fahrlehrer Marc – auch abends & samstags, ab CHF 120.-/Lektion, flexible Treffpunkte. Jetzt anmelden!" />
-      <Meta name="keywords" content="Bootsfahrschule Zürich, Motorboot Fahrstunden Zürich, Bootsführerschein Zürich, Motorboot Zürichsee, Bootsfahrlehrer Zürich, Motorbootführerschein Zürichsee" />
-      <Meta property="og:title" content="Bootsfahrschule Zürich – Motorboot am Zürichsee | Driving Team" />
-      <Meta property="og:description" content="Motorboot-Fahrstunden am Zürichsee ab CHF 120.-/Lektion. Flexibel auch abends & samstags. Erfahrener Fahrlehrer Marc. Jetzt anmelden!" />
+      <Title>Bootsfahrschule Zürich | Motorboot Zürichsee ab CHF 190.- | Driving Team</Title>
+      <Meta name="description" content="Bootsfahrschule Zürich am unteren Zürichsee – Motorbootprüfung Kategorie A mit Fahrlehrer Marc. Treffpunkte in Zürich, Thalwil, Wädenswil, Richterswil. Ab CHF 190.-/90 Min. Jetzt anmelden!" />
+      <Meta name="keywords" content="Bootsfahrschule Zürich, Motorboot Fahrstunden Zürich, Bootsführerschein Zürich, Motorboot Zürichsee, Motorbootprüfung Zürich, Motorboot Fahrschule Zürichsee, Boot fahren lernen Zürichsee" />
+      <Meta property="og:title" content="Bootsfahrschule Zürich | Motorboot am Zürichsee | Driving Team" />
+      <Meta property="og:description" content="Bootsfahrschule am unteren Zürichsee – Zürich, Thalwil, Wädenswil, Richterswil. Motorbootprüfung Kategorie A. Ab CHF 190.-/90 Min." />
       <Meta property="og:url" content="https://drivingteam.ch/motorboot-fahrstunden-zuerich/" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />
@@ -23,8 +23,10 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container">
         <div class="max-w-3xl">
-          <h1 class="heading-lg text-white mb-6">Bootsfahrschule Zürich</h1>
-          <p class="text-xl text-white mb-8">Bootsfahrschule am unteren Zürichsee – flexible Treffpunkte. Professionelle Motorboot Fahrstunden mit erfahrenem Fahrlehrer Marc. Fahrstunden auch abends und samstags!</p>
+          <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Unterer Zürichsee – Zürich, Thalwil, Wädenswil & Richterswil</p>
+          <h1 class="heading-lg text-white mb-4">Bootsfahrschule Zürich</h1>
+          <p class="text-xl text-white/90 mb-3">Motorboot Fahrstunden am unteren Zürichsee – flexible Treffpunkte, auch abends und samstags. Motorbootprüfung Kategorie A mit Fahrlehrer Marc.</p>
+          <p class="text-sm text-white/75 mb-6">Ab CHF 190.-/90 Min · Zürich, Thalwil, Wädenswil, Richterswil</p>
           <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Termin anfragen
           </a>
@@ -36,7 +38,7 @@
     <section class="section-container">
       <h2 class="heading-md mb-8 text-center">Hier befindet sich die Bootsfahrschule des Driving Team Zürich</h2>
       <div class="max-w-3xl mx-auto bg-gray-50 rounded-lg p-8">
-        <p class="text-gray-700 mb-4">Unsere Bootsfahrschule ist am unteren Zürichsee tätig mit flexiblen Treffpunkten. Ob Thalwil, Wädenswil, Richterswil oder andere Orte am See – wir kommen zu dir. Einfach beim Anmelden den gewünschten Treffpunkt angeben.</p>
+        <p class="text-gray-700 mb-4">Unsere Bootsfahrschule ist am unteren Zürichsee tätig. Ob Thalwil, Wädenswil, Richterswil, Oberrieden oder Zürich direkt – wir vereinbaren einen Treffpunkt direkt bei dir. Einfach beim Anmelden den gewünschten Treffpunkt angeben.</p>
         <p class="text-gray-700">Wir bieten das ganze Jahr über Motorbootsfahrstunden an – den See gibt es immer!</p>
       </div>
     </section>

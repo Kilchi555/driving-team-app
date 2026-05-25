@@ -1,10 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Motorboot Fahrschule Kategorie A | Driving Team Zürich</Title>
-      <Meta name="description" content="Motorboot Fahrschule am Zürichsee. In 4 Schritten zur Motorbootprüfung. Erfahrener Bootsfahrlehrer Marc, flexible Fahrstundenzeiten. Jetzt anmelden!" />
-      <Meta property="og:title" content="Motorboot Fahrschule – Bootführerschein am Zürichsee | Driving Team" />
-      <Meta property="og:description" content="In 4 Schritten zur Motorbootprüfung am Zürichsee. Flexibel, professionell, erfahren." />
+      <Title>Motorboot Fahrschule Zürichsee | Kategorie A ab CHF 190.- | Driving Team</Title>
+      <Meta name="description" content="Motorboot Fahrschule am Zürichsee – oberer & unterer See. Bootsfahrlehrer Marc, flexible Zeiten auch abends & samstags. Motorbootprüfung Kategorie A. Ab CHF 190.-/90 Min. Jetzt anmelden!" />
+      <Meta name="keywords" content="Motorboot Fahrschule Zürichsee, Bootsfahrschule Zürichsee, Motorboot Fahrschule, Motorbootprüfung Zürichsee, Motorboot Führerschein Schweiz, Bootfahrschule Zürich, Motorbootfahrschule" />
+      <Meta property="og:title" content="Motorboot Fahrschule Zürichsee | Kategorie A | Driving Team" />
+      <Meta property="og:description" content="Motorboot Fahrschule am Zürichsee – oberer & unterer See. Bootsfahrlehrer Marc. Ab CHF 190.-/90 Min. Motorbootprüfung Kategorie A." />
       <Meta property="og:url" content="https://drivingteam.ch/motorboot-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/motorboot-fahrschule/" />
       
@@ -17,14 +18,66 @@
 
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/categories/motorboot-hero.webp" alt="Motorboot Fahrschule – Bootführerschein Kategorie A auf dem Zürichsee mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" />
+      <img src="/images/categories/motorboot-hero.webp" alt="Motorboot Fahrschule Zürichsee – Kategorie A mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" loading="eager" fetchpriority="high" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
-          <h1 class="heading-lg text-white mb-6">Motorboot Fahrschule am Zürichsee</h1>
-          <p class="text-xl text-white mb-4">Ohne Vorkenntnisse direkt loslegen! Sicher auf dem Wasser – wir bieten das <span class="font-bold text-white text-2xl">ganze Jahr</span> über professionelle Bootsausbildung auf dem oberen Zürichsee.</p>
-          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-            ✨ Jetzt anmelden
-          </a>
+        <div class="max-w-3xl">
+          <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Bootsfahrschule Zürichsee – Oberer & Unterer See</p>
+          <h1 class="heading-lg text-white mb-4">Motorboot Fahrschule Zürichsee</h1>
+          <p class="text-xl text-white/90 mb-3">Ohne Vorkenntnisse direkt loslegen! Professionelle Bootsausbildung auf dem Zürichsee – ganzjährig, flexibel auch abends und samstags.</p>
+          <p class="text-sm text-white/75 mb-8">Bootsfahrlehrer Marc · Kategorie A · Ab CHF 190.-/90 Min · Prüfung am Zürichsee</p>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+              Jetzt anmelden
+            </a>
+            <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
+              044 431 00 33
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trust Bar -->
+    <section class="bg-white border-b border-gray-100 py-4">
+      <div class="section-container">
+        <div class="flex flex-wrap justify-center gap-6 text-sm text-gray-600">
+          <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Oberer & unterer Zürichsee</span>
+          <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Auch abends & samstags</span>
+          <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Ab CHF 190.-/90 Min</span>
+          <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Keine Vorkenntnisse nötig</span>
+          <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Ganzjährig</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Zwei Seegebiete -->
+    <section class="section-container py-12">
+      <h2 class="text-2xl md:text-3xl font-bold mb-8 text-center">Motorboot Fahrstunden am ganzen Zürichsee</h2>
+      <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <div class="bg-gray-50 rounded-xl p-6 border border-gray-100">
+          <h3 class="font-bold text-lg mb-2">Oberer Zürichsee (Lachen)</h3>
+          <p class="text-gray-600 text-sm mb-3">Bootsfahrschule direkt in Lachen SZ – flexible Treffpunkte entlang des oberen Zürichsees.</p>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1">Lachen</span>
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1">Rapperswil-Jona</span>
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1">Altendorf</span>
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1">Pfäffikon SZ</span>
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1">Wangen</span>
+          </div>
+          <a href="/bootsfahrschule/" class="text-sm text-primary-600 font-semibold hover:underline">→ Bootsfahrschule Lachen</a>
+        </div>
+        <div class="bg-gray-50 rounded-xl p-6 border border-gray-100">
+          <h3 class="font-bold text-lg mb-2">Unterer Zürichsee (Zürich)</h3>
+          <p class="text-gray-600 text-sm mb-3">Motorboot Fahrstunden am unteren Zürichsee – flexible Treffpunkte zwischen Zürich und Rapperswil.</p>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1">Zürich</span>
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1">Thalwil</span>
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1">Wädenswil</span>
+            <span class="text-xs bg-primary-100 text-primary-700 rounded-full px-3 py-1">Richterswil</span>
+          </div>
+          <a href="/motorboot-fahrstunden-zuerich/" class="text-sm text-primary-600 font-semibold hover:underline">→ Bootsfahrschule Zürich</a>
+        </div>
       </div>
     </section>
 

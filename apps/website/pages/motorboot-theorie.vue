@@ -1,10 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Motorboot Theorie | Bootführerschein | Driving Team</Title>
-      <Meta name="description" content="Motorboot Theoriestunden beim Driving Team. Optimale Vorbereitung auf die Theorieprüfung mit Tipps und Tricks. CHF 90.- pro 45 Minuten in Lachen SZ." />
-      <Meta property="og:title" content="Motorboot Theorie – Bootführerschein Vorbereitung | Driving Team" />
-      <Meta property="og:description" content="Motorboot Theoriestunden in Lachen SZ. CHF 90.- pro 45 Minuten. Optimale Prüfungsvorbereitung." />
+      <Title>Motorboot Theorie Zürichsee | Bootsprüfung Vorbereitung | Driving Team</Title>
+      <Meta name="description" content="Motorboot Theorie Prüfungsvorbereitung am Zürichsee – Theoriestunden in Lachen SZ. Bootsprüfung Theorie, Schifffahrtsregeln, Signale & Technik. CHF 90.- / 45 Min. Jetzt anmelden!" />
+      <Meta name="keywords" content="Motorboot Theorie, Bootsprüfung Theorie lernen, Motorbootprüfung Theorie, Theorie Motorbootprüfung, Bootprüfung Vorbereitung Zürichsee, Motorbootführerschein Theorie" />
+      <Meta property="og:title" content="Motorboot Theorie Zürichsee | Bootsprüfung Vorbereitung | Driving Team" />
+      <Meta property="og:description" content="Motorboot Theorie in Lachen SZ – Bootsprüfung Vorbereitung. Schifffahrtsregeln, Signale, Technik. CHF 90.- / 45 Min." />
       <Meta property="og:url" content="https://drivingteam.ch/motorboot-theorie/" />
       <Link rel="canonical" href="https://drivingteam.ch/motorboot-theorie/" />
       
@@ -19,8 +20,9 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container">
         <div class="max-w-3xl">
-          <h1 class="heading-lg text-white mb-6">Motorboot Theorie</h1>
-          <p class="text-xl text-white mb-8">Wir bieten Dir die Möglichkeit, bei uns Motorboot Theoriestunden zu buchen und dich beim Lernen mit Tipps und Tricks zu unterstützen. Wer die Motorboot Theorie wirklich verstanden hat, braucht weniger Fahrstunden auf dem Wasser!</p>
+          <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Prüfungsvorbereitung Zürichsee – Lachen SZ</p>
+          <h1 class="heading-lg text-white mb-4">Motorboot Theorie</h1>
+          <p class="text-xl text-white/90 mb-8">Bootsprüfung Theorie verstehen statt auswendig lernen – wer die Motorboot Theorie wirklich versteht, braucht weniger Fahrstunden auf dem Wasser!</p>
           <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Theorie anmelden
           </a>
