@@ -36,8 +36,8 @@
             <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
               Jetzt anmelden
             </a>
-            <a href="tel:+41554420041" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
-              055 442 00 41
+            <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
+              044 431 00 33
             </a>
           </div>
         </div>
@@ -84,8 +84,8 @@
           <p class="text-primary-600 font-semibold text-sm mb-3">LKW Fahrlehrer · Standort Lachen</p>
           <p class="text-gray-600 text-sm mb-4">Eidg. dipl. Fahrlehrer mit Spezialisierung auf die Kategorien C1, C und CE. Langjährige Erfahrung im Raum Zürichsee und Oberer Zürichsee.</p>
           <div class="flex flex-col gap-2 w-full">
-            <a href="tel:+41554420041" class="text-sm bg-primary-100 text-primary-700 px-4 py-2 rounded-lg hover:bg-primary-200 transition font-semibold">
-              055 442 00 41
+            <a href="tel:+41444310033" class="text-sm bg-primary-100 text-primary-700 px-4 py-2 rounded-lg hover:bg-primary-200 transition font-semibold">
+              044 431 00 33
             </a>
             <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition font-semibold">
               Fahrstunde buchen
@@ -368,8 +368,8 @@
           <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             Jetzt anmelden
           </a>
-          <a href="tel:+41554420041" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
-            055 442 00 41
+          <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
+            044 431 00 33
           </a>
         </div>
       </div>
@@ -381,6 +381,7 @@
         <div class="flex flex-wrap justify-center gap-3">
           <a href="/lastwagen-fahrschule/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Lastwagen Fahrschule (allgemein)</a>
           <a href="/lastwagen-fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Lastwagen Fahrschule Zürich</a>
+          <a href="/lastwagen-fahrschule-rapperswil/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Lastwagen Fahrschule Rapperswil</a>
           <a href="/lastwagen-theorie/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Lastwagen Theorie</a>
           <a href="/czv-grundkurs/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">CZV Grundkurs</a>
           <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Lachen</a>
@@ -408,7 +409,7 @@ const jsonLdScripts = [
       name: 'Lastwagen Fahrschule Lachen – Driving Team',
       description: 'Professionelle LKW Fahrschule in Lachen, Altendorf, Pfäffikon SZ und am Zürichsee. Kategorien C1, C und CE. Fahrlehrer Peter Thoma. Prüfung StVA Pfäffikon SZ, Kaltbrunn SG oder Hinwil ZH.',
       url: 'https://drivingteam.ch/lastwagen-fahrschule-lachen/',
-      telephone: LOCATION_LACHEN.phone,
+      telephone: '+41444310033',
       email: BRAND.email,
       logo: { '@type': 'ImageObject', url: BRAND.logo },
       image: 'https://drivingteam.ch/images/categories/lastwagen-fahrschule-hero.webp',
