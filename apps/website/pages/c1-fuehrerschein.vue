@@ -176,7 +176,7 @@
               <span class="font-medium">CHF 40.-</span>
             </div>
             <div class="flex justify-between py-2 border-b border-gray-100">
-              <span class="text-gray-600">Theorieprüfung</span>
+              <span class="text-gray-600">Zusatztheorieprüfung C1</span>
               <span class="font-medium">CHF 50.-</span>
             </div>
             <div class="flex justify-between py-2 border-b border-gray-100">
@@ -201,7 +201,7 @@
             </div>
             <div class="flex justify-between py-3 bg-primary-50 rounded-lg px-3 mt-2">
               <span class="font-bold text-gray-900">Total (ca.)</span>
-              <span class="font-bold text-primary-600">CHF 3'900–5'400.-</span>
+              <span class="font-bold text-primary-600">CHF 3'900–5'300.-</span>
             </div>
           </div>
         </div>
@@ -218,7 +218,7 @@
               <span class="font-medium">CHF 40.-</span>
             </div>
             <div class="flex justify-between py-2 border-b border-primary-100">
-              <span class="text-gray-600">Theorieprüfung</span>
+              <span class="text-gray-600">Zusatztheorieprüfung C1</span>
               <span class="font-medium">CHF 50.-</span>
             </div>
             <div class="flex justify-between py-2 border-b border-primary-100">
@@ -263,28 +263,28 @@
                 <div class="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold flex-shrink-0">1</div>
                 <div>
                   <h3 class="font-semibold mb-1">Mindestalter 18 Jahre</h3>
-                  <p class="text-gray-600 text-sm">Führerschein C1 kann ab 18 Jahren erworben werden – im Gegensatz zu Kategorie C, wo 21 Jahre nötig sind (ausser mit BFS).</p>
+                  <p class="text-gray-600 text-sm">C1 kann ab 18 Jahren erworben werden – ein Vorteil gegenüber Kategorie C, wo ohne BFS (Berufliche Grundausbildung) 21 Jahre erforderlich sind.</p>
                 </div>
               </div>
               <div class="flex gap-4 items-start">
                 <div class="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold flex-shrink-0">2</div>
                 <div>
                   <h3 class="font-semibold mb-1">Führerschein Kategorie B</h3>
-                  <p class="text-gray-600 text-sm">Ein gültiger Führerschein B ist Voraussetzung. Wer noch kein B hat, sollte es zuerst absolvieren.</p>
+                  <p class="text-gray-600 text-sm">Mindestens der Lernfahrausweis B ist Voraussetzung. Wer noch kein B hat, muss es zuerst absolvieren.</p>
                 </div>
               </div>
               <div class="flex gap-4 items-start">
                 <div class="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold flex-shrink-0">3</div>
                 <div>
-                  <h3 class="font-semibold mb-1">Ärztliche Untersuchung</h3>
-                  <p class="text-gray-600 text-sm">Ein Attest eines anerkannten Vertrauensarztes ist für alle LKW-Kategorien (C1, C, CE) zwingend erforderlich.</p>
+                  <h3 class="font-semibold mb-1">Ärztliche Untersuchung (Vertrauensarzt)</h3>
+                  <p class="text-gray-600 text-sm">Eine verkehrsmedizinische Kontrolluntersuchung ist für alle LKW-Kategorien zwingend. Das StVA schickt dir nach der Anmeldung eine Liste mit Vertrauensärzten.</p>
                 </div>
               </div>
               <div class="flex gap-4 items-start">
                 <div class="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold flex-shrink-0">4</div>
                 <div>
-                  <h3 class="font-semibold mb-1">Sehtest bestehen</h3>
-                  <p class="text-gray-600 text-sm">Sehtest beim Augenarzt oder Optiker. Kosten ca. CHF 50.-, Ergebnis muss dem StVA eingereicht werden.</p>
+                  <h3 class="font-semibold mb-1">Sehtest</h3>
+                  <p class="text-gray-600 text-sm">Sehtest beim Schweizer Augenarzt oder Optiker – darf bei Gesuchseinreichung nicht älter als 24 Monate sein. Kosten ca. CHF 50.-. Wer bereits einen gültigen Lernfahrausweis besitzt, braucht keinen neuen Sehtest.</p>
                 </div>
               </div>
             </div>
@@ -297,35 +297,38 @@
                 <div class="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold flex-shrink-0">1</div>
                 <div>
                   <h3 class="font-semibold mb-1">Sehtest & Lernfahrausweis</h3>
-                  <p class="text-gray-600 text-sm">Sehtest beim Optiker, ärztliche Untersuchung, dann Lernfahrausweis beim StVA beantragen.</p>
+                  <p class="text-gray-600 text-sm">Sehtest beim Optiker/Augenarzt, ärztliche Kontrolluntersuchung beim Vertrauensarzt, dann Lernfahrausweis beim StVA beantragen. Lernfahrausweis ist <strong>24 Monate gültig</strong>. (Nothelferkurs entfällt – wurde bereits mit Kat. B absolviert.)</p>
                 </div>
               </div>
               <div class="flex gap-4 items-start">
                 <div class="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold flex-shrink-0">2</div>
                 <div>
-                  <h3 class="font-semibold mb-1">Theorieprüfung</h3>
-                  <p class="text-gray-600 text-sm">Theorieprüfung am Computer beim StVA. Wir empfehlen die offizielle Driving Bee App zur Vorbereitung.</p>
+                  <h3 class="font-semibold mb-1">Zusatztheorieprüfung C1</h3>
+                  <p class="text-gray-600 text-sm">Nur die Zusatztheorieprüfung C1 ist erforderlich – keine Basistheorie (die wurde bereits mit Kat. B absolviert). Prüfung am Computer beim StVA. Tipp: Driving Bee App zur Vorbereitung.</p>
                 </div>
               </div>
               <div class="flex gap-4 items-start">
                 <div class="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold flex-shrink-0">3</div>
                 <div>
-                  <h3 class="font-semibold mb-1">Praktische Fahrstunden</h3>
-                  <p class="text-gray-600 text-sm">Fahrstunden mit eidg. dipl. Fahrlehrer in Zürich oder Lachen. In der Regel 15–25 Stunden je nach Vorkenntnissen.</p>
+                  <h3 class="font-semibold mb-1">Praktische Fahrstunden mit Begleitperson</h3>
+                  <p class="text-gray-600 text-sm">Fahrstunden mit eidg. dipl. Fahrlehrer – oder Lernfahrten mit einer Begleitperson (mind. 23 Jahre alt, mind. 3 Jahre C1, nicht auf Probe). In der Regel 15–25 Stunden je nach Vorkenntnissen.</p>
                 </div>
               </div>
               <div class="flex gap-4 items-start">
                 <div class="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold flex-shrink-0">4</div>
                 <div>
                   <h3 class="font-semibold mb-1">CZV Grundkurs (nur beruflich)</h3>
-                  <p class="text-gray-600 text-sm">Für berufliche Fahrer obligatorisch. Wohnmobil-Fahrer ohne Berufsabsicht sind davon befreit.</p>
+                  <p class="text-gray-600 text-sm">Für berufliche Fahrer (Gütertransport) obligatorisch. Wohnmobil-Fahrer und private Nutzung sind vom CZV Grundkurs befreit (Art. 3 CZV).</p>
                 </div>
               </div>
               <div class="flex gap-4 items-start">
                 <div class="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold flex-shrink-0">5</div>
                 <div>
-                  <h3 class="font-semibold mb-1">Praktische Prüfung</h3>
-                  <p class="text-gray-600 text-sm">WarmUp mit dem Fahrlehrer, dann Prüfungsfahrt beim StVA. Wir begleiten dich bis zur bestandenen Prüfung.</p>
+                  <h3 class="font-semibold mb-1">Praktische Prüfung beim StVA</h3>
+                  <p class="text-gray-600 text-sm">WarmUp mit dem Fahrlehrer, dann ca. 90 Min. Prüfungsfahrt beim StVA deiner Wahl. Dein Fahrlehrer meldet dich an und begleitet dich bis zur bestandenen Prüfung.</p>
+                  <div class="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800">
+                    <strong>Eigenes Fahrzeug möglich:</strong> Wir stellen normalerweise den Prüfungslastwagen. Du kannst aber auch mit deinem eigenen oder dem Fahrzeug deines Arbeitgebers Fahrstunden machen und die Prüfung absolvieren – sofern es die Mindestanforderungen erfüllt (mind. 4t GG, mind. 5m Länge, 80 km/h erreichbar, geschlossener Aufbau mind. so breit und hoch wie die Führerkabine).
+                  </div>
                 </div>
               </div>
             </div>
@@ -383,7 +386,7 @@
               Brauche ich für ein Wohnmobil einen C1 Führerschein?
               <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 mt-4">Ja – für Wohnmobile über 3'500 kg Gesamtgewicht ist in der Schweiz der Führerschein C1 zwingend erforderlich. Mit Kategorie B darfst du nur Fahrzeuge bis 3'500 kg fahren. Die meisten modernen Wohnmobile liegen über dieser Grenze.</p>
+          <p class="text-gray-600 mt-4">Ja – für Wohnmobile über 3'500 kg Gesamtgewicht ist in der Schweiz der Führerschein C1 zwingend erforderlich. Mit Kategorie B darfst du nur Fahrzeuge bis 3'500 kg fahren. Die meisten modernen Wohnmobile liegen über dieser Grenze.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -533,7 +536,7 @@ const jsonLdScripts = [
       mainEntity: [
         { '@type': 'Question', name: 'Was ist der Unterschied zwischen C1 und C Führerschein?', acceptedAnswer: { '@type': 'Answer', text: 'Kategorie C1 erlaubt Fahrzeuge bis 7500 kg, Kategorie C ist unbegrenzt. Für berufliche Fahrer empfehlen wir immer Kategorie C, da ein Upgrade von C1 auf C später teuer ist. Für Wohnmobil-Fahrer reicht C1 aus.' } },
         { '@type': 'Question', name: 'Brauche ich für ein Wohnmobil einen C1 Führerschein?', acceptedAnswer: { '@type': 'Answer', text: 'Ja – für Wohnmobile über 3500 kg Gesamtgewicht ist in der Schweiz der Führerschein C1 zwingend erforderlich. Mit Kategorie B darfst du nur Fahrzeuge bis 3500 kg fahren.' } },
-        { '@type': 'Question', name: 'Was kostet der C1 Führerschein in der Schweiz?', acceptedAnswer: { '@type': 'Answer', text: 'Für Wohnmobil-Fahrer ohne CZV: ca. CHF 2600–4100. Für Berufsfahrer mit CZV Grundkurs: ca. CHF 3900–5400. Fahrstunden kosten CHF 150 pro 45 Minuten.' } },
+        { '@type': 'Question', name: 'Was kostet der C1 Führerschein in der Schweiz?', acceptedAnswer: { '@type': 'Answer', text: 'Für Wohnmobil-Fahrer ohne CZV: ca. CHF 2700–4200. Für Berufsfahrer mit CZV Grundkurs: ca. CHF 4000–5500. Darin enthalten: Sehtest (CHF 50), Nothelferkurs (CHF 80), Fahrstunden à CHF 150 / 45 Min., Versicherungspauschale (CHF 160), WarmUp & Prüfungsfahrt (CHF 649) und ärztliche Untersuchung.' } },
         { '@type': 'Question', name: 'Brauche ich für C1 einen CZV Grundkurs?', acceptedAnswer: { '@type': 'Answer', text: 'Nur wenn du das Fahrzeug beruflich nutzt. Wohnmobil-Fahrer, die ausschliesslich privat unterwegs sind, sind vom CZV Grundkurs befreit.' } },
         { '@type': 'Question', name: 'Ab welchem Alter kann ich den C1 Führerschein machen?', acceptedAnswer: { '@type': 'Answer', text: 'Der C1 Führerschein kann ab 18 Jahren erworben werden – 3 Jahre früher als Kategorie C (21 Jahre).' } },
       ],
