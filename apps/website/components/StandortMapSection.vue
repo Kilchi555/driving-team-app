@@ -269,7 +269,10 @@ const location = computed(() => locations[props.locationKey] ?? locations.zueric
 const structuredData = computed(() => {
   const gbpLocation = gbpLocationMap[props.locationKey]
   if (gbpLocation) {
-    return JSON.stringify(buildLocationSchema(gbpLocation))
+    // Strip aggregateRating to avoid duplicate rating nodes when this component
+    // is embedded on pages that already output their own aggregateRating schema.
+    const { aggregateRating: _omit, ...schema } = buildLocationSchema(gbpLocation)
+    return JSON.stringify(schema)
   }
 
   // Kein GBP vorhanden → einfaches LocalBusiness ohne aggregateRating
