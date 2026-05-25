@@ -49,7 +49,7 @@
       <div class="section-container">
         <div class="flex flex-wrap justify-center gap-6 text-sm text-gray-600">
           <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Standort Lachen – direkt bei Rapperswil</span>
-          <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Eidg. dipl. Fahrlehrer</span>
+          <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Fahrlehrer mit eidg. Fachausweis</span>
           <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Kategorien C1, C & CE</span>
           <span class="flex items-center gap-2"><span class="text-primary-600 font-bold">✓</span> Prüfung StVA Kaltbrunn SG</span>
         </div>
@@ -82,7 +82,7 @@
           <h3 class="font-bold text-xl mb-1">Peter Thoma</h3>
           <p class="text-primary-600 font-semibold text-sm mb-1">LKW Fahrlehrer · Standort Lachen</p>
           <p class="text-gray-500 text-xs mb-3">~10 Min. von Rapperswil-Jona</p>
-          <p class="text-gray-600 text-sm mb-4">Eidg. dipl. Fahrlehrer, spezialisiert auf Kategorien C1, C und CE. Bedient die ganze Region Zürichsee, oberer Zürichsee und Linthgebiet.</p>
+          <p class="text-gray-600 text-sm mb-4">Fahrlehrer mit eidg. Fachausweis, spezialisiert auf C1, C und CE. 15 Jahre Erfahrung als Lastwagenfahrer, seit 5 Jahren als Fahrlehrer tätig.</p>
           <div class="flex flex-col gap-2 w-full">
             <a href="tel:+41444310033" class="text-sm bg-primary-100 text-primary-700 px-4 py-2 rounded-lg hover:bg-primary-200 transition font-semibold">
               044 431 00 33
