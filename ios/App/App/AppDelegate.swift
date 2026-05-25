@@ -1,7 +1,5 @@
 import UIKit
 import Capacitor
-import FirebaseCore
-import FirebaseMessaging
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -9,7 +7,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        FirebaseApp.configure()
+        // Initialize Firebase via Objective-C runtime to avoid direct Swift module import
+        // (firebase-ios-sdk is linked transitively through CapApp-SPM)
+        if let firAppClass = NSClassFromString("FIRApp") {
+            _ = (firAppClass as AnyObject).perform(NSSelectorFromString("configure"))
+        }
         return true
     }
 

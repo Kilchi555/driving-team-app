@@ -4,29 +4,27 @@
   <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[200] px-2"
     style="padding-top: max(8px, env(safe-area-inset-top, 8px)); padding-bottom: max(8px, env(safe-area-inset-bottom, 8px))">
     <!-- MODAL CONTAINER -->
-    <div class="bg-white rounded-lg max-w-4xl w-full max-h-full overflow-hidden flex flex-col">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-full overflow-hidden flex flex-col">
       
       <!-- Header -->
-      <div class="bg-green-600 text-white p-4">
+      <div class="bg-white px-4 py-3 border-b border-gray-100 flex-shrink-0">
         <div class="flex items-center justify-between">
-          <div>
-            <h1 class="text-xl sm:text-2xl font-bold">
-              Pendenzen
-              <span :class="[
-                'ml-2 px-2 py-1 rounded-full text-sm font-medium',
-                (pendingCount + unconfirmedNext24hCount + bookingProposalsCount) > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-              ]">
-                {{ pendingCount + unconfirmedNext24hCount + bookingProposalsCount }}
-              </span>
-            </h1>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base font-semibold text-gray-900">Pendenzen</h1>
+            <span :class="[
+              'px-2 py-0.5 rounded-full text-xs font-semibold',
+              (pendingCount + unconfirmedNext24hCount + bookingProposalsCount) > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+            ]">
+              {{ pendingCount + unconfirmedNext24hCount + bookingProposalsCount }}
+            </span>
           </div>
           
           <!-- Close Button -->
           <button 
             @click="closeModal"
-            class="text-white hover:text-green-200 transition-colors"
+            class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
           </button>
@@ -34,34 +32,37 @@
       </div>
 
       <!-- Tabs -->
-      <div class="bg-gray-50 border-b px-4 overflow-x-auto flex-shrink-0">
-        <div class="flex space-x-4 min-w-min">
+      <div class="bg-white border-b border-gray-100 px-4 overflow-x-auto flex-shrink-0">
+        <div class="flex space-x-1 min-w-min">
           <button
             :class="[
-              'py-3 border-b-2 whitespace-nowrap transition-all font-medium',
-              activeTab === 'pendenzen' ? 'border-b-2 font-bold' : 'border-transparent',
-              activeTab === 'pendenzen' && pendenciesCount > 0 ? 'border-red-600 text-red-600' : activeTab === 'pendenzen' ? 'border-green-600 text-green-700' : pendenciesCount > 0 ? 'text-red-600' : 'text-green-600'
+              'px-3 py-3 text-sm border-b-2 whitespace-nowrap transition-all font-medium',
+              activeTab === 'pendenzen' ? '' : 'border-transparent text-gray-500 hover:text-gray-700',
+              activeTab === 'pendenzen' && pendenciesCount > 0 ? 'border-red-500 text-red-600' : activeTab !== 'pendenzen' && pendenciesCount > 0 ? 'text-red-500' : ''
             ]"
+            :style="activeTab === 'pendenzen' && pendenciesCount === 0 ? { borderBottomColor: 'var(--color-primary, #111827)', color: 'var(--color-primary, #111827)' } : {}"
             @click="activeTab = 'pendenzen'"
           >
             Allgemein
           </button>
           <button
             :class="[
-              'py-3 border-b-2 whitespace-nowrap transition-all font-medium',
-              activeTab === 'bewertungen' ? 'border-b-2 font-bold' : 'border-transparent',
-              activeTab === 'bewertungen' && pendingCount > 0 ? 'border-red-600 text-red-600' : activeTab === 'bewertungen' ? 'border-green-600 text-green-700' : pendingCount > 0 ? 'text-red-600' : 'text-green-600'
+              'px-3 py-3 text-sm border-b-2 whitespace-nowrap transition-all font-medium',
+              activeTab === 'bewertungen' ? '' : 'border-transparent text-gray-500 hover:text-gray-700',
+              activeTab === 'bewertungen' && pendingCount > 0 ? 'border-red-500 text-red-600' : activeTab !== 'bewertungen' && pendingCount > 0 ? 'text-red-500' : ''
             ]"
+            :style="activeTab === 'bewertungen' && pendingCount === 0 ? { borderBottomColor: 'var(--color-primary, #111827)', color: 'var(--color-primary, #111827)' } : {}"
             @click="activeTab = 'bewertungen'"
           >
             Bewertungen
           </button>
           <button
             :class="[
-              'py-3 border-b-2 whitespace-nowrap transition-all font-medium',
-              activeTab === 'anfragen' ? 'border-b-2 font-bold' : 'border-transparent',
-              activeTab === 'anfragen' && bookingProposalsCount > 0 ? 'border-red-600 text-red-600' : activeTab === 'anfragen' ? 'border-green-600 text-green-700' : bookingProposalsCount > 0 ? 'text-red-600' : 'text-green-600'
+              'px-3 py-3 text-sm border-b-2 whitespace-nowrap transition-all font-medium',
+              activeTab === 'anfragen' ? '' : 'border-transparent text-gray-500 hover:text-gray-700',
+              activeTab === 'anfragen' && bookingProposalsCount > 0 ? 'border-red-500 text-red-600' : activeTab !== 'anfragen' && bookingProposalsCount > 0 ? 'text-red-500' : ''
             ]"
+            :style="activeTab === 'anfragen' && bookingProposalsCount === 0 ? { borderBottomColor: 'var(--color-primary, #111827)', color: 'var(--color-primary, #111827)' } : {}"
             @click="activeTab = 'anfragen'"
           >
             Anfragen
@@ -97,7 +98,8 @@
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Pendenzen!</h3>
             <button 
               @click="closeModal"
-              class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+              class="text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+              :style="primaryBg"
             >
               Super! Schliessen
             </button>
@@ -392,7 +394,7 @@
   />
 
   <!-- Booking Proposal Detail Modal -->
-  <div v-if="showProposalDetailModal && selectedProposal" class="fixed inset-0 bg-black bg-opacity-50 z-[110] flex items-center justify-center p-3">
+  <div v-if="showProposalDetailModal && selectedProposal" class="fixed inset-0 bg-black bg-opacity-50 z-[300] flex items-center justify-center p-3">
     <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
       <div class="px-4 py-3 border-b bg-gradient-to-r from-orange-50 to-amber-50 flex items-center justify-between">
         <div>
@@ -487,6 +489,7 @@ import { logger } from '~/utils/logger'
 import { ref, computed, watch, onMounted } from 'vue'
 import { nextTick } from 'vue'
 import { usePendingTasks } from '~/composables/usePendingTasks'
+const { primaryBg } = usePrimaryColor()
 import { usePendencies } from '~/composables/usePendencies'
 import { useCategoryData } from '~/composables/useCategoryData'
 import { useCurrentUser } from '~/composables/useCurrentUser'
