@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Schleuderkurs Zürich | WAB Kurs | Driving Team</Title>
-      <Meta name="description" content="Schleuderkurs Zürich ✓ Obligatorisch für Neulenker ✓ Innerhalb 12 Monate nach Fahrprüfung ✓ Transportschule AG Pfäffikon ZH ✓ Ab CHF 249.-. Anmelden!" />
+      <Meta name="description" content="Schleuderkurs Zürich – Pflicht für Neulenker innerhalb 12 Monate nach der Fahrprüfung. Ab CHF 249.-, Pfäffikon ZH. Jetzt anmelden!" />
       <Meta name="keywords" content="Schleuderkurs Zürich, WAB Kurs Zürich, Schleuderkurs Pflicht, Fahrsicherheitstraining Zürich, 2-Phasen Ausbildung, Weiterbildungskurs Neulenker Zürich" />
       <Meta property="og:title" content="Schleuderkurs Zürich – Obligatorischer WAB Kurs | Driving Team" />
       <Meta property="og:description" content="Schleuderkurs Zürich für Neulenker. Obligatorisch innerhalb 12 Monate nach der Fahrprüfung. Transportschule AG Pfäffikon ZH. Ab CHF 249.-. Jetzt anmelden!" />

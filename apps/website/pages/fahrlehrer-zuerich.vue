@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrlehrer Zürich | Pascal, Skender & Samir | Driving Team</Title>
-      <Meta name="description" content="Fahrlehrer Zürich ✓ Pascal (Motorrad & Mental Coach) ✓ Skender (Albanisch) ✓ Samir ✓ Eidg. diplomiert ✓ 70'000+ Lektionen ✓ Ab CHF 95.-. Jetzt buchen!" />
+      <Meta name="description" content="Pascal, Skender und Samir – deine Fahrlehrer in Zürich. Eidg. diplomiert, über 70'000 Lektionen Erfahrung, ab CHF 95.-. Jetzt Termin online buchen!" />
       <Meta name="keywords" content="Fahrlehrer Zürich, Fahrlehrer Zürich-Altstetten, Fahrlehrer buchen Zürich, Fahrlehrer Albanisch Zürich, Fahrlehrer Motorrad Zürich, eidg. dipl. Fahrlehrer Zürich" />
       <Meta property="og:title" content="Fahrlehrer Zürich – Pascal, Skender & Samir | Driving Team" />
       <Meta property="og:description" content="3 eidgenössisch diplomierte Fahrlehrer in Zürich-Altstetten. Pascal (Motorrad, Mental Coach), Skender (Albanisch, Taxi), Samir. 70'000+ Lektionen. Jetzt Termin buchen." />

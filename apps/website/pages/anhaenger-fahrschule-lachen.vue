@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Anhänger Fahrschule Lachen | BE ab CHF 120.- | Zürichsee | Driving Team</Title>
-      <Meta name="description" content="Anhänger Fahrschule Lachen ✓ Kat. BE ab CHF 120.- ✓ Keine Theorieprüfung ✓ Zürichsee ✓ Fahrzeug gestellt ✓ Günstig zum Anhänger-Führerschein. Jetzt buchen!" />
+      <Meta name="description" content="Anhänger-Führerschein (Kat. BE) in Lachen am Zürichsee – keine Theorieprüfung nötig, Fahrzeug gestellt, ab CHF 120.-. Jetzt direkt online buchen!" />
       <Meta name="keywords" content="Anhänger Fahrschule Lachen, Kategorie BE Lachen, Anhänger Fahrstunden Lachen, BE Führerschein Lachen, Anhänger Fahrschule Zürichsee, Anhänger Kurs Lachen SZ, Anhängerprüfung Lachen" />
       <Meta property="og:title" content="Anhänger Fahrschule Lachen SZ | Kategorie BE | Driving Team" />
       <Meta property="og:description" content="Anhänger Fahrschule Lachen am Zürichsee für Kategorie BE. Ab CHF 120.-/Lektion. Keine Theorieprüfung. Fahrzeug gestellt. Schnellster Weg zum Anhänger-Führerschein." />

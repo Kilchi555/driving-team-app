@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Anhängerprüfung Schweiz – Kategorie BE | Zürich & Lachen</Title>
-      <Meta name="description" content="Anhängerprüfung Schweiz Kategorie BE ✓ Kein Theorietest ✓ Prüfungsort Regensdorf & Wettingen (Zürich) oder Pfäffikon SZ (Lachen) ✓ Jetzt Fahrstunden buchen!" />
+      <Meta name="description" content="Anhängerprüfung (Kat. BE) in der Schweiz – kein Theorietest, Fahrzeug gestellt, Prüfung in Zürich oder Lachen. Buch jetzt deine Fahrstunden online!" />
       <Meta name="keywords" content="Anhängerprüfung Schweiz, Anhänger Prüfung, Kategorie BE, anhänger führerschein schweiz, BE prüfung, kategorie be maximalgewicht" />
       <Meta property="og:title" content="Anhängerprüfung Schweiz – Kategorie BE | Driving Team" />
       <Meta property="og:description" content="Alles zur Anhängerprüfung Kategorie BE: Voraussetzungen, Ablauf, Kosten und Standorte Zürich & Lachen." />

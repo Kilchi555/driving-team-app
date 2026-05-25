@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Bus Fahrschule Zürich ✓ D1 & D | ab CHF 200.-/Lektion</Title>
-      <Meta name="description" content="Bus Fahrschule Zürich ✓ D1 & D Kategorien ✓ Prüfung StVA Regensdorf ✓ Professionelle Busfahrer-Ausbildung ✓ Erfahrene Fahrlehrer. Jetzt anmelden!" />
+      <Meta name="description" content="Busfahrer werden in Zürich – D1 & D Ausbildung mit erfahrenen Fahrlehrern, Prüfung StVA Regensdorf, ab CHF 200.-/Lektion. Jetzt anmelden!" />
       <Meta property="og:title" content="Bus Fahrschule Zürich | D1/D Berufliche Ausbildung | Driving Team" />
       <Meta property="og:description" content="Professionelle Busfahrer-Ausbildung D1 & D in Zürich. Prüfung am StVA Regensdorf. Erfahrene Fahrlehrer, faire Preise." />
       <Meta property="og:url" content="https://drivingteam.ch/bus-fahrschule/" />

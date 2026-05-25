@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Taxi Theorie | ARV 2 Prüfung bestehen | Driving Team</Title>
-      <Meta name="description" content="Taxi Theorie (ARV 2) beim Driving Team. Theoriestunden und Wegleitung ARV2. CHF 90.- pro 45 Minuten. Jetzt anmelden!" />
+      <Meta name="description" content="Taxi Theorie (ARV 2) gezielt vorbereiten – praxisnahe Lektionen und ARV2-Wegleitung bei Driving Team, CHF 90.-/45 Min. Jetzt anmelden!" />
       <Meta property="og:title" content="Taxi Theorie ARV 2 – Vorbereitung & Wegleitung | Driving Team" />
       <Meta property="og:description" content="Taxi Theorie (ARV 2) Vorbereitung. CHF 90.- pro 45 Minuten. Jetzt anmelden!" />
       <Meta property="og:url" content="https://drivingteam.ch/taxi-theorie/" />

@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Uitikon | Waldegg & Whiskeypass | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Uitikon Waldegg ✓ Fahrlehrer Skender ✓ Whiskeypass & Alte Waldegg ✓ Prüfung Albisgütli ✓ DE/EN/Albanisch ✓ Ab CHF 95.-. Jetzt buchen!" />
+      <Meta name="description" content="Fahrlehrer Skender trainiert mit dir den Whiskeypass und die Alte Waldegg – ideale Vorbereitung für Albisgütli. Ab CHF 95.-, jetzt buchen!" />
       <Meta name="keywords" content="Fahrschule Uitikon, Fahrschule Uitikon Waldegg, Fahrstunden Uitikon, Fahrlehrer Uitikon, Führerschein Uitikon, Auto Fahrschule Uitikon Waldegg" />
       <Meta property="og:title" content="Fahrschule Uitikon Waldegg – Alte Waldegg & Whiskeypass | Driving Team" />
       <Meta property="og:description" content="Fahrschule Uitikon Waldegg mit Fahrlehrer Skender. Whiskeypass, Stallikon → Uitikon, Parkplatz Waldegg. Überraschende Rechtsvortritte. Prüfung Albisgütli." />

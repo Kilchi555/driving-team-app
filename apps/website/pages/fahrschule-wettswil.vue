@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Wettswil am Albis | Autobahn & Whiskeypass | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Wettswil am Albis ✓ Fahrlehrer Skender ✓ Autobahnauffahrten A3 & Whiskeypass ✓ Prüfung Albisgütli ✓ DE/EN/AL ✓ Ab CHF 95.-. Jetzt buchen!" />
+      <Meta name="description" content="Fahrlehrer Skender trainiert mit dir die Autobahnauffahrt A3 und den Whiskeypass – ideale Vorbereitung für Albisgütli. Ab CHF 95.-. Jetzt buchen!" />
       <Meta name="keywords" content="Fahrschule Wettswil, Fahrschule Wettswil am Albis, Fahrstunden Wettswil, Fahrlehrer Wettswil, Führerschein Wettswil, Fahrschule Bonstetten, Fahrschule Knonaueramt" />
       <Meta property="og:title" content="Fahrschule Wettswil am Albis – Autobahn & Whiskeypass | Driving Team" />
       <Meta property="og:description" content="Fahrschule Wettswil am Albis mit Fahrlehrer Skender. Autobahnauffahrten Wettswil, Whiskeypass, Prüfung Albisgütli. Deutsch, Englisch & Albanisch." />

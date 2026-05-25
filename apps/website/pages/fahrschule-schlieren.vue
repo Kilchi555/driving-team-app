@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Schlieren | Skender | DE/EN/AL | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Schlieren ✓ Fahrlehrer Skender ✓ Treffpunkt Bhf Schlieren & Glanzenberg ✓ Prüfung Albisgütli/Regensdorf ✓ DE/EN/AL ✓ Ab CHF 95.-. Anmelden!" />
+      <Meta name="description" content="Fahrlehrer Skender holt dich am Bahnhof Schlieren oder Glanzenberg ab. Prüfung Albisgütli/Regensdorf, DE/EN/AL, ab CHF 95.-. Jetzt anmelden!" />
       <Meta name="keywords" content="Fahrschule Schlieren, Fahrstunden Schlieren, Fahrlehrer Schlieren, Fahrschule Limmattal, Führerschein Schlieren, Auto Fahrschule Schlieren" />
       <Meta property="og:title" content="Fahrschule Schlieren – Skender | Driving Team" />
       <Meta property="og:description" content="Fahrschule Schlieren mit Fahrlehrer Skender. Treffpunkt Bahnhof Schlieren, Glanzenberg oder Weihermatt. Prüfung Albisgütli/Regensdorf. Deutsch, Englisch & Albanisch." />

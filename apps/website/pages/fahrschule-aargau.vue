@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Aargau | Auto, Anhänger & Lastwagen</Title>
-      <Meta name="description" content="Fahrschule Aargau - Auto, Motorrad, Lastwagen Fahrstunden. 85% Erfolgsquote, ab CHF 100/Lektion, Deutsch & Albanisch. Flexible Zeiten. Jetzt anmelden!" />
+      <Meta name="description" content="Fahrstunden im Aargau mit 85% Erfolgsquote. Auto, Motorrad & Lastwagen ab CHF 100.- pro Lektion, auf Deutsch & Albanisch. Jetzt flexibel anmelden!" />
       <Meta property="og:title" content="Fahrschule Aargau – Auto & Motorrad | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung im Kanton Aargau. Auto, Motorrad, Lastwagen. 85% Erfolgsquote, ab CHF 100/Lektion." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-aargau/" />

@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Motorrad Grundkurs Zürich ✓ CHF 499.- | Pflicht für A1/A35kW/A</Title>
-      <Meta name="description" content="Motorrad Grundkurs Zürich ✓ CHF 499.- ✓ Pflicht für Kat. A1, A35kW & A ✓ 12h (3×4h) ✓ Max. 5 Teilnehmer ✓ Fahrschul-Motorrad verfügbar. Jetzt Platz sichern!" />
+      <Meta name="description" content="Pflicht-Grundkurs für den Motorrad-Führerschein in Zürich – 12h (3×4h), max. 5 Personen, CHF 499.-, Fahrschulmotorrad verfügbar. Jetzt Platz sichern!" />
       <Meta name="keywords" content="Motorrad Grundkurs Zürich, Motorrad Grundkurs buchen Zürich, PGS Kurs Zürich, Motorrad Kurs Zürich, Motorrad Fahrkurs Zürich, Grundkurs Motorrad Zürich" />
       <Meta property="og:title" content="Motorrad Grundkurs Zürich | CHF 499.- | A1, A35kW, A | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs in Zürich-Altstetten. CHF 499.- Komplettpreis. 12 Stunden (3×4h). Max. 5 Teilnehmer. Fahrschul-Motorrad verfügbar. Obligatorisch für alle A-Kategorien." />

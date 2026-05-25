@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Standorte | Zürich, Lachen & Uster | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Standorte Schweiz – Zürich, Lachen, Pfäffikon, Uster, St.Gallen, Dietikon & Aargau. Alle Kategorien, flexible Zeiten. Jetzt Termin buchen!" />
+      <Meta name="description" content="Driving Team ist in Zürich, Lachen, Pfäffikon, Uster, Dietikon, Aargau und St.Gallen vor Ort. Alle Kategorien, flexible Zeiten. Jetzt Standort wählen!" />
       <Meta property="og:title" content="Fahrschule Standorte - 8 Locations in der Schweiz" />
       <Meta property="og:description" content="Besuche einen unserer 8 Fahrschule Standorte in Zürich, Lachen, Pfäffikon, Uster und mehr." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-standorte/" />

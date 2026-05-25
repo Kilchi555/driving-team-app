@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Pfäffikon SZ – Direkt am Prüfungsort | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Pfäffikon/SZ ✓ Prüfung direkt vor Ort ✓ Routen Feusisberg, Schindellegi, Freienbach, Rapperswil ✓ Auto, Motorrad, Anhänger ✓ Flexible Treffpunkte. Jetzt anmelden!" />
+      <Meta name="description" content="Lerne genau dort, wo du später prüfst – in Pfäffikon SZ. Praxisnahe Fahrstunden auf den echten Prüfungsrouten, flexible Treffpunkte. Jetzt anmelden!" />
       <Meta name="keywords" content="Fahrschule Pfäffikon, Fahrschule Pfäffikon SZ, Fahrstunden Pfäffikon, Führerschein Pfäffikon, Auto Fahrschule Pfäffikon, Motorrad Fahrschule Pfäffikon, Fahrlehrer Pfäffikon SZ" />
       <Meta property="og:title" content="Fahrschule Pfäffikon SZ – Direkt am Prüfungsort | Driving Team" />
       <Meta property="og:description" content="Fahrschule Pfäffikon/SZ ✓ Prüfung direkt vor Ort ✓ Routen Feusisberg, Schindellegi, Freienbach, Rapperswil ✓ Auto, Motorrad, Anhänger ✓ Flexible Treff" />
