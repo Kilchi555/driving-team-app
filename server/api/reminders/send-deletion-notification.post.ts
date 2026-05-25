@@ -7,6 +7,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail, generateAppointmentDeletedEmail, generateStaffNotificationEmail } from '~/server/utils/email'
 import { sendSMS, generateAppointmentDeletedSMS } from '~/server/utils/sms'
 import { logger } from '~/utils/logger'
+import { sendPushToUser } from '~/server/utils/push'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -132,6 +133,13 @@ export default defineEventHandler(async (event) => {
       })
 
       logger.debug(`✅ Customer deletion email sent to ${user.email}`)
+
+      // Push notification (fire-and-forget)
+      sendPushToUser(userId || appointment.user_id, {
+        title: '❌ Termin storniert',
+        body: `Deine Fahrstunde am ${appointmentDate} um ${appointmentTime} Uhr wurde storniert.`,
+        data: { path: '/customer-dashboard' },
+      }).catch(() => {})
 
       // Optional: Send SMS if phone available
       if (user.phone) {
