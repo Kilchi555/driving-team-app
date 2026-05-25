@@ -411,6 +411,7 @@
       <div class="section-container">
         <div class="flex flex-wrap justify-center gap-3">
           <a href="/lastwagen-fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">🚚 Lastwagen Fahrschule Zürich</a>
+          <a href="/lastwagen-fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">🚚 Lastwagen Fahrschule Lachen</a>
           <a href="/bus-fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">🚌 Bus Fahrschule Zürich</a>
           <a href="/czv-grundkurs/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">📋 CZV Grundkurs</a>
         </div>
