@@ -99,7 +99,7 @@
     <section class="bg-gray-50 py-12">
       <div class="section-container">
         <h2 class="text-2xl md:text-3xl font-bold mb-8 text-center">Prüfungsstandorte für Rapperswil</h2>
-        <div class="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+        <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
           <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-primary-600">
             <h3 class="font-bold text-lg mb-2">StVA Kaltbrunn SG</h3>
             <p class="text-gray-600 text-sm mb-3">Hauptprüfungsstandort für Fahrschüler:innen mit Wohnsitz im Kanton St. Gallen – also Rapperswil-Jona, Schmerikon, Eschenbach, Uznach.</p>
@@ -109,6 +109,11 @@
             <h3 class="font-bold text-lg mb-2">StVA Pfäffikon SZ</h3>
             <p class="text-gray-600 text-sm mb-3">Alternative für Fahrschüler:innen mit Wohnsitz im Kanton Schwyz – z.B. Altendorf, Lachen oder Wollerau.</p>
             <p class="text-xs text-gray-400">Kanton Schwyz · je nach Wohnsitz</p>
+          </div>
+          <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-gray-300">
+            <h3 class="font-bold text-lg mb-2">StVA Hinwil ZH</h3>
+            <p class="text-gray-600 text-sm mb-3">Zuständig für Fahrschüler:innen mit Wohnsitz im Kanton Zürich – z.B. Richterswil, Wädenswil, Rüti oder Dürnten.</p>
+            <p class="text-xs text-gray-400">Kanton Zürich · je nach Wohnsitz</p>
           </div>
         </div>
         <p class="text-center text-sm text-gray-500 mt-6">Welches StVA für dich zuständig ist, hängt von deinem Wohnsitz ab. Peter Thoma berät dich und meldet dich an.</p>
@@ -210,7 +215,7 @@
             Welches StVA ist für Rapperswil-Jona zuständig?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Rapperswil-Jona liegt im Kanton St. Gallen, daher ist das StVA Kaltbrunn SG zuständig. Peter Thoma kennt die dortigen Prüfungsrouten und bereitet dich gezielt darauf vor. Er meldet dich auch direkt beim StVA an.</p>
+          <p class="text-gray-600 mt-4">Das hängt von deinem Wohnsitz ab: Kanton St. Gallen (z.B. Rapperswil-Jona, Uznach) → StVA Kaltbrunn SG; Kanton Schwyz (z.B. Altendorf, Lachen) → StVA Pfäffikon SZ; Kanton Zürich (z.B. Richterswil, Wädenswil) → StVA Hinwil ZH. Peter Thoma kennt alle drei Prüfungsrouten und bereitet dich gezielt vor.</p>
         </details>
 
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -331,7 +336,7 @@ const jsonLdScripts = [
       '@type': 'FAQPage',
       mainEntity: [
         { '@type': 'Question', name: 'Wo treffen wir uns für die Fahrstunden in Rapperswil?', acceptedAnswer: { '@type': 'Answer', text: 'Peter Thoma kommt direkt zu dir nach Rapperswil-Jona oder wir vereinbaren einen Treffpunkt in deiner Gemeinde. Unser Standort Lachen SZ liegt nur ca. 10 Minuten von Rapperswil entfernt.' } },
-        { '@type': 'Question', name: 'Welches StVA ist für Rapperswil-Jona zuständig?', acceptedAnswer: { '@type': 'Answer', text: 'Rapperswil-Jona liegt im Kanton St. Gallen, daher ist das StVA Kaltbrunn SG zuständig. Peter Thoma kennt die Prüfungsrouten und meldet dich direkt beim StVA an.' } },
+        { '@type': 'Question', name: 'Welches StVA ist für Rapperswil und die Region zuständig?', acceptedAnswer: { '@type': 'Answer', text: 'Das hängt vom Wohnsitz ab: Kanton St. Gallen (Rapperswil-Jona, Uznach) → StVA Kaltbrunn SG; Kanton Schwyz (Altendorf, Lachen) → StVA Pfäffikon SZ; Kanton Zürich (Richterswil, Wädenswil) → StVA Hinwil ZH. Peter Thoma kennt alle drei Prüfungsrouten und meldet dich direkt an.' } },
         { '@type': 'Question', name: 'Muss ich für den LKW Führerschein nach Zürich?', acceptedAnswer: { '@type': 'Answer', text: 'Nein. Fahrlehrer Peter Thoma bedient die ganze Region ab dem Standort Lachen, der nur 10 Minuten von Rapperswil entfernt liegt.' } },
         { '@type': 'Question', name: 'Was kostet der LKW Führerschein in Rapperswil?', acceptedAnswer: { '@type': 'Answer', text: 'Für Kategorie C rechne mit CHF 4000–6000 je nach Fahrstundenanzahl. Fahrstunden kosten CHF 170 / 45 Min. Dazu kommen Versicherungspauschale (CHF 200), WarmUp & Prüfungsfahrt (CHF 737) und Gebühren.' } },
       ],
