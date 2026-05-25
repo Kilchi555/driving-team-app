@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrstunden Lachen SZ | Ab CHF 95.- | Driving Team</Title>
-      <Meta name="description" content="Fahrstunden Lachen SZ ✓ Flexible Treffpunkte ✓ Auto & Motorrad ✓ Eidg. diplomierte Fahrlehrer ✓ Prüfung Pfäffikon SZ ✓ Ab CHF 95.-/Lektion. Jetzt buchen!" />
+      <Meta name="description" content="Fahrstunden in Lachen SZ – flexible Treffpunkte, Prüfung am StVA Pfäffikon, ab CHF 95.-. Einfach online buchen und loslegen!" />
       <Meta name="keywords" content="Fahrstunden Lachen, Fahrstunden Lachen SZ, Fahrstunden buchen Lachen, Fahrlektion Lachen, Autofahrstunden Lachen, Führerschein Lachen" />
       <Meta property="og:title" content="Fahrstunden Lachen SZ | Ab CHF 95.- | Driving Team" />
       <Meta property="og:description" content="Fahrstunden in Lachen SZ mit eidg. diplomierten Fahrlehrern. Flexible Treffpunkte im Kanton Schwyz. Prüfung in Pfäffikon SZ. Ab CHF 95.-/45 Min." />

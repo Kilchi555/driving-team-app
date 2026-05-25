@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Zürich & Lachen | Auto, Anhänger & Lastwagen</Title>
-      <Meta name="description" content="Fahrschule Zürich & Lachen ✓ Auto, Motorrad, Anhänger ab CHF 95.- ✓ 85% Erfolgsquote ✓ Professionelle Fahrlehrer ✓ Flexible Termine. Jetzt buchen!" />
+      <Meta name="description" content="Willst du deine Fahrprüfung beim 1. Versuch bestehen? ✓ ab CHF 95.- ✓ 85% Erfolgsquote ✓ Flexible Termine. Dann buche deine Fahrstunde jetzt direkt online!" />
       <Meta name="keywords" content="Fahrschule Zürich, Auto Fahrschule Zürich, Fahrschule Lachen, Motorrad Fahrschule Zürich, Anhänger Fahrschule Zürich, Lastwagen Fahrschule Zürich, Taxi Fahrschule Zürich, Bus Fahrschule Zürich, Motorboot Fahrschule Lachen" />
       <Meta name="author" content="Driving Team" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />

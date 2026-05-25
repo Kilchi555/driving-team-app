@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrstunden Pfäffikon SZ | Ab CHF 95.- | Driving Team</Title>
-      <Meta name="description" content="Fahrstunden Pfäffikon SZ ✓ Prüfung direkt am StVA Pfäffikon ✓ Flexible Treffpunkte ✓ Auto & Motorrad ✓ Fahrlehrer mit eidg. Fachausweis ✓ Ab CHF 95.-/Lektion. Jetzt buchen!" />
+      <Meta name="description" content="Fahrstunden in Pfäffikon SZ – du übst direkt auf den echten Prüfungsrouten. Flexible Treffpunkte, ab CHF 95.-. Jetzt online buchen!" />
       <Meta name="keywords" content="Fahrstunden Pfäffikon SZ, Fahrstunden Pfäffikon, Fahrstunden buchen Pfäffikon, Fahrlektion Pfäffikon SZ, Autofahrstunden Pfäffikon, Führerschein Pfäffikon SZ" />
       <Meta property="og:title" content="Fahrstunden Pfäffikon SZ | Ab CHF 95.- | Driving Team" />
       <Meta property="og:description" content="Fahrstunden in Pfäffikon SZ mit Fahrlehrern mit eidg. Fachausweis. Prüfung direkt am StVA Pfäffikon SZ. Flexible Treffpunkte im Kanton Schwyz. Ab CHF 95.-/45 Min." />

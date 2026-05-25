@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Motorrad A1 Führerschein Schweiz – 125cc ab 16 | Driving Team</Title>
-      <Meta name="description" content="Motorrad A1 Führerschein Schweiz ✓ 125cc ab 16 Jahren ✓ Grundkurs & Fahrstunden Zürich ✓ Günstigster Einstieg ins Motorradfahren ✓ Jetzt Termin buchen!" />
+      <Meta name="description" content="Ab 16 Jahren auf dem Motorrad – mit dem A1 Führerschein fährst du legal 125cc. Grundkurs & Fahrstunden in Zürich ab CHF 95.-. Jetzt Termin buchen!" />
       <Meta name="keywords" content="motorrad a1, a1 führerschein schweiz, 125cc führerschein, motorrad 125 führerschein, grundkurs a1, a1 motorrad zürich, motorrad ab 16" />
       <Meta property="og:title" content="Motorrad A1 Führerschein Schweiz – 125cc ab 16 | Driving Team" />
       <Meta property="og:description" content="Mit 16 Motorrad fahren: Alles zur A1 Kategorie in der Schweiz. Voraussetzungen, Ablauf, Kosten und Anmeldung zur praktischen Grundschulung." />

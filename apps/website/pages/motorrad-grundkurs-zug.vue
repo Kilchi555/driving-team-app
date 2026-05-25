@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Motorrad Grundkurs Zug | DE/EN/IT | CHF 600.- | Driving Team</Title>
-      <Meta name="description" content="Motorrad Grundkurs Zug – 3x4h in Steinhausen. In Kooperation mit Fahrschule Schoch. CHF 600.-. Max. 5 Teilnehmer. DE/EN/IT." />
+      <Meta name="description" content="Motorrad Grundkurs in Steinhausen (Zug) – 3×4h auf Deutsch, Englisch oder Italienisch, max. 5 Personen, CHF 600.-. Jetzt anmelden!" />
       <Meta property="og:title" content="Motorrad Grundkurs Zug – CHF 600.- | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs in Steinhausen/Zug. 3x4h, CHF 600.-, max. 5 Teilnehmer. In Kooperation mit Fahrschule Schoch." />
       <Meta property="og:url" content="https://drivingteam.ch/motorrad-grundkurs-zug/" />

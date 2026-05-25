@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Zürich – Driving Team | Auto, Motorrad & Anhänger ab CHF 95.-</Title>
-      <Meta name="description" content="Fahrschule Zürich – Driving Team ✓ Auto ab CHF 95.- ✓ Motorrad, Anhänger, Lastwagen ✓ Hauptstandort Zürich-Altstetten ✓ 414 Google-Bewertungen ⭐ 5.0 ✓ Online buchbar. Jetzt starten!" />
+      <Meta name="description" content="Zürichs Fahrschule mit 414 Google-Bewertungen und 5.0 Sternen. Auto ab CHF 95.-, 85% Erfolgsquote, Hauptstandort Altstetten. Jetzt direkt online buchen!" />
       <Meta name="keywords" content="Fahrschule Zürich, Fahrstunden Zürich, Auto Fahrschule Zürich, Motorrad Fahrschule Zürich, Driving Team Zürich, Fahrschule Zürich-Altstetten" />
       <Meta property="og:title" content="Fahrschule Zürich – Driving Team | Auto, Motorrad & Anhänger" />
       <Meta property="og:description" content="Fahrschule Zürich: Auto, Motorrad, Anhänger & Lastwagen. Hauptstandort Zürich-Altstetten. Ab CHF 95.-/Lektion. 414 Bewertungen ⭐ 5.0. Online buchbar." />

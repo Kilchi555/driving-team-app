@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Motorrad Grundkurs Schweiz | A1, A35kW, A | Driving Team</Title>
-      <Meta name="description" content="Motorrad Grundkurs Schweiz ✓ Zürich, Lachen, Zug & Einsiedeln ✓ 3×4h praxisorientiert ✓ Max. 5 Teilnehmer ✓ Kat. A1/A2/A ✓ Ab CHF 499.-. Anmelden!" />
+      <Meta name="description" content="Motorrad Grundkurs in der ganzen Schweiz – Zürich, Lachen, Zug & Einsiedeln. 3×4h, max. 5 Teilnehmer, ab CHF 499.-. Jetzt deinen Platz sichern!" />
       <Meta property="og:title" content="Motorrad Grundkurs – Zürich, Lachen, Zug & Einsiedeln | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs an 4 Standorten. 3x4h, max. 5 Teilnehmer, ab CHF 499.-. Alle Kategorien A1, A2, A." />
       <Meta property="og:url" content="https://drivingteam.ch/motorrad-grundkurs/" />

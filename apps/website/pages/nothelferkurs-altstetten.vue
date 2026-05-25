@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Nothelferkurs Altstetten | CHF 120.- | 10 Stunden | Driving Team</Title>
-      <Meta name="description" content="Nothelferkurs Altstetten ✓ CHF 120.- inkl. Ausweis ✓ 10 Stunden ✓ Beim Bahnhof Altstetten ✓ Obligatorisch für Führerschein ✓ Ab 14 Jahren ✓ 6 Jahre gültig. Jetzt buchen!" />
+      <Meta name="description" content="Nothelferkurs direkt beim Bahnhof Altstetten – 10 Stunden, CHF 120.- inkl. Ausweis, 6 Jahre gültig, ab 14 Jahren. Jetzt deinen Platz buchen!" />
       <Meta name="keywords" content="Nothelferkurs Altstetten, Nothelfer Altstetten, Nothelferkurs Zürich-Altstetten, Erste Hilfe Kurs Altstetten, Nothelfer Kurs Altstetten, Nothelferkurs beim Bahnhof Altstetten" />
       <Meta property="og:title" content="Nothelferkurs Altstetten | CHF 120.- inkl. Ausweis | Driving Team" />
       <Meta property="og:description" content="Nothelferkurs in Altstetten beim Bahnhof. CHF 120.- inkl. Nothelferausweis. 10 Stunden. Obligatorisch für alle Fahrzeugkategorien. Sofort buchbar." />

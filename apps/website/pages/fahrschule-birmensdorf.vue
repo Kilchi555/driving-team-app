@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Birmensdorf | Whiskeypass & Prüfungsrouten | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Birmensdorf ✓ Fahrlehrer Skender ✓ Whiskeypass & Prüfungsrouten Albisgütli ✓ DE/EN/Albanisch ✓ Ab CHF 95.-. Jetzt buchen!" />
+      <Meta name="description" content="Fahrlehrer Skender kennt die Prüfungsrouten Albisgütli in- und auswendig. Fahrstunden ab CHF 95.- auf DE/EN/AL. Jetzt Termin buchen!" />
       <Meta name="keywords" content="Fahrschule Birmensdorf, Fahrstunden Birmensdorf, Fahrlehrer Birmensdorf, Führerschein Birmensdorf ZH, Auto Fahrschule Birmensdorf, Fahrschule Knonaueramt" />
       <Meta property="og:title" content="Fahrschule Birmensdorf – Whiskeypass & Prüfungsrouten | Driving Team" />
       <Meta property="og:description" content="Fahrschule Birmensdorf mit Fahrlehrer Skender. Whiskeypass, Alte Waldegg, überraschende Rechtsvortritte. Prüfung Albisgütli. Deutsch, Englisch & Albanisch." />

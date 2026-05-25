@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>LKW Fahrschule Zürich ✓ C, C1, CE | ab CHF 170.-</Title>
-      <Meta name="description" content="Lastwagen Fahrschule Zürich ✓ C1, C & CE ✓ Prüfung StVA Regensdorf ✓ CZV Grundkurs ✓ Moderne LKW-Fahrzeuge ✓ ab CHF 160.-/Lektion. Jetzt anmelden!" />
+      <Meta name="description" content="LKW-Führerschein C, C1 & CE in Zürich – moderne Fahrzeuge, CZV Grundkurs, Prüfung StVA Regensdorf, ab CHF 160.-. Jetzt anmelden!" />
       <Meta property="og:title" content="Lastwagen Fahrschule Zürich | C1/C/CE | Driving Team" />
       <Meta property="og:description" content="Berufliche Lastwagen Fahrausbildung in Zürich – C1, C & CE Prüfung am StVA Regensdorf. Weg zur Lastwagenprüfung in 5 Schritten" />
       <Meta property="og:url" content="https://drivingteam.ch/lastwagen-fahrschule/" />

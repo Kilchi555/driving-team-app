@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Urdorf | Skender | DE/EN/AL | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Urdorf ✓ Fahrlehrer Skender ✓ Treffpunkt Bhf Glanzenberg & Weihermatt ✓ Prüfung Albisgütli/Regensdorf ✓ DE/EN/AL ✓ Ab CHF 95.-. Jetzt buchen!" />
+      <Meta name="description" content="Mit Fahrlehrer Skender ab Bhf Glanzenberg oder Weihermatt zur Prüfung. Ab CHF 95.-, dreisprachig (DE/EN/AL), Prüfung Albisgütli/Regensdorf. Jetzt buchen!" />
       <Meta name="keywords" content="Fahrschule Urdorf, Fahrstunden Urdorf, Fahrlehrer Urdorf, Führerschein Urdorf, Auto Fahrschule Urdorf, Fahrschule Limmattal" />
       <Meta property="og:title" content="Fahrschule Urdorf – Skender | Driving Team" />
       <Meta property="og:description" content="Fahrschule Urdorf mit Fahrlehrer Skender. Treffpunkt Bahnhof Glanzenberg oder Weihermatt. Prüfung Albisgütli/Regensdorf. Deutsch, Englisch & Albanisch." />

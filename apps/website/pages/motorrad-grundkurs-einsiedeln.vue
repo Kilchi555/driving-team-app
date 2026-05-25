@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Motorrad Grundkurs Einsiedeln | CHF 600.- | Driving Team</Title>
-      <Meta name="description" content="Motorrad Grundkurs Einsiedeln – 3 x 4h praxisorientierter Grundkurs. In Kooperation mit Fahrschule Bisig. Kompletter Kurs CHF 600.-. Max. 5 Teilnehmer." />
+      <Meta name="description" content="Motorrad Grundkurs in Einsiedeln – 3×4h praxisorientiert, max. 5 Teilnehmer, CHF 600.-, in Kooperation mit Fahrschule Bisig. Jetzt anmelden!" />
       <Meta property="og:title" content="Motorrad Grundkurs Einsiedeln – CHF 600.- | Driving Team" />
       <Meta property="og:description" content="Motorrad Grundkurs in Einsiedeln. 3x4h, CHF 600.-, max. 5 Teilnehmer. In Kooperation mit Fahrschule Bisig." />
       <Meta property="og:url" content="https://drivingteam.ch/motorrad-grundkurs-einsiedeln/" />

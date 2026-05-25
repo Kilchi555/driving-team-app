@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>WAB Course English – Zürich & Schwyz | Driving Team</Title>
-      <Meta name="description" content="WAB refresher course in English ✓ Mandatory within 12 months of cat. B test ✓ CHF 490 ✓ Pfäffikon ZH & Tuggen SZ. Book online!" />
+      <Meta name="description" content="WAB refresher course in English – mandatory within 12 months of your driving test. CHF 490, locations in Pfäffikon ZH & Tuggen SZ. Book online!" />
       <Meta name="keywords" content="WAB course English, WAB Kurs English Switzerland, WAB refresher course English, advanced driving training English Switzerland, Pfäffikon ZH, Tuggen SZ" />
       <Meta property="og:title" content="WAB Course in English – Switzerland | Pfäffikon ZH & Tuggen SZ | Driving Team" />
       <Meta property="og:description" content="Mandatory WAB refresher course in English. Two locations in Zurich and Schwyz canton. Register online now. CHF 490 per course." />

@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Motorrad Fahrschule Zürich ✓ A1/A35kW/A | ab CHF 95.-</Title>
-      <Meta name="description" content="Motorrad Fahrstunden Zürich für A1, A35kW & A. Expert Training mit modernen Bikes, flexible Zeiten. Fahrstunden & Grundkurse. Jetzt anmelden!" />
+      <Meta name="description" content="Motorrad fahren lernen in Zürich – A1, A35kW & A mit erfahrenen Fahrlehrern und modernen Bikes. Grundkurse & Fahrstunden, ab CHF 95.-. Jetzt anmelden!" />
       <Meta property="og:title" content="Motorrad Fahrschule | Driving Team | Zürich & Lachen/SZ" />
       <Meta property="og:description" content="Motorrad Fahrschule für alle Kategorien in Zürich und Umgebung" />
       <Meta property="og:url" content="https://drivingteam.ch/motorrad-fahrschule/" />

@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrlehrer Lachen SZ | Marc, Peter & Rahel | Driving Team</Title>
-      <Meta name="description" content="Fahrlehrer Lachen SZ ✓ Marc (Motorboot) ✓ Peter (Lastwagen & Bus) ✓ Rahel ✓ Eidg. diplomiert ✓ 56'000+ Lektionen ✓ Ab CHF 95.-. Jetzt buchen!" />
+      <Meta name="description" content="Marc, Peter und Rahel – deine Fahrlehrer in Lachen SZ. Eidg. diplomiert, über 56'000 Lektionen Erfahrung, ab CHF 95.-. Jetzt direkt online buchen!" />
       <Meta name="keywords" content="Fahrlehrer Lachen, Fahrlehrer Lachen SZ, Fahrlehrer Kanton Schwyz, Fahrlehrer Motorboot Lachen, Fahrlehrer Lastwagen Lachen, eidg. dipl. Fahrlehrer Lachen" />
       <Meta property="og:title" content="Fahrlehrer Lachen SZ – Marc, Peter & Rahel | Driving Team" />
       <Meta property="og:description" content="3 eidgenössisch diplomierte Fahrlehrer in Lachen SZ. Marc (Motorboot, Anhänger), Peter (Lastwagen, Bus), Rahel. 56'000+ Lektionen. Jetzt Termin buchen." />

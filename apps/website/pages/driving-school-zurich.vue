@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Driving School Zurich | English Lessons | Driving Team</Title>
-      <Meta name="description" content="Driving School Zurich ✓ English lessons from CHF 95/session ✓ Cat. B car, motorcycle & more ✓ 85% first-time pass rate ✓ 368 reviews. Book online!" />
+      <Meta name="description" content="Learn to drive in Zurich in English – from CHF 95, 85% first-time pass rate, over 368 reviews. Car, motorcycle & more. Book online today!" />
       <Meta name="keywords" content="driving school zurich, driving lessons zurich, driving school zurich english, english driving school zurich, category B zurich, driving license zurich, fahrschule zurich english, driving instructor zurich" />
       <Meta property="og:title" content="Driving School Zurich – English Lessons from CHF 95 | Driving Team" />
       <Meta property="og:description" content="Professional driving school in Zurich with English instruction. Category B from CHF 95/session. 85% first-time pass rate. 4.9★ with 368 reviews. Book online." />

@@ -6,7 +6,7 @@
            Test B (Wochen 3-4): <Title>Fahrschule Lachen | Schnell zum Führerschein – Driving Team</Title>
       -->
       <Title>Fahrschule Lachen | Online buchen – Driving Team</Title>
-      <Meta name="description" content="Fahrschule Lachen SZ ✓ ab CHF 95.-/Lektion ✓ Auto, Motorrad, Anhänger, Lastwagen, Bus ✓ 85% Erfolgsquote ✓ Kanton Schwyz. Jetzt anmelden!" />
+      <Meta name="description" content="Deine Fahrschule in Lachen SZ – Führerschein für Auto, Motorrad, Anhänger und Lastwagen. 85% Erfolgsquote, ab CHF 95.-. Jetzt online buchen!" />
       <Meta name="keywords" content="Fahrschule Lachen, Fahrschule Lachen SZ, Fahrstunden Lachen, Führerschein Lachen, Auto Fahrschule Lachen, Motorrad Fahrschule Lachen, Fahrlehrer Lachen SZ" />
       <Meta property="og:title" content="Fahrschule Lachen SZ | ab CHF 95.- | Auto, Motorrad & mehr | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung in Lachen SZ. Auto, Motorrad, Lastwagen & Kurse. Ab CHF 95.-/Lektion. Flexible Zeiten & Treffpunkte im Kanton Schwyz." />
@@ -104,7 +104,7 @@
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wo bietet Ihr Fahrstunden an?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Das Tätigkeitsgebiet des Driving Team Lachen erstreckt sich von Hinwil bis nach Schwyz und von Horgen bis nach Ziegelbrücke. Die Treffpunkte für die Autofahrstunden sind flexibel, das heisst wir holen euch, wenn möglich, zu Hause oder bei der Arbeit ab.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Das Tätigkeitsgebiet des Driving Team Lachen erstreckt sich von Hinwil bis nach Schwyz und von Horgen bis nach Ziegelbrücke. Wir sind unter anderem in folgenden Gemeinden aktiv: <strong>Lachen, Pfäffikon SZ, Siebnen, Schübelbach, Galgenen, Altendorf, Wollerau, Freienbach, Richterswil, Wädenswil, Horgen</strong> und Umgebung. Die Treffpunkte für die Autofahrstunden sind flexibel – wir holen euch, wenn möglich, zu Hause oder bei der Arbeit ab.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Soll ich geschaltet oder automatisch fahren lernen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
@@ -226,7 +226,7 @@ const jsonLdScripts = [
     "mainEntity": [
       { "@type": "Question", "name": "Wie viele Fahrstunden benötige ich in Lachen?", "acceptedAnswer": { "@type": "Answer", "text": "Das hängt von deiner Vorerfahrung und deinem Lerntempo ab. Bei regelmässigem Üben (2-4 Mal pro Woche inkl. privaten Lernfahrten) erreichst du dein Ziel am schnellsten." } },
       { "@type": "Question", "name": "Wie kann ich meine Fahrausbildung beschleunigen?", "acceptedAnswer": { "@type": "Answer", "text": "Optimal wären 2-4 Fahrten pro Woche – zum Beispiel 1 Fahrstunde mit dem Fahrlehrer und 1 private Lernfahrt. Wichtig: genau so fahren, wie es der Fahrlehrer gezeigt hat." } },
-      { "@type": "Question", "name": "Wo bietet Driving Team Lachen Fahrstunden an?", "acceptedAnswer": { "@type": "Answer", "text": "Das Tätigkeitsgebiet erstreckt sich von Hinwil bis nach Schwyz und von Horgen bis nach Ziegelbrücke. Treffpunkte sind flexibel – wir holen euch wenn möglich zu Hause oder bei der Arbeit ab." } },
+      { "@type": "Question", "name": "Wo bietet Driving Team Lachen Fahrstunden an?", "acceptedAnswer": { "@type": "Answer", "text": "Das Tätigkeitsgebiet erstreckt sich von Hinwil bis nach Schwyz und von Horgen bis nach Ziegelbrücke. Wir sind unter anderem aktiv in: Lachen, Pfäffikon SZ, Siebnen, Schübelbach, Galgenen, Altendorf, Wollerau, Freienbach, Richterswil, Wädenswil und Horgen. Treffpunkte sind flexibel – wir holen euch wenn möglich zu Hause oder bei der Arbeit ab." } },
       { "@type": "Question", "name": "Was kosten Fahrstunden in Lachen?", "acceptedAnswer": { "@type": "Answer", "text": "Fahrstunden starten ab CHF 95.-/45min. Hinzu kommt eine einmalige Admin- und Versicherungspauschale für die gesamte Fahrausbildung." } },
       { "@type": "Question", "name": "Welches sind die häufigsten Prüfungsrouten ab Pfäffikon/SZ?", "acceptedAnswer": { "@type": "Answer", "text": "Die häufigsten Prüfungsrouten ab Pfäffikon/SZ führen nach Altendorf/Lachen, Feusisberg/Schindellegi, Wollerau/Samstagern, Freienbach/Richterswil und Rapperswil/Jona." } },
       { "@type": "Question", "name": "Was sind die Voraussetzungen für private Lernfahrten?", "acceptedAnswer": { "@type": "Answer", "text": "Die Begleitperson muss einen gültigen Führerausweis haben, nüchtern sein (0,0 Promille), mindestens 23 Jahre alt sein und die Prüfung vor mindestens 3 Jahren bestanden haben." } },
