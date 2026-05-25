@@ -9,7 +9,7 @@
  *  4. Listen for incoming notifications and taps
  */
 
-import { defineNuxtPlugin, navigateTo, useSupabaseClient } from '#imports'
+import { defineNuxtPlugin, navigateTo } from '#imports'
 
 export default defineNuxtPlugin(async () => {
   if (process.server) return
