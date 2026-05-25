@@ -6,6 +6,7 @@
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { sendPushToUser } from '~/server/utils/push'
 
 const CUSTOMER_PORTAL_BASE_URL = (process.env.CUSTOMER_PORTAL_BASE_URL || 'https://app.simy.ch').replace(/\/$/, '')
 
@@ -175,7 +176,8 @@ export default defineEventHandler(async (event) => {
           tenantSlug: tenant.slug,
           amount,
           confirmationLink,
-          customerDashboard
+          customerDashboard,
+          userId
         }
       })
 
@@ -185,7 +187,16 @@ export default defineEventHandler(async (event) => {
       // Don't fail the whole endpoint if email fails - log and continue
     }
 
-    // 11. Send staff notification – only for online bookings made by the customer (not manual)
+    // 11. Send push notification to the student (fire-and-forget, non-blocking)
+    sendPushToUser(userId, {
+      title: '✅ Buchung bestätigt',
+      body: `Deine Fahrstunde am ${appointmentDateTime} wurde bestätigt.`,
+      data: { path: '/customer-dashboard' },
+    }).catch((err: any) => {
+      logger.warn('⚠️ Push notification failed (non-critical):', err.message)
+    })
+
+    // 12. Send staff notification – only for online bookings made by the customer (not manual)
     const isOnlineBooking = appointment.source === 'online' && appointment.created_by === userId
     if (staff?.email && isOnlineBooking) {
       $fetch('/api/email/send-appointment-notification', {

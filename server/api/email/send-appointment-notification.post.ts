@@ -4,6 +4,7 @@
 import { sendEmail } from '~/server/utils/email'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { sendPushToUser } from '~/server/utils/push'
 
 interface AppointmentNotificationBody {
   email: string
@@ -27,6 +28,8 @@ interface AppointmentNotificationBody {
   chargePercentage?: number
   refundAmount?: string
   chargeAmount?: string
+  // Optional: if provided, a push notification is sent alongside the email
+  userId?: string
 }
 
 // ========== TEMPLATES - Dynamic with tenant colors ==========
@@ -409,6 +412,45 @@ export default defineEventHandler(async (event) => {
     })
     
     logger.debug(`✅ ${type} email sent successfully to ${email}`)
+
+    // Push notification alongside email (fire-and-forget, only for student-facing types)
+    if (body.userId) {
+      const pushMessages: Record<string, { title: string; body: string }> = {
+        appointment_confirmation: {
+          title: '✅ Buchung bestätigt',
+          body: body.appointmentTime
+            ? `Deine Fahrstunde am ${body.appointmentTime} wurde bestätigt.`
+            : 'Deine Fahrstunde wurde bestätigt.',
+        },
+        cancelled: {
+          title: '❌ Termin storniert',
+          body: body.appointmentTime
+            ? `Dein Termin am ${body.appointmentTime} wurde storniert.`
+            : 'Ein Termin wurde storniert.',
+        },
+        rescheduled: {
+          title: '🔄 Termin verschoben',
+          body: body.newTime
+            ? `Neuer Termin: ${body.newTime}`
+            : 'Dein Termin wurde auf einen neuen Zeitpunkt verschoben.',
+        },
+        pending_payment: {
+          title: '💳 Zahlung ausstehend',
+          body: body.appointmentTime
+            ? `Für deine Fahrstunde am ${body.appointmentTime} ist eine Zahlung fällig.`
+            : 'Eine Zahlung für deinen Termin ist ausstehend.',
+        },
+      }
+      const pushMsg = pushMessages[type]
+      if (pushMsg) {
+        sendPushToUser(body.userId, {
+          ...pushMsg,
+          data: { path: '/customer-dashboard' },
+        }).catch((err: any) => {
+          logger.warn('⚠️ Push notification failed (non-critical):', err?.message)
+        })
+      }
+    }
     
     return {
       success: true,
