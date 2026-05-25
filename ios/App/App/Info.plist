@@ -53,5 +53,7 @@
 	<string>Um Fahrstunden direkt in deinen Kalender zu speichern.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Um Fahrstunden direkt in deinen Kalender zu speichern.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
