@@ -35,5 +35,8 @@
   "privacyPolicyUrl": "https://simy.ch/datenschutz",
   "supportUrl": "https://simy.ch/kontakt",
   "marketingUrl": "https://simy.ch",
-  "serverUrl": "https://app.simy.ch"
+  "serverUrl": "https://app.simy.ch",
+  "features": {
+    "push": true
+  }
 }
