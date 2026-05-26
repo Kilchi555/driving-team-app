@@ -83,7 +83,15 @@ platform :ios do
   end
 
   # ---------------------------------------------------------------------------
-  # deploy: Full pipeline — certs, build, upload to TestFlight or App Store
+  # deploy: Full pipeline — build, upload to TestFlight or App Store
+  #
+  # Uses Xcode's "Automatic Signing" (CODE_SIGN_STYLE = Automatic) — no Match
+  # setup required. Xcode itself pulls certs/profiles from Apple Developer
+  # Portal at build time, using the team configured via DEVELOPMENT_TEAM
+  # in project.pbxproj.
+  #
+  # If you ever want a deterministic, git-managed certs/profiles workflow,
+  # set up Match and re-enable the `sync_certificates` lane.
   # ---------------------------------------------------------------------------
   lane :deploy do
     client     = load_client_config
@@ -94,8 +102,9 @@ platform :ios do
 
     UI.message("🚀 Deploying #{app_name} (#{bundle_id}) v#{version} → #{target}")
 
-    # 1. Sync certificates and provisioning profiles
-    sync_certificates
+    # 1. Generate capacitor.config.json + sync iOS project for the right client
+    sh("cd .. && CLIENT=#{client['clientId']} node scripts/gen-cap-config.mjs")
+    sh('cd .. && npx cap sync ios --no-build')
 
     # 2. Update version and build number
     increment_version_number(
@@ -120,19 +129,17 @@ platform :ios do
     sh('cd .. && fastlane/strip-ats.sh')
 
     # 3. Build the app (SPM-based project — no .xcworkspace)
+    #    Automatic signing: Xcode picks the right provisioning profile from the
+    #    Apple Developer Portal for the configured DEVELOPMENT_TEAM.
     build_app(
       project:              'ios/App/App.xcodeproj',
       scheme:               'App',
       configuration:        'Release',
       export_method:        'app-store',
-      export_options: {
-        provisioningProfiles: {
-          bundle_id => "match AppStore #{bundle_id}"
-        }
-      },
       output_directory:     './build',
       output_name:          "#{client['clientId']}.ipa",
       clean:                true,
+      xcargs:               "-allowProvisioningUpdates DEVELOPMENT_TEAM='#{ENV['APPLE_TEAM_ID']}'"
     )
 
     if target == 'appstore'
