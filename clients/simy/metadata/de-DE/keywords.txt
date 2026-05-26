@@ -1,1 +1,1 @@
-fahrschule,fahrstunden,führerausweis,fahrlehrer,online buchen,lernfortschritt
+fahrschule,fahrstunden,führerausweis,fahrlehrer,buchen,lernfortschritt,prüfung,schweiz

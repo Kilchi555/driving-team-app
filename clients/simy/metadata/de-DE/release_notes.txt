@@ -1,1 +1,11 @@
-Erste Version der Simy App für Fahrschulen.
+Willkommen bei Simy! Die erste Version der App bringt dir:
+
+• Fahrstunden online buchen
+• Push-Benachrichtigungen für deine Termine
+• Automatische Kalender-Synchronisation
+• Face ID Login
+• Lernfortschritt und Bewertungen
+• Zahlungen und Rechnungen
+• Sichere Datenverarbeitung in der Schweiz
+
+Wir freuen uns über dein Feedback unter support@simy.ch.

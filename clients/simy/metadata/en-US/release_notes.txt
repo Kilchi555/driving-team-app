@@ -1,1 +1,11 @@
-First release of the Simy driving school app.
+Welcome to Simy! The first release of the app brings you:
+
+• Book driving lessons online
+• Push notifications for your appointments
+• Automatic calendar sync
+• Face ID login
+• Track progress and feedback
+• Payments and invoices
+• Secure data processing in Switzerland
+
+We'd love your feedback at support@simy.ch.
