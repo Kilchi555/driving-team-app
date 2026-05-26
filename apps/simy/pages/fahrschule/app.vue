@@ -100,7 +100,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">simy Fahrlehrer-App kostenlos testen</h2>
-        <p class="text-purple-200 mb-8">30 Tage gratis. Kein Kreditkarte.</p>
+        <p class="text-purple-200 mb-8">60 Tage gratis. Kein Kreditkarte.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: #6000BD">
@@ -117,7 +117,7 @@
 useHead({
   title: 'Fahrlehrer App – simy | iOS & Android Fahrschulsoftware',
   meta: [
-    { name: 'description', content: 'Die simy Fahrlehrer App für iOS und Android. Kalender, Schüler, Rechnungen auf dem Smartphone. Auch offline. 30 Tage kostenlos testen.' },
+    { name: 'description', content: 'Die simy Fahrlehrer App für iOS und Android. Kalender, Schüler, Rechnungen auf dem Smartphone. Auch offline. 60 Tage kostenlos testen.' },
     { name: 'keywords', content: 'fahrlehrer app, fahrschulapp, app für fahrschule, fahrlehrer kalender app, fahrschule app' },
     { property: 'og:title', content: 'Fahrlehrer App – simy | iOS & Android' },
     { property: 'og:description', content: 'Kalender, Schüler und Rechnungen in einer App — iOS, Android, auch offline.' },
