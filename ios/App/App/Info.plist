@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>Driving Team</string>
+	<string>Simy</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -55,5 +55,19 @@
 	<string>Um Fahrstunden direkt in deinen Kalender zu speichern.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!--
+		App Transport Security:
+		NSAllowsArbitraryLoads ist NUR für Capacitor Live-Reload während der Entwicklung gesetzt
+		(z.B. http://192.168.x.x:3000 oder iPhone-Hotspot-IPs).
+		Production läuft ausschliesslich über HTTPS (app.simy.ch).
+		VOR jedem App Store Release-Build automatisch entfernt durch fastlane/strip-ats.sh.
+	-->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

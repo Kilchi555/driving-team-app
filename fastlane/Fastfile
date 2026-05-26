@@ -114,6 +114,11 @@ platform :ios do
       value: app_name
     )
 
+    # 2c. Strip Dev-only App Transport Security exceptions (NSAllowsArbitraryLoads etc.)
+    #     They are required for local Live-Reload but Apple may reject the submission otherwise.
+    #     The original Info.plist is backed up to Info.plist.bak and restored after the build.
+    sh('cd .. && fastlane/strip-ats.sh')
+
     # 3. Build the app (SPM-based project — no .xcworkspace)
     build_app(
       project:              'ios/App/App.xcodeproj',
@@ -170,10 +175,24 @@ platform :ios do
   end
 
   # ---------------------------------------------------------------------------
-  # Error handler
+  # After all: Restore Info.plist (Dev ATS exceptions) — always runs after a lane
+  # ---------------------------------------------------------------------------
+  after_all do |lane, options|
+    # Restore the Dev-only Info.plist (with NSAllowsArbitraryLoads) so local Live-Reload
+    # keeps working after a release build.
+    if File.exist?('../ios/App/App/Info.plist.bak')
+      sh('cd .. && fastlane/restore-ats.sh')
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Error handler — also restore Info.plist on failure
   # ---------------------------------------------------------------------------
   error do |lane, exception, options|
     UI.error("❌ Lane '#{lane}' failed: #{exception.message}")
+    if File.exist?('../ios/App/App/Info.plist.bak')
+      sh('cd .. && fastlane/restore-ats.sh')
+    end
   end
 
 end

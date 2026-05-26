@@ -35,3 +35,4 @@ supabase/functions/**/.env.local
 # Capacitor (generated per-client, do not commit)
 capacitor.config.json
 capacitor.config.ts.bak
+ios/App/App/Info.plist.bak
