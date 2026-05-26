@@ -15,7 +15,7 @@
         </div>
         <h1 class="text-5xl font-black text-gray-900 mb-5 leading-tight">In 5 Minuten startklar</h1>
         <p class="text-xl text-gray-500 mb-10 leading-relaxed">
-          Teste simy 30 Tage lang vollständig kostenlos — ohne Kreditkarte, ohne Risiko. Alles eingerichtet, sofort bereit.
+          Teste simy 60 Tage lang vollständig kostenlos — ohne Kreditkarte, ohne Risiko. Alles eingerichtet, sofort bereit.
         </p>
 
         <!-- Checklist -->
@@ -92,22 +92,22 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'Demo & Gratis-Test – simy | 30 Tage kostenlos testen',
+  title: 'Demo & Gratis-Test – simy | 60 Tage kostenlos testen',
   meta: [
-    { name: 'description', content: 'simy 30 Tage kostenlos testen. Kein Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar. Jetzt Fahrschulsoftware Demo starten.' },
-    { property: 'og:title', content: 'Demo & Gratis-Test – simy | 30 Tage kostenlos' },
-    { property: 'og:description', content: 'simy 30 Tage kostenlos testen — kein Kreditkarte, keine Kündigung.' },
+    { name: 'description', content: 'simy 60 Tage kostenlos testen. Kein Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar. Jetzt Fahrschulsoftware Demo starten.' },
+    { property: 'og:title', content: 'Demo & Gratis-Test – simy | 60 Tage kostenlos' },
+    { property: 'og:description', content: 'simy 60 Tage kostenlos testen — kein Kreditkarte, keine Kündigung.' },
     { property: 'og:url', content: 'https://simy.ch/demo' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/demo' }],
 })
 
-const checks = ['Kein Kreditkarte nötig', '30 Tage vollständig kostenlos', 'Alle Features freigeschaltet', 'Jederzeit kündbar', 'In 5 Min. eingerichtet']
+const checks = ['Kein Kreditkarte nötig', '60 Tage vollständig kostenlos', 'Alle Features freigeschaltet', 'Jederzeit kündbar', 'In 5 Min. eingerichtet']
 
 const steps = [
   { title: 'Registrieren', desc: 'E-Mail, Fahrschulname, Passwort — fertig. Keine weiteren Angaben nötig.' },
   { title: 'Einrichten', desc: 'Setup-Wizard führt dich durch Kategorien, Preise und Standorte.' },
-  { title: 'Ausprobieren', desc: '30 Tage alle Features nutzen — Terminbuchung, Rechnungen, App, Website.' },
+  { title: 'Ausprobieren', desc: '60 Tage alle Features nutzen — Terminbuchung, Rechnungen, App, Website.' },
   { title: 'Entscheiden', desc: 'Weiter mit ab CHF 69/Mt. oder gratis kündigen — ohne Diskussion.' },
 ]
 

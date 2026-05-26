@@ -38,7 +38,7 @@
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
             </svg>
-            14 Tage kostenlos testen
+            60 Tage kostenlos testen
           </a>
           <a href="#features"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl font-bold text-base border border-gray-200 text-gray-700 hover:bg-gray-50 hover:-translate-y-0.5 transition-all">
@@ -268,7 +268,7 @@
     <section class="py-28 px-6" style="background: linear-gradient(135deg, #6000BD 0%, #8B2FE8 100%)">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-4xl font-black text-white mb-5">Bereit, deine Fahrschule auf Autopilot zu stellen?</h2>
-        <p class="text-purple-200 text-lg mb-10">14 Tage kostenlos testen. Kein Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar.</p>
+        <p class="text-purple-200 text-lg mb-10">60 Tage kostenlos testen. Kein Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90 hover:-translate-y-1"
           style="color: #6000BD; box-shadow: 0 12px 40px rgba(0,0,0,0.2)">
@@ -291,13 +291,13 @@ import { ref } from 'vue'
 useHead({
   title: 'Fahrschulsoftware Schweiz – simy | Verwaltung, Website & Marketing',
   meta: [
-    { name: 'description', content: 'simy ist die All-in-One Fahrschulsoftware für die Schweiz. Terminbuchung, automatische Rechnungen, Fahrlehrer-App und professionelle Website. 30 Tage kostenlos.' },
+    { name: 'description', content: 'simy ist die All-in-One Fahrschulsoftware für die Schweiz. Terminbuchung, automatische Rechnungen, Fahrlehrer-App und professionelle Website. 60 Tage kostenlos.' },
     { name: 'keywords', content: 'fahrschulsoftware, software fahrschule, fahrschule app, verwaltungssoftware fahrschule, fahrlehrer app' },
     { property: 'og:title', content: 'Fahrschulsoftware Schweiz – simy | Die All-in-One Lösung' },
-    { property: 'og:description', content: 'Terminbuchung, Rechnungen, App und Website — alles in simy. 30 Tage kostenlos testen.' },
+    { property: 'og:description', content: 'Terminbuchung, Rechnungen, App und Website — alles in simy. 60 Tage kostenlos testen.' },
     { property: 'og:url', content: 'https://simy.ch/fahrschule' },
     { name: 'twitter:title', content: 'Fahrschulsoftware Schweiz – simy' },
-    { name: 'twitter:description', content: 'All-in-One Fahrschulsoftware: Terminbuchung, Rechnungen, App, Website. 30 Tage gratis.' },
+    { name: 'twitter:description', content: 'All-in-One Fahrschulsoftware: Terminbuchung, Rechnungen, App, Website. 60 Tage gratis.' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/fahrschule' }],
   script: [
@@ -310,7 +310,7 @@ useHead({
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web',
         description: 'All-in-One Fahrschulsoftware für die Schweiz',
-        offers: { '@type': 'Offer', price: '0', priceCurrency: 'CHF', description: '30 Tage kostenlos testen' },
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'CHF', description: '60 Tage kostenlos testen' },
         aggregateRating: { '@type': 'AggregateRating', ratingValue: '4.9', reviewCount: '128' },
       }),
     },
@@ -320,7 +320,7 @@ useHead({
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
         mainEntity: [
-          { '@type': 'Question', name: 'Was kostet simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: 'simy bietet Pläne ab CHF 69/Monat. Die ersten 30 Tage sind vollständig kostenlos — keine Kreditkarte nötig.' } },
+          { '@type': 'Question', name: 'Was kostet simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: 'simy bietet Pläne ab CHF 69/Monat. Die ersten 60 Tage sind vollständig kostenlos — keine Kreditkarte nötig.' } },
           { '@type': 'Question', name: 'Wie lange dauert die Einrichtung?', acceptedAnswer: { '@type': 'Answer', text: 'In der Regel unter 15 Minuten. Der Setup-Wizard führt durch alle Schritte.' } },
           { '@type': 'Question', name: 'Können meine Schüler selbst Termine buchen?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Jede Fahrschule erhält einen personalisierten Buchungslink, den du auf deiner Website oder per WhatsApp teilen kannst.' } },
         ],
@@ -367,7 +367,7 @@ const testimonials = [
 ]
 
 const faqs = [
-  { q: 'Was kostet simy für Fahrschulen?', a: 'simy bietet verschiedene Pläne ab CHF 49/Monat. Du kannst 14 Tage vollständig kostenlos testen — ohne Kreditkarte.' },
+  { q: 'Was kostet simy für Fahrschulen?', a: 'simy bietet verschiedene Pläne ab CHF 69/Monat. Du kannst 60 Tage vollständig kostenlos testen — ohne Kreditkarte.' },
   { q: 'Wie lange dauert die Einrichtung?', a: 'In der Regel bist du in unter 15 Minuten startklar. Der Setup-Wizard führt dich durch alle Schritte: Kategorien, Preise, Standorte und Fahrlehrer.' },
   { q: 'Können meine Schüler selbst Termine buchen?', a: 'Ja. Jede Fahrschule erhält einen personalisierten Buchungslink, den du auf deiner Website oder in WhatsApp teilen kannst.' },
   { q: 'Funktioniert simy auch auf dem Smartphone?', a: 'Ja. Die Fahrlehrer-App läuft auf iOS und Android. Deine Schüler können den Buchungslink direkt im Browser öffnen.' },

@@ -108,7 +108,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Nie mehr Rechnungen manuell schreiben</h2>
-        <p class="text-purple-200 mb-8">30 Tage kostenlos — kein Kreditkarte.</p>
+        <p class="text-purple-200 mb-8">60 Tage kostenlos — kein Kreditkarte.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: #6000BD">
@@ -125,7 +125,7 @@
 useHead({
   title: 'Rechnungen & Kasse Fahrschule – simy | Automatische Abrechnung',
   meta: [
-    { name: 'description', content: 'simy automatisiert die Rechnungsstellung für Fahrschulen. TWINT, QR-Rechnung, Kreditkarte. Zahlungseingang automatisch erfasst. 30 Tage kostenlos testen.' },
+    { name: 'description', content: 'simy automatisiert die Rechnungsstellung für Fahrschulen. TWINT, QR-Rechnung, Kreditkarte. Zahlungseingang automatisch erfasst. 60 Tage kostenlos testen.' },
     { name: 'keywords', content: 'rechnung fahrschule, fahrschule abrechnung software, twint fahrschule, qr rechnung fahrschule' },
     { property: 'og:title', content: 'Rechnungen & Kasse – simy | Automatische Abrechnung für Fahrschulen' },
     { property: 'og:description', content: 'Rechnungen automatisch erstellt, versendet und eingetrieben. TWINT, QR-Rechnung, Kreditkarte.' },

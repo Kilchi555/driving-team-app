@@ -121,7 +121,7 @@
         <a href="https://app.simy.ch/tenant-register"
           class="flex items-center justify-center gap-2 w-full py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
           style="background: linear-gradient(135deg, #6000BD, #8B2FE8); box-shadow: 0 8px 24px rgba(96,0,189,0.25)">
-          30 Tage kostenlos testen — kein Kreditkarte →
+          60 Tage kostenlos testen — kein Kreditkarte →
         </a>
       </section>
 
@@ -159,7 +159,7 @@
     <!-- Final CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
       <div class="max-w-2xl mx-auto text-center">
-        <h2 class="text-3xl font-black text-white mb-4">simy 30 Tage kostenlos testen</h2>
+        <h2 class="text-3xl font-black text-white mb-4">simy 60 Tage kostenlos testen</h2>
         <p class="text-purple-200 mb-8">Überzeuge dich selbst. Keine Kreditkarte, keine Kündigung nötig.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
@@ -177,7 +177,7 @@
 useHead({
   title: 'Fahrschulsoftware Schweiz 2026 – Der komplette Ratgeber | simy',
   meta: [
-    { name: 'description', content: 'Was ist die beste Fahrschulsoftware für die Schweiz? Ratgeber zu Funktionen, Kosten und Vergleich. simy: All-in-One Lösung für Fahrschulen. 30 Tage kostenlos.' },
+    { name: 'description', content: 'Was ist die beste Fahrschulsoftware für die Schweiz? Ratgeber zu Funktionen, Kosten und Vergleich. simy: All-in-One Lösung für Fahrschulen. 60 Tage kostenlos.' },
     { name: 'keywords', content: 'fahrschulsoftware, software fahrschule, verwaltungssoftware fahrschule, software für fahrschulen, fahrschule software schweiz' },
     { property: 'og:title', content: 'Fahrschulsoftware Schweiz 2026 – Der komplette Ratgeber' },
     { property: 'og:description', content: 'Was ist die beste Fahrschulsoftware? Vergleich, Funktionen, Kosten. simy gewinnt.' },
@@ -201,7 +201,7 @@ useHead({
       '@context': 'https://schema.org',
       '@type': 'FAQPage',
       mainEntity: [
-        { '@type': 'Question', name: 'Was kostet Fahrschulsoftware?', acceptedAnswer: { '@type': 'Answer', text: 'Fahrschulsoftware kostet je nach Anbieter zwischen CHF 29 und CHF 199 pro Monat. simy bietet Pläne ab CHF 69/Monat mit 30 Tagen kostenlosem Test.' } },
+        { '@type': 'Question', name: 'Was kostet Fahrschulsoftware?', acceptedAnswer: { '@type': 'Answer', text: 'Fahrschulsoftware kostet je nach Anbieter zwischen CHF 29 und CHF 199 pro Monat. simy bietet Pläne ab CHF 69/Monat mit 60 Tagen kostenlosem Test.' } },
         { '@type': 'Question', name: 'Welche Fahrschulsoftware ist die beste?', acceptedAnswer: { '@type': 'Answer', text: 'simy ist die einzige All-in-One Lösung für Schweizer Fahrschulen mit Terminbuchung, automatischen Rechnungen, Fahrlehrer-App und integriertem Website-Generator.' } },
       ],
     }),

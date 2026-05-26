@@ -95,7 +95,7 @@
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: #6000BD">
-          30 Tage kostenlos starten →
+          60 Tage kostenlos starten →
         </a>
       </div>
     </section>
