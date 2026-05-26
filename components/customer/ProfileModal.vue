@@ -80,6 +80,10 @@
                 <p class="text-gray-600">Stadt</p>
                 <p class="font-medium text-gray-900">{{ formData.city }}</p>
               </div>
+              <div v-if="formData.profession" class="col-span-2">
+                <p class="text-gray-600">Beruf</p>
+                <p class="font-medium text-gray-900">{{ formData.profession }}</p>
+              </div>
             </div>
           </div>
 
@@ -333,6 +337,18 @@
                 />
               </div>
             </div>
+
+            <!-- Beruf -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Beruf</label>
+              <input
+                v-model="formData.profession"
+                type="text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="z.B. Student/in, Software Engineer"
+                @input="scheduleAutoSave"
+              />
+            </div>
           </div>
 
           <!-- Documents Section -->
@@ -436,6 +452,56 @@
         <div v-if="successMessage" class="p-3 bg-green-50 border border-green-200 rounded-lg">
           <p class="text-sm text-green-700">{{ successMessage }}</p>
         </div>
+
+        <!-- Account Deletion (Apple/Google compliant in-app account deletion) -->
+        <div class="border-t border-red-100 pt-6 mt-2">
+          <h3 class="text-lg font-semibold text-red-700 mb-2">Konto löschen</h3>
+          <p class="text-sm text-gray-600 mb-3">
+            Diese Aktion ist unwiderruflich. Dein Konto und deine persönlichen Daten werden gelöscht.
+            Rechnungen, Zahlungen und Audit-Logs bleiben aus gesetzlichen Gründen (CH Buchhaltungspflicht) 10 Jahre erhalten.
+          </p>
+          <button
+            v-if="!showDeleteConfirm"
+            @click="showDeleteConfirm = true"
+            class="px-4 py-2 border border-red-300 text-red-700 hover:bg-red-50 rounded-lg transition-colors text-sm font-medium"
+          >
+            Konto löschen
+          </button>
+
+          <div v-else class="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+            <p class="text-sm text-red-800 font-medium">
+              Bist du sicher? Diese Aktion kann nicht rückgängig gemacht werden.
+            </p>
+            <p class="text-sm text-gray-700">
+              Gib zur Bestätigung <span class="font-mono font-bold text-red-700">LÖSCHEN</span> ein:
+            </p>
+            <input
+              v-model="deleteConfirmText"
+              type="text"
+              placeholder="LÖSCHEN"
+              class="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent font-mono"
+              :disabled="isDeletingAccount"
+            />
+            <div class="flex gap-2">
+              <button
+                @click="cancelDeleteAccount"
+                :disabled="isDeletingAccount"
+                class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+              >
+                Abbrechen
+              </button>
+              <button
+                @click="handleDeleteAccount"
+                :disabled="deleteConfirmText !== 'LÖSCHEN' || isDeletingAccount"
+                class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span v-if="isDeletingAccount">Wird gelöscht...</span>
+                <span v-else>Konto endgültig löschen</span>
+              </button>
+            </div>
+            <p v-if="deleteError" class="text-xs text-red-700 mt-2">{{ deleteError }}</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -494,7 +560,8 @@ const formData = ref({
   street: '',
   streetNr: '',
   zip: '',
-  city: ''
+  city: '',
+  profession: ''
 })
 
 // Load user data when modal opens
@@ -514,7 +581,8 @@ const loadUserData = () => {
         street: props.userData.street || '',
         streetNr: props.userData.street_nr || '',
         zip: props.userData.zip || '',
-        city: props.userData.city || ''
+        city: props.userData.city || '',
+        profession: props.userData.profession || ''
       }
     } else {
       logger.debug('⚠️ No userData provided')
@@ -539,6 +607,51 @@ const isWebAuthnLoading = ref(false)
 const webAuthnError = ref('')
 const webAuthnSuccess = ref('')
 const webAuthnCredentials = ref<any[]>([])
+
+// Account Deletion State
+const showDeleteConfirm = ref(false)
+const deleteConfirmText = ref('')
+const isDeletingAccount = ref(false)
+const deleteError = ref('')
+
+const cancelDeleteAccount = () => {
+  showDeleteConfirm.value = false
+  deleteConfirmText.value = ''
+  deleteError.value = ''
+}
+
+const handleDeleteAccount = async () => {
+  if (deleteConfirmText.value !== 'LÖSCHEN' || isDeletingAccount.value) return
+
+  isDeletingAccount.value = true
+  deleteError.value = ''
+
+  try {
+    logger.debug('🗑️ Deleting account...')
+    const response = await $fetch('/api/customer/delete-account', {
+      method: 'POST',
+      body: { confirmation: 'LÖSCHEN' }
+    }) as any
+
+    if (!response?.success) {
+      throw new Error(response?.message || 'Fehler beim Löschen des Kontos')
+    }
+
+    logger.debug('✅ Account deleted, signing out...')
+    showSuccess('Konto gelöscht', 'Dein Konto wurde erfolgreich gelöscht.')
+
+    await authStore.logout().catch(() => {})
+
+    const { currentTenantBranding } = useTenantBranding()
+    const slug = currentTenantBranding.value?.slug
+    await navigateTo(slug ? `/${slug}` : '/login', { replace: true })
+  } catch (err: any) {
+    console.error('❌ Account deletion failed:', err)
+    deleteError.value = err?.data?.statusMessage || err?.message || 'Fehler beim Löschen des Kontos'
+    showError('Fehler', deleteError.value)
+    isDeletingAccount.value = false
+  }
+}
 
 const scheduleAutoSave = () => {
   // Clear existing timer
@@ -645,7 +758,8 @@ const saveProfile = async () => {
         street: formData.value.street,
         streetNr: formData.value.streetNr,
         zip: formData.value.zip,
-        city: formData.value.city
+        city: formData.value.city,
+        profession: formData.value.profession
       }
     }) as any
 
