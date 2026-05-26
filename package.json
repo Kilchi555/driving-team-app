@@ -20,7 +20,9 @@
     "app:bump": "bash scripts/bump-version.sh",
     "app:open:ios": "npx cap open ios",
     "app:open:android": "npx cap open android",
-    "app:sync": "npx cap sync"
+    "app:sync": "npx cap sync",
+    "demo:apple-review:setup": "node scripts/setup-apple-review-tenant.mjs",
+    "demo:apple-review:teardown": "node scripts/teardown-apple-review-tenant.mjs --confirm"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
