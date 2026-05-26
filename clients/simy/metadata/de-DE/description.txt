@@ -1,16 +1,24 @@
-Simy ist die moderne Plattform für Fahrschulen in der Schweiz.
+Simy ist die moderne App für Fahrschulen in der Schweiz. Alles, was du für deinen Weg zum Führerschein brauchst – in einer App.
 
-Als Fahrschüler kannst du:
-• Fahrstunden einfach online buchen
-• Deinen Lernfortschritt verfolgen
+ALS FAHRSCHÜLER:IN
+• Fahrstunden direkt online buchen, verschieben und absagen
+• Push-Benachrichtigungen zu deinen Terminen
+• Termine automatisch in den Kalender deines iPhones übernehmen
+• Lernfortschritt und Bewertungen einsehen
+• Prüfungsresultate und Lernunterlagen abrufen
+• Zahlungen, Guthaben und Rechnungen verwalten
+• Mit Face ID schnell und sicher einloggen
 • Direkt mit deinem Fahrlehrer kommunizieren
-• Prüfungsresultate einsehen
-• Zahlungen und Rechnungen verwalten
 
-Für Fahrlehrer und Fahrschulen:
-• Terminkalender verwalten
+FÜR FAHRLEHRER:INNEN UND FAHRSCHULEN
+• Terminkalender und Verfügbarkeiten verwalten
 • Schüler und Fortschritt im Überblick
 • Prüfungsplanung und Statistiken
-• Einfache Abrechnung
+• Einfache Abrechnung und Rechnungsstellung
+• Bewertungssystem und Lernkontrollen
 
-Simy arbeitet mit ausgewählten Fahrschulen in der Schweiz zusammen. Dein Zugang wird direkt von deiner Fahrschule eingerichtet.
+DATENSCHUTZ
+Deine Daten werden ausschliesslich in der Schweiz verarbeitet. Wir setzen auf moderne Sicherheitsstandards mit Verschlüsselung und biometrischer Authentifizierung.
+
+ZUGANG
+Simy arbeitet mit ausgewählten Fahrschulen in der Schweiz zusammen. Dein Zugang wird direkt von deiner Fahrschule eingerichtet. Du bist noch nicht angemeldet? Frag bei deiner Fahrschule nach Simy oder besuche simy.ch.
