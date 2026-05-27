@@ -78,6 +78,30 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
+    // 1.5 Gate by tenant flags: even if a malicious client calls this endpoint
+    //     directly (bypassing the modal), online payments must be blocked when
+    //     the tenant has not activated Wallee or has been deactivated.
+    const { data: tenantFlags, error: tenantFlagsError } = await supabase
+      .from('tenants')
+      .select('wallee_enabled, is_active')
+      .eq('id', tenantId)
+      .single()
+
+    if (tenantFlagsError || !tenantFlags || tenantFlags.is_active === false) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Tenant nicht verfügbar'
+      })
+    }
+
+    if (!tenantFlags.wallee_enabled) {
+      logger.warn('🚫 Public payment blocked: wallee not enabled', { tenantId, courseId })
+      throw createError({
+        statusCode: 402,
+        statusMessage: 'Online-Zahlung ist für diese Fahrschule aktuell nicht aktiviert. Bitte kontaktiere die Fahrschule direkt.'
+      })
+    }
+
     // 2. Verify enrollment exists and is pending (if enrollmentId provided for backward compat)
     let enrollment: any = null
     if (enrollmentId) {

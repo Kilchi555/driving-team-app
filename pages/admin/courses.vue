@@ -53,9 +53,10 @@
             :class="[
               'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
               activeTab === 'courses'
-                ? 'border-blue-500 text-blue-600'
+                ? ''
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             ]"
+            :style="activeTab === 'courses' ? { borderColor: primaryColor, color: primaryColor } : {}"
           >
             📚 Kurse
           </button>
@@ -64,9 +65,10 @@
             :class="[
               'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
               activeTab === 'categories'
-                ? 'border-blue-500 text-blue-600'
+                ? ''
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             ]"
+            :style="activeTab === 'categories' ? { borderColor: primaryColor, color: primaryColor } : {}"
           >
             🏷️ Kursarten
           </button>
@@ -75,9 +77,10 @@
             :class="[
               'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
               activeTab === 'resources'
-                ? 'border-blue-500 text-blue-600'
+                ? ''
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             ]"
+            :style="activeTab === 'resources' ? { borderColor: primaryColor, color: primaryColor } : {}"
           >
             🏢 Ressourcen
           </button>
@@ -87,7 +90,30 @@
 
     <!-- Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      
+
+      <!-- Wallee-not-activated warning: courses still work but every
+           enrollment will be forced to cash, regardless of city. -->
+      <div
+        v-if="walleeStatusLoaded && !walleeEnabled && activeTab === 'courses'"
+        class="mb-6 p-4 rounded-lg border-2 border-amber-300 bg-amber-50"
+      >
+        <div class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          <div class="flex-1 text-sm text-amber-900">
+            <p class="font-semibold mb-1">Online-Zahlungen sind nicht aktiviert</p>
+            <p>
+              Solange Wallee in deinem Profil nicht aktiviert ist, werden <strong>alle</strong> Kursanmeldungen automatisch auf Barzahlung umgestellt — auch für Städte, in denen sonst online bezahlt würde. Schüler bezahlen den Betrag dann direkt vor Ort am ersten Kurstag.
+            </p>
+            <NuxtLink
+              to="/admin/profile?tab=payments"
+              class="inline-block mt-2 text-amber-900 font-semibold underline hover:no-underline"
+            >Wallee jetzt einrichten →</NuxtLink>
+          </div>
+        </div>
+      </div>
+
       <!-- Courses Tab -->
       <div v-if="activeTab === 'courses'">
         <!-- Stats Cards -->
@@ -158,7 +184,7 @@
                 v-model="searchQuery"
                 type="text"
                 placeholder="Kursname oder Beschreibung..."
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
             
@@ -166,7 +192,7 @@
               <label class="block text-sm font-medium text-gray-700 mb-1">Kursart</label>
               <select
                 v-model="selectedCategory"
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               >
                 <option value="">Alle Kursarten</option>
                 <!-- SARI course types -->
@@ -183,7 +209,7 @@
               <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
               <select
                 v-model="selectedStatus"
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               >
                 <option value="">Alle Status</option>
                 <option value="active">Aktiv</option>
@@ -196,7 +222,7 @@
             <div class="flex gap-2">
               <button
                 @click="loadCourses"
-                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                class="px-4 py-2 text-white rounded-lg transition-colors flex items-center gap-2 hover:opacity-90" :style="{ background: primaryColor }"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -272,7 +298,7 @@
                 <tr v-if="isLoading">
                   <td :colspan="showInstructorColumn ? 7 : 6" class="px-6 py-8 text-center">
                     <div class="flex items-center justify-center">
-                      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      <div class="animate-spin rounded-full h-8 w-8 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
                       <span class="ml-3 text-gray-600">Lade Kurse...</span>
                     </div>
                   </td>
@@ -289,7 +315,7 @@
                       <p class="text-gray-500 mb-4">Es wurden keine Kurse gefunden, die Ihren Suchkriterien entsprechen.</p>
                       <button
                         @click="resetFilters"
-                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                        class="px-4 py-2 text-white rounded-lg transition-colors hover:opacity-90" :style="{ background: primaryColor }"
                       >
                         Filter zurücksetzen
                       </button>
@@ -314,13 +340,22 @@
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="flex items-start">
                       <div class="flex-shrink-0">
-                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <div class="w-10 h-10 rounded-lg flex items-center justify-center" :style="{ background: `${primaryColor}1f` }">
                           <span class="text-lg">{{ course.course_category?.icon || '📚' }}</span>
                         </div>
                       </div>
                       <div class="ml-4">
                         <div class="text-sm font-medium text-gray-900">{{ course.name }}</div>
                         <div v-if="course.description" class="text-sm text-gray-500 mt-1">{{ course.description }}</div>
+                        <div class="mt-1 flex items-center gap-1">
+                          <span
+                            class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                            :class="getCoursePaymentBadge(course).cssClass"
+                            :title="getCoursePaymentBadge(course).title"
+                          >
+                            {{ getCoursePaymentBadge(course).icon }} {{ getCoursePaymentBadge(course).label }}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -369,7 +404,7 @@
                       <a
                         :href="`/booking/waitlist/${course.id}`"
                         target="_blank"
-                        class="text-xs text-blue-600 hover:underline"
+                        class="text-xs hover:underline" :style="{ color: primaryColor }"
                         @click.stop
                       >
                         Link zur Warteliste →
@@ -377,8 +412,8 @@
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
                       <div 
-                        class="bg-blue-600 h-2 rounded-full" 
-                        :style="{ width: `${Math.min(100, ((course.current_participants || 0) / course.max_participants) * 100)}%` }"
+                        class="h-2 rounded-full" 
+                        :style="{ background: primaryColor, width: `${Math.min(100, ((course.current_participants || 0) / course.max_participants) * 100)}%` }"
                       ></div>
                     </div>
                   </td>
@@ -396,7 +431,7 @@
                       @change.stop="handleStatusChange($event, course)"
                       @click.stop
                       :class="getStatusBadgeClass(course)"
-                      class="px-2 py-1 text-xs font-medium rounded-full border-0 bg-transparent cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      class="tenant-focus px-2 py-1 text-xs font-medium rounded-full border-0 bg-transparent cursor-pointer focus:outline-none focus:ring-1"
                     >
                       <option value="draft">Entwurf</option>
                       <option value="active">Aktiv</option>
@@ -429,7 +464,7 @@
           <div class="text-gray-600 mb-4">Keine Kursarten vorhanden</div>
           <button
             @click="showCreateCategoryModal = true"
-            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+            class="text-white px-4 py-2 rounded-lg hover:opacity-90" :style="{ background: primaryColor }"
           >
             Erste Kursart erstellen
           </button>
@@ -479,7 +514,7 @@
                 <span class="px-2 py-1 bg-gray-400 rounded text-xs">
                   {{ (category.default_price_rappen / 100).toFixed(2) }} CHF
                 </span>
-                <span v-if="category.default_requires_room" class="px-2 py-1 bg-blue-600 rounded text-xs">
+                <span v-if="category.default_requires_room" class="px-2 py-1 rounded text-xs" :style="{ background: primaryColor }">
                   🏢 Raum
                 </span>
                 <span v-if="category.default_requires_vehicle" class="px-2 py-1 bg-green-600 rounded text-xs">
@@ -495,7 +530,7 @@
                 <a
                   :href="`/courses/category/${category.code}`"
                   target="_blank"
-                  class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                  class="inline-flex items-center px-3 py-2 text-white text-sm font-medium rounded-lg transition-colors hover:opacity-90" :style="{ background: primaryColor }"
                 >
                   <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -642,7 +677,7 @@
               <h3 class="text-lg font-semibold text-gray-900">🏢 Räume</h3>
               <button
                 @click="showCreateRoomModal = true"
-                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1 w-fit"
+                class="text-white px-3 py-1 rounded text-sm flex items-center gap-1 w-fit hover:opacity-90" :style="{ background: primaryColor }"
               >
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -663,7 +698,7 @@
                   <div v-if="room.description" class="text-gray-600 text-xs">{{ room.description }}</div>
                 </div>
                 <div class="flex items-center justify-end sm:justify-start gap-2">
-                  <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                  <span class="px-2 py-1 rounded text-xs font-medium" :style="{ background: `${primaryColor}1f`, color: primaryColor }">
                     {{ room.capacity }} Plätze
                   </span>
                   <span v-if="room.is_public" class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
@@ -823,11 +858,12 @@
                 :class="[
                   'flex flex-col items-start gap-1 p-3 rounded-lg border-2 text-left transition-all',
                   newCourse.status !== 'waitlist'
-                    ? 'border-blue-600 bg-blue-50'
+                    ? ''
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 ]"
+                :style="newCourse.status !== 'waitlist' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
               >
-                <span class="text-sm font-semibold" :class="newCourse.status !== 'waitlist' ? 'text-blue-700' : 'text-gray-700'">
+                <span class="text-sm font-semibold" :class="newCourse.status !== 'waitlist' ? '' : 'text-gray-700'" :style="newCourse.status !== 'waitlist' ? { color: primaryColor } : {}">
                   Normaler Kurs
                 </span>
                 <span class="text-xs text-gray-500">Fester Termin, Sessions erforderlich</span>
@@ -871,7 +907,7 @@
                 required
                 :readonly="editingCourse && editingCourse.sari_managed"
                 :class="[
-                  'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                  'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2',
                   editingCourse && editingCourse.sari_managed ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
                 ]"
                 placeholder="z.B. Verkehrskunde VKU"
@@ -883,7 +919,7 @@
               <select
                 v-model="newCourse.course_category_id"
                 @change="onCategoryChange"
-                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               >
                 <option value="">Kursart wählen (optional)</option>
                 <option v-if="activeCategories.length === 0" value="" disabled>Kursarten werden geladen...</option>
@@ -900,11 +936,11 @@
               <div v-else class="text-xs text-green-600 mt-1">
                 ✅ {{ activeCategories.length }} Kategorien verfügbar
               </div>
-              <div v-if="selectedCategoryInfo" class="mt-2 p-3 bg-blue-50 rounded-lg">
+              <div v-if="selectedCategoryInfo" class="mt-2 p-3 rounded-lg" :style="{ background: `${primaryColor}10` }">
                 <p v-if="selectedCategoryInfo.description" class="text-sm text-gray-600 mb-2">
                   {{ selectedCategoryInfo.description }}
                 </p>
-                <div class="text-sm text-blue-800">
+                <div class="text-sm" :style="{ color: primaryColor }">
                   <strong>Kursdauer:</strong> 
                   <span v-if="selectedCategoryInfo.session_count && selectedCategoryInfo.hours_per_session">
                     {{ selectedCategoryInfo.session_count }} x {{ selectedCategoryInfo.hours_per_session }}h 
@@ -912,7 +948,7 @@
                   </span>
                   <span v-else>Standard (8h)</span>
                 </div>
-                <div v-if="selectedCategoryInfo.session_structure?.description" class="text-xs text-blue-600 mt-1">
+                <div v-if="selectedCategoryInfo.session_structure?.description" class="text-xs mt-1" :style="{ color: primaryColor }">
                   {{ selectedCategoryInfo.session_structure.description }}
                 </div>
               </div>
@@ -930,7 +966,7 @@
               rows="3"
               :readonly="editingCourse && editingCourse.sari_managed"
               :class="[
-                'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2',
                 editingCourse && editingCourse.sari_managed ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
               ]"
               placeholder="Kursbeschreibung..."
@@ -948,9 +984,35 @@
               v-model="newCourse.city"
               type="text"
               required
-              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
               placeholder="z. B. Zürich"
             />
+          </div>
+
+          <!-- Zahlungsmethode pro Kurs (optional override) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Zahlungsmethode
+            </label>
+            <p class="text-xs text-gray-500 mb-2">
+              <strong>Automatisch</strong> wählt anhand der Stadt: <em>Einsiedeln → Barzahlung</em>, alle anderen → <em>Online-Zahlung (Wallee)</em>. Setze manuell, wenn dieser Kurs abweichen soll (z. B. PGS in Einsiedeln auf Cash, Spezialkurs in Zürich auf Cash).
+            </p>
+            <select
+              v-model="newCourse.payment_method"
+              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
+            >
+              <option :value="null">Automatisch (basierend auf Stadt)</option>
+              <option value="WALLEE">Online-Zahlung (Wallee, Kreditkarte, TWINT)</option>
+              <option value="CASH_ON_SITE">Barzahlung vor Ort</option>
+            </select>
+            <p
+              v-if="!newCourse.payment_method"
+              class="text-xs mt-1"
+              :class="autoPaymentMethodLabel === 'Barzahlung vor Ort' ? 'text-amber-700' : ''"
+              :style="autoPaymentMethodLabel !== 'Barzahlung vor Ort' ? { color: primaryColor } : {}"
+            >
+              Aktuelle Auswahl: <strong>{{ autoPaymentMethodLabel }}</strong>
+            </p>
           </div>
 
           <!-- Participant Settings -->
@@ -965,7 +1027,7 @@
                 min="1"
                 max="100"
                 required
-                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
             
@@ -975,7 +1037,7 @@
                 v-model.number="newCourse.min_participants"
                 type="number"
                 min="1"
-                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
 
@@ -986,7 +1048,7 @@
                 type="number"
                 min="0"
                 step="0.01"
-                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
           </div>
@@ -1002,7 +1064,8 @@
                 <button
                   v-if="!(editingCourse && editingCourse.sari_managed)"
                   @click="addSession"
-                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors flex items-center gap-2"
+                  class="px-4 py-2 text-white text-sm rounded-lg transition-colors flex items-center gap-2 hover:opacity-90"
+                  :style="{ background: primaryColor }"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -1021,8 +1084,8 @@
             </div>
             
             <!-- Course Duration Info from Category -->
-            <div v-if="selectedCategoryInfo" class="bg-blue-50 p-3 rounded-lg">
-              <div class="text-sm text-blue-800">
+            <div v-if="selectedCategoryInfo" class="p-3 rounded-lg" :style="{ background: `${primaryColor}10` }">
+              <div class="text-sm" :style="{ color: primaryColor }">
                 <strong>Kursdauer (aus Kursart):</strong> 
                 <span v-if="selectedCategoryInfo.session_count && selectedCategoryInfo.hours_per_session">
                   {{ selectedCategoryInfo.session_count }} x {{ selectedCategoryInfo.hours_per_session }}h 
@@ -1030,7 +1093,7 @@
                 </span>
                 <span v-else>Standard (8h)</span>
               </div>
-              <div class="text-xs text-blue-600 mt-1">
+              <div class="text-xs mt-1" :style="{ color: primaryColor }">
                 ✅ {{ courseSessions.length || 0 }} Session(s) automatisch aus Kursart generiert. 
                 <span v-if="selectedCategoryInfo.session_count > 0">
                   Klicken Sie auf "Sessions neu generieren", um die Sessions zurückzusetzen.
@@ -1073,7 +1136,7 @@
                         required
                         :readonly="editingCourse && editingCourse.sari_managed"
                         :class="[
-                          'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500',
+                          'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 session-input tenant-focus focus:outline-none focus:ring-2',
                           editingCourse && editingCourse.sari_managed ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
                         ]"
                       />
@@ -1087,7 +1150,7 @@
                       required
                       :readonly="editingCourse && editingCourse.sari_managed"
                       :class="[
-                        'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500',
+                        'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 session-input tenant-focus focus:outline-none focus:ring-2',
                         editingCourse && editingCourse.sari_managed ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
                       ]"
                     />
@@ -1100,7 +1163,7 @@
                       required
                       :readonly="editingCourse && editingCourse.sari_managed"
                       :class="[
-                        'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500',
+                        'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 session-input tenant-focus focus:outline-none focus:ring-2',
                         editingCourse && editingCourse.sari_managed ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
                       ]"
                     />
@@ -1109,7 +1172,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Instruktor-Typ</label>
                     <select
                       v-model="session.instructor_type"
-                      class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input tenant-focus focus:outline-none focus:ring-2"
                     >
                       <option value="">Kein Instruktor</option>
                       <option value="internal">Interner Staff</option>
@@ -1119,8 +1182,8 @@
                 </div>
                 
                 <!-- Instructor Details Row -->
-                <div v-if="session.instructor_type" class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <h5 class="text-sm font-medium text-blue-900 mb-4">Instruktor-Details</h5>
+                <div v-if="session.instructor_type" class="mt-6 p-4 rounded-lg" :style="{ background: `${primaryColor}10`, border: `1px solid ${primaryColor}33` }">
+                  <h5 class="text-sm font-medium mb-4" :style="{ color: primaryColor }">Instruktor-Details</h5>
                   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <!-- Internal Staff Selection -->
                     <div v-if="session.instructor_type === 'internal'">
@@ -1128,7 +1191,7 @@
                       <select
                         v-model="session.staff_id"
                         required
-                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input tenant-focus focus:outline-none focus:ring-2"
                       >
                         <option value="">Staff auswählen</option>
                         <option v-for="staff in availableStaff" :key="staff.id" :value="staff.id">
@@ -1145,7 +1208,7 @@
                         v-model="session.external_instructor_name"
                         type="text"
                         placeholder="z.B. Fahrschule Bisig"
-                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input tenant-focus focus:outline-none focus:ring-2"
                       />
                     </div>
                     <div>
@@ -1154,7 +1217,7 @@
                         v-model="session.external_instructor_email"
                         type="email"
                         placeholder="info@example.ch"
-                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input tenant-focus focus:outline-none focus:ring-2"
                       />
                       <p class="text-xs text-gray-500 mt-1">Erhält die Teilnehmerliste 1 Tag vor dem Kurs</p>
                     </div>
@@ -1166,7 +1229,7 @@
                       v-model="session.description"
                       type="text"
                       :placeholder="`Session ${index + 1} Beschreibung`"
-                      class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input tenant-focus focus:outline-none focus:ring-2"
                     />
                   </div>
                 </div>
@@ -1176,7 +1239,7 @@
               <button
                 @click="addSession"
                 type="button"
-                class="w-full py-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
+                class="tenant-add-session w-full py-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 transition-colors flex items-center justify-center gap-2"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -1211,7 +1274,7 @@
             <div v-if="newCourse.requires_room" class="ml-6 space-y-3">
               <select
                 v-model="newCourse.room_id"
-                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               >
                 <option value="">Raum wählen</option>
                 <optgroup label="Öffentliche Räume">
@@ -1241,7 +1304,7 @@
             <div v-if="newCourse.requires_vehicle" class="ml-6 space-y-3">
               <select
                 v-model="newCourse.vehicle_id"
-                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               >
                 <option value="">Fahrzeug wählen</option>
                 <optgroup v-for="typeGroup in vehiclesByType" :key="typeGroup.type" :label="`${typeGroup.typeInfo.icon} ${typeGroup.typeInfo.label}`">
@@ -1293,7 +1356,7 @@
               <input
                 v-model="newCourse.sari_course_id"
                 type="text"
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="SARI-123456"
               />
             </div>
@@ -1303,7 +1366,7 @@
               <input
                 v-model="registrationDeadline"
                 type="datetime-local"
-                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-white tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
           </div>
@@ -1348,7 +1411,7 @@
                   v-model="externalInstructorForm.first_name"
                   type="text"
                   required
-                  class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
                   placeholder="Max"
                 />
               </div>
@@ -1359,7 +1422,7 @@
                   v-model="externalInstructorForm.last_name"
                   type="text"
                   required
-                  class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
                   placeholder="Mustermann"
                 />
               </div>
@@ -1371,7 +1434,7 @@
                 v-model="externalInstructorForm.email"
                 type="email"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="max.mustermann@example.com"
               />
             </div>
@@ -1381,7 +1444,7 @@
               <input
                 v-model="externalInstructorForm.phone"
                 type="tel"
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="+41 XX XXX XX XX"
               />
             </div>
@@ -1416,15 +1479,16 @@
               <input
                 v-model="sendInvitation"
                 type="checkbox"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                class="tenant-focus h-4 w-4 border-gray-300 rounded"
+                :style="{ accentColor: primaryColor }"
               />
               <label class="ml-2 text-sm text-gray-700">
                 Einladungs-E-Mail senden
               </label>
             </div>
             
-            <div v-if="sendInvitation" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p class="text-sm text-blue-800">
+            <div v-if="sendInvitation" class="rounded-lg p-4" :style="{ background: `${primaryColor}10`, border: `1px solid ${primaryColor}33` }">
+              <p class="text-sm" :style="{ color: primaryColor }">
                 Der externe Instruktor erhält eine E-Mail mit einem Einladungslink, um sein Passwort zu setzen und sich anzumelden.
               </p>
             </div>
@@ -1442,7 +1506,8 @@
           <button
             @click="createExternalInstructor"
             :disabled="!canCreateExternalInstructor || isCreatingExternalInstructor"
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            class="px-4 py-2 hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            :style="{ background: primaryColor }"
           >
             {{ isCreatingExternalInstructor ? 'Erstelle...' : 'Instruktor erstellen' }}
           </button>
@@ -1509,7 +1574,7 @@
                     type="checkbox" 
                     class="sr-only peer"
                   >
-                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                 </label>
               </div>
 
@@ -1524,7 +1589,7 @@
                     type="checkbox" 
                     class="sr-only peer"
                   >
-                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                 </label>
               </div>
             </div>
@@ -1565,10 +1630,10 @@
           class="bg-white rounded-lg border border-gray-200 shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" 
           @click.stop
         >
-        <div class="px-6 py-4 border-b border-gray-200 bg-blue-50">
+        <div class="px-6 py-4 border-b border-gray-200" :style="{ background: `${primaryColor}10` }">
           <h2 class="text-xl font-bold text-gray-900">Kurs-Status ändern</h2>
           <!-- DEBUG: Show modal state with visual indicator -->
-          <div class="mt-3 p-3 bg-white rounded border-2 border-blue-300">
+          <div class="mt-3 p-3 bg-white rounded border-2" :style="{ borderColor: `${primaryColor}66` }">
             <div class="text-xs font-mono space-y-1 text-gray-700">
               <div>🔸 Modal Sichtbar: {{ showStatusChangeModal ? '✅ JA' : '❌ NEIN' }}</div>
               <div>📍 Kurs ID: {{ statusChangeCourse?.id?.substring(0, 12) }}...</div>
@@ -1581,18 +1646,18 @@
         
         <div class="px-6 py-4 space-y-6">
           <!-- Course Info -->
-          <div v-if="statusChangeCourse" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 class="font-semibold text-blue-800 mb-2">{{ statusChangeCourse.name }}</h3>
+          <div v-if="statusChangeCourse" class="rounded-lg p-4" :style="{ background: `${primaryColor}10`, border: `1px solid ${primaryColor}33` }">
+            <h3 class="font-semibold mb-2" :style="{ color: primaryColor }">{{ statusChangeCourse.name }}</h3>
             <div class="flex items-center space-x-4 text-sm">
               <div class="flex items-center space-x-2">
-                <span class="text-blue-700">Von:</span>
+                <span :style="{ color: primaryColor }">Von:</span>
                 <span :class="getStatusBadgeClass({ status: oldStatus })" class="px-2 py-1 rounded-full text-xs font-medium">
                   {{ getStatusText({ status: oldStatus }) }}
                 </span>
               </div>
-              <span class="text-blue-700">→</span>
+              <span :style="{ color: primaryColor }">→</span>
               <div class="flex items-center space-x-2">
-                <span class="text-blue-700">Zu:</span>
+                <span :style="{ color: primaryColor }">Zu:</span>
                 <span :class="getStatusBadgeClass({ status: newStatus })" class="px-2 py-1 rounded-full text-xs font-medium">
                   {{ getStatusText({ status: newStatus }) }}
                 </span>
@@ -1608,7 +1673,8 @@
                 v-model="statusChangeOptions.notifyParticipants"
                 type="checkbox"
                 id="notifyParticipants"
-                class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                class="tenant-focus mt-1 h-4 w-4 border-gray-300 rounded"
+                :style="{ accentColor: primaryColor }"
               />
               <div class="flex-1">
                 <label for="notifyParticipants" class="text-sm font-medium text-gray-700 cursor-pointer">
@@ -1626,7 +1692,8 @@
                 v-model="statusChangeOptions.updateLandingPage"
                 type="checkbox"
                 id="updateLandingPage"
-                class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                class="tenant-focus mt-1 h-4 w-4 border-gray-300 rounded"
+                :style="{ accentColor: primaryColor }"
               />
               <div class="flex-1">
                 <label for="updateLandingPage" class="text-sm font-medium text-gray-700 cursor-pointer">
@@ -1653,7 +1720,7 @@
                 <textarea
                   v-model="statusChangeOptions.customMessage"
                   rows="4"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md tenant-focus focus:outline-none focus:ring-2"
                   placeholder="z.B. Der Kurs muss leider aufgrund unvorhergesehener Umstände abgesagt werden..."
                 ></textarea>
               </div>
@@ -1666,8 +1733,8 @@
               </p>
             </div>
 
-            <div v-else-if="newStatus === 'completed'" class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p class="text-sm text-blue-800">
+            <div v-else-if="newStatus === 'completed'" class="rounded-lg p-3" :style="{ background: `${primaryColor}10`, border: `1px solid ${primaryColor}33` }">
+              <p class="text-sm" :style="{ color: primaryColor }">
                 <strong>Abschluss:</strong> Der Kurs wird als abgeschlossen markiert. Keine weiteren Buchungen möglich.
               </p>
             </div>
@@ -1685,8 +1752,8 @@
             <button
               @click.prevent.stop="() => { logger.debug('🎯 Status ändern Button clicked'); confirmStatusChange() }"
               :disabled="isCanceling"
-              class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium pointer-events-auto"
-              style="pointer-events: auto !important"
+              class="flex-1 px-4 py-2 hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium pointer-events-auto"
+              :style="{ background: primaryColor, pointerEvents: 'auto' }"
               type="button"
             >
               {{ isCanceling ? 'Ändere Status...' : 'Status ändern' }}
@@ -1721,7 +1788,7 @@
                 type="text"
                 required
                 maxlength="50"
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. VKU"
               />
             </div>
@@ -1732,7 +1799,7 @@
                 v-model="categoryForm.name"
                 type="text"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. Verkehrskunde"
               />
             </div>
@@ -1743,7 +1810,7 @@
             <textarea
               v-model="categoryForm.description"
               rows="2"
-              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
               placeholder="Beschreibung der Kategorie..."
             ></textarea>
           </div>
@@ -1756,7 +1823,7 @@
                 v-model="categoryForm.icon"
                 type="text"
                 maxlength="10"
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="📚"
               />
             </div>
@@ -1766,7 +1833,7 @@
               <input
                 v-model="categoryForm.color"
                 type="color"
-                class="w-full h-10 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full h-10 bg-gray-50 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
           </div>
@@ -1783,7 +1850,7 @@
                   type="number"
                   min="1"
                   max="100"
-                  class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
                 />
               </div>
               
@@ -1794,7 +1861,7 @@
                   type="number"
                   min="0"
                   step="0.01"
-                  class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
                 />
               </div>
             </div>
@@ -1828,7 +1895,7 @@
               <label class="block text-sm font-medium text-gray-700">Standard Raum</label>
               <select
                 v-model="categoryForm.default_room_id"
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               >
                 <option value="">Kein Standard-Raum</option>
                 <optgroup label="Öffentliche Räume">
@@ -1849,7 +1916,7 @@
               <label class="block text-sm font-medium text-gray-700">Standard Fahrzeug</label>
               <select
                 v-model="categoryForm.default_vehicle_id"
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               >
                 <option value="">Kein Standard-Fahrzeug</option>
                 <optgroup v-for="typeGroup in vehiclesByType" :key="typeGroup.type" :label="`${typeGroup.typeInfo.icon} ${typeGroup.typeInfo.label}`">
@@ -1875,7 +1942,7 @@
                     max="10"
                     required
                     @input="updateDurationCalculation"
-                    class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
                   />
                 </div>
                 
@@ -1889,7 +1956,7 @@
                     step="0.5"
                     required
                     @input="updateDurationCalculation"
-                    class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
                   />
                 </div>
                 
@@ -1906,8 +1973,8 @@
 
 
               <!-- Duration Preview -->
-              <div class="bg-blue-50 p-3 rounded-lg">
-                <div class="text-sm text-blue-800">
+              <div class="p-3 rounded-lg" :style="{ background: `${primaryColor}10` }">
+                <div class="text-sm" :style="{ color: primaryColor }">
                   <strong>Vorschau:</strong> 
                   {{ categoryForm.session_count }} x {{ categoryForm.hours_per_session }}h 
                   ({{ categoryForm.total_duration_hours }}h total)
@@ -1920,7 +1987,7 @@
               <input
                 v-model="categoryForm.sari_category_code"
                 type="text"
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="SARI-VKU-001"
               />
             </div>
@@ -1969,7 +2036,7 @@
                 v-model.number="categoryForm.sort_order"
                 type="number"
                 min="0"
-                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
           </div>
@@ -2009,7 +2076,7 @@
                 v-model="vehicleForm.marke"
                 type="text"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. VW, BMW, Mercedes"
               />
             </div>
@@ -2020,7 +2087,7 @@
                 v-model="vehicleForm.modell"
                 type="text"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. Golf, Passat, 3er BMW"
               />
             </div>
@@ -2032,7 +2099,7 @@
               <select
                 v-model="vehicleForm.getriebe"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               >
                 <option value="Automatik">Automatik</option>
                 <option value="Schaltgetriebe">Schaltgetriebe</option>
@@ -2046,7 +2113,7 @@
                 v-model="vehicleForm.aufbau"
                 type="text"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. Limousine, Kombi, SUV"
               />
             </div>
@@ -2057,7 +2124,7 @@
                 v-model="vehicleForm.farbe"
                 type="text"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. Weiss, Schwarz, Blau"
               />
             </div>
@@ -2069,7 +2136,7 @@
               v-model="vehicleForm.location"
               type="text"
               required
-              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
               placeholder="z.B. Zürich-Altstetten"
             />
           </div>
@@ -2080,7 +2147,7 @@
             <textarea
               v-model="vehicleForm.description"
               rows="2"
-              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
               placeholder="Fahrzeugbeschreibung..."
             ></textarea>
           </div>
@@ -2127,7 +2194,7 @@
                 v-model="vehicleForm.marke"
                 type="text"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. VW, BMW, Mercedes"
               />
             </div>
@@ -2138,7 +2205,7 @@
                 v-model="vehicleForm.modell"
                 type="text"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. Golf, Passat, 3er BMW"
               />
             </div>
@@ -2150,7 +2217,7 @@
               <select
                 v-model="vehicleForm.getriebe"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               >
                 <option value="Automatik">Automatik</option>
                 <option value="Schaltgetriebe">Schaltgetriebe</option>
@@ -2164,7 +2231,7 @@
                 v-model="vehicleForm.aufbau"
                 type="text"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. Limousine, Kombi, SUV"
               />
             </div>
@@ -2175,7 +2242,7 @@
                 v-model="vehicleForm.farbe"
                 type="text"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. Weiss, Schwarz, Blau"
               />
             </div>
@@ -2187,7 +2254,7 @@
               v-model="vehicleForm.location"
               type="text"
               required
-              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
               placeholder="z.B. Zürich-Altstetten"
             />
           </div>
@@ -2197,7 +2264,7 @@
             <textarea
               v-model="vehicleForm.description"
               rows="2"
-              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
               placeholder="Fahrzeugbeschreibung..."
             ></textarea>
           </div>
@@ -2244,7 +2311,7 @@
                 v-model="roomForm.name"
                 type="text"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. Theorieraum 1"
               />
             </div>
@@ -2255,7 +2322,7 @@
                 v-model="roomForm.location"
                 type="text"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. Zürich-Altstetten"
               />
             </div>
@@ -2270,7 +2337,7 @@
                 min="1"
                 max="100"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
             
@@ -2281,7 +2348,7 @@
                 type="number"
                 min="0"
                 step="1"
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. 5000 für 50.00 CHF"
               />
             </div>
@@ -2292,7 +2359,7 @@
             <textarea
               v-model="roomForm.description"
               rows="2"
-              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
               placeholder="Raumbeschreibung..."
             ></textarea>
           </div>
@@ -2302,7 +2369,7 @@
             <input
               v-model="roomForm.equipment"
               type="text"
-              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
               placeholder="z.B. Beamer, Whiteboard, Computer"
             />
           </div>
@@ -2326,7 +2393,7 @@
           <button
             @click="createRoom"
             :disabled="!roomForm.name || !roomForm.location || isSavingResource"
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            class="px-4 py-2 hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors" :style="{ background: primaryColor }"
           >
             {{ isSavingResource ? 'Erstelle...' : 'Raum erstellen' }}
           </button>
@@ -2349,7 +2416,7 @@
                 v-model="roomForm.name"
                 type="text"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. Theorieraum 1"
               />
             </div>
@@ -2360,7 +2427,7 @@
                 v-model="roomForm.location"
                 type="text"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. Zürich-Altstetten"
               />
             </div>
@@ -2375,7 +2442,7 @@
                 min="1"
                 max="100"
                 required
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
             
@@ -2386,7 +2453,7 @@
                 type="number"
                 min="0"
                 step="1"
-                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. 5000 für 50.00 CHF"
               />
             </div>
@@ -2397,7 +2464,7 @@
             <textarea
               v-model="roomForm.description"
               rows="2"
-              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
               placeholder="Raumbeschreibung..."
             ></textarea>
           </div>
@@ -2407,7 +2474,7 @@
             <input
               v-model="roomForm.equipment"
               type="text"
-              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
               placeholder="z.B. Beamer, Whiteboard, Computer"
             />
           </div>
@@ -2431,7 +2498,7 @@
           <button
             @click="updateRoom"
             :disabled="!roomForm.name || !roomForm.location || isSavingResource"
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            class="px-4 py-2 hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors" :style="{ background: primaryColor }"
           >
             {{ isSavingResource ? 'Aktualisiere...' : 'Raum aktualisieren' }}
           </button>
@@ -3020,7 +3087,7 @@
               v-model="vehicleForm.marke"
               type="text"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             />
           </div>
           <div>
@@ -3029,7 +3096,7 @@
               v-model="vehicleForm.modell"
               type="text"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             />
           </div>
         </div>
@@ -3039,7 +3106,7 @@
           <input
             v-model="vehicleForm.location"
             type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
           />
         </div>
         
@@ -3048,7 +3115,7 @@
           <textarea
             v-model="vehicleForm.description"
             rows="3"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
           ></textarea>
         </div>
 
@@ -3057,7 +3124,7 @@
             <label class="block text-sm font-medium text-gray-500 mb-2">Getriebe</label>
             <select
               v-model="vehicleForm.getriebe"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             >
               <option value="Automatik">Automatik</option>
               <option value="Manuell">Manuell</option>
@@ -3068,7 +3135,7 @@
             <input
               v-model="vehicleForm.aufbau"
               type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             />
           </div>
           <div>
@@ -3076,7 +3143,7 @@
             <input
               v-model="vehicleForm.farbe"
               type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             />
           </div>
         </div>
@@ -3127,7 +3194,7 @@
               v-model="roomForm.name"
               type="text"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             />
           </div>
           <div>
@@ -3137,7 +3204,7 @@
               type="number"
               min="1"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             />
           </div>
         </div>
@@ -3147,7 +3214,7 @@
           <input
             v-model="roomForm.location"
             type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
           />
         </div>
         
@@ -3156,7 +3223,7 @@
           <textarea
             v-model="roomForm.description"
             rows="3"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
           ></textarea>
         </div>
 
@@ -3165,7 +3232,7 @@
           <textarea
             v-model="roomForm.equipment"
             rows="2"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             placeholder="z.B. Beamer, Whiteboard, Klimaanlage"
           ></textarea>
         </div>
@@ -3193,7 +3260,7 @@
         <button
           @click="createRoom"
           :disabled="isSavingResource"
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          class="px-4 py-2 hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors" :style="{ background: primaryColor }"
         >
           {{ isSavingResource ? 'Erstelle...' : 'Erstellen' }}
         </button>
@@ -3216,7 +3283,7 @@
               v-model="vehicleForm.marke"
               type="text"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             />
           </div>
           <div>
@@ -3225,7 +3292,7 @@
               v-model="vehicleForm.modell"
               type="text"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             />
           </div>
         </div>
@@ -3235,7 +3302,7 @@
           <input
             v-model="vehicleForm.location"
             type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
           />
         </div>
         
@@ -3244,7 +3311,7 @@
           <textarea
             v-model="vehicleForm.description"
             rows="3"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
           ></textarea>
         </div>
 
@@ -3253,7 +3320,7 @@
             <label class="block text-sm font-medium text-gray-500 mb-2">Getriebe</label>
             <select
               v-model="vehicleForm.getriebe"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             >
               <option value="Automatik">Automatik</option>
               <option value="Manuell">Manuell</option>
@@ -3264,7 +3331,7 @@
             <input
               v-model="vehicleForm.aufbau"
               type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             />
           </div>
           <div>
@@ -3272,7 +3339,7 @@
             <input
               v-model="vehicleForm.farbe"
               type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             />
           </div>
         </div>
@@ -3300,7 +3367,7 @@
         <button
           @click="updateVehicle"
           :disabled="isSavingResource"
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          class="px-4 py-2 hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors" :style="{ background: primaryColor }"
         >
           {{ isSavingResource ? 'Speichere...' : 'Speichern' }}
         </button>
@@ -3323,7 +3390,7 @@
               v-model="roomForm.name"
               type="text"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             />
           </div>
           <div>
@@ -3333,7 +3400,7 @@
               type="number"
               min="1"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             />
           </div>
         </div>
@@ -3343,7 +3410,7 @@
           <input
             v-model="roomForm.location"
             type="text"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
           />
         </div>
         
@@ -3352,7 +3419,7 @@
           <textarea
             v-model="roomForm.description"
             rows="3"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
           ></textarea>
         </div>
 
@@ -3361,7 +3428,7 @@
           <textarea
             v-model="roomForm.equipment"
             rows="2"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             placeholder="z.B. Beamer, Whiteboard, Klimaanlage"
           ></textarea>
         </div>
@@ -3389,7 +3456,7 @@
         <button
           @click="updateRoom"
           :disabled="isSavingResource"
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          class="px-4 py-2 hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors" :style="{ background: primaryColor }"
         >
           {{ isSavingResource ? 'Speichere...' : 'Speichern' }}
         </button>
@@ -3415,7 +3482,7 @@
               v-model="categoryForm.code"
               type="text"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
               placeholder="z.B. VKU"
             />
           </div>
@@ -3425,7 +3492,7 @@
               v-model="categoryForm.name"
               type="text"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
               placeholder="z.B. Verkehrskunde"
             />
           </div>
@@ -3436,7 +3503,7 @@
           <textarea
             v-model="categoryForm.description"
             rows="3"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             placeholder="Beschreibung der Kursart..."
           ></textarea>
         </div>
@@ -3451,7 +3518,7 @@
               <input
                 v-model="categoryForm.sari_category_code"
                 type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. VKU"
               />
             </div>
@@ -3480,7 +3547,7 @@
                 v-model.number="categoryForm.default_max_participants"
                 type="number"
                 min="1"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
             <div>
@@ -3490,7 +3557,7 @@
                 type="number"
                 step="0.01"
                 min="0"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
           </div>
@@ -3525,7 +3592,7 @@
             <label class="block text-sm font-medium text-gray-500 mb-2">Standard-Raum</label>
             <select
               v-model="categoryForm.default_room_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             >
               <option value="">Kein Standard-Raum</option>
               <option v-for="room in rooms" :key="room.id" :value="room.id">
@@ -3539,7 +3606,7 @@
             <label class="block text-sm font-medium text-gray-500 mb-2">Standard-Fahrzeug</label>
             <select
               v-model="categoryForm.default_vehicle_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             >
               <option value="">Kein Standard-Fahrzeug</option>
               <option v-for="vehicle in vehicles" :key="vehicle.id" :value="vehicle.id">
@@ -3559,7 +3626,7 @@
               <input
                 v-model="categoryForm.color"
                 type="color"
-                class="w-full h-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full h-10 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
             <div>
@@ -3567,7 +3634,7 @@
               <input
                 v-model="categoryForm.icon"
                 type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
                 placeholder="z.B. 🚗"
               />
             </div>
@@ -3586,7 +3653,7 @@
                 type="number"
                 step="0.5"
                 min="0.5"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
             <div>
@@ -3595,7 +3662,7 @@
                 v-model.number="categoryForm.session_count"
                 type="number"
                 min="1"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
             <div>
@@ -3605,7 +3672,7 @@
                 type="number"
                 step="0.5"
                 min="0.5"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
           </div>
@@ -3638,6 +3705,9 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { navigateTo, useNuxtApp } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { useCurrentUser } from '~/composables/useCurrentUser'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor } = useTenantBranding()
 import { useCourseCategories } from '~/composables/useCourseCategories'
 import { useInstructorInvitations } from '~/composables/useInstructorInvitations'
 import { useRoomReservations } from '~/composables/useRoomReservations'
@@ -3647,6 +3717,12 @@ import { useGeneralResources } from '~/composables/useGeneralResources'
 import { formatDateTime, formatDate, formatTime } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import ToggleSwitch from '~/components/ToggleSwitch.vue'
+import { useWalleeStatus } from '~/composables/useWalleeStatus'
+import { getCoursePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLocationUtils'
+
+// Warning banner: surface "no online payments" so admins understand all
+// course enrollments will fall back to cash.
+const { walleeEnabled, walleeStatusLoaded, loadWalleeStatus } = useWalleeStatus()
 
 // Simple toast notification functions
 const showSuccessToast = (title: string, message: string = '') => {
@@ -4090,8 +4166,41 @@ const newCourse = ref({
   sari_managed: false,
   sari_course_id: null as string | null,
   registration_deadline: null as string | null,
-  status: 'draft'
+  status: 'draft',
+  payment_method: null as 'WALLEE' | 'CASH_ON_SITE' | null
 })
+
+// Live preview: which payment method will the auto-detection pick when
+// the admin leaves the dropdown on "Automatisch (basierend auf Stadt)"?
+const autoPaymentMethodLabel = computed(() => {
+  const method = getCoursePaymentMethod(
+    {
+      payment_method: null,
+      city: newCourse.value.city || null,
+      description: newCourse.value.description || null,
+      name: newCourse.value.name || null
+    },
+    walleeEnabled.value
+  )
+  return getPaymentMethodLabel(method)
+})
+
+// Badge metadata for the course list. Distinguishes between an explicit
+// admin override and the automatic fallback, so admins can see at a glance
+// which courses they've customized.
+function getCoursePaymentBadge(course: any): { label: string; icon: string; cssClass: string; title: string } {
+  const method = getCoursePaymentMethod(course, walleeEnabled.value)
+  const isOverride = course?.payment_method === 'WALLEE' || course?.payment_method === 'CASH_ON_SITE'
+  const base = method === 'CASH_ON_SITE'
+    ? { label: 'Bar', icon: '💵', cssClass: 'bg-amber-100 text-amber-800' }
+    : { label: 'Online', icon: '💳', cssClass: 'bg-blue-100 text-blue-800' }
+  return {
+    ...base,
+    title: isOverride
+      ? `Zahlungsmethode manuell auf "${getPaymentMethodLabel(method)}" gesetzt`
+      : `Automatisch erkannt: ${getPaymentMethodLabel(method)}`
+  }
+}
 
 // Course Sessions
 const courseSessions = ref<Array<{
@@ -4416,7 +4525,8 @@ const resetNewCourse = () => {
     sari_managed: false,
     sari_course_id: null,
     registration_deadline: null,
-    status: 'draft'
+    status: 'draft',
+    payment_method: null
   }
   coursePrice.value = 0
   registrationDeadline.value = ''
@@ -5124,7 +5234,8 @@ const editCourse = (course: any) => {
     sari_managed: course.sari_managed || false,
     sari_course_id: course.sari_course_id || '',
     registration_deadline: course.registration_deadline || null,
-    status: course.status || 'draft'
+    status: course.status || 'draft',
+    payment_method: (course.payment_method as 'WALLEE' | 'CASH_ON_SITE' | null) ?? null
   }
   
   // Set derived values
@@ -5431,6 +5542,10 @@ onMounted(async () => {
   
   logger.debug('✅ Auth check passed, loading courses...')
   logger.debug('🔄 Courses page mounted, current user:', currentUser.value)
+
+  // Fire-and-forget: load Wallee status so the warning banner can decide
+  // whether to render. Failures are non-fatal.
+  loadWalleeStatus().catch(() => {})
   
   // Ensure current user is loaded first
   if (!currentUser.value?.tenant_id) {
@@ -5958,6 +6073,22 @@ const triggerSariSync = async () => {
 </script>
 
 <style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+.peer:checked ~ .tenant-toggle {
+  background-color: var(--color-primary, #1E40AF);
+}
+.peer:focus ~ .tenant-toggle {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary, #1E40AF) 30%, transparent);
+}
+.tenant-add-session:hover {
+  border-color: var(--color-primary, #1E40AF);
+  color: var(--color-primary, #1E40AF);
+  background-color: color-mix(in srgb, var(--color-primary, #1E40AF) 10%, transparent);
+}
+
 /* Additional styling for course management */
 .course-card {
   transition: transform 0.2s ease-in-out;

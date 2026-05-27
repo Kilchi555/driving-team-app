@@ -12,8 +12,16 @@ import { useState, useNuxtApp } from '#app'
 import { useTenant } from '~/composables/useTenant'
 
 export const useWalleeStatus = () => {
-  // Global singletons — one value per SSR context / client navigation
-  const walleeEnabled = useState<boolean>('wallee_enabled_status', () => true)
+  // Global singletons — one value per SSR context / client navigation.
+  //
+  // SECURITY: We default to `false` so that any UI which conditionally
+  // renders online-payment affordances stays hidden until the tenant's
+  // Wallee status has been confirmed. This avoids a window where buttons
+  // are shown to users even though the server would reject the payment.
+  // Pages that explicitly know Wallee is enabled (e.g. the public course
+  // page, which receives `wallee_enabled` via the branding endpoint) flip
+  // this on via the watcher below.
+  const walleeEnabled = useState<boolean>('wallee_enabled_status', () => false)
   const walleeStatusLoaded = useState<boolean>('wallee_status_loaded', () => false)
 
   const { currentTenant } = useTenant()
@@ -38,7 +46,8 @@ export const useWalleeStatus = () => {
       walleeEnabled.value = data.enabled
       walleeStatusLoaded.value = true
     } catch {
-      // Non-fatal: keep default (true = show buttons; server will block anyway)
+      // Non-fatal: keep default (false). Affordances stay hidden so users
+      // never see online-payment buttons that would fail server-side.
     }
   }
 

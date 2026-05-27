@@ -124,6 +124,8 @@ export default defineEventHandler(async (event) => {
         name,
         category,
         description,
+        city,
+        payment_method,
         price_per_participant_rappen,
         max_participants,
         current_participants,
