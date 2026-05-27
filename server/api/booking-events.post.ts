@@ -3,11 +3,13 @@ import { createClient } from '@supabase/supabase-js'
 
 interface BookingEventPayload {
   session_id: string
-  event_type: 'viewed' | 'started' | 'completed' | 'abandoned'
+  event_type: 'viewed' | 'started' | 'completed' | 'abandoned' | 'inquiry_submitted'
   page: string
   referrer?: string
   course_id?: string
   amount?: number
+  proposal_id?: string
+  appointment_id?: string
   [key: string]: any
 }
 
@@ -47,6 +49,8 @@ export default defineEventHandler(async (event) => {
       referrer: body.referrer || null,
       course_id: body.course_id || null,
       amount: body.amount || null,
+      appointment_id: body.appointment_id || null,
+      proposal_id: body.proposal_id || null,
       date: new Date().toISOString().split('T')[0],
     })
 

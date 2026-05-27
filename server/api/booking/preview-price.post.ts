@@ -1,17 +1,19 @@
 /**
  * POST /api/booking/preview-price
- * Returns the calculated lesson price for a given slot/category combination.
+ * Returns the calculated lesson price for a given slot/category combination,
+ * including admin fee (when applicable for the user's category history).
  * Used by the booking confirmation step to display the price before confirming.
  */
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { roundToNearest5Rappen } from '~/utils/rounding'
+import { calculateAdminFee } from '~/server/utils/admin-fee'
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { slot_id, category_code, tenant_id } = body
+    const { slot_id, category_code, tenant_id, user_id } = body
 
     if (!slot_id || !category_code || !tenant_id) {
       throw createError({ statusCode: 400, statusMessage: 'slot_id, category_code and tenant_id are required' })
@@ -30,42 +32,93 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: 'Slot not found' })
     }
 
-    // Fetch pricing rule
-    const { data: pricingRule } = await supabase
-      .from('pricing_rules')
-      .select('price_per_minute_rappen, base_duration_minutes, duration_multiplier, weekend_multiplier, evening_multiplier')
-      .eq('category_code', category_code)
-      .eq('tenant_id', tenant_id)
-      .eq('rule_type', 'base_price')
-      .lte('valid_from', new Date().toISOString())
-      .or('valid_until.is.null,valid_until.gte.' + new Date().toISOString())
-      .single()
+    // Fetch base_price + admin_fee rules in parallel
+    const [basePriceRuleRes, adminFeeRuleRes] = await Promise.all([
+      supabase
+        .from('pricing_rules')
+        .select('price_per_minute_rappen, base_duration_minutes, duration_multiplier, weekend_multiplier, evening_multiplier')
+        .eq('category_code', category_code)
+        .eq('tenant_id', tenant_id)
+        .eq('rule_type', 'base_price')
+        .lte('valid_from', new Date().toISOString())
+        .or('valid_until.is.null,valid_until.gte.' + new Date().toISOString())
+        .maybeSingle(),
+      supabase
+        .from('pricing_rules')
+        .select('admin_fee_rappen')
+        .eq('category_code', category_code)
+        .eq('tenant_id', tenant_id)
+        .eq('rule_type', 'admin_fee')
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle(),
+    ])
+
+    const pricingRule = basePriceRuleRes.data
+    const adminFeeRule = adminFeeRuleRes.data
 
     if (!pricingRule) {
-      return { success: true, price_rappen: 0 }
+      return {
+        success: true,
+        price_rappen: 0,
+        admin_fee_rappen: 0,
+        total_rappen: 0,
+        admin_fee_applies: false,
+      }
     }
 
-    let price = Number(pricingRule.price_per_minute_rappen) * slot.duration_minutes
+    // ── Lesson price ────────────────────────────────────────────────────────
+    let lessonPrice = Number(pricingRule.price_per_minute_rappen) * slot.duration_minutes
 
     if (pricingRule.duration_multiplier && pricingRule.duration_multiplier !== '1.00') {
-      price = Math.round(price * parseFloat(pricingRule.duration_multiplier))
+      lessonPrice = Math.round(lessonPrice * parseFloat(pricingRule.duration_multiplier))
     }
 
     const startDate = new Date(slot.start_time)
     const dayOfWeek = startDate.getDay()
     if ((dayOfWeek === 0 || dayOfWeek === 6) && pricingRule.weekend_multiplier && pricingRule.weekend_multiplier !== '1.00') {
-      price = Math.round(price * parseFloat(pricingRule.weekend_multiplier))
+      lessonPrice = Math.round(lessonPrice * parseFloat(pricingRule.weekend_multiplier))
     }
 
     const hour = startDate.getHours()
     if (hour >= 18 && pricingRule.evening_multiplier && pricingRule.evening_multiplier !== '1.00') {
-      price = Math.round(price * parseFloat(pricingRule.evening_multiplier))
+      lessonPrice = Math.round(lessonPrice * parseFloat(pricingRule.evening_multiplier))
     }
 
-    price = roundToNearest5Rappen(price)
+    lessonPrice = roundToNearest5Rappen(lessonPrice)
 
-    logger.debug('💰 Preview price calculated:', { price, slot_id, category_code })
-    return { success: true, price_rappen: price }
+    // ── Admin fee (only when user_id known and rule exists) ────────────────
+    const adminFeeResult = await calculateAdminFee({
+      supabase,
+      userId: user_id || null,
+      tenantId: tenant_id,
+      categoryCode: category_code,
+      adminFeeRappenFromRule: adminFeeRule?.admin_fee_rappen,
+    })
+
+    const totalRappen = lessonPrice + adminFeeResult.adminFeeRappen
+
+    logger.debug('💰 Preview price calculated:', {
+      slot_id,
+      category_code,
+      lessonPrice,
+      adminFee: adminFeeResult.adminFeeRappen,
+      total: totalRappen,
+      adminFeeReason: adminFeeResult.reason,
+      appointmentNumber: adminFeeResult.appointmentNumber,
+    })
+
+    return {
+      success: true,
+      // Backwards-compat: existing callers read price_rappen for the lesson
+      // price only; new callers should use total_rappen for the full price.
+      price_rappen: lessonPrice,
+      admin_fee_rappen: adminFeeResult.adminFeeRappen,
+      total_rappen: totalRappen,
+      admin_fee_applies: adminFeeResult.applies,
+      admin_fee_reason: adminFeeResult.reason,
+      appointment_number: adminFeeResult.appointmentNumber,
+    }
   } catch (err: any) {
     if (err.statusCode) throw err
     throw createError({ statusCode: 500, statusMessage: 'Failed to calculate price' })
