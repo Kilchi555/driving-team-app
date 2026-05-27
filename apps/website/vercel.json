@@ -233,16 +233,6 @@
       "permanent": true
     },
     {
-      "source": "/fahrlehrer-zuerich",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
-      "permanent": true
-    },
-    {
-      "source": "/fahrlehrer-zuerich/",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
-      "permanent": true
-    },
-    {
       "source": "/verkehrskunde-kurs-zuerich",
       "destination": "https://drivingteam.ch/vku-kurs-zuerich/",
       "permanent": true

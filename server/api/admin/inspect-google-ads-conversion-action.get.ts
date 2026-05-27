@@ -8,7 +8,7 @@
  *     -H "Authorization: Bearer $CRON_SECRET"
  */
 
-import { defineEventHandler, getHeader, createError } from 'h3'
+import { defineEventHandler, getHeader, getQuery, createError } from 'h3'
 
 export default defineEventHandler(async (event) => {
   const authHeader = getHeader(event, 'authorization')
@@ -16,6 +16,8 @@ export default defineEventHandler(async (event) => {
   if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
+
+  const { list } = getQuery(event)
 
   const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN!
   const clientId = process.env.GOOGLE_ADS_CLIENT_ID!
@@ -45,9 +47,7 @@ export default defineEventHandler(async (event) => {
     'Content-Type': 'application/json',
   }
 
-  const query = conversionActionId
-    ? `
-      SELECT
+  const selectFields = `
         conversion_action.id,
         conversion_action.name,
         conversion_action.category,
@@ -62,28 +62,13 @@ export default defineEventHandler(async (event) => {
         conversion_action.value_settings.default_value,
         conversion_action.value_settings.default_currency_code,
         conversion_action.value_settings.always_use_default_value
-      FROM conversion_action
-      WHERE conversion_action.id = ${conversionActionId}
-    `
-    : `
-      SELECT
-        conversion_action.id,
-        conversion_action.name,
-        conversion_action.category,
-        conversion_action.type,
-        conversion_action.status,
-        conversion_action.primary_for_goal,
-        conversion_action.counting_type,
-        conversion_action.click_through_lookback_window_days,
-        conversion_action.view_through_lookback_window_days,
-        conversion_action.include_in_conversions_metric,
-        conversion_action.attribution_model_settings.attribution_model,
-        conversion_action.value_settings.default_value,
-        conversion_action.value_settings.default_currency_code,
-        conversion_action.value_settings.always_use_default_value
-      FROM conversion_action
-      WHERE conversion_action.name = 'Server: Booking Completed'
-    `
+      FROM conversion_action`
+
+  const query = list === 'all'
+    ? `SELECT ${selectFields} ORDER BY conversion_action.id DESC`
+    : conversionActionId
+      ? `SELECT ${selectFields} WHERE conversion_action.id = ${conversionActionId}`
+      : `SELECT ${selectFields} WHERE conversion_action.name = 'Server: Booking Completed'`
 
   const res = await fetch(
     `https://googleads.googleapis.com/v23/customers/${customerId}/googleAds:search`,

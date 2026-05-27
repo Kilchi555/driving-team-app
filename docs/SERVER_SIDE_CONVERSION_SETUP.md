@@ -96,6 +96,18 @@ In **Vercel → app.simy.ch Project → Settings → Environment Variables**
 | `GOOGLE_ADS_CUSTOMER_ID`              | `1916698119` (no dashes)              | bereits gesetzt                         |
 | `GOOGLE_ADS_MANAGER_CUSTOMER_ID`      | `9509957201` (optional, MCC)          | falls über Manager-Konto                |
 | **`GOOGLE_ADS_CONVERSION_ACTION_ID`** | **`1234567890`** (aus Schritt 1)      | **NEU — muss gesetzt werden**           |
+| **`GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID`** | **`1234567891`** (Anfrage-Conversion, optional) | **NEU — für Vorschlagsformular** |
+
+### Anfrage-Conversion (optional, Schritt 1b)
+
+Für das „Vorschlag machen“-Formular auf der Booking-Seite:
+
+1. Gleicher Ablauf wie Schritt 1, Name: `Server: Inquiry Submitted`
+2. Kategorie: **„Lead“** oder **„Kontakt“**
+3. Conversion Action ID → `GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID` in Vercel
+4. In Google Ads als **Sekundäre Conversion** markieren (Smart Bidding optimiert weiter auf „Booking Completed“)
+
+Ohne diese Variable: Anfragen werden trotzdem in `booking_events` + GA4 getrackt, nur kein Google Ads Upload.
 
 Nach dem Setzen: redeploy (`vercel --prod` oder neuer Push triggert auto-deploy).
 
