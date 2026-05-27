@@ -558,7 +558,9 @@ const submitProposal = async () => {
         postal_code: postalCode.value?.trim() || null,
         city: city.value?.trim() || null,
         notes: notes.value.trim() || null,
-        created_by_user_id: authStore.userProfile?.id || null
+        created_by_user_id: authStore.userProfile?.id || null,
+        marketing_session_id: (typeof window !== 'undefined' && (window as any).__analyticsSessionId) || undefined,
+        marketing_attribution: (typeof window !== 'undefined' && (window as any).__marketingAttribution) || undefined,
       }
     })
 

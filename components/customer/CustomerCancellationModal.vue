@@ -39,7 +39,7 @@
         <select
           v-model="selectedReasonId"
           @change="onReasonSelected"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          class="tenant-focus w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2"
         >
           <option value="">-- Bitte wählen --</option>
           <option 
@@ -52,9 +52,13 @@
         </select>
 
         <!-- Policy Info -->
-        <div v-if="selectedReason && policyInfo" class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-          <p class="text-sm text-blue-800 font-medium mb-1">Kostenfolge:</p>
-          <p class="text-sm text-blue-700">
+        <div
+          v-if="selectedReason && policyInfo"
+          class="rounded-lg p-3 mb-4 border"
+          :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }"
+        >
+          <p class="text-sm font-medium mb-1" :style="{ color: primaryColor }">Kostenfolge:</p>
+          <p class="text-sm" :style="{ color: primaryColor }">
             {{ policyInfo.description }}
           </p>
         </div>
@@ -95,7 +99,7 @@
                     <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
                   <p class="mt-2 text-sm text-gray-600">
-                    <span class="text-blue-600 hover:text-blue-500 font-medium">Datei auswählen</span> oder hierher ziehen
+                    <span class="font-medium hover:opacity-80" :style="{ color: primaryColor }">Datei auswählen</span> oder hierher ziehen
                   </p>
                   <p class="text-xs text-gray-500 mt-1">PDF, JPG, PNG (max. 5MB)</p>
                 </div>
@@ -133,7 +137,10 @@
 
       <!-- Loading State -->
       <div v-if="isLoading" class="text-center py-8">
-        <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-3"></div>
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent mx-auto mb-3"
+          :style="{ borderColor: primaryColor, borderTopColor: 'transparent' }"
+        ></div>
         <p class="text-gray-600">{{ uploadingFile ? 'Arztzeugnis wird hochgeladen...' : 'Termin wird abgesagt...' }}</p>
       </div>
 
@@ -160,6 +167,9 @@
 <script setup lang="ts">
 
 import { ref, computed, watch } from 'vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor } = useTenantBranding()
 
 const props = defineProps<{
   isVisible: boolean
@@ -384,6 +394,11 @@ watch(() => props.isVisible, (newVal) => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.tenant-focus:focus {
+  border-color: var(--color-primary, #1E40AF);
+  --tw-ring-color: var(--color-primary, #1E40AF);
 }
 </style>
 

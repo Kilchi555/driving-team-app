@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center p-4" :style="{ background: 'linear-gradient(to bottom right, #7C3AED15, #64748b15)' }">
+  <div class="fixed inset-0 overflow-y-auto flex flex-col items-center px-4" :style="{ background: 'linear-gradient(to bottom right, #7C3AED15, #64748b15)', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 32px)', paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px) + 16px)' }">
     
     <!-- Simy Logo (Oben in der Mitte) -->
-    <div class="mb-8">
+    <div class="mb-6">
       <img src="/simy-logo.png" alt="Simy" class="h-12">
     </div>
     
@@ -93,7 +93,7 @@
               <input
                 v-model="loginForm.rememberMe"
                 type="checkbox"
-                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                class="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
                 :disabled="isLoading"
               >
               <span class="ml-2 text-sm text-gray-600">Angemeldet bleiben</span>
@@ -522,6 +522,7 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, watch } from 'vue'
+import { useStatusBar } from '~/composables/useStatusBar'
 import { useRouter, definePageMeta, useHead, useRoute, navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
@@ -541,6 +542,11 @@ const route = useRoute()
 const { login, logout, isLoggedIn, loading } = useAuthStore()
 const { showError, showSuccess } = useUIStore()
 const { loadTenant, currentTenant } = useTenant()
+
+useStatusBar({
+  backgroundColor: '#f5f0fb',
+  style: 'dark'
+})
 const mfaFlow = useMFAFlow()
 
 // Hide registration / "back to home" links in the native app — registration in
@@ -1242,8 +1248,15 @@ useHead({
   title: 'Anmelden - Simy',
   meta: [
     { name: 'description', content: 'Melden Sie sich in Ihrem Simy Account an.' },
-    { name: 'robots', content: 'noindex, nofollow' }
+    { name: 'robots', content: 'noindex, nofollow' },
+    { name: 'theme-color', content: '#f5f0fb' }
   ],
+  bodyAttrs: {
+    style: 'background: linear-gradient(to bottom right, #f5f0fb, #f0f1f5); min-height: 100vh;'
+  },
+  htmlAttrs: {
+    style: 'background: #f5f0fb;'
+  },
   script: [
     {
       src: 'https://js.hcaptcha.com/1/api.js',

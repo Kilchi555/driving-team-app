@@ -1,12 +1,12 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
+  <div class="min-h-screen flex items-center justify-center p-4" style="background: linear-gradient(to bottom right, #7C3AED15, #64748b15);">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
       <!-- Header -->
-      <div class="bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-t-xl">
+      <div class="bg-gradient-to-r from-violet-600 to-purple-600 text-white p-6 rounded-t-xl">
         <div class="text-center">
           <LoadingLogo size="lg" class="mx-auto mb-3" />
           <h1 class="text-2xl font-bold">Passwort zurücksetzen</h1>
-          <p class="text-blue-100 mt-1">Geben Sie Ihr neues Passwort ein</p>
+          <p class="text-violet-100 mt-1">Geben Sie Ihr neues Passwort ein</p>
         </div>
       </div>
 
@@ -14,7 +14,7 @@
       <div class="p-6">
         <!-- Loading State -->
         <div v-if="isLoading" class="text-center py-8">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" style="border-bottom-color: #7C3AED;"></div>
           <p class="text-gray-600">Verarbeite Reset-Link...</p>
         </div>
 
@@ -25,7 +25,7 @@
           <p class="text-gray-600 mb-4">{{ error }}</p>
           <button
             @click="goToLogin"
-            class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
+            class="bg-violet-600 hover:bg-violet-700 text-white py-2 px-4 rounded-lg"
           >
             Zurück zum Login
           </button>
@@ -38,7 +38,7 @@
           <p class="text-gray-600 mb-4">Sie können sich jetzt mit Ihrem neuen Passwort anmelden.</p>
           <button
             @click="goToLogin"
-            class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
+            class="bg-violet-600 hover:bg-violet-700 text-white py-2 px-4 rounded-lg"
           >
             Zum Login
           </button>
@@ -61,7 +61,7 @@
               v-model="newPassword"
               type="password"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
               placeholder="Mindestens 12 Zeichen"
             />
             <div class="mt-2 space-y-1">
@@ -102,7 +102,7 @@
               v-model="confirmPassword"
               type="password"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
               placeholder="Passwort wiederholen"
             />
             <p v-if="confirmPassword && newPassword !== confirmPassword" 

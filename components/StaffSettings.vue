@@ -16,7 +16,7 @@
       <!-- Profile Header -->
       <div class="px-5 pt-2 pb-4 flex items-center justify-between flex-shrink-0">
         <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0" :style="{ background: primaryColor }">
             {{ props.currentUser?.first_name?.charAt(0) || '?' }}{{ props.currentUser?.last_name?.charAt(0) || '' }}
           </div>
           <div>
@@ -203,7 +203,8 @@
             <div class="mt-3 flex justify-end">
               <button
                 @click="showMonthlyDetailModal = true; loadMonthlyHours()"
-                class="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-medium"
+                class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:opacity-80"
+                :style="{ background: `${primaryColor}15`, color: primaryColor }"
               >Detaillierte Übersicht →</button>
             </div>
           </div>
@@ -258,7 +259,8 @@
                 <div class="flex justify-between items-center">
                   <button
                     @click="showNewLocationModal = true"
-                    class="px-4 py-2 text-md font-medium bg-blue-600 text-white rounded hover:bg-blue-700"
+                    class="px-4 py-2 text-md font-medium text-white rounded transition-colors hover:opacity-90"
+                    :style="{ background: primaryColor }"
                   >
                     + Neuer Standort
                   </button>
@@ -275,7 +277,7 @@
                         e.target.value = ''
                       }
                     }"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2"
                   >
                     <option value="">-- Wähle einen Standort --</option>
                     <option v-for="location in availableLocationsForSignup" :key="location.id" :value="location.id">
@@ -375,7 +377,7 @@
                           @change="autoSaveWorkingDay(day.value)"
                           class="sr-only peer"
                         />
-                        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <div class="tenant-toggle relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                       </label>
                     </div>
                     
@@ -393,7 +395,7 @@
                             v-model="block.start_time"
                             type="time"
                             @change="autoSaveWorkingDay(day.value)"
-                            class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            class="tenant-focus w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2"
                           >
                         </div>
                         
@@ -404,7 +406,7 @@
                             v-model="block.end_time"
                             type="time"
                             @change="autoSaveWorkingDay(day.value)"
-                            class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            class="tenant-focus w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2"
                           >
                         </div>
                         
@@ -436,7 +438,7 @@
                 </div>
 
                 <!-- Auto-Save Indicator -->
-                <div v-if="isSavingWorkingHours" class="text-sm text-blue-600 pt-2">
+                <div v-if="isSavingWorkingHours" class="text-sm pt-2" :style="{ color: primaryColor }">
                   💾 Speichere...
                 </div>
 
@@ -454,7 +456,8 @@
                       </select>
                       <button
                         @click="showMonthlyDetailModal = true"
-                        class="text-xs px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md font-medium"
+                        class="text-xs px-2 py-1 rounded-md font-medium transition-colors hover:opacity-80"
+                        :style="{ background: `${primaryColor}15`, color: primaryColor }"
                       >Details →</button>
                     </div>
                   </div>
@@ -496,7 +499,7 @@
 
                   <!-- Loading -->
                   <div v-if="isLoadingMonthlyHours" class="flex justify-center py-4">
-                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
                   </div>
 
                   <!-- Monthly table -->
@@ -571,7 +574,7 @@
           </div>
 
           <!-- ─── Ferien-Übersicht (für Stundenlohn-Staff) ─── -->
-          <div v-if="monthlyHoursData.salary_type !== 'monthly'" class="mt-6 space-y-3">
+          <div v-if="!isLoadingMonthlyHours && monthlyHoursData.salary_type && monthlyHoursData.salary_type !== 'monthly'" class="mt-6 space-y-3">
             <div class="flex items-center justify-between">
               <h4 class="text-sm font-semibold text-gray-800">🌴 Meine Ferien {{ vacationApptsYear }}</h4>
               <select
@@ -975,11 +978,12 @@
                   <input
                     :value="registrationLink"
                     readonly
-                    class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    class="tenant-focus flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 focus:ring-2"
                   />
                   <button
                     @click="copyToClipboard(registrationLink, 'Registrierungs-Link')"
-                    class="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
+                    class="px-4 py-2 text-white rounded text-sm transition-colors hover:opacity-90"
+                    :style="{ background: primaryColor }"
                   >
                     Kopieren
                   </button>
@@ -1011,7 +1015,8 @@
               </button>
               <button
                 @click="shareViaEmail"
-                class="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                class="flex items-center justify-center space-x-2 px-4 py-2 text-white rounded-lg transition-colors hover:opacity-90"
+                :style="{ background: primaryColor }"
               >
                 <span>📧</span>
                 <span>E-Mail teilen</span>
@@ -1049,7 +1054,7 @@
               v-model="newLocationForm.name"
               type="text"
               placeholder="z.B. Treffpunkt A"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2"
             />
           </div>
 
@@ -1065,7 +1070,7 @@
                 @keyup.enter="selectFirstAddressSuggestion"
                 type="text"
                 placeholder="z.B. Bahnhofstrasse 1, 8048 Zürich"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2"
               />
               
               <!-- Google Places Suggestions -->
@@ -1096,7 +1101,8 @@
                   type="checkbox"
                   :value="cat.code"
                   v-model="newLocationForm.available_categories"
-                  class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                  class="tenant-focus w-4 h-4 border-gray-300 rounded focus:ring-2"
+                  :style="{ accentColor: primaryColor }"
                 />
                 <span class="ml-2 text-sm text-gray-700">{{ cat.name }} ({{ cat.code }})</span>
               </label>
@@ -1114,7 +1120,8 @@
           <button
             @click="createNewLocation"
             :disabled="!newLocationForm.name || !newLocationForm.address || newLocationForm.available_categories.length === 0"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+            class="px-4 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors hover:opacity-90"
+            :style="{ background: primaryColor }"
           >
             Erstellen & Hinzufügen
           </button>
@@ -1182,7 +1189,7 @@
         <!-- Body -->
         <div class="overflow-auto flex-1 p-6 pt-3">
           <div v-if="isLoadingMonthlyHours" class="flex justify-center py-8">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
           </div>
           <div v-else-if="!monthlyHoursData.months?.length" class="text-center text-gray-400 py-8">
             <p class="font-medium">Noch keine Stundendaten für {{ monthlyHoursYear }}</p>
@@ -1277,6 +1284,8 @@ import { useTenant } from '~/composables/useTenant'
 import { useDatabaseQuery } from '~/composables/useDatabaseQuery'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useAuthStore } from '~/stores/auth'
+
+const { primaryColor } = useTenantBranding()
 
 interface Props {
   currentUser: any
@@ -3201,5 +3210,17 @@ onBeforeUnmount(() => {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Tenant-aware focus and toggle helpers */
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+.tenant-toggle {
+  --tw-ring-color: color-mix(in srgb, var(--color-primary, #1E40AF) 30%, transparent);
+}
+.peer:checked ~ .tenant-toggle {
+  background-color: var(--color-primary, #1E40AF);
 }
 </style>

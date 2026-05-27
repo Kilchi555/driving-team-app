@@ -3,15 +3,26 @@
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <!-- Back Button & Header -->
-      <div class="mb-4 flex items-center justify-between gap-4">
+      <div class="mb-4 flex items-center gap-4 pt-safe">
         <button 
           v-if="currentStep > 0"
           @click="handleBackButton"
-          class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg shadow hover:bg-gray-200 transition-colors flex-shrink-0"
+          class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
         >
-          ← Zurück
+          <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
         </button>
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 truncate">Fahrstunde buchen</h1>
+        <button
+          v-else
+          @click="goBackToReferrer"
+          class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+        >
+          <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Fahrstunde buchen</h1>
       </div>
 
       <!-- Initial Loading Overlay – shown while SSR hydrates or client-side fetch completes -->
@@ -398,10 +409,10 @@
           </div><!-- end canton-filtered locations wrapper -->
           
           <!-- Pickup Option (wenn verfügbar) -->
-          <div v-if="isPickupAvailableForCategory" class="mt-6 p-3 sm:p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+          <div v-if="isPickupAvailableForCategory" class="mt-6 p-3 sm:p-4 border-2 rounded-xl" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
             <div class="flex flex-col sm:flex-row items-start gap-3">
-              <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" :style="{ background: `${primaryColor}33` }">
+                <svg class="w-5 h-5" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
                 </svg>
               </div>
@@ -417,12 +428,13 @@
                     type="text"
                     placeholder="z.B. 8001"
                     maxlength="4"
-                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 tenant-focus text-sm"
                   >
                   <button
                     @click="checkPickupAvailability"
                     :disabled="!pickupPLZ || pickupPLZ.length < 4 || isCheckingPickup"
-                    class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium whitespace-nowrap"
+                    class="w-full sm:w-auto px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium whitespace-nowrap"
+                    :style="{ background: primaryColor }"
                   >
                     {{ isCheckingPickup ? 'Prüfe...' : 'Prüfen' }}
                   </button>
@@ -499,14 +511,14 @@
               
               <!-- Countdown Timer (wenn Termin reserviert) -->
             </div>
-            <div v-if="currentReservationId" class="max-w-2xl mx-auto mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div v-if="currentReservationId" class="max-w-2xl mx-auto mt-4 p-3 border rounded-lg" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
               <div class="flex items-center justify-between">
-                <span class="text-sm font-medium text-blue-900">Termin reserviert</span>
+                <span class="text-sm font-medium" :style="{ color: primaryColor }">Termin reserviert</span>
                 <div class="text-lg font-bold" :style="{ color: remainingSeconds < 60 ? '#dc2626' : getBrandPrimary() }">
                   {{ getCountdownText }}
                 </div>
               </div>
-              <p class="text-xs text-blue-700 mt-2">Ihre Reservation läuft in {{ getCountdownText }} ab.</p>
+              <p class="text-xs mt-2" :style="{ color: primaryColor }">Ihre Reservation läuft in {{ getCountdownText }} ab.</p>
             </div>
           </div>
           
@@ -709,9 +721,9 @@
               
               <!-- Countdown Timer -->
             </div>
-            <div v-if="currentReservationId" class="max-w-2xl mx-auto mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div v-if="currentReservationId" class="max-w-2xl mx-auto mt-4 p-3 border rounded-lg" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
               <div class="flex items-center justify-between">
-                <span class="text-sm font-medium text-blue-900">Termin reserviert</span>
+                <span class="text-sm font-medium" :style="{ color: primaryColor }">Termin reserviert</span>
                 <div class="text-lg font-bold" :style="{ color: remainingSeconds < 60 ? '#dc2626' : getBrandPrimary() }">
                   {{ getCountdownText }}
                 </div>
@@ -719,12 +731,12 @@
             </div>
 
           <!-- Pickup Info -->
-          <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div class="mb-6 p-4 border rounded-lg" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
             <div class="flex items-start gap-3">
-              <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 flex-shrink-0 mt-0.5" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              <div class="flex-1 text-sm text-blue-800">
+              <div class="flex-1 text-sm" :style="{ color: primaryColor }">
                 <p class="font-medium mb-1">Pickup-Service aktiviert</p>
                 <p>Wir holen dich an deiner Wunschadresse ab. Bitte gebe deine vollständige Adresse in PLZ {{ selectedLocation.pickupPLZ }} ein.</p>
               </div>
@@ -743,7 +755,7 @@
                   v-model="pickupAddress"
                   type="text"
                   placeholder="z.B. Musterstrasse 123, 8048 Zürich"
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 tenant-focus"
                   @input="validatePickupAddress"
                 >
               </div>
@@ -798,7 +810,7 @@
                 v-model="pickupAddressDetails.name"
                 type="text"
                 placeholder="z.B. Zuhause, Arbeit, ..."
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 tenant-focus"
               >
             </div>
           </div>
@@ -829,9 +841,9 @@
             
             <!-- Countdown Timer -->
           </div>
-          <div v-if="currentReservationId" class="max-w-2xl mx-auto mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div v-if="currentReservationId" class="max-w-2xl mx-auto mt-4 p-3 border rounded-lg" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
             <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-blue-900">Termin reserviert</span>
+              <span class="text-sm font-medium" :style="{ color: primaryColor }">Termin reserviert</span>
               <div class="text-lg font-bold" :style="{ color: remainingSeconds < 60 ? '#dc2626' : getBrandPrimary() }">
                 {{ getCountdownText }}
               </div>
@@ -868,16 +880,35 @@
                 <span class="font-medium text-gray-900 text-right">{{ selectedSlot?.duration_minutes }} Minuten</span>
               </div>
 
-              <!-- Price row -->
+              <!-- Price rows -->
               <template v-if="previewPriceRappen > 0">
                 <div class="border-t border-gray-200 pt-2 mt-1"></div>
                 <div class="flex justify-between items-start text-sm">
-                  <span class="text-gray-600">Preis:</span>
-                  <span
-                    class="font-medium text-gray-900 text-right"
-                    :class="(bookingDiscount || bookingCreditRappen > 0) ? 'line-through text-gray-400' : ''"
-                  >
+                  <span class="text-gray-600">Lektion:</span>
+                  <span class="font-medium text-gray-900 text-right">
                     CHF {{ (previewPriceRappen / 100).toFixed(2) }}
+                  </span>
+                </div>
+                <div v-if="previewAdminFeeRappen > 0" class="flex justify-between items-start text-sm">
+                  <span class="text-gray-600 flex items-center gap-1">
+                    Administrationsgebühr
+                    <span
+                      class="text-xs text-gray-400 cursor-help"
+                      title="Einmalige Gebühr ab der 2. Lektion pro Kategorie"
+                    >ⓘ</span>
+                  </span>
+                  <span class="font-medium text-gray-900 text-right">
+                    CHF {{ (previewAdminFeeRappen / 100).toFixed(2) }}
+                  </span>
+                </div>
+                <div
+                  v-if="previewAdminFeeRappen > 0"
+                  class="flex justify-between items-start text-sm font-medium"
+                  :class="(bookingDiscount || bookingCreditRappen > 0) ? 'text-gray-400' : 'text-gray-900'"
+                >
+                  <span>Zwischensumme:</span>
+                  <span :class="(bookingDiscount || bookingCreditRappen > 0) ? 'line-through' : ''">
+                    CHF {{ (previewGrossTotalRappen / 100).toFixed(2) }}
                   </span>
                 </div>
                 <div v-if="bookingDiscount" class="flex justify-between items-start text-sm">
@@ -886,18 +917,18 @@
                 </div>
                 <div v-if="bookingCreditRappen > 0" class="flex justify-between items-start text-sm">
                   <span class="text-gray-600">Guthaben:</span>
-                  <span class="font-medium text-blue-700 text-right">– CHF {{ (Math.min(bookingCreditRappen, Math.max(0, previewPriceRappen - (bookingDiscount?.discountAmountRappen ?? 0))) / 100).toFixed(2) }}</span>
+                  <span class="font-medium text-right" :style="{ color: primaryColor }">– CHF {{ (Math.min(bookingCreditRappen, Math.max(0, previewGrossTotalRappen - (bookingDiscount?.discountAmountRappen ?? 0))) / 100).toFixed(2) }}</span>
                 </div>
-                <div v-if="bookingDiscount || bookingCreditRappen > 0" class="flex justify-between items-start text-sm font-semibold">
+                <div class="flex justify-between items-start text-sm font-semibold pt-1 border-t border-gray-100">
                   <span class="text-gray-800">Total:</span>
                   <span :class="effectiveBookingTotal === 0 ? 'text-green-700' : 'text-gray-900'">
                     {{ effectiveBookingTotal === 0 ? 'Kostenlos ✓' : `CHF ${(effectiveBookingTotal / 100).toFixed(2)}` }}
                   </span>
                 </div>
-                <div v-if="bookingCreditRappen > 0 && effectiveBookingTotal === 0" class="text-xs text-blue-600 text-right">
+                <div v-if="bookingCreditRappen > 0 && effectiveBookingTotal === 0" class="text-xs text-right" :style="{ color: primaryColor }">
                   Wird automatisch mit deinem Guthaben bezahlt
                 </div>
-                <div v-else-if="bookingCreditRappen > 0" class="text-xs text-blue-600 text-right">
+                <div v-else-if="bookingCreditRappen > 0" class="text-xs text-right" :style="{ color: primaryColor }">
                   CHF {{ (bookingCreditRappen / 100).toFixed(2) }} Guthaben wird verrechnet
                 </div>
               </template>
@@ -1066,6 +1097,9 @@ import { navigateTo } from '#app'
 import AppointmentPreferencesForm from '~/components/booking/AppointmentPreferencesForm.vue'
 import { parseTimeWindows } from '~/utils/travelTimeValidation'
 import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor } = useTenantBranding()
 
 // Page Meta
 // @ts-ignore - definePageMeta is a Nuxt compiler macro
@@ -2925,7 +2959,22 @@ const selectTimeSlot = async (slot: any) => {
 // ✅ NEW: Handle proposal submission
 const handleProposalSubmitted = async (proposalId: string) => {
   logger.debug('✅ Booking proposal submitted:', proposalId)
-  
+
+  if (typeof window !== 'undefined' && (window as any).__trackBookingEvent) {
+    ;(window as any).__trackBookingEvent('inquiry_submitted', {
+      proposal_id: proposalId,
+      category_code: selectedCategory.value?.code,
+    })
+  }
+
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    ;(window as any).gtag('event', 'inquiry_submitted', {
+      event_category: 'conversion',
+      event_label: selectedCategory.value?.code ?? 'unknown',
+      proposal_id: proposalId,
+    })
+  }
+
   // Store proposal ID for potential later use
   currentReservationId.value = proposalId
   
@@ -3100,11 +3149,17 @@ const successMessage = ref({
 
 // Price preview + discount + credit for booking confirmation
 const previewPriceRappen = ref(0)
+const previewAdminFeeRappen = ref(0)
+const previewAdminFeeReason = ref<string | null>(null)
 const bookingDiscount = ref<{ code: string; discountAmountRappen: number; discountData: any } | null>(null)
 const bookingCreditRappen = ref(0)
 
+// Total (lesson + admin fee) before discount/credit are applied. Discount and
+// credit reduce from this gross total.
+const previewGrossTotalRappen = computed(() => previewPriceRappen.value + previewAdminFeeRappen.value)
+
 const effectiveBookingTotal = computed(() => {
-  const afterDiscount = Math.max(0, previewPriceRappen.value - (bookingDiscount.value?.discountAmountRappen ?? 0))
+  const afterDiscount = Math.max(0, previewGrossTotalRappen.value - (bookingDiscount.value?.discountAmountRappen ?? 0))
   return Math.max(0, afterDiscount - bookingCreditRappen.value)
 })
 
@@ -3112,35 +3167,44 @@ watch(currentStep, async (step) => {
   if (step === 7 && selectedSlot.value?.id && selectedCategory.value?.code && currentTenant.value?.id) {
     bookingDiscount.value = null
     bookingCreditRappen.value = 0
+    previewAdminFeeRappen.value = 0
+    previewAdminFeeReason.value = null
 
-    const [priceRes, userRes] = await Promise.allSettled([
-      $fetch('/api/booking/preview-price', {
+    // Resolve current user FIRST so we can pass user_id to preview-price for
+    // a correct admin-fee calculation (admin fee depends on user history).
+    let currentUserId: string | null = null
+    try {
+      const userRes = await $fetch('/api/auth/current-user').catch(() => null)
+      if (userRes) currentUserId = (userRes as any)?.id ?? null
+    } catch {
+      // not logged in - admin fee will be 0 in preview, full calc happens server-side at booking time
+    }
+
+    try {
+      const res = await $fetch('/api/booking/preview-price', {
         method: 'POST',
         body: {
           slot_id: selectedSlot.value.id,
           category_code: selectedCategory.value.code,
-          tenant_id: currentTenant.value.id
+          tenant_id: currentTenant.value.id,
+          user_id: currentUserId
         }
-      }),
-      $fetch('/api/auth/current-user').catch(() => null)
-    ])
-
-    if (priceRes.status === 'fulfilled') {
-      const res = priceRes.value as any
-      if (res?.success) previewPriceRappen.value = res.price_rappen
-    } else {
-      logger.warn('⚠️ Could not load price preview:', priceRes.reason)
+      }) as any
+      if (res?.success) {
+        previewPriceRappen.value = res.price_rappen
+        previewAdminFeeRappen.value = res.admin_fee_rappen ?? 0
+        previewAdminFeeReason.value = res.admin_fee_reason ?? null
+      }
+    } catch (err) {
+      logger.warn('⚠️ Could not load price preview:', err)
     }
 
-    if (userRes.status === 'fulfilled' && userRes.value) {
-      const uid = (userRes.value as any)?.id
-      if (uid) {
-        try {
-          const creditRes = await $fetch(`/api/student-credits/get-credit?user_id=${uid}`) as any
-          bookingCreditRappen.value = creditRes?.data?.balance_rappen ?? 0
-        } catch {
-          // not logged in or no credit record - fine
-        }
+    if (currentUserId) {
+      try {
+        const creditRes = await $fetch(`/api/student-credits/get-credit?user_id=${currentUserId}`) as any
+        bookingCreditRappen.value = creditRes?.data?.balance_rappen ?? 0
+      } catch {
+        // not logged in or no credit record - fine
       }
     }
   }
@@ -4329,3 +4393,10 @@ onBeforeUnmount(async () => {
   }
 })
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #111827);
+  border-color: var(--color-primary, #111827);
+}
+</style>

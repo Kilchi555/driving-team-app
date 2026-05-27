@@ -202,6 +202,18 @@
             >
           </div>
 
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Beruf
+            </label>
+            <input
+              v-model="registerForm.profession"
+              type="text"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
+              placeholder="z.B. Student/in, Software Engineer"
+            >
+          </div>
+
           <!-- Document Upload: Fahrausweis -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -306,10 +318,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor: tenantPrimary } = useTenantBranding()
 
 const emit = defineEmits(['close', 'success'])
 
@@ -317,17 +332,17 @@ interface Props {
   initialTab?: 'login' | 'register'
   selectedStaffId?: string
   selectedCategory?: string
-  primaryColor?: string
+  primaryColor?: string | undefined
 }
 
 const props = withDefaults(defineProps<Props>(), {
   initialTab: 'login',
   selectedStaffId: undefined,
   selectedCategory: undefined,
-  primaryColor: '#2563EB'
+  primaryColor: undefined
 })
 
-const primaryColor = computed(() => props.primaryColor || '#2563EB')
+const primaryColor = computed(() => props.primaryColor || tenantPrimary.value || '#111827')
 
 const route = useRoute()
 const router = useRouter()
@@ -358,6 +373,7 @@ const registerForm = ref({
   street_nr: '',
   zip: '',
   city: '',
+  profession: '',
   birthdate: '',
   assigned_staff_id: props.selectedStaffId || '',
   category: props.selectedCategory || ''
@@ -475,6 +491,7 @@ const handleRegister = async () => {
         ...(registerForm.value.street_nr && { street_nr: registerForm.value.street_nr }),
         ...(registerForm.value.zip && { zip: registerForm.value.zip }),
         ...(registerForm.value.city && { city: registerForm.value.city }),
+        ...(registerForm.value.profession && { profession: registerForm.value.profession }),
         ...(registerForm.value.assigned_staff_id && { assigned_staff_id: registerForm.value.assigned_staff_id }),
         ...(registerForm.value.assigned_staff_id && { assigned_staff_ids: [registerForm.value.assigned_staff_id] }),
         ...(registerForm.value.category && { category: registerForm.value.category }),

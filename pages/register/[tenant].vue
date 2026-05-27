@@ -1,6 +1,6 @@
 <!-- pages/[slug]/register.vue - Dynamic tenant registration page -->
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center p-4">
+  <div class="min-h-screen flex items-center justify-center p-4" :style="{ background: `linear-gradient(to bottom right, ${primaryColor}, ${accentColor || primaryColor})` }">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       <!-- Header -->
       <div v-if="!registrationComplete" class="bg-gray-100 text-white rounded-t-xl overflow-hidden">
@@ -94,7 +94,8 @@
           <div class="space-y-3 pt-4 sm:pt-6">
             <button
               @click="navigateTo(registeredTenantSlug || tenantSlug ? `/${registeredTenantSlug || tenantSlug}` : '/login')"
-              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-colors text-sm sm:text-base"
+              class="w-full text-white font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-colors text-sm sm:text-base"
+              :style="{ background: primaryColor }"
             >
               Zum Login
             </button>
@@ -112,12 +113,12 @@
             
             <!-- Pre-filled data notice -->
             <div v-if="prefilledData.first_name || prefilledData.last_name || prefilledData.email || prefilledData.phone" 
-                 class="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
-              <p class="text-blue-800 text-sm">
+                 class="border rounded-lg p-3 mt-4" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
+              <p class="text-sm" :style="{ color: primaryColor }">
                 <span class="font-medium">ℹ️ Vorausgefüllte Daten:</span> 
                 Die Kontaktdaten aus der Firmenregistrierung wurden automatisch übernommen.
               </p>
-              <p class="text-blue-700 text-xs mt-1">
+              <p class="text-xs mt-1" :style="{ color: primaryColor }">
                 <span class="font-medium">📍 Adresse:</span> 
                 Bitte geben Sie hier Ihre <strong>Privatadresse</strong> ein. Falls diese von der Firmenadresse abweicht, können Sie die Felder entsprechend anpassen.
               </p>
@@ -135,7 +136,7 @@
                 v-model="formData.firstName"
                 type="text"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
                 placeholder="Max"
               />
             </div>
@@ -149,7 +150,7 @@
                 v-model="formData.lastName"
                 type="text"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
                 placeholder="Mustermann"
               />
             </div>
@@ -165,8 +166,8 @@
                 required
                 @blur="validateBirthDate"
                 :class="[
-                  'w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-blue-500',
-                  fieldErrors.birthDate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                  'w-full px-3 py-2 border rounded-lg focus:ring-2',
+                  fieldErrors.birthDate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 tenant-focus'
                 ]"
               />
               <p v-if="fieldErrors.birthDate" class="mt-1 text-sm text-red-600">{{ fieldErrors.birthDate }}</p>
@@ -184,8 +185,8 @@
                 @input="phoneExistsBlocked = false"
                 @blur="normalizePhone"
                 :class="[
-                  'w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-blue-500',
-                  fieldErrors.phone ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                  'w-full px-3 py-2 border rounded-lg focus:ring-2',
+                  fieldErrors.phone ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 tenant-focus'
                 ]"
                 placeholder="079 123 45 67"
               />
@@ -194,7 +195,7 @@
                 ⚠ Diese Nummer ist bereits registriert.
                 <button type="button" @click="showPendingPhoneModal = true" class="underline font-medium">Details anzeigen</button>
               </p>
-              <p v-else-if="isCheckingPhone" class="text-xs text-blue-500 mt-1 flex items-center gap-1">
+              <p v-else-if="isCheckingPhone" class="text-xs mt-1 flex items-center gap-1" :style="{ color: primaryColor }">
                 <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                 Wird geprüft...
               </p>
@@ -210,7 +211,7 @@
                 v-model="formData.email"
                 type="email"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
                 placeholder="admin@ihre-firma.ch"
               />
             </div>
@@ -224,7 +225,7 @@
                 v-model="formData.street"
                 type="text"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
                 placeholder="Musterstrasse"
               />
             </div>
@@ -238,7 +239,7 @@
                 v-model="formData.streetNr"
                 type="text"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
                 placeholder="123"
               />
             </div>
@@ -257,8 +258,8 @@
                   pattern="[0-9]{4}"
                   @blur="validateZip"
                   :class="[
-                    'w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-blue-500',
-                    fieldErrors.zip ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                    'w-full px-3 py-2 border rounded-lg focus:ring-2',
+                    fieldErrors.zip ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 tenant-focus'
                   ]"
                   placeholder="8000"
                 />
@@ -274,10 +275,23 @@
                   v-model="formData.city"
                   type="text"
                   required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
                   placeholder="Zürich"
                 />
               </div>
+            </div>
+
+            <!-- Profession -->
+            <div class="mt-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Beruf
+              </label>
+              <input
+                v-model="formData.profession"
+                type="text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
+                placeholder="z.B. Student/in, Software Engineer"
+              />
             </div>
           </div>
 
@@ -287,7 +301,7 @@
               Führerschein-Kategorien *
             </label>
             <div class="space-y-3">
-              <label v-for="category in availableCategories" :key="category.code" :for="`cat-${category.code}`" class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden cursor-pointer hover:border-blue-300 transition-colors">
+              <label v-for="category in availableCategories" :key="category.code" :for="`cat-${category.code}`" class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden cursor-pointer tenant-hover-border transition-colors">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center space-x-3">
                     <span class="text-sm font-medium text-gray-800">{{ category.name }}</span>
@@ -305,7 +319,7 @@
                     type="checkbox"
                     class="sr-only peer"
                   />
-                  <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 pointer-events-none"></div>
+                  <div class="tenant-toggle relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all pointer-events-none"></div>
                 </div>
               </label>
             </div>
@@ -342,7 +356,7 @@
 
               <!-- Upload Area -->
               <div 
-                class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors cursor-pointer"
+                class="border-2 border-dashed border-gray-300 rounded-lg p-6 tenant-hover-border transition-colors cursor-pointer"
                 @click="() => triggerCategoryUpload(category)"
               >
                 <input
@@ -360,7 +374,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
                   </svg>
-                  <p class="text-blue-600 font-medium mb-1">Klicken zum Hochladen</p>
+                  <p class="font-medium mb-1" :style="{ color: primaryColor }">Klicken zum Hochladen</p>
                   <p class="text-xs text-gray-500">Foto aufnehmen oder aus Galerie wählen</p>
                   <p class="text-xs text-gray-400 mt-1">PNG, JPG oder PDF bis 5MB</p>
                 </div>
@@ -439,7 +453,7 @@
                 <!-- Email Check Status Indicator -->
                 <div v-if="isCheckingEmail" class="absolute right-3 top-1/2 transform -translate-y-1/2">
                   <div class="animate-spin">
-                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                     </svg>
                   </div>
@@ -474,18 +488,20 @@
                 <p v-else class="text-sm text-green-700 font-medium">SMS wurde gesendet! Bitte prüfen Sie Ihr Handy.</p>
               </div>
               <!-- Active user: already fully registered -->
-              <div v-else-if="fieldErrors.email?.includes('bereits registriert')" class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p class="text-sm text-blue-800 font-medium mb-2">Sie haben bereits ein Konto?</p>
+              <div v-else-if="fieldErrors.email?.includes('bereits registriert')" class="mt-2 p-3 border rounded-lg" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
+                <p class="text-sm font-medium mb-2" :style="{ color: primaryColor }">Sie haben bereits ein Konto?</p>
                 <div class="flex gap-2 flex-wrap">
                   <NuxtLink
                     :to="tenantSlug ? `/${tenantSlug}` : '/login'"
-                    class="text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md transition-colors"
+                    class="text-sm font-medium text-white px-3 py-1.5 rounded-md transition-colors"
+                    :style="{ background: primaryColor }"
                   >
                     Jetzt anmelden
                   </NuxtLink>
                   <NuxtLink
                     :to="tenantSlug ? `/${tenantSlug}?action=forgot` : '/login?action=forgot'"
-                    class="text-sm font-medium text-blue-700 hover:text-blue-900 px-3 py-1.5 border border-blue-300 rounded-md bg-white transition-colors"
+                    class="text-sm font-medium px-3 py-1.5 border rounded-md bg-white transition-colors"
+                    :style="{ color: primaryColor, borderColor: `${primaryColor}66` }"
                   >
                     Passwort vergessen?
                   </NuxtLink>
@@ -627,7 +643,8 @@
           v-if="currentStep < maxSteps"
           @click="nextStep"
           :disabled="!canProceed"
-          class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+          class="disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+          :style="!canProceed ? {} : { background: primaryColor }"
         >
           Weiter →
         </button>
@@ -649,7 +666,8 @@
           Bereits registriert?
           <button 
             @click="navigateTo(tenantSlug ? `/${tenantSlug}` : '/login')"
-            class="text-blue-600 hover:text-blue-800 font-semibold ml-1"
+            class="font-semibold ml-1 hover:opacity-80 transition-opacity"
+            :style="{ color: primaryColor }"
           >
             Hier anmelden
           </button>
@@ -683,7 +701,8 @@
             <button
               type="button"
               @click="showRegulationModal = false"
-              class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+              class="text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+              :style="{ background: primaryColor }"
             >
               Schließen
             </button>
@@ -699,8 +718,8 @@
     <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-md">
       <div class="p-6">
         <div class="flex items-start gap-4 mb-4">
-          <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center shrink-0" :style="{ background: `${primaryColor}33` }">
+            <svg class="w-6 h-6" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
@@ -722,15 +741,15 @@
         </div>
 
         <!-- Active account: show login link -->
-        <div v-if="pendingPhoneIsActive" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
-          <p class="text-sm text-blue-800">
+        <div v-if="pendingPhoneIsActive" class="border rounded-lg p-4 mb-5" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
+          <p class="text-sm" :style="{ color: primaryColor }">
             🔑 Melden Sie sich mit Ihren bestehenden Zugangsdaten an oder setzen Sie das Passwort zurück.
           </p>
         </div>
 
         <!-- Pending account: offer SMS resend -->
-        <div v-else class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
-          <p class="text-sm text-blue-800">
+        <div v-else class="border rounded-lg p-4 mb-5" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
+          <p class="text-sm" :style="{ color: primaryColor }">
             📱 Wir senden Ihnen den Aktivierungslink erneut per SMS an Ihre hinterlegte Nummer.
           </p>
         </div>
@@ -756,7 +775,8 @@
           <NuxtLink
             v-if="pendingPhoneIsActive"
             :to="tenantSlug ? `/${tenantSlug}` : '/login'"
-            class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium text-center transition-colors"
+            class="flex-1 px-4 py-2 text-white rounded-lg text-sm font-medium text-center transition-colors"
+            :style="{ background: primaryColor }"
           >
             Zum Login
           </NuxtLink>
@@ -767,7 +787,8 @@
             type="button"
             @click="resendOnboardingByPhone"
             :disabled="isSendingPendingPhoneSms"
-            class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            class="flex-1 px-4 py-2 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            :style="{ background: primaryColor }"
           >
             <svg v-if="isSendingPendingPhoneSms" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
@@ -808,6 +829,9 @@ import { useTenant } from '~/composables/useTenant'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { useAffiliateRef } from '~/composables/useAffiliateRef'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor, accentColor } = useTenantBranding()
 
 // Load hCaptcha script - ensure it loads immediately
 if (typeof window !== 'undefined') {
@@ -913,6 +937,7 @@ const formData = ref({
   streetNr: '',
   zip: '',
   city: '',
+  profession: '',
   categories: [] as string[],
   lernfahrausweisNr: '',
   
@@ -1456,6 +1481,7 @@ const submitRegistration = async () => {
         streetNr: formData.value.streetNr?.trim() || null,
         zip: formData.value.zip?.trim() || null,
         city: formData.value.city?.trim() || null,
+        profession: formData.value.profession?.trim() || null,
         categories: formData.value.categories || null,
         lernfahrausweisNr: formData.value.lernfahrausweisNr?.trim() || null,
         tenantId: activeTenantId,
@@ -1755,3 +1781,19 @@ watch(formData, (newData) => {
   }
 }, { deep: true })
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #111827);
+  border-color: var(--color-primary, #111827);
+}
+.tenant-hover-border:hover {
+  border-color: var(--color-primary, #111827);
+}
+.tenant-toggle {
+  --tw-ring-color: color-mix(in srgb, var(--color-primary, #111827) 40%, transparent);
+}
+.peer:checked ~ .tenant-toggle {
+  background-color: var(--color-primary, #111827);
+}
+</style>

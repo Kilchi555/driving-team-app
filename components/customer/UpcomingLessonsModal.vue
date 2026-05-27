@@ -120,8 +120,12 @@
                 </p>
 
                 <!-- Inline transfer picker -->
-                <div v-if="transferringLessonId === lesson.id" class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p class="text-sm font-medium text-blue-800 mb-2">Umplanen zu:</p>
+                <div
+                  v-if="transferringLessonId === lesson.id"
+                  class="mt-2 p-3 border rounded-lg"
+                  :style="{ backgroundColor: `${primaryColor}0d`, borderColor: `${primaryColor}33` }"
+                >
+                  <p class="text-sm font-medium mb-2" :style="{ color: primaryColor }">Umplanen zu:</p>
                   <div v-if="loadingTargetCourses" class="text-xs text-gray-500 mb-2">Kurse werden geladen…</div>
                   <div v-else-if="transferTargetCourses.length === 0" class="text-xs text-gray-500 mb-2">
                     Keine verfügbaren Kurse mit freien Plätzen.
@@ -129,7 +133,8 @@
                   <select
                     v-else
                     v-model="transferTargetCourseId"
-                    class="w-full text-sm border border-blue-300 rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    class="w-full text-sm border rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-2"
+                    :style="{ borderColor: `${primaryColor}66`, '--tw-ring-color': `${primaryColor}66` } as any"
                   >
                     <option value="">Ziel-Kurs auswählen…</option>
                     <option v-for="c in transferTargetCourses" :key="c.id" :value="c.id">
@@ -325,22 +330,10 @@ const confirmTransfer = async (lesson: any) => {
   }
 }
 
-// Tenant branding colors
-const { currentTenantBranding } = useTenantBranding()
-const primaryColor = computed(() => {
-  try {
-    return currentTenantBranding?.value?.primaryColor || '#019ee5'
-  } catch {
-    return '#019ee5'
-  }
-})
-const secondaryColor = computed(() => {
-  try {
-    return currentTenantBranding?.value?.secondaryColor || '#62b22f'
-  } catch {
-    return '#62b22f'
-  }
-})
+// Tenant branding colors — use the same composable-provided computeds
+// as the rest of the customer area (correct path: branding.colors.primary).
+// The fallback colors only apply if branding has not loaded yet.
+const { primaryColor, secondaryColor } = useTenantBranding()
 
 // State
 const filterStatus = ref('all')
@@ -508,20 +501,6 @@ watch(() => props.isOpen, async (isOpen) => {
     await loadLocations()
   }
 }, { immediate: true })
-
-const getStatusColor = (lesson: any) => {
-  const now = new Date()
-  const start = new Date(lesson.start_time)
-  const end = new Date(lesson.end_time)
-  
-  if (now >= start && now <= end) {
-    return 'bg-green-100 text-green-700'
-  } else if (start.toDateString() === now.toDateString()) {
-    return 'bg-blue-100 text-blue-700'
-  } else {
-    return 'bg-gray-100 text-gray-700'
-  }
-}
 
 const getStatusText = (lesson: any) => {
   const now = new Date()

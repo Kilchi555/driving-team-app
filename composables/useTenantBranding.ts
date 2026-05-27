@@ -73,6 +73,7 @@ export interface TenantBranding {
   customJs?: string
   defaultTheme: 'light' | 'dark' | 'auto'
   allowThemeSwitch: boolean
+  business_type?: string
 }
 
 
@@ -262,6 +263,7 @@ export const useTenantBranding = () => {
         customJs: data.custom_js,
         defaultTheme: data.default_theme || 'light',
         allowThemeSwitch: data.allow_theme_switch ?? true,
+        business_type: data.business_type,
       }
 
     // CSS-Variablen anwenden

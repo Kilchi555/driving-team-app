@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-[100svh] bg-gradient-to-b from-white to-gray-50 text-gray-900">
+  <div class="h-[100svh] flex flex-col bg-gradient-to-b from-white to-gray-50 text-gray-900">
     <!-- Header -->
-    <div class="border-b border-gray-100 bg-white/80 backdrop-blur sticky top-0 z-10">
+    <div class="border-b border-gray-100 bg-white/80 backdrop-blur flex-shrink-0 pt-safe">
       <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div class="flex items-center gap-4">
           <button @click="goBack" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm hover:bg-gray-50 shrink-0">
@@ -11,8 +11,8 @@
             Zurück
           </button>
           <div class="flex items-center gap-3 min-w-0">
-            <div class="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
-              <span class="text-emerald-600 text-base">📘</span>
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" :style="{ background: `${primaryColor}15` }">
+              <span class="text-base" :style="{ color: primaryColor }">📘</span>
             </div>
             <div class="min-w-0">
               <h1 class="text-lg font-bold tracking-tight truncate">Lernbereich</h1>
@@ -30,9 +30,10 @@
             :class="[
               'shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all',
               activeTab === tab
-                ? 'bg-emerald-600 text-white shadow-sm'
+                ? 'text-white shadow-sm'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             ]"
+            :style="activeTab === tab ? { background: primaryColor } : {}"
           >
             {{ tab }}
           </button>
@@ -40,6 +41,8 @@
       </div>
     </div>
 
+    <!-- Scrollable content -->
+    <div class="flex-1 overflow-y-auto">
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
       <!-- Loading -->
@@ -60,8 +63,8 @@
 
       <!-- Empty -->
       <div v-else-if="items.length === 0" class="p-10 bg-white border border-gray-200 rounded-2xl shadow-sm text-center">
-        <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-emerald-50 flex items-center justify-center">
-          <span class="text-emerald-600 text-2xl">✨</span>
+        <div class="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center" :style="{ background: `${primaryColor}15` }">
+          <span class="text-2xl" :style="{ color: primaryColor }">✨</span>
         </div>
         <h2 class="text-base font-semibold">Noch keine Bewertungen</h2>
         <p class="text-sm text-gray-500 mt-1">Sobald dein Fahrlehrer ein Thema bewertet hat, erscheint es hier.</p>
@@ -93,7 +96,7 @@
             <button
               v-for="criterion in category.items"
               :key="criterion.id"
-              class="group text-left bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all"
+              class="group text-left bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all hover:tenant-border"
               @click="openDetail(criterion)"
             >
               <div class="flex items-start gap-3">
@@ -111,7 +114,7 @@
                 </div>
                 <div class="min-w-0 flex-1">
                   <p class="text-sm font-semibold text-gray-900 leading-snug">{{ criterion.name }}</p>
-                  <p v-if="hasText(criterion) || hasImages(criterion)" class="text-xs text-emerald-600 mt-1">
+                  <p v-if="hasText(criterion) || hasImages(criterion)" class="text-xs mt-1" :style="{ color: primaryColor }">
                     Lerninhalt vorhanden →
                   </p>
                   <p v-else class="text-xs text-gray-400 mt-1">Noch kein Lerninhalt</p>
@@ -122,6 +125,7 @@
         </div>
       </div>
     </div>
+    </div><!-- end scrollable content -->
 
     <!-- Detail Modal -->
     <div v-if="selectedCriterion" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50" @click.self="closeDetail">
@@ -166,6 +170,8 @@ import { useAuthStore } from '~/stores/auth'
 import { storeToRefs } from 'pinia'
 import { navigateTo, useRouter } from '#app'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor } = useTenantBranding()
 
 const isLoading = ref(true)
 const error = ref<string | null>(null)
@@ -274,14 +280,62 @@ onMounted(async () => {
       if (a.type) appointmentTypeMap.set(a.id, a.type)
     })
 
+    // ── Deduplicate criteria by name + eval-category-name ────────────────────
+    // The API returns global (tenant_id=null) AND tenant-specific duplicates.
+    // We pick the canonical version per name: prefer the one with educational_content,
+    // then tenant-specific, then global. We also track all alias IDs so that notes
+    // referencing any duplicate still surface the canonical criterion.
+
+    // Step 1: find the best criterion per (name + category-name) group
+    const canonicalByKey = new Map<string, any>() // key → best criterion
+    const allIds = (allCriteria || []).map((c: any) => c.id as string)
+    ;(allCriteria || []).forEach((c: any) => {
+      const key = `${c.name}__${c.evaluation_categories?.name || ''}`
+      const existing = canonicalByKey.get(key)
+      if (!existing) {
+        canonicalByKey.set(key, c)
+      } else {
+        const existingHasContent = !!existing.educational_content
+        const newHasContent = !!c.educational_content
+        const existingIsTenant = !!existing.evaluation_categories?.tenant_id
+        const newIsTenant = !!c.evaluation_categories?.tenant_id
+        // Prefer: has content > tenant-specific > anything else
+        if ((!existingHasContent && newHasContent) ||
+            (existingHasContent === newHasContent && !existingIsTenant && newIsTenant)) {
+          canonicalByKey.set(key, c)
+        }
+      }
+    })
+
+    // Step 2: map every duplicate ID → canonical ID
+    const idToCanonicalId = new Map<string, string>()
+    ;(allCriteria || []).forEach((c: any) => {
+      const key = `${c.name}__${c.evaluation_categories?.name || ''}`
+      const canonical = canonicalByKey.get(key)
+      if (canonical) idToCanonicalId.set(c.id, canonical.id)
+    })
+
+    // Step 3: build best-content map (name → educational_content) for enrichment
+    const bestContentByName = new Map<string, any>()
+    ;(allCriteria || []).forEach((c: any) => {
+      if (c.educational_content && !bestContentByName.has(c.name)) {
+        bestContentByName.set(c.name, c.educational_content)
+      }
+    })
+
+    // Deduplicated criteria list (one per name+category)
+    const deduplicatedCriteria: any[] = Array.from(canonicalByKey.values())
+
     // Map criteria_id → { ratings[], evaluatedInCategories: Set<string> }
+    // Uses canonical IDs so ratings on any duplicate are attributed to the canonical
     const criteriaDataMap = new Map<string, { ratings: number[], cats: Set<string> }>()
     notes.forEach((note: any) => {
       if (!note.evaluation_criteria_id || note.criteria_rating == null) return
-      if (!criteriaDataMap.has(note.evaluation_criteria_id)) {
-        criteriaDataMap.set(note.evaluation_criteria_id, { ratings: [], cats: new Set() })
+      const canonicalId = idToCanonicalId.get(note.evaluation_criteria_id) || note.evaluation_criteria_id
+      if (!criteriaDataMap.has(canonicalId)) {
+        criteriaDataMap.set(canonicalId, { ratings: [], cats: new Set() })
       }
-      const entry = criteriaDataMap.get(note.evaluation_criteria_id)!
+      const entry = criteriaDataMap.get(canonicalId)!
       entry.ratings.push(note.criteria_rating)
       const aptType = appointmentTypeMap.get(note.appointment_id)
       if (aptType) entry.cats.add(aptType)
@@ -301,7 +355,7 @@ onMounted(async () => {
       })
     })
 
-    allCriteria?.forEach((criterion: any) => {
+    deduplicatedCriteria.forEach((criterion: any) => {
       const categoryId = criterion.evaluation_categories?.id
       if (!categoryId) return
       const matchesCategory = !studentCategoryCodes.length ||
@@ -319,7 +373,7 @@ onMounted(async () => {
     })
 
     // Build evaluated items — include criteria that are evaluated OR always_visible
-    const criteriaForStudent = (allCriteria || []).filter((c: any) =>
+    const criteriaForStudent = deduplicatedCriteria.filter((c: any) =>
       !studentCategoryCodes.length ||
       !c.driving_categories?.length ||
       c.driving_categories.some((dc: string) => studentCategoryCodes.includes(dc))
@@ -329,8 +383,11 @@ onMounted(async () => {
       .filter((c: any) => criteriaDataMap.has(c.id) || c.always_visible)
       .map((c: any) => {
         const entry = criteriaDataMap.get(c.id)
+        // Enrich educational_content from any duplicate that has it
+        const enrichedContent = c.educational_content || bestContentByName.get(c.name) || null
         return {
           ...c,
+          educational_content: enrichedContent,
           highestRating: entry ? Math.max(...entry.ratings) : null,
           latestRating: entry ? (entry.ratings[entry.ratings.length - 1] ?? null) : null,
           evaluatedInCategories: entry ? Array.from(entry.cats) : [],
@@ -373,4 +430,7 @@ onMounted(async () => {
 <style scoped>
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+.hover\:tenant-border:hover {
+  border-color: var(--color-primary, #1E40AF);
+}
 </style>

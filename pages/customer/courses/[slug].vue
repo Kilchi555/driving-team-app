@@ -1,11 +1,11 @@
 <template>
   <div 
-    class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100"
+    class="h-[100svh] flex flex-col bg-gradient-to-br from-slate-50 to-slate-100"
     :style="{'--primary-color': tenantBranding?.primary_color || '#10B981'} as any"
   >
     <!-- Header -->
     <div 
-      class="sticky top-0 z-50 shadow-sm border-b"
+      class="shadow-sm border-b flex-shrink-0 pt-safe"
       :style="{'backgroundColor': tenantBranding?.primary_color || '#10B981'}"
     >
       <div class="max-w-6xl mx-auto px-4 py-4">
@@ -23,6 +23,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Scrollable content -->
+    <div class="flex-1 overflow-y-auto">
 
     <!-- Initial Loading Overlay -->
     <div
@@ -53,7 +56,10 @@
 
     <!-- Loading State (within-page) -->
     <div v-if="isLoading" class="flex items-center justify-center py-20">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div
+        class="animate-spin rounded-full h-12 w-12 border-b-2"
+        :style="{ borderBottomColor: tenantBranding?.primary_color || '#10B981' }"
+      ></div>
     </div>
 
     <!-- Error State -->
@@ -73,7 +79,7 @@
             <label class="block text-sm font-medium text-slate-700 mb-1">Kategorie</label>
             <select 
               v-model="selectedCategory" 
-              class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2"
             >
               <option value="">Alle Kategorien</option>
               <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
@@ -85,7 +91,7 @@
             <label class="block text-sm font-medium text-slate-700 mb-1">Standort</label>
             <select 
               v-model="selectedLocation" 
-              class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2"
             >
               <option value="">Alle Standorte</option>
               <option v-for="loc in locations" :key="loc" :value="loc">{{ loc }}</option>
@@ -147,16 +153,21 @@
             <!-- Inline transfer picker for this registration -->
             <div
               v-if="customerTransferRegId === reg.id"
-              class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg"
+              class="mt-3 p-3 border rounded-lg"
+              :style="{
+                backgroundColor: `${tenantBranding?.primary_color || '#10B981'}0d`,
+                borderColor: `${tenantBranding?.primary_color || '#10B981'}33`
+              }"
             >
-              <p class="text-sm font-medium text-blue-800 mb-2">Umplanen zu:</p>
+              <p class="text-sm font-medium mb-2" :style="{ color: tenantBranding?.primary_color || '#10B981' }">Umplanen zu:</p>
               <div v-if="customerTransferOptions(reg).length === 0" class="text-sm text-gray-500 mb-2">
                 Keine verfügbaren Kurse derselben Kategorie mit freien Plätzen.
               </div>
               <select
                 v-else
                 v-model="customerTransferTargetId"
-                class="w-full text-sm border border-blue-300 rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                class="tenant-focus w-full text-sm border rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-2"
+                :style="{ borderColor: `${tenantBranding?.primary_color || '#10B981'}66` }"
               >
                 <option value="">Ziel-Kurs auswählen…</option>
                 <option v-for="c in customerTransferOptions(reg)" :key="c.id" :value="c.id">
@@ -311,6 +322,8 @@
         </div>
       </div>
     </div>
+
+    </div><!-- end scrollable content -->
 
     <!-- Enrollment Modal -->
     <CourseEnrollmentModal
@@ -758,4 +771,11 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--primary-color, #10B981);
+  border-color: var(--primary-color, #10B981);
+}
+</style>
 

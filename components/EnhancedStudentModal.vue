@@ -86,7 +86,7 @@
           <!-- Student Documents (Ausweise) Section -->
           <div class="bg-white border border-gray-200 rounded-lg p-6">
             <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" :style="{ color: primaryColor }">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
               </svg>
               Ausweise
@@ -106,7 +106,7 @@
                   v-if="doc.file_type && doc.file_type.startsWith('image/')"
                   :src="getStudentDocumentUrl(doc)"
                   :alt="doc.file_name"
-                  class="max-h-48 max-w-48 object-contain rounded border border-gray-200 hover:border-blue-400 transition-colors"
+                  class="max-h-48 max-w-48 object-contain rounded border border-gray-200 hover:tenant-border transition-colors"
                   loading="lazy"
                 />
                 <!-- PDF Icon -->
@@ -122,15 +122,19 @@
             <!-- Upload Button - Native Device Behavior -->
             <button
               @click="cameraInput?.click()"
-              class="relative overflow-hidden rounded-lg border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 px-4 py-3 text-center transition-all hover:border-blue-400 hover:shadow-md active:scale-95"
+              class="relative overflow-hidden rounded-lg border-2 px-4 py-3 text-center transition-all hover:shadow-md active:scale-95 hover:tenant-border"
+              :style="{
+                borderColor: `${primaryColor}33`,
+                background: `linear-gradient(to bottom right, ${primaryColor}15, ${primaryColor}30)`
+              }"
             >
-              <div class="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-transparent"></div>
+              <div class="absolute inset-0" :style="{ background: `linear-gradient(to bottom right, ${primaryColor}10, transparent)` }"></div>
               <div class="relative">
-                <svg class="mx-auto h-10 w-10 text-blue-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="mx-auto h-10 w-10 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" :style="{ color: primaryColor }">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
-                <p class="text-base font-semibold text-blue-700">Weiteres Dokument hochladen</p>
+                <p class="text-base font-semibold" :style="{ color: primaryColor }">Weiteres Dokument hochladen</p>
               </div>
             </button>
             
@@ -194,7 +198,7 @@
           <div v-if="progressSubTab === 'lektionen'">
             <!-- Loading State -->
             <div v-if="isLoadingLessons" class="flex items-center justify-center py-8">
-              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
               <span class="ml-3 text-gray-600">Lade Lektionen...</span>
             </div>
 
@@ -209,7 +213,7 @@
             <div v-else-if="lessons.length === 0" class="text-center py-12">
               <div class="text-6xl mb-4">📚</div>
               <h4 class="font-semibold text-gray-900 mb-2 text-lg">Keine Lektionen gefunden</h4>
-              <p class="text-gray-600">Für diesen Schüler wurden noch keine Lektionen erfasst.</p>
+              <p class="text-gray-600">Für diesen {{ t.client }} wurden noch keine Lektionen erfasst.</p>
             </div>
 
             <div v-else class="space-y-4">
@@ -335,7 +339,7 @@
           <div v-if="progressSubTab === 'prüfungen'">
             <!-- Loading State -->
             <div v-if="isLoadingExamResults" class="flex items-center justify-center py-8">
-              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
               <span class="ml-3 text-gray-600">Lade Prüfungsergebnisse...</span>
             </div>
 
@@ -350,7 +354,7 @@
             <div v-else-if="examResults.length === 0" class="text-center py-12">
               <div class="text-6xl mb-4">🎓</div>
               <h4 class="font-semibold text-gray-900 mb-2 text-lg">Keine Prüfungsergebnisse gefunden</h4>
-              <p class="text-gray-600">Für diesen Schüler wurden noch keine Prüfungen erfasst.</p>
+              <p class="text-gray-600">Für diesen {{ t.client }} wurden noch keine Prüfungen erfasst.</p>
             </div>
 
             <div v-else class="space-y-3">
@@ -545,7 +549,7 @@
 
           <!-- Loading State -->
           <div v-if="isLoadingPayments" class="flex items-center justify-center py-8">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
             <span class="ml-3 text-gray-600">Lade Zahlungen...</span>
           </div>
 
@@ -560,7 +564,7 @@
           <div v-else-if="payments.length === 0" class="text-center py-8">
             <div class="text-4xl mb-2">💰</div>
             <h4 class="font-semibold text-gray-900 mb-2">Keine Zahlungen gefunden</h4>
-            <p class="text-gray-600">Für diesen Schüler wurden noch keine Zahlungen erfasst.</p>
+            <p class="text-gray-600">Für diesen {{ t.client }} wurden noch keine Zahlungen erfasst.</p>
           </div>
 
           <div v-else class="space-y-4">
@@ -584,7 +588,8 @@
                 </button>
                 <button
                   v-if="selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p && isInvoicedPayment(p) })"
-                  class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-all hover:shadow-md"
+                  class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md hover:opacity-90"
+                  :style="{ backgroundColor: secondaryColor || '#22C55E' }"
                   @click="handleBulkMarkAsPaid"
                 >
                   Bar bezahlen
@@ -873,7 +878,7 @@
               Onboarding Status: Ausstehend
             </h4>
             <p class="text-sm text-orange-800 mb-4">
-              Dieser Schüler hat sein Konto noch nicht aktiviert. Hier können Sie Erinnerungen versenden:
+              Dieser {{ t.client }} hat sein Konto noch nicht aktiviert. Hier können Sie Erinnerungen versenden:
             </p>
             <button
               @click="openReminderModal"
@@ -890,7 +895,7 @@
           <div class="bg-white rounded-lg border p-6">
             <div class="flex items-center justify-between mb-4">
               <h4 class="text-lg font-semibold text-gray-900 flex items-center">
-                <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" :style="{ color: primaryColor }">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                 </svg>
                 Persönliche Daten
@@ -920,7 +925,8 @@
                     <div v-if="selectedStudent.email" class="mt-1">
                       <a 
                         :href="`mailto:${selectedStudent.email}`"
-                        class="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center"
+                        class="text-sm hover:underline flex items-center"
+                        :style="{ color: primaryColor }"
                       >
                         {{ selectedStudent.email }}
                       </a>
@@ -941,7 +947,8 @@
                     <div v-if="selectedStudent.phone" class="mt-1">
                       <a 
                         :href="`tel:${selectedStudent.phone}`"
-                        class="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center"
+                        class="text-sm hover:underline flex items-center"
+                        :style="{ color: primaryColor }"
                       >
                         {{ selectedStudent.phone }}
                       </a>
@@ -1028,6 +1035,22 @@
                     <div v-else class="mt-1 text-sm text-gray-500 italic">Nicht angegeben</div>
                   </div>
                 </div>
+
+                <!-- Beruf -->
+                <div class="flex items-start space-x-3">
+                  <div class="flex-shrink-0 w-5 h-5 mt-0.5">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-gray-900">Beruf</div>
+                    <div v-if="selectedStudent.profession" class="mt-1 text-sm text-gray-700">
+                      {{ selectedStudent.profession }}
+                    </div>
+                    <div v-else class="mt-1 text-sm text-gray-500 italic">Nicht angegeben</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1036,7 +1059,7 @@
           <div class="bg-white rounded-lg border p-6">
             <div class="flex items-center justify-between mb-4">
               <h4 class="text-lg font-semibold text-gray-900 flex items-center">
-                <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" :style="{ color: primaryColor }">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                 </svg>
                 Rechnungsadresse
@@ -1188,7 +1211,7 @@
                 min="1"
                 step="0.05"
                 placeholder="0.00"
-                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                class="tenant-focus flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:border-transparent"
               />
               <span class="text-sm font-medium text-gray-500 shrink-0">CHF</span>
             </div>
@@ -1204,7 +1227,8 @@
             <button
               @click="submitCashDeposit"
               :disabled="isSubmittingDeposit"
-              class="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
+              class="flex-1 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors hover:opacity-90"
+              :style="{ backgroundColor: secondaryColor || '#22C55E' }"
             >
               {{ isSubmittingDeposit ? 'Wird gespeichert…' : 'Einzahlen' }}
             </button>
@@ -1230,7 +1254,7 @@
         </p>
         <div class="overflow-y-auto flex-1">
           <div v-if="isLoadingCreditTransactions" class="flex justify-center py-8">
-            <div class="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+            <div class="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" :style="{ borderColor: primaryColor, borderTopColor: 'transparent' }"></div>
           </div>
           <div v-else-if="creditTransactions.length === 0" class="text-center py-8 text-gray-400 text-sm">
             Noch keine Transaktionen vorhanden.
@@ -1305,6 +1329,9 @@ import { logger } from '~/utils/logger'
 import { getSupabase } from '~/utils/supabase'
 import { useUserDocuments, type UserDocument } from '~/composables/useUserDocuments'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 import { useCalendarCache } from '~/composables/useCalendarCache'
 import EvaluationModal from '~/components/EvaluationModal.vue'
 import ExamResultModal from '~/components/ExamResultModal.vue'
@@ -1327,6 +1354,7 @@ interface Student {
   zip: string | null
   city: string | null
   invoice_address: string | null
+  profession: string | null
   is_active: boolean
   category: string[] | null
   assignedInstructor: string | null
@@ -3068,3 +3096,12 @@ async function downloadReceipts() {
 
 </script>
 
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+.hover\:tenant-border:hover {
+  border-color: var(--color-primary, #1E40AF);
+}
+</style>

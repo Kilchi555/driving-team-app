@@ -419,6 +419,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { logger } from '~/utils/logger'
+import { Capacitor } from '@capacitor/core'
 import { useRuntimeConfig } from '#app'
 import { useUIStore } from '~/stores/ui'
 import RedeemVoucherModal from '~/components/customer/RedeemVoucherModal.vue'
@@ -574,7 +575,8 @@ function getCreditTransactionLabel(tx: any): string {
     topup: 'Guthaben aufgeladen',
     credit_topup: 'Guthaben aufgeladen',
     voucher: 'Gutschein eingelöst',
-    manual: 'Manuelle Buchung',
+    manual: 'Manuelle Anpassung',
+    manual_adjustment: 'Manuelle Anpassung',
     cash_deposit: 'Bar-Einzahlung',
     cancellation: 'Stornierung',
     cancellation_credit_refund: 'Stornierung (Rückerstattung)',
@@ -585,6 +587,7 @@ function getCreditTransactionLabel(tx: any): string {
     withdrawal: 'Auszahlung',
     withdrawal_pending: 'Auszahlung (ausstehend)',
     withdrawal_completed: 'Auszahlung abgeschlossen',
+    affiliate_reward: 'Weiterempfehlungs-Gutschrift',
   }
   return typeMap[tx.transaction_type] || tx.transaction_type || 'Transaktion'
 }
@@ -613,7 +616,12 @@ async function startTopup() {
       body: { amountRappen: Math.round(amount * 100) }
     }) as any
     if (res?.paymentUrl) {
-      window.location.href = res.paymentUrl
+      if (Capacitor.isNativePlatform()) {
+        const { Browser } = await import('@capacitor/browser')
+        await Browser.open({ url: res.paymentUrl, presentationStyle: 'popover' })
+      } else {
+        window.location.href = res.paymentUrl
+      }
     } else {
       topupError.value = 'Keine Zahlungs-URL erhalten. Bitte erneut versuchen.'
     }

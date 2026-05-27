@@ -58,6 +58,30 @@
   --color-primary-900: color-mix(in srgb, var(--color-primary) 50%, black);
 }
 
+/* === NATIVE APP: SAFE AREA SYSTEM ===
+ * overlaysWebView: true  → Status Bar ist transparent, WebView läuft dahinter
+ * contentInset: automatic → Scroll funktioniert korrekt
+ * Mit dieser Kombi muss jede Seite `env(safe-area-inset-top)` selbst via CSS setzen.
+ *
+ * Nutzung:
+ *   .pt-safe   → oben (Kalender, Dashboard-Header)
+ *   .pb-safe   → unten (Tab Bar, Bottom Sheet)
+ *   calc(env(safe-area-inset-top, 0px) + Xpx)  → Login-Seiten mit extra Puffer
+ */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+.pt-safe  { padding-top:    var(--safe-top); }
+.pb-safe  { padding-bottom: var(--safe-bottom); }
+.pl-safe  { padding-left:   var(--safe-left); }
+.pr-safe  { padding-right:  var(--safe-right); }
+.mt-safe  { margin-top:     var(--safe-top); }
+.mb-safe  { margin-bottom:  var(--safe-bottom); }
+
 /* === DARK THEME OVERRIDES === */
 [data-theme="dark"] {
   --color-background: #111827;

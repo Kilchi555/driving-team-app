@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen" :style="{ backgroundColor: brandConfig.background_color || '#f9fafb' }">
+  <div class="h-[100svh] flex flex-col" :style="{ backgroundColor: brandConfig.background_color || '#f9fafb' }">
     <!-- Auth loading -->
     <div v-if="authLoading" class="flex items-center justify-center min-h-screen">
       <div class="text-center">
@@ -51,9 +51,9 @@
     </div>
 
     <!-- Dashboard -->
-    <div v-else>
+    <div v-else class="flex-1 flex flex-col overflow-hidden">
       <!-- Header with gradient -->
-      <div class="relative overflow-hidden" :style="{ backgroundColor: brandConfig.primary_color }">
+      <div class="relative overflow-hidden flex-shrink-0 pt-safe" :style="{ backgroundColor: brandConfig.primary_color }">
         <div class="absolute inset-0 opacity-10">
           <div class="absolute inset-0" :style="{ backgroundImage: 'radial-gradient(circle at 20% 50%, #fff, transparent)' }"></div>
         </div>
@@ -92,6 +92,7 @@
         </nav>
       </div>
 
+      <div class="flex-1 overflow-y-auto">
       <div class="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
         <!-- Info Link -->
@@ -228,6 +229,7 @@
         </div>
 
       </div>
+      </div><!-- end flex-1 overflow-y-auto -->
     </div>
   </div>
 

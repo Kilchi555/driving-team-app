@@ -83,8 +83,8 @@
                           <!-- Gruppierte Kriterien nach Kategorien -->
             <template v-for="(categoryGroup, categoryName) in groupedCriteria" :key="categoryName">
               <!-- Kategorie-Überschrift -->
-              <div class="px-3 py-1.5 bg-blue-50 border-b border-blue-200">
-                <h3 class="text-xs font-bold text-blue-800 uppercase tracking-wide">{{ categoryName }}</h3>
+              <div class="px-3 py-1.5 border-b" :style="{ background: 'color-mix(in srgb, var(--color-primary, #111827) 8%, white)', borderColor: 'color-mix(in srgb, var(--color-primary, #111827) 20%, white)' }">
+                <h3 class="text-xs font-bold uppercase tracking-wide" :style="primaryText">{{ categoryName }}</h3>
               </div>
               
               <!-- Kriterien dieser Kategorie -->
@@ -163,8 +163,8 @@
                 <textarea
                   v-model="criteriaNotes[criteriaId]"
                   :placeholder="`Notiz optional...`"
-                  class="w-full p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none overflow-y-auto"
-                  style="height: 2.5rem; max-height: 10rem;"
+                  class="w-full p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:border-transparent resize-none overflow-y-auto"
+                  style="height: 2.5rem; max-height: 10rem; --tw-ring-color: var(--color-primary, #111827);"
                   rows="1"
                 ></textarea>
               </div>
@@ -226,7 +226,7 @@ import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { formatDate } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import { useTenant } from '~/composables/useTenant'
-const { primaryBg } = usePrimaryColor()
+const { primaryBg, primaryText } = usePrimaryColor()
 // Importiere den CriteriaEvaluationData-Typ
 import { usePendingTasks, type CriteriaEvaluationData } from '~/composables/usePendingTasks'
 

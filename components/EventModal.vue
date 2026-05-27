@@ -393,7 +393,10 @@
         <button
           v-if="selectedStudent && (props.mode === 'edit' || props.mode === 'view')"
           @click="$emit('open-student-progress', selectedStudent)"
-          class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors"
+          class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl transition-colors"
+          :style="{ color: primaryColor, background: `${primaryColor}15` }"
+          @mouseover="($event.currentTarget as HTMLElement).style.background = `${primaryColor}33`"
+          @mouseleave="($event.currentTarget as HTMLElement).style.background = `${primaryColor}15`"
           title="Schüler Fortschritt anzeigen"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
@@ -501,9 +504,10 @@
               :class="[
                 'p-6 rounded-lg border-2 transition-all duration-200 text-center disabled:opacity-50 disabled:cursor-not-allowed',
                 cancellationType === 'student'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
+                  ? 'shadow-md'
                   : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
               ]"
+              :style="cancellationType === 'student' ? { borderColor: primaryColor, background: `${primaryColor}15`, color: primaryColor } : {}"
             >
               <div class="text-3xl mb-2">👨‍🎓</div>
               <div class="font-medium">Schüler</div>
@@ -514,9 +518,10 @@
               :class="[
                 'p-6 rounded-lg border-2 transition-all duration-200 text-center disabled:opacity-50 disabled:cursor-not-allowed',
                 cancellationType === 'staff'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
+                  ? 'shadow-md'
                   : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
               ]"
+              :style="cancellationType === 'staff' ? { borderColor: primaryColor, background: `${primaryColor}15`, color: primaryColor } : {}"
             >
               <div class="text-3xl mb-2">👨‍🏫</div>
               <div class="font-medium">Fahrlehrer</div>
@@ -535,9 +540,10 @@
               :class="[
                 'p-4 rounded-lg border-2 transition-all duration-200 text-center disabled:opacity-50 disabled:cursor-not-allowed',
                 selectedCancellationReasonId === reason.id
-                  ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
+                  ? 'shadow-md'
                   : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
               ]"
+              :style="selectedCancellationReasonId === reason.id ? { borderColor: primaryColor, background: `${primaryColor}15`, color: primaryColor } : {}"
             >
               <div class="font-medium text-sm">{{ reason.name_de }}</div>
             </button>
@@ -659,8 +665,8 @@
           Der Termin wird in weniger als 24 Stunden abgesagt. Wähle, ob der Schüler belastet werden soll:
         </p>
         
-        <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-6">
-          <p class="text-sm font-medium text-blue-900">
+        <div class="rounded p-3 mb-6 border" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
+          <p class="text-sm font-medium" :style="{ color: primaryColor }">
             💰 Preis: {{ ((appointmentPrice || 0) / 100).toFixed(2) }} CHF
           </p>
         </div>
@@ -698,14 +704,14 @@
         </div>
         
         <div class="mb-4 space-y-3">
-          <div class="p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p class="text-sm text-blue-800">
+          <div class="p-3 border rounded-md" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
+            <p class="text-sm" :style="{ color: primaryColor }">
               <strong>Termin:</strong> {{ cancellationInvoiceData?.appointment_title || 'Unbekannt' }}
             </p>
-            <p class="text-sm text-blue-800">
+            <p class="text-sm" :style="{ color: primaryColor }">
               <strong>Datum:</strong> {{ formatDate(cancellationInvoiceData?.appointment_date) }}
             </p>
-            <p class="text-sm text-blue-800">
+            <p class="text-sm" :style="{ color: primaryColor }">
               <strong>Betrag:</strong> {{ formatCurrency(cancellationInvoiceData?.amount_rappen) }}
             </p>
           </div>
@@ -807,6 +813,9 @@ import { useAuthStore } from '~/stores/auth'
 
 //Utils
 import { saveWithOfflineSupport } from '~/utils/offlineQueue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor, accentColor } = useTenantBranding()
 
 // Types
 interface Student {
@@ -1291,6 +1300,40 @@ const handleSaveAppointment = async () => {
       isLoading.value = false
       logger.warn('⚠️ Duration validation failed:', { duration: formData.value.duration_minutes })
       return
+    }
+    
+    // ── Availability Re-Check vor dem Speichern (nur Create-Modus mit zugewiesenem Fahrlehrer) ──
+    if (
+      props.mode === 'create' &&
+      formData.value.staff_id &&
+      formData.value.startDate &&
+      formData.value.startTime &&
+      formData.value.endTime
+    ) {
+      try {
+        logger.debug('🔒 Re-checking availability before save:', {
+          staffId: formData.value.staff_id,
+          date: formData.value.startDate,
+          start: formData.value.startTime,
+          end: formData.value.endTime
+        })
+        const isAvailable = await checkStaffAvailability(
+          formData.value.staff_id,
+          formData.value.startDate,
+          formData.value.startTime,
+          formData.value.endTime
+        )
+        if (!isAvailable) {
+          error.value = 'Dieser Zeitslot ist nicht mehr verfügbar. Bitte wähle einen anderen Termin.'
+          isLoading.value = false
+          logger.warn('🚫 Submit blocked – availability conflict detected for staff:', formData.value.staff_id)
+          return
+        }
+        logger.debug('✅ Availability confirmed before save')
+      } catch (availErr) {
+        // Im Fehlerfall nicht blocken — lieber speichern als den User hängen lassen
+        logger.warn('⚠️ Could not re-check availability before save, proceeding anyway:', availErr)
+      }
     }
     
     // ✅ NEU: Auto-save billing address before saving appointment
@@ -1784,7 +1827,7 @@ const isLoadingAdminFee = ref<boolean>(false)
 
 // ✅ Staff management
 const availableStaff = ref<StaffAvailability[]>([])
-const { loadStaffWithAvailability, isLoading: isLoadingStaff } = useStaffAvailability()
+const { loadStaffWithAvailability, checkStaffAvailability, isLoading: isLoadingStaff } = useStaffAvailability()
 const isEditingStaff = ref(false)
 
 // ✅ Auto-Assign Staff
@@ -2360,6 +2403,20 @@ const calculatePriceForCurrentData = async (): Promise<void> => {
     logger.debug('⚠️ duration_minutes war ein Array, verwende ersten Wert:', formData.value.duration_minutes)
   }
 
+  // ── Availability-Guard: Preis nur berechnen wenn gewählter Fahrlehrer verfügbar ──
+  if (formData.value.staff_id && availableStaff.value.length > 0 && props.mode === 'create') {
+    const selectedStaffEntry = availableStaff.value.find(s => s.id === formData.value.staff_id)
+    if (selectedStaffEntry && selectedStaffEntry.isAvailable === false) {
+      logger.debug('🚫 Skipping price calculation – selected staff is not available for this time slot')
+      dynamicPricing.value = {
+        ...dynamicPricing.value,
+        isLoading: false,
+        error: 'Fahrlehrer zu dieser Zeit nicht verfügbar'
+      }
+      return
+    }
+  }
+
   // Capture inputs at call time – detect if we've been superseded before writing results
   const mySeq = ++_priceCalcSeq
   const capturedType = formData.value.type
@@ -2801,54 +2858,6 @@ const calculateAdminFee = (): number => {
 // ✅ Admin-Fee Anzeige-Logik
 const shouldShowAdminFee = (): boolean => {
   return calculateAdminFee() > 0
-}
-
-// ✅ Asynchrone Admin-Fee Berechnung
-const calculateAdminFeeAsync = async (categoryCode: string, studentId: string) => {
-  if (!categoryCode || !studentId) {
-    calculatedAdminFee.value = 0
-    return
-  }
-
-  try {
-    isLoadingAdminFee.value = true
-    logger.debug('🧮 Calculating admin fee for:', { categoryCode, studentId })
-
-    // 1. Zähle bestehende NICHT-stornierte Termine für diesen Schüler + Kategorie via secure API
-    const appointmentCount = await eventModalApi.countStudentAppointments(studentId, categoryCode)
-    logger.debug('📊 Existing appointments count via API:', appointmentCount)
-
-    // 2. Admin-Fee ab dem 2. Termin — aber nur einmal pro Kategorie (wie usePricing.shouldApplyAdminFee)
-    if (appointmentCount >= 1) {
-      const adminFeeAlreadyPaid = await eventModalApi.checkAdminFeePaid(studentId, categoryCode)
-      if (adminFeeAlreadyPaid) {
-        calculatedAdminFee.value = 0
-        logger.debug('ℹ️ No admin fee: already charged once for this category', { categoryCode, appointmentCount })
-      } else {
-        const pricingRule = await eventModalApi.getPricingRuleByCategory(categoryCode)
-
-        const adminFeeRappen = pricingRule?.admin_fee_rappen || 500 // Fallback 500 rappen = CHF 5.00
-        const adminFeeChf = adminFeeRappen / 100
-
-        calculatedAdminFee.value = adminFeeChf
-        logger.debug('✅ Admin fee calculated via API:', {
-          appointmentCount,
-          adminFeeRappen,
-          adminFeeChf,
-          appliesFrom: pricingRule?.admin_fee_applies_from
-        })
-      }
-    } else {
-      calculatedAdminFee.value = 0
-      logger.debug('ℹ️ No admin fee: First appointment')
-    }
-
-  } catch (error) {
-    console.error('❌ Error in calculateAdminFeeAsync:', error)
-    calculatedAdminFee.value = 0
-  } finally {
-    isLoadingAdminFee.value = false
-  }
 }
 
 // ✅ 6. TEST BUTTON (temporär für Debugging)
@@ -6094,10 +6103,9 @@ watch(() => selectedStudent.value, async (newStudent, oldStudent) => {
       await calculatePriceForCurrentData()
     }
     
-    // ✅ NEU: Admin-Fee berechnen wenn Schüler sich ändert (redundant aber als Fallback)
+    // ✅ NEU: Preis inkl. Admin-Fee neu berechnen wenn Schüler sich ändert (Fallback)
     if (newStudent && props.mode === 'create' && formData.value.eventType === 'lesson') {
-      const categoryCode = formData.value.type || 'A'
-      calculateAdminFeeAsync(categoryCode, newStudent.id)
+      await calculatePriceForCurrentData()
     }
     
     // ✅ NEU: Zahlungsmethode aus User-Präferenzen laden wenn Student ausgewählt wird

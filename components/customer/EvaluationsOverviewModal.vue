@@ -3,14 +3,17 @@
     <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
       
       <!-- Header with Gradient -->
-      <div class="sticky top-0 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 px-6 py-6 rounded-t-2xl">
+      <div
+        class="sticky top-0 px-6 py-6 rounded-t-2xl"
+        :style="{ background: `linear-gradient(to right, ${primaryColor}, ${primaryColor}cc, ${accentColor || primaryColor}cc)` }"
+      >
         <div class="flex justify-between items-center">
           <h3 class="text-2xl font-bold text-white">
             Meine Bewertungen
           </h3>
           <button 
             @click="$emit('close')" 
-            class="text-white hover:bg-blue-700 rounded-full p-2 transition-all duration-200 hover:scale-110"
+            class="text-white rounded-full p-2 transition-all duration-200 hover:scale-110 hover:bg-white/10"
           >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -35,7 +38,8 @@
           <p class="text-gray-500 mb-4">Für die ausgewählte Kategorie "{{ filterCategory }}" wurden keine Bewertungen gefunden.</p>
           <button
             @click="filterCategory = 'all'"
-            class="px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:shadow-lg transition-all duration-200 transform hover:scale-105 font-medium"
+            class="px-6 py-2 text-white rounded-lg hover:shadow-lg transition-all duration-200 transform hover:scale-105 font-medium"
+            :style="{ background: `linear-gradient(to right, ${primaryColor}, ${accentColor || primaryColor})` }"
           >
             Alle Kategorien anzeigen
           </button>
@@ -46,10 +50,16 @@
           <div 
             v-for="lessonGroup in groupedByLesson" 
             :key="lessonGroup.lesson_id"
-            class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:border-blue-300"
+            class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
+            :style="{ '--hover-border': primaryColor + '66' } as any"
+            @mouseover="($event.currentTarget as HTMLElement)?.style.setProperty('border-color', `${primaryColor}66`)"
+            @mouseleave="($event.currentTarget as HTMLElement)?.style.setProperty('border-color', '')"
           >
             <!-- Termin Header mit Gradient -->
-            <div class="bg-gradient-to-r from-blue-50 to-cyan-50 px-6 py-4 border-b border-gray-200">
+            <div
+              class="px-6 py-4 border-b border-gray-200"
+              :style="{ background: `linear-gradient(to right, ${primaryColor}1a, ${(accentColor || primaryColor)}1a)` }"
+            >
               <div class="flex items-start justify-between">
                 <div class="flex-1">
                   <div class="flex items-center gap-3 mb-2">
@@ -67,7 +77,11 @@
                     <span class="flex items-center gap-1">📅 {{ formatCompactDate(lessonGroup.lesson_date) }}</span>
                     <span class="flex items-center gap-1">🕐 {{ formatTimeRange(lessonGroup.start_time, lessonGroup.end_time) }}</span>
                     <span v-if="lessonGroup.duration_minutes" class="flex items-center gap-1">⏱️ {{ lessonGroup.duration_minutes }}min</span>
-                    <span v-if="lessonGroup.driving_category" class="ml-auto px-3 py-1 text-xs font-bold bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full">
+                    <span
+                      v-if="lessonGroup.driving_category"
+                      class="ml-auto px-3 py-1 text-xs font-bold text-white rounded-full"
+                      :style="{ background: `linear-gradient(to right, ${primaryColor}, ${accentColor || primaryColor})` }"
+                    >
                       Kategorie {{ lessonGroup.driving_category }}
                     </span>
                   </div>
@@ -87,10 +101,12 @@
               </div>
               <!-- Regular Evaluations -->
               <template v-if="!lessonGroup.is_exam">
-                <div 
-                  v-for="(evaluation, index) in lessonGroup.evaluations" 
+                <div
+                  v-for="(evaluation, index) in lessonGroup.evaluations"
                   :key="`${evaluation.criteria_id}-${index}`"
-                  class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                  class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all duration-200"
+                  @mouseover="($event.currentTarget as HTMLElement)?.style.setProperty('border-color', `${primaryColor}66`)"
+                  @mouseleave="($event.currentTarget as HTMLElement)?.style.setProperty('border-color', '')"
                 >
                   <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div class="flex-1 min-w-0">
@@ -110,7 +126,11 @@
                     </div>
                   </div>
 
-                  <div v-if="evaluation.criteria_note" class="mt-3 p-3 bg-white rounded-lg border-l-4 border-blue-400">
+                  <div
+                    v-if="evaluation.criteria_note"
+                    class="mt-3 p-3 bg-white rounded-lg border-l-4"
+                    :style="{ borderLeftColor: primaryColor }"
+                  >
                     <p class="text-xs text-gray-700 italic break-words">💬 "{{ evaluation.criteria_note }}"</p>
                   </div>
                 </div>
@@ -145,6 +165,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 // Props & Emits
 interface Props {
@@ -154,6 +175,9 @@ interface Props {
 
 const props = defineProps<Props>()
 const emit = defineEmits(['close'])
+
+// Tenant branding colors
+const { primaryColor, accentColor } = useTenantBranding()
 
 // State
 const sortBy = ref('date') // 'date' oder 'rating'

@@ -2,17 +2,19 @@
   <!-- Skip rendering for sub-routes -->
   <div v-if="isSubRoute" class="min-h-screen flex items-center justify-center p-4">
     <div class="text-center">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" :style="{ borderBottomColor: primaryColor || '#111827' }"></div>
       <p class="text-gray-600">Lade...</p>
     </div>
   </div>
   
   <!-- Main login form -->
-  <div v-else class="min-h-screen flex items-center justify-center p-4" 
+  <div v-else class="fixed inset-0 overflow-y-auto flex flex-col items-center px-4" 
        :style="{ 
          background: currentBranding?.colors ? 
            `linear-gradient(to bottom right, ${currentBranding.colors.primary}15, ${currentBranding.colors.secondary}15)` : 
-           'linear-gradient(to bottom right, #1E40AF15, #64748B15)' 
+           'linear-gradient(to bottom right, #11182715, #64748B15)',
+         paddingTop: 'calc(env(safe-area-inset-top, 0px) + 64px)',
+         paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px) + 16px)'
        }">
     
     <!-- Loading State: nur kurzer Spinner wenn noch kein Branding UND kein gecachtes Logo -->
@@ -39,7 +41,8 @@
       <p class="text-gray-600 mb-4">{{ brandingError }}</p>
       <button 
         @click="$router.push('/')" 
-        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        class="text-white px-4 py-2 rounded-lg transition-colors hover:opacity-90"
+        :style="{ background: primaryColor || '#111827' }"
       >
         Zurück zur Auswahl
       </button>
@@ -145,8 +148,8 @@
               <input
                 v-model="loginForm.rememberMe"
                 type="checkbox"
-                class="rounded border-gray-300 text-blue-600 focus:ring-2"
-                :style="{ '--focus-color': primaryColor }"
+                class="rounded border-gray-300 focus:ring-2"
+                :style="{ accentColor: primaryColor, '--focus-color': primaryColor }"
                 :disabled="isLoading"
               >
               <span class="ml-2 text-sm text-gray-600">Angemeldet bleiben</span>
@@ -500,6 +503,7 @@
 logger.debug('📄 [slug].vue script setup initializing...')
 
 import { ref, computed, onMounted, watch } from 'vue'
+import { useStatusBar } from '~/composables/useStatusBar'
 import { logger } from '~/utils/logger'
 import { useRoute, useRouter, definePageMeta, useHead } from '#imports'
 import { useTenantBranding } from '~/composables/useTenantBranding'
@@ -1167,6 +1171,14 @@ const tenantSlug = computed(() => route.params.slug as string)
 const currentBranding = computed(() => currentTenantBranding.value)
 const headerLogo = computed(() => getLogo('header'))
 
+useStatusBar({
+  backgroundColor: () => {
+    const primary = currentBranding.value?.colors?.primary || '#111827'
+    return `${primary}15`
+  },
+  style: 'dark'
+})
+
 // Check if this is a sub-route that should be handled by other pages
 const isSubRoute = computed(() => {
   const currentPath = route.path
@@ -1276,14 +1288,26 @@ onMounted(async () => {
   }
 })
 
-// SEO
-useHead(() => ({
-  title: `Anmelden - ${brandName.value}`,
-  meta: [
-    { name: 'description', content: `Melden Sie sich in Ihrem ${brandName.value} Account an.` },
-    { name: 'robots', content: 'noindex, nofollow' }
-  ]
-}))
+// SEO + Body background for native edge-to-edge
+useHead(() => {
+  const primary = currentBranding.value?.colors?.primary || '#111827'
+  const secondary = currentBranding.value?.colors?.secondary || '#64748B'
+  const bgColor = `${primary}15`
+  return {
+    title: `Anmelden - ${brandName.value}`,
+    meta: [
+      { name: 'description', content: `Melden Sie sich in Ihrem ${brandName.value} Account an.` },
+      { name: 'robots', content: 'noindex, nofollow' },
+      { name: 'theme-color', content: bgColor }
+    ],
+    bodyAttrs: {
+      style: `background: linear-gradient(to bottom right, ${primary}15, ${secondary}15); min-height: 100vh;`
+    },
+    htmlAttrs: {
+      style: `background: ${bgColor};`
+    }
+  }
+})
 </script>
 
 <style scoped>

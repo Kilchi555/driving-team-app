@@ -41,7 +41,8 @@
               <p class="text-xs text-gray-500 mb-3">Bitten Sie Ihre Fahrschule, den Onboarding-Link erneut per SMS zu senden.</p>
               <a
                 :href="`mailto:${userData?.email || ''}`"
-                class="text-xs text-blue-600 hover:text-blue-800 underline"
+                class="text-xs underline hover:opacity-80 transition-opacity"
+                :style="{ color: primaryColor }"
               >
                 Fahrschule kontaktieren
               </a>
@@ -53,7 +54,8 @@
               <p class="text-xs text-gray-500 mb-3">Falls Sie Ihr Konto bereits aktiviert haben, melden Sie sich direkt an.</p>
               <button
                 @click="navigateTo(userData?.tenant_slug ? `/${userData.tenant_slug}` : '/login')"
-                class="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md transition-colors"
+                class="text-xs font-medium text-white px-3 py-1.5 rounded-md transition-colors hover:opacity-90"
+                :style="{ background: primaryColor }"
               >
                 Zum Login
               </button>
@@ -364,6 +366,18 @@
                     required
                     class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                     placeholder="Zürich"
+                  >
+                </div>
+
+                <div class="col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Beruf
+                  </label>
+                  <input
+                    v-model="form.profession"
+                    type="text"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="z.B. Student/in, Software Engineer"
                   >
                 </div>
               </div>
@@ -725,6 +739,9 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, navigateTo, useFetch } from '#app'
 import { logger } from '~/utils/logger'
 import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholders'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor } = useTenantBranding()
 
 const route = useRoute()
 const token = route.params.token as string
@@ -816,6 +833,7 @@ const form = reactive({
   street_nr: '',
   zip: '',
   city: '',
+  profession: '',
   acceptedTerms: false
 })
 
@@ -1028,6 +1046,7 @@ onMounted(async () => {
     if (userData.value.street_nr) form.street_nr = userData.value.street_nr
     if (userData.value.zip) form.zip = userData.value.zip
     if (userData.value.city) form.city = userData.value.city
+    if (userData.value.profession) form.profession = userData.value.profession
     if (userData.value.category && Array.isArray(userData.value.category)) {
       form.categories = userData.value.category
     }
@@ -1416,6 +1435,7 @@ const completeOnboarding = async () => {
       street_nr: form.street_nr,
       zip: form.zip,
       city: form.city,
+      profession: form.profession,
       documentUrls
     }
     
