@@ -23,7 +23,8 @@
           <button
             @click="refreshData"
             :disabled="isLoading"
-            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+            class="text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 hover:opacity-90"
+            :style="{ background: primaryColor }"
           >
             🔄 Aktualisieren
           </button>
@@ -48,9 +49,9 @@
     <OfficeCashRegistersManager />
 
     <!-- Help Section -->
-    <div class="mt-12 bg-blue-50 rounded-lg p-6">
-      <h3 class="text-lg font-semibold text-blue-900 mb-3">💡 Bürokassen-System</h3>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-blue-800">
+    <div class="mt-12 rounded-lg p-6" :style="{ background: `${primaryColor}10` }">
+      <h3 class="text-lg font-semibold mb-3" :style="{ color: primaryColor }">💡 Bürokassen-System</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm" :style="{ color: primaryColor }">
         <div>
           <h4 class="font-medium mb-2">Kassentypen:</h4>
           <ul class="space-y-1">
@@ -78,14 +79,15 @@
 import { ref, onMounted } from 'vue'
 import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
-// Layout
 definePageMeta({
   middleware: 'admin',
   layout: 'admin'
 })
 
-// Auth check
+const { primaryColor } = useTenantBranding()
+
 const authStore = useAuthStore()
 
 // Composables

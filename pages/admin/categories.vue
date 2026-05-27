@@ -38,7 +38,8 @@
             <!-- Create Custom Button -->
             <button
               @click="openCreateModal"
-              class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+              class="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2"
+              :style="{ background: primaryColor }"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -169,7 +170,7 @@
                         @mousedown.stop
                         @change="toggleFAK(category, ($event.target as HTMLInputElement).checked)"
                       />
-                      <div class="w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-4"></div>
+                      <div class="tenant-toggle w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 rounded-full peer after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-4"></div>
                     </label>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
@@ -304,7 +305,8 @@
             <div class="mt-6">
               <button
                 @click="openCreateModal"
-                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                class="text-white px-4 py-2 rounded-lg hover:opacity-90"
+                :style="{ background: primaryColor }"
               >
                 Neue Kursart erstellen
               </button>
@@ -317,12 +319,12 @@
     <!-- Category Modal -->
     <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click="closeModal">
       <div class="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto" @click.stop>
-        <div class="bg-blue-600 text-white p-4">
+        <div class="text-white p-4" :style="{ background: primaryColor }">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-bold">
               {{ editingCategory ? 'Kategorie bearbeiten' : 'Neue Kategorie' }}
             </h3>
-            <button @click="closeModal" class="text-white hover:text-blue-200">
+            <button @click="closeModal" class="text-white hover:opacity-80">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
@@ -341,7 +343,7 @@
                   v-model="categoryForm.code"
                   type="text"
                   required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
                   placeholder="z.B. A, B, C..."
                 />
               </div>
@@ -353,7 +355,7 @@
                 <input
                   v-model="categoryForm.color"
                   type="color"
-                  class="w-full h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="tenant-focus w-full h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
                 />
               </div>
             </div>
@@ -366,7 +368,7 @@
                 v-model="categoryForm.name"
                 type="text"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
                 placeholder="z.B. Kategorie A, Kategorie B..."
               />
             </div>
@@ -378,7 +380,7 @@
               <textarea
                 v-model="categoryForm.description"
                 rows="2"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
                 placeholder="Beschreibung der Kategorie..."
               ></textarea>
             </div>
@@ -417,7 +419,7 @@
                       v-model="newLessonDuration"
                       type="number"
                       step="5"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
                       placeholder="Neue Lektionsdauer eingeben..."
                     />
                   </div>
@@ -445,7 +447,7 @@
                 v-model="categoryForm.exam_duration_minutes"
                 type="number"
                 step="5"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
                 placeholder="z.B. 45"
               />
             </div>
@@ -466,7 +468,7 @@
                       v-model.number="categoryForm.price_per_lesson_chf"
                       type="number"
                       step="0.50"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
                       placeholder="z.B. 95.00"
                     />
                   </div>
@@ -479,7 +481,7 @@
                       v-model.number="categoryForm.admin_fee_chf"
                       type="number"
                       step="0.50"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
                       placeholder="z.B. 120.00"
                     />
                   </div>
@@ -494,7 +496,7 @@
                     type="number"
                     min="1"
                     max="10"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
                     placeholder="z.B. 2"
                   />
                   <p class="text-xs text-gray-500 mt-1">
@@ -606,7 +608,8 @@
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                class="px-4 py-2 text-white rounded-md hover:opacity-90"
+                :style="{ background: primaryColor }"
               >
                 {{ editingCategory ? 'Aktualisieren' : 'Hinzufügen' }}
               </button>
@@ -672,14 +675,15 @@
                     v-model="selectedStandardTemplates"
                     class="sr-only peer"
                   >
-                  <div class="w-9 h-5 sm:w-11 sm:h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-4 sm:peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 sm:after:h-5 sm:after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div class="tenant-toggle w-9 h-5 sm:w-11 sm:h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 rounded-full peer peer-checked:after:translate-x-4 sm:peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 sm:after:h-5 sm:after:w-5 after:transition-all"></div>
                 </label>
               </div>
             </div>
 
             <!-- Selection Summary -->
-            <div v-if="selectedStandardTemplates.length > 0" class="mb-3 sm:mb-4 p-2 sm:p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p class="text-xs sm:text-sm text-blue-800">
+            <div v-if="selectedStandardTemplates.length > 0" class="mb-3 sm:mb-4 p-2 sm:p-3 rounded-md border"
+              :style="{ background: `${primaryColor}10`, borderColor: `${primaryColor}33` }">
+              <p class="text-xs sm:text-sm" :style="{ color: primaryColor }">
                 {{ selectedStandardTemplates.length }} von {{ standardTemplates.length }} Templates ausgewählt
               </p>
             </div>
@@ -750,6 +754,9 @@ import { ref, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
 import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor } = useTenantBranding()
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import SkeletonLoader from '~/components/SkeletonLoader.vue'
 
@@ -1338,3 +1345,16 @@ onMounted(async () => {
   await loadPricingData()
 })
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+.tenant-toggle.peer-focus\:ring-2:focus {
+  --tw-ring-color: color-mix(in srgb, var(--color-primary, #1E40AF) 50%, transparent);
+}
+.peer:checked ~ .tenant-toggle {
+  background-color: var(--color-primary, #1E40AF);
+}
+</style>

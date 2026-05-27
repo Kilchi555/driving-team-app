@@ -29,7 +29,8 @@
             <button
               @click="saveChanges"
               :disabled="isSaving"
-              class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="tenant-focus inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              :style="{ background: primaryColor }"
             >
               <svg v-if="isSaving" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -43,7 +44,7 @@
             
             <button
               @click="cancelEdit"
-              class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              class="tenant-focus inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2"
             >
               <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -56,7 +57,7 @@
 
       <!-- Loading State -->
       <div v-if="isLoading" class="flex justify-center items-center py-12">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
       </div>
 
       <!-- Error State -->
@@ -92,7 +93,7 @@
                   id="firstName"
                   v-model="editForm.first_name"
                   type="text"
-                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  class="tenant-focus mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm"
                 />
               </div>
               
@@ -103,7 +104,7 @@
                   id="lastName"
                   v-model="editForm.last_name"
                   type="text"
-                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  class="tenant-focus mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm"
                 />
               </div>
               
@@ -114,7 +115,7 @@
                   id="email"
                   v-model="editForm.email"
                   type="email"
-                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  class="tenant-focus mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm"
                 />
               </div>
               
@@ -125,7 +126,7 @@
                   id="phone"
                   v-model="editForm.phone"
                   type="tel"
-                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  class="tenant-focus mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm"
                 />
               </div>
               
@@ -135,7 +136,7 @@
                 <select
                   id="role"
                   v-model="editForm.role"
-                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  class="tenant-focus mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm"
                 >
                   <option value="client">Kunde</option>
                   <option value="staff">Fahrlehrer</option>
@@ -149,7 +150,7 @@
                 <select
                   id="isActive"
                   v-model="editForm.is_active"
-                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  class="tenant-focus mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm"
                 >
                   <option :value="true">Aktiv</option>
                   <option :value="false">Inaktiv</option>
@@ -172,7 +173,7 @@
                 <select
                   id="tenant"
                   v-model="editForm.tenant_id"
-                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  class="tenant-focus mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm"
                 >
                   <option value="">Kein Tenant</option>
                   <option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
@@ -216,6 +217,9 @@ import { ref, computed, onMounted } from 'vue'
 // definePageMeta is auto-imported
 import { useRoute } from '#app'
 import StaffTab from '~/components/users/StaffTab.vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor } = useTenantBranding()
 
 // Page Meta für Admin-Layout
 definePageMeta({
@@ -416,3 +420,10 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+</style>

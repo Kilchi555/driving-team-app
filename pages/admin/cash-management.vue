@@ -247,7 +247,8 @@
               </button>
               <button
                 @click="refreshRegisterData"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors"
+                class="w-full text-white px-4 py-3 rounded-lg font-medium transition-colors hover:opacity-90"
+                :style="{ background: primaryColor }"
               >
                 🔄 Aktualisieren
               </button>
@@ -319,15 +320,17 @@ import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useOfficeCashRegisters } from '~/composables/useOfficeCashRegisters'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import AdminCashBalanceManager from '~/components/admin/CashBalanceManager.vue'
 
-// Layout
 definePageMeta({
   layout: 'admin',
   middleware: 'admin'
 })
+
+const { primaryColor } = useTenantBranding()
 
 // Auth check - must be first
 const authStore = useAuthStore()

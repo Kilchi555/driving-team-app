@@ -1,11 +1,13 @@
 <template>
-  <div class="admin-layout min-h-screen flex flex-col">
+  <div class="admin-layout h-[100svh] flex flex-col">
     <!-- Trial Banner -->
-    <TrialBanner />
+    <div class="flex-shrink-0">
+      <TrialBanner />
+    </div>
 
     <!-- ═══ HEADER ═══ -->
     <header
-      class="sticky top-0 z-50 text-white"
+      class="flex-shrink-0 z-50 text-white pt-safe"
       :style="{ background: `linear-gradient(135deg, ${primaryColor || '#1e293b'} 0%, ${secondaryColor || '#334155'} 100%)` }"
     >
       <div class="mx-auto px-3 sm:px-5 h-14 flex items-center justify-between gap-3">
@@ -89,7 +91,7 @@
       leave-to-class="-translate-x-full"
     >
       <div v-if="showMobileMenu"
-        class="fixed top-0 left-0 bottom-0 z-50 w-72 flex flex-col shadow-2xl"
+        class="fixed top-0 left-0 bottom-0 z-50 w-72 flex flex-col shadow-2xl pt-safe pb-safe"
         :style="{ background: `linear-gradient(180deg, ${primaryColor || '#1e293b'} 0%, ${secondaryColor || '#334155'} 100%)` }"
         @click.stop
       >
@@ -125,7 +127,7 @@
             <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/invoices" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/invoices') ? 'drawer-active' : ''">Rechnungen</NuxtLink>
             <NuxtLink to="/admin/users" @click="showMobileMenu = false"
-              class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">Schüler</NuxtLink>
+              class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">{{ t.clientsPlural }}</NuxtLink>
 
             <NuxtLink to="/admin/student-credits" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
@@ -187,7 +189,7 @@
     </Transition>
 
     <!-- ═══ BODY: Desktop Sidebar + Main ═══ -->
-    <div class="flex flex-1">
+    <div class="flex flex-1 min-h-0">
 
       <!-- ═══ DESKTOP SIDEBAR (≥1200px) ═══ -->
       <aside class="desktop-sidebar flex-shrink-0 w-64 flex flex-col"
@@ -204,7 +206,7 @@
             <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/invoices"
               class="drawer-link" :class="isActive('/admin/invoices') ? 'drawer-active' : ''">Rechnungen</NuxtLink>
             <NuxtLink to="/admin/users"
-              class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">Schüler</NuxtLink>
+              class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">{{ t.clientsPlural }}</NuxtLink>
             <NuxtLink to="/admin/student-credits"
               class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
 
@@ -284,14 +286,14 @@
       </aside>
 
       <!-- ═══ MAIN CONTENT ═══ -->
-      <main class="flex-1 bg-gray-50/60 min-w-0">
+      <main class="flex-1 bg-gray-50/60 min-w-0 overflow-y-auto">
         <slot />
       </main>
 
     </div>
 
     <!-- ═══ FOOTER ═══ -->
-    <footer class="border-t border-white/10 py-3"
+    <footer class="flex-shrink-0 border-t border-white/10 py-3 pb-safe"
       :style="{ background: `linear-gradient(135deg, ${primaryColor || '#1e293b'} 0%, ${secondaryColor || '#334155'} 100%)` }">
       <div class="mx-auto px-4 sm:px-6">
         <div class="text-center text-xs text-white/50">
@@ -305,6 +307,10 @@
 <script setup>
 import { ref, watch, watchEffect, nextTick } from 'vue'
 import { useRoute } from '#app'
+import { useStatusBar } from '~/composables/useStatusBar'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 const route = useRoute()
 const showMobileMenu = ref(false)
@@ -331,6 +337,12 @@ const {
   loadTenantBrandingById,
   isLoading: isTenantLoading
 } = useTenantBranding()
+
+// Native Status Bar (iOS): match header color, light text
+useStatusBar({
+  backgroundColor: () => primaryColor.value || '#1e293b',
+  style: 'light'
+})
 
 // Loading State für UI - nur während tatsächlichem Laden
 const isLoading = computed(() => isTenantLoading.value && !currentTenantBranding.value)
@@ -813,9 +825,6 @@ div.admin-layout textarea,
     display: flex;
     flex-direction: column;
     width: 256px;
-    position: sticky;
-    top: 56px; /* header h-14 = 56px */
-    height: calc(100vh - 56px);
     overflow-y: auto;
   }
 

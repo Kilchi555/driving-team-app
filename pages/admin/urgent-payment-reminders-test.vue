@@ -10,15 +10,16 @@
     </div>
 
     <!-- Info Card -->
-    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-      <p class="text-sm text-blue-900">
+    <div class="rounded-lg p-4 mb-6 border"
+      :style="{ background: `${primaryColor}10`, borderColor: `${primaryColor}33` }">
+      <p class="text-sm" :style="{ color: primaryColor }">
         <strong>Test-Modus:</strong> Sendet Erinnerungen nur an <code class="bg-white px-1">pascal_kilchenmann@icloud.com</code>
       </p>
     </div>
 
     <!-- Status -->
     <div v-if="isLoading" class="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" :style="{ borderBottomColor: primaryColor }"></div>
       <p class="text-gray-600">Führe Cron Job aus...</p>
     </div>
 
@@ -58,7 +59,8 @@
       <button
         @click="runCronJob"
         :disabled="isLoading"
-        class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        class="flex-1 px-4 py-2 text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        :style="{ background: primaryColor }"
       >
         <span v-if="isLoading">Wird ausgeführt...</span>
         <span v-else>🚀 Cron Job ausführen (Manuell)</span>
@@ -93,11 +95,14 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 definePageMeta({
   layout: 'admin',
   middleware: 'admin-only'
 })
+
+const { primaryColor } = useTenantBranding()
 
 const isLoading = ref(false)
 const lastResult = ref<any>(null)

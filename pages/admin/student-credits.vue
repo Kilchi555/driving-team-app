@@ -16,9 +16,10 @@
             :class="[
               'px-4 py-2 text-sm font-medium border-b-2 transition-colors',
               activeTab === 'students'
-                ? 'border-blue-500 text-blue-600'
+                ? ''
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             ]"
+            :style="activeTab === 'students' ? { borderColor: primaryColor, color: primaryColor } : {}"
           >
             Alle Schüler
           </button>
@@ -27,9 +28,10 @@
             :class="[
               'px-4 py-2 text-sm font-medium border-b-2 transition-colors relative',
               activeTab === 'withdrawals'
-                ? 'border-blue-500 text-blue-600'
+                ? ''
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             ]"
+            :style="activeTab === 'withdrawals' ? { borderColor: primaryColor, color: primaryColor } : {}"
           >
             Ausstehende Auszahlungen
             <span v-if="pendingWithdrawals.length > 0" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
@@ -123,7 +125,7 @@
               <input
                 v-model="searchQuery"
                 type="text"
-                class="p-2 block w-full text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                class="tenant-focus p-2 block w-full text-sm border-gray-300 rounded-md"
                 placeholder="Name oder E-Mail..."
               />
             </div>
@@ -132,7 +134,7 @@
               <label class="block text-sm font-medium text-gray-700 mb-2">Guthaben-Status</label>
               <select
                 v-model="balanceFilter"
-                class="p-2 block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                class="tenant-focus p-2 block w-full border-gray-300 rounded-md"
               >
                 <option value="">Alle</option>
                 <option value="with_credit">Mit Guthaben</option>
@@ -144,7 +146,7 @@
               <label class="block text-sm font-medium text-gray-700 mb-2">Sortierung</label>
               <select
                 v-model="sortBy"
-                class="p-2 block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                class="tenant-focus p-2 block w-full border-gray-300 rounded-md"
               >
                 <option value="name">Name</option>
                 <option value="balance">Guthaben (hoch)</option>
@@ -278,7 +280,8 @@
               <button
                 @click="exportPain001"
                 :disabled="isExportingPain001"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-white text-xs font-medium rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors"
+                :style="{ background: primaryColor }"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -444,7 +447,7 @@
                   <button
                     @click="loadStudentTransactions(selectedStudent.id)"
                     :disabled="isLoadingTransactions"
-                    class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    class="tenant-focus inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50"
                   >
                     <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -529,12 +532,15 @@
 import { ref, onMounted, computed } from 'vue'
 import { useStudentCredits } from '~/composables/useStudentCredits'
 import StudentCreditManager from '~/components/StudentCreditManager.vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 import type { CreditTransactionWithDetails } from '~/types/studentCredits'
 
 definePageMeta({
   middleware: 'admin',
   layout: 'admin'
 })
+
+const { primaryColor } = useTenantBranding()
 
 // Composables
 const {
@@ -827,3 +833,11 @@ onMounted(async () => {
   await loadPendingWithdrawals()
 })
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+  outline: none;
+}
+</style>

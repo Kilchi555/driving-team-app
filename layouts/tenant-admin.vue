@@ -40,6 +40,13 @@
             </svg>
             Analytics
           </NuxtLink>
+          <NuxtLink to="/tenant-admin/marketing" class="sa-nav-link" :class="{ 'sa-nav-active': $route.path === '/tenant-admin/marketing' }">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            Marketing
+          </NuxtLink>
           <NuxtLink to="/tenant-admin/security" class="sa-nav-link" :class="{ 'sa-nav-active': $route.path === '/tenant-admin/security' }">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

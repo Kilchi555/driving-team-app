@@ -14,7 +14,8 @@
           </div>
           <button
             @click="openCreate"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+            class="px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
+            :style="{ background: primaryColor }"
           >
             + Neues Template
           </button>
@@ -25,15 +26,16 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
       <!-- Variable Hint -->
-      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-        <p class="text-sm text-blue-800">
+      <div class="rounded-xl p-4 mb-6 border"
+        :style="{ background: `${primaryColor}10`, borderColor: `${primaryColor}33` }">
+        <p class="text-sm" :style="{ color: primaryColor }">
           <strong>Verfügbare Variablen:</strong>
-          <code class="mx-1 px-1.5 py-0.5 bg-blue-100 rounded text-xs" v-text="'{{first_name}}'"></code>
-          <code class="mx-1 px-1.5 py-0.5 bg-blue-100 rounded text-xs" v-text="'{{last_name}}'"></code>
-          <code class="mx-1 px-1.5 py-0.5 bg-blue-100 rounded text-xs" v-text="'{{email}}'"></code>
-          <code class="mx-1 px-1.5 py-0.5 bg-blue-100 rounded text-xs" v-text="'{{consent_link}}'"></code>
-          <code class="mx-1 px-1.5 py-0.5 bg-blue-100 rounded text-xs" v-text="'{{unsubscribe_link}}'"></code>
-          <code class="mx-1 px-1.5 py-0.5 bg-blue-100 rounded text-xs" v-text="'{{tenant_name}}'"></code>
+          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{first_name}}'"></code>
+          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{last_name}}'"></code>
+          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{email}}'"></code>
+          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{consent_link}}'"></code>
+          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{unsubscribe_link}}'"></code>
+          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{tenant_name}}'"></code>
           — werden beim Versand pro Lead ersetzt.
           <span class="block mt-1"><strong v-text="'{{consent_link}}'"></strong> = Opt-In-Button (für Re-Consent) · <strong v-text="'{{unsubscribe_link}}'"></strong> = Abmelde-Link</span>
         </p>
@@ -41,7 +43,7 @@
 
       <!-- Loading -->
       <div v-if="loading" class="text-center py-12">
-        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
       </div>
 
       <!-- Empty State -->
@@ -50,7 +52,8 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
         <p class="text-gray-500 mb-4">Noch keine Templates vorhanden</p>
-        <button @click="openCreate" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+        <button @click="openCreate" class="px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90"
+          :style="{ background: primaryColor }">
           Erstes Template erstellen
         </button>
       </div>
@@ -60,7 +63,7 @@
         <div
           v-for="t in templates"
           :key="t.id"
-          class="bg-white rounded-xl border p-5 hover:border-blue-200 transition-colors"
+          class="tenant-card-hover bg-white rounded-xl border p-5 transition-colors"
         >
           <div class="flex items-start justify-between gap-2 mb-3">
             <div>
@@ -68,7 +71,7 @@
               <p class="text-sm text-gray-500 mt-0.5">{{ t.subject }}</p>
             </div>
             <div class="flex gap-1 shrink-0">
-              <button @click="openEdit(t)" class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors rounded-lg hover:bg-blue-50">
+              <button @click="openEdit(t)" class="p-1.5 text-gray-400 tenant-hover-primary tenant-hover-bg transition-colors rounded-lg">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
@@ -108,11 +111,11 @@
           <div class="grid grid-cols-1 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Interner Name <span class="text-red-500">*</span></label>
-              <input v-model="form.name" type="text" placeholder="z.B. Willkommens-Email Motorrad" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input v-model="form.name" type="text" placeholder="z.B. Willkommens-Email Motorrad" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2" />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Email-Betreff <span class="text-red-500">*</span></label>
-              <input v-model="form.subject" type="text" placeholder="z.B. Ein Angebot für dich 🎉" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input v-model="form.subject" type="text" placeholder="z.B. Ein Angebot für dich 🎉" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2" />
               <p class="text-xs text-gray-400 mt-1">Du kannst <span class="font-mono">&#123;&#123;first_name&#125;&#125;</span> im Betreff verwenden.</p>
             </div>
           </div>
@@ -122,21 +125,24 @@
             <button
               @click="editorMode = 'simple'"
               class="px-3 py-1.5 rounded-lg text-sm font-medium transition"
-              :class="editorMode === 'simple' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'"
+              :class="editorMode === 'simple' ? 'text-white' : 'text-gray-500 hover:bg-gray-100'"
+              :style="editorMode === 'simple' ? { background: primaryColor } : {}"
             >
               ✏️ Einfacher Editor
             </button>
             <button
               @click="editorMode = 'html'"
               class="px-3 py-1.5 rounded-lg text-sm font-medium transition"
-              :class="editorMode === 'html' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'"
+              :class="editorMode === 'html' ? 'text-white' : 'text-gray-500 hover:bg-gray-100'"
+              :style="editorMode === 'html' ? { background: primaryColor } : {}"
             >
               🧑‍💻 HTML (Profi)
             </button>
             <button
               @click="editorMode = 'preview'"
               class="px-3 py-1.5 rounded-lg text-sm font-medium transition"
-              :class="editorMode === 'preview' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'"
+              :class="editorMode === 'preview' ? 'text-white' : 'text-gray-500 hover:bg-gray-100'"
+              :style="editorMode === 'preview' ? { background: primaryColor } : {}"
             >
               👁 Vorschau
             </button>
@@ -146,7 +152,7 @@
           <div v-if="editorMode === 'simple'" class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Überschrift im Email</label>
-              <input v-model="simple.headline" type="text" placeholder="z.B. Verdiene bis zu CHF 70.– pro Empfehlung" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input v-model="simple.headline" type="text" placeholder="z.B. Verdiene bis zu CHF 70.– pro Empfehlung" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2" />
             </div>
 
             <div>
@@ -155,7 +161,7 @@
                 v-model="simple.body"
                 rows="6"
                 placeholder="Schreib hier deine Nachricht. Drücke Enter für einen neuen Absatz.&#10;&#10;Du kannst {{first_name}} für den Vornamen verwenden."
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 resize-y"
               />
               <p class="text-xs text-gray-400 mt-1">Tipp: <span class="font-mono">&#123;&#123;first_name&#125;&#125;</span> wird durch den Vornamen der Person ersetzt.</p>
             </div>
@@ -168,11 +174,11 @@
               <div v-if="simple.showCta" class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs text-gray-500 mb-1">Button-Text</label>
-                  <input v-model="simple.ctaText" type="text" placeholder="Jetzt Partner werden →" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input v-model="simple.ctaText" type="text" placeholder="Jetzt Partner werden →" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2" />
                 </div>
                 <div>
                   <label class="block text-xs text-gray-500 mb-1">Link (URL)</label>
-                  <input v-model="simple.ctaUrl" type="url" placeholder="https://..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input v-model="simple.ctaUrl" type="url" placeholder="https://..." class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2" />
                 </div>
               </div>
             </div>
@@ -194,7 +200,7 @@
               v-model="form.html_body"
               rows="16"
               placeholder="<h2>Hallo {{first_name}},</h2><p>...</p>"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 resize-y"
             />
             <p class="text-xs text-gray-400 mt-1">Variablen: <code>&#123;&#123;first_name&#125;&#125;</code> <code>&#123;&#123;tenant_name&#125;&#125;</code> <code>&#123;&#123;consent_link&#125;&#125;</code> <code>&#123;&#123;unsubscribe_link&#125;&#125;</code></p>
           </div>
@@ -216,7 +222,8 @@
           <button @click="closeModal" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
             Abbrechen
           </button>
-          <button @click="saveTemplate" :disabled="saving || !form.name || !form.subject || !finalHtml" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+          <button @click="saveTemplate" :disabled="saving || !form.name || !form.subject || !finalHtml" class="px-4 py-2 text-sm text-white rounded-lg hover:opacity-90 disabled:opacity-50"
+            :style="{ background: primaryColor }">
             {{ saving ? 'Speichere...' : 'Speichern' }}
           </button>
         </div>
@@ -229,9 +236,12 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useHead } from '#app'
 import { useAuthStore } from '~/stores/auth'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useHead({ title: 'Email-Templates - Admin' })
+
+const { primaryColor } = useTenantBranding()
 
 const authStore = useAuthStore()
 const templates = ref<any[]>([])
@@ -476,3 +486,19 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+.tenant-hover-primary:hover {
+  color: var(--color-primary, #1E40AF);
+}
+.tenant-hover-bg:hover {
+  background-color: color-mix(in srgb, var(--color-primary, #1E40AF) 8%, transparent);
+}
+.tenant-card-hover:hover {
+  border-color: color-mix(in srgb, var(--color-primary, #1E40AF) 30%, transparent);
+}
+</style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+  <div class="min-h-screen" :style="{ background: `linear-gradient(to bottom right, ${primaryColor}10, ${accentColor || primaryColor}1f)` }">
     <!-- Step Indicator -->
     <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
       <div class="max-w-4xl mx-auto px-4 py-6">
@@ -11,9 +11,10 @@
                 currentStep > idx
                   ? 'bg-green-500 text-white'
                   : currentStep === idx
-                    ? 'bg-blue-500 text-white'
+                    ? 'text-white'
                     : 'bg-gray-200 text-gray-600'
               ]"
+              :style="currentStep === idx ? { background: primaryColor } : {}"
             >
               {{ idx + 1 }}
             </div>
@@ -26,8 +27,8 @@
     <!-- Progress Bar -->
     <div class="h-1 bg-gray-200">
       <div
-        class="h-full bg-blue-500 transition-all duration-300"
-        :style="{ width: `${((currentStep + 1) / steps.length) * 100}%` }"
+        class="h-full transition-all duration-300"
+        :style="{ width: `${((currentStep + 1) / steps.length) * 100}%`, background: primaryColor }"
       />
     </div>
 
@@ -39,7 +40,7 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Company Name -->
             <div class="md:col-span-1">
-              <p class="text-3xl font-bold text-blue-600">{{ tenantInfo?.name || '-' }}</p>
+              <p class="text-3xl font-bold" :style="{ color: primaryColor }">{{ tenantInfo?.name || '-' }}</p>
             </div>
             <!-- Contact Info & Domain -->
             <div class="md:col-span-2">
@@ -120,7 +121,7 @@
             <input
               v-model="formData.name"
               type="text"
-              class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="tenant-focus w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:border-transparent"
               placeholder="z.B. Pascal Kilchenmann"
             />
           </div>
@@ -131,7 +132,7 @@
             >
             <textarea
               v-model="formData.bio"
-              class="w-full border border-gray-300 rounded-lg px-4 py-3 h-24 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="tenant-focus w-full border border-gray-300 rounded-lg px-4 py-3 h-24 focus:ring-2 focus:border-transparent"
               placeholder="z.B. Erfahrener Fahrlehrer seit 15 Jahren mit Spezialisierung auf..."
             />
             <AIOptimizationSuggestion
@@ -152,14 +153,15 @@
                   :checked="formData.specializations?.includes(spec)"
                   @change="toggleSpecialization(spec)"
                   type="checkbox"
-                  class="w-4 h-4 text-blue-600"
+                  class="w-4 h-4"
+                  :style="{ accentColor: primaryColor }"
                 />
                 <span class="ml-2 text-sm">{{ spec }}</span>
               </label>
             </div>
           </div>
 
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div class="rounded-lg p-4 border" :style="{ background: `${primaryColor}10`, borderColor: `${primaryColor}33` }">
             <p class="text-sm">
               ✅ Diese Infos stammen aus deiner Driving Team App und werden
               automatisch synchronisiert
@@ -187,14 +189,14 @@
                     {{ service.duration_minutes }} Min
                   </p>
                 </div>
-                <span class="text-lg font-bold text-blue-600"
+                <span class="text-lg font-bold" :style="{ color: primaryColor }"
                   >€ {{ (service.price / 100).toFixed(2) }}</span
                 >
               </div>
               <textarea
                 v-model="serviceDescriptions[service.id]"
                 placeholder="Beschreibe diese Fahrstunde..."
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-20 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="tenant-focus w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-20 focus:ring-2 focus:border-transparent"
               />
               <AIOptimizationSuggestion
                 :original="serviceDescriptions[service.id]"
@@ -256,7 +258,8 @@
                     type="checkbox"
                     :checked="selectedTestimonials.includes(testimonial.id)"
                     @change="toggleTestimonial(testimonial.id)"
-                    class="w-4 h-4 text-blue-600"
+                    class="w-4 h-4"
+                    :style="{ accentColor: primaryColor }"
                   />
                   <span class="ml-2 text-sm">Auf Website anzeigen</span>
                 </label>
@@ -281,7 +284,7 @@
             <input
               v-model="formData.address"
               type="text"
-              class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="tenant-focus w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:border-transparent"
               placeholder="z.B. Bahnhofstrasse 123, 8000 Zürich"
             />
           </div>
@@ -291,7 +294,7 @@
             <input
               v-model="formData.phone"
               type="tel"
-              class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="tenant-focus w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:border-transparent"
             />
           </div>
 
@@ -300,7 +303,7 @@
             <input
               v-model="formData.email"
               type="email"
-              class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="tenant-focus w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:border-transparent"
             />
           </div>
 
@@ -333,7 +336,7 @@
             <input
               v-model="formData.seo_title"
               type="text"
-              class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="tenant-focus w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:border-transparent"
               placeholder="z.B. Fahrschule Pascal | Fahrausbildung in Zürich"
               maxlength="60"
             />
@@ -354,7 +357,7 @@
             </label>
             <textarea
               v-model="formData.seo_description"
-              class="w-full border border-gray-300 rounded-lg px-4 py-3 h-20 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="tenant-focus w-full border border-gray-300 rounded-lg px-4 py-3 h-20 focus:ring-2 focus:border-transparent"
               placeholder="z.B. Moderne Fahrausbildung mit hoher Erfolgsquote..."
               maxlength="160"
             />
@@ -376,7 +379,7 @@
             <input
               v-model="formData.seo_keywords"
               type="text"
-              class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="tenant-focus w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:border-transparent"
               placeholder="z.B. Fahrlehrer, Fahrschule, Führerschein"
             />
             <AIOptimizationSuggestion
@@ -414,7 +417,8 @@
           <button
             v-if="currentStep < steps.length - 1"
             @click="currentStep++"
-            class="px-8 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition"
+            class="px-8 py-2 text-white font-medium rounded-lg hover:opacity-90 transition"
+            :style="{ background: primaryColor }"
           >
             Weiter →
           </button>
@@ -435,6 +439,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import AIOptimizationSuggestion from '~/components/website/AIOptimizationSuggestion.vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor, accentColor } = useTenantBranding()
 
 const currentStep = ref(0)
 const savingLoading = ref(false)
@@ -609,3 +616,10 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+</style>

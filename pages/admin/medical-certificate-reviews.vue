@@ -14,7 +14,8 @@
       <div class="flex space-x-2">
         <button
           @click="statusFilter = 'uploaded'"
-          :class="statusFilter === 'uploaded' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'"
+          :class="statusFilter === 'uploaded' ? 'text-white' : 'bg-white text-gray-700 border border-gray-300'"
+          :style="statusFilter === 'uploaded' ? { background: primaryColor } : {}"
           class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
         >
           Hochgeladen ({{ uploadedCount }})
@@ -39,7 +40,8 @@
     <!-- Loading State -->
     <div v-if="isLoading" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div class="text-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto"></div>
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent mx-auto"
+          :style="{ borderColor: primaryColor, borderTopColor: 'transparent' }"></div>
         <p class="mt-4 text-gray-600">Lade Prüfungen...</p>
       </div>
     </div>
@@ -151,7 +153,7 @@
               v-model="review.notes"
               rows="3"
               placeholder="Notizen zur Prüfung (z.B. warum abgelehnt)..."
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class="tenant-focus w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2"
             />
           </div>
 
@@ -183,11 +185,14 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 definePageMeta({
   middleware: 'admin',
   layout: 'admin'
 })
+
+const { primaryColor } = useTenantBranding()
 
 // State
 const reviews = ref<any[]>([])
@@ -335,6 +340,11 @@ onMounted(() => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
 }
 </style>
 

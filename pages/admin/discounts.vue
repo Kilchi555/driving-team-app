@@ -114,14 +114,14 @@
             v-model="searchTerm"
             type="text"
             placeholder="Rabattname oder Code suchen..."
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
           />
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Typ</label>
           <select
             v-model="selectedType"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
           >
             <option value="">Alle Typen</option>
             <option value="percentage">Prozentual</option>
@@ -134,7 +134,7 @@
           <label class="block text-sm font-medium text-gray-700 mb-2">Gilt für</label>
           <select
             v-model="selectedAppliesTo"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
           >
             <option value="">Alle</option>
             <option value="all">Alle</option>
@@ -147,7 +147,7 @@
           <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
           <select
             v-model="selectedStatus"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
           >
             <option value="">Alle</option>
             <option value="active">Nur aktive</option>
@@ -982,3 +982,10 @@ onMounted(async () => {
   loadVouchers() // ✅ NEW: Load vouchers
 })
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+</style>
