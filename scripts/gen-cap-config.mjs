@@ -39,11 +39,30 @@ if (client.features?.push === true) {
   }
 }
 
+// Build the server config.
+//  - `url` is required for live-reload / hosted-shell setups (Simy).
+//  - `allowNavigation` MUST list every domain the WebView may navigate
+//    to internally. Without it Capacitor punts every non-exact-url
+//    navigation to SFSafariViewController, which is why you'd see the
+//    in-app Safari pop up after login on iOS.
+//  - We derive the hostname from the serverUrl and also accept any
+//    extra hosts from clients/<id>/config.json -> allowNavigation.
+const serverConfig = {}
+if (client.serverUrl) {
+  serverConfig.url = client.serverUrl
+  const baseHost = (() => {
+    try { return new URL(client.serverUrl).hostname } catch { return null }
+  })()
+  const extra = Array.isArray(client.allowNavigation) ? client.allowNavigation : []
+  const hosts = Array.from(new Set([baseHost, ...extra].filter(Boolean)))
+  if (hosts.length) serverConfig.allowNavigation = hosts
+}
+
 const config = {
   appId: client.bundleId,
   appName: client.appName,
   webDir: '.output/public',
-  server: client.serverUrl ? { url: client.serverUrl } : {},
+  server: serverConfig,
   ios: {
     scheme: client.scheme,
     backgroundColor: client.backgroundColor || '#ffffff',
