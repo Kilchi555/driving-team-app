@@ -1196,16 +1196,16 @@
                     <span class="text-xs" :style="{ color: primaryColor }">Datum + Zeit</span>
                   </div>
                   <div class="flex flex-col">
-                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{location}}</code>
-                    <span class="text-xs text-blue-700">Treffpunkt</span>
+                    <code class="text-xs bg-white px-2 py-1 rounded border mb-1" :style="{ borderColor: `${primaryColor}33` }">{{location}}</code>
+                    <span class="text-xs" :style="{ color: primaryColor }">Treffpunkt</span>
                   </div>
                   <div class="flex flex-col">
-                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{price}}</code>
-                    <span class="text-xs text-blue-700">Preis (125.00)</span>
+                    <code class="text-xs bg-white px-2 py-1 rounded border mb-1" :style="{ borderColor: `${primaryColor}33` }">{{price}}</code>
+                    <span class="text-xs" :style="{ color: primaryColor }">Preis (125.00)</span>
                   </div>
                   <div class="flex flex-col">
-                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{confirmation_link}}</code>
-                    <span class="text-xs text-blue-700">Bestätigungs-Link</span>
+                    <code class="text-xs bg-white px-2 py-1 rounded border mb-1" :style="{ borderColor: `${primaryColor}33` }">{{confirmation_link}}</code>
+                    <span class="text-xs" :style="{ color: primaryColor }">Bestätigungs-Link</span>
                   </div>
                 </div>
               </div>
@@ -1268,7 +1268,7 @@
               </div>
 
               <!-- Automatic Payment Timing -->
-              <div v-if="paymentSettings.automatic_payment_enabled" class="border-l-4 border-blue-500 pl-4 space-y-4">
+              <div v-if="paymentSettings.automatic_payment_enabled" class="border-l-4 pl-4 space-y-4" :style="{ borderColor: primaryColor }">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">
                     Früheste Autorisierung vor Termin
@@ -1315,12 +1315,12 @@
                 </div>
 
                 <!-- Info Box -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="rounded-lg p-4" :style="{ background: `${primaryColor}10`, border: `1px solid ${primaryColor}33` }">
                   <div class="flex">
-                    <svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" :style="{ color: primaryColor }" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
                     </svg>
-                    <div class="text-sm text-blue-800">
+                    <div class="text-sm" :style="{ color: primaryColor }">
                       <strong>So funktioniert's (Authorize & Capture):</strong>
                       <ul class="mt-2 list-disc list-inside space-y-1">
                         <li><strong>Termin >{{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage entfernt:</strong> Reservierung erfolgt automatisch {{ Math.round((paymentSettings.automatic_authorization_hours_before || 168) / 24) }} Tage vor Termin, finale Abbuchung {{ paymentSettings.automatic_payment_hours_before || 24 }}h vor Termin</li>
@@ -1409,7 +1409,7 @@
               <button
                 @click="saveInvoiceSettings"
                 :disabled="isSavingInvoiceSettings"
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm font-medium"
+                class="px-4 py-2 text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors text-sm font-medium" :style="{ background: primaryColor }"
               >
                 {{ isSavingInvoiceSettings ? 'Speichern…' : 'Rechnungseinstellungen speichern' }}
               </button>
@@ -1438,13 +1438,14 @@
               </div>
 
               <!-- Cash Payment Visibility -->
-              <div v-if="paymentSettings.cash_payments_enabled" class="border-l-4 border-blue-500 pl-4">
+              <div v-if="paymentSettings.cash_payments_enabled" class="border-l-4 pl-4" :style="{ borderColor: primaryColor }">
                 <label class="block text-sm font-medium text-gray-700 mb-2">
                   Sichtbarkeit der Barzahlungsoption
                 </label>
                 <div class="space-y-2">
                   <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                         :class="paymentSettings.cash_payment_visibility === 'staff_only' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'">
+                         :class="paymentSettings.cash_payment_visibility === 'staff_only' ? '' : 'border-gray-200'"
+                         :style="paymentSettings.cash_payment_visibility === 'staff_only' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
                     <input
                       type="radio"
                       v-model="paymentSettings.cash_payment_visibility"
