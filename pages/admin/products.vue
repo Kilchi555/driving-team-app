@@ -487,7 +487,7 @@
                 v-model="formData.is_active"
                 class="sr-only peer"
               >
-              <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div class="tenant-toggle relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
             </label>
           </div>
 
@@ -868,6 +868,12 @@ onMounted(async () => {
 .tenant-focus:focus {
   --tw-ring-color: var(--color-primary, #1E40AF);
   border-color: var(--color-primary, #1E40AF);
+}
+.peer:checked ~ .tenant-toggle {
+  background-color: var(--color-primary, #1E40AF);
+}
+.peer:focus ~ .tenant-toggle {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary, #1E40AF) 30%, transparent);
 }
 
 input:focus, select:focus, textarea:focus {
