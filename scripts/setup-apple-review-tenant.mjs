@@ -14,13 +14,17 @@
  *   6. Seeds 3 mock payments (2 paid, 1 open)
  *
  * Usage:
- *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/setup-apple-review-tenant.mjs
- *
- * Or, if you have a .env at the repo root:
+ *   DEMO_PASSWORD='YourSecurePassword' \
+ *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
  *   node scripts/setup-apple-review-tenant.mjs
  *
- * The demo customer password defaults to "AppleReview2026!" but can be overridden
- * via the DEMO_PASSWORD env var.
+ * DEMO_PASSWORD is REQUIRED — the script refuses to run without it so
+ * that we never commit a default password to the repository.
+ *
+ * Where to store the password:
+ *   - 1Password / Bitwarden under "Simy → Apple Review demo accounts"
+ *   - Paste it into App Store Connect → App Review Information → Notes
+ *     so the reviewer sees it without us having to commit it anywhere.
  */
 
 import { readFileSync, existsSync } from 'fs'
@@ -55,7 +59,17 @@ if (!SERVICE_ROLE_KEY) {
   process.exit(1)
 }
 
-const DEMO_PASSWORD = process.env.DEMO_PASSWORD || 'AppleReview2026!'
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD
+if (!DEMO_PASSWORD) {
+  console.error('❌ Missing DEMO_PASSWORD env var.')
+  console.error('   The default password was removed to keep credentials out of git history.')
+  console.error('   Re-run with:  DEMO_PASSWORD="YourSecurePass" npm run demo:apple-review:setup')
+  process.exit(1)
+}
+if (DEMO_PASSWORD.length < 12) {
+  console.error('❌ DEMO_PASSWORD must be at least 12 characters long.')
+  process.exit(1)
+}
 const DEMO_CUSTOMER_EMAIL = 'apple-review@simy.ch'
 const DEMO_INSTRUCTOR_EMAIL = 'demo-instructor@simy.ch'
 const DEMO_ADMIN_EMAIL = 'demo-admin@simy.ch'

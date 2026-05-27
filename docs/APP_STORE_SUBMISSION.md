@@ -108,12 +108,21 @@ Apple fragt in App Store Connect für jede Datenkategorie:
 |------|------|
 | Sign-in required | **Ja** |
 | Demo Account Username | `apple-review@simy.ch` |
-| Demo Account Password | `AppleReview2026!` (ggf. via `DEMO_PASSWORD` env überschreiben) |
+| Demo Account Password | **Wird in App Store Connect direkt eingegeben** — NICHT im Repo committen (siehe 1Password "Simy → Apple Review demo accounts") |
 | Contact Email | `support@simy.ch` |
 | Contact Phone | (deine Nummer) |
 | Notes für Reviewer | siehe Vorlage unten |
 
+> ⚠️ **Passwort-Rotation 2026-05-27**: Das ursprüngliche Demo-Passwort
+> wurde durch GitGuardian als public gemeldet und ist rotiert. Das neue
+> Passwort wird ausschließlich in App Store Connect → "App Review
+> Information → Notes" eingetragen und im Passwort-Manager gespeichert.
+> Setup-Script verlangt jetzt zwingend `DEMO_PASSWORD` env var.
+
 #### Reviewer Notes (Vorlage – DE/EN bilingual)
+
+Beim Eintragen in App Store Connect **`<DEMO_PASSWORD>`** durch das aktuelle
+Demo-Passwort aus dem Passwort-Manager ersetzen.
 
 ```
 Hello App Review Team,
@@ -136,7 +145,7 @@ the demo credentials below.
 
 Demo accounts (all share the same password)
 ============================================
-Password for all 3 accounts: AppleReview2026!
+Password for all 3 accounts: <DEMO_PASSWORD>
 
 • Student / Customer (primary login to review):
      apple-review@simy.ch
@@ -198,10 +207,13 @@ auf Cash.
 ✅ Cleanup-Script: `npm run demo:apple-review:teardown`
    - Entfernt sämtliche Demo-Daten + Auth-User
 
-Passwort überschreiben:
+Demo-Tenant initial einrichten / Passwort rotieren:
 ```bash
-DEMO_PASSWORD='DeinNeuesPasswort2026!' npm run demo:apple-review:setup
+# Passwort ist Pflicht — kein Default mehr im Code
+DEMO_PASSWORD='YourStrongPassword' npm run demo:apple-review:setup
 ```
+Danach das Passwort in App Store Connect → "App Review Information → Notes"
+einfügen und in 1Password unter "Simy → Apple Review demo accounts" ablegen.
 
 ---
 
