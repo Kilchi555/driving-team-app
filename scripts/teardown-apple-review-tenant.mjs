@@ -75,10 +75,12 @@ async function main() {
       'student_credits',
       'credit_transactions',
       'audit_logs',
-      'locations',
-      'tenant_settings',
+      'staff_working_hours',
       'staff_locations',
-      'staff_monthly_hours'
+      'staff_monthly_hours',
+      'event_types',
+      'locations',
+      'tenant_settings'
     ]
 
     for (const table of tables) {
