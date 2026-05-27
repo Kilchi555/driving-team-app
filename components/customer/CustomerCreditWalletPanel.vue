@@ -1,9 +1,18 @@
 <template>
   <div>
     <!-- Student Credit Balance Card -->
-    <div class="mb-0 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl shadow-md border border-green-200 p-4 sm:p-6">
+    <div
+      class="mb-0 rounded-xl shadow-md p-4 sm:p-6 border"
+      :style="{
+        backgroundImage: `linear-gradient(to right, ${primaryColor}10, ${primaryColor}1f)`,
+        borderColor: `${primaryColor}33`
+      }"
+    >
       <div v-if="isLoadingBalance && !walletLoadError" class="flex justify-center py-4">
-        <div class="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+        <div
+          class="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+          :style="{ borderColor: primaryColor, borderTopColor: 'transparent' }"
+        />
       </div>
       <div v-else-if="walletLoadError" class="text-sm text-red-600 py-2">{{ walletLoadError }}</div>
       <div v-else class="relative">
@@ -21,8 +30,14 @@
             title="Guthaben-Verlauf anzeigen"
             @click="openCreditTransactionsModal"
           >
-            <p class="text-sm sm:text-base text-green-700 font-medium mb-1">Verfügbares Guthaben</p>
-            <p class="text-2xl sm:text-3xl font-bold text-green-900">CHF {{ availableBalance.toFixed(2) }}</p>
+            <p
+              class="text-sm sm:text-base font-medium mb-1"
+              :style="{ color: primaryColor }"
+            >Verfügbares Guthaben</p>
+            <p
+              class="text-2xl sm:text-3xl font-bold"
+              :style="{ color: primaryColor }"
+            >CHF {{ availableBalance.toFixed(2) }}</p>
             <p v-if="pendingWithdrawalRappen > 0" class="text-xs text-yellow-700 mt-1">
               CHF {{ formatAmount(pendingWithdrawalRappen) }} in Bearbeitung
             </p>
@@ -32,7 +47,8 @@
           <button
             v-if="withdrawalOnly"
             type="button"
-            class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-green-300 text-green-700 text-sm font-medium rounded-lg hover:bg-green-50 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            class="inline-flex items-center gap-1.5 px-3 py-2 bg-white text-sm font-medium rounded-lg transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed border"
+            :style="{ borderColor: `${primaryColor}66`, color: primaryColor }"
             :disabled="availableBalance <= 0"
             @click="showWithdrawalModal = true"
           >
@@ -43,7 +59,8 @@
           <div v-else class="relative">
             <button
               type="button"
-              class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-green-300 text-green-700 text-sm font-medium rounded-lg hover:bg-green-50 transition-colors shadow-sm"
+              class="inline-flex items-center gap-1.5 px-3 py-2 bg-white text-sm font-medium rounded-lg transition-colors shadow-sm border"
+              :style="{ borderColor: `${primaryColor}66`, color: primaryColor }"
               @click="showActionsDropdown = !showActionsDropdown"
             >
               Aktionen
@@ -56,21 +73,21 @@
                 <button
                   v-if="walleeEnabled"
                   type="button"
-                  class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                  class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                   @click="showActionsDropdown = false; showTopupModal = true"
                 >
                   Guthaben aufladen
                 </button>
                 <button
                   type="button"
-                  class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+                  class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                   @click="showActionsDropdown = false; showRedeemModal = true"
                 >
                   Code einlösen
                 </button>
                 <button
                   type="button"
-                  class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   :disabled="availableBalance <= 0"
                   @click="showActionsDropdown = false; showWithdrawalModal = true"
                 >
@@ -424,7 +441,10 @@ import { useRuntimeConfig } from '#app'
 import { useUIStore } from '~/stores/ui'
 import RedeemVoucherModal from '~/components/customer/RedeemVoucherModal.vue'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 import { roundToNearest5Rappen as roundToNearestFranken } from '~/utils/rounding'
+
+const { primaryColor } = useTenantBranding()
 
 const props = withDefaults(
   defineProps<{
