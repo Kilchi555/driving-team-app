@@ -1,5 +1,9 @@
 <template>
-  <div class="fixed inset-0 overflow-y-auto flex flex-col items-center px-4" :style="{ background: 'linear-gradient(to bottom right, #7C3AED15, #64748b15)', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 32px)', paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px) + 16px)' }">
+  <div class="fixed inset-0 overflow-y-auto" :style="{ background: 'linear-gradient(to bottom right, #7C3AED15, #64748b15)' }">
+    <div
+      class="min-h-full flex flex-col items-center justify-center px-4"
+      :style="{ paddingTop: 'max(24px, calc(env(safe-area-inset-top, 0px) + 24px))', paddingBottom: 'max(24px, calc(env(safe-area-inset-bottom, 0px) + 24px))' }"
+    >
     
     <!-- Simy Logo (Oben in der Mitte) -->
     <div class="mb-6">
@@ -516,6 +520,7 @@
         </div>
       </div>
     </Transition>
+    </div>
   </div>
 </template>
 
