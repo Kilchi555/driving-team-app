@@ -8,15 +8,24 @@
  * What this script does (idempotent — safe to run multiple times):
  *   1. Creates tenant "Apple Review Fahrschule" (slug: apple-review) if missing
  *   2. Creates a default location for the tenant
- *   3. Creates demo staff (instructor): demo-instructor@simy.ch
- *   4. Creates demo customer: apple-review@simy.ch (the credentials we give to Apple)
- *   5. Seeds 5 mock appointments (3 past, 2 future)
- *   6. Seeds 3 mock payments (2 paid, 1 open)
+ *   3. Creates demo admin, instructor, and customer accounts
+ *   4. Seeds event types (lesson / theory / exam)
+ *   5. Seeds instructor working hours (Mon–Fri 08–17, Sat 09–13)
+ *   6. Seeds staff↔location link (online bookable)
+ *   7. Seeds availability settings for the instructor
+ *   8. Seeds 10 mock appointments across categories B / A35kW / BE
+ *      (past + upcoming, mixed lesson/theory/exam, mixed locations)
+ *   9. Seeds 4 mock payments (3 paid, 1 open)
  *
  * Usage:
  *   DEMO_PASSWORD='YourSecurePassword' \
  *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
- *   node scripts/setup-apple-review-tenant.mjs
+ *   node scripts/setup-apple-review-tenant.mjs [--reseed]
+ *
+ * Flags:
+ *   --reseed   Wipes the existing appointments + payments of the demo
+ *              customer and seeds a fresh set. Use this to refresh the
+ *              dates so the upcoming lessons stay in the future.
  *
  * DEMO_PASSWORD is REQUIRED — the script refuses to run without it so
  * that we never commit a default password to the repository.
@@ -128,49 +137,73 @@ async function ensureTenant() {
 }
 
 async function ensureLocation(tenantId) {
-  console.log('📍 Checking location…')
-  const { data: existing } = await supabase
-    .from('locations')
-    .select('id')
-    .eq('tenant_id', tenantId)
-    .limit(1)
-    .maybeSingle()
-
-  if (existing) {
-    console.log(`   ✓ Location exists: ${existing.id}`)
-    return existing.id
-  }
-
-  const { data, error } = await supabase
-    .from('locations')
-    .insert({
+  console.log('📍 Checking locations…')
+  const wanted = [
+    {
       name: 'Zürich HB',
       address: 'Bahnhofstrasse 1, 8001 Zürich',
-      formatted_address: 'Bahnhofstrasse 1, 8001 Zürich, Schweiz',
-      city: 'Zürich',
-      postal_code: '8001',
-      canton: 'ZH',
-      latitude: 47.3769,
-      longitude: 8.5417,
-      tenant_id: tenantId,
-      is_active: true,
-      location_type: 'standard',
-      category: ['B'],
-      available_categories: ['B']
-    })
-    .select('id')
-    .single()
+      city: 'Zürich', postal_code: '8001', canton: 'ZH',
+      latitude: 47.3769, longitude: 8.5417,
+      categories: ['B', 'A35kW', 'BE']
+    },
+    {
+      name: 'Zürich Oerlikon',
+      address: 'Hofwiesenstrasse 350, 8050 Zürich',
+      city: 'Zürich', postal_code: '8050', canton: 'ZH',
+      latitude: 47.4108, longitude: 8.5439,
+      categories: ['B', 'A35kW']
+    }
+  ]
 
-  if (error) throw error
-  console.log(`   ✓ Location created: ${data.id}`)
-  return data.id
+  const ids = []
+  for (const loc of wanted) {
+    const { data: existing } = await supabase
+      .from('locations')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('name', loc.name)
+      .maybeSingle()
+    if (existing) {
+      ids.push(existing.id)
+      console.log(`   ✓ Location exists: ${loc.name} (${existing.id})`)
+      continue
+    }
+
+    const { data, error } = await supabase
+      .from('locations')
+      .insert({
+        name: loc.name,
+        address: loc.address,
+        formatted_address: `${loc.address}, Schweiz`,
+        city: loc.city,
+        postal_code: loc.postal_code,
+        canton: loc.canton,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        tenant_id: tenantId,
+        is_active: true,
+        location_type: 'standard',
+        category: loc.categories,
+        available_categories: loc.categories
+      })
+      .select('id')
+      .single()
+    if (error) throw error
+    ids.push(data.id)
+    console.log(`   ✓ Location created: ${loc.name} (${data.id})`)
+  }
+
+  // Returns the primary (first) location id for the appointment seeding,
+  // plus the full list for the location rotation.
+  return { primaryId: ids[0], allIds: ids }
 }
 
 async function ensureEventTypes(tenantId) {
   console.log('🏷️  Checking event types…')
   const types = [
-    { code: 'lesson', name: 'Fahrstunde', emoji: '🚗', description: 'Standard Fahrstunde', default_duration_minutes: 45, default_color: '#7C3AED', display_order: 0, is_default: true, allowed_roles: ['staff', 'admin'], public_bookable: true },
-    { code: 'exam',   name: 'Prüfung',    emoji: '💪', description: 'Praktische Prüfung',  default_duration_minutes: 45, default_color: '#EF4444', display_order: 1, is_default: false, allowed_roles: ['staff', 'admin'], public_bookable: false, require_payment: true }
+    { code: 'lesson', name: 'Fahrstunde', emoji: '🚗', description: 'Standard Fahrstunde',  default_duration_minutes: 45, default_color: '#7C3AED', display_order: 0, is_default: true,  allowed_roles: ['staff', 'admin'], public_bookable: true },
+    { code: 'theory', name: 'Theorie',    emoji: '📚', description: 'Theorie-Unterricht',   default_duration_minutes: 60, default_color: '#10B981', display_order: 1, is_default: false, allowed_roles: ['staff', 'admin'], public_bookable: true },
+    { code: 'exam',   name: 'Prüfung',    emoji: '💪', description: 'Praktische Prüfung',   default_duration_minutes: 45, default_color: '#EF4444', display_order: 2, is_default: false, allowed_roles: ['staff', 'admin'], public_bookable: false, require_payment: true }
   ]
 
   for (const t of types) {
@@ -190,6 +223,100 @@ async function ensureEventTypes(tenantId) {
     if (error) throw error
     console.log(`   ✓ Event type created: ${t.code}`)
   }
+}
+
+async function ensureWorkingHours(staffId, tenantId) {
+  console.log('🕒 Checking instructor working hours…')
+  const { count } = await supabase
+    .from('staff_working_hours')
+    .select('id', { count: 'exact', head: true })
+    .eq('staff_id', staffId)
+
+  if ((count ?? 0) > 0) {
+    console.log(`   ✓ ${count} working-hour rules already exist – skipping`)
+    return
+  }
+
+  // Mon-Fri 08:00-17:00, Sat 09:00-13:00 (day_of_week: 1=Mon, 7=Sun)
+  const rows = []
+  for (let day = 1; day <= 5; day++) {
+    rows.push({
+      staff_id: staffId,
+      tenant_id: tenantId,
+      day_of_week: day,
+      start_time: '08:00:00',
+      end_time: '17:00:00',
+      is_active: true,
+      timezone: 'Europe/Zurich'
+    })
+  }
+  rows.push({
+    staff_id: staffId,
+    tenant_id: tenantId,
+    day_of_week: 6,
+    start_time: '09:00:00',
+    end_time: '13:00:00',
+    is_active: true,
+    timezone: 'Europe/Zurich'
+  })
+
+  const { error } = await supabase.from('staff_working_hours').insert(rows)
+  if (error) throw error
+  console.log(`   ✓ ${rows.length} working-hour rules seeded (Mon–Fri 08–17, Sat 09–13)`)
+}
+
+async function ensureStaffLocations(staffId, tenantId, locationIds) {
+  console.log('🔗 Linking instructor to locations…')
+  for (const locationId of locationIds) {
+    const { data: existing } = await supabase
+      .from('staff_locations')
+      .select('id')
+      .eq('staff_id', staffId)
+      .eq('location_id', locationId)
+      .maybeSingle()
+    if (existing) {
+      console.log(`   ✓ Staff↔Location link exists: ${locationId}`)
+      continue
+    }
+    const { error } = await supabase
+      .from('staff_locations')
+      .insert({
+        staff_id: staffId,
+        location_id: locationId,
+        tenant_id: tenantId,
+        is_active: true,
+        is_online_bookable: true
+      })
+    if (error) throw error
+    console.log(`   ✓ Staff↔Location link created: ${locationId}`)
+  }
+}
+
+async function ensureAvailabilitySettings(staffId) {
+  console.log('⚙️  Checking instructor availability settings…')
+  const { data: existing } = await supabase
+    .from('staff_availability_settings')
+    .select('id')
+    .eq('staff_id', staffId)
+    .maybeSingle()
+  if (existing) {
+    console.log(`   ✓ Availability settings exist`)
+    return
+  }
+  const { error } = await supabase
+    .from('staff_availability_settings')
+    .insert({
+      staff_id: staffId,
+      availability_mode: 'working_hours',
+      minimum_booking_lead_time_hours: 24,
+      pickup_radius_minutes: 30,
+      peak_time_morning_start: '07:00:00',
+      peak_time_morning_end:   '09:00:00',
+      peak_time_evening_start: '16:00:00',
+      peak_time_evening_end:   '19:00:00'
+    })
+  if (error) throw error
+  console.log(`   ✓ Availability settings seeded`)
 }
 
 async function findExistingAuthUser(email) {
@@ -267,8 +394,18 @@ async function ensureUserRow({ authUserId, email, role, firstName, lastName, ten
   return data.id
 }
 
-async function seedAppointments({ tenantId, customerId, staffId, locationId }) {
+async function seedAppointments({ tenantId, customerId, staffId, locationIds, reseed }) {
   console.log('📅 Seeding appointments…')
+
+  if (reseed) {
+    const { error: delErr } = await supabase
+      .from('appointments')
+      .delete()
+      .eq('user_id', customerId)
+      .eq('tenant_id', tenantId)
+    if (delErr) throw delErr
+    console.log('   🗑  Existing appointments wiped (--reseed)')
+  }
 
   const { count } = await supabase
     .from('appointments')
@@ -277,37 +414,80 @@ async function seedAppointments({ tenantId, customerId, staffId, locationId }) {
     .eq('tenant_id', tenantId)
 
   if ((count ?? 0) > 0) {
-    console.log(`   ✓ ${count} appointments already exist – skipping seed`)
+    console.log(`   ✓ ${count} appointments already exist – skipping seed (use --reseed to force)`)
     return
   }
 
-  const now = new Date()
-  const HOUR_MS = 60 * 60 * 1000
-  const DAY_MS = 24 * HOUR_MS
+  const [primaryLocation, secondaryLocation] = locationIds
+  const DAY_MS = 24 * 60 * 60 * 1000
+
+  // Build appointments such that every weekday at 10:00 lands on a working
+  // day for the instructor (Mon–Sat). The "weekday" is computed at seed
+  // time so screenshots always show the same realistic mix.
+  const nextWeekday = (offsetDays) => {
+    const d = new Date(Date.now() + offsetDays * DAY_MS)
+    while (d.getDay() === 0) d.setTime(d.getTime() + DAY_MS) // skip Sunday
+    return d
+  }
 
   const slots = [
-    { offsetDays: -21, label: 'Grundausbildung Manöver',  status: 'completed' },
-    { offsetDays: -14, label: 'Stadtfahrt Zürich',         status: 'completed' },
-    { offsetDays: -7,  label: 'Autobahn-Fahrt',            status: 'completed' },
-    { offsetDays: 3,   label: 'Prüfungsvorbereitung',      status: 'booked' },
-    { offsetDays: 7,   label: 'Praktische Prüfung',        status: 'booked' }
+    // ─── Past (8) ─────────────────────────────────────────────────────
+    { offsetDays: -42, hour: 18, dur: 60, type: 'theory', loc: primaryLocation,
+      title: 'Verkehrskunde-Theorie Modul 1',
+      desc:  'Grundlagen Verkehrsregeln und Vorfahrt' },
+    { offsetDays: -35, hour: 10, dur: 45, type: 'lesson', loc: primaryLocation,
+      title: 'Kategorie B – Grundausbildung Manöver',
+      desc:  'Anhalten, Anfahren, Schulterblick, Rückwärtsfahren' },
+    { offsetDays: -28, hour: 14, dur: 45, type: 'lesson', loc: primaryLocation,
+      title: 'Kategorie B – Innerorts Zürich West',
+      desc:  'Stadtfahrt mit Tram- und Velo-Interaktion' },
+    { offsetDays: -21, hour: 9,  dur: 90, type: 'lesson', loc: secondaryLocation,
+      title: 'Motorrad A35kW – Grundkurs Tag 1',
+      desc:  'Sicherheits-Slalom, Bremsen, Kurvenfahrt' },
+    { offsetDays: -19, hour: 9,  dur: 90, type: 'lesson', loc: secondaryLocation,
+      title: 'Motorrad A35kW – Grundkurs Tag 2',
+      desc:  'Verkehrsumgang und Notbremsung' },
+    { offsetDays: -14, hour: 11, dur: 45, type: 'lesson', loc: primaryLocation,
+      title: 'Kategorie B – Autobahn A1',
+      desc:  'Auffahren, Spurwechsel, Geschwindigkeitsanpassung' },
+    { offsetDays: -10, hour: 16, dur: 45, type: 'lesson', loc: primaryLocation,
+      title: 'Kategorie B – Nachtfahrt',
+      desc:  'Sicht- und Blendverhalten, beleuchtete Strecken' },
+    { offsetDays: -5,  hour: 10, dur: 45, type: 'lesson', loc: primaryLocation,
+      title: 'Kategorie B – Prüfungssimulation',
+      desc:  'Vollständige Prüfungsstrecke unter Realbedingungen' },
+
+    // ─── Upcoming (4) ─────────────────────────────────────────────────
+    { offsetDays: 2,   hour: 10, dur: 45, type: 'lesson', loc: primaryLocation,
+      title: 'Kategorie B – Prüfungsvorbereitung Stadt',
+      desc:  'Letzter Feinschliff vor der praktischen Prüfung' },
+    { offsetDays: 5,   hour: 9,  dur: 60, type: 'exam',   loc: primaryLocation,
+      title: 'Praktische Prüfung Kategorie B',
+      desc:  'Strassenverkehrsamt Zürich – Albisgüetli' },
+    { offsetDays: 9,   hour: 14, dur: 45, type: 'lesson', loc: primaryLocation,
+      title: 'Anhängerausbildung BE',
+      desc:  'Rückwärtsfahren mit Anhänger und Kurvenfahrt' },
+    { offsetDays: 14,  hour: 18, dur: 60, type: 'theory', loc: primaryLocation,
+      title: 'Verkehrskunde-Theorie Modul 4',
+      desc:  'Ökologie, erste Hilfe, Strassenphysik' }
   ]
 
   const rows = slots.map(s => {
-    const start = new Date(now.getTime() + s.offsetDays * DAY_MS)
-    start.setHours(10, 0, 0, 0)
-    const end = new Date(start.getTime() + 45 * 60 * 1000)
+    const start = nextWeekday(s.offsetDays)
+    start.setHours(s.hour, 0, 0, 0)
+    const end = new Date(start.getTime() + s.dur * 60 * 1000)
+    const isPast = s.offsetDays < 0
     return {
       tenant_id: tenantId,
       user_id: customerId,
       staff_id: staffId,
-      location_id: locationId,
-      title: s.label,
-      description: `Demo-Termin für Apple App Review – ${s.label}`,
-      duration_minutes: 45,
-      type: 'lesson',
-      event_type_code: 'lesson',
-      status: s.status,
+      location_id: s.loc,
+      title: s.title,
+      description: s.desc,
+      duration_minutes: s.dur,
+      type: s.type,
+      event_type_code: s.type,
+      status: isPast ? 'completed' : 'booked',
       start_time: start.toISOString(),
       end_time: end.toISOString(),
       source: 'manual'
@@ -316,11 +496,21 @@ async function seedAppointments({ tenantId, customerId, staffId, locationId }) {
 
   const { error } = await supabase.from('appointments').insert(rows)
   if (error) throw error
-  console.log(`   ✓ ${rows.length} appointments seeded`)
+  console.log(`   ✓ ${rows.length} appointments seeded (${rows.filter(r => r.status === 'completed').length} past, ${rows.filter(r => r.status === 'booked').length} upcoming)`)
 }
 
-async function seedPayments({ tenantId, customerId, staffId }) {
+async function seedPayments({ tenantId, customerId, staffId, reseed }) {
   console.log('💳 Seeding payments…')
+
+  if (reseed) {
+    const { error: delErr } = await supabase
+      .from('payments')
+      .delete()
+      .eq('user_id', customerId)
+      .eq('tenant_id', tenantId)
+    if (delErr) throw delErr
+    console.log('   🗑  Existing payments wiped (--reseed)')
+  }
 
   const { count } = await supabase
     .from('payments')
@@ -329,51 +519,35 @@ async function seedPayments({ tenantId, customerId, staffId }) {
     .eq('tenant_id', tenantId)
 
   if ((count ?? 0) > 0) {
-    console.log(`   ✓ ${count} payments already exist – skipping seed`)
+    console.log(`   ✓ ${count} payments already exist – skipping seed (use --reseed to force)`)
     return
   }
 
   const now = new Date()
+  const DAY = 24 * 60 * 60 * 1000
+
+  const make = ({ days, status, desc, rappen = 11000, method = 'cash' }) => ({
+    tenant_id: tenantId,
+    user_id: customerId,
+    staff_id: staffId,
+    lesson_price_rappen: rappen,
+    total_amount_rappen: rappen,
+    payment_method: method,
+    payment_provider: null,
+    payment_status: status,
+    currency: 'CHF',
+    description: desc,
+    ...(status === 'paid'
+      ? { paid_at: new Date(now.getTime() + days * DAY).toISOString() }
+      : { due_date: new Date(now.getTime() + days * DAY).toISOString() })
+  })
+
   const rows = [
-    {
-      tenant_id: tenantId,
-      user_id: customerId,
-      staff_id: staffId,
-      lesson_price_rappen: 11000, // CHF 110.00
-      total_amount_rappen: 11000,
-      payment_method: 'cash',
-      payment_provider: null,
-      payment_status: 'paid',
-      currency: 'CHF',
-      description: 'Fahrstunde Grundausbildung',
-      paid_at: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      tenant_id: tenantId,
-      user_id: customerId,
-      staff_id: staffId,
-      lesson_price_rappen: 11000,
-      total_amount_rappen: 11000,
-      payment_method: 'cash',
-      payment_provider: null,
-      payment_status: 'paid',
-      currency: 'CHF',
-      description: 'Stadtfahrt Zürich',
-      paid_at: new Date(now.getTime() - 13 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      tenant_id: tenantId,
-      user_id: customerId,
-      staff_id: staffId,
-      lesson_price_rappen: 11000,
-      total_amount_rappen: 11000,
-      payment_method: 'cash',
-      payment_provider: null,
-      payment_status: 'pending',
-      currency: 'CHF',
-      description: 'Autobahn-Fahrt (offen)',
-      due_date: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
-    }
+    make({ days: -35, status: 'paid',    desc: 'Kategorie B – Grundausbildung Manöver' }),
+    make({ days: -28, status: 'paid',    desc: 'Kategorie B – Innerorts Zürich West' }),
+    make({ days: -21, status: 'paid',    desc: 'Motorrad A35kW – Grundkurs (2 Tage)', rappen: 56000 }),
+    make({ days: -14, status: 'paid',    desc: 'Kategorie B – Autobahn A1' }),
+    make({ days:  -7, status: 'pending', desc: 'Kategorie B – Nachtfahrt (offen)' })
   ]
 
   const { error } = await supabase.from('payments').insert(rows)
@@ -387,7 +561,7 @@ async function main() {
   console.log('\n🍎 Apple Review Demo-Tenant Setup\n────────────────────────────────\n')
 
   const tenantId = await ensureTenant()
-  const locationId = await ensureLocation(tenantId)
+  const { primaryId: primaryLocationId, allIds: locationIds } = await ensureLocation(tenantId)
   await ensureEventTypes(tenantId)
 
   console.log('\n👤 Demo Admin')
@@ -407,18 +581,23 @@ async function main() {
 
   console.log('\n🧑‍🏫 Demo Instructor')
   const instructorAuthId = await ensureAuthUser(DEMO_INSTRUCTOR_EMAIL, DEMO_PASSWORD, {
-    first_name: 'Demo', last_name: 'Instructor'
+    first_name: 'Marco', last_name: 'Bianchi'
   })
   const staffId = await ensureUserRow({
     authUserId: instructorAuthId,
     email: DEMO_INSTRUCTOR_EMAIL,
     role: 'staff',
-    firstName: 'Demo',
-    lastName: 'Instructor',
+    firstName: 'Marco',
+    lastName: 'Bianchi',
     tenantId,
     phone: '+41 79 000 00 02',
-    extra: { category: ['B'] }
+    extra: { category: ['B', 'A35kW', 'BE'] }
   })
+
+  // Instructor configuration (working hours, locations, availability)
+  await ensureWorkingHours(staffId, tenantId)
+  await ensureStaffLocations(staffId, tenantId, locationIds)
+  await ensureAvailabilitySettings(staffId)
 
   console.log('\n🎓 Demo Customer (Apple Review Account)')
   const customerAuthId = await ensureAuthUser(DEMO_CUSTOMER_EMAIL, DEMO_PASSWORD, {
@@ -441,12 +620,15 @@ async function main() {
       zip: '8000',
       city: 'Zürich',
       profession: 'App Reviewer',
-      category: ['B']
+      category: ['B', 'A35kW']
     }
   })
 
-  await seedAppointments({ tenantId, customerId, staffId, locationId })
-  await seedPayments({ tenantId, customerId, staffId })
+  const reseed = process.argv.includes('--reseed')
+  if (reseed) console.log('\n♻️  --reseed flag detected: wiping appointments + payments first')
+
+  await seedAppointments({ tenantId, customerId, staffId, locationIds, reseed })
+  await seedPayments({ tenantId, customerId, staffId, reseed })
 
   console.log('\n✅ Setup complete!\n')
   console.log('────── Apple App Review Credentials ──────')
