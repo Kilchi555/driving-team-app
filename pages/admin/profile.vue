@@ -43,7 +43,7 @@
 
     <!-- Loading State -->
     <div v-if="isLoading" class="flex justify-center items-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
       <span class="ml-3 text-gray-600">Lade Profil-Einstellungen...</span>
     </div>
 
@@ -70,9 +70,10 @@
             :class="[
               'py-2 px-1 border-b-2 font-medium text-sm transition-colors',
               activeTab === tab.id
-                ? 'border-blue-500 text-blue-600'
+                ? ''
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             ]"
+            :style="activeTab === tab.id ? { borderColor: primaryColor, color: primaryColor } : {}"
           >
             <span class="flex items-center">
               <component :is="tab.icon" class="w-5 h-5 mr-2" />
@@ -115,8 +116,9 @@
                   @click="selectTab(tab.id)"
                   :class="[
                     'w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors',
-                    activeTab === tab.id ? 'bg-blue-50 text-blue-600' : ''
+                    activeTab === tab.id ? '' : ''
                   ]"
+                  :style="activeTab === tab.id ? { background: `${primaryColor}10`, color: primaryColor } : {}"
                 >
                   <component :is="tab.icon" class="w-5 h-5 mr-3" />
                   {{ tab.name }}
@@ -143,7 +145,7 @@
                 <select 
                   v-model="selectedPreset"
                   @change="applySelectedPreset"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 focus:border-transparent"
                 >
                   <option value="">-- Benutzerdefiniert --</option>
                   <optgroup label="Business">
@@ -169,7 +171,7 @@
                 <select 
                   v-model="selectedFont"
                   @change="applySelectedFont"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 focus:border-transparent"
                 >
                   <option value="">-- Standard --</option>
                   <optgroup label="Modern & Clean">
@@ -454,7 +456,7 @@
                   v-model="brandingForm.typography.fontFamily"
                   @blur="autoSaveBranding"
                   type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                   placeholder="Inter, system-ui, sans-serif"
                 >
               </div>
@@ -465,7 +467,7 @@
                   v-model="brandingForm.typography.headingFontFamily"
                   @blur="autoSaveBranding"
                   type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                   placeholder="Inter, system-ui, sans-serif"
                 >
               </div>
@@ -477,7 +479,7 @@
                   type="number"
                   min="12"
                   max="24"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                 >
               </div>
             </div>
@@ -492,7 +494,7 @@
             <!-- Features Grid Container -->
             <div>
               <div v-if="isLoadingFeatures" class="flex justify-center items-center py-6 sm:py-8">
-                <div class="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600"></div>
+                <div class="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
                 <span class="ml-2 text-sm sm:text-base text-gray-600">Lade Funktionen...</span>
               </div>
               
@@ -540,7 +542,7 @@
                   v-model="brandingForm.contact.email"
                   @blur="autoSaveBranding"
                   type="email"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                   placeholder="info@ihre-firma.ch"
                 >
               </div>
@@ -552,7 +554,7 @@
                   v-model="brandingForm.contact.phone"
                   @blur="autoSaveBranding"
                   type="tel"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                   placeholder="+41 44 123 45 67"
                 >
               </div>
@@ -564,7 +566,7 @@
                   v-model="brandingForm.contact.address"
                   @blur="autoSaveBranding"
                   rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                   placeholder="Musterstrasse 123, 8000 Zürich"
                 ></textarea>
               </div>
@@ -589,7 +591,7 @@
                     type="file"
                     accept="image/*"
                     @change="handleLogoUpload($event, 'square')"
-                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    class="tenant-file block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold"
                   >
                   <p class="text-xs text-gray-500 mt-1">Empfohlen: 1:1 Format, max. 2MB</p>
                 </div>
@@ -606,7 +608,7 @@
                     type="file"
                     accept="image/*"
                     @change="handleLogoUpload($event, 'wide')"
-                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    class="tenant-file block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold"
                   >
                   <p class="text-xs text-gray-500 mt-1">Empfohlen: 3:1 oder 4:1 Format, max. 2MB</p>
                 </div>
@@ -629,7 +631,7 @@
                 <select 
                   v-model="sessionSettings.inactivityTimeoutMinutes"
                   @change="autoSaveSessionSettings"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 focus:border-transparent"
                 >
                   <option :value="0">Kein Timeout (Standard)</option>
                   <option :value="15">15 Minuten</option>
@@ -679,7 +681,7 @@
                   v-model="sessionSettings.warningBeforeTimeoutMinutes"
                   @change="autoSaveSessionSettings"
                   :disabled="sessionSettings.inactivityTimeoutMinutes === 0"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 focus:border-transparent disabled:bg-gray-100"
                 >
                   <option :value="0">Keine Warnung</option>
                   <option :value="2">2 Minuten vorher</option>
@@ -716,17 +718,17 @@
                     @change="saveSARISettings"
                     class="sr-only peer"
                   />
-                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                 </label>
               </div>
 
               <!-- SARI Credentials (shown when enabled) -->
-              <div v-if="sariSettings.sari_enabled" class="border-l-4 border-blue-500 pl-4 space-y-4">
+              <div v-if="sariSettings.sari_enabled" class="border-l-4 pl-4 space-y-4" :style="{ borderColor: primaryColor }">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Umgebung</label>
                   <select 
                     v-model="sariSettings.sari_environment"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 focus:border-transparent"
                   >
                     <option value="test">Test (sari-v4-test.ky2help.com)</option>
                     <option value="production">Production (www.vku-pgs.asa.ch)</option>
@@ -741,7 +743,7 @@
                   <button
                     type="button"
                     @click="showSariCredentials = !showSariCredentials"
-                    class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                    class="text-sm hover:opacity-70 flex items-center gap-1" :style="{ color: primaryColor }"
                   >
                     <svg v-if="!showSariCredentials" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -761,7 +763,7 @@
                       v-model="sariSettings.sari_client_id"
                       :type="showSariCredentials ? 'text' : 'password'"
                       placeholder="Von Kyberna bereitgestellt"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 focus:border-transparent font-mono text-sm"
                     />
                   </div>
 
@@ -771,7 +773,7 @@
                       v-model="sariSettings.sari_client_secret"
                       :type="showSariCredentials ? 'text' : 'password'"
                       placeholder="Von Kyberna bereitgestellt"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 focus:border-transparent font-mono text-sm"
                     />
                   </div>
 
@@ -781,7 +783,7 @@
                       v-model="sariSettings.sari_username"
                       :type="showSariCredentials ? 'text' : 'password'"
                       placeholder="Von Kyberna bereitgestellt"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 focus:border-transparent font-mono text-sm"
                     />
                   </div>
 
@@ -791,7 +793,7 @@
                       v-model="sariSettings.sari_password"
                       :type="showSariCredentials ? 'text' : 'password'"
                       placeholder="Von Kyberna bereitgestellt"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 focus:border-transparent font-mono text-sm"
                     />
                   </div>
                 </div>
@@ -809,7 +811,8 @@
                   <button
                     @click="testSARIConnection"
                     :disabled="isSARITesting"
-                    class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors font-medium flex items-center justify-center"
+                    class="flex-1 px-4 py-2 text-white rounded-lg hover:opacity-90 disabled:bg-gray-400 transition-colors font-medium flex items-center justify-center"
+                    :style="{ background: primaryColor }"
                   >
                     <span v-if="!isSARITesting">Verbindung testen</span>
                     <span v-else class="flex items-center">
@@ -884,12 +887,12 @@
                 </div>
 
                 <!-- Info Box -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                <div class="rounded-lg p-4 mt-4" :style="{ background: `${primaryColor}10`, border: `1px solid ${primaryColor}33` }">
                   <div class="flex">
-                    <svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" :style="{ color: primaryColor }" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
                     </svg>
-                    <div class="text-sm text-blue-800">
+                    <div class="text-sm" :style="{ color: primaryColor }">
                       <strong>Automatische Synchronisierung:</strong>
                       <p class="mt-1">Kurse werden automatisch jede Stunde synchronisiert. Konfigurieren Sie Ihre Kurskategorien, um zu definieren, welche SARI-Kurse importiert werden sollen.</p>
                     </div>
@@ -937,12 +940,12 @@
                     v-model="reminderSettings.is_enabled"
                     class="sr-only peer"
                   />
-                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                 </label>
               </div>
 
               <!-- Timing Settings -->
-              <div v-if="reminderSettings.is_enabled" class="border-l-4 border-blue-500 pl-4">
+              <div v-if="reminderSettings.is_enabled" class="border-l-4 pl-4" :style="{ borderColor: primaryColor }">
                 <h3 class="text-sm font-medium text-gray-700 mb-3">Zeiteinstellungen</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
@@ -951,7 +954,7 @@
                       type="number"
                       v-model.number="reminderSettings.first_after_hours"
                       min="1"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                     />
                   </div>
                   <div>
@@ -960,7 +963,7 @@
                       type="number"
                       v-model.number="reminderSettings.second_after_hours"
                       min="1"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                     />
                   </div>
                   <div>
@@ -969,7 +972,7 @@
                       type="number"
                       v-model.number="reminderSettings.final_after_hours"
                       min="1"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                     />
                   </div>
                 </div>
@@ -987,21 +990,21 @@
                         <span class="text-sm text-gray-700">E-Mail</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" v-model="reminderSettings.first_email" class="sr-only peer" />
-                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                         </label>
                       </div>
                       <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-700">Web Push</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" v-model="reminderSettings.first_push" class="sr-only peer" />
-                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                         </label>
                       </div>
                       <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-700">SMS</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" v-model="reminderSettings.first_sms" class="sr-only peer" />
-                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                         </label>
                       </div>
                     </div>
@@ -1015,21 +1018,21 @@
                         <span class="text-sm text-gray-700">E-Mail</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" v-model="reminderSettings.second_email" class="sr-only peer" />
-                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                         </label>
                       </div>
                       <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-700">Web Push</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" v-model="reminderSettings.second_push" class="sr-only peer" />
-                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                         </label>
                       </div>
                       <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-700">SMS</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" v-model="reminderSettings.second_sms" class="sr-only peer" />
-                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                         </label>
                       </div>
                     </div>
@@ -1043,21 +1046,21 @@
                         <span class="text-sm text-gray-700">E-Mail</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" v-model="reminderSettings.final_email" class="sr-only peer" />
-                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                         </label>
                       </div>
                       <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-700">Web Push</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" v-model="reminderSettings.final_push" class="sr-only peer" />
-                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                         </label>
                       </div>
                       <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-700">SMS</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" v-model="reminderSettings.final_sms" class="sr-only peer" />
-                          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                         </label>
                       </div>
                     </div>
@@ -1090,7 +1093,7 @@
                       type="number"
                       v-model.number="reminderSettings.auto_delete_after_hours"
                       min="1"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                     />
                   </div>
                 </div>
@@ -1118,7 +1121,7 @@
                   <select
                     v-model="selectedTemplateStage"
                     @change="loadSelectedTemplate"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                   >
                     <option value="first">1. Erinnerung</option>
                     <option value="second">2. Erinnerung</option>
@@ -1130,7 +1133,7 @@
                   <select
                     v-model="selectedTemplateChannel"
                     @change="loadSelectedTemplate"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                   >
                     <option value="email">E-Mail</option>
                     <option value="sms">SMS</option>
@@ -1145,7 +1148,7 @@
                 <input
                   v-model="currentTemplate.subject"
                   type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                   placeholder="z.B. Terminbestätigung - {{tenant_name}}"
                 />
               </div>
@@ -1156,7 +1159,7 @@
                 <textarea
                   v-model="currentTemplate.body"
                   rows="10"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 font-mono text-sm"
                   placeholder="Nachrichtentext mit Platzhaltern..."
                 ></textarea>
                 <p class="text-xs text-gray-500 mt-1">
@@ -1165,32 +1168,32 @@
               </div>
 
               <!-- Available Placeholders -->
-              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 class="text-sm font-medium text-blue-900 mb-3">Verfügbare Platzhalter:</h4>
+              <div class="rounded-lg p-4" :style="{ background: `${primaryColor}10`, border: `1px solid ${primaryColor}33` }">
+                <h4 class="text-sm font-medium mb-3" :style="{ color: primaryColor }">Verfügbare Platzhalter:</h4>
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-3" v-pre>
                   <div class="flex flex-col">
-                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{tenant_name}}</code>
-                    <span class="text-xs text-blue-700">Name der Fahrschule</span>
+                    <code class="text-xs bg-white px-2 py-1 rounded border mb-1" :style="{ borderColor: `${primaryColor}33` }">{{tenant_name}}</code>
+                    <span class="text-xs" :style="{ color: primaryColor }">Name der Fahrschule</span>
                   </div>
                   <div class="flex flex-col">
-                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{student_name}}</code>
-                    <span class="text-xs text-blue-700">Voller Name</span>
+                    <code class="text-xs bg-white px-2 py-1 rounded border mb-1" :style="{ borderColor: `${primaryColor}33` }">{{student_name}}</code>
+                    <span class="text-xs" :style="{ color: primaryColor }">Voller Name</span>
                   </div>
                   <div class="flex flex-col">
-                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{student_first_name}}</code>
-                    <span class="text-xs text-blue-700">Vorname</span>
+                    <code class="text-xs bg-white px-2 py-1 rounded border mb-1" :style="{ borderColor: `${primaryColor}33` }">{{student_first_name}}</code>
+                    <span class="text-xs" :style="{ color: primaryColor }">Vorname</span>
                   </div>
                   <div class="flex flex-col">
-                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{appointment_date}}</code>
-                    <span class="text-xs text-blue-700">Datum (15.10.2025)</span>
+                    <code class="text-xs bg-white px-2 py-1 rounded border mb-1" :style="{ borderColor: `${primaryColor}33` }">{{appointment_date}}</code>
+                    <span class="text-xs" :style="{ color: primaryColor }">Datum (15.10.2025)</span>
                   </div>
                   <div class="flex flex-col">
-                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{appointment_time}}</code>
-                    <span class="text-xs text-blue-700">Zeit (14:00)</span>
+                    <code class="text-xs bg-white px-2 py-1 rounded border mb-1" :style="{ borderColor: `${primaryColor}33` }">{{appointment_time}}</code>
+                    <span class="text-xs" :style="{ color: primaryColor }">Zeit (14:00)</span>
                   </div>
                   <div class="flex flex-col">
-                    <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{appointment_datetime}}</code>
-                    <span class="text-xs text-blue-700">Datum + Zeit</span>
+                    <code class="text-xs bg-white px-2 py-1 rounded border mb-1" :style="{ borderColor: `${primaryColor}33` }">{{appointment_datetime}}</code>
+                    <span class="text-xs" :style="{ color: primaryColor }">Datum + Zeit</span>
                   </div>
                   <div class="flex flex-col">
                     <code class="text-xs bg-white px-2 py-1 rounded border border-blue-200 mb-1">{{location}}</code>
@@ -1260,7 +1263,7 @@
                     v-model="paymentSettings.automatic_payment_enabled"
                     class="sr-only peer"
                   />
-                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                 </label>
               </div>
 
@@ -1277,7 +1280,7 @@
                       min="24"
                       max="120"
                       step="24"
-                      class="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      class="w-24 px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                       placeholder="72"
                     />
                     <span class="text-sm text-gray-700">Stunden vor dem Termin</span>
@@ -1301,7 +1304,7 @@
                       type="number"
                       min="1"
                       max="168"
-                      class="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      class="w-24 px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                       placeholder="24"
                     />
                     <span class="text-sm text-gray-700">Stunden vor dem Termin</span>
@@ -1354,7 +1357,7 @@
                   v-model="invoiceSettings.qr_iban"
                   type="text"
                   placeholder="CH44 3199 9123 0008 8901 2"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 font-mono text-sm"
                 />
                 <p class="text-xs text-gray-400 mt-1">Die QR-IBAN deiner Bank für Swiss QR-Rechnungen. Leer lassen wenn nicht gewünscht.</p>
               </div>
@@ -1366,24 +1369,24 @@
                   <input
                     v-model="invoiceSettings.invoice_street"
                     placeholder="Strasse"
-                    class="col-span-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    class="col-span-2 px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm"
                   />
                   <input
                     v-model="invoiceSettings.invoice_street_nr"
                     placeholder="Nr."
-                    class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    class="px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm"
                   />
                 </div>
                 <div class="grid grid-cols-3 gap-2">
                   <input
                     v-model="invoiceSettings.invoice_zip"
                     placeholder="PLZ"
-                    class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    class="px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm"
                   />
                   <input
                     v-model="invoiceSettings.invoice_city"
                     placeholder="Ort"
-                    class="col-span-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    class="col-span-2 px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm"
                   />
                 </div>
               </div>
@@ -1396,7 +1399,7 @@
                   type="text"
                   placeholder="RE"
                   maxlength="10"
-                  class="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  class="w-32 px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm"
                 />
                 <p class="text-xs text-gray-400 mt-1">Rechnungen werden z.B. als <span class="font-mono">{{ invoiceSettings.invoice_number_prefix || 'RE' }}-{{ new Date().getFullYear() }}-0001</span> nummeriert.</p>
               </div>
@@ -1430,7 +1433,7 @@
                     v-model="paymentSettings.cash_payments_enabled"
                     class="sr-only peer"
                   />
-                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                 </label>
               </div>
 
@@ -1523,7 +1526,7 @@
                           @change="updateStaffCashPermission(staff)"
                           class="sr-only peer"
                         />
-                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                       </label>
                     </div>
                   </div>
@@ -1551,7 +1554,7 @@
                       type="number"
                       min="0"
                       max="10"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                     />
                     <p class="text-xs text-gray-500 mt-1">
                       Wie viele Erinnerungs-E-Mails sollen versendet werden?
@@ -1567,7 +1570,7 @@
                       type="number"
                       min="1"
                       max="7"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
                     />
                     <p class="text-xs text-gray-500 mt-1">
                       Alle wie viele Tage soll eine Erinnerung versendet werden?
@@ -1600,7 +1603,7 @@
                       v-model="reminderSettings.reminder_sms_enabled"
                       class="sr-only peer"
                     />
-                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                   </label>
                 </div>
 

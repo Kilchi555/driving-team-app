@@ -134,6 +134,7 @@ export default defineEventHandler(async (event) => {
         street_nr: body.street_nr || null,
         zip: body.zip || null,
         city: body.city || null,
+        profession: body.profession || null,
         category: categoryArray,
         assigned_staff_id: body.assigned_staff_id || null,
         assigned_staff_ids: assignedStaffIds,  // ✅ NEW: Also store as array

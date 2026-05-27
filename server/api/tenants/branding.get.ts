@@ -129,7 +129,8 @@ export default defineEventHandler(async (event): Promise<TenantBrandingResponse>
         website_url, social_facebook, social_instagram, social_linkedin, social_twitter,
         brand_name, brand_tagline, brand_description, meta_description, meta_keywords,
         custom_css, custom_js, default_theme, allow_theme_switch,
-        wallee_enabled
+        wallee_enabled,
+        business_type
       `)
       .eq('is_active', true)
 

@@ -65,6 +65,7 @@ export default defineEventHandler(async (event) => {
         street_nr,
         zip,
         city,
+        profession,
         category,
         role,
         preferred_payment_method,

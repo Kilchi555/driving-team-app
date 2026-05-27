@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
     logger.debug('🔐 Verifying onboarding token...')
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, first_name, last_name, email, phone, tenant_id, onboarding_token_expires, birthdate, street, street_nr, zip, city, category')
+      .select('id, first_name, last_name, email, phone, tenant_id, onboarding_token_expires, birthdate, street, street_nr, zip, city, profession, category')
       .eq('onboarding_token', token)
       .eq('onboarding_status', 'pending')
       .single()
@@ -97,6 +97,7 @@ export default defineEventHandler(async (event) => {
         street_nr: user.street_nr,
         zip: user.zip,
         city: user.city,
+        profession: user.profession,
         category: user.category,
         tenant_id: user.tenant_id,
         tenant_slug: tenant.slug
