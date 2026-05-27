@@ -27,7 +27,7 @@ const plugins = {
   },
   StatusBar: {
     style: 'Default',
-    backgroundColor: client.backgroundColor || '#ffffff',
+    overlaysWebView: true,
   },
 }
 
@@ -48,7 +48,7 @@ const config = {
     scheme: client.scheme,
     backgroundColor: client.backgroundColor || '#ffffff',
     deploymentTarget: client.ios?.deploymentTarget || '16.0',
-    contentInset: 'automatic',
+    contentInset: 'never',
   },
   android: {
     backgroundColor: client.backgroundColor || '#ffffff',
