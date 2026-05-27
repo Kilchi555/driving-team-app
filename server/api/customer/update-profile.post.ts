@@ -18,7 +18,8 @@ export default defineEventHandler(async (event) => {
       street, 
       streetNr, 
       zip, 
-      city 
+      city,
+      profession
     } = body
 
     // Get auth token from Authorization header (set by @nuxtjs/supabase module)
@@ -93,7 +94,8 @@ export default defineEventHandler(async (event) => {
       street: street?.trim() || null,
       street_nr: streetNr?.trim() || null,
       zip: zip?.trim() || null,
-      city: city?.trim() || null
+      city: city?.trim() || null,
+      profession: profession?.trim() || null
     }
 
     // Add email if it changed

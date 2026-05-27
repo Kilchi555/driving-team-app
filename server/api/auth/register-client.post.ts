@@ -38,6 +38,7 @@ export default defineEventHandler(async (event) => {
       streetNr,
       zip,
       city,
+      profession,
       categories,
       lernfahrausweisNr,
       tenantId,
@@ -168,6 +169,7 @@ export default defineEventHandler(async (event) => {
     const sanitizedStreet = street ? sanitizeString(street, 100) : null
     const sanitizedStreetNr = streetNr ? sanitizeString(streetNr, 10) : null
     const sanitizedCity = city ? sanitizeString(city, 100) : null
+    const sanitizedProfession = profession ? sanitizeString(profession, 100) : null
     const sanitizedLernfahrausweisNr = lernfahrausweisNr ? sanitizeString(lernfahrausweisNr, 50) : null
 
     // ============ PRE-CHECK: Duplicate Phone & Email ============
@@ -269,6 +271,7 @@ export default defineEventHandler(async (event) => {
           street_nr: sanitizedStreetNr,
           zip: zip?.trim() || null,
           city: sanitizedCity,
+          profession: sanitizedProfession,
           category: categoryArray,
           lernfahrausweis_nr: sanitizedLernfahrausweisNr,
           role: userRole,
@@ -307,6 +310,7 @@ export default defineEventHandler(async (event) => {
           street_nr: sanitizedStreetNr,
           zip: zip?.trim() || null,
           city: sanitizedCity,
+          profession: sanitizedProfession,
           category: categoryArray,
           lernfahrausweis_nr: sanitizedLernfahrausweisNr,
           role: userRole,

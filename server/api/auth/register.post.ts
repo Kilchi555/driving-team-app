@@ -23,6 +23,7 @@ interface RegisterRequest {
   street_nr?: string | null
   zip?: string | null
   city?: string | null
+  profession?: string | null
   assigned_staff_id?: string | null
   category?: string | null
   slug?: string
@@ -68,7 +69,7 @@ export default defineEventHandler(async (event) => {
 })
 
 async function registerCustomer(event: any, body: RegisterRequest) {
-  const { email, password, first_name, last_name, phone, birthdate, street, street_nr, zip, city, assigned_staff_id, category, slug, tenant_id } = body
+  const { email, password, first_name, last_name, phone, birthdate, street, street_nr, zip, city, profession, assigned_staff_id, category, slug, tenant_id } = body
 
   // ===== LAYER 1: INPUT VALIDATION =====
   if (!email || !password || !first_name || !last_name || !phone) {
@@ -184,6 +185,7 @@ async function registerCustomer(event: any, body: RegisterRequest) {
   if (street_nr) userInsertData.street_nr = street_nr
   if (zip) userInsertData.zip = zip
   if (city) userInsertData.city = city
+  if (profession) userInsertData.profession = profession
   if (assigned_staff_id) userInsertData.assigned_staff_id = assigned_staff_id
   if (category) userInsertData.category = [category] // Convert to array for PostgreSQL
 

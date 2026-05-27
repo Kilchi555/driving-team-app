@@ -79,7 +79,8 @@ export default defineEventHandler(async (event) => {
       street,
       street_nr,
       zip,
-      city
+      city,
+      profession
     } = body
 
     if (!user_id) {
@@ -135,6 +136,7 @@ export default defineEventHandler(async (event) => {
     if (street_nr !== undefined) updateData.street_nr = street_nr
     if (zip !== undefined) updateData.zip = zip
     if (city !== undefined) updateData.city = city
+    if (profession !== undefined) updateData.profession = profession
 
     logger.debug('📝 Update data:', updateData)
 

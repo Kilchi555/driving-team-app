@@ -31,6 +31,7 @@ interface StudentData {
   street_nr?: string
   zip?: string
   city?: string
+  profession?: string
   category?: string
   assigned_staff_id?: string
 }
@@ -117,6 +118,7 @@ export default defineEventHandler(async (event) => {
         street_nr: body.street_nr?.trim() || null,
         zip: body.zip?.trim() || null,
         city: body.city?.trim() || null,
+        profession: body.profession?.trim() || null,
         category: body.category || null,
         role: 'client', // Students are always clients
         tenant_id: userProfile.tenant_id,

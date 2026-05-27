@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     logger.debug('📝 Complete onboarding request received')
     
-    const { token, firstName, lastName, phone, password, email, birthdate, categories, category, street, street_nr, zip, city, documentUrls } = body
+    const { token, firstName, lastName, phone, password, email, birthdate, categories, category, street, street_nr, zip, city, profession, documentUrls } = body
 
     // ✅ LAYER 1: Validate required fields
     if (!token || !password || !email) {
@@ -244,6 +244,7 @@ export default defineEventHandler(async (event) => {
     const sanitizedStreet = street ? sanitizeString(street, 100) : null
     const sanitizedStreetNr = street_nr ? sanitizeString(street_nr, 10) : null
     const sanitizedCity = city ? sanitizeString(city, 100) : null
+    const sanitizedProfession = profession ? sanitizeString(profession, 100) : null
 
     const { error: updateError } = await supabaseAdmin
       .from('users')
@@ -259,6 +260,7 @@ export default defineEventHandler(async (event) => {
         street_nr: sanitizedStreetNr,
         zip: zip,
         city: sanitizedCity,
+        profession: sanitizedProfession,
         is_active: true,
         onboarding_status: 'completed',
         onboarding_completed_at: new Date().toISOString(),
