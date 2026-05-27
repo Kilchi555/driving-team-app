@@ -19,8 +19,7 @@ let package = Package(
         .package(name: "CapacitorPushNotifications", path: "../../../node_modules/@capacitor/push-notifications"),
         .package(name: "CapacitorSplashScreen", path: "../../../node_modules/@capacitor/splash-screen"),
         .package(name: "CapacitorStatusBar", path: "../../../node_modules/@capacitor/status-bar"),
-        .package(name: "EbarooniCapacitorCalendar", path: "../../../node_modules/@ebarooni/capacitor-calendar"),
-        .package(url: "https://github.com/firebase/firebase-ios-sdk.git", from: "11.0.0")
+        .package(name: "EbarooniCapacitorCalendar", path: "../../../node_modules/@ebarooni/capacitor-calendar")
     ],
     targets: [
         .target(
@@ -35,8 +34,7 @@ let package = Package(
                 .product(name: "CapacitorPushNotifications", package: "CapacitorPushNotifications"),
                 .product(name: "CapacitorSplashScreen", package: "CapacitorSplashScreen"),
                 .product(name: "CapacitorStatusBar", package: "CapacitorStatusBar"),
-                .product(name: "EbarooniCapacitorCalendar", package: "EbarooniCapacitorCalendar"),
-                .product(name: "FirebaseMessaging", package: "firebase-ios-sdk")
+                .product(name: "EbarooniCapacitorCalendar", package: "EbarooniCapacitorCalendar")
             ]
         )
     ]
