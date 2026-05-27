@@ -36,6 +36,7 @@ import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
+import { calculateAdminFee } from '~/server/utils/admin-fee'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -335,15 +336,30 @@ export default defineEventHandler(async (event: H3Event) => {
       tenant_id: tenantId
     })
 
-    const { data: pricingRule, error: pricingError } = await supabase
-      .from('pricing_rules')
-      .select('price_per_minute_rappen, base_duration_minutes, duration_multiplier, weekend_multiplier, evening_multiplier')
-      .eq('category_code', body.category_code)
-      .eq('tenant_id', tenantId)
-      .eq('rule_type', 'base_price')
-      .lte('valid_from', new Date().toISOString())
-      .or('valid_until.is.null,valid_until.gte.' + new Date().toISOString())
-      .single()
+    const [pricingRuleRes, adminFeeRuleRes] = await Promise.all([
+      supabase
+        .from('pricing_rules')
+        .select('price_per_minute_rappen, base_duration_minutes, duration_multiplier, weekend_multiplier, evening_multiplier')
+        .eq('category_code', body.category_code)
+        .eq('tenant_id', tenantId)
+        .eq('rule_type', 'base_price')
+        .lte('valid_from', new Date().toISOString())
+        .or('valid_until.is.null,valid_until.gte.' + new Date().toISOString())
+        .maybeSingle(),
+      supabase
+        .from('pricing_rules')
+        .select('admin_fee_rappen')
+        .eq('category_code', body.category_code)
+        .eq('tenant_id', tenantId)
+        .eq('rule_type', 'admin_fee')
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle(),
+    ])
+
+    const pricingRule = pricingRuleRes.data
+    const pricingError = pricingRuleRes.error
+    const adminFeeRuleRappen = Number(adminFeeRuleRes.data?.admin_fee_rappen || 0)
 
     let totalAmountRappen = 0
     if (pricingRule) {
@@ -378,6 +394,26 @@ export default defineEventHandler(async (event: H3Event) => {
     } else {
       logger.warn('⚠️ No pricing rule found for category, defaulting to 0', { category_code: body.category_code, tenant_id: tenantId })
     }
+
+    // ============ LAYER 6c: ADMIN FEE CALCULATION ============
+    // Must run BEFORE the appointment is inserted so the utility's count of
+    // existing active appointments doesn't include the upcoming one.
+    const adminFeeResult = await calculateAdminFee({
+      supabase,
+      userId: userData.id,
+      tenantId: tenantId!,
+      categoryCode: body.category_code,
+      adminFeeRappenFromRule: adminFeeRuleRappen,
+    })
+    const adminFeeRappen = adminFeeResult.adminFeeRappen
+    logger.debug('💼 Admin fee decision (booking flow):', {
+      user_id: userData.id,
+      category: body.category_code,
+      adminFeeRappen,
+      reason: adminFeeResult.reason,
+      appointmentNumber: adminFeeResult.appointmentNumber,
+      alreadyPaid: adminFeeResult.alreadyPaid,
+    })
 
     // ============ LAYER 7: CREATE APPOINTMENT ============ 
     logger.debug('✍️ Creating final appointment record...', {
@@ -624,13 +660,17 @@ export default defineEventHandler(async (event: H3Event) => {
       : null
     const effectiveDiscountCode = body.discount_code || autoDiscountCode
 
-    const netAmountRappen = Math.max(0, totalAmountRappen - validatedDiscountAmount)
+    // Lesson price + admin fee, then discount applied on top.
+    const grossAmountRappen = totalAmountRappen + adminFeeRappen
+    const netAmountRappen = Math.max(0, grossAmountRappen - validatedDiscountAmount)
 
     // ============ LAYER 8: CREATE PAYMENT ============ 
     logger.debug('💳 Creating payment record for appointment...', {
       appointment_id: newAppointment.id,
       user_id: newAppointment.user_id,
       tenant_id: tenantId,
+      lesson_price_rappen: totalAmountRappen,
+      admin_fee_rappen: adminFeeRappen,
       total_amount_rappen: netAmountRappen,
       discount_amount_rappen: validatedDiscountAmount
     })
@@ -641,7 +681,7 @@ export default defineEventHandler(async (event: H3Event) => {
       tenant_id: tenantId,
       staff_id: slot.staff_id,
       lesson_price_rappen: totalAmountRappen,
-      admin_fee_rappen: 0,
+      admin_fee_rappen: adminFeeRappen,
       products_price_rappen: 0,
       discount_amount_rappen: validatedDiscountAmount,
       total_amount_rappen: netAmountRappen,
@@ -652,6 +692,7 @@ export default defineEventHandler(async (event: H3Event) => {
       description: appointmentTitle,
       metadata: {
         category: body.category_code || null,
+        admin_fee_reason: adminFeeResult.reason,
         ...(effectiveDiscountCode ? { discount_code: effectiveDiscountCode, discount_auto_applied: !body.discount_code } : {})
       },
       currency: 'CHF',

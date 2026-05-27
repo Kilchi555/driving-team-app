@@ -14,7 +14,7 @@ declare global {
   interface Window {
     __analyticsSessionId: string
     __marketingAttribution?: DecodedAttribution | null
-    __trackBookingEvent: (eventType: 'viewed' | 'started' | 'completed' | 'abandoned', data: Record<string, any>) => Promise<void>
+    __trackBookingEvent: (eventType: 'viewed' | 'started' | 'completed' | 'abandoned' | 'inquiry_submitted', data: Record<string, any>) => Promise<void>
   }
 }
 
@@ -86,7 +86,7 @@ export default defineNuxtPlugin(() => {
   window.__marketingAttribution = attribution
 
   // Track booking events — only fire when on a valid booking/availability page
-  const trackBookingEvent = async (eventType: 'viewed' | 'started' | 'completed' | 'abandoned', data: Record<string, any>) => {
+  const trackBookingEvent = async (eventType: 'viewed' | 'started' | 'completed' | 'abandoned' | 'inquiry_submitted', data: Record<string, any>) => {
     const currentPath = window.location.pathname
     const isValidBookingPath = currentPath.includes('/booking/') || currentPath.includes('/availability/')
     if (!isValidBookingPath) return
@@ -120,7 +120,7 @@ export default defineNuxtPlugin(() => {
   let bookingCompleted = false
   const originalTrack = window.__trackBookingEvent
   window.__trackBookingEvent = async (eventType, data) => {
-    if (eventType === 'completed') bookingCompleted = true
+    if (eventType === 'completed' || eventType === 'inquiry_submitted') bookingCompleted = true
     return originalTrack(eventType, data)
   }
 
