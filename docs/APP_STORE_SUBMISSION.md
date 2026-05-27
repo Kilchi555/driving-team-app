@@ -20,8 +20,9 @@ Alle Schritte sollten der Reihe nach abgearbeitet werden. Bereits erledigte Punk
 ### 1.3 Universal Links (Wallee Payment Callback)
 ✅ `Associated Domains` Entitlement (`applinks:app.simy.ch`)
 ✅ AASA Datei wird ausgeliefert via `server/middleware/00.well-known.ts`
-- [ ] **Nach Deploy testen**: `curl https://app.simy.ch/.well-known/apple-app-site-association`
-   muss JSON zurückgeben (kein HTML)
+✅ Live-Test bestätigt: `https://app.simy.ch/.well-known/apple-app-site-association`
+   liefert `HTTP 200 application/json` mit `appID: 25H29N3PDT.ch.simy.app`
+   und `paths: ["/payment-callback*", "/customer-dashboard*", "/login*"]`
 
 ### 1.4 Capability Aktivierung im Apple Developer Portal
 Für die App-ID `ch.simy.app` müssen folgende Capabilities aktiv sein:
@@ -60,24 +61,47 @@ um das Provisioning Profile zu regenerieren.
 - Availability: **Schweiz**, **Deutschland**, **Liechtenstein**, **Österreich** (initial), später weltweit
 - Pre-orders: Nein
 
-### 2.3 App Privacy ("Datenschutz")
-Die App sammelt folgende Daten – muss bei "App Privacy" in ASC angegeben werden:
+### 2.3 App Privacy ("Datenschutz") — exakte Antworten für ASC
 
-| Datenkategorie | Verwendung | Verknüpft mit User | Tracking |
-|----------------|------------|---------------------|----------|
-| **Name** (Vor-/Nachname) | App-Funktionalität, Personalisierung | Ja | Nein |
-| **E-Mail Adresse** | App-Funktionalität, Account, Kommunikation | Ja | Nein |
-| **Telefonnummer** | Kommunikation, Notfall-Erreichbarkeit | Ja | Nein |
-| **Adresse** (Strasse, PLZ, Ort) | Rechnungsstellung | Ja | Nein |
-| **Geburtsdatum** | Mindestalter-Check (Führerschein) | Ja | Nein |
-| **Foto-/Video** (Ausweis-Uploads) | Identitätsprüfung | Ja | Nein |
-| **Zahlungsinformationen** | Wallee-Payment (von Wallee verarbeitet) | Ja | Nein |
-| **Standort** (grob) | Bei Buchungs-Standort | Ja | Nein |
-| **Benutzerinhalte** (Nachrichten) | Kommunikation mit Fahrlehrer | Ja | Nein |
-| **Identifier** (User ID) | App-Funktionalität | Ja | Nein |
-| **Diagnostics** (Crash Logs) | App-Funktionalität | Nein | Nein |
+Apple fragt in App Store Connect für jede Datenkategorie:
+1. Sammeln wir das? (Yes/No)
+2. Verwendungszwecke (Purposes)
+3. Linked to user / Used for tracking?
 
-**Tracking**: NEIN (keine SKAdNetwork / IDFA Nutzung)
+#### Globale Antwort
+> **Does your app use data for tracking?** → **NO**
+>
+> Wir nutzen kein SKAdNetwork, kein IDFA, keine Cross-App-Werbe-IDs,
+> kein Drittanbieter-Tracking-SDK.
+
+#### Datenkategorien
+
+| ASC-Kategorie | Sammeln? | Purposes | Linked | Tracking |
+|---------------|----------|----------|--------|----------|
+| **Contact Info → Name** | Yes | App Functionality, Customer Support | Yes | No |
+| **Contact Info → Email** | Yes | App Functionality, Customer Support, Account Mgmt | Yes | No |
+| **Contact Info → Phone** | Yes | App Functionality, Customer Support | Yes | No |
+| **Contact Info → Physical Address** | Yes | App Functionality (Rechnungen) | Yes | No |
+| **Health & Fitness** | No | – | – | – |
+| **Financial → Payment Info** | Yes (via Wallee – nicht persistent bei uns) | App Functionality | Yes | No |
+| **Financial → Credit Info** | No | – | – | – |
+| **Location → Precise** | No | – | – | – |
+| **Location → Coarse** | Yes (Buchungs-Standort) | App Functionality | Yes | No |
+| **Sensitive Info** | No | – | – | – |
+| **Contacts** | No | – | – | – |
+| **User Content → Photos/Videos** | Yes (Ausweis-Uploads) | App Functionality | Yes | No |
+| **User Content → Other (Messages)** | Yes (Notizen) | App Functionality | Yes | No |
+| **Browsing History** | No | – | – | – |
+| **Search History** | No | – | – | – |
+| **Identifiers → User ID** | Yes (Supabase UUID) | App Functionality, Analytics (own) | Yes | No |
+| **Identifiers → Device ID** | No | – | – | – |
+| **Purchases → Purchase History** | Yes | App Functionality | Yes | No |
+| **Usage Data → Product Interaction** | Yes | Analytics (own), App Functionality | Yes | No |
+| **Usage Data → Advertising Data** | No | – | – | – |
+| **Diagnostics → Crash Data** | Yes (error_logs) | App Functionality, Analytics | No | No |
+| **Diagnostics → Performance Data** | Yes (page_analytics) | Analytics | No | No |
+| **Diagnostics → Other Diagnostic** | No | – | – | – |
+| **Other → Sensitive User Info** | Yes (Geburtsdatum → Mindestalter-Check) | App Functionality | Yes | No |
 
 ### 2.4 App Review Information
 | Feld | Wert |
@@ -89,37 +113,81 @@ Die App sammelt folgende Daten – muss bei "App Privacy" in ASC angegeben werde
 | Contact Phone | (deine Nummer) |
 | Notes für Reviewer | siehe Vorlage unten |
 
-#### Reviewer Notes (Vorlage)
+#### Reviewer Notes (Vorlage – DE/EN bilingual)
+
 ```
 Hello App Review Team,
 
-Simy is a B2B2C platform for driving schools in Switzerland. End users
-(driving students) are invited by their driving school – self-registration
-is not possible without an existing invitation.
+Simy is a B2B2C platform for driving schools in Switzerland.
 
-For your review, we have created a demo account that auto-loads the
-"Apple Review Fahrschule" tenant:
+IMPORTANT — How to access the demo tenant
+==========================================
+End users (driving students) are normally invited by their driving school —
+self-registration without an invitation is intentionally not possible.
+For your review we have pre-created a tenant called "Apple Review Fahrschule"
+that is reachable via this URL:
 
-   URL:      https://app.simy.ch/apple-review
-   Email:    apple-review@simy.ch
-   Password: AppleReview2026!
+   https://app.simy.ch/login?tenant=apple-review
 
-This account contains mock data so you can fully test the app:
-• 5 mock lessons (3 completed, 2 upcoming)
-• 3 mock payments (2 paid, 1 open)
-• A demo instructor and a demo location in Zürich
+The "?tenant=apple-review" parameter loads the demo school's branding
+(purple Simy theme) and unlocks all features. WITHOUT this parameter the
+app will load the default driving school's tenant which DOES NOT accept
+the demo credentials below.
 
-Key flows to test:
-• Login → Customer Dashboard
-• Book a lesson via "Fahrstunden buchen"
-• View payment history under "Zahlungen"
-• Account deletion under "Mein Profil" → "Konto löschen"
+Demo accounts (all share the same password)
+============================================
+Password for all 3 accounts: AppleReview2026!
 
-The Wallee payment integration opens an in-app browser (SFSafariViewController)
-and returns to the app via Universal Link (app.simy.ch) after payment.
+• Student / Customer (primary login to review):
+     apple-review@simy.ch
+• Driving instructor / Staff:
+     demo-instructor@simy.ch
+• Driving school admin:
+     demo-admin@simy.ch
 
-Thank you!
+The demo tenant contains seeded mock data so you can test every flow:
+• Several mock lessons (past + upcoming)
+• Mock payments in different states (paid / open)
+• A demo instructor and a demo location
+
+Key flows to verify
+====================
+1. Customer login → Customer Dashboard (purple branding visible)
+2. Book a driving lesson under "Fahrstunden buchen" / "Book lesson"
+3. View payment history under "Zahlungen"
+4. ACCOUNT DELETION (Apple Guideline 5.1.1(v)):
+   Profile (top-right) → "Konto löschen" → confirm by typing "LÖSCHEN"
+   The account is anonymised, the auth user is deleted and you can no
+   longer log in with the credentials. Legal bookkeeping data is retained
+   as required by Swiss law.
+5. (Optional) Login as the instructor or admin demo account to see the
+   staff/admin views from the same tenant.
+
+Payment integration
+====================
+The "Apple Review Fahrschule" tenant is configured for in-person CASH
+payment ("Barzahlung vor Ort"). This is a real production option used by
+some Swiss driving schools. Online payments via Wallee (credit card,
+TWINT) are intentionally disabled for this demo tenant so reviewers do
+not need to enter real card data.
+
+For tenants that have Wallee enabled, payment opens via the in-app
+SFSafariViewController and returns to the app through a Universal Link
+(applinks:app.simy.ch) after a successful or aborted payment.
+
+Privacy
+========
+The app does not use IDFA / SKAdNetwork / cross-app tracking. All
+personal data is bound to the tenant the user belongs to and is removed
+on account deletion (apart from legally required bookkeeping records).
+
+Thank you for reviewing Simy!
 ```
+
+**Hinweis Customer-Service**: Wenn der Reviewer doch Wallee testen will,
+können wir kurzfristig `tenants.wallee_enabled=true` für `apple-review`
+setzen und einen 0.01 CHF Test-Course freigeben. Standardmäßig bleibt es
+auf Cash.
 
 ### 2.5 Demo Tenant Setup (automatisiert!)
 ✅ Setup-Script: `npm run demo:apple-review:setup`
