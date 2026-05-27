@@ -307,7 +307,8 @@ async function ensureAvailabilitySettings(staffId) {
     .from('staff_availability_settings')
     .insert({
       staff_id: staffId,
-      availability_mode: 'working_hours',
+      // Allowed by the DB check constraint: 'standard' | 'pickup' | 'hybrid'.
+      availability_mode: 'standard',
       minimum_booking_lead_time_hours: 24,
       pickup_radius_minutes: 30,
       peak_time_morning_start: '07:00:00',
