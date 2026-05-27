@@ -35,7 +35,8 @@
 
         <div
           class="border-2 border-dashed rounded-xl transition-colors cursor-pointer"
-          :class="isDragging ? 'border-blue-400 bg-blue-50' : fileMeta.name ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-gray-400'"
+          :class="fileMeta.name ? 'border-green-400 bg-green-50' : !isDragging ? 'border-gray-300 hover:border-gray-400' : ''"
+          :style="isDragging && !fileMeta.name ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
           @dragover.prevent="isDragging = true"
           @dragleave.prevent="isDragging = false"
           @drop.prevent="onDrop"
@@ -73,7 +74,7 @@
             </label>
             <select
               v-model="mapping[field.key]"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2"
             >
               <option value="">(nicht importieren)</option>
               <option v-for="col in columns" :key="col" :value="col">{{ col }}</option>
@@ -116,7 +117,7 @@
               v-model="sourceLabel"
               type="text"
               placeholder="z.B. Alte Kundenliste Auto 2023"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2"
             />
           </div>
         </div>
@@ -142,7 +143,8 @@
           <button
             @click="startImport"
             :disabled="importing"
-            class="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+            class="px-6 py-3 text-white rounded-xl font-medium hover:opacity-90 disabled:opacity-50 transition-colors flex items-center gap-2"
+            :style="{ background: primaryColor }"
           >
             <svg v-if="importing" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -177,7 +179,9 @@
         </div>
 
         <div class="flex gap-3 pt-2">
-          <NuxtLink to="/admin/marketing/leads" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+          <NuxtLink to="/admin/marketing/leads"
+            class="px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90"
+            :style="{ background: primaryColor }">
             Leads anzeigen
           </NuxtLink>
           <button @click="reset" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">
@@ -192,10 +196,12 @@
 
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useHead({ title: 'Leads importieren - Admin' })
 
+const { primaryColor } = useTenantBranding()
 const authStore = useAuthStore()
 
 const tenantId = computed(() => authStore.userProfile?.tenant_id)
@@ -336,3 +342,10 @@ async function startImport() {
   }
 }
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+</style>

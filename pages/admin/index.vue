@@ -107,7 +107,8 @@
               <p class="text-xs text-gray-400 mt-0.5">Letzte {{ revenueMonths.length }} Monate</p>
             </div>
             <button @click="showRevenueModal = true"
-              class="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors px-3 py-1.5 rounded-xl hover:bg-blue-50">
+              class="tenant-link-pill text-xs font-semibold transition-colors px-3 py-1.5 rounded-xl"
+              :style="{ color: primaryColor }">
               12 Monate →
             </button>
           </div>
@@ -210,7 +211,9 @@
         <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm">
           <div class="flex items-center justify-between px-5 py-4 border-b border-gray-50">
             <h3 class="text-sm font-bold text-gray-900">Letzte Aktivitäten</h3>
-            <NuxtLink to="/admin/payment-overview" class="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors px-3 py-1.5 rounded-xl hover:bg-blue-50">
+            <NuxtLink to="/admin/payment-overview"
+              class="tenant-link-pill text-xs font-semibold transition-colors px-3 py-1.5 rounded-xl"
+              :style="{ color: primaryColor }">
               Alle Zahlungen →
             </NuxtLink>
           </div>
@@ -248,7 +251,7 @@
           <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <div class="flex items-center justify-between mb-3">
               <h4 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Guthaben</h4>
-              <NuxtLink to="/admin/student-credits" class="text-xs text-blue-600 hover:text-blue-800">→</NuxtLink>
+              <NuxtLink to="/admin/student-credits" class="text-xs hover:opacity-70 transition-opacity" :style="{ color: primaryColor }">→</NuxtLink>
             </div>
             <p class="text-xl font-bold text-gray-900">CHF {{ (creditsStats.totalCredit / 100).toFixed(0) }}</p>
             <div class="mt-2 flex justify-between text-xs">
@@ -267,7 +270,7 @@
           <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <div class="flex items-center justify-between mb-3">
               <h4 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Absagen</h4>
-              <NuxtLink to="/admin/cancellation-management" class="text-xs text-blue-600 hover:text-blue-800">→</NuxtLink>
+              <NuxtLink to="/admin/cancellation-management" class="text-xs hover:opacity-70 transition-opacity" :style="{ color: primaryColor }">→</NuxtLink>
             </div>
             <div class="space-y-2">
               <div class="flex justify-between text-sm">
@@ -470,6 +473,7 @@ import AdminPendencies from '~/components/admin/AdminPendencies.vue'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 import { logger } from '~/utils/logger'
 
 definePageMeta({
@@ -481,6 +485,7 @@ definePageMeta({
 const { currentUser } = useCurrentUser()
 const authStore = useAuthStore()
 const uiStore = useUIStore()
+const { primaryColor } = useTenantBranding()
 
 // Types
 interface DashboardStats {
@@ -807,5 +812,9 @@ onMounted(() => {
 <style scoped>
 .transition-colors {
   transition: all 0.2s ease-in-out;
+}
+
+.tenant-link-pill:hover {
+  background-color: color-mix(in srgb, var(--color-primary, #1E40AF) 10%, transparent);
 }
 </style>

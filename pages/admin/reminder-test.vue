@@ -12,7 +12,8 @@
       <button
         @click="triggerCronJob"
         :disabled="isRunningCron"
-        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        class="px-4 py-2 text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        :style="{ background: primaryColor }"
       >
         <span v-if="isRunningCron">
           <svg class="animate-spin inline-block h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
@@ -57,7 +58,7 @@
             v-model="testPaymentId"
             type="text"
             placeholder="UUID der Zahlung"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
           />
         </div>
 
@@ -65,7 +66,7 @@
           <label class="block text-sm font-medium text-gray-700 mb-2">Erinnerungs-Stufe</label>
           <select
             v-model="testStage"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
           >
             <option value="first">1. Erinnerung</option>
             <option value="second">2. Erinnerung</option>
@@ -124,7 +125,7 @@
       </div>
 
       <div v-if="isLoadingLogs" class="text-center py-8">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" :style="{ borderBottomColor: primaryColor }"></div>
       </div>
 
       <div v-else-if="reminderLogs.length === 0" class="text-center py-8 text-gray-500">
@@ -183,12 +184,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 definePageMeta({
   layout: 'admin',
   middleware: ['auth', 'admin'],
   // Keine Feature-Flag Prüfung für Test-Seite
 })
+
+const { primaryColor } = useTenantBranding()
 
 
 // Cron Job State
@@ -286,3 +290,10 @@ onMounted(() => {
   loadReminderLogs()
 })
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+</style>

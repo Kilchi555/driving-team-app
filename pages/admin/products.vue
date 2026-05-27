@@ -15,7 +15,8 @@
         <div class="flex space-x-3">
           <NuxtLink
             to="/admin/product-sales"
-            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex-shrink-0"
+            class="text-white px-4 py-2 rounded-lg hover:opacity-90 transition-colors flex-shrink-0"
+            :style="{ background: primaryColor }"
           >
             📊 Produktverkäufe
           </NuxtLink>
@@ -79,7 +80,7 @@
         </div>
         <p class="text-xs text-gray-500 mt-2">
           {{ topSellingProduct.quantity ? `${topSellingProduct.quantity}x verkauft` : 'Keine Daten' }}
-          <span class="text-blue-600 ml-2">→ Klicken für Details</span>
+          <span class="ml-2" :style="{ color: primaryColor }">→ Klicken für Details</span>
         </p>
       </div>
     </div>
@@ -93,14 +94,14 @@
             v-model="searchTerm"
             type="text"
             placeholder="Produktname suchen..."
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
           />
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Kategorie</label>
           <select
             v-model="selectedCategory"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
           >
             <option value="">Alle Kategorien</option>
             <option v-for="category in uniqueCategories" :key="category" :value="category">
@@ -112,7 +113,7 @@
           <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
           <select
             v-model="selectedStatus"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
           >
             <option value="">Alle Status</option>
             <option value="active">Aktiv</option>
@@ -350,7 +351,7 @@
             <input
               v-model="formData.name"
               type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
               placeholder="z.B. Nothelferkurs Buch"
             />
           </div>
@@ -363,7 +364,7 @@
             <textarea
               v-model="formData.description"
               rows="3"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
               placeholder="Kurze Beschreibung des Produkts..."
             ></textarea>
           </div>
@@ -378,7 +379,7 @@
               type="number"
               step="0.01"
               min="0"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
               :placeholder="formData.is_voucher ? '100.00' : '0.00'"
             />
             <p v-if="formData.is_voucher" class="text-xs text-blue-600 mt-1">
@@ -404,7 +405,7 @@
             <input
               v-model="formData.category"
               type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
               placeholder="z.B. Bücher, Ausrüstung, Kurse"
             />
           </div>
@@ -416,7 +417,8 @@
                 v-model="formData.track_stock"
                 type="checkbox"
                 id="track_stock"
-                class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                class="tenant-focus h-4 w-4 border-gray-300 rounded"
+                :style="{ accentColor: primaryColor }"
               />
               <label for="track_stock" class="ml-2 text-sm text-gray-700">
                 Lagerbestand verfolgen
@@ -431,7 +433,7 @@
                 v-model.number="formData.stock_quantity"
                 type="number"
                 min="0"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
                 placeholder="0"
               />
             </div>
@@ -445,7 +447,7 @@
             <input
               v-model="formData.image_url"
               type="url"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
               placeholder="https://example.com/bild.jpg"
             />
             <div v-if="formData.image_url" class="mt-2">
@@ -462,7 +464,7 @@
               v-model.number="formData.display_order"
               type="number"
               min="0"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
               placeholder="0"
             />
             <p class="text-xs text-gray-500 mt-1">Niedrigere Zahlen werden zuerst angezeigt</p>
@@ -513,7 +515,8 @@
           <button
             @click="saveProduct"
             :disabled="!isFormValid"
-            class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="px-4 py-2 text-white rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+            :style="{ background: primaryColor }"
           >
             {{ editingProduct ? 'Speichern' : 'Erstellen' }}
           </button>
@@ -534,9 +537,12 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { definePageMeta, navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 import ProductStatisticsModal from '~/components/admin/ProductStatisticsModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import SkeletonLoader from '~/components/SkeletonLoader.vue'
+
+const { primaryColor } = useTenantBranding()
 
 definePageMeta({
   layout: 'admin',
@@ -857,6 +863,11 @@ onMounted(async () => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
 }
 
 input:focus, select:focus, textarea:focus {

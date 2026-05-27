@@ -6,7 +6,7 @@
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 pt-5 pb-4">
         <div>
           <h1 class="text-xl font-bold text-gray-900">Benutzerverwaltung</h1>
-          <p class="text-sm text-gray-400 mt-0.5">Schüler, Fahrlehrer und Admins</p>
+          <p class="text-sm text-gray-400 mt-0.5">{{ t.clientsPlural }}, {{ t.staffPlural }} und Admins</p>
         </div>
       </div>
       <!-- Tabs -->
@@ -18,9 +18,10 @@
           :class="[
             'px-4 py-2.5 text-sm font-semibold rounded-t-xl transition-colors border-b-2 -mb-px',
             activeTab === tab.id
-              ? 'border-blue-600 text-blue-700 bg-blue-50/60'
+              ? ''
               : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50'
           ]"
+          :style="activeTab === tab.id ? { borderColor: primaryColor, color: primaryColor, background: `${primaryColor}10` } : {}"
         >
           {{ tab.name }}
         </button>
@@ -112,12 +113,12 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
           </svg>
           <input v-model="searchTerm" type="text" placeholder="Name oder E-Mail…"
-            class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-300 focus:outline-none"/>
+            class="tenant-focus w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:outline-none"/>
         </div>
 
         <!-- Status Filter -->
         <select v-model="selectedStatus"
-          class="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-300 focus:outline-none bg-white text-gray-700">
+          class="tenant-focus px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:outline-none bg-white text-gray-700">
           <option value="">Alle Status</option>
           <option value="active">Aktiv</option>
           <option value="inactive">Inaktiv</option>
@@ -127,7 +128,8 @@
         <!-- Tab-abhängige Aktionen -->
         <template v-if="activeTab === 'customers'">
           <button @click="openCreateForCurrentTab()"
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap">
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white hover:opacity-90 shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap"
+            :style="{ background: primaryColor }">
             Neuer Kunde
           </button>
         </template>
@@ -160,8 +162,9 @@
               'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm transition-all whitespace-nowrap',
               seatsAtLimit
                 ? 'bg-gray-300 cursor-not-allowed opacity-60'
-                : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5'
+                : 'hover:opacity-90 hover:-translate-y-0.5'
             ]"
+            :style="seatsAtLimit ? {} : { background: primaryColor }"
           >
             Neuer Fahrlehrer
           </button>
@@ -176,7 +179,8 @@
             <template v-else-if="activeTab === 'admins'">
               <button
                 @click="openCreateForCurrentTab()"
-                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all hover:-translate-y-0.5"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white hover:opacity-90 shadow-sm transition-all hover:-translate-y-0.5"
+                :style="{ background: primaryColor }"
               >
                 Neuer Admin
               </button>
@@ -205,7 +209,7 @@
                 'transition-colors group',
                 user.is_invitation
                   ? 'bg-gray-50/50 opacity-75'
-                  : 'hover:bg-blue-50/30 cursor-pointer'
+                  : 'tenant-row-hover cursor-pointer'
               ]"
               @click="user.is_invitation ? null : navigateToUserDetails(user.id)"
             >
@@ -213,12 +217,13 @@
                 <div class="flex items-center gap-3">
                   <div :class="[
                     'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold',
-                    user.is_invitation ? 'bg-gray-200 text-gray-500' : 'bg-blue-100 text-blue-700'
-                  ]">
+                    user.is_invitation ? 'bg-gray-200 text-gray-500' : ''
+                  ]"
+                    :style="user.is_invitation ? {} : { background: `${primaryColor}1f`, color: primaryColor }">
                     {{ getInitials(user.first_name, user.last_name) }}
                   </div>
                   <div>
-                    <p :class="['text-sm font-semibold', user.is_invitation ? 'text-gray-500' : 'text-gray-900 group-hover:text-blue-700 transition-colors']">
+                    <p :class="['text-sm font-semibold', user.is_invitation ? 'text-gray-500' : 'text-gray-900 tenant-row-title transition-colors']">
                       {{ user.first_name }} {{ user.last_name }}
                       <span v-if="user.is_invitation" class="font-normal text-xs text-gray-400 ml-1">(Eingeladen)</span>
                     </p>
@@ -277,7 +282,7 @@
 
     <!-- Loading State -->
     <div v-if="isLoading" class="flex justify-center items-center py-12">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
     </div>
 
     <!-- Invite Staff Modal -->
@@ -384,7 +389,7 @@
               <button
                 type="button"
                 @click="showRoleDropdown = !showRoleDropdown"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-700 text-white text-left flex justify-between items-center"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 bg-gray-700 text-white text-left flex justify-between items-center"
               >
                 <span v-if="newUser.role">
                   <span v-if="newUser.role === 'staff'">👨‍🏫 Fahrlehrer</span>
@@ -424,7 +429,7 @@
                 v-model="newUser.first_name"
                 type="text"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
                 placeholder="Max"
               />
             </div>
@@ -434,7 +439,7 @@
                 v-model="newUser.last_name"
                 type="text"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
                 placeholder="Mustermann"
               />
             </div>
@@ -447,7 +452,7 @@
               v-model="newUser.email"
               type="email"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
               placeholder="max.mustermann@example.com"
             />
           </div>
@@ -459,7 +464,7 @@
               v-model="newUser.phone"
               type="tel"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
               placeholder="+41 79 123 45 67"
             />
           </div>
@@ -471,7 +476,7 @@
               v-model="newUser.birthdate"
               type="date"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
             />
           </div>
 
@@ -487,7 +492,7 @@
                   v-model="newUser.street"
                   type="text"
                   required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
                   placeholder="Musterstrasse"
                 />
               </div>
@@ -497,7 +502,7 @@
                   v-model="newUser.street_nr"
                   type="text"
                   required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
                   placeholder="123"
                 />
               </div>
@@ -512,7 +517,7 @@
                   type="text"
                   required
                   pattern="[0-9]{4}"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
                   placeholder="8000"
                 />
               </div>
@@ -522,7 +527,7 @@
                   v-model="newUser.city"
                   type="text"
                   required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
                   placeholder="Zürich"
                 />
               </div>
@@ -538,7 +543,7 @@
               <label class="block text-sm font-medium text-gray-700 mb-2">Vorderseite *</label>
               <div 
                 class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-gray-400 transition-colors cursor-pointer"
-                :class="{ 'border-blue-400 bg-blue-50': isDraggingFront }"
+                :style="isDraggingFront ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
                 @click="($refs.licenseFrontInput as HTMLInputElement)?.click()"
                 @dragover.prevent="handleDragOver('front')"
                 @dragleave.prevent="handleDragLeave('front')"
@@ -554,10 +559,10 @@
                 
                 <div v-if="!newUser.licenseFrontFile" class="text-center">
                   <div v-if="isDraggingFront" class="mb-2">
-                    <svg class="mx-auto h-16 w-16 text-blue-500 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="mx-auto h-16 w-16 animate-bounce" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
                     </svg>
-                    <p class="text-blue-600 font-medium">Datei hier ablegen</p>
+                    <p class="font-medium" :style="{ color: primaryColor }">Datei hier ablegen</p>
                   </div>
                   <div v-else>
                     <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
@@ -566,7 +571,8 @@
                     <div class="mt-2">
                       <button
                         type="button"
-                        class="text-blue-600 hover:text-blue-500 font-medium"
+                        class="hover:opacity-70 font-medium"
+                        :style="{ color: primaryColor }"
                       >
                         Vorderseite auswählen
                       </button>
@@ -600,7 +606,7 @@
               <label class="block text-sm font-medium text-gray-700 mb-2">Rückseite *</label>
               <div 
                 class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-gray-400 transition-colors cursor-pointer"
-                :class="{ 'border-blue-400 bg-blue-50': isDraggingBack }"
+                :style="isDraggingBack ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
                 @click="($refs.licenseBackInput as HTMLInputElement)?.click()"
                 @dragover.prevent="handleDragOver('back')"
                 @dragleave.prevent="handleDragLeave('back')"
@@ -616,10 +622,10 @@
                 
                 <div v-if="!newUser.licenseBackFile" class="text-center">
                   <div v-if="isDraggingBack" class="mb-2">
-                    <svg class="mx-auto h-16 w-16 text-blue-500 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="mx-auto h-16 w-16 animate-bounce" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
                     </svg>
-                    <p class="text-blue-600 font-medium">Datei hier ablegen</p>
+                    <p class="font-medium" :style="{ color: primaryColor }">Datei hier ablegen</p>
                   </div>
                   <div v-else>
                     <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
@@ -628,7 +634,8 @@
                     <div class="mt-2">
                       <button
                         type="button"
-                        class="text-blue-600 hover:text-blue-500 font-medium"
+                        class="hover:opacity-70 font-medium"
+                        :style="{ color: primaryColor }"
                       >
                         Rückseite auswählen
                       </button>
@@ -665,7 +672,7 @@
               v-model="newUser.password"
               type="password"
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
               placeholder="Mindestens 12 Zeichen"
             />
             <p class="text-xs text-gray-500 mt-1">
@@ -691,7 +698,7 @@
                     v-model="newUser.categories"
                     class="sr-only peer"
                   />
-                  <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div class="tenant-toggle relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                 </label>
               </div>
               
@@ -735,7 +742,8 @@
             <button
               type="submit"
               :disabled="isCreatingUser"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              :style="{ background: primaryColor }"
             >
               <span v-if="isCreatingUser">Erstelle...</span>
               <span v-else-if="newUser.role === 'staff'">👨‍🏫 Fahrlehrer erstellen</span>
@@ -758,9 +766,15 @@ import { toLocalTimeString } from '~/utils/dateUtils'
 import { useRouter } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor } = useTenantBranding()
 import StaffTab from '~/components/users/StaffTab.vue'
 import AdminsTab from '~/components/users/AdminsTab.vue'
 import CustomersTab from '~/components/users/CustomersTab.vue'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 definePageMeta({
   middleware: 'admin',
@@ -795,8 +809,8 @@ const supabase = getSupabase()
 const activeTab = ref<string>('customers')
 const tabs = computed(() => {
   const base = [
-    { id: 'customers', name: 'Kunden' },
-    { id: 'staff', name: 'Fahrlehrer' }
+    { id: 'customers', name: t.value.clientsPlural },
+    { id: 'staff', name: t.value.staffPlural }
   ] as any[]
   if (authStore.isAdmin) base.push({ id: 'admins', name: 'Admins' })
   return base
@@ -1683,6 +1697,20 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+.tenant-row-hover:hover {
+  background-color: color-mix(in srgb, var(--color-primary, #1E40AF) 5%, transparent);
+}
+.tenant-row-hover:hover .tenant-row-title {
+  color: var(--color-primary, #1E40AF);
+}
+.peer:checked ~ .tenant-toggle {
+  background-color: var(--color-primary, #1E40AF);
+}
+
 /* ✅ LOKALE CSS-REGELN FÜR USER-MODAL INPUTS */
 /* Überschreibt Tailwind-Klassen mit höherer Spezifität */
 .admin-modal input[type="text"],

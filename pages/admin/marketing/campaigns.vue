@@ -15,7 +15,8 @@
           <button
             @click="openCreate"
             :disabled="templates.length === 0"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            class="px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-colors"
+            :style="{ background: primaryColor }"
             :title="templates.length === 0 ? 'Erstelle zuerst ein Email-Template' : ''"
           >
             + Neue Kampagne
@@ -44,7 +45,7 @@
 
       <!-- Loading -->
       <div v-if="loading" class="text-center py-12">
-        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
       </div>
 
       <!-- Empty State -->
@@ -53,7 +54,8 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
         </svg>
         <p class="text-gray-500 mb-4">Noch keine Kampagnen vorhanden</p>
-        <button v-if="templates.length > 0" @click="openCreate" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+        <button v-if="templates.length > 0" @click="openCreate" class="px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90"
+          :style="{ background: primaryColor }">
           Erste Kampagne erstellen
         </button>
       </div>
@@ -87,7 +89,8 @@
                 <span
                   v-for="cat in (c.segment_filter?.categories || [])"
                   :key="cat"
-                  class="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-xs"
+                  class="px-1.5 py-0.5 rounded text-xs"
+                  :style="{ background: `${primaryColor}15`, color: primaryColor }"
                 >{{ cat }}</span>
                 <span v-if="!(c.segment_filter?.categories?.length)" class="text-xs text-gray-400">Alle aktiven Leads</span>
               </div>
@@ -125,12 +128,12 @@
         <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Kampagnen-Name <span class="text-red-500">*</span></label>
-            <input v-model="createForm.name" type="text" placeholder="z.B. Motorrad-Saison 2026" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input v-model="createForm.name" type="text" placeholder="z.B. Motorrad-Saison 2026" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2" />
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Email-Template <span class="text-red-500">*</span></label>
-            <select v-model="createForm.template_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select v-model="createForm.template_id" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2">
               <option value="">Template auswählen...</option>
               <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
             </select>
@@ -138,7 +141,7 @@
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Betreff-Override <span class="text-gray-400 font-normal">(optional)</span></label>
-            <input v-model="createForm.subject_override" type="text" placeholder="Leer = Betreff aus Template verwenden" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input v-model="createForm.subject_override" type="text" placeholder="Leer = Betreff aus Template verwenden" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2" />
           </div>
 
           <div>
@@ -150,7 +153,7 @@
               <button
                 type="button"
                 @click="catDropdownOpen = !catDropdownOpen"
-                class="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition min-h-[38px]"
+                class="tenant-focus w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:outline-none focus:ring-2 transition min-h-[38px]"
               >
                 <span class="flex flex-wrap gap-1 flex-1 text-left">
                   <template v-if="createForm.categories.length === 0">
@@ -160,12 +163,13 @@
                     <span
                       v-for="v in createForm.categories"
                       :key="v"
-                      class="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full"
+                      class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+                      :style="{ background: `${primaryColor}1f`, color: primaryColor }"
                     >
                       {{ drivingCategories.find(d => d.value === v)?.label || v }}
                       <span
                         @click.stop="createForm.categories = createForm.categories.filter(c => c !== v)"
-                        class="cursor-pointer hover:text-blue-600 leading-none"
+                        class="cursor-pointer hover:opacity-70 leading-none"
                       >×</span>
                     </span>
                   </template>
@@ -189,7 +193,8 @@
                     type="checkbox"
                     :value="cat.value"
                     v-model="createForm.categories"
-                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    class="rounded border-gray-300"
+                    :style="{ accentColor: primaryColor }"
                   />
                   <span class="text-sm text-gray-700">{{ cat.label }}</span>
                 </label>
@@ -228,7 +233,7 @@
                 <label class="block text-xs font-medium text-gray-600 mb-1">Bestehender Code</label>
                 <select
                   v-model="createForm.discount_code"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2"
                 >
                   <option value="">— Kein Code —</option>
                   <option v-for="d in discounts" :key="d.id" :value="d.code">
@@ -244,7 +249,8 @@
               <button
                 type="button"
                 @click="quickCreateDiscountOpen = true"
-                class="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                class="flex items-center gap-2 text-sm hover:opacity-70 font-medium"
+                :style="{ color: primaryColor }"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -255,8 +261,9 @@
           </div>
 
           <!-- Estimated recipients -->
-          <div v-if="estimatedCount !== null" class="bg-blue-50 rounded-lg p-3 text-sm">
-            <span class="text-blue-800">
+          <div v-if="estimatedCount !== null" class="rounded-lg p-3 text-sm"
+            :style="{ background: `${primaryColor}10` }">
+            <span :style="{ color: primaryColor }">
               Geschätzte Empfänger: <strong>{{ estimatedCount.toLocaleString('de-CH') }}</strong> aktive Leads
               <span v-if="createForm.categories.length"> in den Kategorien {{ createForm.categories.map(v => drivingCategories.find(d => d.value === v)?.label || v).join(', ') }}</span>
             </span>
@@ -270,7 +277,8 @@
           <button
             @click="createCampaign"
             :disabled="saving || !createForm.name || !createForm.template_id"
-            class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            class="px-4 py-2 text-sm text-white rounded-lg hover:opacity-90 disabled:opacity-50"
+            :style="{ background: primaryColor }"
           >
             {{ saving ? 'Erstelle...' : 'Kampagne erstellen' }}
           </button>
@@ -347,7 +355,8 @@
                   <div class="text-xs text-gray-400 truncate">{{ r.email }}</div>
                 </div>
                 <div class="flex gap-1 shrink-0">
-                  <span v-for="cat in (r.categories || []).slice(0, 2)" :key="cat" class="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">{{ cat }}</span>
+                  <span v-for="cat in (r.categories || []).slice(0, 2)" :key="cat" class="text-xs px-1.5 py-0.5 rounded"
+                    :style="{ background: `${primaryColor}15`, color: primaryColor }">{{ cat }}</span>
                 </div>
               </div>
             </div>
@@ -388,11 +397,13 @@
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useHead } from '#app'
 import { useAuthStore } from '~/stores/auth'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useHead({ title: 'Kampagnen - Marketing - Admin' })
 
 const authStore = useAuthStore()
+const { primaryColor } = useTenantBranding()
 
 const drivingCategories = ref<{ value: string; label: string }[]>([])
 const catDropdownOpen = ref(false)
@@ -619,3 +630,10 @@ onUnmounted(() => {
 })
 
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+</style>

@@ -8,7 +8,7 @@
 
     <!-- Loading State -->
     <div v-if="isLoading" class="flex justify-center items-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
       <span class="ml-3 text-gray-600">Lade Prüfungsstatistiken...</span>
     </div>
 
@@ -108,7 +108,7 @@
             <select 
               v-model="filters.staffId"
               @change="applyFilters"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
             >
               <option value="">Alle Fahrlehrer</option>
               <option v-for="staff in staffList" :key="staff.id" :value="staff.id">
@@ -123,7 +123,7 @@
             <select 
               v-model="filters.examinerId"
               @change="applyFilters"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
             >
               <option value="">Alle Experten</option>
               <option v-for="examiner in examinerList" :key="examiner.id" :value="examiner.id">
@@ -138,7 +138,7 @@
             <select 
               v-model="filters.category"
               @change="applyFilters"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
             >
               <option value="">Alle Kategorien</option>
               <option v-for="category in categoryList" :key="category.code" :value="category.code">
@@ -153,7 +153,7 @@
             <select 
               v-model="filters.result"
               @change="applyFilters"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
             >
               <option value="">Alle Ergebnisse</option>
               <option value="passed">Bestanden</option>
@@ -169,14 +169,14 @@
                 v-model="filters.dateFrom"
                 type="date"
                 @change="applyFilters"
-                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                class="tenant-focus flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
               >
               <span class="self-center text-gray-500">bis</span>
               <input 
                 v-model="filters.dateTo"
                 type="date"
                 @change="applyFilters"
-                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                class="tenant-focus flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
               >
             </div>
           </div>
@@ -226,8 +226,9 @@
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center">
                     <div class="flex-shrink-0 h-8 w-8">
-                      <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span class="text-sm font-medium text-blue-600">
+                      <div class="h-8 w-8 rounded-full flex items-center justify-center"
+                        :style="{ background: `${primaryColor}1f` }">
+                        <span class="text-sm font-medium" :style="{ color: primaryColor }">
                           {{ getInitials(staff.first_name, staff.last_name) }}
                         </span>
                       </div>
@@ -434,12 +435,14 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { definePageMeta } from '#imports'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
-// Layout
 definePageMeta({
   middleware: 'admin',
   layout: 'admin'
 })
+
+const { primaryColor } = useTenantBranding()
 
 // State
 const isLoading = ref(true)
@@ -659,6 +662,11 @@ onMounted(() => {
   background-color: #f8fafc;
   min-height: 100vh;
   padding: 1.5rem;
+}
+
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
 }
 
 /* Loading animation */

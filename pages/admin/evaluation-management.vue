@@ -36,7 +36,8 @@
         <button
           @click="copyDefaults"
           :disabled="isLoading"
-          class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          class="text-white px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
+          :style="{ background: primaryColor }"
         >
           {{ isLoading ? 'Kopiere...' : 'Standard-Daten kopieren' }}
         </button>
@@ -60,7 +61,7 @@
       
       <div class="p-6">
         <div v-if="isLoading" class="text-center py-4">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" :style="{ borderBottomColor: primaryColor }"></div>
           <p class="text-gray-500 mt-2">Lade Kategorien...</p>
         </div>
         
@@ -68,7 +69,8 @@
           <p class="text-gray-500 mb-4">Keine tenant-spezifischen Kategorien gefunden</p>
           <button
             @click="copyDefaults"
-            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            class="text-white px-4 py-2 rounded-lg hover:opacity-90"
+            :style="{ background: primaryColor }"
           >
             Standard-Daten kopieren
           </button>
@@ -114,7 +116,7 @@
       
       <div class="p-6">
         <div v-if="isLoading" class="text-center py-4">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" :style="{ borderBottomColor: primaryColor }"></div>
           <p class="text-gray-500 mt-2">Lade Kriterien...</p>
         </div>
         
@@ -161,7 +163,7 @@
       
       <div class="p-6">
         <div v-if="isLoading" class="text-center py-4">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" :style="{ borderBottomColor: primaryColor }"></div>
           <p class="text-gray-500 mt-2">Lade Bewertungsskala...</p>
         </div>
         
@@ -207,6 +209,9 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useEvaluationData } from '~/composables/useEvaluationData'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor } = useTenantBranding()
 
 // Use the evaluation data composable
 const {

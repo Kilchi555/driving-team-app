@@ -37,9 +37,10 @@
             :class="[
               'whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors',
               activeTab === 'overview'
-                ? 'border-blue-500 text-blue-600'
+                ? ''
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             ]"
+            :style="activeTab === 'overview' ? { borderColor: primaryColor, color: primaryColor } : {}"
           >
             📊 Gesamtübersicht
           </button>
@@ -48,9 +49,10 @@
             :class="[
               'whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors',
               activeTab === 'office'
-                ? 'border-blue-500 text-blue-600'
+                ? ''
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             ]"
+            :style="activeTab === 'office' ? { borderColor: primaryColor, color: primaryColor } : {}"
           >
             🏢 Bürokassen
             <span v-if="officeRegisters.length > 0" class="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
@@ -62,9 +64,10 @@
             :class="[
               'whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors',
               activeTab === 'instructor'
-                ? 'border-blue-500 text-blue-600'
+                ? ''
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             ]"
+            :style="activeTab === 'instructor' ? { borderColor: primaryColor, color: primaryColor } : {}"
           >
             👨‍🏫 Fahrlehrer-Kassen
           </button>
@@ -189,9 +192,11 @@ import { ref, computed, onMounted } from 'vue'
 import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { useCurrentUser } from '~/composables/useCurrentUser'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 import AdminCashBalanceManager from '~/components/admin/CashBalanceManager.vue'
 
-// Layout
+const { primaryColor } = useTenantBranding()
+
 definePageMeta({
   middleware: 'admin',
   layout: 'admin'

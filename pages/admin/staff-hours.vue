@@ -10,17 +10,20 @@
       <button
         @click="activeView = 'hours'"
         class="px-5 py-2.5 text-sm font-medium border-b-2 transition-colors"
-        :class="activeView === 'hours' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        :class="activeView === 'hours' ? '' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        :style="activeView === 'hours' ? { borderColor: primaryColor, color: primaryColor } : {}"
       >Stundenerfassung</button>
       <button
         @click="activeView = 'monthly'"
         class="px-5 py-2.5 text-sm font-medium border-b-2 transition-colors"
-        :class="activeView === 'monthly' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        :class="activeView === 'monthly' ? '' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        :style="activeView === 'monthly' ? { borderColor: primaryColor, color: primaryColor } : {}"
       >Monatslohn Übersicht</button>
       <button
         @click="activeView = 'settings'"
         class="px-5 py-2.5 text-sm font-medium border-b-2 transition-colors"
-        :class="activeView === 'settings' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        :class="activeView === 'settings' ? '' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        :style="activeView === 'settings' ? { borderColor: primaryColor, color: primaryColor } : {}"
       >Lohneinstellungen</button>
     </div>
 
@@ -34,14 +37,14 @@
       <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Jahr</label>
-          <select v-model="selectedYear" @change="onYearChange" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <select v-model="selectedYear" @change="onYearChange" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2">
             <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
           </select>
         </div>
         
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Monat</label>
-          <select v-model="selectedMonth" @change="onMonthChange" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <select v-model="selectedMonth" @change="onMonthChange" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2">
             <option value="all">Ganzes Jahr</option>
             <option v-for="(month, index) in monthNames" :key="index" :value="index">{{ month }}</option>
           </select>
@@ -49,16 +52,16 @@
         
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Von</label>
-          <input v-model="customStartDate" type="date" @change="onCustomDateChange" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input v-model="customStartDate" type="date" @change="onCustomDateChange" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2" />
         </div>
         
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Bis</label>
-          <input v-model="customEndDate" type="date" @change="onCustomDateChange" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input v-model="customEndDate" type="date" @change="onCustomDateChange" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2" />
         </div>
         
         <div class="flex items-end">
-          <button @click="loadStaffHours" :disabled="isLoading" class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+          <button @click="loadStaffHours" :disabled="isLoading" class="w-full px-4 py-2 text-white rounded-md hover:opacity-90 disabled:opacity-50" :style="{ background: primaryColor }">
             {{ isLoading ? 'Lade...' : 'Aktualisieren' }}
           </button>
         </div>
@@ -68,7 +71,7 @@
     <!-- Loading State -->
     <div v-if="isLoading" class="flex justify-center items-center py-12">
       <div class="text-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" :style="{ borderBottomColor: primaryColor }"></div>
         <p class="text-gray-600">Lade Stundenübersicht...</p>
       </div>
     </div>
@@ -145,7 +148,7 @@
                   @change="toggleView"
                   class="sr-only peer"
                 />
-                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                 <span class="ml-3 text-sm font-medium text-gray-700">Jahresübersicht</span>
               </label>
             </div>
@@ -185,8 +188,8 @@
                 <td class="px-6 py-4 whitespace-nowrap sticky left-0 bg-white z-10">
                   <div class="flex items-center">
                     <div class="flex-shrink-0 h-10 w-10">
-                      <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span class="text-sm font-medium text-blue-600">
+                      <div class="h-10 w-10 rounded-full flex items-center justify-center" :style="{ background: `${primaryColor}1f` }">
+                        <span class="text-sm font-medium" :style="{ color: primaryColor }">
                           {{ getInitials(staff.first_name, staff.last_name) }}
                         </span>
                       </div>
@@ -218,8 +221,8 @@
 
         <!-- Year Overview -->
         <div v-else class="overflow-x-auto">
-          <div class="px-6 py-3 bg-blue-50 border-b border-blue-200 flex items-center justify-between">
-            <h3 class="text-sm font-medium text-blue-800">Jahresübersicht {{ selectedYear }}</h3>
+          <div class="px-6 py-3 border-b flex items-center justify-between" :style="{ background: `${primaryColor}10`, borderColor: `${primaryColor}33` }">
+            <h3 class="text-sm font-medium" :style="{ color: primaryColor }">Jahresübersicht {{ selectedYear }}</h3>
             <div class="flex items-center gap-3">
               <span v-if="!monthlyHoursFromCache" class="text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded">
                 Live-Berechnung — einmal "Neu berechnen" für schnellere Abfragen
@@ -227,7 +230,8 @@
               <button
                 @click="recalculateYearly"
                 :disabled="isRecalculatingYearly"
-                class="text-xs px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5"
+                class="text-xs px-3 py-1.5 text-white rounded hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5"
+                :style="{ background: primaryColor }"
               >
                 <svg v-if="isRecalculatingYearly" class="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
@@ -308,7 +312,7 @@
         <div class="flex flex-wrap items-end gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Jahr</label>
-            <select v-model="monthlyYear" @change="loadMonthlyHours" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select v-model="monthlyYear" @change="loadMonthlyHours" class="tenant-focus px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2">
               <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
             </select>
           </div>
@@ -333,7 +337,7 @@
 
       <!-- Loading -->
       <div v-if="isMonthlyLoading" class="flex justify-center py-12">
-        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+        <div class="animate-spin rounded-full h-10 w-10 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
       </div>
 
       <!-- No monthly staff -->
@@ -349,7 +353,7 @@
           <!-- Staff header -->
           <div class="px-5 py-4 bg-gray-50 border-b flex items-center justify-between gap-4 flex-wrap">
             <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">
+              <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm" :style="{ background: `${primaryColor}1f`, color: primaryColor }">
                 {{ staff.first_name?.charAt(0) }}{{ staff.last_name?.charAt(0) }}
               </div>
               <div>
@@ -365,7 +369,7 @@
                 step="0.25"
                 :value="staff.carry_over_hours ?? 0"
                 @change="saveMonthlyCarryOver(staff, $event)"
-                class="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-right focus:ring-2 focus:ring-blue-500"
+                class="tenant-focus w-20 px-2 py-1 border border-gray-300 rounded text-sm text-right focus:ring-2"
               />
               <span class="text-xs text-gray-400">h</span>
             </div>
@@ -420,11 +424,12 @@
                 <tr
                   v-for="m in staff.months"
                   :key="m.month"
-                  :class="m.month === currentMonth && monthlyYear === currentYear ? 'bg-blue-50' : 'hover:bg-gray-50'"
+                  :class="m.month === currentMonth && monthlyYear === currentYear ? '' : 'hover:bg-gray-50'"
+                  :style="m.month === currentMonth && monthlyYear === currentYear ? { background: `${primaryColor}10` } : {}"
                 >
                   <td class="px-4 py-2.5 font-medium text-gray-900">{{ monthNames[m.month - 1] }}</td>
                   <td class="px-4 py-2.5 text-right">
-                    <span v-if="m.pensum_pct != null" class="text-xs font-medium px-1.5 py-0.5 rounded" :class="m.pensum_pct === 100 ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-700'">{{ m.pensum_pct }}%</span>
+                    <span v-if="m.pensum_pct != null" class="text-xs font-medium px-1.5 py-0.5 rounded" :class="m.pensum_pct === 100 ? 'bg-gray-100 text-gray-500' : ''" :style="m.pensum_pct !== 100 ? { background: `${primaryColor}15`, color: primaryColor } : {}">{{ m.pensum_pct }}%</span>
                     <span v-else class="text-gray-300">–</span>
                   </td>
                   <td class="px-4 py-2.5 text-right text-gray-600">{{ m.working_days }}</td>
@@ -509,7 +514,7 @@
          TAB: LOHNEINSTELLUNGEN
          ══════════════════════════════════════════════════ -->
     <div v-if="activeView === 'settings'" class="space-y-4">
-      <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+      <div class="rounded-lg p-3 text-sm" :style="{ background: `${primaryColor}10`, border: `1px solid ${primaryColor}33`, color: primaryColor }">
         Hier kannst du für jeden Fahrlehrer den Lohntyp und das Pensum festlegen.
         Für Monatslohn-Mitarbeiter werden die Soll-Stunden pro Monat automatisch anhand der Schweizer Arbeitstage (inkl. Feiertage) berechnet.
       </div>
@@ -526,13 +531,14 @@
                 min="1"
                 max="60"
                 step="0.5"
-                class="w-24 px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500"
+                class="tenant-focus w-24 px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2"
               />
               <span class="text-sm text-gray-500">Stunden / Woche</span>
               <button
                 @click="saveFulltimeHours"
                 :disabled="isSavingFulltime"
-                class="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-xs font-medium"
+                class="px-3 py-1.5 text-white rounded-md hover:opacity-90 disabled:opacity-50 text-xs font-medium"
+                :style="{ background: primaryColor }"
               >{{ isSavingFulltime ? 'Speichere...' : fulltimeSaved ? '✓' : 'Speichern' }}</button>
             </div>
             <p class="text-xs text-gray-400 mt-1">Basis für die automatische Berechnung der Vertragsstunden aus dem Pensum-Prozentsatz.</p>
@@ -542,7 +548,7 @@
 
       <!-- Loading -->
       <div v-if="isSettingsLoading" class="flex justify-center py-12">
-        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+        <div class="animate-spin rounded-full h-10 w-10 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
       </div>
 
       <div v-else class="bg-white rounded-lg shadow-sm border overflow-hidden">
@@ -570,7 +576,7 @@
               <td class="px-5 py-3">
                 <select
                   v-model="staff.salary_type"
-                  class="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500"
+                  class="tenant-focus px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2"
                 >
                   <option value="hourly">Stundenlohn</option>
                   <option value="monthly">Monatslohn</option>
@@ -586,7 +592,7 @@
                     max="80"
                     step="0.5"
                     :placeholder="fulltimeWeeklyHours"
-                    class="w-20 px-2 py-1.5 border rounded-md text-sm text-right focus:ring-2 focus:ring-blue-500"
+                    class="tenant-focus w-20 px-2 py-1.5 border rounded-md text-sm text-right focus:ring-2"
                     :class="staff.fulltime_weekly_hours_override ? 'border-amber-400 bg-amber-50' : 'border-gray-300 bg-gray-50'"
                     @input="deriveFromBase(staff)"
                   />
@@ -610,7 +616,7 @@
                     max="200"
                     step="5"
                     placeholder="100"
-                    class="w-20 px-2 py-1.5 border border-gray-300 rounded-md text-sm text-right focus:ring-2 focus:ring-blue-500"
+                    class="tenant-focus w-20 px-2 py-1.5 border border-gray-300 rounded-md text-sm text-right focus:ring-2"
                     @input="deriveWeeklyHours(staff)"
                   />
                   <span class="text-gray-500 text-sm">%</span>
@@ -627,7 +633,7 @@
                     max="80"
                     step="0.5"
                     :placeholder="(staff.fulltime_weekly_hours_override ?? fulltimeWeeklyHours).toString()"
-                    class="w-20 px-2 py-1.5 border border-gray-300 rounded-md text-sm text-right focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                    class="tenant-focus w-20 px-2 py-1.5 border border-gray-300 rounded-md text-sm text-right focus:ring-2 bg-gray-50"
                     @input="derivePercentage(staff)"
                   />
                   <span class="text-gray-500 text-sm">h</span>
@@ -644,7 +650,7 @@
                     max="365"
                     step="1"
                     placeholder="20"
-                    class="w-20 px-2 py-1.5 border border-gray-300 rounded-md text-sm text-right focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                    class="tenant-focus w-20 px-2 py-1.5 border border-gray-300 rounded-md text-sm text-right focus:ring-2 bg-gray-50"
                   />
                   <span class="text-gray-500 text-sm">Tage</span>
                 </div>
@@ -656,7 +662,7 @@
                     <span>gilt ab</span>
                     <select
                       v-model.number="staff.effectiveFromMonth"
-                      class="px-1.5 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500"
+                      class="tenant-focus px-1.5 py-1 border border-gray-300 rounded text-xs focus:ring-1"
                     >
                       <option v-for="(name, idx) in monthNames" :key="idx" :value="idx + 1">{{ name }}</option>
                     </select>
@@ -664,7 +670,8 @@
                   <button
                     @click="saveSalarySettings(staff)"
                     :disabled="staff.isSaving"
-                    class="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-xs font-medium"
+                    class="px-3 py-1.5 text-white rounded-md hover:opacity-90 disabled:opacity-50 text-xs font-medium"
+                    :style="{ background: primaryColor }"
                   >
                     {{ staff.isSaving ? 'Speichere...' : staff.saved ? '✓ Gespeichert' : 'Speichern' }}
                   </button>
@@ -686,6 +693,9 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor } = useTenantBranding()
 // ✅ Using secure API instead of direct Supabase
 
 // Meta
@@ -1257,3 +1267,16 @@ onMounted(async () => {
   loadStaffHours()
 })
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+.peer:checked ~ .tenant-toggle {
+  background-color: var(--color-primary, #1E40AF);
+}
+.peer:focus ~ .tenant-toggle {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary, #1E40AF) 30%, transparent);
+}
+</style>

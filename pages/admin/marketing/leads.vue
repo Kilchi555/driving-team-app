@@ -39,7 +39,8 @@
           <!-- Import Dropdown -->
           <div class="relative shrink-0" ref="importMenuRef">
             <button @click="importMenuOpen = !importMenuOpen"
-              class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+              class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
+              :style="{ background: primaryColor }">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
               </svg>
@@ -112,10 +113,10 @@
       <!-- Filters -->
       <div class="bg-white rounded-xl border p-3 sm:p-4 space-y-3 sm:space-y-0 sm:flex sm:flex-wrap sm:gap-3 sm:items-center">
         <input v-model="search" @keyup.enter="loadLeads" type="text" placeholder="Email, Name suchen…"
-          class="w-full sm:flex-1 sm:min-w-40 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          class="tenant-focus w-full sm:flex-1 sm:min-w-40 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2" />
         <div class="flex gap-2 flex-wrap">
           <select v-model="filterStatus" @change="loadLeads"
-            class="flex-1 sm:flex-none px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            class="tenant-focus flex-1 sm:flex-none px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2">
             <option value="all">Alle Status</option>
             <option value="active">Aktiv</option>
             <option value="pending_consent">Consent ausstehend</option>
@@ -124,7 +125,7 @@
             <option value="inactive">Inaktiv</option>
           </select>
           <select v-model="filterCategory" @change="loadLeads"
-            class="flex-1 sm:flex-none px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            class="tenant-focus flex-1 sm:flex-none px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2">
             <option value="">Alle Kategorien</option>
             <option v-for="cat in CATEGORIES" :key="cat.value" :value="cat.value">{{ cat.label }}</option>
           </select>
@@ -137,7 +138,7 @@
 
       <!-- Loading -->
       <div v-if="loading" class="bg-white rounded-xl border p-12 text-center">
-        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
       </div>
 
       <!-- Empty -->
@@ -186,7 +187,7 @@
                 <td class="px-4 py-3 text-gray-400 text-xs">{{ lead.source || '—' }}</td>
                 <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{{ formatDate(lead.created_at) }}</td>
                 <td class="px-4 py-3">
-                  <button @click="openEdit(lead)" class="text-gray-400 hover:text-blue-600 transition-colors p-1">
+                  <button @click="openEdit(lead)" class="text-gray-400 tenant-hover-primary transition-colors p-1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
@@ -201,7 +202,8 @@
           <span class="text-sm text-gray-500">{{ total.toLocaleString('de-CH') }} Leads</span>
           <div class="flex gap-1">
             <button v-for="p in visiblePages" :key="p" @click="goToPage(p)"
-              :class="['px-3 py-1.5 text-sm rounded-lg', p === currentPage ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100']">
+              :class="['px-3 py-1.5 text-sm rounded-lg', p === currentPage ? 'text-white' : 'text-gray-600 hover:bg-gray-100']"
+              :style="p === currentPage ? { background: primaryColor } : {}">
               {{ p }}
             </button>
           </div>
@@ -228,7 +230,7 @@
                 :style="{ background: categoryColor(code) }">{{ code }}</span>
             </div>
           </div>
-          <button @click="openEdit(lead)" class="text-gray-400 hover:text-blue-600 p-1 shrink-0">
+          <button @click="openEdit(lead)" class="text-gray-400 tenant-hover-primary p-1 shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
@@ -276,23 +278,23 @@
             <div>
               <label class="block text-xs font-medium text-gray-700 mb-1">Vorname</label>
               <input v-model="manualForm.first_name" type="text" placeholder="Max"
-                class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                class="tenant-focus w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2" />
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-700 mb-1">Nachname</label>
               <input v-model="manualForm.last_name" type="text" placeholder="Muster"
-                class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                class="tenant-focus w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2" />
             </div>
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
             <input v-model="manualForm.email" type="email" placeholder="max@beispiel.ch"
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              class="tenant-focus w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2" />
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Telefon</label>
             <input v-model="manualForm.phone" type="tel" placeholder="+41 79 123 45 67"
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              class="tenant-focus w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2" />
           </div>
           <!-- Category Multi-Select -->
           <MarketingCategoryDropdown
@@ -303,10 +305,11 @@
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Notiz</label>
             <textarea v-model="manualForm.notes" rows="2" placeholder="z.B. Anruf erhalten, interessiert an Motorrad"
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              class="tenant-focus w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm resize-none focus:outline-none focus:ring-2" />
           </div>
           <div v-if="manualError" class="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">{{ manualError }}</div>
-          <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800">
+          <div class="p-3 rounded-xl text-xs border"
+            :style="{ background: `${primaryColor}10`, borderColor: `${primaryColor}33`, color: primaryColor }">
             <strong>📧 Consent-Email wird automatisch gesendet.</strong> Der Lead erhält sofort eine Einladung zum Anmelden.
           </div>
         </div>
@@ -316,7 +319,8 @@
             Abbrechen
           </button>
           <button @click="saveManualLead" :disabled="manualSaving || !manualForm.email"
-            class="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition">
+            class="flex-1 px-4 py-2.5 text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 transition"
+            :style="{ background: primaryColor }">
             {{ manualSaving ? 'Speichere…' : 'Hinzufügen' }}
           </button>
         </div>
@@ -373,7 +377,8 @@
         </div>
         <div class="p-5 border-t shrink-0">
           <button v-if="importUsersResult" @click="showImportFromUsers = false"
-            class="w-full px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700">
+            class="w-full px-4 py-2.5 text-white rounded-xl text-sm font-medium hover:opacity-90"
+            :style="{ background: primaryColor }">
             Fertig
           </button>
           <div v-else class="flex gap-3">
@@ -407,18 +412,18 @@
             <div>
               <label class="block text-xs font-medium text-gray-700 mb-1">Vorname</label>
               <input v-model="editForm.first_name" type="text"
-                class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                class="tenant-focus w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2" />
             </div>
             <div>
               <label class="block text-xs font-medium text-gray-700 mb-1">Nachname</label>
               <input v-model="editForm.last_name" type="text"
-                class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                class="tenant-focus w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2" />
             </div>
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
             <select v-model="editForm.status"
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              class="tenant-focus w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2">
               <option value="pending_consent">Consent ausstehend</option>
               <option value="active">Aktiv</option>
               <option value="unsubscribed">Abgemeldet</option>
@@ -434,7 +439,7 @@
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Notiz</label>
             <textarea v-model="editForm.notes" rows="2"
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              class="tenant-focus w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm resize-none focus:outline-none focus:ring-2" />
           </div>
         </div>
         <div class="p-5 border-t flex gap-3 shrink-0">
@@ -443,7 +448,8 @@
             Abbrechen
           </button>
           <button @click="saveLead" :disabled="saving"
-            class="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+            class="flex-1 px-4 py-2.5 text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50"
+            :style="{ background: primaryColor }">
             {{ saving ? 'Speichere…' : 'Speichern' }}
           </button>
         </div>
@@ -465,12 +471,12 @@
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Name</label>
             <input v-model="newCategoryForm.name" type="text" placeholder="z.B. Interessent"
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              class="tenant-focus w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2" />
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Code <span class="text-gray-400">(Kürzel)</span></label>
             <input v-model="newCategoryForm.code" type="text" placeholder="z.B. INT"
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              class="tenant-focus w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2" />
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-2">Farbe</label>
@@ -490,7 +496,8 @@
             Abbrechen
           </button>
           <button @click="saveNewCategory" :disabled="newCategorySaving || !newCategoryForm.name || !newCategoryForm.code"
-            class="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition">
+            class="flex-1 px-4 py-2.5 text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 transition"
+            :style="{ background: primaryColor }">
             {{ newCategorySaving ? 'Erstelle…' : 'Erstellen' }}
           </button>
         </div>
@@ -502,11 +509,13 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '~/stores/auth'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useHead({ title: 'Leads - Marketing - Admin' })
 
 const authStore = useAuthStore()
+const { primaryColor } = useTenantBranding()
 
 const COLOR_PRESETS = [
   '#6366f1', '#3b82f6', '#10b981', '#f59e0b',
@@ -773,3 +782,13 @@ onMounted(() => {
 })
 onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+.tenant-hover-primary:hover {
+  color: var(--color-primary, #1E40AF);
+}
+</style>

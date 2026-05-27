@@ -9,7 +9,7 @@
     <!-- Loading State -->
     <div v-if="isLoading" class="flex items-center justify-center py-12">
       <div class="text-center">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" :style="{ borderBottomColor: primaryColor }"></div>
         <p class="text-gray-600 mt-4">Daten werden geladen...</p>
       </div>
     </div>
@@ -26,9 +26,10 @@
             :class="[
               'px-4 py-2 rounded-lg font-medium transition-colors',
               selectedDays === d
-                ? 'bg-blue-600 text-white'
+                ? 'text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             ]"
+            :style="selectedDays === d ? { background: primaryColor } : {}"
           >
             {{ d }} Tage
           </button>
@@ -342,10 +343,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 definePageMeta({
   middleware: 'admin',
 })
+
+const { primaryColor } = useTenantBranding()
 
 interface AnalyticsData {
   summary: {

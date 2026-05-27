@@ -13,7 +13,8 @@
           ⚙️ Inhalte bearbeiten
         </NuxtLink>
         <NuxtLink to="/admin/website-analytics"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-600 hover:bg-blue-700 transition-colors">
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-600 hover:opacity-90 transition-colors"
+          :style="{ background: primaryColor }">
           📊 Analytics
         </NuxtLink>
       </div>
@@ -35,7 +36,8 @@
       <div class="flex items-center justify-between px-6 py-4 border-b border-gray-50">
         <div class="flex items-center gap-3">
           <h2 class="font-800 text-gray-900">Neue Anfragen</h2>
-          <span class="bg-blue-100 text-blue-700 text-xs font-700 px-2 py-0.5 rounded-full">{{ newLeads.length }} neu</span>
+          <span class="text-xs font-700 px-2 py-0.5 rounded-full"
+            :style="{ background: `${primaryColor}1f`, color: primaryColor }">{{ newLeads.length }} neu</span>
         </div>
         <select v-model="filterType" class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600">
           <option value="">Alle Typen</option>
@@ -72,7 +74,7 @@
             <p class="text-xs text-gray-400 mt-1">{{ formatDate(lead.created_at) }}</p>
           </div>
           <div class="flex-shrink-0">
-            <span class="w-2 h-2 rounded-full bg-blue-500 block" v-if="lead.status === 'new'"></span>
+            <span class="w-2 h-2 rounded-full block" :style="{ background: primaryColor }" v-if="lead.status === 'new'"></span>
           </div>
         </div>
       </div>
@@ -98,7 +100,7 @@
           <div class="p-6 space-y-3">
             <div class="flex items-center gap-3">
               <span class="text-lg">📧</span>
-              <a :href="`mailto:${selectedLead.email}`" class="text-blue-600 font-600 text-sm hover:underline">{{ selectedLead.email }}</a>
+              <a :href="`mailto:${selectedLead.email}`" class="font-600 text-sm hover:underline" :style="{ color: primaryColor }">{{ selectedLead.email }}</a>
             </div>
             <div class="flex items-center gap-3">
               <span class="text-lg">📞</span>
@@ -136,9 +138,12 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 definePageMeta({ layout: 'admin', middleware: ['admin'] })
 useHead({ title: 'Website – Leads & Übersicht' })
+
+const { primaryColor } = useTenantBranding()
 
 const filterType = ref('')
 const selectedLead = ref<any>(null)

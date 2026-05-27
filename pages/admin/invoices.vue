@@ -18,7 +18,8 @@
           <span class="hidden sm:inline">CAMT Import</span>
         </button>
         <button @click="showCreateModal = true"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:opacity-90"
+          :style="{ background: primaryColor }">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
@@ -74,7 +75,7 @@
             placeholder="Name, Rechnungsnummer…"
             :class="[
               'w-full pl-9 pr-3 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2',
-              filters.search?.trim() ? 'border-emerald-400 focus:ring-emerald-300' : 'border-gray-200 focus:ring-blue-300'
+              filters.search?.trim() ? 'border-emerald-400 focus:ring-emerald-300' : 'border-gray-200 tenant-focus'
             ]"
             @input="debouncedSearch"
           />
@@ -137,18 +138,19 @@
           <div v-if="showDateDropdown" class="absolute z-10 mt-1.5 w-64 bg-white border border-gray-100 rounded-2xl shadow-xl p-4 space-y-3">
             <div>
               <label class="block text-xs font-semibold text-gray-500 mb-1">Von</label>
-              <input v-model="filters.date_from" type="date" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300"/>
+              <input v-model="filters.date_from" type="date" class="tenant-focus w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2"/>
             </div>
             <div>
               <label class="block text-xs font-semibold text-gray-500 mb-1">Bis</label>
-              <input v-model="filters.date_to" type="date" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300"/>
+              <input v-model="filters.date_to" type="date" class="tenant-focus w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2"/>
             </div>
           </div>
         </div>
 
         <!-- Apply + Reset -->
         <button @click="applyFilters"
-          class="px-4 py-2 text-sm font-semibold rounded-xl text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors">
+          class="px-4 py-2 text-sm font-semibold rounded-xl text-white shadow-sm transition-colors hover:opacity-90"
+          :style="{ background: primaryColor }">
           Anwenden
         </button>
         <button @click="clearFilters"
@@ -189,10 +191,10 @@
           </thead>
           <tbody class="divide-y divide-gray-50">
             <tr v-for="invoice in invoices" :key="invoice.id"
-              class="hover:bg-blue-50/40 cursor-pointer transition-colors group"
+              class="tenant-row-hover cursor-pointer transition-colors group"
               @click="viewInvoice(invoice.id)">
               <td class="px-5 py-3.5">
-                <p class="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">{{ invoice.invoice_number }}</p>
+                <p class="text-sm font-semibold text-gray-900 tenant-row-title transition-colors">{{ invoice.invoice_number }}</p>
                 <p class="text-xs text-gray-400 mt-0.5">{{ formatDate(invoice.invoice_date) }}</p>
               </td>
               <td class="px-5 py-3.5">
@@ -274,16 +276,18 @@ import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
 import { navigateTo } from '#app'
 import { useInvoices } from '~/composables/useInvoices'
 import { useAuthStore } from '~/stores/auth'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 import InvoiceCreateModal from '~/components/admin/InvoiceCreateModal.vue'
 import InvoiceDetailModal from '~/components/admin/InvoiceDetailModal.vue'
 import CamtImportModal from '~/components/admin/CamtImportModal.vue'
 import type { InvoiceStatus, PaymentStatus, InvoiceFilters } from '~/types/invoice'
 
-// Page meta
 definePageMeta({
   layout: 'admin',
   middleware: 'admin'
 })
+
+const { primaryColor } = useTenantBranding()
 
 // Auth check
 const authStore = useAuthStore()
@@ -597,8 +601,8 @@ const onInvoiceUpdated = async () => {
 
 // Utility functions
 const formatCurrency = (rappen: number): string => {
-  if (rappen === 0) return 'CHF 0.-'
-  return `CHF ${rappen}.-`
+  const value = (rappen || 0) / 100
+  return `CHF ${value.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 const formatDate = (dateString: string) => {
@@ -773,4 +777,15 @@ onUnmounted(() => {
 })
 </script>
 
-
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+.tenant-row-hover:hover {
+  background-color: color-mix(in srgb, var(--color-primary, #1E40AF) 6%, transparent);
+}
+.tenant-row-hover:hover .tenant-row-title {
+  color: var(--color-primary, #1E40AF);
+}
+</style>

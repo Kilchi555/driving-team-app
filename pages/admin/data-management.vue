@@ -11,7 +11,7 @@
                 Importieren Sie CSV-Dateien mit Kundendaten und Rechnungen, durchsuchen Sie importierte Daten und verwalten Sie Import-Batches.
               </p>
             </div>
-            <div class="ml-4 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+            <div class="ml-4 px-3 py-1 text-sm rounded-full" :style="{ background: `${primaryColor}1f`, color: primaryColor }">
               {{ batches.length }} Import{{ batches.length !== 1 ? 's' : '' }}
             </div>
           </div>
@@ -21,9 +21,10 @@
               :class="[
                 'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                 activeTab === 'import' 
-                  ? 'bg-blue-600 text-white shadow-sm' 
+                  ? 'text-white shadow-sm' 
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               ]"
+              :style="activeTab === 'import' ? { background: primaryColor } : {}"
             >
               <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
@@ -35,9 +36,10 @@
               :class="[
                 'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                 activeTab === 'view' 
-                  ? 'bg-blue-600 text-white shadow-sm' 
+                  ? 'text-white shadow-sm' 
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               ]"
+              :style="activeTab === 'view' ? { background: primaryColor } : {}"
             >
               <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
@@ -118,10 +120,11 @@
             class="relative rounded-lg border-2 border-dashed transition-all duration-200"
             :class="[
               isDragging 
-                ? 'border-blue-400 bg-blue-50 scale-105' 
+                ? 'scale-105' 
                 : 'border-gray-300 hover:border-gray-400',
               fileMeta.name ? 'border-green-400 bg-green-50' : ''
             ]"
+            :style="isDragging ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
             @dragover.prevent="onDragOver"
             @dragleave.prevent="onDragLeave"
             @drop.prevent="onDrop"
@@ -169,9 +172,10 @@
               :class="[
                 'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                 rows.length && !validating
-                  ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                  ? 'text-white hover:opacity-90 shadow-sm'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               ]"
+              :style="rows.length && !validating ? { background: primaryColor } : {}"
             >
               <svg v-if="validating" class="w-4 h-4 inline mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -278,7 +282,7 @@
                 type="text"
                 placeholder="z.B. 'Altes CRM', 'Excel-Export Q1'"
                 required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="tenant-focus w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
               />
               <p class="mt-1 text-xs text-gray-500">Bezeichnung für diesen Import-Batch</p>
             </div>
@@ -290,7 +294,7 @@
               <select
                 v-model="importSettings.dataType"
                 required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="tenant-focus w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
               >
                 <option value="">-- Bitte wählen --</option>
                 <option value="customers">Kundendaten</option>
@@ -307,25 +311,25 @@
                 v-model="importSettings.note"
                 rows="3"
                 placeholder="Zusätzliche Informationen zum Import..."
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="tenant-focus w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
               ></textarea>
             </div>
           </div>
 
           <!-- Column Mapping Info -->
-          <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+          <div class="mt-6 p-4 rounded-lg" :style="{ background: `${primaryColor}10` }">
             <div class="flex items-start">
-              <svg class="w-5 h-5 text-blue-600 mt-0.5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+              <svg class="w-5 h-5 mt-0.5 mr-3" :style="{ color: primaryColor }" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
               </svg>
               <div>
-                <h4 class="text-sm font-medium text-blue-900">Automatische Spalten-Erkennung</h4>
-                <p class="text-sm text-blue-700 mt-1">
+                <h4 class="text-sm font-medium" :style="{ color: primaryColor }">Automatische Spalten-Erkennung</h4>
+                <p class="text-sm mt-1" :style="{ color: primaryColor }">
                   Das System erkennt automatisch Spalten wie 
-                  <span class="font-mono bg-blue-100 px-1 rounded">email</span>, 
-                  <span class="font-mono bg-blue-100 px-1 rounded">first_name</span>, 
-                  <span class="font-mono bg-blue-100 px-1 rounded">last_name</span>, 
-                  <span class="font-mono bg-blue-100 px-1 rounded">phone</span> 
+                  <span class="font-mono px-1 rounded" :style="{ background: `${primaryColor}1f` }">email</span>, 
+                  <span class="font-mono px-1 rounded" :style="{ background: `${primaryColor}1f` }">first_name</span>, 
+                  <span class="font-mono px-1 rounded" :style="{ background: `${primaryColor}1f` }">last_name</span>, 
+                  <span class="font-mono px-1 rounded" :style="{ background: `${primaryColor}1f` }">phone</span> 
                   basierend auf den Spaltennamen.
                 </p>
               </div>
@@ -376,8 +380,8 @@
         <div class="bg-white rounded-lg shadow-sm border p-6">
           <div class="flex items-center">
             <div class="flex-shrink-0">
-              <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center" :style="{ background: `${primaryColor}1f` }">
+                <svg class="w-4 h-4" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                 </svg>
               </div>
@@ -459,7 +463,7 @@
         </div>
         
         <div v-if="loading" class="p-8 text-center">
-          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
           <p class="mt-2 text-gray-600">Lade Daten...</p>
         </div>
         
@@ -472,7 +476,8 @@
           <div class="mt-6">
             <button
               @click="activeTab = 'import'"
-              class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white hover:opacity-90"
+              :style="{ background: primaryColor }"
             >
               <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -493,7 +498,7 @@
               <div class="flex-1">
                 <div class="flex items-center space-x-3">
                   <h3 class="text-lg font-medium text-gray-900">{{ batch.source }}</h3>
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :style="{ background: `${primaryColor}1f`, color: primaryColor }">
                     {{ batch.total_rows.toLocaleString() }} Zeilen
                   </span>
                 </div>
@@ -563,7 +568,8 @@
                   <button
                     @click="performGeneralSearch"
                     :disabled="isLoadingData || !generalSearch.trim()"
-                    class="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+                    class="px-3 py-2 text-sm text-white rounded-lg hover:opacity-90 disabled:bg-gray-400 transition-colors"
+                    :style="{ background: primaryColor }"
                   >
                     <svg v-if="isLoadingData" class="w-4 h-4 inline mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -583,7 +589,7 @@
                   @keyup.enter="performGeneralSearch"
                   type="text"
                   placeholder="Sucht in allen Spalten (Schüler, Institution, E-Mail, Titel, Auftragsnummer)..."
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                 />
                 <p class="text-xs text-gray-500">
                   Die Suche durchsucht alle wichtigen Spalten gleichzeitig und ist nicht case-sensitive.
@@ -591,7 +597,7 @@
                 
                 <!-- Search Results Count -->
                 <div v-if="generalSearch.trim() && !isLoadingData" class="mt-2">
-                  <div class="inline-flex items-center px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
+                  <div class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium" :style="{ background: `${primaryColor}10`, color: primaryColor }">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
@@ -614,7 +620,7 @@
         <!-- Loading Indicator -->
         <div v-if="isLoadingData" class="bg-white rounded-xl shadow border border-gray-200 p-8">
           <div class="text-center">
-            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
             <p class="mt-2 text-gray-600">Lade Daten...</p>
           </div>
         </div>
@@ -638,7 +644,7 @@
                   >
                     <div class="flex items-center gap-1">
                       {{ column }}
-                      <span v-if="sortColumn === column" class="text-blue-600">
+                      <span v-if="sortColumn === column" :style="{ color: primaryColor }">
                         {{ sortDirection === 'asc' ? '↑' : '↓' }}
                       </span>
                     </div>
@@ -680,7 +686,7 @@
                   >
                     <div class="flex items-center gap-1">
                       {{ column }}
-                      <span v-if="sortColumn === column" class="text-blue-600">
+                      <span v-if="sortColumn === column" :style="{ color: primaryColor }">
                         {{ sortDirection === 'asc' ? '↑' : '↓' }}
                       </span>
                     </div>
@@ -723,9 +729,10 @@
                     :class="[
                       'px-3 py-1 text-sm border rounded-md transition-colors',
                       itemsPerPage === size
-                        ? 'bg-blue-600 text-white border-blue-600'
+                        ? 'text-white'
                         : 'border-gray-300 hover:bg-gray-50 text-gray-900'
                     ]"
+                    :style="itemsPerPage === size ? { background: primaryColor, borderColor: primaryColor } : {}"
                   >
                     {{ size }}
                   </button>
@@ -751,10 +758,11 @@
                   :class="[
                     'px-3 py-2 text-sm border rounded-md',
                     currentPage === page
-                      ? 'bg-blue-600 text-white border-blue-600'
+                      ? 'text-white'
                       : 'border-gray-300 hover:bg-gray-50 text-gray-900',
                     isLoadingData ? 'opacity-50 cursor-not-allowed' : ''
                   ]"
+                  :style="currentPage === page ? { background: primaryColor, borderColor: primaryColor } : {}"
                 >
                   {{ page }}
                 </button>
@@ -767,9 +775,10 @@
                   :class="[
                     'px-3 py-2 text-sm border rounded-md',
                     currentPage === totalPages
-                      ? 'bg-blue-600 text-white border-blue-600'
+                      ? 'text-white'
                       : 'border-gray-300 hover:bg-gray-50 text-gray-900'
                   ]"
+                  :style="currentPage === totalPages ? { background: primaryColor, borderColor: primaryColor } : {}"
                 >
                   {{ totalPages }}
                 </button>
@@ -795,6 +804,9 @@
 import { definePageMeta, useHead } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { formatDateTime } from '~/utils/dateUtils'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor } = useTenantBranding()
 
 definePageMeta({ 
   layout: 'admin',
@@ -1336,3 +1348,10 @@ const lastImportDate = computed(() => {
 })
 
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+</style>

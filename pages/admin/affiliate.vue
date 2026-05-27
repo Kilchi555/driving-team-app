@@ -16,9 +16,10 @@
           :class="[
             'px-4 sm:px-6 py-3 text-sm font-medium transition-colors whitespace-nowrap',
             activeTab === tab.id
-              ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+              ? 'border-b-2'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
           ]"
+          :style="activeTab === tab.id ? { color: primaryColor, borderColor: primaryColor, background: `${primaryColor}10` } : {}"
         >
           {{ tab.label }}
         </button>
@@ -34,7 +35,8 @@
           <div
             @click="toggleEnabled"
             class="relative w-12 h-6 rounded-full transition-colors flex-shrink-0"
-            :class="affiliateEnabled ? 'bg-blue-600' : 'bg-gray-300'"
+            :class="affiliateEnabled ? '' : 'bg-gray-300'"
+            :style="affiliateEnabled ? { background: primaryColor } : {}"
           >
             <div
               class="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform"
@@ -63,7 +65,7 @@
             <label class="block text-xs font-semibold text-gray-600 mb-1">Fahrkategorie</label>
             <select
               v-model="newCategory"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
             >
               <option value="">Wählen…</option>
               <option v-for="cat in availableCategories" :key="cat.code" :value="cat.code">
@@ -80,14 +82,15 @@
                 type="number"
                 min="0"
                 step="1"
-                class="w-full border border-gray-300 rounded-lg pl-11 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="tenant-focus w-full border border-gray-300 rounded-lg pl-11 pr-3 py-2 text-sm focus:outline-none focus:ring-2"
               />
             </div>
           </div>
           <button
             @click="addCategoryReward"
             :disabled="!newCategory || savingCategory"
-            class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-40 sm:self-end"
+            class="text-white rounded-lg px-4 py-2 text-sm font-semibold hover:opacity-90 transition disabled:opacity-40 sm:self-end"
+            :style="{ background: primaryColor }"
           >
             {{ savingCategory ? 'Speichern…' : '+ Hinzufügen' }}
           </button>
@@ -123,21 +126,22 @@
                       <input
                         v-model.number="editingChf"
                         type="number" min="0" step="1"
-                        class="w-full border border-blue-400 rounded px-2 pl-9 py-1 text-sm focus:outline-none"
+                        class="w-full border rounded px-2 pl-9 py-1 text-sm focus:outline-none"
+                        :style="{ borderColor: primaryColor }"
                         @keydown.enter="saveEdit(row)"
                         @keydown.escape="editingId = null"
                       />
                     </div>
-                    <button @click="saveEdit(row)" class="text-xs bg-blue-600 text-white rounded px-2 py-1 hover:bg-blue-700">OK</button>
+                    <button @click="saveEdit(row)" class="text-xs text-white rounded px-2 py-1 hover:opacity-90" :style="{ background: primaryColor }">OK</button>
                     <button @click="editingId = null" class="text-xs text-gray-500 hover:text-gray-700">Abbrechen</button>
                   </div>
                   <div v-else class="flex items-center gap-2">
                     <span class="font-medium">CHF {{ (row.reward_rappen / 100).toFixed(2) }}</span>
-                    <button @click="startEdit(row)" class="text-gray-400 hover:text-blue-600 text-xs">✏️</button>
+                    <button @click="startEdit(row)" class="text-gray-400 tenant-hover-primary text-xs">✏️</button>
                   </div>
                 </td>
                 <td class="px-4 py-3">
-                  <div @click="toggleCategoryActive(row)" class="relative w-10 h-5 rounded-full cursor-pointer transition-colors" :class="row.is_active ? 'bg-blue-600' : 'bg-gray-300'">
+                  <div @click="toggleCategoryActive(row)" class="relative w-10 h-5 rounded-full cursor-pointer transition-colors" :class="row.is_active ? '' : 'bg-gray-300'" :style="row.is_active ? { background: primaryColor } : {}">
                     <div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform" :class="row.is_active ? 'translate-x-5' : 'translate-x-0.5'"></div>
                   </div>
                 </td>
@@ -156,7 +160,7 @@
             <div class="flex items-center justify-between mb-3">
               <span class="font-mono font-bold text-gray-900 bg-white border px-2 py-0.5 rounded text-sm">{{ row.driving_category }}</span>
               <div class="flex items-center gap-3">
-                <div @click="toggleCategoryActive(row)" class="relative w-10 h-5 rounded-full cursor-pointer transition-colors" :class="row.is_active ? 'bg-blue-600' : 'bg-gray-300'">
+                <div @click="toggleCategoryActive(row)" class="relative w-10 h-5 rounded-full cursor-pointer transition-colors" :class="row.is_active ? '' : 'bg-gray-300'" :style="row.is_active ? { background: primaryColor } : {}">
                   <div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform" :class="row.is_active ? 'translate-x-5' : 'translate-x-0.5'"></div>
                 </div>
                 <button @click="deleteCategoryReward(row.id)" class="text-red-400 hover:text-red-600 text-xs font-medium">Löschen</button>
@@ -168,17 +172,18 @@
                 <input
                   v-model.number="editingChf"
                   type="number" min="0" step="1"
-                  class="w-full border border-blue-400 rounded px-2 pl-9 py-1.5 text-sm focus:outline-none"
+                  class="w-full border rounded px-2 pl-9 py-1.5 text-sm focus:outline-none"
+                  :style="{ borderColor: primaryColor }"
                   @keydown.enter="saveEdit(row)"
                   @keydown.escape="editingId = null"
                 />
               </div>
-              <button @click="saveEdit(row)" class="text-xs bg-blue-600 text-white rounded px-3 py-1.5 hover:bg-blue-700">OK</button>
+              <button @click="saveEdit(row)" class="text-xs text-white rounded px-3 py-1.5 hover:opacity-90" :style="{ background: primaryColor }">OK</button>
               <button @click="editingId = null" class="text-xs text-gray-500">✕</button>
             </div>
             <div v-else class="flex items-center justify-between">
               <span class="text-sm font-medium text-gray-700">CHF {{ (row.reward_rappen / 100).toFixed(2) }}</span>
-              <button @click="startEdit(row)" class="text-xs text-blue-600 font-medium">Betrag ändern ✏️</button>
+              <button @click="startEdit(row)" class="text-xs font-medium" :style="{ color: primaryColor }">Betrag ändern ✏️</button>
             </div>
             <div class="text-xs text-gray-400 mt-2">{{ formatDate(row.updated_at) }}</div>
           </div>
@@ -202,7 +207,7 @@
             <label class="block text-xs font-semibold text-gray-600 mb-1">Kurs</label>
             <select
               v-model="newCourseId"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
             >
               <option value="">Kurs wählen…</option>
               <option v-for="course in availableCourses" :key="course.id" :value="course.id">
@@ -219,14 +224,15 @@
                 type="number"
                 min="0"
                 step="1"
-                class="w-full border border-gray-300 rounded-lg pl-11 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="tenant-focus w-full border border-gray-300 rounded-lg pl-11 pr-3 py-2 text-sm focus:outline-none focus:ring-2"
               />
             </div>
           </div>
           <button
             @click="addCourseReward"
             :disabled="!newCourseId || savingCourseReward"
-            class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-40 sm:self-end"
+            class="text-white rounded-lg px-4 py-2 text-sm font-semibold hover:opacity-90 transition disabled:opacity-40 sm:self-end"
+            :style="{ background: primaryColor }"
           >
             {{ savingCourseReward ? 'Speichern…' : '+ Hinzufügen' }}
           </button>
@@ -267,21 +273,22 @@
                       <input
                         v-model.number="editingCourseChf"
                         type="number" min="0" step="1"
-                        class="w-full border border-blue-400 rounded px-2 pl-9 py-1 text-sm focus:outline-none"
+                        class="w-full border rounded px-2 pl-9 py-1 text-sm focus:outline-none"
+                        :style="{ borderColor: primaryColor }"
                         @keydown.enter="saveCourseEdit(row)"
                         @keydown.escape="editingCourseId = null"
                       />
                     </div>
-                    <button @click="saveCourseEdit(row)" class="text-xs bg-blue-600 text-white rounded px-2 py-1 hover:bg-blue-700">OK</button>
+                    <button @click="saveCourseEdit(row)" class="text-xs text-white rounded px-2 py-1 hover:opacity-90" :style="{ background: primaryColor }">OK</button>
                     <button @click="editingCourseId = null" class="text-xs text-gray-500 hover:text-gray-700">Abbrechen</button>
                   </div>
                   <div v-else class="flex items-center gap-2">
                     <span class="font-medium">CHF {{ (row.reward_rappen / 100).toFixed(2) }}</span>
-                    <button @click="startCourseEdit(row)" class="text-gray-400 hover:text-blue-600 text-xs">✏️</button>
+                    <button @click="startCourseEdit(row)" class="text-gray-400 tenant-hover-primary text-xs">✏️</button>
                   </div>
                 </td>
                 <td class="px-4 py-3">
-                  <div @click="toggleCourseRewardActive(row)" class="relative w-10 h-5 rounded-full cursor-pointer transition-colors" :class="row.is_active ? 'bg-blue-600' : 'bg-gray-300'">
+                  <div @click="toggleCourseRewardActive(row)" class="relative w-10 h-5 rounded-full cursor-pointer transition-colors" :class="row.is_active ? '' : 'bg-gray-300'" :style="row.is_active ? { background: primaryColor } : {}">
                     <div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform" :class="row.is_active ? 'translate-x-5' : 'translate-x-0.5'"></div>
                   </div>
                 </td>
@@ -303,7 +310,7 @@
                 <span v-if="row.courses?.category" class="font-mono text-xs bg-gray-200 px-1.5 py-0.5 rounded text-gray-600">{{ row.courses.category }}</span>
               </div>
               <div class="flex items-center gap-3 flex-shrink-0">
-                <div @click="toggleCourseRewardActive(row)" class="relative w-10 h-5 rounded-full cursor-pointer transition-colors" :class="row.is_active ? 'bg-blue-600' : 'bg-gray-300'">
+                <div @click="toggleCourseRewardActive(row)" class="relative w-10 h-5 rounded-full cursor-pointer transition-colors" :class="row.is_active ? '' : 'bg-gray-300'" :style="row.is_active ? { background: primaryColor } : {}">
                   <div class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform" :class="row.is_active ? 'translate-x-5' : 'translate-x-0.5'"></div>
                 </div>
                 <button @click="deleteCourseReward(row.id)" class="text-red-400 hover:text-red-600 text-xs font-medium">Löschen</button>
@@ -315,17 +322,18 @@
                 <input
                   v-model.number="editingCourseChf"
                   type="number" min="0" step="1"
-                  class="w-full border border-blue-400 rounded px-2 pl-9 py-1.5 text-sm focus:outline-none"
+                  class="w-full border rounded px-2 pl-9 py-1.5 text-sm focus:outline-none"
+                  :style="{ borderColor: primaryColor }"
                   @keydown.enter="saveCourseEdit(row)"
                   @keydown.escape="editingCourseId = null"
                 />
               </div>
-              <button @click="saveCourseEdit(row)" class="text-xs bg-blue-600 text-white rounded px-3 py-1.5 hover:bg-blue-700">OK</button>
+              <button @click="saveCourseEdit(row)" class="text-xs text-white rounded px-3 py-1.5 hover:opacity-90" :style="{ background: primaryColor }">OK</button>
               <button @click="editingCourseId = null" class="text-xs text-gray-500">✕</button>
             </div>
             <div v-else class="flex items-center justify-between mt-2">
               <span class="text-sm font-medium text-gray-700">CHF {{ (row.reward_rappen / 100).toFixed(2) }}</span>
-              <button @click="startCourseEdit(row)" class="text-xs text-blue-600 font-medium">Betrag ändern ✏️</button>
+              <button @click="startCourseEdit(row)" class="text-xs font-medium" :style="{ color: primaryColor }">Betrag ändern ✏️</button>
             </div>
             <div class="text-xs text-gray-400 mt-2">{{ formatDate(row.updated_at) }}</div>
           </div>
@@ -478,9 +486,12 @@
 </template>
 
 <script setup lang="ts">
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
 definePageMeta({ middleware: 'admin', layout: 'admin' })
 
 const authStore = useAuthStore()
+const { primaryColor } = useTenantBranding()
 
 const tabs = [
   { id: 'settings', label: '⚙️ Einstellungen' },
@@ -744,3 +755,13 @@ onMounted(async () => {
   loadAvailableCourses()
 })
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+.tenant-hover-primary:hover {
+  color: var(--color-primary, #1E40AF);
+}
+</style>

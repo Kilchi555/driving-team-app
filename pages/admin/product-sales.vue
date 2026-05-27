@@ -12,7 +12,7 @@
             Alle Verkäufe - sowohl aus dem Online-Shop als auch direkte Verkäufe
           </p>
           <p v-if="currentTenant" class="text-sm text-gray-500 mt-1">
-            Tenant: <span class="font-medium text-blue-600">{{ currentTenant.name }}</span>
+            Tenant: <span class="font-medium" :style="{ color: primaryColor }">{{ currentTenant.name }}</span>
           </p>
         </div>
         <div class="flex space-x-3">
@@ -31,7 +31,8 @@
           <NuxtLink
             :to="`/shop?tenant=${currentTenant?.slug || 'driving-team'}`"
             target="_blank"
-            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex-shrink-0"
+            class="text-white px-4 py-2 rounded-lg hover:opacity-90 transition-colors flex-shrink-0"
+            :style="{ background: primaryColor }"
           >
             🛒 Shop öffnen
           </NuxtLink>
@@ -114,7 +115,7 @@
           <label class="block text-sm font-medium text-gray-700 mb-2">Verkaufstyp</label>
           <select
             v-model="selectedSaleType"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
           >
             <option value="">Alle Typen</option>
             <option value="shop">Shop-Verkäufe</option>
@@ -126,7 +127,7 @@
           <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
           <select
             v-model="selectedStatus"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
           >
             <option value="">Alle Status</option>
             <option value="pending">Ausstehend</option>
@@ -138,7 +139,7 @@
           <label class="block text-sm font-medium text-gray-700 mb-2">Zeitraum</label>
           <select
             v-model="selectedTimeframe"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
           >
             <option value="all">Alle Zeit</option>
             <option value="today">Heute</option>
@@ -153,7 +154,7 @@
             v-model="searchTerm"
             type="text"
             placeholder="Kunde oder Produkt suchen..."
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
           />
         </div>
         <div class="flex items-end">
@@ -176,7 +177,7 @@
       </div>
       
       <div v-if="isLoading" class="p-8 text-center">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" :style="{ borderBottomColor: primaryColor }"></div>
         <p class="text-gray-600">Lade Verkäufe...</p>
       </div>
 
@@ -366,13 +367,14 @@
               ></textarea>
             </div>
             
-            <div v-if="anonymousPaymentMethod !== 'cash'" class="bg-blue-50 border border-blue-200 rounded-md p-3">
+            <div v-if="anonymousPaymentMethod !== 'cash'" class="rounded-md p-3 border"
+              :style="{ background: `${primaryColor}10`, borderColor: `${primaryColor}33` }">
               <div class="flex">
                 <div class="flex-shrink-0">
-                  <span class="text-blue-400">💳</span>
+                  <span :style="{ color: primaryColor }">💳</span>
                 </div>
                 <div class="ml-3">
-                  <p class="text-sm text-blue-700">
+                  <p class="text-sm" :style="{ color: primaryColor }">
                     <strong>Online-Zahlung:</strong> Nach der Produktauswahl wird der Kunde zur Wallee-Zahlungsseite weitergeleitet. 
                     Der Verkauf wird erst nach erfolgreicher Zahlung abgeschlossen.
                   </p>
@@ -426,7 +428,10 @@ import { ref, computed, onMounted } from 'vue'
 import { navigateTo } from '#app'
 import { formatDateTime } from '~/utils/dateUtils'
 import { useAuthStore } from '~/stores/auth'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 import ProductSaleModal from '~/components/ProductSaleModal.vue'
+
+const { primaryColor } = useTenantBranding()
 
 definePageMeta({
   layout: 'admin',
@@ -755,6 +760,11 @@ onMounted(async () => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
 }
 
 input:focus, select:focus {

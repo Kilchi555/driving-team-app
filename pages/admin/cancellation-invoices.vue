@@ -8,7 +8,7 @@
           Übersicht aller Stornierungs- und Rückerstattungs-Rechnungen und deren Zahlungsstatus
         </p>
         <p v-if="currentTenant" class="text-sm text-gray-500 mt-1">
-          Tenant: <span class="font-medium text-blue-600">{{ currentTenant.name }}</span>
+          Tenant: <span class="font-medium" :style="{ color: primaryColor }">{{ currentTenant.name }}</span>
         </p>
       </div>
 
@@ -74,7 +74,7 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
             <select 
               v-model="filters.status" 
-              class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2"
             >
               <option value="">Alle</option>
               <option value="pending">Ausstehend</option>
@@ -87,7 +87,7 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">Zeitraum</label>
             <select 
               v-model="filters.timeRange" 
-              class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="tenant-focus border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2"
             >
               <option value="all">Alle</option>
               <option value="today">Heute</option>
@@ -98,7 +98,8 @@
 
           <button
             @click="loadCancellationInvoices"
-            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            class="px-4 py-2 text-white rounded-md hover:opacity-90 transition-colors"
+            :style="{ background: primaryColor }"
           >
             🔄 Aktualisieren
           </button>
@@ -209,7 +210,8 @@
                   </button>
                   <button
                     @click="viewInvoiceDetails(invoice)"
-                    class="text-blue-600 hover:text-blue-900"
+                    class="hover:opacity-70 transition-opacity"
+                    :style="{ color: primaryColor }"
                   >
                     👁️ Details
                   </button>
@@ -282,8 +284,10 @@
 <script setup lang="ts">
 
 import { ref, onMounted, computed } from 'vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
-// State
+const { primaryColor } = useTenantBranding()
+
 const isLoading = ref(false)
 const cancellationInvoices = ref<any[]>([])
 const showInvoiceModal = ref(false)
@@ -423,3 +427,10 @@ onMounted(() => {
   loadCancellationInvoices()
 })
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+</style>

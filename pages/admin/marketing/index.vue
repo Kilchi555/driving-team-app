@@ -193,14 +193,14 @@
           v-for="action in quickActions"
           :key="action.href"
           :to="action.href"
-          class="bg-white rounded-xl border p-5 hover:border-blue-300 hover:shadow-sm transition-all group"
+          class="tenant-action-card bg-white rounded-xl border p-5 hover:shadow-sm transition-all group"
         >
           <div class="w-10 h-10 rounded-lg flex items-center justify-center mb-3" :class="action.iconBg">
             <svg class="w-5 h-5" :class="action.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="action.icon" />
             </svg>
           </div>
-          <div class="font-semibold text-gray-900 group-hover:text-blue-600">{{ action.title }}</div>
+          <div class="font-semibold text-gray-900 tenant-action-title">{{ action.title }}</div>
           <div class="text-sm text-gray-500 mt-1">{{ action.description }}</div>
         </NuxtLink>
       </div>
@@ -345,3 +345,12 @@ async function sendConsentTest() {
   }
 }
 </script>
+
+<style scoped>
+.tenant-action-card:hover {
+  border-color: color-mix(in srgb, var(--color-primary, #1E40AF) 30%, transparent);
+}
+.tenant-action-card:hover .tenant-action-title {
+  color: var(--color-primary, #1E40AF);
+}
+</style>

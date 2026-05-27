@@ -9,7 +9,8 @@
         </div>
         <button
           @click="showAddModal = true"
-          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 tenant-focus"
+          :style="{ background: primaryColor }"
         >
           <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -127,8 +128,9 @@
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center">
                     <div class="flex-shrink-0 h-10 w-10">
-                      <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span class="text-sm font-medium text-blue-600">
+                      <div class="h-10 w-10 rounded-full flex items-center justify-center"
+                        :style="{ background: `${primaryColor}1f` }">
+                        <span class="text-sm font-medium" :style="{ color: primaryColor }">
                           {{ (examiner.first_name || '').charAt(0) }}{{ examiner.last_name.charAt(0) }}
                         </span>
                       </div>
@@ -181,7 +183,8 @@
                   <div class="flex space-x-2">
                     <button
                       @click="editExaminer(examiner)"
-                      class="text-blue-600 hover:text-blue-900"
+                      class="hover:opacity-70 transition-opacity"
+                      :style="{ color: primaryColor }"
                       title="Bearbeiten"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,23 +228,23 @@
         <div class="p-6 space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Vorname *</label>
-            <input v-model="formData.first_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            <input v-model="formData.first_name" type="text" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2" required>
           </div>
           
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Nachname *</label>
-            <input v-model="formData.last_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            <input v-model="formData.last_name" type="text" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2" required>
           </div>
           
           
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail</label>
-            <input v-model="formData.email" type="email" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <input v-model="formData.email" type="email" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2">
           </div>
           
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
-            <input v-model="formData.phone" type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <input v-model="formData.phone" type="tel" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2">
           </div>
           
         </div>
@@ -250,7 +253,8 @@
           <button @click="cancelEdit" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">
             Abbrechen
           </button>
-          <button @click="saveExaminer" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+          <button @click="saveExaminer" class="px-4 py-2 text-white rounded-md hover:opacity-90 transition-colors"
+            :style="{ background: primaryColor }">
             {{ editingExaminer ? 'Aktualisieren' : 'Hinzufügen' }}
           </button>
         </div>
@@ -263,12 +267,14 @@
 
 import { ref, computed, onMounted } from 'vue'
 import SkeletonLoader from '~/components/SkeletonLoader.vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
-// Configure page meta for admin layout
 definePageMeta({
   layout: 'admin',
   middleware: 'admin'
 })
+
+const { primaryColor } = useTenantBranding()
 
 // State
 const examiners = ref<any[]>([])
@@ -405,3 +411,10 @@ onMounted(() => {
   loadExaminers()
 })
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+</style>
