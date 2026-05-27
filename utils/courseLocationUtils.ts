@@ -27,21 +27,68 @@ export function extractCityFromCourseDescription(description: string): string | 
   return null
 }
 
+export type CoursePaymentMethod = 'WALLEE' | 'CASH_ON_SITE'
+
 /**
- * Determine payment method based on location
- * - Zürich, Lachen: Online payment (Wallee)
- * - Einsiedeln, others: Cash on site
+ * Determine payment method based on location and tenant Wallee status.
+ *
+ * Source of truth: `server/api/courses/enroll-cash.post.ts` rejects cash for
+ * any course whose city is not "Einsiedeln" UNLESS the tenant has no Wallee
+ * activated at all. To keep UI and server consistent:
+ *   - Einsiedeln → always CASH_ON_SITE
+ *   - Any other city → CASH_ON_SITE if walleeEnabled is explicitly false
+ *     (since the tenant has no other payment option), otherwise WALLEE.
+ *
+ * `walleeEnabled` is optional for backwards compatibility; when omitted the
+ * function defaults to the historical behavior (everything except Einsiedeln
+ * uses Wallee).
  */
-export function determinePaymentMethod(city: string | null): 'WALLEE' | 'CASH_ON_SITE' {
-  if (!city) return 'WALLEE' // Default to online
-  
-  const onlinePaymentCities = ['zürich', 'zurich', 'zuerich', 'lachen']
-  
-  if (onlinePaymentCities.includes(city.toLowerCase())) {
-    return 'WALLEE'
+export function determinePaymentMethod(
+  city: string | null,
+  walleeEnabled?: boolean
+): CoursePaymentMethod {
+  if (city && city.toLowerCase() === 'einsiedeln') {
+    return 'CASH_ON_SITE'
   }
-  
-  return 'CASH_ON_SITE'
+
+  if (walleeEnabled === false) {
+    return 'CASH_ON_SITE'
+  }
+
+  return 'WALLEE'
+}
+
+/**
+ * Determine payment method for a course, honoring the admin-controlled
+ * override `courses.payment_method` when set. Falls back to the automatic
+ * city/wallee-based logic when the column is NULL.
+ *
+ * This is the single entry point that UI and server-side handlers should
+ * call so that admin overrides, city-based defaults and tenant Wallee
+ * status are evaluated consistently.
+ */
+export function getCoursePaymentMethod(
+  course: {
+    payment_method?: CoursePaymentMethod | string | null
+    city?: string | null
+    description?: string | null
+    name?: string | null
+  } | null | undefined,
+  walleeEnabled?: boolean
+): CoursePaymentMethod {
+  const explicit = course?.payment_method
+  if (explicit === 'WALLEE' || explicit === 'CASH_ON_SITE') {
+    // Admin override wins, BUT we still degrade to cash if the tenant has
+    // no Wallee activated at all — otherwise the enrollment would fail at
+    // the payment step.
+    if (explicit === 'WALLEE' && walleeEnabled === false) {
+      return 'CASH_ON_SITE'
+    }
+    return explicit
+  }
+
+  const city = course?.city || extractCityFromCourseDescription(course?.description || course?.name || '')
+  return determinePaymentMethod(city, walleeEnabled)
 }
 
 /**

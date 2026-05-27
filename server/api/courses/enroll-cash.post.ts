@@ -63,13 +63,22 @@ const handler = defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // 2. Get course details
-    const { data: course, error: courseError } = await supabase
-      .from('courses')
-      .select('*, course_sessions(*), course_category:course_categories(allow_partial_enrollment, partial_start_position, partial_price_rappen)')
-      .eq('id', courseId)
-      .eq('tenant_id', tenantId)
-      .single()
+    // 2. Get course details + tenant flags in parallel.
+    const [courseResult, tenantResult] = await Promise.all([
+      supabase
+        .from('courses')
+        .select('*, course_sessions(*), course_category:course_categories(allow_partial_enrollment, partial_start_position, partial_price_rappen)')
+        .eq('id', courseId)
+        .eq('tenant_id', tenantId)
+        .single(),
+      supabase
+        .from('tenants')
+        .select('wallee_enabled, is_active')
+        .eq('id', tenantId)
+        .single()
+    ])
+
+    const { data: course, error: courseError } = courseResult
 
     if (courseError || !course) {
       throw createError({
@@ -78,20 +87,35 @@ const handler = defineEventHandler(async (event) => {
       })
     }
 
-    // 2b. IMPORTANT: Check if cash payment is allowed (only for Einsiedeln!)
-    // Cash enrollment is ONLY allowed for Einsiedeln courses
-    // All other locations MUST use Wallee payment
-    const courseLocation = course.description?.toLowerCase() || ''
-    const isEinsiedeln = courseLocation.includes('einsiedeln') || courseLocation.includes('einsiedeln')
-    
-    if (!isEinsiedeln) {
-      logger.warn('❌ Cash payment attempted for non-Einsiedeln course:', {
+    const tenant = tenantResult.data
+    if (!tenant || tenant.is_active === false) {
+      throw createError({ statusCode: 404, statusMessage: 'Tenant nicht verfügbar' })
+    }
+
+    // 2b. Cash enrollment is allowed in three cases:
+    //   a) The course's `payment_method` column is explicitly set to
+    //      'CASH_ON_SITE' by an admin (highest priority).
+    //   b) The course's city is Einsiedeln (historical default).
+    //   c) The tenant has not activated Wallee at all — in that case cash
+    //      is the only option we can offer, so we accept it for every city.
+    // This mirrors `getCoursePaymentMethod` on the client.
+    const explicitMethod = (course as any).payment_method as string | null | undefined
+    const explicitCity = (course as any).city as string | null | undefined
+    const isEinsiedeln = explicitCity
+      ? explicitCity.toLowerCase() === 'einsiedeln'
+      : (course.description?.toLowerCase() || '').includes('einsiedeln')
+    const adminAllowedCash = explicitMethod === 'CASH_ON_SITE'
+
+    if (!adminAllowedCash && !isEinsiedeln && tenant.wallee_enabled) {
+      logger.warn('❌ Cash payment attempted for course without cash override on Wallee-enabled tenant:', {
         courseId,
-        location: course.description
+        city: explicitCity,
+        location: course.description,
+        payment_method: explicitMethod
       })
       throw createError({
         statusCode: 400,
-        statusMessage: 'Cash-on-site payment is only available for Einsiedeln courses. Please use online payment.'
+        statusMessage: 'Cash-on-site payment is not enabled for this course. Please use online payment.'
       })
     }
 

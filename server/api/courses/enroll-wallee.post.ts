@@ -65,13 +65,31 @@ const handler = defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // 2. Get course details
-    const { data: course, error: courseError } = await supabase
-      .from('courses')
-      .select('*, course_sessions(*), course_category:course_categories(allow_partial_enrollment, partial_start_position, partial_price_rappen)')
-      .eq('id', courseId)
-      .eq('tenant_id', tenantId)
-      .single()
+    // 2. Get course details + tenant feature flags in parallel.
+    //    Tenant flags gate this entire flow: course-booking feature must be
+    //    enabled AND Wallee onboarding must be active before an online payment
+    //    can be initiated. This guard mirrors the UI but cannot be bypassed.
+    const [courseResult, tenantResult, courseSettingResult] = await Promise.all([
+      supabase
+        .from('courses')
+        .select('*, course_sessions(*), course_category:course_categories(allow_partial_enrollment, partial_start_position, partial_price_rappen)')
+        .eq('id', courseId)
+        .eq('tenant_id', tenantId)
+        .single(),
+      supabase
+        .from('tenants')
+        .select('wallee_enabled, wallee_onboarding_status, is_active')
+        .eq('id', tenantId)
+        .single(),
+      supabase
+        .from('tenant_settings')
+        .select('setting_value')
+        .eq('tenant_id', tenantId)
+        .eq('setting_key', 'courses_enabled')
+        .maybeSingle()
+    ])
+
+    const { data: course, error: courseError } = courseResult
 
     if (courseError || !course) {
       throw createError({
@@ -79,6 +97,39 @@ const handler = defineEventHandler(async (event) => {
         statusMessage: 'Course not found'
       })
     }
+
+    const tenant = tenantResult.data
+    if (!tenant || tenant.is_active === false) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Tenant nicht verfügbar'
+      })
+    }
+
+    const coursesEnabled = (courseSettingResult.data?.setting_value as any)?.enabled !== false
+    if (!coursesEnabled) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Kursbuchung ist für diese Fahrschule aktuell nicht aktiviert.'
+      })
+    }
+
+    // If an admin has explicitly marked this course as cash-only, the
+    // Wallee endpoint must refuse — clients should call `enroll-cash`
+    // instead. Block early so we don't accidentally create Wallee
+    // transactions for cash courses.
+    const explicitMethod = (course as any).payment_method as string | null | undefined
+    if (explicitMethod === 'CASH_ON_SITE') {
+      logger.warn('🚫 Wallee enrollment blocked: course is admin-marked cash-only', { courseId, tenantId })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Dieser Kurs ist auf Barzahlung vor Ort eingestellt. Bitte verwende die Barzahlungs-Anmeldung.'
+      })
+    }
+
+    // Note: tenant.wallee_enabled is enforced LATER in the flow, only when a
+    // Wallee payment is actually required. Users whose credit balance covers
+    // the full enrollment must be allowed to proceed even when Wallee is off.
 
     // 2b. Validate partial enrollment: only allowed if category explicitly enables it.
     // Always use partial_start_position from DB — never trust client-provided value.
@@ -483,6 +534,20 @@ const handler = defineEventHandler(async (event) => {
         logger.info('✅ Course registration created (credit payment)')
         return { success: true, paidWithCredit: true }
       }
+    }
+
+    // 9.5 At this point Wallee will actually be invoked. Enforce
+    //     tenant.wallee_enabled HERE (after the credit-bypass paths have
+    //     completed). This keeps credit-only enrollments possible even when
+    //     online payments are disabled, while still preventing direct
+    //     Wallee transactions on tenants that have not activated online
+    //     payments yet.
+    if (!tenant.wallee_enabled) {
+      logger.warn('🚫 Wallee enrollment blocked: tenant has not activated online payments', { tenantId, courseId })
+      throw createError({
+        statusCode: 402,
+        statusMessage: 'Online-Zahlung ist für diese Fahrschule aktuell nicht aktiviert. Bitte kontaktiere die Fahrschule direkt für die Anmeldung.'
+      })
     }
 
     // 10. Call payment processor (WITH VALIDATION DATA, NOT ENROLLMENT ID)

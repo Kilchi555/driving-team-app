@@ -81,11 +81,20 @@
               <p v-if="appliedDiscount && !userCreditRappen" class="text-lg font-bold text-green-700">
                 CHF {{ formatPrice(effectivePrice) }}
               </p>
-              <p v-if="userCreditRappen > 0" class="text-lg font-bold" :class="effectivePriceAfterCredit === 0 ? 'text-green-700' : 'text-blue-700'">
+              <p
+                v-if="userCreditRappen > 0"
+                class="text-lg font-bold"
+                :class="effectivePriceAfterCredit === 0 ? 'text-green-700' : ''"
+                :style="effectivePriceAfterCredit === 0 ? {} : { color: getTenantPrimaryColor() }"
+              >
                 {{ effectivePriceAfterCredit === 0 ? 'Kostenlos ✓' : `CHF ${formatPrice(effectivePriceAfterCredit)}` }}
               </p>
             </div>
-            <div v-if="userCreditRappen > 0" class="mt-1 text-xs text-blue-600 flex items-center gap-1">
+            <div
+              v-if="userCreditRappen > 0"
+              class="mt-1 text-xs flex items-center gap-1"
+              :style="{ color: getTenantPrimaryColor() }"
+            >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
               </svg>
@@ -98,14 +107,15 @@
                 v-for="(session, idx) in sessionGroups" 
                 :key="idx" 
                 class="text-sm p-2 rounded-lg flex flex-col gap-1"
-                :class="session.isCustom ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'"
+                :class="session.isCustom ? 'border' : 'bg-gray-50'"
+                :style="session.isCustom ? { background: `${getTenantPrimaryColor()}15`, borderColor: `${getTenantPrimaryColor()}33` } : {}"
               >
                 <div>
                   <span class="text-gray-800 font-medium">{{ session.label }}: </span>
                   <span class="text-gray-800">{{ formatSessionDate(session.displayDate) }}</span>
                 </div>
                 <span class="text-gray-500">{{ session.timeRange }}</span>
-                <span v-if="session.isCustom" class="text-xs text-blue-600">({{ session.customCourseName }})</span>
+                <span v-if="session.isCustom" class="text-xs" :style="{ color: getTenantPrimaryColor() }">({{ session.customCourseName }})</span>
               </div>
             </div>
             
@@ -153,7 +163,8 @@
                     v-for="session in sessionGroups" 
                     :key="session.position"
                     class="p-3 rounded-lg border"
-                    :class="session.isCustom ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'"
+                    :class="session.isCustom ? '' : 'bg-gray-50 border-gray-200'"
+                    :style="session.isCustom ? { background: `${getTenantPrimaryColor()}15`, borderColor: `${getTenantPrimaryColor()}33` } : {}"
                   >
                     <div class="flex items-center justify-between">
                       <div>
@@ -176,7 +187,7 @@
                       <span class="text-gray-700">{{ formatSessionDate(session.displayDate) }}</span>
                       <span class="text-gray-500 ml-2">{{ session.timeRange }}</span>
                     </div>
-                    <div v-if="session.isCustom" class="mt-1 text-xs text-blue-600">
+                    <div v-if="session.isCustom" class="mt-1 text-xs" :style="{ color: getTenantPrimaryColor() }">
                       {{ session.customCourseName }}
                     </div>
                   </div>
@@ -248,7 +259,8 @@
                     :key="option.sessionId"
                     @click="selectSwapSession(option)"
                     class="w-full p-3 text-left rounded-lg border-2 transition-colors"
-                    :class="option.isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-400'"
+                    :class="option.isSelected ? '' : 'border-gray-200 hover:border-gray-400'"
+                    :style="option.isSelected ? { borderColor: getTenantPrimaryColor(), background: `${getTenantPrimaryColor()}15` } : {}"
                   >
                     <div class="flex justify-between items-start">
                       <div>
@@ -264,6 +276,24 @@
                     </div>
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Wallee-disabled banner (online-payment city, online payment off, credit insufficient) -->
+          <div
+            v-if="paymentMethod === 'WALLEE' && !walleeEnabled && effectivePriceAfterCredit > 0"
+            class="mb-4 p-4 rounded-lg border-2 border-amber-300 bg-amber-50"
+          >
+            <div class="flex items-start gap-3">
+              <svg class="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <div class="text-sm text-amber-900">
+                <p class="font-semibold mb-1">Online-Zahlung aktuell nicht verfügbar</p>
+                <p>
+                  Für diesen Kurs wäre eine Online-Zahlung über Kreditkarte oder TWINT erforderlich, die die Fahrschule aktuell nicht aktiviert hat. Bitte kontaktiere die Fahrschule direkt für die Anmeldung.
+                </p>
               </div>
             </div>
           </div>
@@ -293,7 +323,8 @@
                 <input 
                   v-model="formData.birthdate"
                   type="date"
-                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                  :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
                 />
               </div>
             </div>
@@ -343,7 +374,8 @@
                   v-model="formData.email"
                   type="email"
                   placeholder="deine@email.ch"
-                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                  :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
                   :class="{ 'border-red-300': formData.email && !isValidEmail }"
                 />
                 <p v-if="formData.email && !isValidEmail" class="text-xs text-red-500 mt-1">Bitte gib eine gültige E-Mail ein</p>
@@ -404,8 +436,8 @@
                 id="agb-checkbox"
                 v-model="agbAccepted"
                 type="checkbox"
-                class="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                :style="{ accentColor: getTenantPrimaryColor() }"
+                class="mt-1 h-4 w-4 rounded border-slate-300 focus:ring-2"
+                :style="{ accentColor: getTenantPrimaryColor(), '--tw-ring-color': getTenantPrimaryColor() } as any"
               />
               <label for="agb-checkbox" class="text-sm text-slate-600">
                 Ich habe die 
@@ -428,7 +460,7 @@
               </button>
               <button 
                 @click="submitEnrollment"
-                :disabled="!canSubmit || isLoading || (paymentMethod === 'WALLEE' && !walleeEnabled)"
+                :disabled="!canSubmit || isLoading || (paymentMethod === 'WALLEE' && !walleeEnabled && effectivePriceAfterCredit > 0)"
                 class="flex-1 py-3 text-white font-medium rounded-lg hover:opacity-90 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
                 :style="{ backgroundColor: getTenantPrimaryColor() }"
               >
@@ -439,7 +471,8 @@
                   </svg>
                   Lädt...
                 </span>
-                <span v-else-if="paymentMethod === 'WALLEE' && !walleeEnabled">Online-Zahlung nicht verfügbar</span>
+                <span v-else-if="paymentMethod === 'WALLEE' && !walleeEnabled && effectivePriceAfterCredit > 0">Online-Zahlung nicht verfügbar</span>
+                <span v-else-if="paymentMethod === 'WALLEE' && effectivePriceAfterCredit === 0">Mit Guthaben anmelden</span>
                 <span v-else>{{ paymentMethod === 'WALLEE' ? 'Zur Zahlung' : 'Verbindlich anmelden' }}</span>
               </button>
             </div>
@@ -453,7 +486,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
-import { extractCityFromCourseDescription, determinePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLocationUtils'
+import { getCoursePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLocationUtils'
 import { useTenant } from '~/composables/useTenant'
 import { useAffiliateRef } from '~/composables/useAffiliateRef'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
@@ -520,8 +553,10 @@ const formData = ref({
 
 // Computed
 const paymentMethod = computed(() => {
-  const city = extractCityFromCourseDescription(props.course?.description || props.course?.name || '')
-  return determinePaymentMethod(city)
+  // Honors `course.payment_method` (admin override), falls back to city +
+  // tenant Wallee status. Server-side handlers use the same helper to keep
+  // UI and API in sync.
+  return getCoursePaymentMethod(props.course as any, walleeEnabled.value)
 })
 
 const paymentMethodLabel = computed(() => getPaymentMethodLabel(paymentMethod.value))

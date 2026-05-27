@@ -192,7 +192,9 @@ export const useTenant = () => {
   const tenantPrimaryColor = computed(() => currentTenant.value?.primary_color || '#3B82F6')
   const tenantSecondaryColor = computed(() => currentTenant.value?.secondary_color || '#10B981')
   const tenantBusinessType = computed(() => currentTenant.value?.business_type || 'driving_school')
-  const walleeEnabled = computed(() => (currentTenant.value as any)?.wallee_enabled ?? true) // default true = show until loaded
+  // SECURITY: default to `false` so online-payment affordances stay hidden
+  // until the tenant has been confirmed to have Wallee activated.
+  const walleeEnabled = computed(() => (currentTenant.value as any)?.wallee_enabled ?? false)
   
   return {
     // State
