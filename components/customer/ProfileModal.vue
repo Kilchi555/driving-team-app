@@ -110,7 +110,8 @@
                         v-if="doc.fileType?.startsWith('image/')"
                         :src="getDocumentUrl(doc)" 
                         :alt="doc.fileName"
-                        class="w-full h-32 object-contain rounded border border-blue-200 hover:border-blue-400 transition-colors bg-white"
+                        class="w-full h-32 object-contain rounded border transition-colors bg-white"
+                        :style="{ borderColor: `${primaryColor}33` }"
                         @load="handleImageLoad(doc)"
                         @error="handleImageError"
                       />
@@ -172,7 +173,10 @@
           <div v-if="false" class="border-t pt-4">
             <h3 class="text-lg font-semibold text-gray-900 mb-3">Biometrische Authentifizierung</h3>
             
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div
+              class="rounded-lg p-4 border"
+              :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }"
+            >
               <div class="space-y-4">
                 <!-- Info -->
                 <p class="text-sm text-gray-700">
@@ -203,7 +207,8 @@
                 <button
                   @click="registerFaceID"
                   :disabled="isWebAuthnLoading"
-                  class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg transition-colors font-medium text-sm"
+                  class="w-full px-4 py-2 text-white rounded-lg transition-colors font-medium text-sm hover:opacity-90 disabled:opacity-50"
+                  :style="{ background: primaryColor }"
                 >
                   <span v-if="isWebAuthnLoading">Wird registriert...</span>
                   <span v-else>Face ID / Touch ID hinzufügen</span>
@@ -236,7 +241,7 @@
                 <input
                   v-model="formData.firstName"
                   type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                   placeholder="Vorname"
                   @input="scheduleAutoSave"
                 />
@@ -248,7 +253,7 @@
                 <input
                   v-model="formData.lastName"
                   type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                   placeholder="Nachname"
                   @input="scheduleAutoSave"
                 />
@@ -260,7 +265,7 @@
                 <input
                   v-model="formData.email"
                   type="email"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                   placeholder="email@example.com"
                   @input="scheduleAutoSave"
                 />
@@ -272,7 +277,7 @@
                 <input
                   v-model="formData.phone"
                   type="tel"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                   placeholder="+41 79 123 45 67"
                   @input="scheduleAutoSave"
                 />
@@ -284,7 +289,7 @@
                 <input
                   v-model="formData.birthdate"
                   type="date"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                   @input="scheduleAutoSave"
                 />
               </div>
@@ -297,7 +302,7 @@
                 <input
                   v-model="formData.street"
                   type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                   placeholder="Strasse"
                   @input="scheduleAutoSave"
                 />
@@ -307,7 +312,7 @@
                 <input
                   v-model="formData.streetNr"
                   type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                   placeholder="Nr."
                   @input="scheduleAutoSave"
                 />
@@ -321,7 +326,7 @@
                 <input
                   v-model="formData.zip"
                   type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                   placeholder="PLZ"
                   @input="scheduleAutoSave"
                 />
@@ -331,7 +336,7 @@
                 <input
                   v-model="formData.city"
                   type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                   placeholder="Stadt"
                   @input="scheduleAutoSave"
                 />
@@ -344,7 +349,7 @@
               <input
                 v-model="formData.profession"
                 type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                 placeholder="z.B. Student/in, Software Engineer"
                 @input="scheduleAutoSave"
               />
@@ -412,7 +417,8 @@
                       <a 
                         :href="getDocumentUrl(doc)" 
                         target="_blank"
-                        class="text-xs text-blue-600 hover:text-blue-800"
+                        class="text-xs hover:opacity-80"
+                        :style="{ color: primaryColor }"
                       >
                         Öffnen
                       </a>
@@ -1074,3 +1080,9 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
   return btoa(binary)
 }
 </script>
+
+<style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #3B82F6);
+}
+</style>

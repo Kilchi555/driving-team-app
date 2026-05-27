@@ -295,6 +295,7 @@ const form = ref({
   street_nr: '',
   zip: '',
   city: '',
+  profession: '',
   category: '',
   assigned_staff_id: ''
 })
@@ -370,6 +371,7 @@ const resetForm = () => {
     street_nr: '',
     zip: '',
     city: '',
+    profession: '',
     category: '',
     assigned_staff_id: ''
   }
@@ -397,6 +399,7 @@ const submitForm = async () => {
     if (form.value.street_nr) studentData.street_nr = form.value.street_nr.trim()
     if (form.value.zip) studentData.zip = form.value.zip.trim()
     if (form.value.city) studentData.city = form.value.city.trim()
+    if (form.value.profession) studentData.profession = form.value.profession.trim()
     if (form.value.category) studentData.category = form.value.category
     // ✅ NOTE: assigned_staff_id is now automatically set by the API based on authenticated user
     // No need to pass it from frontend anymore

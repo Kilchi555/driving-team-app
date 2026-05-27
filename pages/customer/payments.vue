@@ -1,8 +1,8 @@
 <!-- pages/customer/payments.vue -->
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-    <!-- Header (Sticky) -->
-    <div class="sticky top-0 z-40 bg-white shadow-lg border-b">
+  <div class="h-[100svh] flex flex-col bg-gray-50">
+    <!-- Header (Fixed) -->
+    <div class="bg-white shadow-lg border-b pt-safe flex-shrink-0">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center py-3 sm:py-4">
           <div class="flex items-center space-x-2 sm:space-x-4">
@@ -21,6 +21,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Scrollable content -->
+    <div class="flex-1 overflow-y-auto">
 
     <!-- Loading State -->
     <div v-if="isLoading" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -66,7 +69,8 @@
             <div class="flex flex-wrap gap-2">
               <button 
                 @click="statusFilter = 'all'"
-                :class="statusFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                :class="statusFilter === 'all' ? 'text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                :style="statusFilter === 'all' ? { background: primaryColor } : {}"
                 class="px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors"
               >
                 Alle Status
@@ -267,12 +271,13 @@
                 </button>
                 <span v-else />
 
-                <!-- Jetzt bezahlen Button (rechts) -->
-                <button @click="payIndividual(payment)"
-                        :disabled="processingPaymentIds.has(payment.id) || !walleeEnabled"
-                        :title="!walleeEnabled ? 'Online-Zahlung aktuell nicht verfügbar' : ''"
-                        class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base">
-                  {{ !walleeEnabled ? 'Online-Zahlung nicht verfügbar' : processingPaymentIds.has(payment.id) ? 'Verarbeitung...' : 'Jetzt bezahlen' }}
+                <!-- Jetzt bezahlen Button (rechts) — nur sichtbar wenn Online-Zahlung aktiviert -->
+                <button v-if="walleeEnabled"
+                        @click="payIndividual(payment)"
+                        :disabled="processingPaymentIds.has(payment.id)"
+                        class="text-white px-3 py-2 sm:px-4 rounded-lg transition-colors font-medium disabled:opacity-50 text-sm sm:text-base hover:opacity-90"
+                        :style="{ background: primaryColor }">
+                  {{ processingPaymentIds.has(payment.id) ? 'Verarbeitung...' : 'Jetzt bezahlen' }}
                 </button>
               </div>
 
@@ -285,7 +290,7 @@
                     placeholder="Code eingeben"
                     :disabled="discountApplyingFor === payment.id"
                     @keyup.enter="applyDiscount(payment)"
-                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase placeholder-normal"
+                    class="tenant-focus flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 uppercase placeholder-normal"
                     style="text-transform: uppercase;"
                   />
                   <button
@@ -321,6 +326,7 @@
       @close="closeMedicalCertificateModal"
       @uploaded="loadAllData"
     />
+    </div><!-- end scrollable content -->
   </div>
 </template>
 
@@ -328,6 +334,7 @@
 
 import { logger } from '~/utils/logger'
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { Capacitor } from '@capacitor/core'
 import { roundToNearest5Rappen as roundToNearestFranken } from '~/utils/rounding'
 import { navigateTo } from '#app'
 import { useAuthStore } from '~/stores/auth'
@@ -339,6 +346,9 @@ import CustomerCancellationModal from '~/components/customer/CustomerCancellatio
 import CustomerMedicalCertificateModal from '~/components/customer/CustomerMedicalCertificateModal.vue'
 import CustomerCreditWalletPanel from '~/components/customer/CustomerCreditWalletPanel.vue'
 import { formatDateTime as formatDateTimeUtil } from '~/utils/dateUtils'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor } = useTenantBranding()
 
 // Components (these would need to be created)
 // import PaymentDetailsModal from '~/components/customer/PaymentDetailsModal.vue'
@@ -534,6 +544,31 @@ const loadAllData = async () => {
   }
 }
 
+// Gibt die korrekten Redirect-URLs zurück:
+// - Native App: Universal Link zurück zur App (via Safari ViewController)
+// - Web: normale Seiten-Navigation
+const getPaymentUrls = () => {
+  if (Capacitor.isNativePlatform()) {
+    return {
+      successUrl: 'https://app.simy.ch/payment-callback?status=success',
+      failedUrl: 'https://app.simy.ch/payment-callback?status=failed'
+    }
+  }
+  return {
+    successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
+    failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`
+  }
+}
+
+const openPaymentUrl = async (url: string) => {
+  if (Capacitor.isNativePlatform()) {
+    const { Browser } = await import('@capacitor/browser')
+    await Browser.open({ url, presentationStyle: 'popover' })
+  } else {
+    window.location.href = url
+  }
+}
+
 const payAllUnpaid = async () => {
   if (unpaidPayments.value.length === 0) return
 
@@ -561,18 +596,19 @@ const payAllUnpaid = async () => {
       error?: string
     }
     
+    const { successUrl, failedUrl } = getPaymentUrls()
     const response = await $fetch<PaymentResponse>('/api/payments/process', {
       method: 'POST',
       body: {
         paymentId: firstPayment.id,
-        successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
-        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`
+        successUrl,
+        failedUrl
       }
     })
     
     if (response.success && response.paymentUrl) {
-      logger.debug('✅ Payment processed successfully, redirecting to Wallee')
-      window.location.href = response.paymentUrl
+      logger.debug('✅ Payment processed successfully, opening Wallee')
+      await openPaymentUrl(response.paymentUrl)
     } else {
       throw new Error(response.error || 'Payment processing failed')
     }
@@ -622,12 +658,13 @@ const payIndividual = async (payment: any) => {
     // ✅ NEW: Use secure API - it handles ALL credit logic internally
     logger.debug('🚀 Calling /api/payments/process with paymentId:', payment.id)
     
+    const { successUrl, failedUrl } = getPaymentUrls()
     const walleeResponse = await $fetch('/api/payments/process', {
       method: 'POST',
       body: {
         paymentId: payment.id,
-        successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
-        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`
+        successUrl,
+        failedUrl
       }
     }) as any
     
@@ -651,10 +688,10 @@ const payIndividual = async (payment: any) => {
       return
     }
     
-    // Otherwise, redirect to Wallee payment page
+    // Otherwise, open Wallee payment page
     if (walleeResponse.success && walleeResponse.paymentUrl) {
-      logger.debug('💳 Redirecting to Wallee:', walleeResponse.paymentUrl)
-      window.location.href = walleeResponse.paymentUrl
+      logger.debug('💳 Opening Wallee:', walleeResponse.paymentUrl)
+      await openPaymentUrl(walleeResponse.paymentUrl)
     } else {
       throw new Error(walleeResponse.error || 'Failed to create Wallee payment')
     }
@@ -760,21 +797,23 @@ const downloadAllReceipts = async () => {
     logger.debug('✅ Receipt PDF URL:', response.pdfUrl)
     logger.debug('📄 Filename:', response.filename)
     
-    // Fetch the PDF as a blob and trigger download
-    logger.debug('📥 Fetching PDF from URL...')
-    const pdfResponse = await fetch(response.pdfUrl)
-    
-    if (!pdfResponse.ok) {
-      throw new Error(`PDF download failed: ${pdfResponse.status} ${pdfResponse.statusText}`)
+    if (Capacitor.isNativePlatform()) {
+      // Native iOS/Android: Open PDF directly in system browser (Safari ViewController)
+      // → iOS gives the user a native PDF viewer with Share/Save options
+      const { Browser } = await import('@capacitor/browser')
+      await Browser.open({ url: response.pdfUrl, presentationStyle: 'fullscreen' })
+      logger.debug('✅ Opened PDF in native browser!')
+    } else {
+      // Web: Fetch as blob and open in new tab
+      const pdfResponse = await fetch(response.pdfUrl)
+      if (!pdfResponse.ok) {
+        throw new Error(`PDF download failed: ${pdfResponse.status} ${pdfResponse.statusText}`)
+      }
+      const blob = await pdfResponse.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      window.open(blobUrl, '_blank')
+      logger.debug('✅ Opened in new tab!')
     }
-    
-    const blob = await pdfResponse.blob()
-    logger.debug('✅ PDF blob received, size:', blob.size, 'bytes')
-    
-    // Open in new tab only (not download)
-    const blobUrl = URL.createObjectURL(blob)
-    window.open(blobUrl, '_blank')
-    logger.debug('✅ Opened in new tab!')
   } catch (err: any) {
     console.error('❌ Error downloading receipts:', err)
     alert(`Fehler beim Erstellen der Quittungen: ${err.message}`)
@@ -1349,6 +1388,10 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+}
+
 .animate-spin {
   animation: spin 1s linear infinite;
 }

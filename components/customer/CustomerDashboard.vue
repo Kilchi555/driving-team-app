@@ -1,9 +1,9 @@
 <!-- components/CustomerDashboard.vue -->
 <!-- In CustomerDashboard.vue Template - im Header Bereich -->
 <template>
-  <div class="min-h-screen" :style="{ background: `linear-gradient(160deg, ${primaryColor}12 0%, #f9fafb 25%, #f3f4f6 100%)` }">
+  <div class="h-[100svh] flex flex-col" :style="{ background: `linear-gradient(160deg, ${primaryColor}12 0%, #f9fafb 25%, #f3f4f6 100%)` }">
       <!-- Header -->
-      <div class="shadow-lg border-b" :style="{ background: primaryColor }">
+      <div class="shadow-lg border-b pt-safe flex-shrink-0" :style="{ background: primaryColor }">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex justify-between items-center py-4">
             <div class="flex items-center space-x-4">
@@ -58,6 +58,9 @@
           </div>
         </div>
       </div>
+
+    <!-- Scrollable content -->
+    <div class="flex-1 overflow-y-auto">
 
     <!-- BANNER: Bestätigung erforderlich (deaktiviert - Termine werden direkt als 'confirmed' gesetzt) -->
     <div v-if="false && showContent && pendingConfirmations.length > 0" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -299,23 +302,23 @@
           @click="handleClickWithDelay('affiliate', () => { showAffiliateModal = true })"
           class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border-t-4"
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'affiliate' }"
-          style="border-top-color: #16a34a"
+          :style="{ borderTopColor: secondaryButtonColor }"
         >
           <div class="p-4 h-full flex flex-col">
             <div class="flex items-center justify-between mb-2">
               <div class="flex items-center">
-                <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center bg-green-50">
-                  <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: secondaryButtonColorLight }">
+                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: secondaryButtonColor }">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
                 <div>
                   <h3 class="text-lg font-semibold text-gray-900">Freunde empfehlen</h3>
-                  <p class="text-sm text-green-600 font-semibold">Link teilen und Geld verdienen</p>
+                  <p class="text-sm font-semibold" :style="{ color: secondaryButtonColor }">Link teilen und Geld verdienen</p>
                 </div>
               </div>
               <!-- Arrow -->
-              <div class="text-green-600">
+              <div :style="{ color: secondaryButtonColor }">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
@@ -352,7 +355,8 @@
         </div>
 
         <!-- Kurs buchen - Uses Secondary Color -->
-        <div 
+        <div
+          v-if="!coursesGateResolved || coursesEnabled"
           @click="handleClickWithDelay('course', navigateToCourseBooking)"
           class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border-t-4" 
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'course' }"
@@ -582,6 +586,8 @@
         </div>
       </div>
     </div>
+
+    </div><!-- end scrollable content -->
 
     <!-- Affiliate Detail Sub-Modal -->
     <Teleport to="body">
@@ -939,7 +945,10 @@
 
                   <!-- Event Type Code + "mit" + Staff Name -->
                   <div class="flex items-center gap-2 text-gray-600">
-                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium">
+                    <span
+                      class="text-xs px-2 py-1 rounded font-medium"
+                      :style="{ background: `${primaryColor}20`, color: primaryColor }"
+                    >
                       {{ getEventTypeLabel(appointment.event_type_code) }}
                     </span>
                     <span class="font-medium">mit {{ getInstructorName(appointment) }}</span>
@@ -1018,7 +1027,7 @@
                     <!-- Still to Pay (if credit was used) -->
                     <div v-if="appointment.payment?.credit_used_rappen && appointment.payment.credit_used_rappen > 0" class="flex justify-between items-center border-t border-gray-200 pt-2">
                       <span class="font-semibold text-gray-900 text-xs">Noch zu zahlen</span>
-                      <span class="font-bold text-blue-600 text-sm">CHF {{ formatPrice(Math.max(0, (appointment.payment?.total_amount_rappen || 0) - (appointment.payment?.credit_used_rappen || 0))) }}</span>
+                      <span class="font-bold text-sm" :style="{ color: primaryColor }">CHF {{ formatPrice(Math.max(0, (appointment.payment?.total_amount_rappen || 0) - (appointment.payment?.credit_used_rappen || 0))) }}</span>
                     </div>
                     <!-- Payment Method -->
                     <div v-if="getPaymentMethod(appointment)" class="flex items-center justify-between text-xs">
@@ -1032,7 +1041,8 @@
                 <button
                   @click="confirmAppointment(appointment)"
                   :disabled="confirmingAppointments.has(appointment.id)"
-                  class="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                  class="w-full px-4 py-2.5 text-white rounded-lg transition-colors text-sm font-medium shadow focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 hover:opacity-90"
+                  :style="{ background: primaryColor, '--tw-ring-color': `${primaryColor}66` } as any"
                 >
                   <svg v-if="confirmingAppointments.has(appointment.id)" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -1089,23 +1099,27 @@
           </div>
 
           <!-- School Contact Info -->
-          <div v-if="!isLoading && currentTenantBranding" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <h3 class="font-semibold text-blue-900 mb-3">Meine Fahrschule</h3>
+          <div
+            v-if="!isLoading && currentTenantBranding"
+            class="rounded-lg p-4 mb-6 border"
+            :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }"
+          >
+            <h3 class="font-semibold mb-3" :style="{ color: primaryColor }">Meine Fahrschule</h3>
             <div class="space-y-2">
            
-              <div v-if="currentTenantBranding.contact?.email" class="flex items-center gap-2 text-sm text-blue-800">
-                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div v-if="currentTenantBranding.contact?.email" class="flex items-center gap-2 text-sm" :style="{ color: primaryColor }">
+                <svg class="w-4 h-4" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                <a :href="`mailto:${currentTenantBranding.contact.email}`" class="text-blue-600 hover:text-blue-800">
+                <a :href="`mailto:${currentTenantBranding.contact.email}`" class="hover:opacity-80" :style="{ color: primaryColor }">
                   {{ currentTenantBranding.contact.email }}
                 </a>
               </div>
-              <div v-if="currentTenantBranding.contact?.phone" class="flex items-center gap-2 text-sm text-blue-800">
-                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div v-if="currentTenantBranding.contact?.phone" class="flex items-center gap-2 text-sm" :style="{ color: primaryColor }">
+                <svg class="w-4 h-4" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
-                <a :href="`tel:${currentTenantBranding.contact.phone}`" class="text-blue-600 hover:text-blue-800">
+                <a :href="`tel:${currentTenantBranding.contact.phone}`" class="hover:opacity-80" :style="{ color: primaryColor }">
                   {{ currentTenantBranding.contact.phone }}
                 </a>
               </div>
@@ -1118,7 +1132,7 @@
             <div 
               v-for="instructor in instructors" 
               :key="instructor.id"
-              class="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:bg-gray-100 hover:border-blue-300 transition-colors cursor-pointer"
+              class="tenant-hover-border bg-gray-50 rounded-lg p-4 border border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <div class="flex items-start justify-between gap-3">
                 <div class="flex-1">
@@ -1128,7 +1142,7 @@
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
-                      <a :href="`mailto:${instructor.email}`" class="text-blue-600 hover:text-blue-800 break-all">
+                      <a :href="`mailto:${instructor.email}`" class="hover:opacity-80 break-all" :style="{ color: primaryColor }">
                         {{ instructor.email }}
                       </a>
                     </div>
@@ -1136,7 +1150,7 @@
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                       </svg>
-                      <a :href="`tel:${instructor.phone}`" class="text-blue-600 hover:text-blue-800">
+                      <a :href="`tel:${instructor.phone}`" class="hover:opacity-80" :style="{ color: primaryColor }">
                         {{ instructor.phone }}
                       </a>
                     </div>
@@ -1236,8 +1250,11 @@
 
         <!-- Header -->
         <div class="flex items-center justify-center mb-6">
-          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div
+            class="w-16 h-16 rounded-full flex items-center justify-center"
+            :style="{ background: `${primaryColor}20` }"
+          >
+            <svg class="w-8 h-8" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h10m4 0a1 1 0 11-2 0 1 1 0 012 0zM7 15a1 1 0 11-2 0 1 1 0 012 0z" />
             </svg>
           </div>
@@ -1260,12 +1277,13 @@
             Später
           </button>
           
-          <!-- Jetzt Bezahlen Button -->
+          <!-- Jetzt Bezahlen Button — nur sichtbar wenn Online-Zahlung aktiviert -->
           <button
             v-if="walleeEnabled"
             @click="handlePayNow"
             :disabled="isProcessingPayment"
-            class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            class="flex-1 px-4 py-3 text-white font-semibold rounded-lg disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 hover:opacity-90"
+            :style="{ background: primaryColor }"
           >
             <svg v-if="isProcessingPayment" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -1273,9 +1291,6 @@
             <span v-if="isProcessingPayment">Lädt...</span>
             <span v-else>Jetzt</span>
           </button>
-          <p v-else class="flex-1 text-center text-xs text-gray-400 py-3">
-            Online-Zahlung aktuell nicht verfügbar
-          </p>
         </div>
       </div>
     </div>
@@ -1287,6 +1302,7 @@
 
 import { logger } from '~/utils/logger'
 import DOMPurify from 'isomorphic-dompurify'
+import { useStatusBar } from '~/composables/useStatusBar'
 
 // In CustomerDashboard.vue - ganz oben im script setup:
 logger.debug('🔍 CustomerDashboard Script loaded')
@@ -1313,6 +1329,11 @@ import { useCalendarSync } from '~/composables/useCalendarSync'
 const authStore = useAuthStore()
 const { user: currentUser, userRole, isClient } = storeToRefs(authStore)
 const { loadTenantBrandingById, primaryColor, secondaryColor, accentColor, currentTenantBranding } = useTenantBranding()
+
+useStatusBar({
+  backgroundColor: () => primaryColor.value,
+  style: 'light'
+})
 const { currentTenant, loadTenant, setTenant } = useTenant()
 
 // ===== DASHBOARD CACHE =====
@@ -1439,6 +1460,31 @@ async function loadShopFeatureEnabled() {
     shopEnabled.value = false
   } finally {
     shopGateResolved.value = true
+  }
+}
+
+/** Kurse-Karte: tenant_settings features.courses_enabled (wie Admin „Kursbuchung“) */
+const coursesEnabled = ref(
+  import.meta.client ? localStorage.getItem('customer_courses_enabled') === 'true' : false
+)
+/** Nach Feature-Check: Kurse-Karte ausblenden wenn Kursbuchung aus */
+const coursesGateResolved = ref(false)
+
+async function loadCoursesFeatureEnabled() {
+  try {
+    const tenantId = userData.value?.tenant_id
+    if (!tenantId) {
+      coursesEnabled.value = false
+      return
+    }
+    const res = await checkFeatureFlag(tenantId, 'courses_enabled')
+    coursesEnabled.value = !!res?.enabled
+    if (import.meta.client) localStorage.setItem('customer_courses_enabled', String(coursesEnabled.value))
+  } catch (e) {
+    logger.warn('⚠️ loadCoursesFeatureEnabled failed:', e)
+    coursesEnabled.value = false
+  } finally {
+    coursesGateResolved.value = true
   }
 }
 
@@ -2960,7 +3006,7 @@ onMounted(async () => {
     }
     
     // Feature-Flags parallel (keine Verzögerung der Affiliate-Karte hinter Shop-Request)
-    await Promise.all([loadShopFeatureEnabled(), loadAffiliateStats()])
+    await Promise.all([loadShopFeatureEnabled(), loadCoursesFeatureEnabled(), loadAffiliateStats()])
     
     // Show payment status toast
     if (paymentSuccess) {
@@ -3158,5 +3204,9 @@ const handlePayLater = async () => {
 .slide-down-enter-to,
 .slide-down-leave-from {
   max-height: 200px;
+}
+
+.tenant-hover-border:hover {
+  border-color: var(--color-primary, #1E40AF);
 }
 </style>

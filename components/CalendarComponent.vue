@@ -4,6 +4,8 @@ import { ref, onMounted, onUnmounted, watch, nextTick, onErrorCaptured, computed
 import { logger } from '~/utils/logger'
 import { usePrimaryColor } from '~/composables/usePrimaryColor'
 const { primaryBg, primaryText, primaryBgLight } = usePrimaryColor()
+import { useTenantBranding } from '~/composables/useTenantBranding'
+const { primaryColor } = useTenantBranding()
 import FullCalendar from '@fullcalendar/vue3'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -1635,8 +1637,8 @@ showConfirmDialog({
     <strong>Neue Zeit:</strong> ${newStartTime} - ${newEndTime}<br>
     <strong>Fahrschüler:</strong> ${studentName}<br><br>
     
-    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-      <div class="text-sm text-blue-800">
+    <div class="rounded-lg p-3 border" style="background:${primaryColor.value}15;border-color:${primaryColor.value}33;">
+      <div class="text-sm" style="color:${primaryColor.value};">
         📱 Der Fahrschüler wird per E-Mail über die Terminverschiebung informiert.
       </div>
     </div>
@@ -1714,14 +1716,14 @@ showConfirmDialog({
     <strong>Neue Dauer:</strong> ${durationMinutes} Minuten<br>
     <strong>Fahrschüler:</strong> ${resizeInfo.event.extendedProps?.student || 'Unbekannt'}<br><br>
     
-    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+    <div class="rounded-lg p-3 border" style="background:${primaryColor.value}15;border-color:${primaryColor.value}33;">
       <div class="flex items-center gap-2 mb-2">
         <input type="checkbox" id="sendSmsResize" checked class="rounded border-gray-300">
-        <label for="sendSmsResize" class="font-medium text-blue-800">
+        <label for="sendSmsResize" class="font-medium" style="color:${primaryColor.value};">
           📱 SMS über Änderung senden
         </label>
       </div>
-      <div class="text-xs text-blue-600">
+      <div class="text-xs" style="color:${primaryColor.value};">
         Der Fahrschüler wird über die Terminänderung informiert.
       </div>
     </div>
@@ -3140,7 +3142,7 @@ defineExpose({
   font-weight: 500 !important;
   transition: all 0.2s ease !important;
   display: block !important;
-  background-color: #62b22f !important; /* Fallback-Farbe */
+  background-color: var(--color-primary, #111827) !important; /* Tenant-Primärfarbe als Fallback */
   overflow: hidden;
 }
 
@@ -3353,14 +3355,14 @@ defineExpose({
 }
 
 .fc-button-primary {
-  background-color: var(--color-primary, #62b22f) !important;
-  border-color: var(--color-primary, #62b22f) !important;
+  background-color: var(--color-primary, #111827) !important;
+  border-color: var(--color-primary, #111827) !important;
   color: white !important;
 }
 
 .fc-button-primary:hover {
-  background-color: color-mix(in srgb, var(--color-primary, #62b22f) 85%, black) !important;
-  border-color: color-mix(in srgb, var(--color-primary, #62b22f) 85%, black) !important;
+  background-color: color-mix(in srgb, var(--color-primary, #111827) 85%, black) !important;
+  border-color: color-mix(in srgb, var(--color-primary, #111827) 85%, black) !important;
 }
 
 .fc-button:disabled {
@@ -3392,7 +3394,7 @@ defineExpose({
 
 /* === SELECTION === */
 .fc-highlight {
-  background-color: color-mix(in srgb, var(--color-primary, #62b22f) 20%, transparent) !important;
+  background-color: color-mix(in srgb, var(--color-primary, #111827) 20%, transparent) !important;
   border-radius: 4px;
 }
 

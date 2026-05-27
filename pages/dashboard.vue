@@ -15,6 +15,9 @@ import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
 import { useFeatureFlags } from '@/utils/useFeatureFlags'
 import { useAuthStore } from '~/stores/auth'
 import LoadingLogo from '~/components/LoadingLogo.vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor } = useTenantBranding()
 
 // ✅ Protect this page - require authentication
 definePageMeta({
@@ -448,7 +451,7 @@ onUnmounted(() => {
   </div>
 
   <!-- Success State - Dashboard -->
-  <div v-else-if="currentUser" class="h-[100svh] flex flex-col overflow-hidden">
+  <div v-else-if="currentUser" class="h-[100svh] flex flex-col overflow-clip">
     <!-- Temporär entfernt: Reload Button oben rechts -->
     <!--
     <button
@@ -463,7 +466,7 @@ onUnmounted(() => {
     -->
 
     <!-- NEU: Status Update Indicator -->
-    <div v-if="isUpdatingStatus" class="fixed top-4 right-20 bg-blue-500 text-white px-3 py-2 rounded-lg shadow-lg z-50">
+    <div v-if="isUpdatingStatus" class="fixed top-4 right-20 text-white px-3 py-2 rounded-lg shadow-lg z-50" :style="{ background: primaryColor }">
       🔄 Updating appointment status...
     </div>
 
@@ -473,7 +476,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 overflow-hidden bg-white" style="padding-top: env(safe-area-inset-top, 0px)">
+    <div class="flex-1 overflow-clip bg-white pt-safe">
       
       <!-- Temporär entfernt: Admin Staff Switcher -->
       <!--

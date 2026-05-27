@@ -29,17 +29,19 @@
           <button 
             @click="goBack"
             :class="[
-              'text-2xl transition-colors duration-200',
+              'p-2 rounded-lg transition-colors',
               isNavigating 
                 ? 'text-gray-400 cursor-not-allowed' 
-                : 'text-gray-600 hover:text-gray-800 cursor-pointer'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
             ]"
             :disabled="isNavigating"
           >
-            {{ isNavigating ? '⟳' : '←' }}
+            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
           <h1 class="text-xl sm:text-2xl font-bold text-gray-900">
-            {{ isNavigating ? 'Lade Kalender...' : 'Schülerliste' }}
+            {{ isNavigating ? 'Lade Kalender...' : `${t.clientsPlural}-Liste` }}
           </h1>
         </div>
 
@@ -47,7 +49,8 @@
         <button 
           v-if="currentUser.role !== 'client'"
           @click="addNewStudent"
-          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+          class="text-white px-4 py-2 rounded-lg transition-colors hover:opacity-90"
+          :style="{ background: primaryColor }"
         >
           + Neu
         </button>
@@ -60,8 +63,8 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Schüler suchen (Name oder E-Mail)..."
-            class="w-full pl-4 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            :placeholder="`${t.clientsPlural} suchen (Name oder E-Mail)...`"
+            class="tenant-focus w-full pl-4 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
           >
           <div class="absolute left-3 top-2.5 text-gray-400">
           </div>
@@ -81,7 +84,7 @@
                 class="sr-only peer"
                 @change="() => loadStudents(true)"
               >
-              <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div class="tenant-toggle relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
             </label>
           </div>
 
@@ -92,7 +95,7 @@
             </span>
             <label class="relative inline-flex items-center cursor-pointer">
               <input v-model="showAllStudents" type="checkbox" class="sr-only peer" @change="() => loadStudents(true)">
-              <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div class="tenant-toggle relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
             </label>
           </div>
 
@@ -140,7 +143,7 @@
     </div>
 
     <!-- Content -->
-    <div class="flex-1 overflow-hidden">
+    <div class="flex-1 overflow-y-auto">
       <!-- Error Loading Students -->
       <div v-if="error" class="h-full flex items-center justify-center">
         <div class="text-center max-w-md p-6 bg-red-50 rounded-lg">
@@ -160,18 +163,18 @@
         <div class="text-center px-4">
           <div class="text-6xl mb-4">👥</div>
           <h3 class="text-lg font-semibold text-gray-900 mb-2">
-            {{ searchQuery ? 'Keine Schüler gefunden' : 'Noch keine Schüler' }}
+            {{ searchQuery ? `Keine ${t.clientsPlural} gefunden` : `Noch keine ${t.clientsPlural}` }}
           </h3>
         </div>
       </div>
 
       <!-- Mobile-Optimierte Students List -->
-      <div v-else class="h-full overflow-y-auto relative">
+      <div v-else class="relative">
         <!-- Loading Overlay für Schülerliste -->
         <div v-if="isLoading" class="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10">
           <div class="text-center">
             <LoadingLogo size="xl"  />
-            <p class="text-gray-600 mt-4">Lade Schüler...</p>
+            <p class="text-gray-600 mt-4">Lade {{ t.clientsPlural }}...</p>
           </div>
         </div>
         
@@ -184,7 +187,7 @@
               @click="selectStudent(student)"
               :class="[
                 'bg-white rounded-lg shadow-sm border p-3 transition-all',
-                'cursor-pointer hover:shadow-md active:scale-98 hover:border-green-300'
+                'cursor-pointer hover:shadow-md active:scale-98 hover:tenant-border'
               ]"
             >
 
@@ -216,7 +219,7 @@
                   <div class="space-y-0.5">
                     <p v-if="student.phone" class="text-sm text-gray-600 flex items-center gap-1">
                       <span class="text-xs">📱</span>
-                      <a :href="`tel:${student.phone}`" class="text-blue-600 hover:text-blue-800 hover:underline"  @click.stop>
+                      <a :href="`tel:${student.phone}`" class="hover:underline" :style="{ color: primaryColor }" @click.stop>
                         {{ formatPhone(student.phone) }}
                       </a>                    
                     </p>
@@ -240,7 +243,8 @@
                   <!-- Quick Action Button (für alle) -->
                   <button 
                     @click.stop="quickAction(student)"
-                    class="text-xs text-green-600 hover:text-green-800 font-medium py-1 px-2 rounded hover:bg-green-50 transition-colors"
+                    class="text-xs font-medium py-1 px-2 rounded transition-colors hover:opacity-80"
+                    :style="{ color: primaryColor, background: `${primaryColor}15` }"
                   >
                     Details →
                   </button>
@@ -286,7 +290,7 @@
               {{ pendingStudent?.first_name }} {{ pendingStudent?.last_name }}
             </h3>
             <p class="text-sm text-gray-600 mb-4">
-              Dieser Schüler hat sein Konto noch nicht aktiviert.
+              Dieser {{ t.client }} hat sein Konto noch nicht aktiviert.
             </p>
             
             <div class="space-y-3">
@@ -294,7 +298,8 @@
               <button
                 @click="resendOnboardingSms"
                 :disabled="isResendingSms"
-                class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                class="w-full flex items-center justify-center gap-2 px-4 py-3 text-white rounded-lg transition-colors hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                :style="{ background: isResendingSms ? undefined : primaryColor }"
               >
                 <span v-if="!isResendingSms">📱 SMS erneut senden</span>
                 <span v-else class="flex items-center gap-2">
@@ -395,6 +400,11 @@ import { useUIStore } from '~/stores/ui'
 import EnhancedStudentModal from '~/components/EnhancedStudentModal.vue'
 import AddStudentModal from '~/components/AddStudentModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
+import { useTerminology } from '~/composables/useTerminology'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { t } = useTerminology()
+const { primaryColor } = useTenantBranding()
 
 
 // Supabase client
@@ -1113,6 +1123,21 @@ const showErrorToast = (title: string, message: string = '') => {
 </script>
 
 <style scoped>
+/* Tenant-aware focus / toggle / hover-border helpers */
+.tenant-focus:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+  border-color: var(--color-primary, #1E40AF);
+}
+.tenant-toggle {
+  --tw-ring-color: color-mix(in srgb, var(--color-primary, #1E40AF) 30%, transparent);
+}
+.peer:checked ~ .tenant-toggle {
+  background-color: var(--color-primary, #1E40AF);
+}
+.hover\:tenant-border:hover {
+  border-color: var(--color-primary, #1E40AF);
+}
+
 /* Mobile optimizations */
 .active\:scale-98:active {
   transform: scale(0.98);

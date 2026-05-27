@@ -55,9 +55,12 @@
         </div>
 
         <!-- Info Text -->
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p class="text-xs text-blue-800 font-medium mb-2">Hinweise:</p>
-          <ul class="text-xs text-blue-700 space-y-1 list-disc list-inside">
+        <div
+          class="rounded-lg p-4 border"
+          :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }"
+        >
+          <p class="text-xs font-medium mb-2" :style="{ color: primaryColor }">Hinweise:</p>
+          <ul class="text-xs space-y-1 list-disc list-inside" :style="{ color: primaryColor }">
             <li>Arztzeugnis oder Unfallbericht erforderlich</li>
             <li>Dokument muss Ihr Name und Datum enthalten</li>
             <li>Nach Upload wird das Dokument überprüft</li>
@@ -88,6 +91,9 @@
 <script setup lang="ts">
 
 import { ref } from 'vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor } = useTenantBranding()
 
 interface Props {
   isVisible: boolean

@@ -2,11 +2,14 @@
   <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
       <!-- Header -->
-      <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-xl flex items-center justify-between">
+      <div
+        class="text-white p-6 rounded-t-xl flex items-center justify-between"
+        :style="{ background: `linear-gradient(to right, ${primaryColor}, ${accentColor || primaryColor})` }"
+      >
         <h2 class="text-xl font-bold">{{ reglementTitle }}</h2>
         <button
           @click="closeModal"
-          class="p-2 hover:bg-blue-700 rounded-lg transition-colors"
+          class="p-2 rounded-lg transition-colors hover:bg-white/10"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -17,7 +20,10 @@
       <!-- Content -->
       <div class="flex-1 overflow-y-auto p-8">
         <div v-if="isLoading" class="text-center py-12">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div
+            class="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
+            :style="{ borderBottomColor: primaryColor }"
+          ></div>
           <p class="text-gray-600">Lade Reglement...</p>
         </div>
 
@@ -50,7 +56,8 @@
       <div class="bg-gray-50 px-8 py-4 rounded-b-xl border-t flex justify-end">
         <button
           @click="closeModal"
-          class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          class="px-6 py-2 text-white rounded-lg transition-colors font-medium hover:opacity-90"
+          :style="{ background: primaryColor }"
         >
           Schließen
         </button>
@@ -63,6 +70,9 @@
 import { ref, computed, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import DOMPurify from 'isomorphic-dompurify'
+import { useTenantBranding } from '~/composables/useTenantBranding'
+
+const { primaryColor, accentColor } = useTenantBranding()
 
 interface Props {
   isOpen: boolean
@@ -235,6 +245,11 @@ watch(() => props.isOpen, (newValue) => {
 }
 
 .prose a {
-  @apply text-blue-600 hover:text-blue-700 underline;
+  color: var(--color-primary, #1E40AF);
+  text-decoration: underline;
+}
+
+.prose a:hover {
+  opacity: 0.85;
 }
 </style>

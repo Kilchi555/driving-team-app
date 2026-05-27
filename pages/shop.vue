@@ -1,8 +1,8 @@
 <!-- pages/shop.vue -->
 <template>
   <!-- Dynamic branded page background -->
-  <div class="min-h-screen" :style="isShopVisible ? pageBackground : 'background: white'">
-    <div class="max-w-xl mx-auto w-full px-3 py-6 pb-12">
+  <div class="h-[100svh] overflow-y-auto" :style="isShopVisible ? pageBackground : 'background: white'">
+    <div class="max-w-xl mx-auto w-full px-3 py-6 pb-12 pt-safe">
 
       <!-- ── LOADING: white screen with centered logo ── -->
       <Transition
@@ -17,6 +17,19 @@
           <LoadingLogo size="2xl" :tenant-id="tenantId || undefined" :tenant-slug="tenantParam || undefined" />
         </div>
       </Transition>
+
+      <!-- Schliessen / Zurück -->
+      <div v-if="isShopVisible" class="mb-3">
+        <button
+          @click="$router.back()"
+          class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 bg-white/80 backdrop-blur px-3 py-2 rounded-lg shadow-sm transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+          Zurück
+        </button>
+      </div>
 
       <!-- ── CARD ── -->
       <div v-if="isShopVisible" class="bg-white rounded-2xl shadow-2xl overflow-hidden shop-fade-in">
