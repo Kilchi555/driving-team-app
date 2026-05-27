@@ -115,9 +115,12 @@ async function ensureTenant() {
       contact_email: 'support@simy.ch',
       contact_phone: '+41 44 000 00 00',
       address: 'Demo Strasse 1, 8000 Zürich',
-      primary_color: '#7C3AED',
-      secondary_color: '#10B981',
-      accent_color: '#EC4899',
+      // Cohesive monochromatic Simy palette (violet → purple → pink).
+      // Avoids the clash with emerald-green you'd otherwise get when
+      // mixing primary + a typical "secondary brand" green.
+      primary_color: '#7C3AED',   // violet-600 — buttons, logo, primary CTA
+      secondary_color: '#A855F7', // purple-500 — sibling tint, calendar cards
+      accent_color: '#EC4899',    // pink-500   — accent badges, completed lessons
       language: 'de',
       currency: 'CHF',
       is_active: true,

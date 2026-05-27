@@ -6,6 +6,8 @@
   "tier": "whitelabel",
   "version": "1.0.0",
   "primaryColor": "#7C3AED",
+  "secondaryColor": "#A855F7",
+  "accentColor": "#EC4899",
   "backgroundColor": "#ffffff",
   "scheme": "simy",
   "ios": {
