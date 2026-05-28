@@ -1,176 +1,8 @@
 <template>
   <div class="min-h-screen bg-white font-sans" :style="brandCssVars">
 
-    <!-- ── Nav (SEO Mega-Menu) ──────────────────────────────────────────────── -->
-    <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
-      <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <NuxtLink to="/" class="flex items-center" aria-label="Simy – Fahrschulsoftware Schweiz">
-          <img :src="logoPreview || '/simy-logo.png'" alt="Simy – Fahrschulsoftware Schweiz"
-            class="h-8 max-w-[140px] object-contain transition-all duration-500"
-            :style="{ filter: logoColorFilter }" />
-        </NuxtLink>
-
-        <!-- Desktop nav with hover-dropdowns -->
-        <div class="hidden min-[900px]:flex items-center gap-1">
-          <!-- Software dropdown -->
-          <div class="relative" @mouseenter="navDropdown = 'software'" @mouseleave="navDropdown = null">
-            <button class="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors rounded-lg"
-              :class="{ 'text-gray-900': navDropdown === 'software' }"
-              @click="navDropdown = navDropdown === 'software' ? null : 'software'">
-              Software
-              <svg class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': navDropdown === 'software' }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-            </button>
-            <Transition enter-active-class="transition-all duration-200 ease-out" enter-from-class="opacity-0 translate-y-1" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition-all duration-150 ease-in" leave-from-class="opacity-100" leave-to-class="opacity-0">
-              <div v-if="navDropdown === 'software'" class="absolute left-0 top-full pt-2 w-[420px]">
-                <div class="bg-white rounded-2xl shadow-xl border p-3 grid grid-cols-1 gap-1" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
-                  <NuxtLink v-for="item in navSoftware" :key="item.to" :to="item.to" class="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group">
-                    <span class="w-9 h-9 rounded-lg flex items-center justify-center text-base flex-shrink-0" :style="{ background: `rgba(var(--brand-rgb), 0.08)` }">{{ item.icon }}</span>
-                    <span class="flex-1 min-w-0">
-                      <span class="block text-sm font-bold text-gray-900 group-hover:text-gray-800">{{ item.title }}</span>
-                      <span class="block text-xs text-gray-500 leading-snug">{{ item.desc }}</span>
-                    </span>
-                  </NuxtLink>
-                </div>
-              </div>
-            </Transition>
-          </div>
-
-          <!-- Wachstum dropdown -->
-          <div class="relative" @mouseenter="navDropdown = 'marketing'" @mouseleave="navDropdown = null">
-            <button class="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors rounded-lg"
-              :class="{ 'text-gray-900': navDropdown === 'marketing' }"
-              @click="navDropdown = navDropdown === 'marketing' ? null : 'marketing'">
-              Wachstum
-              <svg class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': navDropdown === 'marketing' }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-            </button>
-            <Transition enter-active-class="transition-all duration-200 ease-out" enter-from-class="opacity-0 translate-y-1" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition-all duration-150 ease-in" leave-from-class="opacity-100" leave-to-class="opacity-0">
-              <div v-if="navDropdown === 'marketing'" class="absolute left-0 top-full pt-2 w-[380px]">
-                <div class="bg-white rounded-2xl shadow-xl border p-3 grid grid-cols-1 gap-1" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
-                  <NuxtLink v-for="item in navMarketing" :key="item.to" :to="item.to" class="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group">
-                    <span class="w-9 h-9 rounded-lg flex items-center justify-center text-base flex-shrink-0" :style="{ background: `rgba(var(--brand-rgb), 0.08)` }">{{ item.icon }}</span>
-                    <span class="flex-1 min-w-0">
-                      <span class="block text-sm font-bold text-gray-900 group-hover:text-gray-800">{{ item.title }}</span>
-                      <span class="block text-xs text-gray-500 leading-snug">{{ item.desc }}</span>
-                    </span>
-                  </NuxtLink>
-                </div>
-              </div>
-            </Transition>
-          </div>
-
-          <NuxtLink to="/preise" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors rounded-lg">Preise</NuxtLink>
-          <NuxtLink to="/kunden" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors rounded-lg">Kunden</NuxtLink>
-          <NuxtLink to="/demo" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors rounded-lg">Demo</NuxtLink>
-
-          <span class="w-px h-5 bg-gray-200 mx-2"></span>
-
-          <a href="/login" class="px-3 py-2 text-sm font-medium transition-colors rounded-lg" style="color: var(--brand-primary);">Einloggen</a>
-          <a :href="registerUrl" @click="saveLogoToSession"
-            class="text-sm font-bold px-4 py-2 rounded-xl text-white transition-all hover:opacity-90 whitespace-nowrap"
-            style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));">
-            Kostenlos starten →
-          </a>
-        </div>
-
-        <!-- Mobile: login + hamburger -->
-        <div class="flex min-[900px]:hidden items-center gap-3">
-          <a :href="registerUrl" @click="saveLogoToSession"
-            class="text-xs font-bold px-3 py-2 rounded-xl text-white transition-all hover:opacity-90"
-            style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));">
-            Starten →
-          </a>
-          <button @click="mobileMenuOpen = !mobileMenuOpen"
-            class="w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-xl transition-colors"
-            :style="{ background: `rgba(var(--brand-rgb), 0.08)` }"
-            :aria-label="mobileMenuOpen ? 'Menü schliessen' : 'Menü öffnen'">
-            <span class="block w-5 h-0.5 rounded-full transition-all duration-300"
-              :style="{ background: primaryColor, transform: mobileMenuOpen ? 'rotate(45deg) translate(3px, 3px)' : 'none' }"></span>
-            <span class="block w-5 h-0.5 rounded-full transition-all duration-300"
-              :style="{ background: primaryColor, opacity: mobileMenuOpen ? '0' : '1' }"></span>
-            <span class="block w-5 h-0.5 rounded-full transition-all duration-300"
-              :style="{ background: primaryColor, transform: mobileMenuOpen ? 'rotate(-45deg) translate(3px, -3px)' : 'none' }"></span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Mobile dropdown -->
-      <Transition
-        enter-active-class="transition-all duration-300 ease-out"
-        enter-from-class="opacity-0 -translate-y-2"
-        enter-to-class="opacity-100 translate-y-0"
-        leave-active-class="transition-all duration-200 ease-in"
-        leave-from-class="opacity-100 translate-y-0"
-        leave-to-class="opacity-0 -translate-y-2"
-      >
-        <div v-if="mobileMenuOpen" class="min-[900px]:hidden border-t bg-white/98 max-h-[80vh] overflow-y-auto"
-          :style="{ borderColor: `rgba(var(--brand-rgb), 0.1)` }">
-          <div class="px-6 py-4 space-y-4">
-            <!-- Software group -->
-            <div>
-              <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 px-3">Software</p>
-              <NuxtLink v-for="item in navSoftware" :key="item.to" :to="item.to" @click="mobileMenuOpen = false"
-                class="flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
-                <span class="w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0" :style="{ background: `rgba(var(--brand-rgb), 0.1)` }">{{ item.icon }}</span>
-                <span class="flex-1 min-w-0">
-                  <span class="block text-sm font-bold text-gray-900">{{ item.title }}</span>
-                  <span class="block text-xs text-gray-500 leading-snug">{{ item.desc }}</span>
-                </span>
-              </NuxtLink>
-            </div>
-
-            <!-- Marketing group -->
-            <div>
-              <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 px-3">Wachstum</p>
-              <NuxtLink v-for="item in navMarketing" :key="item.to" :to="item.to" @click="mobileMenuOpen = false"
-                class="flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
-                <span class="w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0" :style="{ background: `rgba(var(--brand-rgb), 0.1)` }">{{ item.icon }}</span>
-                <span class="flex-1 min-w-0">
-                  <span class="block text-sm font-bold text-gray-900">{{ item.title }}</span>
-                  <span class="block text-xs text-gray-500 leading-snug">{{ item.desc }}</span>
-                </span>
-              </NuxtLink>
-            </div>
-
-            <!-- Mehr -->
-            <div>
-              <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2 px-3">Mehr</p>
-              <div class="grid grid-cols-2 gap-1">
-                <NuxtLink to="/preise" @click="mobileMenuOpen = false" class="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                  <span class="w-6 h-6 rounded-lg flex items-center justify-center text-xs" :style="{ background: `rgba(var(--brand-rgb), 0.1)` }">💰</span>
-                  Preise
-                </NuxtLink>
-                <NuxtLink to="/kunden" @click="mobileMenuOpen = false" class="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                  <span class="w-6 h-6 rounded-lg flex items-center justify-center text-xs" :style="{ background: `rgba(var(--brand-rgb), 0.1)` }">⭐</span>
-                  Kunden
-                </NuxtLink>
-                <NuxtLink to="/demo" @click="mobileMenuOpen = false" class="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                  <span class="w-6 h-6 rounded-lg flex items-center justify-center text-xs" :style="{ background: `rgba(var(--brand-rgb), 0.1)` }">▶</span>
-                  Demo
-                </NuxtLink>
-                <NuxtLink to="/ueber-uns" @click="mobileMenuOpen = false" class="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                  <span class="w-6 h-6 rounded-lg flex items-center justify-center text-xs" :style="{ background: `rgba(var(--brand-rgb), 0.1)` }">👋</span>
-                  Über uns
-                </NuxtLink>
-                <a href="#branding-preview" @click="mobileMenuOpen = false" class="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                  <span class="w-6 h-6 rounded-lg flex items-center justify-center text-xs" :style="{ background: `rgba(var(--brand-rgb), 0.1)` }">🎨</span>
-                  Farben testen
-                </a>
-                <a href="/login" @click="mobileMenuOpen = false" class="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:bg-gray-50" :style="{ color: primaryColor }">
-                  <span class="w-6 h-6 rounded-lg flex items-center justify-center text-xs" :style="{ background: `rgba(var(--brand-rgb), 0.1)` }">→</span>
-                  Einloggen
-                </a>
-              </div>
-            </div>
-
-            <a :href="registerUrl" @click="saveLogoToSession; mobileMenuOpen = false"
-              class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90"
-              style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));">
-              60 Tage kostenlos starten →
-            </a>
-          </div>
-        </div>
-      </Transition>
-    </nav>
+    <!-- ── Nav ──────────────────────────────────────────────────────────────── -->
+    <SimyNav />
 
     <!-- ── Hero ─────────────────────────────────────────────────────────────── -->
     <section class="relative overflow-hidden pt-12 pb-20 px-6">
@@ -1738,7 +1570,7 @@
               <li><NuxtLink to="/partner" class="text-gray-500 hover:text-gray-900 transition-colors">Partner</NuxtLink></li>
               <li><NuxtLink to="/preise" class="text-gray-500 hover:text-gray-900 transition-colors">Preise</NuxtLink></li>
               <li><NuxtLink to="/demo" class="text-gray-500 hover:text-gray-900 transition-colors">Demo</NuxtLink></li>
-              <li><a href="mailto:info@simy.ch" class="text-gray-500 hover:text-gray-900 transition-colors">Kontakt</a></li>
+              <li><NuxtLink to="/kontakt" class="text-gray-500 hover:text-gray-900 transition-colors">Kontakt</NuxtLink></li>
             </ul>
           </div>
 
@@ -1751,7 +1583,7 @@
                   Kostenlos starten
                 </a>
               </li>
-              <li><a href="/login" class="text-gray-500 hover:text-gray-900 transition-colors">Einloggen</a></li>
+              <li><a href="https://app.simy.ch/login" class="text-gray-500 hover:text-gray-900 transition-colors">Einloggen</a></li>
               <li><a href="#branding-preview" class="text-gray-500 hover:text-gray-900 transition-colors">Farben testen</a></li>
               <li><a href="#email-demo" class="text-gray-500 hover:text-gray-900 transition-colors">E-Mail-Demo</a></li>
               <li><a href="#preise" class="text-gray-500 hover:text-gray-900 transition-colors">Plan wählen</a></li>
@@ -2147,9 +1979,6 @@ const primaryColor = ref(DEFAULT_PRIMARY)
 const secondaryColor = ref(DEFAULT_SECONDARY)
 const accentColor = ref(DEFAULT_ACCENT)
 const showColorPicker = ref(false)
-const mobileMenuOpen = ref(false)
-const navDropdown = ref<null | 'software' | 'marketing'>(null)
-
 const navSoftware = [
   { to: '/fahrschule/software', icon: '💻', title: 'Fahrschulsoftware', desc: 'Die komplette All-in-One-Lösung' },
   { to: '/fahrschule/buchungssystem', icon: '📅', title: 'Online-Buchungssystem', desc: 'Schüler buchen Fahrstunden selbst' },
