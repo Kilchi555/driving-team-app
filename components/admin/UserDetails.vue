@@ -56,6 +56,24 @@
               <span class="sm:hidden ml-2">{{ userDetails?.is_active ? 'Deaktivieren' : 'Aktivieren' }}</span>
             </button>
 
+            <!-- Password Reset Button -->
+            <button
+              v-if="userDetails && canManageUser(userDetails as any) && userDetails.email && !userDetails.deleted_at"
+              @click="sendPasswordReset"
+              :disabled="isResettingPassword"
+              class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-blue-300 rounded-md shadow-sm text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg v-if="isResettingPassword" class="w-4 h-4 sm:mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              <svg v-else class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+              </svg>
+              <span class="hidden sm:inline">{{ isResettingPassword ? 'Wird gesendet...' : 'Passwort zurücksetzen' }}</span>
+              <span class="sm:hidden ml-2">{{ isResettingPassword ? '...' : 'PW Reset' }}</span>
+            </button>
+
             <!-- Soft Delete Button -->
             <button
               v-if="userDetails && canManageUser(userDetails as any) && !userDetails.deleted_at"
@@ -535,6 +553,7 @@ const showDeleteConfirm = ref(false)
 const deleteReason = ref('')
 const isSaving = ref(false)
 const isDeleting = ref(false)
+const isResettingPassword = ref(false)
 const successMessage = ref<string | null>(null)
 const auditLog = ref<any[]>([])
 const availableCategories = ref<any[]>([])
@@ -846,6 +865,25 @@ const closeEditModal = () => {
   // Schließe das Modal ohne Aktion
   showEditModal.value = false
   successMessage.value = null
+}
+
+const sendPasswordReset = async () => {
+  if (!userDetails.value?.id) return
+  if (!confirm(`Passwort-Reset-Email an ${userDetails.value.email} senden?`)) return
+
+  isResettingPassword.value = true
+  try {
+    await $fetch('/api/admin/reset-user-password', {
+      method: 'POST',
+      body: { user_id: userDetails.value.id },
+    })
+    successMessage.value = `✅ Passwort-Reset-Email wurde an ${userDetails.value.email} gesendet.`
+    setTimeout(() => { successMessage.value = null }, 5000)
+  } catch (err: any) {
+    alert(`Fehler: ${err?.data?.statusMessage || err?.message || 'Unbekannter Fehler'}`)
+  } finally {
+    isResettingPassword.value = false
+  }
 }
 
 const toggleUserStatus = async () => {
