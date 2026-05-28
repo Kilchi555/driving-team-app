@@ -48,9 +48,15 @@
           
           <div class="space-y-3 pt-4">
             <NuxtLink
-              :to="getLoginRoute()"
+              :to="getForgotPasswordRoute()"
               class="block text-center text-white font-semibold py-2 px-4 rounded-lg transition-colors hover:opacity-90"
               :style="{ background: primaryColor || '#2563eb' }"
+            >
+              Neuen Link anfordern
+            </NuxtLink>
+            <NuxtLink
+              :to="getLoginRoute()"
+              class="block text-center text-gray-600 font-medium py-2 px-4 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
             >
               Zur Anmeldung
             </NuxtLink>
@@ -438,6 +444,14 @@ const getLoginRoute = () => {
     return `/${tenantSlug}`
   }
   return '/login'
+}
+
+const getForgotPasswordRoute = () => {
+  const tenantSlug = route.query.tenant as string
+  if (tenantSlug) {
+    return `/${tenantSlug}?forgot=1`
+  }
+  return '/login?forgot=1'
 }
 
 onMounted(async () => {
