@@ -14,22 +14,7 @@
           Preise
         </div>
         <h1 class="text-5xl font-black text-gray-900 mb-4 leading-tight">Fahrschulsoftware Preise — transparent &amp; fair</h1>
-        <p class="text-xl text-gray-500 max-w-xl mx-auto mb-3">60 Tage kostenlos testen — keine Kreditkarte, keine Jahresbindung.</p>
-
-        <!-- Billing toggle -->
-        <div class="flex items-center justify-center gap-3 mb-10">
-          <span class="text-sm font-medium" :class="!annual ? 'text-gray-900' : 'text-gray-400'">Monatlich</span>
-          <button @click="annual = !annual"
-            class="relative w-11 h-6 rounded-full transition-colors"
-            :style="annual ? 'background: #6000BD' : 'background: #e5e7eb'">
-            <span class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform"
-              :style="annual ? 'transform: translateX(1.25rem)' : 'transform: translateX(0.125rem)'"></span>
-          </button>
-          <span class="text-sm font-medium" :class="annual ? 'text-gray-900' : 'text-gray-400'">
-            Jährlich
-            <span class="ml-1.5 text-xs font-bold px-2 py-0.5 rounded-full text-white" style="background: #059669">2 Monate gratis</span>
-          </span>
-        </div>
+        <p class="text-xl text-gray-500 max-w-xl mx-auto mb-10">60 Tage kostenlos testen — keine Kreditkarte, keine Jahresbindung.</p>
       </div>
     </section>
 
@@ -48,16 +33,12 @@
             </div>
             <h3 class="font-extrabold text-xl mb-1" :class="plan.highlighted ? 'text-white' : 'text-gray-900'">{{ plan.name }}</h3>
             <p class="text-sm mb-5" :style="plan.highlighted ? 'color: rgba(255,255,255,0.65)' : 'color: #9ca3af'">{{ plan.tagline }}</p>
-            <div class="flex items-baseline gap-1 mb-1">
+            <div class="flex items-baseline gap-1 mb-6">
               <span class="text-4xl font-black" :class="plan.highlighted ? 'text-white' : 'text-gray-900'">
-                CHF {{ annual ? plan.annualPrice : plan.price }}
+                CHF {{ plan.price }}
               </span>
               <span class="text-sm" :style="plan.highlighted ? 'color: rgba(255,255,255,0.6)' : 'color: #9ca3af'">/Monat</span>
             </div>
-            <p v-if="annual" class="text-xs mb-5" :style="plan.highlighted ? 'color: rgba(255,255,255,0.5)' : 'color: #9ca3af'">
-              CHF {{ plan.annualPrice * 12 }} / Jahr — CHF {{ plan.annualSaving }} gespart
-            </p>
-            <p v-else class="text-xs mb-5" :style="plan.highlighted ? 'color: rgba(255,255,255,0.5)' : 'color: #9ca3af'"> &nbsp;</p>
             <ul class="space-y-2.5 mb-8 flex-1">
               <li v-for="f in plan.features" :key="f.text"
                 class="flex items-start gap-2.5 text-sm"
@@ -171,15 +152,15 @@
 import { ref, computed } from 'vue'
 
 useHead({
-  title: 'Preise – simy | Fahrschulsoftware ab CHF 69/Monat',
+  title: 'Preise – simy | Fahrschulsoftware ab CHF 49/Monat',
   meta: [
-    { name: 'description', content: 'simy Preise: Fahrschulsoftware ab CHF 69/Monat. 60 Tage kostenlos testen, kein Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.' },
+    { name: 'description', content: 'simy Preise: Fahrschulsoftware ab CHF 49/Monat. 60 Tage kostenlos testen, kein Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.' },
     { name: 'keywords', content: 'simy preis, fahrschulapp kosten, fahrschulsoftware preis' },
-    { property: 'og:title', content: 'Preise – simy | Fahrschulsoftware ab CHF 69/Monat' },
-    { property: 'og:description', content: 'simy Preise: ab CHF 69/Monat. 60 Tage kostenlos testen, kein Kreditkarte, monatlich kündbar.' },
+    { property: 'og:title', content: 'Preise – simy | Fahrschulsoftware ab CHF 49/Monat' },
+    { property: 'og:description', content: 'simy Preise: ab CHF 49/Monat. 60 Tage kostenlos testen, kein Kreditkarte, monatlich kündbar.' },
     { property: 'og:url', content: 'https://simy.ch/preise' },
-    { name: 'twitter:title', content: 'Preise – simy | Fahrschulsoftware ab CHF 69/Monat' },
-    { name: 'twitter:description', content: 'simy Preise: ab CHF 69/Monat. 60 Tage kostenlos testen.' },
+    { name: 'twitter:title', content: 'Preise – simy | Fahrschulsoftware ab CHF 49/Monat' },
+    { name: 'twitter:description', content: 'simy Preise: ab CHF 49/Monat. 60 Tage kostenlos testen.' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/preise' }],
   script: [{
@@ -189,7 +170,7 @@ useHead({
       '@type': 'FAQPage',
       mainEntity: [
         { '@type': 'Question', name: 'Brauche ich eine Kreditkarte für den Trial?', acceptedAnswer: { '@type': 'Answer', text: 'Nein. Die 60 Tage sind vollständig kostenlos und ohne Kreditkarte. Du wirst erst danach zur Kasse gebeten.' } },
-        { '@type': 'Question', name: 'Was kostet simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: 'simy bietet Pläne ab CHF 69/Monat. Bei jährlicher Zahlung sparst du 2 Monate.' } },
+        { '@type': 'Question', name: 'Was kostet simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: 'simy bietet Pläne ab CHF 49/Monat. Monatlich kündbar, keine Jahresbindung.' } },
         { '@type': 'Question', name: 'Kann ich jederzeit kündigen?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Monatlich kündbar, keine Jahresbindung. Kündigung mit 30 Tagen Frist auf Ende des Monats.' } },
         { '@type': 'Question', name: 'Wie funktioniert die Abrechnung?', acceptedAnswer: { '@type': 'Answer', text: 'Monatlich per TWINT, Kreditkarte oder Banküberweisung. Bei Jahresabo einmal jährlich.' } },
       ],
@@ -197,29 +178,21 @@ useHead({
   }],
 })
 
-const annual = ref(false)
 const openFaq = ref<number | null>(null)
 
 const { data: stripePrices } = await useFetch('/api/prices', { default: () => ({ starter: null, professional: null, enterprise: null }) })
 
-const FALLBACK = { starter: { monthly: 69, annual: 57 }, professional: { monthly: 129, annual: 107 }, enterprise: { monthly: 249, annual: 207 } }
+const FALLBACK = { starter: { monthly: 49 }, professional: { monthly: 149 }, enterprise: { monthly: 249 } }
 
 function monthlyPrice(key: 'starter' | 'professional' | 'enterprise'): number {
   const stripe = stripePrices.value?.[key]
   return stripe ? parseInt(stripe.formatted) : FALLBACK[key].monthly
 }
-function annualPrice(key: 'starter' | 'professional' | 'enterprise'): number {
-  const monthly = monthlyPrice(key)
-  return Math.round(monthly * 10 / 12)
-}
-function annualSaving(key: 'starter' | 'professional' | 'enterprise'): number {
-  return Math.round((monthlyPrice(key) - annualPrice(key)) * 12)
-}
 
 const plans = computed(() => [
   {
     name: 'Starter', tagline: 'Für den Einzelfahrlehrer', key: 'starter' as const,
-    price: monthlyPrice('starter'), annualPrice: annualPrice('starter'), annualSaving: annualSaving('starter'),
+    price: monthlyPrice('starter'),
     highlighted: false,
     features: [
       { text: '1 Fahrlehrer' },
@@ -233,7 +206,7 @@ const plans = computed(() => [
   },
   {
     name: 'Professional', tagline: 'Für wachsende Fahrschulen', key: 'professional' as const,
-    price: monthlyPrice('professional'), annualPrice: annualPrice('professional'), annualSaving: annualSaving('professional'),
+    price: monthlyPrice('professional'),
     highlighted: true,
     features: [
       { text: 'Bis 5 Fahrlehrer' },
@@ -247,7 +220,7 @@ const plans = computed(() => [
   },
   {
     name: 'Enterprise', tagline: 'Für grosse Fahrschulen & Ketten', key: 'enterprise' as const,
-    price: monthlyPrice('enterprise'), annualPrice: annualPrice('enterprise'), annualSaving: annualSaving('enterprise'),
+    price: monthlyPrice('enterprise'),
     highlighted: false,
     features: [
       { text: 'Bis 10 Fahrlehrer' },
