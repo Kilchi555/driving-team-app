@@ -95,7 +95,10 @@ CLIENT=simy node scripts/gen-cap-config.mjs
 # 6) Sync Capacitor iOS project (copy web + plugin files)
 # ───────────────────────────────────────────────────────
 echo "🔁 Syncing Capacitor iOS project…"
-npx cap sync ios --no-build
+# NOTE: --no-build was removed in Capacitor 8 (cap sync no longer builds the
+# web app on its own; the build runs as part of `cap copy` if `webDir` points
+# at a dist folder). Passing the flag now makes cap exit 1.
+npx cap sync ios
 
 echo "=================================================="
 echo "🎉 Pre-build complete."
