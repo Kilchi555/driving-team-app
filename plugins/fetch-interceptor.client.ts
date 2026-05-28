@@ -77,20 +77,44 @@ export default defineNuxtPlugin((nuxtApp) => {
       // DON'T redirect for booking flow - let component show modal
       if (status === 401 && !isRedirecting && !isBookingFlow && !onAffiliateDashboard) {
         // Before triggering a logout, check if the auth store still considers the user logged in.
-        // If yes, this 401 is a permission/endpoint error — not an expired session.
-        // Logging out in that case would cause spurious logouts (e.g. EmailDomainSettings mounting
-        // while the token cookie hasn't propagated yet, or an endpoint without the right permissions).
+        // If yes, the HTTP-only cookies may simply be out of sync with the client-side Supabase
+        // session (e.g. expired cookie while localStorage session is still valid).
+        // Try to re-sync the cookies first; if that works, reload so all requests use the fresh
+        // cookies. If the sync itself fails (truly expired session) fall through to logout.
         try {
           const authStore = useAuthStore()
           if (authStore.isLoggedIn) {
-            console.debug('ℹ️ 401 received but authStore shows active session — treating as permission error, not session expiry')
-            const d = (response as any)?._data
-            throw createError({ statusCode: status, statusMessage: d?.statusMessage || response?.statusText || 'Request failed', data: d?.data ?? d ?? undefined })
+            let synced = false
+            try {
+              const { getSupabase } = await import('~/utils/supabase')
+              const supabase = getSupabase()
+              const { data: sessionData } = await supabase.auth.getSession()
+              if (sessionData?.session) {
+                await $fetch('/api/auth/sync-session', {
+                  method: 'POST',
+                  body: {
+                    access_token: sessionData.session.access_token,
+                    refresh_token: sessionData.session.refresh_token
+                  }
+                })
+                synced = true
+                console.debug('✅ Cookie sync succeeded after 401 — reloading page')
+                window.location.reload()
+                return
+              }
+            } catch (syncErr: any) {
+              console.debug('⚠️ Cookie sync failed after 401:', syncErr?.message)
+            }
+
+            if (!synced) {
+              // Sync failed or no Supabase session — the session is truly gone.
+              // Fall through to the normal logout + redirect logic below.
+              console.debug('ℹ️ 401 with active authStore but sync failed — proceeding to logout')
+            }
           }
         } catch (e: any) {
-          // If it's the createError we just threw, re-throw it
+          // If it's a createError we re-throw it, otherwise fall through to logout
           if (e?.statusCode === 401) throw e
-          // Otherwise fall through to logout logic
         }
 
         isRedirecting = true

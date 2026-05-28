@@ -45,6 +45,27 @@ export default defineNuxtPlugin(async (nuxtApp) => {
             logger.debug('⚠️ Could not fetch profile (cookie/Bearer):', err)
           }
         }
+
+        // Sync server-side HTTP-only cookies with the current (possibly auto-refreshed)
+        // Supabase session so that all /api/* routes can authenticate. Without this step
+        // the cookies can silently expire while the client-side localStorage session is
+        // still valid — causing every server API call to return 401.
+        try {
+          const { data: currentSession } = await supabase.auth.getSession()
+          if (currentSession?.session) {
+            await $fetch('/api/auth/sync-session', {
+              method: 'POST',
+              body: {
+                access_token: currentSession.session.access_token,
+                refresh_token: currentSession.session.refresh_token
+              }
+            })
+            logger.debug('✅ Server-side cookies synced with Supabase session')
+          }
+        } catch (syncErr: any) {
+          // Non-fatal: dashboard will catch API 401s and handle accordingly
+          logger.debug('⚠️ Cookie sync failed (non-fatal):', syncErr?.message)
+        }
         
         logger.debug('✅ Auth restore complete (from Supabase storage)')
         return
