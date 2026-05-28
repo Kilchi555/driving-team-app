@@ -69,7 +69,7 @@
       </div>
 
       <div class="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <p class="text-xs text-gray-600">© {{ new Date().getFullYear() }} simy GmbH · Fahrschulsoftware Schweiz · <a href="mailto:support@simy.ch" class="hover:text-gray-400 transition-colors">support@simy.ch</a></p>
+        <p class="text-xs text-gray-600">© {{ new Date().getFullYear() }} Simy IT Systems · Pascal Kilchenmann · <a href="mailto:info@simy.ch" class="hover:text-gray-400 transition-colors">info@simy.ch</a></p>
         <div class="flex gap-4 text-xs">
           <span class="text-gray-700 flex items-center gap-1.5">
             <span class="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>

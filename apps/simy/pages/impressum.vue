@@ -23,22 +23,22 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'Impressum – simy GmbH',
+  title: 'Impressum – Simy IT Systems',
   meta: [{ name: 'robots', content: 'noindex' }],
 })
 
 const blocks = [
   {
     title: 'Firmenangaben',
-    content: 'simy GmbH\nSchweiz',
+    content: 'Simy IT Systems\nPascal Kilchenmann\nSchweiz',
   },
   {
     title: 'Kontakt',
-    content: 'E-Mail: info@simy.ch\nSupport: support@simy.ch\nWebsite: https://simy.ch',
+    content: 'E-Mail: info@simy.ch\nWebsite: https://simy.ch',
   },
   {
     title: 'Vertretungsberechtigte Person',
-    content: 'Pascal Kilchenmann\nGeschäftsführer',
+    content: 'Pascal Kilchenmann',
   },
   {
     title: 'Haftungsausschluss',
