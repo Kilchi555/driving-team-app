@@ -157,9 +157,10 @@ export default defineEventHandler(async (event) => {
         tenant_name: tenantName,
       }
 
+      const isLastReminder = reminderDay === reminderDays[reminderDays.length - 1]
+
       if (student.email) {
         // ── EMAIL (primary) ──────────────────────────────────
-        const isLastReminder = reminderDay === reminderDays[reminderDays.length - 1]
 
         const subject = reminderNumber === 1
           ? `Deine Registrierung bei ${tenantName} wartet auf dich`
