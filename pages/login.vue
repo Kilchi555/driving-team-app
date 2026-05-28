@@ -649,6 +649,13 @@ const { loginWithPasskey, fetchStatus, isSupported: passkeyBrowserSupported } = 
 
 const checkPasskeyAvailability = async () => {
   if (process.server) return
+  // Hide on native (iOS/Android) — Passkeys require apple-app-site-association /
+  // assetlinks.json + native plugin setup which is not in place yet. Web only for Phase 1.
+  const isNative = !!(window as any).Capacitor?.isNativePlatform?.()
+  if (isNative) {
+    passkeySupported.value = false
+    return
+  }
   passkeySupported.value = passkeyBrowserSupported.value
   try {
     const status = await fetchStatus()
