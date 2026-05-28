@@ -52,6 +52,7 @@
             <li><a href="/kunden" class="footer-link">Kundenstories</a></li>
             <li><a href="/ueber-uns" class="footer-link">Über uns</a></li>
             <li><a href="/partner" class="footer-link">Partner</a></li>
+            <li><a href="/kontakt" class="footer-link">Kontakt</a></li>
             <li><a href="https://app.simy.ch/login" class="footer-link">Login</a></li>
           </ul>
         </div>
