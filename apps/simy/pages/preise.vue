@@ -65,12 +65,66 @@
       </div>
     </section>
 
+    <!-- Add-ons -->
+    <section class="pb-16 px-6">
+      <div class="max-w-5xl mx-auto">
+        <p class="text-xs font-bold uppercase tracking-widest text-center mb-8" style="color: #6000BD; opacity: 0.6;">Add-ons (optional)</p>
+        <div class="grid md:grid-cols-2 gap-4">
+
+          <div class="rounded-2xl border-2 border-gray-100 p-6 bg-white">
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <p class="font-bold text-gray-900 text-sm">Extra Fahrlehrer Seats</p>
+                <p class="text-xs text-gray-400 mt-0.5">Jeder Plan inkl. feste Anzahl — weitere Seats zubuchbar</p>
+              </div>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(96,0,189,0.08); color: #6000BD;">Pro Seat / Mt.</span>
+            </div>
+            <p class="text-xs text-gray-500 leading-relaxed">Starter: 1 Seat inkl. · Professional: 5 inkl. · Enterprise: 10 inkl. Mehr nötig? Einfach dazubuchen.</p>
+          </div>
+
+          <div class="rounded-2xl border-2 border-gray-100 p-6 bg-white">
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <p class="font-bold text-gray-900 text-sm">Kursbuchungsseite</p>
+                <p class="text-xs text-gray-400 mt-0.5">Online-Buchung für Kurse & Lektionen</p>
+              </div>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(96,0,189,0.08); color: #6000BD;">Add-on</span>
+            </div>
+            <p class="text-xs text-gray-500 leading-relaxed">Im <strong>Professional</strong> und <strong>Enterprise</strong>-Plan inklusive. Für Starter als Add-on zubuchbar.</p>
+          </div>
+
+          <div class="rounded-2xl border-2 border-gray-100 p-6 bg-white">
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <p class="font-bold text-gray-900 text-sm">Affiliate-System</p>
+                <p class="text-xs text-gray-400 mt-0.5">Empfehlungen & Partnerprogramm</p>
+              </div>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(96,0,189,0.08); color: #6000BD;">Add-on</span>
+            </div>
+            <p class="text-xs text-gray-500 leading-relaxed">Im <strong>Enterprise</strong>-Plan inklusive. Für Starter & Professional als Add-on zubuchbar.</p>
+          </div>
+
+          <div class="rounded-2xl border-2 border-gray-100 p-6 bg-white">
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <p class="font-bold text-gray-900 text-sm">Online-Zahlungen (Wallee)</p>
+                <p class="text-xs text-gray-400 mt-0.5">TWINT, Kreditkarte & mehr für deine Schüler</p>
+              </div>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-green-50 text-green-700">Inklusive</span>
+            </div>
+            <p class="text-xs text-gray-500 leading-relaxed">In jedem Plan enthalten. Es fällt eine Transaktionsgebühr von <strong>1.7%</strong> pro Schülerzahlung an — kein monatlicher Aufpreis.</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
     <!-- Full feature comparison table -->
     <section id="vergleich" class="py-16 px-6 bg-gray-50">
       <div class="max-w-4xl mx-auto">
-        <h2 class="text-2xl font-extrabold text-gray-900 mb-8 text-center">Vollständiger Feature-Vergleich</h2>
+        <h2 class="text-2xl font-extrabold text-gray-900 mb-8 text-center">Was ist in jedem Plan?</h2>
         <div class="overflow-x-auto rounded-2xl border border-gray-100 bg-white">
-          <table class="w-full text-sm">
+          <table class="w-full text-sm min-w-[500px]">
             <thead>
               <tr class="border-b border-gray-100">
                 <th class="px-5 py-4 text-left font-bold text-gray-500 w-1/2">Feature</th>
@@ -81,26 +135,31 @@
             </thead>
             <tbody>
               <tr v-for="(row, i) in comparison" :key="i"
-                :class="row.section ? 'bg-gray-50' : 'border-t border-gray-50 hover:bg-gray-50/50'">
-                <td v-if="row.section" colspan="4" class="px-5 py-3 text-xs font-bold uppercase tracking-widest text-gray-400">{{ row.section }}</td>
-                <template v-else>
-                  <td class="px-5 py-3.5 text-gray-700">{{ row.feature }}</td>
-                  <td class="px-4 py-3.5 text-center">
-                    <span v-if="row.starter === true" class="text-green-500 font-bold">✓</span>
-                    <span v-else-if="row.starter === false" class="text-gray-200">—</span>
-                    <span v-else class="text-xs text-gray-600 font-medium">{{ row.starter }}</span>
-                  </td>
-                  <td class="px-4 py-3.5 text-center" style="background: rgba(96,0,189,0.03)">
-                    <span v-if="row.pro === true" class="font-bold" style="color: #6000BD">✓</span>
-                    <span v-else-if="row.pro === false" class="text-gray-200">—</span>
-                    <span v-else class="text-xs font-medium" style="color: #6000BD">{{ row.pro }}</span>
-                  </td>
-                  <td class="px-4 py-3.5 text-center">
-                    <span v-if="row.enterprise === true" class="text-green-500 font-bold">✓</span>
-                    <span v-else-if="row.enterprise === false" class="text-gray-200">—</span>
-                    <span v-else class="text-xs text-gray-600 font-medium">{{ row.enterprise }}</span>
-                  </td>
-                </template>
+                class="border-t border-gray-50 hover:bg-gray-50/50 transition-colors">
+                <td class="px-5 py-3.5 text-gray-700 font-medium">{{ row.label }}</td>
+                <td class="px-4 py-3.5 text-center">
+                  <span v-if="row.starter === true" class="inline-flex items-center justify-center w-5 h-5 rounded-full" style="background: rgba(96,0,189,0.08)">
+                    <svg class="w-3 h-3" style="color:#6000BD" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  </span>
+                  <svg v-else-if="row.starter === false" class="w-4 h-4 text-gray-200 mx-auto" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                  <span v-else-if="row.starter === 'Add-on'" class="text-xs font-medium px-2 py-0.5 rounded-full" style="background: rgba(96,0,189,0.08); color:#6000BD">Add-on</span>
+                  <span v-else class="text-xs text-gray-600 font-semibold">{{ row.starter }}</span>
+                </td>
+                <td class="px-4 py-3.5 text-center" style="background: rgba(96,0,189,0.03)">
+                  <span v-if="row.pro === true" class="inline-flex items-center justify-center w-5 h-5 rounded-full" style="background: rgba(96,0,189,0.12)">
+                    <svg class="w-3 h-3" style="color:#6000BD" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  </span>
+                  <svg v-else-if="row.pro === false" class="w-4 h-4 text-gray-200 mx-auto" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                  <span v-else-if="row.pro === 'Add-on'" class="text-xs font-medium px-2 py-0.5 rounded-full" style="background: rgba(96,0,189,0.08); color:#6000BD">Add-on</span>
+                  <span v-else class="text-xs font-semibold" style="color:#6000BD">{{ row.pro }}</span>
+                </td>
+                <td class="px-4 py-3.5 text-center">
+                  <span v-if="row.enterprise === true" class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-50">
+                    <svg class="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  </span>
+                  <svg v-else-if="row.enterprise === false" class="w-4 h-4 text-gray-200 mx-auto" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                  <span v-else class="text-xs text-gray-600 font-semibold">{{ row.enterprise }}</span>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -195,13 +254,13 @@ const plans = computed(() => [
     price: monthlyPrice('starter'),
     highlighted: false,
     features: [
-      { text: '1 Fahrlehrer' },
+      { text: '1 Fahrlehrer inkl.' },
       { text: 'Online-Terminbuchung' },
       { text: 'Kundenverwaltung' },
       { text: 'Rechnungen & Zahlungen' },
+      { text: 'Kassenverwaltung' },
+      { text: 'Auswertungen & Statistiken' },
       { text: 'Fahrlehrer-App (iOS/Android)' },
-      { text: 'E-Mail Support' },
-      { text: 'Website-Generator', new: true },
     ],
   },
   {
@@ -209,13 +268,10 @@ const plans = computed(() => [
     price: monthlyPrice('professional'),
     highlighted: true,
     features: [
-      { text: 'Bis 5 Fahrlehrer' },
+      { text: 'Bis 5 Fahrlehrer inkl.' },
       { text: 'Alles aus Starter' },
       { text: 'Kursbuchungsseite' },
-      { text: 'Multi-Fahrlehrer Kalender' },
-      { text: 'Erweiterte Statistiken' },
       { text: 'Prioritäts-Support' },
-      { text: 'Google Ads Integration', new: true },
     ],
   },
   {
@@ -223,39 +279,27 @@ const plans = computed(() => [
     price: monthlyPrice('enterprise'),
     highlighted: false,
     features: [
-      { text: 'Bis 10 Fahrlehrer' },
+      { text: 'Bis 10 Fahrlehrer inkl.' },
       { text: 'Alles aus Professional' },
       { text: 'Affiliate-System' },
-      { text: 'Dedizierter Account Manager' },
-      { text: 'API-Zugang' },
-      { text: 'SLA Garantie' },
-      { text: 'Custom Domain Website', new: true },
+      { text: 'Dedizierter Support' },
     ],
   },
 ])
 
-const comparison = [
-  { section: 'Kernfunktionen' },
-  { feature: 'Online-Terminbuchung', starter: true, pro: true, enterprise: true },
-  { feature: 'Fahrlehrer-App (iOS/Android)', starter: true, pro: true, enterprise: true },
-  { feature: 'Kundenverwaltung', starter: true, pro: true, enterprise: true },
-  { feature: 'Anzahl Fahrlehrer', starter: '1', pro: 'bis 5', enterprise: 'bis 10' },
-  { section: 'Rechnungen & Kasse' },
-  { feature: 'Automatische Rechnungen', starter: true, pro: true, enterprise: true },
-  { feature: 'TWINT & Online-Zahlung', starter: true, pro: true, enterprise: true },
-  { feature: 'QR-Rechnung', starter: true, pro: true, enterprise: true },
-  { feature: 'Guthaben-System', starter: true, pro: true, enterprise: true },
-  { section: 'Website & Marketing' },
-  { feature: 'Website-Generator', starter: true, pro: true, enterprise: true },
-  { feature: 'Custom Domain', starter: false, pro: false, enterprise: true },
-  { feature: 'Google Ads Integration', starter: false, pro: true, enterprise: true },
-  { feature: 'SEO-Reporting', starter: false, pro: true, enterprise: true },
-  { section: 'Support & Extras' },
-  { feature: 'E-Mail Support', starter: true, pro: true, enterprise: true },
-  { feature: 'Prioritäts-Support', starter: false, pro: true, enterprise: true },
-  { feature: 'Dedizierter Account Manager', starter: false, pro: false, enterprise: true },
-  { feature: 'API-Zugang', starter: false, pro: false, enterprise: true },
-  { feature: 'Affiliate-System', starter: false, pro: false, enterprise: true },
+const comparison: { label: string; starter: boolean | string; pro: boolean | string; enterprise: boolean | string }[] = [
+  { label: 'Fahrlehrer inkl.', starter: '1', pro: '5', enterprise: '10' },
+  { label: 'Online-Terminbuchung', starter: true, pro: true, enterprise: true },
+  { label: 'Kundenverwaltung', starter: true, pro: true, enterprise: true },
+  { label: 'Rechnungen & Zahlungen', starter: true, pro: true, enterprise: true },
+  { label: 'Auswertungen & Statistiken', starter: true, pro: true, enterprise: true },
+  { label: 'Kassenverwaltung', starter: true, pro: true, enterprise: true },
+  { label: 'Gutscheine & Rabatte', starter: true, pro: true, enterprise: true },
+  { label: 'Prüfungsverwaltung', starter: true, pro: true, enterprise: true },
+  { label: 'Kursbuchungsseite', starter: 'Add-on', pro: true, enterprise: true },
+  { label: 'Affiliate-System', starter: 'Add-on', pro: 'Add-on', enterprise: true },
+  { label: 'Online-Zahlungen (Wallee)', starter: true, pro: true, enterprise: true },
+  { label: 'Support', starter: 'E-Mail', pro: 'Priorität', enterprise: 'Dediziert' },
 ]
 
 const faqs = [
