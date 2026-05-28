@@ -168,7 +168,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 useHead({
   title: 'Preise – simy | Fahrschulsoftware ab CHF 69/Monat',
@@ -200,9 +200,27 @@ useHead({
 const annual = ref(false)
 const openFaq = ref<number | null>(null)
 
-const plans = [
+const { data: stripePrices } = await useFetch('/api/prices', { default: () => ({ starter: null, professional: null, enterprise: null }) })
+
+const FALLBACK = { starter: { monthly: 69, annual: 57 }, professional: { monthly: 129, annual: 107 }, enterprise: { monthly: 249, annual: 207 } }
+
+function monthlyPrice(key: 'starter' | 'professional' | 'enterprise'): number {
+  const stripe = stripePrices.value?.[key]
+  return stripe ? parseInt(stripe.formatted) : FALLBACK[key].monthly
+}
+function annualPrice(key: 'starter' | 'professional' | 'enterprise'): number {
+  const monthly = monthlyPrice(key)
+  return Math.round(monthly * 10 / 12)
+}
+function annualSaving(key: 'starter' | 'professional' | 'enterprise'): number {
+  return Math.round((monthlyPrice(key) - annualPrice(key)) * 12)
+}
+
+const plans = computed(() => [
   {
-    name: 'Starter', tagline: 'Für den Einzelfahrlehrer', price: 69, annualPrice: 57, annualSaving: 144, highlighted: false,
+    name: 'Starter', tagline: 'Für den Einzelfahrlehrer', key: 'starter' as const,
+    price: monthlyPrice('starter'), annualPrice: annualPrice('starter'), annualSaving: annualSaving('starter'),
+    highlighted: false,
     features: [
       { text: '1 Fahrlehrer' },
       { text: 'Online-Terminbuchung' },
@@ -214,7 +232,9 @@ const plans = [
     ],
   },
   {
-    name: 'Professional', tagline: 'Für wachsende Fahrschulen', price: 129, annualPrice: 107, annualSaving: 264, highlighted: true,
+    name: 'Professional', tagline: 'Für wachsende Fahrschulen', key: 'professional' as const,
+    price: monthlyPrice('professional'), annualPrice: annualPrice('professional'), annualSaving: annualSaving('professional'),
+    highlighted: true,
     features: [
       { text: 'Bis 5 Fahrlehrer' },
       { text: 'Alles aus Starter' },
@@ -226,7 +246,9 @@ const plans = [
     ],
   },
   {
-    name: 'Enterprise', tagline: 'Für grosse Fahrschulen & Ketten', price: 249, annualPrice: 207, annualSaving: 504, highlighted: false,
+    name: 'Enterprise', tagline: 'Für grosse Fahrschulen & Ketten', key: 'enterprise' as const,
+    price: monthlyPrice('enterprise'), annualPrice: annualPrice('enterprise'), annualSaving: annualSaving('enterprise'),
+    highlighted: false,
     features: [
       { text: 'Bis 10 Fahrlehrer' },
       { text: 'Alles aus Professional' },
@@ -237,7 +259,7 @@ const plans = [
       { text: 'Custom Domain Website', new: true },
     ],
   },
-]
+])
 
 const comparison = [
   { section: 'Kernfunktionen' },
