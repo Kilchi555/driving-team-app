@@ -4,7 +4,7 @@
 
 # Load root .env for local development (ignored in CI where secrets are injected)
 root_env = File.join(File.dirname(__FILE__), '..', '.env')
-if File.exist?(root_env) && !is_ci
+if File.exist?(root_env)
   File.readlines(root_env).each do |line|
     line = line.strip
     next if line.empty? || line.start_with?('#')
@@ -104,7 +104,7 @@ platform :ios do
 
     # 1. Generate capacitor.config.json + sync iOS project for the right client
     sh("cd .. && CLIENT=#{client['clientId']} node scripts/gen-cap-config.mjs")
-    sh('cd .. && npx cap sync ios --no-build')
+    sh('cd .. && npx cap sync ios')
 
     # 2. Update version and build number
     increment_version_number(
