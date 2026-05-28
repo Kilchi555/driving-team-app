@@ -36,3 +36,13 @@ supabase/functions/**/.env.local
 capacitor.config.json
 capacitor.config.ts.bak
 ios/App/App/Info.plist.bak
+
+# Native build artifacts (signed IPAs, debug symbols, etc.)
+build/
+*.ipa
+*.dSYM.zip
+
+# Fastlane auto-generated outputs
+fastlane/report.xml
+fastlane/test_output
+fastlane/README.md
