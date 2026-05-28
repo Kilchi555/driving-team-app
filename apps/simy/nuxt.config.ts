@@ -59,6 +59,7 @@ export default defineNuxtConfig({
         '/agb',
         '/datenschutz',
         '/impressum',
+        '/kontakt',
         '/fahrschule',
         '/fahrschule/software',
         '/fahrschule/buchungssystem',
@@ -86,6 +87,7 @@ export default defineNuxtConfig({
     '/agb': { prerender: true },
     '/datenschutz': { prerender: true },
     '/impressum': { prerender: true },
+    '/kontakt': { prerender: true },
     '/_nuxt/**': { headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
   },
 })
