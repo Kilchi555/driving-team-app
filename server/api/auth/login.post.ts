@@ -708,6 +708,22 @@ Diese E-Mail ist eine automatische Sicherheitsmitteilung von ${tenantName}.
       if (!profileError && profileData) {
         userProfile = profileData
         logger.debug('✅ User profile loaded:', profileData.email)
+
+        // Resolve tenant_slug so the client can persist last_tenant_slug for post-logout redirect
+        if (profileData.tenant_id) {
+          try {
+            const { data: tenantData } = await adminSupabase
+              .from('tenants')
+              .select('slug')
+              .eq('id', profileData.tenant_id)
+              .single()
+            if (tenantData?.slug) {
+              ;(userProfile as any).tenant_slug = tenantData.slug
+            }
+          } catch (slugErr: any) {
+            logger.warn('⚠️ Failed to resolve tenant slug for login response:', slugErr?.message)
+          }
+        }
         
         // ✅ NEW: If password meets new strength requirements, auto-upgrade version
         const hasUppercase = /[A-Z]/.test(password)

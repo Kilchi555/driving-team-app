@@ -192,6 +192,23 @@ const isAdmin = computed(() => {
           // Fallback: fetch profile via API
           await fetchUserProfile(backendResponse.user.id)
         }
+
+        // Persist tenant_slug so post-logout redirect lands back on the tenant page
+        // (works for all login paths, including the generic /login on native apps)
+        if (process.client) {
+          try {
+            const slug = (userProfile.value as any)?.tenant_slug
+            if (slug) {
+              localStorage.setItem('last_tenant_slug', slug)
+              logger.debug('💾 Saved tenant slug from login response:', slug)
+            } else if (userRole.value === 'super_admin') {
+              // Super admin has no tenant — clear any stale slug from a previous session
+              localStorage.removeItem('last_tenant_slug')
+            }
+          } catch (e) {
+            logger.warn('⚠️ Could not persist tenant slug to localStorage:', e)
+          }
+        }
         
         // 🔐 DEBUG: Log what we got from backend
         console.log('🔐 DEBUG backendResponse.session:', backendResponse.session)
