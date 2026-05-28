@@ -355,10 +355,29 @@
         </div>
 
         <!-- Kurs buchen - Uses Secondary Color -->
+        <!-- Skeleton while feature flag is loading -->
         <div
-          v-if="!coursesGateResolved || coursesEnabled"
+          v-if="!coursesGateResolved"
+          class="bg-white rounded-xl shadow-sm border-t-4 border-gray-200 animate-pulse"
+        >
+          <div class="p-4 h-full flex flex-col">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-lg mr-3 bg-gray-200"></div>
+                <div class="space-y-2">
+                  <div class="h-4 w-24 bg-gray-200 rounded"></div>
+                  <div class="h-3 w-32 bg-gray-100 rounded"></div>
+                </div>
+              </div>
+              <div class="w-5 h-5 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          v-else-if="coursesEnabled"
           @click="handleClickWithDelay('course', navigateToCourseBooking)"
-          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border-t-4" 
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border-t-4"
           :class="{ 'scale-95 opacity-80': activeClickDiv === 'course' }"
           :style="{ borderTopColor: secondaryButtonColor }"
         >
