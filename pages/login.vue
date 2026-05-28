@@ -217,6 +217,31 @@
               <span>{{ biometricType === 2 ? 'Mit Face ID anmelden' : 'Mit Touch ID anmelden' }}</span>
             </button>
           </template>
+
+          <!-- Passkey login (web, role-gated via PASSKEY_ENABLED_ROLES) -->
+          <!-- Only shown for direct platform-admin login (no tenant context) to avoid confusing staff/clients in Phase 1 -->
+          <template v-if="passkeySupported && passkeyEnabledForAnyone && !tenantParam">
+            <div class="relative">
+              <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-gray-100"></div>
+              </div>
+              <div class="relative flex justify-center">
+                <span class="px-3 bg-white text-xs text-gray-400">oder</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              @click="handlePasskeyLogin"
+              :disabled="isLoading"
+              class="w-full py-3 px-4 rounded-xl border-2 border-violet-200 bg-violet-50 font-semibold text-violet-900 transition-all hover:border-violet-400 hover:bg-violet-100 disabled:opacity-50 flex items-center justify-center gap-3"
+            >
+              <svg class="w-6 h-6 text-violet-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7.864 4.243A8.974 8.974 0 0112 3c.972 0 1.907.155 2.785.443M3.302 8.293A8.99 8.99 0 003 11c0 1.605.422 3.111 1.158 4.421M21 12a8.952 8.952 0 00-1.275-4.624M9 13l2 2 4-4"/>
+              </svg>
+              <span>Mit Passkey anmelden</span>
+            </button>
+            <p v-if="passkeyError" class="text-xs text-red-600 text-center">{{ passkeyError }}</p>
+          </template>
         </form>
 
 
@@ -615,6 +640,53 @@ const pendingAccount = ref({
   error: null as string | null,
   success: null as string | null
 })
+
+// ─── Passkey Login (web, role-gated via PASSKEY_ENABLED_ROLES) ───────────
+const passkeySupported = ref(false)
+const passkeyEnabledForAnyone = ref(false)
+const passkeyError = ref<string | null>(null)
+const { loginWithPasskey, fetchStatus, isSupported: passkeyBrowserSupported } = usePasskey()
+
+const checkPasskeyAvailability = async () => {
+  if (process.server) return
+  passkeySupported.value = passkeyBrowserSupported.value
+  try {
+    const status = await fetchStatus()
+    passkeyEnabledForAnyone.value = status.anyEnabled
+  } catch {
+    passkeyEnabledForAnyone.value = false
+  }
+}
+
+const handlePasskeyLogin = async () => {
+  if (isLoading.value) return
+  passkeyError.value = null
+  isLoading.value = true
+  try {
+    // Use the email field if provided (targeted login). Empty = discoverable.
+    const email = loginForm.value.email?.trim()
+    const result = await loginWithPasskey(email || undefined)
+    if (result.success && result.user) {
+      // Mirror the success path of handleLogin
+      const role = result.user.role
+      let redirectPath = '/'
+      if (role === 'admin' || role === 'tenant_admin' || role === 'superadmin') {
+        redirectPath = '/admin/dashboard'
+      } else if (role === 'staff') {
+        redirectPath = '/staff/dashboard'
+      } else if (role === 'client') {
+        redirectPath = '/customer-dashboard'
+      }
+      window.location.href = redirectPath
+    } else {
+      passkeyError.value = 'Passkey-Anmeldung fehlgeschlagen.'
+    }
+  } catch (err: any) {
+    passkeyError.value = err?.data?.statusMessage || err?.message || 'Passkey-Anmeldung fehlgeschlagen.'
+  } finally {
+    isLoading.value = false
+  }
+}
 
 // ─── Biometric Login (native only) ────────────────────────────────────────
 const BIOMETRIC_SERVER = 'simy.ch'
@@ -1184,8 +1256,16 @@ const handleLogout = async () => {
 
 // Lifecycle
 onMounted(async () => {
+  // Auto-open forgot password modal if ?forgot=1 is in the URL
+  if (route.query.forgot === '1') {
+    showForgotPasswordModal.value = true
+  }
+
   // Check biometric availability (native only, no-op on web)
   checkBiometric()
+
+  // Check Passkey availability (web; role-gated)
+  checkPasskeyAvailability()
 
   // Warte kurz damit Auth-State nach Logout vollständig gelöscht ist
   await new Promise(resolve => setTimeout(resolve, 100))
