@@ -57,7 +57,7 @@ echo "✅ npm  version: $(npm -v)"
 # ───────────────────────────────────────────────────────
 # 3) Locate repo root
 # ───────────────────────────────────────────────────────
-REPO_ROOT="${CI_WORKSPACE:-$CI_PRIMARY_REPOSITORY_PATH}"
+REPO_ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$CI_WORKSPACE}"
 if [ -z "$REPO_ROOT" ] || [ ! -d "$REPO_ROOT" ]; then
   # Last-resort fallback: derive from script location.
   SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
