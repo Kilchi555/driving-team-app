@@ -148,6 +148,25 @@
                 </div>
               </div>
 
+              <!-- PCI documents (per-tenant merchant docs for Wallee) -->
+              <div class="sa-info-card">
+                <p class="sa-toggle-label">PCI-Dokumente</p>
+                <p class="sa-toggle-sub mb-2">
+                  Compliance-Richtlinie + Incident-Response-Plan auf den Namen des Tenants
+                  (Firma/Adresse/UID kommen automatisch aus den Stammdaten).
+                </p>
+                <div class="space-y-2">
+                  <input v-model="pciForm.approver" type="text"
+                    placeholder="Unterzeichner (z.B. Pascal Kilchenmann)" class="sa-input" />
+                  <input v-model="pciForm.title" type="text"
+                    placeholder="Funktion (z.B. Geschäftsführer)" class="sa-input" />
+                </div>
+                <button @click="openPciDocs" class="sa-btn-success mt-3">
+                  PCI-Dokumente erzeugen &amp; öffnen
+                </button>
+                <p class="sa-hint mt-1">Öffnet eine Druckansicht → „Drucken / Als PDF speichern".</p>
+              </div>
+
               <p v-if="walleeError" class="sa-error">{{ walleeError }}</p>
             </div>
 
@@ -254,12 +273,22 @@ const walleeError        = ref('')
 const walleeLoading      = ref(false)
 const walleeForm         = ref({ space_id: '', user_id: '' })
 const trialExtendLoading = ref(false)
+const pciForm            = ref({ approver: '', title: '' })
 
 const openWalleeActivation = (tenant: any) => {
   walleeTenant.value = tenant
   walleeForm.value   = { space_id: '', user_id: '' }
+  pciForm.value      = { approver: '', title: '' }
   walleeError.value  = ''
   showWalleeModal.value = true
+}
+
+const openPciDocs = () => {
+  if (!walleeTenant.value) return
+  const params = new URLSearchParams({ tenant_id: walleeTenant.value.id })
+  if (pciForm.value.approver.trim()) params.set('approver', pciForm.value.approver.trim())
+  if (pciForm.value.title.trim()) params.set('title', pciForm.value.title.trim())
+  window.open(`/api/admin/pci-docs?${params.toString()}`, '_blank')
 }
 
 const activateWallee = async () => {

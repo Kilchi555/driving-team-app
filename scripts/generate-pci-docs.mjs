@@ -44,10 +44,16 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { execFileSync } from 'child_process'
+import {
+  PCI_DOCS,
+  buildReplacements,
+  fillTemplate,
+  mdToHtml,
+  htmlDocument,
+} from '../server/templates/pci-templates.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
-const templatesDir = join(root, 'docs', 'pci', 'templates')
 
 // ─── Load .env (so the script works without exporting vars) ──────────────────
 const envPath = join(root, '.env')
@@ -120,58 +126,6 @@ async function fetchTenant() {
   }
 }
 
-// ─── Minimal Markdown → HTML (sufficient for these docs) ──────────────────────
-function mdToHtml(src) {
-  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  const inline = (s) => esc(s)
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-  const lines = src.split('\n')
-  let html = '', i = 0, inUl = false, inOl = false
-  const closeLists = () => { if (inUl) { html += '</ul>\n'; inUl = false } if (inOl) { html += '</ol>\n'; inOl = false } }
-  while (i < lines.length) {
-    const line = lines[i]
-    if (/^\s*\|/.test(line) && i + 1 < lines.length && /^\s*\|[\s:|-]+\|?\s*$/.test(lines[i + 1])) {
-      closeLists()
-      const header = line.split('|').slice(1, -1).map((c) => c.trim())
-      i += 2
-      html += '<table><thead><tr>' + header.map((h) => `<th>${inline(h)}</th>`).join('') + '</tr></thead><tbody>\n'
-      while (i < lines.length && /^\s*\|/.test(lines[i])) {
-        const cells = lines[i].split('|').slice(1, -1).map((c) => c.trim())
-        html += '<tr>' + cells.map((c) => `<td>${inline(c)}</td>`).join('') + '</tr>\n'
-        i++
-      }
-      html += '</tbody></table>\n'; continue
-    }
-    if (/^#\s+/.test(line)) { closeLists(); html += `<h1>${inline(line.replace(/^#\s+/, ''))}</h1>\n`; i++; continue }
-    if (/^##\s+/.test(line)) { closeLists(); html += `<h2>${inline(line.replace(/^##\s+/, ''))}</h2>\n`; i++; continue }
-    if (/^###\s+/.test(line)) { closeLists(); html += `<h3>${inline(line.replace(/^###\s+/, ''))}</h3>\n`; i++; continue }
-    if (/^---\s*$/.test(line)) { closeLists(); html += '<hr/>\n'; i++; continue }
-    if (/^>\s?/.test(line)) { closeLists(); html += `<blockquote>${inline(line.replace(/^>\s?/, ''))}</blockquote>\n`; i++; continue }
-    if (/^\s*[-*]\s+/.test(line)) { if (!inUl) { closeLists(); html += '<ul>\n'; inUl = true } html += `<li>${inline(line.replace(/^\s*[-*]\s+/, ''))}</li>\n`; i++; continue }
-    if (/^\s*\d+\.\s+/.test(line)) { if (!inOl) { closeLists(); html += '<ol>\n'; inOl = true } html += `<li>${inline(line.replace(/^\s*\d+\.\s+/, ''))}</li>\n`; i++; continue }
-    if (line.trim() === '') { closeLists(); i++; continue }
-    closeLists(); html += `<p>${inline(line)}</p>\n`; i++
-  }
-  closeLists()
-  return `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><style>
-@page { margin: 22mm 18mm; }
-body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #1a1a1a; font-size: 11pt; line-height: 1.5; }
-h1 { font-size: 20pt; border-bottom: 3px solid #7C3AED; padding-bottom: 6px; }
-h2 { font-size: 14pt; color: #7C3AED; margin-top: 22px; }
-h3 { font-size: 12pt; margin-top: 16px; }
-table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 10pt; }
-th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; }
-th { background: #f3effc; }
-blockquote { border-left: 4px solid #A855F7; background: #faf8ff; margin: 12px 0; padding: 8px 14px; color: #444; }
-code { background: #f0f0f3; padding: 1px 5px; border-radius: 3px; font-size: 9.5pt; }
-hr { border: none; border-top: 1px solid #ddd; margin: 18px 0; }
-a { color: #7C3AED; }
-li { margin: 3px 0; }
-</style></head><body>${html}</body></html>`
-}
-
 function findChrome() {
   const candidates = [
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -197,33 +151,19 @@ async function main() {
     .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 
-  const today = new Date()
-  const effective = args.date || today.toISOString().slice(0, 10)
-  const review = args.review ||
-    `${today.getFullYear() + 1}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-  const ph = (label, val) => val || `[BITTE AUSFÜLLEN: ${label}]`
-
-  const replacements = {
-    COMPANY_NAME:    company,
-    COMPANY_ADDRESS: ph('Adresse', args.address || db?.address),
-    COMPANY_UID:     ph('UID', args.uid || db?.uid),
-    CONTACT_EMAIL:   ph('Kontakt-E-Mail', args.email || db?.email),
-    APPROVER_NAME:   ph('Name Unterzeichner', args.approver || db?.approver),
-    APPROVER_TITLE:  ph('Funktion', args.title),
-    EFFECTIVE_DATE:  effective,
-    REVIEW_DATE:     review,
-  }
-
-  const fill = (template) => template.replace(/\{\{(\w+)\}\}/g, (_, k) =>
-    k in replacements ? replacements[k] : `{{${k}}}`)
+  const replacements = buildReplacements({
+    company,
+    address: args.address || db?.address,
+    uid: args.uid || db?.uid,
+    email: args.email || db?.email,
+    approver: args.approver || db?.approver,
+    title: args.title,
+    effectiveDate: args.date,
+    reviewDate: args.review,
+  })
 
   const outDir = join(root, 'docs', 'pci', slug)
   mkdirSync(outDir, { recursive: true })
-
-  const docs = [
-    { tpl: 'PCI_COMPLIANCE_POLICY.de.template.md', out: 'PCI-Compliance-Richtlinie' },
-    { tpl: 'PCI_INCIDENT_RESPONSE_PLAN.de.template.md', out: 'PCI-Incident-Response-Plan' },
-  ]
 
   const chrome = args.pdf ? findChrome() : null
   if (args.pdf && !chrome) console.warn('⚠️  Kein Chromium-Browser gefunden — überspringe PDF-Erzeugung.')
@@ -233,21 +173,21 @@ async function main() {
   if (db?.usedDisplayFallback) console.log(`   ⚠️  Kein legal_company_name in DB — Anzeigename "${db.displayName}" als Fallback verwendet.`)
   console.log('')
 
-  for (const d of docs) {
-    const filled = fill(readFileSync(join(templatesDir, d.tpl), 'utf-8'))
-    const mdPath = join(outDir, `${d.out}_${slug}.md`)
+  for (const d of PCI_DOCS) {
+    const filled = fillTemplate(d.template, replacements)
+    const mdPath = join(outDir, `${d.filenameBase}_${slug}.md`)
     writeFileSync(mdPath, filled)
     console.log(`   ✓ ${mdPath.replace(root + '/', '')}`)
 
     if (chrome) {
-      const htmlPath = join(outDir, `.${d.out}_${slug}.html`)
-      const pdfPath = join(outDir, `${d.out}_${slug}.pdf`)
-      writeFileSync(htmlPath, mdToHtml(filled))
+      const htmlPath = join(outDir, `.${d.filenameBase}_${slug}.html`)
+      const pdfPath = join(outDir, `${d.filenameBase}_${slug}.pdf`)
+      writeFileSync(htmlPath, htmlDocument(mdToHtml(filled), { title: d.title }))
       try {
         execFileSync(chrome, ['--headless=new', '--disable-gpu', `--print-to-pdf=${pdfPath}`, `file://${htmlPath}`], { stdio: 'ignore' })
         console.log(`   ✓ ${pdfPath.replace(root + '/', '')}`)
       } catch (e) {
-        console.warn(`   ⚠️  PDF fehlgeschlagen für ${d.out}: ${e.message}`)
+        console.warn(`   ⚠️  PDF fehlgeschlagen für ${d.filenameBase}: ${e.message}`)
       } finally {
         try { rmSync(htmlPath, { force: true }) } catch { /* ignore */ }
       }
