@@ -115,6 +115,16 @@
                 </svg>
                 Senden
               </button>
+              <button
+                v-if="c.status === 'pilot'"
+                @click="openSendConfirm(c)"
+                class="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors flex items-center gap-1.5"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                </svg>
+                Weitere senden
+              </button>
             </div>
           </div>
         </div>
@@ -376,8 +386,40 @@
 
         <!-- Daily limit + Test email section -->
         <div v-if="!sendResult" class="px-6 pb-4 space-y-4">
-          <!-- Tagesrate -->
-          <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+
+          <!-- Pilot vs. Alles senden -->
+          <div class="bg-orange-50 border border-orange-200 rounded-xl p-4" v-if="sendConfirmCampaign?.status !== 'pilot'">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm font-semibold text-orange-900">Versand-Modus</span>
+            </div>
+            <div class="space-y-2">
+              <label class="flex items-start gap-3 cursor-pointer">
+                <input type="radio" :value="true" v-model="pilotMode" class="mt-0.5 text-orange-600" />
+                <div>
+                  <span class="text-sm font-medium text-gray-900">Pilot-Versand</span>
+                  <p class="text-xs text-gray-500">Sende nur X Emails, Kampagne bleibt offen. Danach kannst du anpassen und weitersenden.</p>
+                  <div v-if="pilotMode" class="mt-2">
+                    <select v-model="pilotLimit" class="w-full px-2 py-1.5 border border-orange-300 rounded-lg text-sm bg-white">
+                      <option :value="100">100 Emails</option>
+                      <option :value="250">250 Emails</option>
+                      <option :value="500">500 Emails</option>
+                      <option :value="1000">1000 Emails</option>
+                    </select>
+                  </div>
+                </div>
+              </label>
+              <label class="flex items-start gap-3 cursor-pointer">
+                <input type="radio" :value="false" v-model="pilotMode" class="mt-0.5 text-orange-600" />
+                <div>
+                  <span class="text-sm font-medium text-gray-900">Alle senden</span>
+                  <p class="text-xs text-gray-500">Alle Leads erhalten die Email. Kampagne wird danach als "Gesendet" markiert.</p>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Tagesrate (nur bei "Alle senden") -->
+          <div v-if="!pilotMode" class="bg-blue-50 border border-blue-200 rounded-xl p-4">
             <div class="flex items-center justify-between mb-2">
               <span class="text-sm font-semibold text-blue-900">Tagesrate (Spam-Schutz)</span>
               <span class="text-xs text-blue-600 font-medium">
@@ -424,12 +466,18 @@
           </div>
         </div>
 
-        <div v-if="sendResult" class="mx-6 mb-4 bg-green-50 rounded-xl p-4">
-          <p class="text-sm font-medium text-green-800">
-            ✅ {{ sendResult.queuedCount }} Emails erfolgreich in die Warteschlange eingereiht.
-            <span v-if="dailyLimit > 0 && sendResult.queuedCount > dailyLimit" class="block mt-1 text-green-700">
-              📅 Verteilt über {{ Math.ceil(sendResult.queuedCount / dailyLimit) }} Tage à {{ dailyLimit }}/Tag.
-            </span>
+        <div v-if="sendResult" class="mx-6 mb-4 rounded-xl p-4" :class="sendResult.status === 'pilot' ? 'bg-orange-50' : 'bg-green-50'">
+          <p class="text-sm font-medium" :class="sendResult.status === 'pilot' ? 'text-orange-800' : 'text-green-800'">
+            <template v-if="sendResult.status === 'pilot'">
+              🚀 Pilot gesendet: {{ sendResult.queuedCount }} Emails in der Warteschlange.<br>
+              <span class="font-normal">Noch {{ sendResult.remainingCount }} Leads ausstehend. Passe das Template an und klicke "Weitere senden" wenn du bereit bist.</span>
+            </template>
+            <template v-else>
+              ✅ {{ sendResult.queuedCount }} Emails erfolgreich in die Warteschlange eingereiht.
+              <span v-if="dailyLimit > 0 && sendResult.queuedCount > dailyLimit" class="block mt-1">
+                📅 Verteilt über {{ Math.ceil(sendResult.queuedCount / dailyLimit) }} Tage à {{ dailyLimit }}/Tag.
+              </span>
+            </template>
           </p>
         </div>
 
@@ -446,7 +494,7 @@
             <svg v-if="sending" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            {{ sending ? 'Sendet...' : `Ja, an ${recipients.length} Leads senden` }}
+            {{ sending ? 'Sendet...' : pilotMode ? `Pilot: ${pilotLimit} Emails senden` : `Ja, an ${recipients.length} Leads senden` }}
           </button>
         </div>
       </div>
@@ -494,6 +542,8 @@ const recipients = ref<any[]>([])
 const recipientsTotal = ref(0)
 const recipientsLoading = ref(false)
 const dailyLimit = ref(500)
+const pilotMode = ref(false)
+const pilotLimit = ref(500)
 const testEmailAddress = ref('')
 const testEmailSending = ref(false)
 const testEmailResult = ref<'ok' | 'error' | null>(null)
@@ -505,7 +555,7 @@ function formatDate(d: string) {
 }
 
 function statusLabel(status: string) {
-  return { draft: 'Entwurf', sending: 'Wird gesendet', sent: 'Gesendet', failed: 'Fehlgeschlagen' }[status] ?? status
+  return { draft: 'Entwurf', sending: 'Wird gesendet', sent: 'Gesendet', pilot: 'Pilot laufend', failed: 'Fehlgeschlagen' }[status] ?? status
 }
 
 function statusBadge(status: string) {
@@ -513,6 +563,7 @@ function statusBadge(status: string) {
     draft: 'bg-gray-100 text-gray-600',
     sending: 'bg-blue-100 text-blue-700',
     sent: 'bg-green-100 text-green-700',
+    pilot: 'bg-orange-100 text-orange-700',
     failed: 'bg-red-100 text-red-700',
   }[status] ?? 'bg-gray-100 text-gray-600'
 }
@@ -653,6 +704,7 @@ async function openSendConfirm(campaign: any) {
   sendResult.value = null
   testEmailResult.value = null
   testEmailAddress.value = ''
+  pilotMode.value = campaign.status !== 'pilot' // default to pilot for fresh drafts, off for continuations
   recipients.value = []
   recipientsTotal.value = 0
   recipientsLoading.value = true
@@ -689,7 +741,11 @@ async function sendCampaign() {
   try {
     const res = await $fetch<any>(`/api/marketing/campaigns/${sendConfirmCampaign.value.id}/send`, {
       method: 'POST',
-      body: { tenantId, dailyLimit: dailyLimit.value > 0 ? dailyLimit.value : null },
+      body: {
+        tenantId,
+        dailyLimit: !pilotMode.value && dailyLimit.value > 0 ? dailyLimit.value : null,
+        pilotLimit: pilotMode.value ? pilotLimit.value : null,
+      },
     })
     sendResult.value = res
     await loadData()
