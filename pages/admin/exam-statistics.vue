@@ -164,19 +164,19 @@
           <!-- Date Range -->
           <div class="md:col-span-2">
             <label class="block text-sm font-medium text-gray-700 mb-2">Zeitraum</label>
-            <div class="flex space-x-2">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
               <input 
                 v-model="filters.dateFrom"
                 type="date"
                 @change="applyFilters"
-                class="tenant-focus flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
               >
-              <span class="self-center text-gray-500">bis</span>
+              <span class="text-gray-500 text-sm text-center sm:flex-shrink-0">bis</span>
               <input 
                 v-model="filters.dateTo"
                 type="date"
                 @change="applyFilters"
-                class="tenant-focus flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
               >
             </div>
           </div>

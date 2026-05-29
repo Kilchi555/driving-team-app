@@ -3,45 +3,32 @@
     <!-- Header -->
     <div class="bg-white shadow-sm border-b">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between py-4">
-          <div class="flex items-center">
-            <div>
-              <h1 class="text-2xl font-bold text-gray-900">Datenverwaltung</h1>
-              <p class="text-sm text-gray-600 mt-1">
-                Importieren Sie CSV-Dateien mit Kundendaten und Rechnungen, durchsuchen Sie importierte Daten und verwalten Sie Import-Batches.
-              </p>
-            </div>
-            <div class="ml-4 px-3 py-1 text-sm rounded-full" :style="{ background: `${primaryColor}1f`, color: primaryColor }">
+        <div class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <!-- Title + badge -->
+          <div class="flex items-center gap-2 min-w-0">
+            <h1 class="text-2xl font-bold text-gray-900 truncate">Datenverwaltung</h1>
+            <span class="flex-shrink-0 px-2.5 py-0.5 text-xs rounded-full font-medium" :style="{ background: `${primaryColor}1f`, color: primaryColor }">
               {{ batches.length }} Import{{ batches.length !== 1 ? 's' : '' }}
-            </div>
+            </span>
           </div>
-          <div class="flex items-center space-x-4">
+          <!-- Tab buttons -->
+          <div class="flex items-center gap-2">
             <button
               @click="activeTab = 'import'"
-              :class="[
-                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                activeTab === 'import' 
-                  ? 'text-white shadow-sm' 
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              ]"
+              :class="['flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors', activeTab === 'import' ? 'text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100']"
               :style="activeTab === 'import' ? { background: primaryColor } : {}"
             >
-              <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
               </svg>
               Import
             </button>
             <button
               @click="activeTab = 'view'"
-              :class="[
-                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                activeTab === 'view' 
-                  ? 'text-white shadow-sm' 
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              ]"
+              :class="['flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors', activeTab === 'view' ? 'text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100']"
               :style="activeTab === 'view' ? { background: primaryColor } : {}"
             >
-              <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
               </svg>
               Übersicht
@@ -57,57 +44,49 @@
     <!-- Import Tab -->
     <div v-if="activeTab === 'import'" class="space-y-6">
       <!-- Step Indicator -->
-      <div class="bg-white rounded-lg shadow-sm border p-6">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-4">
-            <div class="flex items-center">
-              <div :class="[
-                'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium',
-                fileMeta.name ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
-              ]">
-                <svg v-if="fileMeta.name" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                </svg>
+      <div class="bg-white rounded-lg shadow-sm border px-4 py-4 sm:px-6">
+        <div class="flex items-center justify-between gap-2">
+          <!-- Steps -->
+          <div class="flex items-center flex-1 min-w-0">
+            <!-- Step 1 -->
+            <div class="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 flex-shrink-0">
+              <div :class="['w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0', fileMeta.name ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600']">
+                <svg v-if="fileMeta.name" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                 <span v-else>1</span>
               </div>
-              <span class="ml-2 text-sm font-medium text-gray-900">Datei auswählen</span>
+              <span class="text-xs sm:text-sm font-medium text-gray-900 text-center sm:text-left leading-tight">Datei<br class="sm:hidden"> auswählen</span>
             </div>
-            <div class="w-8 h-px bg-gray-300"></div>
-            <div class="flex items-center">
-              <div :class="[
-                'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium',
-                validationResult ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
-              ]">
-                <svg v-if="validationResult" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                </svg>
+            <!-- Connector -->
+            <div class="flex-1 h-px bg-gray-300 mx-2 min-w-[12px]"></div>
+            <!-- Step 2 -->
+            <div class="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 flex-shrink-0">
+              <div :class="['w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0', validationResult ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600']">
+                <svg v-if="validationResult" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                 <span v-else>2</span>
               </div>
-              <span class="ml-2 text-sm font-medium text-gray-900">Daten prüfen</span>
+              <span class="text-xs sm:text-sm font-medium text-gray-900 text-center sm:text-left leading-tight">Daten<br class="sm:hidden"> prüfen</span>
             </div>
-            <div class="w-8 h-px bg-gray-300"></div>
-            <div class="flex items-center">
-              <div :class="[
-                'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium',
-                canImport ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
-              ]">
-                <svg v-if="canImport" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                </svg>
+            <!-- Connector -->
+            <div class="flex-1 h-px bg-gray-300 mx-2 min-w-[12px]"></div>
+            <!-- Step 3 -->
+            <div class="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 flex-shrink-0">
+              <div :class="['w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0', canImport ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600']">
+                <svg v-if="canImport" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                 <span v-else>3</span>
               </div>
-              <span class="ml-2 text-sm font-medium text-gray-900">Importieren</span>
+              <span class="text-xs sm:text-sm font-medium text-gray-900 text-center sm:text-left leading-tight">Impor<wbr>tieren</span>
             </div>
           </div>
+          <!-- Reset -->
           <button
             v-if="fileMeta.name || validationResult"
             @click="resetAll"
-            class="text-sm text-gray-500 hover:text-gray-700 flex items-center"
+            class="flex-shrink-0 text-xs sm:text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 ml-2"
           >
-            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
-            Zurücksetzen
+            <span class="hidden sm:inline">Zurücksetzen</span>
           </button>
         </div>
       </div>

@@ -827,75 +827,81 @@ class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
 
         <!-- Appointments Table -->
         <div class="bg-white shadow rounded-lg overflow-hidden">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <div class="flex items-center justify-between">
+          <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+            <!-- Header: title stacks above filters on mobile -->
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 class="text-lg leading-6 font-medium text-gray-900">
                 Terminhistorie ({{ appointments.length }})
               </h3>
-              
-              <!-- Filter Buttons -->
-              <div class="flex flex-wrap gap-2">
+              <!-- Filter Buttons — wrap on mobile -->
+              <div class="flex flex-wrap gap-1.5">
                 <button
-                  :class="[
-                    'px-3 py-1 text-sm rounded-md font-medium',
-                    appointmentFilter === 'all' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  ]"
+                  :class="['px-3 py-1 text-xs sm:text-sm rounded-full font-medium transition-colors', appointmentFilter === 'all' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600 hover:bg-gray-200']"
                   @click="appointmentFilter = 'all'"
-                >
-                  Alle ({{ totalAppointments }})
-                </button>
+                >Alle ({{ totalAppointments }})</button>
                 <button
-                  :class="[
-                    'px-3 py-1 text-sm rounded-md font-medium',
-                    appointmentFilter === 'paid' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  ]"
+                  :class="['px-3 py-1 text-xs sm:text-sm rounded-full font-medium transition-colors', appointmentFilter === 'paid' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600 hover:bg-gray-200']"
                   @click="appointmentFilter = 'paid'"
-                >
-                  Bezahlt ({{ paidAppointments }})
-                </button>
+                >Bezahlt ({{ paidAppointments }})</button>
                 <button
-                  :class="[
-                    'px-3 py-1 text-sm rounded-md font-medium',
-                    appointmentFilter === 'unpaid' 
-                      ? 'bg-yellow-100 text-yellow-800' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  ]"
+                  :class="['px-3 py-1 text-xs sm:text-sm rounded-full font-medium transition-colors', appointmentFilter === 'unpaid' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600 hover:bg-gray-200']"
                   @click="appointmentFilter = 'unpaid'"
-                >
-                  Unbezahlt ({{ unpaidAppointments }})
-                </button>
+                >Unbezahlt ({{ unpaidAppointments }})</button>
                 <button
                   v-if="failedAppointments > 0"
-                  :class="[
-                    'px-3 py-1 text-sm rounded-md font-medium',
-                    appointmentFilter === 'failed' 
-                      ? 'bg-red-100 text-red-800' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  ]"
+                  :class="['px-3 py-1 text-xs sm:text-sm rounded-full font-medium transition-colors', appointmentFilter === 'failed' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-600 hover:bg-gray-200']"
                   @click="appointmentFilter = 'failed'"
-                >
-                  ❌ Fehlgeschlagen ({{ failedAppointments }})
-                </button>
+                >❌ Fehlgeschlagen ({{ failedAppointments }})</button>
                 <button
-                  :class="[
-                    'px-3 py-1 text-sm rounded-md font-medium',
-                    appointmentFilter === 'deleted' 
-                      ? 'bg-gray-100 text-gray-800' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  ]"
+                  :class="['px-3 py-1 text-xs sm:text-sm rounded-full font-medium transition-colors', appointmentFilter === 'deleted' ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 text-gray-600 hover:bg-gray-200']"
                   @click="appointmentFilter = 'deleted'"
-                >
-                  🗑️ Gelöscht ({{ deletedAppointments }})
-                </button>
+                >🗑️ Gelöscht ({{ deletedAppointments }})</button>
               </div>
             </div>
           </div>
-          
-          <div class="overflow-x-auto">
+
+          <!-- Mobile card list (hidden on sm+) -->
+          <ul class="divide-y divide-gray-100 sm:hidden">
+            <li
+              v-for="appointment in filteredAppointments" :key="'m-' + appointment.id"
+              :class="['px-4 py-3 flex gap-3', appointment.is_paid ? 'bg-green-50' : 'bg-white', isAppointmentSelectable(appointment) ? 'cursor-pointer active:bg-gray-50' : 'opacity-60']"
+              @click="(appointmentFilter === 'deleted' || appointmentFilter === 'failed' || !appointment.is_paid) && isAppointmentSelectable(appointment) && toggleAppointmentSelection(appointment.id)"
+            >
+              <!-- Checkbox -->
+              <div class="pt-0.5 flex-shrink-0">
+                <input
+                  v-if="(appointmentFilter === 'deleted' || appointmentFilter === 'failed' || !appointment.is_paid) && isAppointmentSelectable(appointment)"
+                  type="checkbox"
+                  :checked="selectedAppointments.includes(appointment.id)"
+                  class="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                  @change="toggleAppointmentSelection(appointment.id)"
+                  @click.stop
+                >
+              </div>
+              <!-- Content -->
+              <div class="min-w-0 flex-1 space-y-1">
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <p class="text-sm font-semibold text-gray-900 leading-tight">
+                      {{ appointment.event_type_code ? getEventTypeLabel(appointment.event_type_code) : 'Lektion' }}
+                    </p>
+                    <p class="text-xs text-gray-500">Mit {{ appointment.staff?.first_name || '—' }} · {{ appointment.duration_minutes }}min</p>
+                  </div>
+                  <p class="text-sm font-semibold text-gray-900 whitespace-nowrap">{{ formatCurrency(calculateAppointmentAmount(appointment)) }}</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span class="text-xs text-gray-500">{{ formatDate(appointment.start_time) }}, {{ formatTime(appointment.start_time) }}</span>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" :class="getStatusClass(appointment.status)">{{ getStatusLabel(appointment.status) }}</span>
+                  <span v-if="appointment.payment_method" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" :class="getPaymentMethodClass(appointment.payment_method)">{{ getPaymentMethodLabel(appointment.payment_method) }}</span>
+                </div>
+                <p v-if="appointment.deleted_at" class="text-xs text-red-600 font-medium">Gelöscht: {{ formatPaymentDateTime(appointment.deleted_at) }}</p>
+              </div>
+            </li>
+            <li v-if="filteredAppointments.length === 0" class="px-4 py-8 text-center text-sm text-gray-400">Keine Einträge</li>
+          </ul>
+
+          <!-- Desktop table (hidden below sm) -->
+          <div class="hidden sm:block overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr>
@@ -908,30 +914,14 @@ class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                       @change="toggleAllAppointments"
                     >
                   </th>
-                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Datum & Zeit
-                  </th>
-                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Termin
-                  </th>
-                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Dauer
-                  </th>
-                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Zahlungsmethode
-                  </th>
-                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Betrag
-                  </th>
-                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Zahlungsstatus
-                  </th>
-                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Aktionen
-                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Datum & Zeit</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Termin</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dauer</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zahlungsmethode</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Betrag</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zahlungsstatus</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
@@ -1221,6 +1211,7 @@ v-if="(appointment.credit_used || 0) > 0"
               </tbody>
             </table>
           </div>
+          <!-- /Desktop table -->
         </div>
       </div>
     </div>
