@@ -1,54 +1,46 @@
-import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { getSupabaseAdmin } from '~/utils/supabase'
+import { defineEventHandler, readBody, createError } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser?.id) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+
   const supabase = getSupabaseAdmin()
 
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
-  }
-
-  const token = authHeader.replace('Bearer ', '')
-  const { data: { user: authUser } } = await supabase.auth.getUser(token)
-  if (!authUser) throw createError({ statusCode: 401, message: 'Unauthorized' })
-
-  const { data: userProfile } = await supabase
+  const { data: staffUser } = await supabase
     .from('users')
-    .select('id, tenant_id')
+    .select('id, tenant_id, role')
     .eq('auth_user_id', authUser.id)
     .single()
 
-  if (!userProfile) throw createError({ statusCode: 403, message: 'User profile not found' })
+  if (!staffUser || !['admin', 'staff'].includes(staffUser.role)) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
 
-  const body = await readBody(event)
-  const { invoice_id, updates } = body
+  const { invoice_id, updates } = await readBody(event)
 
   if (!invoice_id || !updates) {
-    throw createError({ statusCode: 400, message: 'Missing invoice_id or updates' })
+    throw createError({ statusCode: 400, statusMessage: 'Missing invoice_id or updates' })
   }
 
-  try {
-    const { data: invoice, error } = await supabase
-      .from('invoices')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', invoice_id)
-      .eq('tenant_id', userProfile.tenant_id)
-      .select()
-      .single()
+  const { data: invoice, error } = await supabase
+    .from('invoices')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', invoice_id)
+    .eq('tenant_id', staffUser.tenant_id)
+    .select()
+    .single()
 
-    if (error) throw error
-
-    // Fetch full details
-    const { data: fullInvoice } = await supabase
-      .from('invoices_with_details')
-      .select('*')
-      .eq('id', invoice_id)
-      .single()
-
-    return { success: true, data: fullInvoice }
-  } catch (err: any) {
-    console.error('Error updating invoice:', err)
-    throw createError({ statusCode: 500, message: err.message })
+  if (error || !invoice) {
+    throw createError({ statusCode: 500, statusMessage: error?.message || 'Failed to update invoice' })
   }
+
+  const { data: fullInvoice } = await supabase
+    .from('invoices_with_details')
+    .select('*')
+    .eq('id', invoice_id)
+    .single()
+
+  return { success: true, data: fullInvoice }
 })

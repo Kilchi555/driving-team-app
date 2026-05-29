@@ -93,58 +93,83 @@
                 <div class="flex items-center justify-between mb-3">
                   <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Rechnungsadresse</p>
                   <button
-                    v-if="props.mode !== 'view'"
-                    @click="editingAddress = !editingAddress"
+                    @click="props.mode === 'view' ? toggleViewAddressEdit() : (editingAddress = !editingAddress)"
                     class="text-xs font-semibold flex items-center gap-1 transition-colors"
                     :style="{ color: primaryColor }"
                   >
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
-                    {{ editingAddress ? 'Fertig' : 'Bearbeiten' }}
+                    {{ (props.mode === 'view' ? editingViewAddress : editingAddress) ? 'Abbrechen' : 'Bearbeiten' }}
                   </button>
                 </div>
 
-                <!-- Read mode -->
-                <div v-if="props.mode === 'view' || !editingAddress" class="space-y-0.5">
-                  <template v-if="props.mode === 'view'">
-                    <p v-if="props.viewInvoice?.billing_company_name" class="text-sm font-semibold text-gray-800">{{ props.viewInvoice.billing_company_name }}</p>
-                    <p class="text-sm font-semibold text-gray-800">{{ props.viewInvoice?.billing_contact_person }}</p>
-                    <p v-if="props.viewInvoice?.billing_street" class="text-xs text-gray-500">
-                      {{ props.viewInvoice.billing_street }}{{ (props.viewInvoice as any)?.billing_street_number ? ' ' + (props.viewInvoice as any).billing_street_number : '' }}
-                    </p>
-                    <p v-if="props.viewInvoice?.billing_zip || props.viewInvoice?.billing_city" class="text-xs text-gray-500">{{ props.viewInvoice?.billing_zip }} {{ props.viewInvoice?.billing_city }}</p>
-                    <p v-if="props.viewInvoice?.billing_email" class="text-xs break-all" :style="{ color: primaryColor }">{{ props.viewInvoice.billing_email }}</p>
-                    <p v-if="!props.viewInvoice?.billing_contact_person && !props.viewInvoice?.billing_company_name" class="text-xs text-orange-400 italic">Keine Rechnungsadresse</p>
-                  </template>
-                  <template v-else>
+                <!-- VIEW MODE -->
+                <template v-if="props.mode === 'view'">
+                  <!-- Read -->
+                  <div v-if="!editingViewAddress" class="space-y-0.5">
+                    <p v-if="localViewBilling.company_name" class="text-sm font-semibold text-gray-800">{{ localViewBilling.company_name }}</p>
+                    <p v-if="localViewBilling.contact_person" class="text-sm font-semibold text-gray-800">{{ localViewBilling.contact_person }}</p>
+                    <p v-if="localViewBilling.street" class="text-xs text-gray-500">{{ localViewBilling.street }}</p>
+                    <p v-if="localViewBilling.zip || localViewBilling.city" class="text-xs text-gray-500">{{ localViewBilling.zip }} {{ localViewBilling.city }}</p>
+                    <p v-if="localViewBilling.email" class="text-xs break-all" :style="{ color: primaryColor }">{{ localViewBilling.email }}</p>
+                    <p v-if="!localViewBilling.contact_person && !localViewBilling.company_name" class="text-xs text-orange-400 italic">Keine Rechnungsadresse</p>
+                  </div>
+                  <!-- Edit -->
+                  <div v-else class="space-y-2">
+                    <input v-model="localViewBilling.company_name" placeholder="Firmenname (optional)" class="input-field w-full" />
+                    <input v-model="localViewBilling.contact_person" placeholder="Name *" required class="input-field w-full" />
+                    <input v-model="localViewBilling.street" placeholder="Strasse + Nr. *" required class="input-field w-full" />
+                    <div class="grid grid-cols-3 gap-2">
+                      <input v-model="localViewBilling.zip" placeholder="PLZ *" required class="input-field" />
+                      <input v-model="localViewBilling.city" placeholder="Ort *" required class="input-field col-span-2" />
+                    </div>
+                    <input v-model="localViewBilling.email" placeholder="E-Mail *" type="email" required class="input-field w-full" />
+                    <button
+                      @click="saveViewBilling"
+                      :disabled="isSavingAddress"
+                      class="w-full py-2 rounded-lg text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      :style="{ background: primaryGradient }"
+                    >
+                      <svg v-if="isSavingAddress" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      {{ isSavingAddress ? 'Speichert…' : 'Adresse speichern' }}
+                    </button>
+                  </div>
+                </template>
+
+                <!-- DRAFT MODE -->
+                <template v-else>
+                  <!-- Read -->
+                  <div v-if="!editingAddress" class="space-y-0.5">
                     <p v-if="localBilling.company_name" class="text-xs font-semibold text-gray-500">{{ localBilling.company_name }}</p>
                     <p class="text-sm font-semibold text-gray-800">{{ localBilling.first_name }} {{ localBilling.last_name }}</p>
                     <p v-if="localBilling.street" class="text-xs text-gray-500">{{ localBilling.street }} {{ localBilling.street_nr }}</p>
                     <p v-if="localBilling.zip || localBilling.city" class="text-xs text-gray-500">{{ localBilling.zip }} {{ localBilling.city }}</p>
                     <p v-if="localBilling.email" class="text-xs break-all" :style="{ color: primaryColor }">{{ localBilling.email }}</p>
                     <p v-if="!localBilling.street && !localBilling.zip" class="text-xs text-orange-500 italic">Keine Adresse hinterlegt</p>
-                  </template>
-                </div>
-
-                <!-- Edit mode (only in edit mode) -->
-                <div v-else class="space-y-2">
-                  <input v-model="localBilling.company_name" placeholder="Firmenname (optional)" class="input-field w-full" />
-                  <div class="grid grid-cols-2 gap-2">
-                    <input v-model="localBilling.first_name" placeholder="Vorname *" required class="input-field" :class="{ 'border-red-400': billingErrors.first_name }" />
-                    <input v-model="localBilling.last_name" placeholder="Nachname *" required class="input-field" :class="{ 'border-red-400': billingErrors.last_name }" />
                   </div>
-                  <div class="grid grid-cols-3 gap-2">
-                    <input v-model="localBilling.street" placeholder="Strasse *" required class="input-field col-span-2" :class="{ 'border-red-400': billingErrors.street }" />
-                    <input v-model="localBilling.street_nr" placeholder="Nr." class="input-field" />
+                  <!-- Edit -->
+                  <div v-else class="space-y-2">
+                    <input v-model="localBilling.company_name" placeholder="Firmenname (optional)" class="input-field w-full" />
+                    <div class="grid grid-cols-2 gap-2">
+                      <input v-model="localBilling.first_name" placeholder="Vorname *" required class="input-field" :class="{ 'border-red-400': billingErrors.first_name }" />
+                      <input v-model="localBilling.last_name" placeholder="Nachname *" required class="input-field" :class="{ 'border-red-400': billingErrors.last_name }" />
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                      <input v-model="localBilling.street" placeholder="Strasse *" required class="input-field col-span-2" :class="{ 'border-red-400': billingErrors.street }" />
+                      <input v-model="localBilling.street_nr" placeholder="Nr." class="input-field" />
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                      <input v-model="localBilling.zip" placeholder="PLZ *" required class="input-field" :class="{ 'border-red-400': billingErrors.zip }" />
+                      <input v-model="localBilling.city" placeholder="Ort *" required class="input-field col-span-2" :class="{ 'border-red-400': billingErrors.city }" />
+                    </div>
+                    <input v-model="localBilling.email" placeholder="E-Mail *" type="email" required class="input-field w-full" :class="{ 'border-red-400': billingErrors.email }" />
+                    <p v-if="Object.values(billingErrors).some(Boolean)" class="text-xs text-red-500">Bitte alle Pflichtfelder ausfüllen.</p>
                   </div>
-                  <div class="grid grid-cols-3 gap-2">
-                    <input v-model="localBilling.zip" placeholder="PLZ *" required class="input-field" :class="{ 'border-red-400': billingErrors.zip }" />
-                    <input v-model="localBilling.city" placeholder="Ort *" required class="input-field col-span-2" :class="{ 'border-red-400': billingErrors.city }" />
-                  </div>
-                  <input v-model="localBilling.email" placeholder="E-Mail *" type="email" required class="input-field w-full" :class="{ 'border-red-400': billingErrors.email }" />
-                  <p v-if="Object.values(billingErrors).some(Boolean)" class="text-xs text-red-500">Bitte alle Pflichtfelder ausfüllen.</p>
-                </div>
+                </template>
               </div>
             </div>
 
@@ -493,12 +518,23 @@ const primaryGradient = computed(() => {
 const isSending = ref(false)
 const isResending = ref(false)
 const isLoadingPdf = ref(false)
+const isSavingAddress = ref(false)
 const error = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 const localDueDate = ref('')
 const localNote = ref('')
 const editingAddress = ref(false)
+const editingViewAddress = ref(false)
 const editingDueDate = ref(false)
+
+const localViewBilling = ref({
+  company_name: '',
+  contact_person: '',
+  street: '',
+  zip: '',
+  city: '',
+  email: '',
+})
 const expandedItems = ref<number[]>([])
 const qrDataUrl = ref<string | null>(null)
 const qrLoading = ref(false)
@@ -558,6 +594,15 @@ watch(() => props.draft, (d) => {
 watch(() => props.viewInvoice, (v) => {
   if (v) {
     localNote.value = v.notes || ''
+    localViewBilling.value = {
+      company_name: v.billing_company_name || '',
+      contact_person: v.billing_contact_person || '',
+      street: v.billing_street || '',
+      zip: v.billing_zip || '',
+      city: v.billing_city || '',
+      email: v.billing_email || '',
+    }
+    editingViewAddress.value = false
   }
 }, { immediate: true })
 
@@ -671,6 +716,54 @@ function formatAppointmentDate(dateStr?: string | null): string {
 
 function close() {
   if (!isSending.value) emit('update:modelValue', false)
+}
+
+function toggleViewAddressEdit() {
+  if (editingViewAddress.value) {
+    // Abbrechen → zurücksetzen
+    const v = props.viewInvoice
+    if (v) {
+      localViewBilling.value = {
+        company_name: v.billing_company_name || '',
+        contact_person: v.billing_contact_person || '',
+        street: v.billing_street || '',
+        zip: v.billing_zip || '',
+        city: v.billing_city || '',
+        email: v.billing_email || '',
+      }
+    }
+  }
+  editingViewAddress.value = !editingViewAddress.value
+}
+
+async function saveViewBilling() {
+  const invoiceId = props.viewInvoice?.id
+  if (!invoiceId || isSavingAddress.value) return
+  isSavingAddress.value = true
+  error.value = null
+  try {
+    await $fetch('/api/invoices/update', {
+      method: 'POST',
+      body: {
+        invoice_id: invoiceId,
+        updates: {
+          billing_contact_person: localViewBilling.value.contact_person || null,
+          billing_company_name: localViewBilling.value.company_name || null,
+          billing_street: localViewBilling.value.street || null,
+          billing_zip: localViewBilling.value.zip || null,
+          billing_city: localViewBilling.value.city || null,
+          billing_email: localViewBilling.value.email || null,
+        },
+      },
+    })
+    editingViewAddress.value = false
+    successMessage.value = 'Adresse gespeichert.'
+    setTimeout(() => { successMessage.value = null }, 3000)
+  } catch (err: any) {
+    error.value = err?.data?.statusMessage || err?.message || 'Fehler beim Speichern der Adresse'
+  } finally {
+    isSavingAddress.value = false
+  }
 }
 
 async function openPdf() {
