@@ -788,6 +788,26 @@
       "permanent": true
     },
     {
+      "source": "/driving-team-zuerich",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/driving-team-zuerich/",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/driving-team-z%C3%BCrich",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/driving-team-z%C3%BCrich/",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
       "source": "/motorbootpruefung",
       "destination": "https://drivingteam.ch/motorboot-fahrschule/",
       "permanent": true
@@ -1569,6 +1589,11 @@
     },
     {
       "source": "/taxi",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/taxi/",
       "destination": "https://drivingteam.ch/taxi-fahrschule/",
       "permanent": true
     },
