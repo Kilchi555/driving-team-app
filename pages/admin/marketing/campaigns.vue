@@ -105,6 +105,18 @@
             </div>
             <div class="flex items-center gap-2 shrink-0">
               <span class="text-xs text-gray-400">{{ formatDate(c.created_at) }}</span>
+              <!-- Duplicate button (always visible) -->
+              <button
+                @click="duplicateCampaign(c)"
+                :disabled="duplicatingId === c.id"
+                class="px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                title="Kampagne duplizieren"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                {{ duplicatingId === c.id ? '...' : 'Duplizieren' }}
+              </button>
               <button
                 v-if="c.status === 'draft'"
                 @click="openSendConfirm(c)"
@@ -541,6 +553,7 @@ const sendResult = ref<any>(null)
 const recipients = ref<any[]>([])
 const recipientsTotal = ref(0)
 const recipientsLoading = ref(false)
+const duplicatingId = ref<string | null>(null)
 const dailyLimit = ref(500)
 const pilotMode = ref(false)
 const pilotLimit = ref(500)
@@ -677,6 +690,32 @@ async function createCampaign() {
     await loadData()
   } finally {
     saving.value = false
+  }
+}
+
+async function duplicateCampaign(campaign: any) {
+  const tenantId = authStore.userProfile?.tenant_id
+  const userId = authStore.userProfile?.id
+  if (!tenantId) return
+  duplicatingId.value = campaign.id
+  try {
+    const now = new Date().toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    await $fetch('/api/marketing/campaigns', {
+      method: 'POST',
+      body: {
+        tenantId,
+        createdBy: userId,
+        name: `${campaign.name} (Kopie ${now})`,
+        template_id: campaign.template_id,
+        subject_override: campaign.subject_override || null,
+        segment_filter: campaign.segment_filter || {},
+      },
+    })
+    await loadData()
+  } catch (err: any) {
+    alert(`Fehler beim Duplizieren: ${err.message || 'Unbekannter Fehler'}`)
+  } finally {
+    duplicatingId.value = null
   }
 }
 
