@@ -57,17 +57,19 @@ fi
 echo "✅ Homebrew: $(brew --version | head -1)"
 
 # ───────────────────────────────────────────────────────
-# 2) Install Node 20 (idempotent — won't fail if present)
+# 2) Install Node 22 (idempotent — won't fail if present)
+#    Capacitor CLI 8.x requires Node >= 22.0.0. node@20 makes
+#    `cap sync` abort with "The Capacitor CLI requires NodeJS >=22.0.0".
 # ───────────────────────────────────────────────────────
-CURRENT_STEP="2) install node@20"
-echo "📦 Installing Node.js 20…"
-if ! brew list node@20 >/dev/null 2>&1; then
-  brew install node@20
+CURRENT_STEP="2) install node@22"
+echo "📦 Installing Node.js 22…"
+if ! brew list node@22 >/dev/null 2>&1; then
+  brew install node@22
 fi
-brew link --overwrite --force node@20 || true
+brew link --overwrite --force node@22 || true
 
-# Make sure node@20 wins on PATH even if another node is preinstalled
-export PATH="$(brew --prefix node@20)/bin:$PATH"
+# Make sure node@22 wins on PATH even if another node is preinstalled
+export PATH="$(brew --prefix node@22)/bin:$PATH"
 
 echo "✅ Node version: $(node -v)"
 echo "✅ npm  version: $(npm -v)"
