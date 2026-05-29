@@ -26,9 +26,9 @@ Alle Schritte sollten der Reihe nach abgearbeitet werden. Bereits erledigte Punk
 
 ### 1.4 Capability Aktivierung im Apple Developer Portal
 Für die App-ID `ch.simy.app` müssen folgende Capabilities aktiv sein:
-- [ ] Push Notifications
-- [ ] Associated Domains
-- [ ] Sign In with Apple (falls Apple Login geplant)
+- [x] Push Notifications (aktiv – Entitlement gesetzt, TestFlight-Build signiert erfolgreich)
+- [x] Associated Domains (aktiv – `applinks:app.simy.ch` im Entitlement)
+- [ ] ~~Sign In with Apple~~ — nicht zutreffend (kein Apple/Social-Login in der App)
 
 Nach Aktivierung: `bundle exec fastlane sync_certificates` ausführen,
 um das Provisioning Profile zu regenerieren.
@@ -219,6 +219,8 @@ einfügen und in 1Password unter "Simy → Apple Review demo accounts" ablegen.
 
 ## 3. Screenshots & Visual Assets
 
+✅ Screenshots erstellt und in App Store Connect hochgeladen.
+
 ### 3.1 Erforderliche Screenshot-Sets (iOS)
 Apple verlangt mindestens **ein** Set – wir nehmen das grösste:
 | Device | Resolution | Anzahl |
@@ -240,8 +242,8 @@ direkt auf dem iPhone 16 Pro Max Simulator erstellen.
 
 ### 3.3 App Icon
 ✅ `clients/simy/icon.png` (1024×1024)
-- [ ] Im Xcode unter `Assets.xcassets/AppIcon.appiconset` einbinden
-   (bzw. `npx capacitor-assets generate --iconBackgroundColor '#7C3AED'`)
+✅ Im Xcode unter `Assets.xcassets/AppIcon.appiconset` eingebunden
+   (`AppIcon-512@2x.png` vorhanden, wird im erfolgreichen TestFlight-Build verwendet)
 
 ---
 
