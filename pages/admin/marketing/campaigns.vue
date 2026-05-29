@@ -79,9 +79,17 @@
                 Template: <span class="font-medium text-gray-700">{{ c.email_templates?.name ?? '—' }}</span>
                 <span v-if="c.subject_override" class="ml-2 text-gray-400">· Betreff-Override: "{{ c.subject_override }}"</span>
               </p>
-              <div v-if="c.status === 'sent'" class="flex gap-4 mt-2">
-                <span class="text-sm text-gray-600"><strong class="text-gray-900">{{ c.total_recipients.toLocaleString('de-CH') }}</strong> Empfänger</span>
-                <span class="text-sm text-gray-600"><strong class="text-gray-900">{{ c.sent_count.toLocaleString('de-CH') }}</strong> gesendet</span>
+              <div v-if="c.status === 'sent'" class="flex flex-wrap gap-4 mt-2">
+                <span class="text-sm text-gray-600"><strong class="text-gray-900">{{ c.total_recipients?.toLocaleString('de-CH') }}</strong> Empfänger</span>
+                <span class="text-sm text-gray-600"><strong class="text-gray-900">{{ c.sent_count?.toLocaleString('de-CH') }}</strong> gesendet</span>
+                <span v-if="c.open_count > 0" class="text-sm text-blue-600">
+                  <strong>{{ c.open_count }}</strong> Öffnungen
+                  <span class="text-gray-400">({{ c.sent_count ? Math.round(c.open_count / c.sent_count * 100) : 0 }}%)</span>
+                </span>
+                <span v-if="c.click_count > 0" class="text-sm text-green-600">
+                  <strong>{{ c.click_count }}</strong> Klicks
+                  <span class="text-gray-400">({{ c.sent_count ? Math.round(c.click_count / c.sent_count * 100) : 0 }}%)</span>
+                </span>
                 <span v-if="c.bounce_count > 0" class="text-sm text-red-600"><strong>{{ c.bounce_count }}</strong> Bounces</span>
                 <span v-if="c.unsubscribe_count > 0" class="text-sm text-gray-500"><strong>{{ c.unsubscribe_count }}</strong> Abmeldungen</span>
               </div>
