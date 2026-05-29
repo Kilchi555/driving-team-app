@@ -560,7 +560,8 @@ const reservedRoutes = [
   'simple-test', 'sms-test', 'sms-direct-test', 'wallee-test', 'debug-pricing',
   'debug-other-events', 'optimized-workflow-test', 'accounto-test', 
   'tenant-test', 'tenant-demo', 'tenant-debug', 'tenant-start', 'customers',
-  'AdminEventTypes', 'wallee-corrected-test'
+  'AdminEventTypes', 'wallee-corrected-test',
+  'helvetia-offerte'
   // NOTE: 'login' is intentionally NOT in this list - it should be handled by [slug].vue or /login/[tenant].vue
 ]
 
