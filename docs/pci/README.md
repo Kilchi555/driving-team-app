@@ -14,13 +14,27 @@ Dieses Verzeichnis erzeugt pro Tenant zwei Dokumente:
 ## Struktur
 
 ```
+server/templates/pci-templates.mjs     # EINZIGE Quelle der Vorlagen (DE) + Render-Logik
+                                        # — genutzt von CLI UND vom Super-Admin-UI-Endpoint
 docs/pci/
-├── templates/                         # parametrisierte DE-Vorlagen ({{PLATZHALTER}})
-│   ├── PCI_COMPLIANCE_POLICY.de.template.md
-│   └── PCI_INCIDENT_RESPONSE_PLAN.de.template.md
 ├── <tenant-slug>/                     # generierte Doks pro Tenant (.md + .pdf)
 └── README.md
 ```
+
+> Die Vorlagentexte liegen als importierbares Modul in
+> `server/templates/pci-templates.mjs` (damit sie auch auf Vercel gebündelt
+> werden). Texte dort ändern → wirkt sowohl im CLI als auch in der UI.
+
+## Erzeugen — in der UI (empfohlen für den Alltag)
+
+**Nur Super-Admin.** Tenant-Verwaltung (`/tenant-admin/tenants`) → bei einem
+Tenant auf **Wallee „Verwalten/Setup"** → Abschnitt **„PCI-Dokumente"**:
+Unterzeichner + Funktion eingeben → **„PCI-Dokumente erzeugen & öffnen"**.
+Es öffnet sich eine Druckansicht beider Dokumente → **Drucken / Als PDF
+speichern** → dem Tenant zusenden.
+
+Endpoint dahinter: `GET /api/admin/pci-docs?tenant_id=…&approver=…&title=…`
+(super-admin-geschützt, liefert druckbares HTML).
 
 ## Erzeugen — empfohlen (Daten aus der `tenants`-Tabelle)
 
