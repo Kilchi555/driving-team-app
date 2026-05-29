@@ -106,25 +106,30 @@
           </p>
         </div>
 
-        <div class="flex items-center gap-3">
-          <button
-            @click="checkStatus"
-            :disabled="checking"
-            class="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-2"
-          >
-            <svg v-if="checking" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-            </svg>
-            {{ checking ? 'Prüfe…' : 'Status prüfen' }}
-          </button>
-          <button
-            @click="remove"
-            :disabled="saving"
-            class="text-sm text-red-500 hover:text-red-700 transition-colors"
-          >
-            Domain entfernen
-          </button>
+        <div class="space-y-2">
+          <div class="flex items-center gap-3">
+            <button
+              @click="checkStatus"
+              :disabled="checking"
+              class="px-4 py-2 bg-white border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-2"
+            >
+              <svg v-if="checking" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+              {{ checking ? 'Prüfe…' : 'Status prüfen' }}
+            </button>
+            <button
+              @click="remove"
+              :disabled="saving"
+              class="text-sm text-red-500 hover:text-red-700 transition-colors"
+            >
+              Domain entfernen
+            </button>
+          </div>
+          <p v-if="lastChecked" class="text-xs text-gray-400">
+            Zuletzt geprüft: {{ lastChecked }} — noch nicht verifiziert
+          </p>
         </div>
       </div>
 
@@ -174,12 +179,13 @@ interface DomainStatus {
   dnsRecords?: Array<{ type: string; name: string; value: string }>
 }
 
-const loading  = ref(true)
-const saving   = ref(false)
-const checking = ref(false)
-const errorMsg = ref('')
+const loading    = ref(true)
+const saving     = ref(false)
+const checking   = ref(false)
+const errorMsg   = ref('')
 const newFromEmail = ref('')
-const status = ref<DomainStatus | null>(null)
+const status     = ref<DomainStatus | null>(null)
+const lastChecked = ref('')
 
 onMounted(loadStatus)
 
@@ -200,6 +206,7 @@ async function checkStatus() {
   errorMsg.value = ''
   try {
     status.value = await $fetch<DomainStatus>('/api/admin/email-domain/status')
+    lastChecked.value = new Date().toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
   } catch (e: any) {
     errorMsg.value = e?.data?.statusMessage || 'Fehler beim Prüfen'
   } finally {
