@@ -40,7 +40,7 @@ export default defineNuxtConfig({
         { name: 'twitter:site', content: '@simych' },
       ],
       link: [
-        { rel: 'icon', type: 'image/png', href: '/simy-logo.png' },
+        { rel: 'icon', type: 'image/png', href: '/simy-favicon.png' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       ],
     },
