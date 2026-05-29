@@ -11,40 +11,41 @@
         <div
           v-for="(staff, idx) in staffBalances"
           :key="staff.id"
-          class="flex items-center px-5 py-3.5"
+          class="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:px-5 sm:py-3.5"
           :class="{ 'border-t border-gray-100': idx > 0 }"
         >
-          <!-- Avatar -->
-          <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
-            <span class="text-xs font-semibold text-gray-600">
-              {{ staff.first_name?.charAt(0) }}{{ staff.last_name?.charAt(0) }}
+          <!-- Top row: avatar + name + balance -->
+          <div class="flex items-center gap-3 flex-1 min-w-0">
+            <!-- Avatar -->
+            <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <span class="text-xs font-semibold text-gray-600">
+                {{ staff.first_name?.charAt(0) }}{{ staff.last_name?.charAt(0) }}
+              </span>
+            </div>
+            <!-- Name + email -->
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-900 leading-tight">{{ staff.first_name }} {{ staff.last_name }}</p>
+              <p class="text-xs text-gray-400 truncate">{{ staff.email }}</p>
+            </div>
+            <!-- Balance — inline on mobile, separate on desktop -->
+            <span
+              class="text-sm font-semibold tabular-nums flex-shrink-0 sm:mx-6"
+              :class="getStaffCurrentBalance(staff.id) >= 0 ? 'text-gray-900' : 'text-red-600'"
+            >
+              {{ (getStaffCurrentBalance(staff.id) / 100).toFixed(2) }} CHF
             </span>
           </div>
 
-          <!-- Name + email -->
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-gray-900">{{ staff.first_name }} {{ staff.last_name }}</p>
-            <p class="text-xs text-gray-400 truncate">{{ staff.email }}</p>
-          </div>
-
-          <!-- Balance -->
-          <span
-            class="text-sm font-semibold tabular-nums mx-6"
-            :class="getStaffCurrentBalance(staff.id) >= 0 ? 'text-gray-900' : 'text-red-600'"
-          >
-            {{ (getStaffCurrentBalance(staff.id) / 100).toFixed(2) }} CHF
-          </span>
-
           <!-- Actions -->
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 sm:flex-shrink-0">
             <button
-              class="text-xs px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 font-medium transition-colors whitespace-nowrap"
+              class="flex-1 sm:flex-none text-xs px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 font-medium transition-colors whitespace-nowrap text-center"
               @click="openHandoverModal(staff)"
             >
               Kassenabgabe
             </button>
             <button
-              class="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium transition-colors"
+              class="flex-1 sm:flex-none text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium transition-colors text-center"
               @click="viewStaffTransactions(staff)"
             >
               Details

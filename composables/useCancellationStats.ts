@@ -48,18 +48,18 @@ export const useCancellationStats = () => {
       isLoading.value = true
       error.value = null
 
-      // Get current user's tenant_id
       const authStore = useAuthStore()
-      const currentUser = authStore.user
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', currentUser?.id)
-        .single()
-      const tenantId = userProfile?.tenant_id
-      
+      const tenantId = authStore.userProfile?.tenant_id
+
       if (!tenantId) {
-        throw new Error('User has no tenant assigned')
+        // Super-admin or user without tenant — return empty stats silently
+        stats.value = {
+          total_cancellations: 0,
+          stats_by_reason: [],
+          stats_by_month: [],
+          recent_cancellations: []
+        }
+        return
       }
 
       logger.debug('🔍 Cancellation Stats - Current tenant_id:', tenantId)

@@ -3,19 +3,17 @@
   <div>
     <div class="p-4">
       <div class="flex items-center justify-between mb-6">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900">Experten-Verwaltung</h1>
-          <p class="text-gray-600">Verwalten Sie alle Prüfungsexperten im System</p>
-        </div>
+        <h1 class="text-2xl font-bold text-gray-900">Experten-Verwaltung</h1>
         <button
           @click="showAddModal = true"
-          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 tenant-focus"
+          class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 tenant-focus flex-shrink-0"
           :style="{ background: primaryColor }"
         >
-          <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
-          Neuen Experten hinzufügen
+          <span class="hidden sm:inline">Neuen Experten hinzufügen</span>
+          <span class="sm:hidden">+ Neu</span>
         </button>
       </div>
 

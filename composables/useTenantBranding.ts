@@ -407,7 +407,9 @@ export const useTenantBranding = () => {
       logger.debug('📝 Final updateData to be saved:', updateData)
 
       // ✅ SECURE API CALL - Use new secure branding update API
-      const authHeader = await getAuthHeader()
+      const supabaseClient = getSupabase()
+      const { data: { session } } = await supabaseClient.auth.getSession()
+      const authHeader = session?.access_token ? `Bearer ${session.access_token}` : null
       if (!authHeader) {
         throw new Error('Authentication required for branding updates')
       }

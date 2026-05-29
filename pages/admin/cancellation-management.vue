@@ -822,8 +822,8 @@ onMounted(async () => {
     return navigateTo('/dashboard')
   }
   
-  // Prüfe ob User Admin ist
-  if (!authStore.isAdmin) {
+  // Prüfe ob User Admin oder Super-Admin ist
+  if (!authStore.isAdmin && !authStore.isSuperAdmin) {
     logger.debug('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }

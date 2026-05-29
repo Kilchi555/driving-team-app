@@ -5,20 +5,20 @@
  */
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
 
-  const user = event.context.user
-  if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  const authUser = await getAuthenticatedUser(event)
 
   const { data: profile } = await supabase
     .from('users')
     .select('tenant_id, role')
-    .eq('auth_user_id', user.id)
+    .eq('auth_user_id', authUser.id)
     .single()
 
-  if (!profile?.tenant_id || !['admin', 'owner'].includes(profile.role)) {
+  if (!profile?.tenant_id || !['admin', 'owner', 'super_admin'].includes(profile.role ?? '')) {
     throw createError({ statusCode: 403, statusMessage: 'Admin required' })
   }
 

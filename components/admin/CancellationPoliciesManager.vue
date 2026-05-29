@@ -4,13 +4,12 @@
     <div class="flex justify-between items-center">
       <div>
         <h2 class="text-xl font-bold text-gray-900">Absage-Policies</h2>
-        <p class="text-gray-600">Verwalten Sie die Regeln für Stornogebühren und Stunden-Gutschriften</p>
       </div>
       <button
         @click="showCreatePolicyModal = true"
         class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
       >
-        + Neue Policy erstellen
+        + Neu
       </button>
     </div>
 

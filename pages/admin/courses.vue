@@ -3,39 +3,38 @@
     <!-- Page Header -->
     <div class="bg-white shadow-sm border-b">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-6">
-          <div>
-            <h1 class="text-3xl font-bold text-gray-900">Kursverwaltung</h1>
-          </div>
-          <div v-if="activeTab === 'courses'" class="flex items-center gap-3">
+        <div class="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center py-4 sm:py-6">
+          <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Kursverwaltung</h1>
+          <div v-if="activeTab === 'courses'" class="flex items-center gap-2">
             <button
               @click="triggerSariSync"
               :disabled="sariSyncing"
-              class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+              class="flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium transition-colors text-sm"
               :class="sariSyncing ? 'bg-orange-100 text-orange-400 cursor-not-allowed' : 'bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200'"
               title="SARI-Kurse jetzt synchronisieren"
             >
-              <svg class="w-4 h-4" :class="sariSyncing ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 flex-shrink-0" :class="sariSyncing ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
               </svg>
-              {{ sariSyncing ? 'Synchronisiert…' : 'SARI Sync' }}
+              <span class="hidden xs:inline sm:inline">{{ sariSyncing ? 'Synchronisiert…' : 'SARI Sync' }}</span>
             </button>
             <button
               @click="openCreateCourseModal"
-              class="text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+              class="text-white bg-green-600 hover:bg-green-700 px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-1.5 text-sm"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
               </svg>
-              Neuer Kurs erstellen
+              <span class="hidden sm:inline">Neuer Kurs erstellen</span>
+              <span class="sm:hidden">Neuer Kurs</span>
             </button>
           </div>
           <button
             v-if="activeTab === 'categories'"
             @click="showCreateCategoryModal = true"
-            class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+            class="bg-green-600 hover:bg-green-700 px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-1.5 text-sm self-start sm:self-auto"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
             </svg>
             Neue Kursart
@@ -95,7 +94,7 @@
            enrollment will be forced to cash, regardless of city. -->
       <div
         v-if="walleeStatusLoaded && !walleeEnabled && activeTab === 'courses'"
-        class="mb-6 p-4 rounded-lg border-2 border-amber-300 bg-amber-50"
+        class="hidden sm:block mb-6 p-4 rounded-lg border-2 border-amber-300 bg-amber-50"
       >
         <div class="flex items-start gap-3">
           <svg class="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

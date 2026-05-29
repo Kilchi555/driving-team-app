@@ -1,30 +1,31 @@
 <template>
-  <div class="p-6">
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900 mb-2">Stundenübersicht</h1>
-      <p class="text-gray-600">Übersicht über die Arbeitsstunden der Fahrlehrer</p>
+  <div class="p-4 sm:p-6">
+    <div class="mb-4 sm:mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Stundenübersicht</h1>
     </div>
 
-    <!-- View Tabs -->
-    <div class="flex border-b border-gray-200 mb-6">
-      <button
-        @click="activeView = 'hours'"
-        class="px-5 py-2.5 text-sm font-medium border-b-2 transition-colors"
-        :class="activeView === 'hours' ? '' : 'border-transparent text-gray-500 hover:text-gray-700'"
-        :style="activeView === 'hours' ? { borderColor: primaryColor, color: primaryColor } : {}"
-      >Stundenerfassung</button>
-      <button
-        @click="activeView = 'monthly'"
-        class="px-5 py-2.5 text-sm font-medium border-b-2 transition-colors"
-        :class="activeView === 'monthly' ? '' : 'border-transparent text-gray-500 hover:text-gray-700'"
-        :style="activeView === 'monthly' ? { borderColor: primaryColor, color: primaryColor } : {}"
-      >Monatslohn Übersicht</button>
-      <button
-        @click="activeView = 'settings'"
-        class="px-5 py-2.5 text-sm font-medium border-b-2 transition-colors"
-        :class="activeView === 'settings' ? '' : 'border-transparent text-gray-500 hover:text-gray-700'"
-        :style="activeView === 'settings' ? { borderColor: primaryColor, color: primaryColor } : {}"
-      >Lohneinstellungen</button>
+    <!-- View Tabs — scrollable on mobile -->
+    <div class="border-b border-gray-200 mb-6 overflow-x-auto">
+      <div class="flex min-w-max">
+        <button
+          @click="activeView = 'hours'"
+          class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+          :class="activeView === 'hours' ? '' : 'border-transparent text-gray-500 hover:text-gray-700'"
+          :style="activeView === 'hours' ? { borderColor: primaryColor, color: primaryColor } : {}"
+        >Stundenerfassung</button>
+        <button
+          @click="activeView = 'monthly'"
+          class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+          :class="activeView === 'monthly' ? '' : 'border-transparent text-gray-500 hover:text-gray-700'"
+          :style="activeView === 'monthly' ? { borderColor: primaryColor, color: primaryColor } : {}"
+        >Monatslohn</button>
+        <button
+          @click="activeView = 'settings'"
+          class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+          :class="activeView === 'settings' ? '' : 'border-transparent text-gray-500 hover:text-gray-700'"
+          :style="activeView === 'settings' ? { borderColor: primaryColor, color: primaryColor } : {}"
+        >Lohneinstellungen</button>
+      </div>
     </div>
 
     <!-- ══════════════════════════════════════════════════
@@ -134,24 +135,22 @@
 
       <!-- Staff Hours Table -->
       <div class="bg-white rounded-lg shadow overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <div class="flex items-center justify-between">
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h2 class="text-lg font-semibold text-gray-900">
               Fahrlehrer-Stunden {{ selectedYear }}{{ selectedMonth !== 'all' ? ` - ${monthNames[selectedMonth]}` : '' }}
             </h2>
-            <div class="flex items-center space-x-3">
-              <span class="text-sm font-medium text-gray-700">Monatsübersicht</span>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  :checked="showDetailedView"
-                  @change="toggleView"
-                  class="sr-only peer"
-                />
-                <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                <span class="ml-3 text-sm font-medium text-gray-700">Jahresübersicht</span>
-              </label>
-            </div>
+            <label class="relative inline-flex items-center cursor-pointer self-start sm:self-auto gap-2">
+              <span class="text-sm font-medium text-gray-700">Monat</span>
+              <input
+                type="checkbox"
+                :checked="showDetailedView"
+                @change="toggleView"
+                class="sr-only peer"
+              />
+              <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+              <span class="text-sm font-medium text-gray-700">Jahr</span>
+            </label>
           </div>
         </div>
         

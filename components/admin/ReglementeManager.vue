@@ -1,84 +1,78 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-5">
     <!-- Header -->
-    <div class="flex justify-between items-center">
-      <div>
-        <h2 class="text-xl font-bold text-gray-900">Reglemente verwalten</h2>
-        <p class="text-gray-600">Verwalten Sie die rechtlichen Dokumente für Ihre Fahrschule</p>
-        <p class="text-xs text-gray-500 mt-1">
-          Basis-Reglemente werden automatisch mit Ihren Fahrschul-Daten gefüllt. Sie können zusätzliche Inhalte und Abschnitte hinzufügen.
-        </p>
-      </div>
+    <div class="flex items-center justify-between">
+      <h2 class="text-base font-semibold text-gray-800">Reglemente</h2>
       <button
         @click="showCreateCustomModal = true"
         :disabled="isLoading"
-        class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
+        class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-40"
       >
-        ➕ Neues Reglement
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Neu
       </button>
     </div>
 
     <!-- Loading State -->
     <div v-if="isLoading" class="flex justify-center py-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400"></div>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-md p-4">
-      <div class="flex">
-        <div class="text-red-400 mr-3">⚠️</div>
-        <div>
-          <h3 class="text-red-800 font-medium">Fehler beim Laden</h3>
-          <p class="text-red-700 mt-1">{{ error }}</p>
-        </div>
-      </div>
+    <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
+      {{ error }}
     </div>
 
     <!-- Standard Reglemente -->
-    <div v-else>
-      <div class="mb-4">
-        <h3 class="text-lg font-semibold text-gray-900">Standard-Reglemente</h3>
-        <p class="text-sm text-gray-600">Diese Reglemente werden automatisch mit Ihren Fahrschul-Daten gefüllt</p>
-      </div>
-      
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <div
-          v-for="reglementType in reglementTypes"
-          :key="reglementType.type"
-          class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
-        >
-          <div class="p-6">
-            <div class="flex items-start justify-between mb-4">
-              <div class="flex items-center space-x-3">
-                <div :class="['w-10 h-10 rounded-lg flex items-center justify-center', reglementType.iconBg]">
-                  <component :is="reglementType.icon" :class="['w-5 h-5', reglementType.iconColor]" />
+    <div v-else class="space-y-6">
+      <div>
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Standard</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div
+            v-for="reglementType in reglementTypes"
+            :key="reglementType.type"
+            class="bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all"
+          >
+            <div class="p-4">
+              <div class="flex items-center gap-3 mb-4">
+                <div :class="['w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', reglementType.iconBg]">
+                  <component :is="reglementType.icon" :class="['w-4 h-4', reglementType.iconColor]" />
                 </div>
-                <div>
-                  <h3 class="font-semibold text-gray-900">{{ reglementType.title }}</h3>
-                  <p class="text-xs text-gray-500 mt-1">{{ reglementType.description }}</p>
-                </div>
+                <span class="text-sm font-medium text-gray-800 leading-tight">{{ reglementType.title }}</span>
               </div>
-            </div>
 
-            <div class="space-y-2">
-              <button
-                @click="viewReglement(reglementType.type)"
-                class="w-full px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-              >
-                👁️ Vorschau
-              </button>
-              <button
-                @click="editAdditionalContent(reglementType.type)"
-                class="w-full px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
-              >
-                📝 Zusätzliche Inhalte
-              </button>
-              <button
-                @click="manageSections(reglementType.type)"
-                class="w-full px-3 py-2 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors text-sm font-medium"
-              >
-                📑 Abschnitte verwalten
-              </button>
+              <div class="flex gap-2">
+                <button
+                  @click="viewReglement(reglementType.type)"
+                  class="flex-1 px-2 py-1.5 bg-gray-50 text-gray-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors text-xs font-medium"
+                  title="Vorschau"
+                >
+                  <svg class="w-3.5 h-3.5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
+                </button>
+                <button
+                  @click="editAdditionalContent(reglementType.type)"
+                  class="flex-1 px-2 py-1.5 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors text-xs font-medium"
+                  title="Zusätzliche Inhalte"
+                >
+                  <svg class="w-3.5 h-3.5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                </button>
+                <button
+                  @click="manageSections(reglementType.type)"
+                  class="flex-1 px-2 py-1.5 bg-gray-50 text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-600 transition-colors text-xs font-medium"
+                  title="Abschnitte verwalten"
+                >
+                  <svg class="w-3.5 h-3.5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -86,43 +80,47 @@
 
       <!-- Custom Reglemente -->
       <div v-if="customReglements.length > 0">
-        <div class="mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">Zusätzliche Reglemente</h3>
-          <p class="text-sm text-gray-600">Ihre benutzerdefinierten Reglemente</p>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Eigene</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div
             v-for="reglement in customReglements"
             :key="reglement.id"
-            class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
+            class="bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all"
           >
-            <div class="p-6">
-              <div class="flex items-start justify-between mb-4">
-                <div>
-                  <h3 class="font-semibold text-gray-900">{{ reglement.title }}</h3>
-                  <p class="text-xs text-gray-500 mt-1">{{ formatDate(reglement.updated_at) }}</p>
-                </div>
+            <div class="p-4">
+              <div class="mb-4">
+                <p class="text-sm font-medium text-gray-800">{{ reglement.title }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ formatDate(reglement.updated_at) }}</p>
               </div>
 
-              <div class="space-y-2">
+              <div class="flex gap-2">
                 <button
                   @click="viewCustomReglement(reglement)"
-                  class="w-full px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+                  class="flex-1 px-2 py-1.5 bg-gray-50 text-gray-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                  title="Vorschau"
                 >
-                  👁️ Vorschau
+                  <svg class="w-3.5 h-3.5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
                 </button>
                 <button
                   @click="editCustomReglement(reglement)"
-                  class="w-full px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
+                  class="flex-1 px-2 py-1.5 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                  title="Bearbeiten"
                 >
-                  ✏️ Bearbeiten
+                  <svg class="w-3.5 h-3.5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
                 </button>
                 <button
                   @click="deleteCustomReglement(reglement)"
-                  class="w-full px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium"
+                  class="flex-1 px-2 py-1.5 bg-gray-50 text-gray-600 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"
+                  title="Löschen"
                 >
-                  🗑️ Löschen
+                  <svg class="w-3.5 h-3.5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
                 </button>
               </div>
             </div>
@@ -236,8 +234,11 @@
         </div>
         <div class="p-6 overflow-y-auto flex-1">
           <div class="mb-4">
-            <button @click="showAddSectionForm = true" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
-              ➕ Neuer Abschnitt
+            <button @click="showAddSectionForm = true" class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg hover:bg-gray-700 transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              Neuer Abschnitt
             </button>
           </div>
           
