@@ -29,13 +29,15 @@ export default defineEventHandler(async (event) => {
   // Load tenant info for from-name, branding + base URL
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, slug, from_email, resend_domain_verified, primary_color')
+    .select('name, slug, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_square_url')
     .eq('id', tenantId)
     .single()
 
   const tenantName = tenant?.name ?? 'Fahrschule'
   const tenantSlug = tenant?.slug ?? ''
   const primaryColor = tenant?.primary_color || '#1e293b'
+  const logoWideUrl = tenant?.logo_wide_url || null
+  const logoSquareUrl = tenant?.logo_square_url || null
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL || 'https://app.simy.ch'
 
   // Extract discount code from segment_filter (non-filtering metadata)
@@ -92,7 +94,7 @@ export default defineEventHandler(async (event) => {
       tenant_name: tenantName,
     })
 
-    const wrappedHtml = wrapMarketingEmail(renderedHtml, tenantName, unsubscribeLink, primaryColor)
+    const wrappedHtml = wrapMarketingEmail(renderedHtml, tenantName, unsubscribeLink, primaryColor, logoWideUrl, logoSquareUrl)
 
     queueRows.push({
       channel: 'email',
