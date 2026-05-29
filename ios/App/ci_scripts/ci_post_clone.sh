@@ -102,9 +102,13 @@ CURRENT_STEP="4) npm install"
 echo "📥 Installing npm dependencies…"
 # Limit parallel sockets — more reliable on CI networks (Capacitor CI guides).
 npm config set maxsockets 3 || true
-if ! npm ci --prefer-offline --no-audit --no-fund; then
+# --ignore-scripts: skip lifecycle scripts (notably our "postinstall": "nuxt prepare").
+# `cap sync` only needs node_modules/@capacitor/* present — it does NOT need a
+# Nuxt build/prepare for this hosted-shell app. nuxt prepare in CI is an
+# unnecessary failure vector (env/memory), so we skip all install scripts here.
+if ! npm ci --prefer-offline --no-audit --no-fund --ignore-scripts; then
   echo "⚠️  npm ci failed (lockfile mismatch or peer conflict). Falling back to npm install --legacy-peer-deps."
-  npm install --no-audit --no-fund --legacy-peer-deps
+  npm install --no-audit --no-fund --legacy-peer-deps --ignore-scripts
 fi
 
 # ───────────────────────────────────────────────────────
