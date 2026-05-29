@@ -92,12 +92,39 @@ echo "🛠  Generating capacitor.config.json for client=simy…"
 CLIENT=simy node scripts/gen-cap-config.mjs
 
 # ───────────────────────────────────────────────────────
+# 5b) Ensure the Capacitor webDir exists.
+#     Simy is a hosted-shell app (loads from serverUrl at runtime), so the
+#     bundled web assets are only a placeholder — but `cap copy` still requires
+#     the webDir to exist or it exits 1. On a fresh CI clone .output/public
+#     hasn't been built, so we create a minimal stub instead of running a full
+#     (slow, env-dependent) Nuxt build.
+# ───────────────────────────────────────────────────────
+WEB_DIR="$REPO_ROOT/.output/public"
+if [ ! -f "$WEB_DIR/index.html" ]; then
+  echo "📄 webDir missing — creating placeholder at $WEB_DIR"
+  mkdir -p "$WEB_DIR"
+  cat > "$WEB_DIR/index.html" <<'HTML'
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Simy</title>
+  </head>
+  <body>
+    <!-- Hosted-shell placeholder. The app loads from server.url at runtime. -->
+  </body>
+</html>
+HTML
+else
+  echo "✅ webDir already present at $WEB_DIR"
+fi
+
+# ───────────────────────────────────────────────────────
 # 6) Sync Capacitor iOS project (copy web + plugin files)
 # ───────────────────────────────────────────────────────
 echo "🔁 Syncing Capacitor iOS project…"
-# NOTE: --no-build was removed in Capacitor 8 (cap sync no longer builds the
-# web app on its own; the build runs as part of `cap copy` if `webDir` points
-# at a dist folder). Passing the flag now makes cap exit 1.
+# NOTE: --no-build was removed in Capacitor 8 — passing it makes cap exit 1.
 npx cap sync ios
 
 echo "=================================================="
