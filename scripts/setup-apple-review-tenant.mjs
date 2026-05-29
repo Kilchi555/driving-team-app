@@ -559,6 +559,22 @@ async function seedPayments({ tenantId, customerId, staffId, reseed }) {
   console.log(`   ✓ ${rows.length} payments seeded`)
 }
 
+async function ensureFeatureFlags(tenantId) {
+  console.log('🚩 Setting feature flags…')
+  const flags = [
+    { key: 'courses_enabled',      value: { enabled: true } },
+    { key: 'product_sales_enabled', value: { enabled: true } },
+  ]
+  for (const f of flags) {
+    const { error } = await supabase
+      .from('tenant_settings')
+      .upsert({ tenant_id: tenantId, category: 'features', setting_key: f.key, setting_value: JSON.stringify(f.value) },
+              { onConflict: 'tenant_id,category,setting_key' })
+    if (error) throw error
+    console.log(`   ✓ ${f.key} = true`)
+  }
+}
+
 // ─── Main ───────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -633,6 +649,7 @@ async function main() {
 
   await seedAppointments({ tenantId, customerId, staffId, locationIds, reseed })
   await seedPayments({ tenantId, customerId, staffId, reseed })
+  await ensureFeatureFlags(tenantId)
 
   console.log('\n✅ Setup complete!\n')
   console.log('────── Apple App Review Credentials ──────')
