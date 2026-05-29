@@ -29,11 +29,12 @@ export default defineEventHandler(async (event) => {
   // Load tenant info for from-name, branding + base URL
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, from_email, resend_domain_verified, primary_color')
+    .select('name, slug, from_email, resend_domain_verified, primary_color')
     .eq('id', tenantId)
     .single()
 
   const tenantName = tenant?.name ?? 'Fahrschule'
+  const tenantSlug = tenant?.slug ?? ''
   const primaryColor = tenant?.primary_color || '#1e293b'
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL || 'https://app.simy.ch'
 
@@ -79,6 +80,7 @@ export default defineEventHandler(async (event) => {
       unsubscribe_link: unsubscribeLink,
       consent_link: consentLink,
       tenant_name: tenantName,
+      tenant_slug: tenantSlug,
       primary_color: primaryColor,
       discount_code: discountCode,
     })

@@ -1,6 +1,6 @@
 /**
  * Replaces template variables in HTML/text strings.
- * Supported: {{first_name}}, {{last_name}}, {{email}}, {{unsubscribe_link}}, {{consent_link}}, {{tenant_name}}
+ * Supported: {{first_name}}, {{last_name}}, {{email}}, {{unsubscribe_link}}, {{consent_link}}, {{tenant_name}}, {{tenant_slug}}
  */
 export interface TemplateVariables {
   first_name?: string | null
@@ -9,6 +9,7 @@ export interface TemplateVariables {
   unsubscribe_link?: string
   consent_link?: string
   tenant_name?: string
+  tenant_slug?: string
   primary_color?: string
   discount_code?: string
 }
@@ -21,6 +22,7 @@ export function renderTemplate(template: string, variables: TemplateVariables): 
     .replace(/\{\{unsubscribe_link\}\}/g, variables.unsubscribe_link || '#')
     .replace(/\{\{consent_link\}\}/g, variables.consent_link || '#')
     .replace(/\{\{tenant_name\}\}/g, variables.tenant_name || '')
+    .replace(/\{\{tenant_slug\}\}/g, variables.tenant_slug || '')
     .replace(/\{\{primary_color\}\}/g, variables.primary_color || '#1e293b')
     .replace(/\{\{discount_code\}\}/g, variables.discount_code || '')
 }
