@@ -559,6 +559,50 @@ async function seedPayments({ tenantId, customerId, staffId, reseed }) {
   console.log(`   ✓ ${rows.length} payments seeded`)
 }
 
+async function ensureCourses(tenantId, staffId) {
+  console.log('📚 Checking demo courses…')
+  const { count } = await supabase
+    .from('courses')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+
+  if ((count ?? 0) > 0) {
+    console.log(`   ✓ ${count} courses already exist – skipping`)
+    return
+  }
+
+  const DAY = 24 * 60 * 60 * 1000
+  const courses = [
+    {
+      name: 'Nothelferkurs Kategorie B',
+      description: 'Pflichtiger Nothelferkurs fuer den Fuehrerscheinerwerb. Du lernst Erste Hilfe bei Verkehrsunfaellen: Bewusstlosigkeit, Atemstillstand, Blutungen und Schockbehandlung. Kurs dauert ca. 10 Stunden und wird mit einem anerkannten Zertifikat abgeschlossen.',
+      price_per_participant_rappen: 18000,
+      max_participants: 16, min_participants: 4, current_participants: 3,
+      course_start_date: new Date(Date.now() + 14 * DAY).toISOString(),
+      registration_deadline: new Date(Date.now() + 10 * DAY).toISOString(),
+    },
+    {
+      name: 'Verkehrskundeunterricht (VKU)',
+      description: 'Der gesetzlich vorgeschriebene Verkehrskundeunterricht fuer Neulenker. 3 Halbtages-Module zu Themen wie Fahrzeugkunde, Unfallpraevention und oekologisches Fahren. Anerkannt durch das Strassenverkehrsamt.',
+      price_per_participant_rappen: 22000,
+      max_participants: 12, min_participants: 3, current_participants: 1,
+      course_start_date: new Date(Date.now() + 21 * DAY).toISOString(),
+      registration_deadline: new Date(Date.now() + 17 * DAY).toISOString(),
+    },
+  ]
+
+  const rows = courses.map(c => ({
+    tenant_id: tenantId, instructor_id: staffId,
+    category: 'B', status: 'active', is_public: true, is_active: true,
+    payment_method: 'CASH_ON_SITE', city: 'Zuerich',
+    ...c,
+  }))
+
+  const { error } = await supabase.from('courses').insert(rows)
+  if (error) throw error
+  console.log(`   ✓ ${rows.length} demo courses seeded`)
+}
+
 async function ensureFeatureFlags(tenantId) {
   console.log('🚩 Setting feature flags…')
   const flags = [
@@ -650,6 +694,7 @@ async function main() {
   await seedAppointments({ tenantId, customerId, staffId, locationIds, reseed })
   await seedPayments({ tenantId, customerId, staffId, reseed })
   await ensureFeatureFlags(tenantId)
+  await ensureCourses(tenantId, staffId)
 
   console.log('\n✅ Setup complete!\n')
   console.log('────── Apple App Review Credentials ──────')
