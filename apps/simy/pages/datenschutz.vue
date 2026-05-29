@@ -25,13 +25,13 @@
 <script setup lang="ts">
 useHead({
   title: 'Datenschutz – simy',
-  meta: [{ name: 'description', content: 'Datenschutzerklärung der simy GmbH. DSGVO-konform, Schweizer Server.' }],
+  meta: [{ name: 'description', content: 'Datenschutzerklärung der Simy IT Systems Kilchenmann. DSGVO-konform, Schweizer Server.' }],
 })
 
 const sections = [
   {
     title: '1. Verantwortliche Stelle',
-    content: 'simy GmbH, Schweiz\nE-Mail: datenschutz@simy.ch\n\nWir nehmen den Schutz deiner persönlichen Daten sehr ernst und behandeln deine personenbezogenen Daten vertraulich und entsprechend der gesetzlichen Datenschutzvorschriften (DSG, DSGVO).',
+    content: 'Simy IT Systems Kilchenmann, Schweiz\nE-Mail: info@simy.ch\n\nWir nehmen den Schutz deiner persönlichen Daten sehr ernst und behandeln deine personenbezogenen Daten vertraulich und entsprechend der gesetzlichen Datenschutzvorschriften (DSG, DSGVO).',
   },
   {
     title: '2. Welche Daten wir erheben',
@@ -47,7 +47,7 @@ const sections = [
   },
   {
     title: '5. Deine Rechte',
-    content: 'Auskunft über deine gespeicherten Daten\nBerichtigung unrichtiger Daten\nLöschung deiner Daten ("Recht auf Vergessenwerden")\nEinschränkung der Verarbeitung\nDatenportabilität\n\nUm deine Rechte auszuüben, kontaktiere uns unter datenschutz@simy.ch.',
+    content: 'Auskunft über deine gespeicherten Daten\nBerichtigung unrichtiger Daten\nLöschung deiner Daten ("Recht auf Vergessenwerden")\nEinschränkung der Verarbeitung\nDatenportabilität\n\nUm deine Rechte auszuüben, kontaktiere uns unter info@simy.ch.',
   },
   {
     title: '6. Cookies',
@@ -59,7 +59,7 @@ const sections = [
   },
   {
     title: '8. Kontakt',
-    content: 'Bei Fragen zum Datenschutz: datenschutz@simy.ch',
+    content: 'Bei Fragen zum Datenschutz: info@simy.ch',
   },
 ]
 </script>
