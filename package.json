@@ -22,7 +22,8 @@
     "app:open:android": "npx cap open android",
     "app:sync": "npx cap sync",
     "demo:apple-review:setup": "node scripts/setup-apple-review-tenant.mjs",
-    "demo:apple-review:teardown": "node scripts/teardown-apple-review-tenant.mjs --confirm"
+    "demo:apple-review:teardown": "node scripts/teardown-apple-review-tenant.mjs --confirm",
+    "pci:generate": "node scripts/generate-pci-docs.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

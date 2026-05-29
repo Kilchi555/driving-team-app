@@ -46,3 +46,7 @@ build/
 fastlane/report.xml
 fastlane/test_output
 fastlane/README.md
+
+# Generated PCI documents (regenerable from templates; .md sources are tracked)
+docs/pci/**/*.pdf
+docs/pci/**/*.html
