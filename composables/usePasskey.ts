@@ -25,6 +25,7 @@ export interface PasskeyStatus {
   enabledRoles: string[]
   requiredRoles: string[]
   anyEnabled: boolean
+  loginEnabled: boolean
 }
 
 export const usePasskey = () => {

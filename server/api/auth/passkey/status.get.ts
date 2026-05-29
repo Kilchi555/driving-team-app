@@ -21,10 +21,19 @@ export default defineEventHandler(() => {
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean)
 
+  // Separate, explicit opt-in for showing the "Mit Passkey anmelden" button on
+  // the login page. Decoupled from PASSKEY_ENABLED_ROLES so admins can register
+  // passkeys in their profile (feature enabled) WITHOUT the login button being
+  // visible to everyone yet. Default OFF — flip to 'true' once ready to expose it.
+  const loginEnabled = (process.env.PASSKEY_LOGIN_ENABLED || 'false').trim().toLowerCase() === 'true'
+
   return {
     enabledRoles,
     requiredRoles,
-    // Convenience flag: if anyone may use passkeys, the login page can offer it
-    anyEnabled: enabledRoles.length > 0
+    // Convenience flag: passkeys are enabled for at least one role (controls
+    // whether the in-app management UI is offered).
+    anyEnabled: enabledRoles.length > 0,
+    // Whether the login page should offer the passkey button at all.
+    loginEnabled
   }
 })

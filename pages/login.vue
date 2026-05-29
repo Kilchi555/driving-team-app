@@ -659,7 +659,10 @@ const checkPasskeyAvailability = async () => {
   passkeySupported.value = passkeyBrowserSupported.value
   try {
     const status = await fetchStatus()
-    passkeyEnabledForAnyone.value = status.anyEnabled
+    // Gate the login button on the explicit PASSKEY_LOGIN_ENABLED flag, not on
+    // whether the feature is enabled for some role — so admins can register
+    // passkeys before the button is exposed to everyone.
+    passkeyEnabledForAnyone.value = status.loginEnabled
   } catch {
     passkeyEnabledForAnyone.value = false
   }
