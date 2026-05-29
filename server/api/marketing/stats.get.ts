@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
     supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'pending_consent'),
     supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'unsubscribed'),
     supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'bounced'),
-    supabase.from('email_campaigns').select('status, sent_count, bounce_count, unsubscribe_count').eq('tenant_id', tenantId),
+    supabase.from('email_campaigns').select('status, sent_count, bounce_count, unsubscribe_count, open_count, click_count').eq('tenant_id', tenantId),
     supabase.from('email_templates').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
   ])
 
@@ -32,10 +32,12 @@ export default defineEventHandler(async (event) => {
   const totalEmailsSent = campaigns.reduce((s, c) => s + (c.sent_count || 0), 0)
   const totalBounces = campaigns.reduce((s, c) => s + (c.bounce_count || 0), 0)
   const totalUnsubscribes = campaigns.reduce((s, c) => s + (c.unsubscribe_count || 0), 0)
+  const totalOpens = campaigns.reduce((s, c) => s + (c.open_count || 0), 0)
+  const totalClicks = campaigns.reduce((s, c) => s + (c.click_count || 0), 0)
 
   return {
     leads: { total: leadsTotal, active: leadsActive, pendingConsent: leadsPendingConsent, unsubscribed: leadsUnsubscribed, bounced: leadsBounced },
-    campaigns: { total: campaigns.length, sent: campaignsSent, totalEmailsSent, totalBounces, totalUnsubscribes },
+    campaigns: { total: campaigns.length, sent: campaignsSent, totalEmailsSent, totalBounces, totalUnsubscribes, totalOpens, totalClicks },
     templates: { total: templatesRes.count ?? 0 },
   }
 })
