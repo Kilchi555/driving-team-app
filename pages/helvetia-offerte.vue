@@ -186,7 +186,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useHead, useFetch } from '#app'
 
 definePageMeta({ layout: false })
 useHead({ title: 'Kostenlose Versicherungs-Offerte — Helvetia' })
