@@ -40,8 +40,9 @@ export function wrapMarketingEmail(
   tenantName: string,
   unsubscribeLink: string,
   primaryColor = '#1e293b',
-  logoUrl?: string | null,        // wide logo — replaces the colored bar when present
-  logoSquareUrl?: string | null,  // square logo — shown in bar alongside tenant name when no wide logo
+  logoUrl?: string | null,
+  logoSquareUrl?: string | null,
+  trackingPixelUrl?: string | null,
 ): string {
   const hasWideLogo = !!logoUrl
   const hasSquareLogo = !!logoSquareUrl
@@ -75,5 +76,5 @@ ${header}
   ${tenantName} &middot;
   <a href="${unsubscribeLink}" style="color:#9ca3af">Abmelden</a>
 </div>
-</div></body></html>`
+</div>${trackingPixelUrl ? `<img src="${trackingPixelUrl}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0" />` : ''}</body></html>`
 }

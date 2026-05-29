@@ -292,6 +292,18 @@ async function submit() {
 
     await $fetch('/api/partner/offer-request', { method: 'POST', body: fd })
     submitted.value = true
+
+    // Fire form fill-out tracking event (non-blocking)
+    const campaignId = String(route.query.cid || '')
+    $fetch('/api/marketing/track/event', {
+      method: 'POST',
+      body: {
+        event_type: 'helvetia_form_submitted',
+        campaign_id: campaignId || null,
+        tenant_id: tenant.value?.id || null,
+        metadata: { insurance_types: form.insurance_types },
+      },
+    }).catch(() => {})
   } catch (e: any) {
     error.value = e?.data?.statusMessage || 'Fehler beim Senden. Bitte versuche es erneut.'
   } finally {

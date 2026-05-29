@@ -74,6 +74,7 @@ export default defineEventHandler(async (event) => {
   for (const lead of leads) {
     const unsubscribeLink = buildUnsubscribeLink(baseUrl, lead.id, lead.unsubscribe_token)
     const consentLink = buildConsentLink(baseUrl, lead.id, lead.unsubscribe_token)
+    const trackingPixelUrl = `${baseUrl}/api/marketing/track/open?cid=${campaignId}&lid=${lead.id}`
 
     const renderedHtml = renderTemplate(template.html_body, {
       first_name: lead.first_name,
@@ -94,7 +95,13 @@ export default defineEventHandler(async (event) => {
       tenant_name: tenantName,
     })
 
-    const wrappedHtml = wrapMarketingEmail(renderedHtml, tenantName, unsubscribeLink, primaryColor, logoWideUrl, logoSquareUrl)
+    // Wrap all links with click tracker (except the pixel itself)
+    const trackedHtml = renderedHtml.replace(
+      /href="(https?:\/\/[^"]+)"/g,
+      (_, url) => `href="${baseUrl}/api/marketing/track/click?cid=${campaignId}&lid=${lead.id}&url=${encodeURIComponent(url)}"`,
+    )
+
+    const wrappedHtml = wrapMarketingEmail(trackedHtml, tenantName, unsubscribeLink, primaryColor, logoWideUrl, logoSquareUrl, trackingPixelUrl)
 
     queueRows.push({
       channel: 'email',
