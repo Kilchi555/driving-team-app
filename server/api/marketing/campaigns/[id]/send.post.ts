@@ -4,7 +4,8 @@ import { renderTemplate, buildUnsubscribeLink, buildConsentLink, wrapMarketingEm
 export default defineEventHandler(async (event) => {
   const campaignId = getRouterParam(event, 'id')
   const body = await readBody(event)
-  const { tenantId } = body
+  const { tenantId, dailyLimit } = body
+  const batchSize500 = typeof dailyLimit === 'number' && dailyLimit > 0 ? dailyLimit : 0
 
   if (!tenantId || !campaignId) {
     throw createError({ statusCode: 400, statusMessage: 'tenantId and campaignId are required' })
@@ -70,8 +71,12 @@ export default defineEventHandler(async (event) => {
   // Build outbound_messages_queue rows + email_campaign_leads rows
   const queueRows: any[] = []
   const campaignLeadRows: any[] = []
+  const now = Date.now()
 
-  for (const lead of leads) {
+  for (let i = 0; i < leads.length; i++) {
+    const lead = leads[i]
+    const dayOffset = batchSize500 > 0 ? Math.floor(i / batchSize500) : 0
+    const sendAt = new Date(now + dayOffset * 24 * 60 * 60 * 1000).toISOString()
     const unsubscribeLink = buildUnsubscribeLink(baseUrl, lead.id, lead.unsubscribe_token)
     const consentLink = buildConsentLink(baseUrl, lead.id, lead.unsubscribe_token)
     const trackingPixelUrl = `${baseUrl}/api/marketing/track/open?cid=${campaignId}&lid=${lead.id}`
@@ -109,7 +114,7 @@ export default defineEventHandler(async (event) => {
       subject: renderedSubject,
       body: wrappedHtml,
       status: 'pending',
-      send_at: new Date().toISOString(),
+      send_at: sendAt,
       context_data: {
         tenant_name: tenantName,
         campaign_id: campaignId,

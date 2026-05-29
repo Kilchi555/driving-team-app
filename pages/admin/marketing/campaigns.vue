@@ -374,9 +374,62 @@
           </div>
         </div>
 
+        <!-- Daily limit + Test email section -->
+        <div v-if="!sendResult" class="px-6 pb-4 space-y-4">
+          <!-- Tagesrate -->
+          <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-semibold text-blue-900">Tagesrate (Spam-Schutz)</span>
+              <span class="text-xs text-blue-600 font-medium">
+                {{ dailyLimit > 0 && recipientsTotal > dailyLimit
+                  ? `ca. ${Math.ceil(recipientsTotal / dailyLimit)} Tage`
+                  : 'Alles heute' }}
+              </span>
+            </div>
+            <select v-model="dailyLimit" class="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm bg-white focus:outline-none">
+              <option :value="100">100 / Tag</option>
+              <option :value="250">250 / Tag</option>
+              <option :value="500">500 / Tag (empfohlen)</option>
+              <option :value="1000">1000 / Tag</option>
+              <option :value="0">Keine Begrenzung (alle sofort)</option>
+            </select>
+            <p v-if="dailyLimit > 0 && recipientsTotal > dailyLimit" class="text-xs text-blue-600 mt-2">
+              {{ dailyLimit }} heute, {{ dailyLimit }} morgen, usw. — wird automatisch auf Folgetage verteilt.
+            </p>
+          </div>
+
+          <!-- Test Email -->
+          <div class="border border-gray-200 rounded-xl p-4">
+            <p class="text-sm font-semibold text-gray-700 mb-2">Test-Email senden</p>
+            <div class="flex gap-2">
+              <input
+                v-model="testEmailAddress"
+                type="email"
+                placeholder="test@example.com"
+                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+              <button
+                @click="sendTestEmail"
+                :disabled="testEmailSending || !testEmailAddress"
+                class="px-3 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+              >
+                <svg v-if="testEmailSending" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {{ testEmailSending ? '...' : 'Senden' }}
+              </button>
+            </div>
+            <p v-if="testEmailResult === 'ok'" class="text-xs text-green-600 mt-1.5">✅ Test-Email gesendet!</p>
+            <p v-if="testEmailResult === 'error'" class="text-xs text-red-600 mt-1.5">❌ Fehler beim Senden.</p>
+          </div>
+        </div>
+
         <div v-if="sendResult" class="mx-6 mb-4 bg-green-50 rounded-xl p-4">
           <p class="text-sm font-medium text-green-800">
             ✅ {{ sendResult.queuedCount }} Emails erfolgreich in die Warteschlange eingereiht.
+            <span v-if="dailyLimit > 0 && sendResult.queuedCount > dailyLimit" class="block mt-1 text-green-700">
+              📅 Verteilt über {{ Math.ceil(sendResult.queuedCount / dailyLimit) }} Tage à {{ dailyLimit }}/Tag.
+            </span>
           </p>
         </div>
 
@@ -440,6 +493,10 @@ const sendResult = ref<any>(null)
 const recipients = ref<any[]>([])
 const recipientsTotal = ref(0)
 const recipientsLoading = ref(false)
+const dailyLimit = ref(500)
+const testEmailAddress = ref('')
+const testEmailSending = ref(false)
+const testEmailResult = ref<'ok' | 'error' | null>(null)
 
 const estimatedCount = ref<number | null>(null)
 
@@ -572,9 +629,30 @@ async function createCampaign() {
   }
 }
 
+async function sendTestEmail() {
+  if (!sendConfirmCampaign.value || !testEmailAddress.value) return
+  const tenantId = authStore.userProfile?.tenant_id
+  if (!tenantId) return
+  testEmailSending.value = true
+  testEmailResult.value = null
+  try {
+    await $fetch('/api/marketing/send-preview', {
+      method: 'POST',
+      body: { to: testEmailAddress.value, campaignId: sendConfirmCampaign.value.id, tenantId },
+    })
+    testEmailResult.value = 'ok'
+  } catch {
+    testEmailResult.value = 'error'
+  } finally {
+    testEmailSending.value = false
+  }
+}
+
 async function openSendConfirm(campaign: any) {
   sendConfirmCampaign.value = campaign
   sendResult.value = null
+  testEmailResult.value = null
+  testEmailAddress.value = ''
   recipients.value = []
   recipientsTotal.value = 0
   recipientsLoading.value = true
@@ -611,7 +689,7 @@ async function sendCampaign() {
   try {
     const res = await $fetch<any>(`/api/marketing/campaigns/${sendConfirmCampaign.value.id}/send`, {
       method: 'POST',
-      body: { tenantId },
+      body: { tenantId, dailyLimit: dailyLimit.value > 0 ? dailyLimit.value : null },
     })
     sendResult.value = res
     await loadData()
