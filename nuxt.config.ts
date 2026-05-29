@@ -179,6 +179,8 @@ export default defineNuxtConfig({
     // Public booking + courses pages: cache API responses at CDN edge for 60s
     '/api/booking/get-booking-init': { headers: { 'cache-control': 'public, max-age=60, s-maxage=60' } },
     '/api/courses/public': { headers: { 'cache-control': 'public, max-age=60, s-maxage=60' } },
+    // Redirect common misspelling of the Helvetia offer form URL
+    '/offerte-helvetia': { redirect: { to: '/helvetia-offerte', statusCode: 301 } },
   },
   
   // Vue-spezifische Konfiguration
