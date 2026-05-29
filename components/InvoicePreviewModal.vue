@@ -1,7 +1,11 @@
 <template>
   <Teleport to="body">
-    <div v-if="modelValue" class="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-      <div class="bg-white w-full sm:rounded-2xl shadow-2xl sm:max-w-2xl max-h-[96dvh] sm:max-h-[90vh] flex flex-col overflow-hidden rounded-t-2xl">
+    <div
+      v-if="modelValue"
+      class="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4"
+      style="padding-bottom: max(8px, env(safe-area-inset-bottom, 8px)); padding-top: max(8px, env(safe-area-inset-top, 8px));"
+    >
+      <div class="bg-white w-full sm:rounded-2xl shadow-2xl sm:max-w-2xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden rounded-2xl">
 
         <!-- Header -->
         <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-shrink-0">
@@ -679,9 +683,14 @@ async function openPdf() {
       body: { invoiceId },
     })
     if (result?.pdfUrl) {
-      // Browser blockieren data:-URLs in window.open() → Blob-URL erstellen
-      const res = await fetch(result.pdfUrl)
-      const blob = await res.blob()
+      // iOS Safari blockiert fetch() auf data:-URLs → base64 direkt mit atob() dekodieren
+      const base64Match = result.pdfUrl.match(/^data:([^;]+);base64,(.+)$/)
+      if (!base64Match) throw new Error('Ungültiges PDF-Format')
+      const mimeType = base64Match[1]
+      const binaryStr = atob(base64Match[2])
+      const bytes = new Uint8Array(binaryStr.length)
+      for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i)
+      const blob = new Blob([bytes], { type: mimeType })
       const blobUrl = URL.createObjectURL(blob)
       const win = window.open(blobUrl, '_blank')
       if (!win) {
