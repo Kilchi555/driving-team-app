@@ -17,6 +17,22 @@
 set -e
 set -x
 
+# Print which step we died on — makes a failed build's log unambiguous even
+# when the only surfaced message is Apple's generic "script failed (exit 1)".
+CURRENT_STEP="startup"
+on_exit() {
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    echo "=================================================="
+    echo "❌ ci_post_clone.sh FAILED during step: ${CURRENT_STEP} (exit ${status})"
+    echo "=================================================="
+  fi
+}
+trap on_exit EXIT
+
+# Speeds up brew and avoids cleanup-related failures in CI (Apple/Capacitor docs)
+export HOMEBREW_NO_INSTALL_CLEANUP=TRUE
+
 echo "=================================================="
 echo "🏗  Xcode Cloud pre-build script"
 echo "=================================================="
@@ -31,6 +47,7 @@ echo "=================================================="
 # ───────────────────────────────────────────────────────
 # 1) Ensure Homebrew is on PATH (Apple Silicon vs Intel)
 # ───────────────────────────────────────────────────────
+CURRENT_STEP="1) homebrew on PATH"
 if [ -x /opt/homebrew/bin/brew ]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 elif [ -x /usr/local/bin/brew ]; then
@@ -42,6 +59,7 @@ echo "✅ Homebrew: $(brew --version | head -1)"
 # ───────────────────────────────────────────────────────
 # 2) Install Node 20 (idempotent — won't fail if present)
 # ───────────────────────────────────────────────────────
+CURRENT_STEP="2) install node@20"
 echo "📦 Installing Node.js 20…"
 if ! brew list node@20 >/dev/null 2>&1; then
   brew install node@20
@@ -57,6 +75,7 @@ echo "✅ npm  version: $(npm -v)"
 # ───────────────────────────────────────────────────────
 # 3) Locate repo root
 # ───────────────────────────────────────────────────────
+CURRENT_STEP="3) locate repo root"
 REPO_ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$CI_WORKSPACE}"
 if [ -z "$REPO_ROOT" ] || [ ! -d "$REPO_ROOT" ]; then
   # Last-resort fallback: derive from script location.
@@ -79,15 +98,19 @@ cd "$REPO_ROOT"
 #    is out of sync, fall back to `npm install` so the build
 #    doesn't die — but loudly, so we know to fix the lockfile.
 # ───────────────────────────────────────────────────────
+CURRENT_STEP="4) npm install"
 echo "📥 Installing npm dependencies…"
+# Limit parallel sockets — more reliable on CI networks (Capacitor CI guides).
+npm config set maxsockets 3 || true
 if ! npm ci --prefer-offline --no-audit --no-fund; then
-  echo "⚠️  npm ci failed (likely lockfile mismatch). Falling back to npm install."
-  npm install --no-audit --no-fund
+  echo "⚠️  npm ci failed (lockfile mismatch or peer conflict). Falling back to npm install --legacy-peer-deps."
+  npm install --no-audit --no-fund --legacy-peer-deps
 fi
 
 # ───────────────────────────────────────────────────────
 # 5) Generate capacitor.config.json for the Simy client
 # ───────────────────────────────────────────────────────
+CURRENT_STEP="5) gen capacitor.config.json"
 echo "🛠  Generating capacitor.config.json for client=simy…"
 CLIENT=simy node scripts/gen-cap-config.mjs
 
@@ -99,6 +122,7 @@ CLIENT=simy node scripts/gen-cap-config.mjs
 #     hasn't been built, so we create a minimal stub instead of running a full
 #     (slow, env-dependent) Nuxt build.
 # ───────────────────────────────────────────────────────
+CURRENT_STEP="5b) ensure webDir stub"
 WEB_DIR="$REPO_ROOT/.output/public"
 if [ ! -f "$WEB_DIR/index.html" ]; then
   echo "📄 webDir missing — creating placeholder at $WEB_DIR"
@@ -123,9 +147,12 @@ fi
 # ───────────────────────────────────────────────────────
 # 6) Sync Capacitor iOS project (copy web + plugin files)
 # ───────────────────────────────────────────────────────
+CURRENT_STEP="6) cap sync ios"
 echo "🔁 Syncing Capacitor iOS project…"
 # NOTE: --no-build was removed in Capacitor 8 — passing it makes cap exit 1.
 npx cap sync ios
+
+CURRENT_STEP="done"
 
 echo "=================================================="
 echo "🎉 Pre-build complete."
