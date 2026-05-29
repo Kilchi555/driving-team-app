@@ -598,9 +598,25 @@ async function ensureCourses(tenantId, staffId) {
     ...c,
   }))
 
-  const { error } = await supabase.from('courses').insert(rows)
+  const { data: inserted, error } = await supabase.from('courses').insert(rows).select('id, course_start_date, name')
   if (error) throw error
-  console.log(`   ✓ ${rows.length} demo courses seeded`)
+  console.log(`   ✓ ${inserted.length} demo courses seeded`)
+
+  // Each course needs at least one session — otherwise the customer UI filters it out
+  const sessions = inserted.map(c => ({
+    course_id: c.id,
+    tenant_id: tenantId,
+    session_number: 1,
+    title: c.name,
+    start_time: c.course_start_date,
+    end_time: new Date(new Date(c.course_start_date).getTime() + 10 * 60 * 60 * 1000).toISOString(),
+    is_active: true,
+    custom_location: 'Zuerich HB',
+  }))
+
+  const { error: sessErr } = await supabase.from('course_sessions').insert(sessions)
+  if (sessErr) throw sessErr
+  console.log(`   ✓ ${sessions.length} course sessions seeded`)
 }
 
 async function ensureFeatureFlags(tenantId) {
