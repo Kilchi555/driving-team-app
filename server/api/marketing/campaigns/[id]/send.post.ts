@@ -4,8 +4,9 @@ import { renderTemplate, buildUnsubscribeLink, buildConsentLink, wrapMarketingEm
 export default defineEventHandler(async (event) => {
   const campaignId = getRouterParam(event, 'id')
   const body = await readBody(event)
-  const { tenantId, dailyLimit } = body
+  const { tenantId, dailyLimit, pilotLimit } = body
   const batchSize500 = typeof dailyLimit === 'number' && dailyLimit > 0 ? dailyLimit : 0
+  const isPilot = typeof pilotLimit === 'number' && pilotLimit > 0
 
   if (!tenantId || !campaignId) {
     throw createError({ statusCode: 400, statusMessage: 'tenantId and campaignId are required' })
@@ -22,7 +23,7 @@ export default defineEventHandler(async (event) => {
     .single()
 
   if (campaignErr || !campaign) throw createError({ statusCode: 404, statusMessage: 'Campaign not found' })
-  if (campaign.status !== 'draft') throw createError({ statusCode: 409, statusMessage: 'Campaign already sent or sending' })
+  if (!['draft', 'pilot'].includes(campaign.status)) throw createError({ statusCode: 409, statusMessage: 'Campaign already sent or sending' })
 
   const template = campaign.email_templates as any
   if (!template) throw createError({ statusCode: 400, statusMessage: 'Campaign has no template' })
@@ -54,16 +55,34 @@ export default defineEventHandler(async (event) => {
   if (filter.categories?.length) leadsQuery = leadsQuery.overlaps('categories', filter.categories)
   if (filter.tags?.length) leadsQuery = leadsQuery.overlaps('tags', filter.tags)
 
-  const { data: leads, error: leadsErr } = await leadsQuery
+  const { data: allLeads, error: leadsErr } = await leadsQuery
   if (leadsErr) throw createError({ statusCode: 500, statusMessage: leadsErr.message })
-  if (!leads || leads.length === 0) {
+  if (!allLeads || allLeads.length === 0) {
     return { success: true, recipientCount: 0, message: 'No active leads match this segment' }
   }
+
+  // For pilot re-runs: exclude leads already queued for this campaign
+  const { data: alreadySent } = await supabase
+    .from('email_campaign_leads')
+    .select('lead_id')
+    .eq('campaign_id', campaignId)
+
+  const alreadySentIds = new Set((alreadySent ?? []).map((r: any) => r.lead_id))
+  const remainingLeads = allLeads.filter(l => !alreadySentIds.has(l.id))
+
+  // In pilot mode: take only the first N remaining leads
+  const leads = isPilot ? remainingLeads.slice(0, pilotLimit) : remainingLeads
+
+  if (leads.length === 0) {
+    return { success: true, recipientCount: 0, message: 'No remaining leads to send to' }
+  }
+
+  const totalRemaining = remainingLeads.length
 
   // Mark campaign as sending immediately
   await supabase
     .from('email_campaigns')
-    .update({ status: 'sending', total_recipients: leads.length })
+    .update({ status: 'sending', total_recipients: allLeads.length })
     .eq('id', campaignId)
 
   const subject = campaign.subject_override || template.subject
@@ -157,11 +176,23 @@ export default defineEventHandler(async (event) => {
     .update({ last_emailed_at: new Date().toISOString() })
     .in('id', leadIds)
 
-  // Mark campaign as sent
+  // Mark as 'pilot' if more leads remain, otherwise 'sent'
+  const newStatus = isPilot && totalRemaining > leads.length ? 'pilot' : 'sent'
+  const prevSentCount = campaign.sent_count || 0
   await supabase
     .from('email_campaigns')
-    .update({ status: 'sent', sent_at: new Date().toISOString(), sent_count: totalInserted })
+    .update({
+      status: newStatus,
+      sent_at: new Date().toISOString(),
+      sent_count: prevSentCount + totalInserted,
+    })
     .eq('id', campaignId)
 
-  return { success: true, recipientCount: leads.length, queuedCount: totalInserted }
+  return {
+    success: true,
+    recipientCount: leads.length,
+    queuedCount: totalInserted,
+    remainingCount: totalRemaining - leads.length,
+    status: newStatus,
+  }
 })
