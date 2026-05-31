@@ -3,10 +3,6 @@ import { defineNuxtRouteMiddleware, navigateTo } from '#app'
 import { logger } from '~/utils/logger'
 import { useAuthStore } from '~/stores/auth'
 
-// Throttle for the split-session diagnostic so a (hypothetical) loop can't flood
-// the error_logs table — at most one report every 10s.
-let lastAuthDiagAt = 0
-
 export default defineNuxtRouteMiddleware(async (to, from) => {
   // Skip auf Server
   if (process.server) return
@@ -97,22 +93,6 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
         : { data: { session: null } }
 
       const hasSupabaseSession = !!(session?.access_token && session?.refresh_token)
-
-      // 🔎 DIAGNOSTIC (throttled): report the client-side auth decision from the
-      // native app to the server (error_logs table) so we can see WHY the route
-      // is considered logged-out and which recovery path is taken.
-      if (Date.now() - lastAuthDiagAt > 10_000) {
-        lastAuthDiagAt = Date.now()
-        logger.error('auth-middleware-diag', 'Protected route hit while logged out', {
-          path: to.path,
-          from: from?.path,
-          isInitialized: authStore.isInitialized,
-          isLoggedIn: authStore.isLoggedIn,
-          hasSupabaseSession,
-          recoveryPath: hasSupabaseSession ? 'sync-session' : 'cookie-refresh',
-          isNative: typeof window !== 'undefined' && /capacitor|simy/i.test(navigator.userAgent || '')
-        })
-      }
 
       if (hasSupabaseSession) {
         await $fetch('/api/auth/sync-session', {
