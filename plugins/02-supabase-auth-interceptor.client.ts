@@ -38,6 +38,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     
     let refreshCheckInterval: any = null
     let isRefreshing = false
+    let refreshFailed = false  // set after a permanent 401 – stops all further attempts
 
     // Restore session from localStorage (if exists)
     const restoreSessionFromStorage = async () => {
@@ -92,6 +93,8 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     }
 
     const startTokenRefreshCheck = async () => {
+      if (refreshFailed) return
+
       try {
         const supabase = getSupabase()
         if (!supabase) {
@@ -206,8 +209,15 @@ export default defineNuxtPlugin(async (nuxtApp) => {
               (typeof window !== 'undefined' && pathnameIncludesAffiliateDashboard(window.location.pathname))
 
             // If refresh fails due to invalid/expired refresh token, redirect to tenant login
-            if ((err?.response?.status === 401 || err?.statusCode === 401) && !isShopPage && !isAffiliateDashboardCatch) {
+            if ((err?.response?.status === 401 || err?.statusCode === 401 || err?.status === 401) && !isShopPage && !isAffiliateDashboardCatch) {
               logger.warn('🚪 Refresh token invalid/expired, redirecting to tenant login')
+
+              // Stop all further refresh attempts immediately
+              refreshFailed = true
+              if (refreshCheckInterval) {
+                clearTimeout(refreshCheckInterval)
+                refreshCheckInterval = null
+              }
               
               try {
                 const { navigateTo } = await import('#app')
@@ -254,12 +264,12 @@ export default defineNuxtPlugin(async (nuxtApp) => {
           }
         }
 
-        // Schedule next check
-        if (timeUntilExpiry > 0) {
+        // Schedule next check (skip if a permanent failure already stopped the loop)
+        if (!refreshFailed && timeUntilExpiry > 0) {
           refreshCheckInterval = setTimeout(() => {
             startTokenRefreshCheck()
           }, CHECK_INTERVAL)
-        } else {
+        } else if (!refreshFailed) {
           logger.warn('⚠️ Session already expired')
         }
 
