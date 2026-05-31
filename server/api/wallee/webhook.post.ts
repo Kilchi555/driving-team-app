@@ -1040,7 +1040,7 @@ async function fetchWalleeTransaction(transactionId: string, webhookSpaceId?: nu
     
     if (paymentForConfig?.tenant_id) {
       try {
-        const walleeConfig = getWalleeConfigForTenant(paymentForConfig.tenant_id)
+        const walleeConfig = await getWalleeConfigForTenant(paymentForConfig.tenant_id)
         spaceId = walleeConfig.spaceId
         userId = walleeConfig.userId
         apiSecret = walleeConfig.apiSecret

@@ -21,6 +21,16 @@ interface SaveSecretsRequest {
   secrets: Record<string, string>
 }
 
+/** Derive a group secret_type from the key name (matches existing DB data). */
+function deriveSecretType(key: string): string {
+  const k = key.toLowerCase()
+  if (k.startsWith('wallee_')) return 'wallee_api_key'
+  if (k.startsWith('sari_')) return 'sari_credentials'
+  if (k.startsWith('google_')) return 'google_credentials'
+  if (k.startsWith('stripe_')) return 'stripe_api_key'
+  return k
+}
+
 export default defineEventHandler(async (event) => {
   try {
     // ✅ LAYER 1: Authentication
@@ -122,9 +132,9 @@ export default defineEventHandler(async (event) => {
 
       secretsToUpsert.push({
         tenant_id: body.tenant_id,
-        secret_type: secretType,
+        secret_type: deriveSecretType(secretType),
+        secret_name: secretType.toLowerCase(),
         secret_value: encryptedValue,
-        updated_by: userProfile.id,
         updated_at: new Date().toISOString()
       })
 
@@ -135,9 +145,9 @@ export default defineEventHandler(async (event) => {
     const { data: upsertedSecrets, error: upsertError } = await supabaseAdmin
       .from('tenant_secrets')
       .upsert(secretsToUpsert, {
-        onConflict: 'tenant_id,secret_type'
+        onConflict: 'tenant_id,secret_type,secret_name'
       })
-      .select('secret_type, updated_at')
+      .select('secret_type, secret_name, updated_at')
 
     if (upsertError) {
       logger.error('❌ Failed to upsert secrets:', upsertError)
@@ -169,6 +179,7 @@ export default defineEventHandler(async (event) => {
       message: `Successfully saved ${Object.keys(body.secrets).length} secret(s)`,
       updated: upsertedSecrets?.map(s => ({
         secret_type: s.secret_type,
+        secret_name: s.secret_name,
         updated_at: s.updated_at
       })) || []
     }

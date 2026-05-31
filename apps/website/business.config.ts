@@ -80,6 +80,10 @@ interface Location {
   gbpCategories: { primary: string; secondary: string[] }
   /** Hauptdienstleistungen dieses Standorts mit URL */
   services: Array<{ name: string; url: string }>
+  /** Büro-/Kurslokal-Adresse (abweichend von der Hauptadresse) */
+  office?: string
+  /** Treffpunkt für Fahrstunden */
+  meetingPoint?: string
   /** Einzugsgebiet für Schema areaServed */
   areaServed?: string[]
 }

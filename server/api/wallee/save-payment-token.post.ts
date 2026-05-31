@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabaseAdmin()
 
     // Load Wallee config
-    const walleeConfig = getWalleeConfigForTenant(tenantId)
+    const walleeConfig = await getWalleeConfigForTenant(tenantId)
     const spaceId = walleeConfig.spaceId
     const config = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
 

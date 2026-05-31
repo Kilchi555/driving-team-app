@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
     // ── Wallee config for this tenant ─────────────────────
     let walleeConfig: any
     try {
-      walleeConfig = getWalleeConfigForTenant(resolvedTenantId)
+      walleeConfig = await getWalleeConfigForTenant(resolvedTenantId)
     } catch (e: any) {
       throw createError({ statusCode: 500, message: `Wallee nicht konfiguriert für diesen Tenant: ${e.message}` })
     }

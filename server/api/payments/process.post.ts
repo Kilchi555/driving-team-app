@@ -371,7 +371,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
 
     // ============ LAYER 11: CREATE WALLEE TRANSACTION ============
     logger.debug('🔍 Fetching Wallee config for tenant:', tenantId)
-    const walleeConfig = getWalleeConfigForTenant(tenantId)
+    const walleeConfig = await getWalleeConfigForTenant(tenantId)
     const spaceId = walleeConfig.spaceId
 
     const config = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
