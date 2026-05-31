@@ -26,6 +26,7 @@ const GOOGLE_ADS_API_VERSION = 'v23'
 
 export interface ConversionUploadInput {
   appointment_id: string
+  tenant_id?: string | null
   gclid?: string | null
   gbraid?: string | null
   wbraid?: string | null
@@ -215,6 +216,7 @@ export async function recordAndUploadConversion(input: ConversionUploadInput): P
     .from('google_ads_conversion_uploads')
     .insert({
       appointment_id: input.appointment_id,
+      tenant_id: input.tenant_id ?? null,
       conversion_action_id: conversionActionId,
       gclid: input.gclid ?? null,
       gbraid: input.gbraid ?? null,

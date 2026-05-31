@@ -857,6 +857,7 @@ export default defineEventHandler(async (event: H3Event) => {
 
           await recordAndUploadConversion({
             appointment_id: newAppointment.id,
+            tenant_id: tenantId ?? null,
             gclid: marketingAttr.gclid ?? null,
             gbraid: marketingAttr.gbraid ?? null,
             wbraid: marketingAttr.wbraid ?? null,

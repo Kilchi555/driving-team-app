@@ -26,6 +26,7 @@ export default defineEventHandler(async (event) => {
     // Reuse booking_redirects table with category 'phone_call' to keep schema minimal
     const { error } = await supabase.from('booking_redirects').insert({
       session_id: body.session_id || 'unknown',
+      tenant_id: process.env.NUXT_TENANT_ID || null,
       category: 'phone_call',
       referrer_page: body.referrer_page || '/',
       date: new Date().toISOString().split('T')[0],

@@ -1424,6 +1424,13 @@ const currentTenant = ref<any>(null)
 const availableStaff = ref<any[]>([])
 const isLoadingLocations = ref(false)
 const isLoadingTimeSlots = ref(false)
+
+// Propagate tenant_id to booking-session-tracking plugin for multi-tenant attribution
+watch(currentTenant, (tenant) => {
+  if (tenant?.id && typeof window !== 'undefined' && (window as any).__setTenantId) {
+    ;(window as any).__setTenantId(tenant.id)
+  }
+}, { immediate: true })
 const tenantSettings = ref<any>({})
 
 // SSR pre-fetch: tenant + categories + locationsCount in one roundtrip before JS hydration

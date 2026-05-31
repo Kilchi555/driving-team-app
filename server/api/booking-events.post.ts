@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 interface BookingEventPayload {
   session_id: string
+  tenant_id?: string | null
   event_type: 'viewed' | 'started' | 'completed' | 'abandoned' | 'inquiry_submitted'
   page: string
   referrer?: string
@@ -44,6 +45,7 @@ export default defineEventHandler(async (event) => {
     // Insert booking event
     const { error } = await supabase.from('booking_events').insert({
       session_id: body.session_id,
+      tenant_id: body.tenant_id || null,
       event_type: body.event_type,
       page: body.page,
       referrer: body.referrer || null,

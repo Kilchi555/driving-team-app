@@ -37,6 +37,7 @@ export default defineEventHandler(async (event) => {
     // Track booking redirect
     const { error } = await supabase.from('booking_redirects').insert({
       session_id: body.session_id,
+      tenant_id: process.env.NUXT_TENANT_ID || null,
       category: body.category,
       referrer_page: body.referrer_page,
       date: new Date().toISOString().split('T')[0],

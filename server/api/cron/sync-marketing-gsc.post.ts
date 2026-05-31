@@ -98,6 +98,7 @@ export default defineEventHandler(async (event) => {
   const records = allRows.map((row) => {
     const [date, query, page] = row.keys ?? []
     return {
+      tenant_id: process.env.MARKETING_TENANT_ID ?? null,
       date: date ?? fmt(rangeEnd),
       query: query ?? '',
       page: page ?? '/',
@@ -115,7 +116,7 @@ export default defineEventHandler(async (event) => {
       const batch = records.slice(i, i + batchSize)
       const { error } = await supabase
         .from('marketing_gsc_daily')
-        .upsert(batch, { onConflict: 'date,query,page' })
+        .upsert(batch, { onConflict: 'tenant_id,date,query,page' })
 
       if (error) {
         logger.error('sync-marketing-gsc: upsert error', error)

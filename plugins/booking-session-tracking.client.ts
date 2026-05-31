@@ -14,6 +14,8 @@ declare global {
   interface Window {
     __analyticsSessionId: string
     __marketingAttribution?: DecodedAttribution | null
+    __tenantId?: string | null
+    __setTenantId: (id: string) => void
     __trackBookingEvent: (eventType: 'viewed' | 'started' | 'completed' | 'abandoned' | 'inquiry_submitted', data: Record<string, any>) => Promise<void>
   }
 }
@@ -66,7 +68,7 @@ export default defineNuxtPlugin(() => {
       fetch('/api/marketing-attribution', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, attribution }),
+        body: JSON.stringify({ session_id: sessionId, tenant_id: window.__tenantId ?? null, attribution }),
       }).catch(() => {})
     }
   } else {
@@ -92,6 +94,7 @@ export default defineNuxtPlugin(() => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         session_id: sessionId,
+        tenant_id: window.__tenantId ?? null,
         attribution: {
           utm_source: fromWebsite ? 'drivingteam_direct' : 'direct',
           utm_medium: fromWebsite ? 'referral' : 'none',
@@ -115,6 +118,7 @@ export default defineNuxtPlugin(() => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: sessionId,
+          tenant_id: window.__tenantId ?? null,
           event_type: eventType,
           page: currentPath,
           ...data,
@@ -127,6 +131,8 @@ export default defineNuxtPlugin(() => {
 
   // Expose utilities to window
   window.__analyticsSessionId = sessionId
+  window.__tenantId = null
+  window.__setTenantId = (id: string) => { window.__tenantId = id }
   window.__trackBookingEvent = trackBookingEvent
 
   // Track page view on initial load
