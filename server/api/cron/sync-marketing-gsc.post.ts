@@ -1,5 +1,6 @@
 import { google } from 'googleapis'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getTenantIdByGscSite } from '~/server/utils/marketing-tenant'
 import { logger } from '~/utils/logger'
 
 // Fetches Search Console data and upserts into marketing_gsc_daily.
@@ -94,11 +95,12 @@ export default defineEventHandler(async (event) => {
 
   // ============ LAYER 5: UPSERT INTO SUPABASE ============
   const supabase = getSupabaseAdmin()
+  const tenantId = await getTenantIdByGscSite(siteUrl)
 
   const records = allRows.map((row) => {
     const [date, query, page] = row.keys ?? []
     return {
-      tenant_id: process.env.MARKETING_TENANT_ID ?? null,
+      tenant_id: tenantId,
       date: date ?? fmt(rangeEnd),
       query: query ?? '',
       page: page ?? '/',

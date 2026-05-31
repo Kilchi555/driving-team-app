@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { getWebsiteTenantId } from '~/server/utils/website-tenant'
 
 interface BookingRedirectPayload {
   category: string
@@ -33,11 +34,12 @@ export default defineEventHandler(async (event) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const tenantId = await getWebsiteTenantId(event)
 
     // Track booking redirect
     const { error } = await supabase.from('booking_redirects').insert({
       session_id: body.session_id,
-      tenant_id: process.env.NUXT_TENANT_ID || null,
+      tenant_id: tenantId,
       category: body.category,
       referrer_page: body.referrer_page,
       date: new Date().toISOString().split('T')[0],
