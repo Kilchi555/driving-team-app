@@ -15,7 +15,8 @@ export default defineNuxtPlugin((nuxtApp) => {
 
     const attributionBlob = encodeAttribution((window as any).__dtMarketingAttribution)
 
-    const bookingLinks = document.querySelectorAll('a[href*="simy.ch"][href*="booking"]')
+    // Enrich all simy.ch outbound links (booking AND customer/course links)
+    const bookingLinks = document.querySelectorAll('a[href*="simy.ch"]')
 
     bookingLinks.forEach((link) => {
       const href = link.getAttribute('href')

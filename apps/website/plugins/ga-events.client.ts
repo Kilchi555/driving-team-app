@@ -1,16 +1,53 @@
-// Tracks conversion events for Google Analytics 4 and Meta Pixel.
+// Tracks conversion events for Google Analytics 4, Meta Pixel, and first-party Supabase.
 // Uses event delegation so there's no per-component boilerplate needed.
 // Events tracked:
-//   booking_click  – clicks on simy.ch booking links
-//   phone_click    – clicks on tel: links
+//   booking_click  – clicks on simy.ch booking/customer links
+//   phone_click    – clicks on tel: links (GA4 + Meta + first-party DB)
 //   form_submit    – contact/lead form submissions
+
+// Maps page paths to driving category codes when the booking URL has no category param.
+// This fixes the "unknown" category problem for VKU, Taxi, Bus, Motorboot, etc.
+function inferCategoryFromPath(pathname: string): string {
+  const p = pathname.toLowerCase()
+  if (p.includes('motorrad') || p.includes('grundkurs') || p.includes('/motorrad-a')) return 'A'
+  if (p.includes('anhaenger') || p.includes('anhänger')) return 'BE'
+  if (p.includes('lastwagen') || p.includes('lkw') || p.includes('kategorie-c')) return 'C'
+  if (p.includes('bus-fahrschule') || p.includes('bus-theorie') || p.includes('kategorie-d')) return 'D'
+  if (p.includes('taxi')) return 'Taxi'
+  if (p.includes('vku') || p.includes('verkehrskunde')) return 'VKU'
+  if (p.includes('motorboot') || p.includes('bootsfahrschule') || p.includes('boots')) return 'Motorboot'
+  if (p.includes('auto-fahrschule') || p.includes('auto-theorie') || p.includes('fahrstunden') || p.includes('kategorie-b')) return 'B'
+  if (p.includes('nothelferkurs') || p.includes('nothelfer')) return 'Nothelfer'
+  if (p.includes('wab') || p.includes('czv')) return 'WAB'
+  return 'unknown'
+}
+
 export default defineNuxtPlugin(() => {
   if (process.server) return
   const { gtag } = useGtag()
+  const config = useRuntimeConfig()
 
   function fireMetaEvent(event: string, params?: Record<string, unknown>) {
     if (typeof window !== 'undefined' && (window as any).fbq) {
       ;(window as any).fbq('track', event, params)
+    }
+  }
+
+  function fireGoogleAdsConversion() {
+    const adsId = config.public.googleAdsId
+    const adsLabel = config.public.googleAdsConversionLabel
+    if (adsId && adsLabel) {
+      gtag('event', 'conversion', { send_to: `${adsId}/${adsLabel}` })
+    }
+  }
+
+  function getUtmParams() {
+    const p = new URLSearchParams(window.location.search)
+    return {
+      utm_source: p.get('utm_source') || null,
+      utm_medium: p.get('utm_medium') || null,
+      utm_campaign: p.get('utm_campaign') || null,
+      utm_content: p.get('utm_content') || null,
     }
   }
 
@@ -20,23 +57,23 @@ export default defineNuxtPlugin(() => {
 
     const href = target.getAttribute('href') ?? ''
 
-    if (href.includes('simy.ch/booking')) {
+    // Match all outbound simy.ch links (booking AND customer/course links)
+    if (href.includes('simy.ch')) {
       const parsedUrl = new URL(href, window.location.href)
-      const service = parsedUrl.searchParams.get('service') ?? 'unknown'
-      const category = parsedUrl.searchParams.get('category') || service
+      // Try URL params first, fall back to page-path inference
+      const service = parsedUrl.searchParams.get('service') ?? ''
+      const urlCategory = parsedUrl.searchParams.get('category') || service
+      const category = urlCategory || inferCategoryFromPath(window.location.pathname)
 
       gtag('event', 'booking_click', {
         event_category: 'conversion',
-        event_label: service,
+        event_label: category,
         page_path: window.location.pathname,
       })
-      // Meta Pixel: Lead event on booking click (proxy conversion for app.simy.ch bookings)
-      fireMetaEvent('Lead', { content_name: service, content_category: 'booking' })
-      // Google Ads booking conversion: server-side only (create-appointment) — no browser tag here
+      fireMetaEvent('Lead', { content_name: category, content_category: 'booking' })
+      fireGoogleAdsConversion()
 
-      // First-party server-side logging — independent of GA4/consent/ad-blockers
       const sessionId = (window as any).__analyticsSessionId || 'unknown'
-      const pageParams = new URLSearchParams(window.location.search)
       fetch('/api/booking-redirect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -44,22 +81,32 @@ export default defineNuxtPlugin(() => {
           session_id: sessionId,
           category,
           referrer_page: window.location.pathname,
-          utm_source: pageParams.get('utm_source') || null,
-          utm_medium: pageParams.get('utm_medium') || null,
-          utm_campaign: pageParams.get('utm_campaign') || null,
-          utm_content: pageParams.get('utm_content') || null,
+          ...getUtmParams(),
         }),
       }).catch(() => {})
     }
 
     if (href.startsWith('tel:')) {
+      const phoneNumber = href.replace('tel:', '')
       gtag('event', 'phone_click', {
         event_category: 'conversion',
-        event_label: href.replace('tel:', ''),
+        event_label: phoneNumber,
         page_path: window.location.pathname,
       })
-      // Meta Pixel: Contact event on phone click
       fireMetaEvent('Contact')
+
+      // First-party DB log for phone clicks
+      const sessionId = (window as any).__analyticsSessionId || 'unknown'
+      fetch('/api/phone-click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          phone_number: phoneNumber,
+          referrer_page: window.location.pathname,
+          ...getUtmParams(),
+        }),
+      }).catch(() => {})
     }
   }, { passive: true })
 
@@ -73,7 +120,6 @@ export default defineNuxtPlugin(() => {
       event_label: formId,
       page_path: window.location.pathname,
     })
-    // Meta Pixel: Lead event on form submit
     fireMetaEvent('Lead', { content_name: formId, content_category: 'form' })
   }, { passive: true })
 })
