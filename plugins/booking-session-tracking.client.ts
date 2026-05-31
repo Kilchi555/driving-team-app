@@ -21,13 +21,7 @@ declare global {
 export default defineNuxtPlugin(() => {
   if (process.server) return
 
-  // Only track on booking/availability pages
-  const isBookingPage = window.location.pathname.includes('/booking/') || 
-                        window.location.pathname.includes('/availability/')
-  
-  if (!isBookingPage) return // Nur client-side
-
-  // Get or create session ID
+  // Get or create session ID — runs on ALL simy.ch pages, not just /booking/
   const getSessionId = (): string => {
     const key = 'analytics_session_id'
     
@@ -40,7 +34,7 @@ export default defineNuxtPlugin(() => {
       return sessionFromUrl
     }
 
-    // Then check localStorage
+    // Then check localStorage (returning visitor who previously came from drivingteam.ch)
     let sessionId = localStorage.getItem(key)
     
     if (!sessionId) {
@@ -57,6 +51,7 @@ export default defineNuxtPlugin(() => {
   const ATTR_KEY = 'sm_marketing_attribution'
   const urlParams = new URLSearchParams(window.location.search)
   let attribution: DecodedAttribution | null = null
+  let isNewSession = false
 
   const dtAttr = urlParams.get('dt_attr')
   if (dtAttr) {
@@ -77,10 +72,33 @@ export default defineNuxtPlugin(() => {
   } else {
     try {
       const stored = localStorage.getItem(ATTR_KEY)
-      if (stored) attribution = JSON.parse(stored) as DecodedAttribution
+      if (stored) {
+        attribution = JSON.parse(stored) as DecodedAttribution
+      } else {
+        // No attribution from drivingteam.ch — mark as direct so we always have a source
+        isNewSession = true
+      }
     } catch {
-      // ignore
+      isNewSession = true
     }
+  }
+
+  // Persist direct-traffic sessions so they also appear in marketing_attributions.
+  // This allows us to count and report direct bookings separately from website-attributed ones.
+  if (isNewSession) {
+    const fromWebsite = document.referrer.includes('drivingteam.ch')
+    fetch('/api/marketing-attribution', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: sessionId,
+        attribution: {
+          utm_source: fromWebsite ? 'drivingteam_direct' : 'direct',
+          utm_medium: fromWebsite ? 'referral' : 'none',
+          landing_page: window.location.pathname,
+        },
+      }),
+    }).catch(() => {})
   }
 
   window.__marketingAttribution = attribution
