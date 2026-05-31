@@ -84,32 +84,46 @@ export default defineNuxtPlugin((nuxtApp) => {
         try {
           const authStore = useAuthStore()
           if (authStore.isLoggedIn) {
+            // One-shot guard: only attempt sync+reload once per short window.
+            // Without this, a stale Supabase access_token gets re-synced into the
+            // cookie, the next request 401s again, and we reload endlessly
+            // (~150ms cycles in the native webview where assets load from cache).
+            const RELOAD_GUARD_KEY = 'cookie_sync_reload_at'
+            const RELOAD_GUARD_WINDOW = 15 * 1000 // 15s
+            const lastReloadAt = parseInt(sessionStorage.getItem(RELOAD_GUARD_KEY) || '0', 10)
+            const alreadyTriedRecently = Date.now() - lastReloadAt < RELOAD_GUARD_WINDOW
+
             let synced = false
-            try {
-              const { getSupabase } = await import('~/utils/supabase')
-              const supabase = getSupabase()
-              const { data: sessionData } = await supabase.auth.getSession()
-              if (sessionData?.session) {
-                await $fetch('/api/auth/sync-session', {
-                  method: 'POST',
-                  body: {
-                    access_token: sessionData.session.access_token,
-                    refresh_token: sessionData.session.refresh_token
-                  }
-                })
-                synced = true
-                console.debug('✅ Cookie sync succeeded after 401 — reloading page')
-                window.location.reload()
-                return
+            if (!alreadyTriedRecently) {
+              try {
+                const { getSupabase } = await import('~/utils/supabase')
+                const supabase = getSupabase()
+                const { data: sessionData } = await supabase.auth.getSession()
+                if (sessionData?.session) {
+                  await $fetch('/api/auth/sync-session', {
+                    method: 'POST',
+                    body: {
+                      access_token: sessionData.session.access_token,
+                      refresh_token: sessionData.session.refresh_token
+                    }
+                  })
+                  synced = true
+                  sessionStorage.setItem(RELOAD_GUARD_KEY, Date.now().toString())
+                  console.debug('✅ Cookie sync succeeded after 401 — reloading page (one-shot)')
+                  window.location.reload()
+                  return
+                }
+              } catch (syncErr: any) {
+                console.debug('⚠️ Cookie sync failed after 401:', syncErr?.message)
               }
-            } catch (syncErr: any) {
-              console.debug('⚠️ Cookie sync failed after 401:', syncErr?.message)
+            } else {
+              console.debug('🛑 Cookie sync+reload already attempted recently — skipping reload to avoid loop')
             }
 
             if (!synced) {
-              // Sync failed or no Supabase session — the session is truly gone.
-              // Fall through to the normal logout + redirect logic below.
-              console.debug('ℹ️ 401 with active authStore but sync failed — proceeding to logout')
+              // Sync failed, no Supabase session, or we already tried — the session
+              // is truly gone. Fall through to the normal logout + redirect logic.
+              console.debug('ℹ️ 401 with active authStore but no successful sync — proceeding to logout')
             }
           }
         } catch (e: any) {
