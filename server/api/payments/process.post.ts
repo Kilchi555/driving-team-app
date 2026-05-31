@@ -45,6 +45,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
   let authenticatedUserId: string | undefined
   let tenantId: string | undefined
   let auditDetails: any = {}
+  let userData: { id: string; tenant_id: string; email?: string; first_name?: string; last_name?: string } | undefined
 
   try {
     logger.debug('💳 Unified Payment Processing API called')
@@ -95,7 +96,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
 
     // ============ LAYER 5+6: GET USER & PAYMENT IN PARALLEL ============
     // User profile already resolved by getAuthenticatedUser — no extra DB query needed.
-    const userData = {
+    userData = {
       id: authUser.db_user_id as string,
       tenant_id: authUser.tenant_id as string,
       email: authUser.profile?.email || (authUser as any).email,
