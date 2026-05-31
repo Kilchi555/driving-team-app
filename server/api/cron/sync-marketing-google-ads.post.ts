@@ -101,11 +101,11 @@ export default defineEventHandler(async (event) => {
       date: row.segments?.date ?? '',
       campaign_id: String(row.campaign?.id ?? ''),
       campaign_name: row.campaign?.name ?? '',
-      cost_micros: row.metrics?.costMicros ?? 0,
-      clicks: row.metrics?.clicks ?? 0,
-      impressions: row.metrics?.impressions ?? 0,
-      conversions: row.metrics?.conversions ?? 0,
-      cpc_micros: row.metrics?.averageCpc ?? 0,
+      cost_micros: Math.round(Number(row.metrics?.costMicros ?? 0)),
+      clicks: Math.round(Number(row.metrics?.clicks ?? 0)),
+      impressions: Math.round(Number(row.metrics?.impressions ?? 0)),
+      conversions: Number(row.metrics?.conversions ?? 0),
+      cpc_micros: Math.round(Number(row.metrics?.averageCpc ?? 0)),
     })).filter(r => r.date && r.campaign_id)
 
     if (records.length > 0) {
