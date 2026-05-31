@@ -43,6 +43,12 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
                        to.path.match(/^\/[^\/]+\/(services|register)/) ||
                        to.path.startsWith('/customer/courses') ||
                        to.path.startsWith('/shop') ||
+                       // Guest booking flow (no login required). Covers BOTH the
+                       // tenant-prefixed URL (/:slug/booking/availability/…) and the
+                       // top-level guest URL (/booking/availability/:slug, /booking/waitlist/…).
+                       // Without /booking the middleware treated it as protected and
+                       // hammered /api/auth/refresh in a redirect loop for guests.
+                       to.path.startsWith('/booking/') ||
                        to.path.match(/^\/[^\/]+\/booking\/availability\/.+$/) ||
                        isSlugRoute
   
