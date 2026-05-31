@@ -531,20 +531,38 @@ const submitInquiry = async () => {
     })
 
     if (response?.success) {
-      console.log('✅ Inquiry submitted:', response.proposal_id)
       showSuccessModal.value = true
+
+      const label = isSpecificRequest.value ? 'specific-inquiry' : 'general-inquiry'
 
       gtag('event', 'form_submit', {
         event_category: 'conversion',
-        event_label: isSpecificRequest.value ? 'specific-inquiry' : 'general-inquiry',
+        event_label: label,
         page_path: window.location.pathname,
       })
       if (typeof window !== 'undefined' && (window as any).fbq) {
         ;(window as any).fbq('track', 'Lead', {
-          content_name: isSpecificRequest.value ? 'specific-inquiry' : 'general-inquiry',
+          content_name: label,
           content_category: 'form',
         })
       }
+
+      // First-party DB log so inquiry forms appear in booking_redirects alongside booking clicks
+      const sessionId = (window as any).__analyticsSessionId || 'unknown'
+      const urlParams = new URLSearchParams(window.location.search)
+      fetch('/api/booking-redirect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          category: label,
+          referrer_page: window.location.pathname,
+          utm_source: urlParams.get('utm_source') || null,
+          utm_medium: urlParams.get('utm_medium') || null,
+          utm_campaign: urlParams.get('utm_campaign') || null,
+          utm_content: urlParams.get('utm_content') || null,
+        }),
+      }).catch(() => {})
 
       // Auto-close after 3 seconds
       setTimeout(() => {
