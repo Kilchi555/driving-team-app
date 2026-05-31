@@ -36,17 +36,18 @@
 const STORAGE_KEY = 'dt_cookie_consent'
 const config = useRuntimeConfig()
 
+// Single GA4 init path – nuxt-gtag has enabled:false, we call initialize() here after consent
+const { initialize: initGtag, gtag } = useGtag()
+
 const visible = ref(false)
 
 onMounted(() => {
   const stored = localStorage.getItem(STORAGE_KEY)
   if (!stored) {
-    // Small delay so banner doesn't flash on initial load
     setTimeout(() => { visible.value = true }, 800)
   }
-  // Re-initialize pixels if user previously accepted (page reload)
   if (stored === 'accepted') {
-    loadAnalytics()
+    enableAnalytics()
     loadMetaPixel()
   }
 })
@@ -54,7 +55,7 @@ onMounted(() => {
 function accept() {
   localStorage.setItem(STORAGE_KEY, 'accepted')
   visible.value = false
-  loadAnalytics()
+  enableAnalytics()
   loadMetaPixel()
 }
 
@@ -63,24 +64,19 @@ function decline() {
   visible.value = false
 }
 
-function loadAnalytics() {
-  const GA_ID = 'G-ZJX01VS6PN'
-  const script = document.createElement('script')
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`
-  script.async = true
-  document.head.appendChild(script)
-
-  window.dataLayer = window.dataLayer || []
-  function gtag(...args: any[]) { window.dataLayer.push(args) }
-  gtag('js', new Date())
-  gtag('config', GA_ID)
+function enableAnalytics() {
+  // Grant consent and initialize GA4 via nuxt-gtag (single instance, correct Measurement ID)
+  gtag('consent', 'update', {
+    analytics_storage: 'granted',
+    ad_storage: 'granted',
+  })
+  initGtag()
 }
 
 function loadMetaPixel() {
   const pixelId = config.public.metaPixelId
   if (!pixelId || (window as any).fbq) return
 
-  // Standard Meta Pixel base code
   ;(function(w: any) {
     if (w.fbq) return
     const n: any = w.fbq = function() {

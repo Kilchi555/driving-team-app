@@ -1,6 +1,7 @@
 import { BetaAnalyticsDataClient } from '@google-analytics/data'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { readBody } from 'h3'
 
 // Fetches the last 3 days of GA4 data (sessions, users, conversions by channel + page)
 // and upserts into marketing_ga4_daily. Runs daily at 04:00 via Vercel Cron.
@@ -22,32 +23,46 @@ export default defineEventHandler(async (event) => {
     return { success: false, reason: 'missing_credentials' }
   }
 
-  logger.info('sync-marketing-ga4: starting sync for last 3 days')
+  // Optional body params for manual backfills: { startDate: 'YYYY-MM-DD', endDate: 'YYYY-MM-DD' }
+  let body: { startDate?: string; endDate?: string } = {}
+  try { body = await readBody(event) ?? {} } catch { body = {} }
+
+  const startDate = body.startDate ?? '7daysAgo'
+  const endDate   = body.endDate   ?? 'yesterday'
+
+  logger.info(`sync-marketing-ga4: starting sync from ${startDate} to ${endDate}`)
 
   // ============ LAYER 3: FETCH FROM GA4 ============
   const analyticsClient = new BetaAnalyticsDataClient({
     credentials: { client_email: clientEmail, private_key: privateKey },
   })
 
-  const [response] = await analyticsClient.runReport({
-    property: propertyId,
-    dimensions: [
-      { name: 'date' },
-      { name: 'sessionDefaultChannelGrouping' },
-      { name: 'pagePath' },
-    ],
-    metrics: [
-      { name: 'sessions' },
-      { name: 'totalUsers' },
-      { name: 'newUsers' },
-      { name: 'screenPageViews' },
-      { name: 'engagementRate' },
-      { name: 'conversions' },
-    ],
-    dateRanges: [{ startDate: '3daysAgo', endDate: 'yesterday' }],
-    orderBys: [{ dimension: { dimensionName: 'date' }, desc: true }],
-    limit: 5000,
-  })
+  let response: Awaited<ReturnType<typeof analyticsClient.runReport>>[0]
+  try {
+    ;[response] = await analyticsClient.runReport({
+      property: propertyId,
+      dimensions: [
+        { name: 'date' },
+        { name: 'sessionDefaultChannelGrouping' },
+        { name: 'pagePath' },
+      ],
+      metrics: [
+        { name: 'sessions' },
+        { name: 'totalUsers' },
+        { name: 'newUsers' },
+        { name: 'screenPageViews' },
+        { name: 'engagementRate' },
+        { name: 'conversions' },
+      ],
+      dateRanges: [{ startDate, endDate }],
+      orderBys: [{ dimension: { dimensionName: 'date' }, desc: true }],
+      limit: 5000,
+    })
+  } catch (apiErr: any) {
+    const detail = apiErr?.message ?? String(apiErr)
+    logger.error('sync-marketing-ga4: GA4 API error', detail)
+    throw createError({ statusCode: 502, statusMessage: `GA4 API error: ${detail}` })
+  }
 
   const rows = response.rows ?? []
   logger.info(`sync-marketing-ga4: fetched ${rows.length} rows from GA4`)

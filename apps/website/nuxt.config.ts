@@ -5,14 +5,20 @@ export default defineNuxtConfig({
   gtag: {
     // GA4 Measurement ID – set NUXT_PUBLIC_GA_ID in Vercel environment variables
     id: process.env.NUXT_PUBLIC_GA_ID ?? '',
-    // Load GA4 asynchronously after page interaction – zero render-blocking impact
     loadingStrategy: 'async',
-    // Disable during local development to avoid polluting GA data
-    enabled: process.env.NODE_ENV === 'production',
+    // Never auto-initialize – CookieBanner calls initialize() after consent
+    // This prevents a second GA4 instance from loading before the user accepts
+    enabled: false,
+    initCommands: [
+      // Set default consent to denied so GA4 respects DSGVO before accept
+      ['consent', 'default', {
+        analytics_storage: 'denied',
+        ad_storage: 'denied',
+        wait_for_update: 500,
+      }],
+    ],
     config: {
-      // Anonymize IPs for DSGVO compliance
       anonymize_ip: true,
-      // Disable Google Signals to reduce cookie consent requirement
       allow_google_signals: false,
     },
   },
