@@ -153,18 +153,37 @@ export default defineNuxtPlugin(async (nuxtApp) => {
             let newAccessToken: string | null = null
             let newRefreshToken: string | null = null
 
-            if (isAffiliateDashboard) {
-              // Affiliate: refresh via Supabase client directly (no HTTP-Only cookie)
+            // Prefer refreshing via the Supabase client whenever a localStorage
+            // session exists (native app + affiliates log in this way and often
+            // have NO sb-refresh-token cookie — the cookie endpoint would 401 in
+            // a loop). Only fall back to the cookie endpoint when there is no
+            // Supabase session (pure cookie-based staff/client login).
+            const { data: { session: currentSession } } = await supabase.auth.getSession()
+
+            if (isAffiliateDashboard || currentSession) {
               const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
               if (!refreshError && refreshData?.session) {
                 newAccessToken = refreshData.session.access_token
                 newRefreshToken = refreshData.session.refresh_token
-                logger.debug('✅ Affiliate token refreshed via supabase.auth.refreshSession()')
+                logger.debug('✅ Token refreshed via supabase.auth.refreshSession()')
+
+                // Sync the fresh tokens into the server-side HTTP-only cookies
+                // (skip for affiliate dashboard — it doesn't use cookies).
+                if (!isAffiliateDashboard) {
+                  try {
+                    await $fetch('/api/auth/sync-session', {
+                      method: 'POST',
+                      body: { access_token: newAccessToken, refresh_token: newRefreshToken }
+                    })
+                  } catch (syncErr: any) {
+                    logger.debug('⚠️ Cookie sync after refresh failed (non-fatal):', syncErr?.message)
+                  }
+                }
               } else {
-                logger.warn('⚠️ Affiliate token refresh failed:', refreshError?.message)
+                logger.warn('⚠️ Supabase token refresh failed:', refreshError?.message)
               }
             } else {
-              // Staff/Client: refresh via HTTP-Only cookie endpoint
+              // No Supabase session — refresh via HTTP-Only cookie endpoint
               const response = await $fetch('/api/auth/refresh', {
                 method: 'POST'
               }) as any
