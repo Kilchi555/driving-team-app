@@ -78,6 +78,7 @@ export default defineEventHandler(async (event) => {
     const dateFormatted = `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`
 
     return {
+      tenant_id: process.env.MARKETING_TENANT_ID ?? null,
       date: dateFormatted,
       channel: channel || 'unknown',
       page_path: pagePath || '/',
@@ -93,7 +94,7 @@ export default defineEventHandler(async (event) => {
   if (records.length > 0) {
     const { error } = await supabase
       .from('marketing_ga4_daily')
-      .upsert(records, { onConflict: 'date,channel,page_path' })
+      .upsert(records, { onConflict: 'tenant_id,date,channel,page_path' })
 
     if (error) {
       logger.error('sync-marketing-ga4: upsert error', error)

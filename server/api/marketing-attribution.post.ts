@@ -17,6 +17,7 @@ import { logger } from '~/utils/logger'
 
 interface AttributionPayload {
   session_id: string
+  tenant_id?: string | null
   attribution: {
     gclid?: string | null
     gbraid?: string | null
@@ -73,6 +74,7 @@ export default defineEventHandler(async (event) => {
       .from('marketing_attributions')
       .upsert({
         session_id: sessionId,
+        tenant_id: nullable(body.tenant_id) ?? null,
         gclid: nullable(attr.gclid),
         gbraid: nullable(attr.gbraid),
         wbraid: nullable(attr.wbraid),

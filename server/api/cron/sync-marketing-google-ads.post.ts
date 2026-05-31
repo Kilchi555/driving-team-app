@@ -95,6 +95,7 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabaseAdmin()
 
     const records = apiRows.map((row: any) => ({
+      tenant_id: process.env.MARKETING_TENANT_ID ?? null,
       date: row.segments?.date ?? '',
       campaign_id: String(row.campaign?.id ?? ''),
       campaign_name: row.campaign?.name ?? '',
@@ -108,7 +109,7 @@ export default defineEventHandler(async (event) => {
     if (records.length > 0) {
       const { error } = await supabase
         .from('marketing_google_ads_daily')
-        .upsert(records, { onConflict: 'date,campaign_id' })
+        .upsert(records, { onConflict: 'tenant_id,date,campaign_id' })
 
       if (error) {
         logger.error('sync-marketing-google-ads: upsert error', error)
