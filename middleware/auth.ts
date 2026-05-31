@@ -3,6 +3,10 @@ import { defineNuxtRouteMiddleware, navigateTo } from '#app'
 import { logger } from '~/utils/logger'
 import { useAuthStore } from '~/stores/auth'
 
+// Throttle for the split-session diagnostic so a (hypothetical) loop can't flood
+// the error_logs table — at most one report every 10s.
+let lastAuthDiagAt = 0
+
 export default defineNuxtRouteMiddleware(async (to, from) => {
   // Skip auf Server
   if (process.server) return
@@ -73,16 +77,57 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   // Prüfe ob User eingeloggt ist
   if (!authStore.isLoggedIn) {
     logger.debug('🚫 Auth middleware: User not logged in, trying token refresh first...')
-    
-    // Versuche zuerst einen Token-Refresh bevor wir redirecten
+
+    // Native app / Capacitor split-session: there is a valid Supabase session in
+    // localStorage but no HTTP-only cookie. The cookie-based /api/auth/refresh
+    // would 401 ("No refresh token available") on every navigation and spam the
+    // logs. Sync the localStorage session into cookies first; only fall back to
+    // the cookie refresh endpoint when no Supabase session exists.
     try {
-      const refreshResponse = await $fetch('/api/auth/refresh', { method: 'POST' }) as any
-      if (refreshResponse?.session?.access_token) {
-        logger.debug('✅ Auth middleware: Token refreshed, re-initializing auth store...')
+      const { getSupabase } = await import('~/utils/supabase')
+      const supabase = getSupabase()
+      const { data: { session } } = supabase
+        ? await supabase.auth.getSession()
+        : { data: { session: null } }
+
+      const hasSupabaseSession = !!(session?.access_token && session?.refresh_token)
+
+      // 🔎 DIAGNOSTIC (throttled): report the client-side auth decision from the
+      // native app to the server (error_logs table) so we can see WHY the route
+      // is considered logged-out and which recovery path is taken.
+      if (Date.now() - lastAuthDiagAt > 10_000) {
+        lastAuthDiagAt = Date.now()
+        logger.error('auth-middleware-diag', 'Protected route hit while logged out', {
+          path: to.path,
+          from: from?.path,
+          isInitialized: authStore.isInitialized,
+          isLoggedIn: authStore.isLoggedIn,
+          hasSupabaseSession,
+          recoveryPath: hasSupabaseSession ? 'sync-session' : 'cookie-refresh',
+          isNative: typeof window !== 'undefined' && /capacitor|simy/i.test(navigator.userAgent || '')
+        })
+      }
+
+      if (hasSupabaseSession) {
+        await $fetch('/api/auth/sync-session', {
+          method: 'POST',
+          body: {
+            access_token: session!.access_token,
+            refresh_token: session!.refresh_token
+          }
+        })
+        logger.debug('✅ Auth middleware: Synced Supabase session to cookies, re-initializing...')
         await authStore.initializeAuthStore()
+      } else {
+        // No localStorage session — pure cookie-based (web) session refresh
+        const refreshResponse = await $fetch('/api/auth/refresh', { method: 'POST' }) as any
+        if (refreshResponse?.session?.access_token) {
+          logger.debug('✅ Auth middleware: Token refreshed, re-initializing auth store...')
+          await authStore.initializeAuthStore()
+        }
       }
     } catch (refreshErr: any) {
-      logger.debug('⚠️ Auth middleware: Token refresh failed:', refreshErr?.statusCode || refreshErr?.message)
+      logger.debug('⚠️ Auth middleware: Token refresh/sync failed:', refreshErr?.statusCode || refreshErr?.message)
     }
   }
 
