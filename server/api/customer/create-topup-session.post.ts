@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // ── Create Wallee transaction ──────────────────────────
-    const walleeConfig = getWalleeConfigForTenant(userProfile.tenant_id)
+    const walleeConfig = await getWalleeConfigForTenant(userProfile.tenant_id)
     const spaceId = walleeConfig.spaceId
     const config = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
     const transactionService = new Wallee.api.TransactionService(config)

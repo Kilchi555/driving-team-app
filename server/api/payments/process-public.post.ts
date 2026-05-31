@@ -160,7 +160,7 @@ export default defineEventHandler(async (event) => {
     
     try {
       // ✅ Load Wallee config from Vercel environment variables (same as process.post.ts)
-      walleeConfig = getWalleeConfigForTenant(tenantId)
+      walleeConfig = await getWalleeConfigForTenant(tenantId)
       logger.debug('✅ Wallee config loaded:', { 
         spaceId: walleeConfig.spaceId,
         userId: walleeConfig.userId,
