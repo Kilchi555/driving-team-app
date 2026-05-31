@@ -11,7 +11,7 @@
  * ✅ Supports "Remember Me" sessions
  */
 
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, createError, getHeader, getCookie } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthCookies, setAuthCookies } from '~/server/utils/cookies'
 import { logger } from '~/utils/logger'
@@ -21,10 +21,26 @@ export default defineEventHandler(async (event) => {
     logger.debug('🔄 Token refresh requested')
 
     // Get refresh token from HTTP-Only cookie
-    const { refreshToken } = getAuthCookies(event)
+    const { accessToken, refreshToken } = getAuthCookies(event)
+
+    // 🔎 DIAGNOSTIC: capture the request context so we can see in Vercel logs
+    // WHY this endpoint keeps getting hit (split-session, native app, which page).
+    const ua = getHeader(event, 'user-agent') || ''
+    const isNativeApp = /capacitor|simy|wkwebview/i.test(ua) || !/mozilla.*safari/i.test(ua) && /mobile/i.test(ua)
+    logger.warn('🔎 [refresh-diag] /api/auth/refresh called', {
+      hasAccessCookie: !!accessToken,
+      hasRefreshCookie: !!refreshToken,
+      // Split-session signature: access cookie present but refresh cookie gone,
+      // OR neither present in a native webview that DOES have a localStorage session.
+      likelySplitSession: !!accessToken && !refreshToken,
+      isNativeApp,
+      referer: getHeader(event, 'referer') || getHeader(event, 'x-nuxt-route') || 'unknown',
+      origin: getHeader(event, 'origin') || 'unknown',
+      userAgent: ua.slice(0, 120)
+    })
 
     if (!refreshToken) {
-      logger.debug('⚠️ No refresh token found in cookies')
+      logger.warn('⚠️ No refresh token found in cookies', { hasAccessCookie: !!accessToken, isNativeApp })
       throw createError({
         statusCode: 401,
         statusMessage: 'No refresh token available'

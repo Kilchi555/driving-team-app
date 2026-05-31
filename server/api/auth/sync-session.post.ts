@@ -14,13 +14,22 @@
  * ✅ Returns only a success flag, never the tokens themselves.
  */
 
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { setAuthCookies } from '~/server/utils/cookies'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const { access_token, refresh_token } = body ?? {}
+
+  // 🔎 DIAGNOSTIC: confirm the split-session fix path is actually being taken
+  // (client synced its localStorage session into cookies instead of looping on refresh).
+  logger.warn('🔎 [sync-diag] /api/auth/sync-session called', {
+    hasAccessToken: !!access_token,
+    hasRefreshToken: !!refresh_token,
+    referer: getHeader(event, 'referer') || 'unknown',
+    userAgent: (getHeader(event, 'user-agent') || '').slice(0, 120)
+  })
 
   if (!access_token || !refresh_token) {
     throw createError({ statusCode: 400, statusMessage: 'access_token and refresh_token are required' })

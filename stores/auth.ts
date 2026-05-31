@@ -90,7 +90,45 @@ const isAdmin = computed(() => {
             }
           }
         } else {
-          const response = await $fetch('/api/auth/current-user') as any
+          // Cookie-based session check. Returns null instead of throwing on 401
+          // so we can transparently fall back to the localStorage session below.
+          const tryCurrentUser = async (): Promise<any | null> => {
+            try {
+              return await $fetch('/api/auth/current-user')
+            } catch {
+              return null
+            }
+          }
+
+          let response = await tryCurrentUser() as any
+
+          // Split-session (native app / Capacitor): a valid Supabase session lives
+          // in localStorage but the HTTP-only cookies are missing. Without this the
+          // store stays "logged out" and the auth middleware hammers
+          // /api/auth/refresh (which 401s because there is no refresh cookie).
+          // Sync the localStorage tokens into cookies, then retry once.
+          if (!response?.user) {
+            try {
+              const supabase = getSupabase()
+              const { data: { session } } = supabase
+                ? await supabase.auth.getSession()
+                : { data: { session: null } }
+
+              if (session?.access_token && session?.refresh_token) {
+                logger.debug('🔄 No cookie session, syncing Supabase localStorage session to cookies')
+                await $fetch('/api/auth/sync-session', {
+                  method: 'POST',
+                  body: {
+                    access_token: session.access_token,
+                    refresh_token: session.refresh_token
+                  }
+                })
+                response = await tryCurrentUser()
+              }
+            } catch (syncErr: any) {
+              logger.debug('⚠️ Session sync during init failed:', syncErr?.message)
+            }
+          }
 
           if (response?.user && !user.value) {
             logger.debug('🔄 Restoring session from HTTP-Only cookie for:', response.user.email)
