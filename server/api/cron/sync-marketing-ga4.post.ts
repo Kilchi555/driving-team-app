@@ -1,5 +1,6 @@
 import { BetaAnalyticsDataClient } from '@google-analytics/data'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getTenantIdByGa4Property } from '~/server/utils/marketing-tenant'
 import { logger } from '~/utils/logger'
 import { readBody } from 'h3'
 
@@ -69,6 +70,7 @@ export default defineEventHandler(async (event) => {
 
   // ============ LAYER 4: UPSERT INTO SUPABASE ============
   const supabase = getSupabaseAdmin()
+  const tenantId = await getTenantIdByGa4Property(propertyId)
 
   const records = rows.map((row) => {
     const [date, channel, pagePath] = (row.dimensionValues ?? []).map((d) => d.value ?? '')
@@ -78,7 +80,7 @@ export default defineEventHandler(async (event) => {
     const dateFormatted = `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`
 
     return {
-      tenant_id: process.env.MARKETING_TENANT_ID ?? null,
+      tenant_id: tenantId,
       date: dateFormatted,
       channel: channel || 'unknown',
       page_path: pagePath || '/',

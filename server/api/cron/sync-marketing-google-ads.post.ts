@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getTenantIdByGoogleAdsCustomer } from '~/server/utils/marketing-tenant'
 import { logger } from '~/utils/logger'
 
 // Fetches the last 7 days of Google Ads campaign performance via REST API
@@ -93,9 +94,10 @@ export default defineEventHandler(async (event) => {
 
     // ============ LAYER 5: UPSERT INTO SUPABASE ============
     const supabase = getSupabaseAdmin()
+    const tenantId = await getTenantIdByGoogleAdsCustomer(customerId)
 
     const records = apiRows.map((row: any) => ({
-      tenant_id: process.env.MARKETING_TENANT_ID ?? null,
+      tenant_id: tenantId,
       date: row.segments?.date ?? '',
       campaign_id: String(row.campaign?.id ?? ''),
       campaign_name: row.campaign?.name ?? '',
