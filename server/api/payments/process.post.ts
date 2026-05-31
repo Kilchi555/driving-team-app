@@ -19,6 +19,7 @@ import {
 import { Wallee } from 'wallee'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { buildMerchantReference } from '~/utils/merchantReference'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 interface PaymentProcessRequest {
   // CHANGED: Now takes existing paymentId instead of creating new payment
@@ -49,25 +50,16 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     logger.debug('💳 Unified Payment Processing API called')
 
     // ============ LAYER 1: AUTHENTICATION ============
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      logger.warn('❌ No auth token provided')
-      // Skip audit logging - we don't have a user_id yet
+    // Accepts both Authorization: Bearer <token> header and HTTP-only session cookies
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) {
+      logger.warn('❌ No valid authentication found')
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
-    const token = authHeader.substring(7)
-    const supabaseAdmin = getSupabaseAdmin()
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-
-    if (authError || !user) {
-      logger.warn('❌ Invalid auth token')
-      // Skip audit logging - we don't have a valid user yet
-      throw createError({ statusCode: 401, statusMessage: 'Invalid authentication' })
-    }
-
-    authenticatedUserId = user.id
+    authenticatedUserId = authUser.id
     auditDetails.authenticated_user_id = authenticatedUserId
+    const supabaseAdmin = getSupabaseAdmin()
 
     // ============ LAYER 2: RATE LIMITING ============
     const rateLimitResult = await checkRateLimit(
@@ -102,15 +94,17 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     }
 
     // ============ LAYER 5+6: GET USER & PAYMENT IN PARALLEL ============
-    // User profile and payment record are independent — fetch simultaneously.
-    const { data: userData, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('id, tenant_id, email, first_name, last_name')
-      .eq('auth_user_id', authenticatedUserId)
-      .single()
+    // User profile already resolved by getAuthenticatedUser — no extra DB query needed.
+    const userData = {
+      id: authUser.db_user_id as string,
+      tenant_id: authUser.tenant_id as string,
+      email: authUser.profile?.email || (authUser as any).email,
+      first_name: authUser.profile?.first_name,
+      last_name: authUser.profile?.last_name,
+    }
 
-    if (userError || !userData) {
-      logger.warn('❌ User not found')
+    if (!userData.id || !userData.tenant_id) {
+      logger.warn('❌ User profile incomplete')
       throw createError({ statusCode: 404, statusMessage: 'User not found' })
     }
 
