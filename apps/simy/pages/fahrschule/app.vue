@@ -10,7 +10,7 @@
       </div>
       <div class="relative max-w-4xl mx-auto">
         <nav class="flex items-center gap-2 text-xs text-gray-400 mb-8">
-          <a href="/" class="hover:text-gray-600">simy</a><span>›</span>
+          <a href="/" class="hover:text-gray-600">Simy</a><span>›</span>
           <a href="/fahrschule" class="hover:text-gray-600">Fahrschule</a><span>›</span>
           <span class="text-gray-600">Fahrlehrer App</span>
         </nav>
@@ -21,11 +21,11 @@
         <h1 class="text-5xl font-black text-gray-900 mb-6 leading-tight">
           Die Fahrlehrer App, die<br/>
           <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-            wirklich funktioniert
+            wirklich an alles denkt.
           </span>
         </h1>
         <p class="text-xl text-gray-500 max-w-2xl mb-10 leading-relaxed">
-          Kalender, Schüler, Rechnungen und Einnahmen — alles auf deinem Smartphone. simy läuft auf iOS und Android, auch ohne Internet.
+          Kalender, Schülerliste, Erinnerungen, Ausbildungsplan, Online-Zahlung und Terminbuchung — alles auf deinem Smartphone. Simy läuft auf iOS und Android.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
           <a href="https://app.simy.ch/tenant-register"
@@ -36,9 +36,8 @@
         </div>
         <div class="flex flex-wrap gap-4 mt-8 text-sm text-gray-400">
           <span class="flex items-center gap-1.5">✅ iOS & Android</span>
-          <span class="flex items-center gap-1.5">✅ Offline-Modus</span>
           <span class="flex items-center gap-1.5">✅ Push-Benachrichtigungen</span>
-          <span class="flex items-center gap-1.5">✅ Keine separate App nötig</span>
+          <span class="flex items-center gap-1.5">✅ Viele Automatisierungen</span>
         </div>
       </div>
     </section>
@@ -47,7 +46,7 @@
     <section class="py-24 px-6 bg-gray-50">
       <div class="max-w-5xl mx-auto">
         <div class="text-center mb-14">
-          <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Was die simy Fahrlehrer-App kann</h2>
+          <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Was die Simy Fahrlehrer App kann</h2>
         </div>
         <div class="grid md:grid-cols-3 gap-6">
           <div v-for="f in appFeatures" :key="f.title"
@@ -66,13 +65,13 @@
     <!-- vs. other apps comparison -->
     <section class="py-20 px-6">
       <div class="max-w-3xl mx-auto">
-        <h2 class="text-3xl font-extrabold text-gray-900 mb-10 text-center">simy vs. andere Fahrlehrer-Apps</h2>
+        <h2 class="text-3xl font-extrabold text-gray-900 mb-10 text-center">Simy vs. andere Fahrlehrer-Apps</h2>
         <div class="overflow-x-auto rounded-2xl border border-gray-100">
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-gray-50 border-b border-gray-100">
                 <th class="px-5 py-4 text-left font-bold text-gray-700">Feature</th>
-                <th class="px-5 py-4 text-center font-bold" style="color: #6000BD">simy</th>
+                <th class="px-5 py-4 text-center font-bold" style="color: #6000BD">Simy</th>
                 <th class="px-5 py-4 text-center font-bold text-gray-400">Andere Apps</th>
               </tr>
             </thead>
@@ -117,10 +116,10 @@
 useHead({
   title: 'Fahrlehrer App – simy | iOS & Android Fahrschulsoftware',
   meta: [
-    { name: 'description', content: 'Die simy Fahrlehrer App für iOS und Android. Kalender, Schüler, Rechnungen auf dem Smartphone. Auch offline. 60 Tage kostenlos testen.' },
+    { name: 'description', content: 'Die simy Fahrlehrer App für iOS und Android. Kalender, Schüler, Rechnungen auf dem Smartphone. 60 Tage kostenlos testen.' },
     { name: 'keywords', content: 'fahrlehrer app, fahrschulapp, app für fahrschule, fahrlehrer kalender app, fahrschule app' },
     { property: 'og:title', content: 'Fahrlehrer App – simy | iOS & Android' },
-    { property: 'og:description', content: 'Kalender, Schüler und Rechnungen in einer App — iOS, Android, auch offline.' },
+    { property: 'og:description', content: 'Kalender, Schüler und Rechnungen in einer App — iOS und Android.' },
     { property: 'og:url', content: 'https://simy.ch/fahrschule/app' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/fahrschule/app' }],
@@ -128,7 +127,7 @@ useHead({
 
 const appFeatures = [
   { icon: '📅', title: 'Tageskalender', desc: 'Alle Termine des Tages auf einen Blick. Schülername, Uhrzeit, Standort — alles direkt sichtbar.' },
-  { icon: '👤', title: 'Schülerprofil unterwegs', desc: 'Fahrstunden-History, Notizen, Kontaktdaten — alles griffbereit, auch ohne Internet.' },
+  { icon: '👤', title: 'Schülerprofil unterwegs', desc: 'Fahrstunden-History, Notizen, Kontaktdaten — alles griffbereit, immer aktuell.' },
   { icon: '💶', title: 'Einnahmen-Übersicht', desc: 'Tages-, Wochen- und Monatseinnahmen auf einen Blick. Offene Rechnungen sofort sichtbar.' },
   { icon: '🔔', title: 'Push-Benachrichtigungen', desc: 'Neue Buchungen, Absagen, Zahlungseingänge — du wirst sofort benachrichtigt.' },
   { icon: '📍', title: 'Navigation aus der App', desc: 'Tippe auf eine Adresse und die Navigation startet direkt. Kein Copy-Paste mehr.' },
@@ -140,7 +139,7 @@ const comparison = [
   { feature: 'Online-Buchungssystem für Schüler', simy: true, other: false },
   { feature: 'Automatische Rechnungen', simy: true, other: false },
   { feature: 'TWINT & Online-Zahlung (CH)', simy: true, other: false },
-  { feature: 'Offline-Modus', simy: true, other: 'Teilweise' },
+  { feature: 'Echtzeit-Synchronisation', simy: true, other: 'Teilweise' },
   { feature: 'Website-Generator', simy: true, other: false },
   { feature: 'Google Ads & SEO Service', simy: true, other: false },
   { feature: 'Auf Schweizer Servern', simy: true, other: 'Meist nein' },
