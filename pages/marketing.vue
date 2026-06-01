@@ -200,6 +200,93 @@
         </div>
       </div>
 
+      <!-- Booking Attribution -->
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100">
+          <h3 class="font-semibold text-gray-800">Buchungs-Attribution: Woher kamen echte Buchungen?</h3>
+          <p class="text-xs text-gray-500 mt-0.5">Verknüpft Website-Klicks (booking_redirects) mit Buchungsabschlüssen (booking_events) · letzte {{ days }} Tage</p>
+        </div>
+
+        <!-- Sources Summary -->
+        <div v-if="attribution" class="px-5 pt-4 pb-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="text-center">
+            <p class="text-2xl font-bold text-gray-900">{{ attribution.funnel.totalClicks }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Buchungs-Klicks</p>
+          </div>
+          <div class="text-center">
+            <p class="text-2xl font-bold text-gray-900">{{ attribution.funnel.totalOpened }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Buchungsseite geöffnet</p>
+          </div>
+          <div class="text-center">
+            <p class="text-2xl font-bold text-amber-500">{{ attribution.funnel.totalAbandoned }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Abgebrochen</p>
+          </div>
+          <div class="text-center">
+            <p class="text-2xl font-bold" :style="{ color: primaryColor }">{{ attribution.funnel.totalCompleted }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Buchungen abgeschlossen</p>
+          </div>
+        </div>
+
+        <!-- Source breakdown bar -->
+        <div v-if="attribution?.sourcesSummary?.length" class="px-5 py-3 space-y-2 border-t border-gray-50">
+          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Nach Quelle</p>
+          <div v-for="src in attribution.sourcesSummary" :key="src.label" class="flex items-center gap-3">
+            <div class="w-36 text-xs text-gray-600 truncate shrink-0">{{ src.label }}</div>
+            <div class="flex-1 bg-gray-100 rounded-full h-2">
+              <div class="h-2 rounded-full" :style="{ width: Math.round((src.clicks / attribution.funnel.totalClicks) * 100) + '%', background: src.label.includes('cpc') || src.label.includes('CPC') ? '#f59e0b' : primaryColor }"></div>
+            </div>
+            <div class="text-xs text-gray-600 w-10 text-right">{{ src.clicks }}</div>
+            <div class="text-xs font-bold w-16 text-right" :style="{ color: src.completed > 0 ? primaryColor : '#9ca3af' }">
+              {{ src.completed > 0 ? src.completed + ' gebucht' : '—' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Detail table: per page -->
+        <div class="border-t border-gray-100">
+          <p class="px-5 pt-4 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Detail pro Seite</p>
+          <div class="divide-y divide-gray-50 overflow-x-auto">
+            <div v-for="row in attribution?.bySourceAndPage?.slice(0, 15)" :key="row.source + row.page" class="px-5 py-3 hover:bg-gray-50">
+              <div class="flex items-start gap-3">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs font-semibold px-1.5 py-0.5 rounded" :class="row.medium === 'cpc' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'">
+                      {{ row.medium === 'cpc' ? 'Google Ads' : row.source === 'organic/direct' ? 'Organisch' : row.source }}
+                    </span>
+                    <span v-if="row.campaign" class="text-xs text-gray-400">{{ row.campaign }}</span>
+                  </div>
+                  <p class="text-sm font-medium text-gray-800 mt-1 truncate">{{ row.page }}</p>
+                  <p v-if="row.topKeywords?.length" class="text-xs text-gray-400 mt-0.5">
+                    Keywords: {{ row.topKeywords.join(', ') }}
+                  </p>
+                </div>
+                <div class="shrink-0 flex gap-4 text-center">
+                  <div>
+                    <p class="text-sm font-semibold text-gray-700">{{ row.clicks }}</p>
+                    <p class="text-xs text-gray-400">Klicks</p>
+                  </div>
+                  <div>
+                    <p class="text-sm font-semibold text-amber-500">{{ row.abandoned }}</p>
+                    <p class="text-xs text-gray-400">Abbruch</p>
+                  </div>
+                  <div>
+                    <p class="text-sm font-bold" :style="{ color: row.completed > 0 ? primaryColor : '#d1d5db' }">{{ row.completed }}</p>
+                    <p class="text-xs text-gray-400">Gebucht</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-if="!attribution || attribution.bySourceAndPage.length === 0" class="px-5 py-6 text-center text-sm text-gray-400">
+              Keine Daten
+            </div>
+          </div>
+        </div>
+
+        <div class="px-5 py-3 bg-gray-50 border-t border-gray-100">
+          <p class="text-xs text-gray-400">{{ attribution?.note }}</p>
+        </div>
+      </div>
+
       <!-- CTR Bugs: Top Ranks, 0 Clicks -->
       <div v-if="ctrBugs.length > 0" class="bg-white rounded-xl border border-amber-200 overflow-hidden">
         <div class="px-5 py-4 border-b border-amber-100 bg-amber-50">
@@ -248,18 +335,19 @@ const data = ref<any>(null)
 const weeklyReview = ref<any>(null)
 const seoOpportunities = ref<any[]>([])
 const ctrBugs = ref<any[]>([])
+const attribution = ref<any>(null)
 const fetchingData = ref(false)
 
 onMounted(async () => {
   await fetchCurrentUser()
   if (currentUser.value) {
-    await Promise.all([fetchMarketingData(), fetchWeeklyReview(), fetchSeoData()])
+    await Promise.all([fetchMarketingData(), fetchWeeklyReview(), fetchSeoData(), fetchAttribution()])
   }
 })
 
 async function changeDays(d: number) {
   days.value = d
-  await fetchMarketingData()
+  await Promise.all([fetchMarketingData(), fetchAttribution()])
 }
 
 async function fetchMarketingData() {
@@ -277,6 +365,12 @@ async function fetchWeeklyReview() {
   try {
     weeklyReview.value = await $fetch('/api/admin/marketing-weekly-review')
   } catch { /* no review yet */ }
+}
+
+async function fetchAttribution() {
+  try {
+    attribution.value = await $fetch(`/api/admin/marketing-attribution?days=${days.value}`)
+  } catch (e) { console.error('attribution fetch failed', e) }
 }
 
 async function fetchSeoData() {
