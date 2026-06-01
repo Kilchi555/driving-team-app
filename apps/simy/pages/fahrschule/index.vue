@@ -347,7 +347,7 @@ const pains = [
 const features = [
   { icon: '📅', title: 'Online-Terminbuchung', desc: 'Schüler buchen selbst — per Link, rund um die Uhr. Du siehst alles in einem Kalender.', link: '/fahrschule/buchungssystem' },
   { icon: '💶', title: 'Automatische Rechnungen', desc: 'Rechnungen werden automatisch erstellt und per E-Mail versendet. Zahlungserinnerungen laufen von selbst.', link: null },
-  { icon: '📱', title: 'Fahrlehrer-App', desc: 'Dein Kalender, deine Schüler, deine Einnahmen — alles auf dem Smartphone, auch offline.', link: '/fahrschule/app' },
+  { icon: '📱', title: 'Fahrlehrer-App', desc: 'Dein Kalender, deine Schüler, deine Einnahmen — alles auf dem Smartphone, immer aktuell.', link: '/fahrschule/app' },
   { icon: '🌐', title: 'Website-Generator', desc: 'simy erstellt automatisch eine professionelle Website mit deinen Daten, Preisen und Fahrlehrern.', link: null },
   { icon: '📊', title: 'Statistiken & Berichte', desc: 'Einnahmen, Fahrstunden, Prüfungsquote — alle Zahlen auf einen Blick.', link: null },
   { icon: '🎨', title: 'Dein Branding', desc: 'simy läuft in deinen Farben und mit deinem Logo — für deine Schüler sieht es aus wie deine eigene App.', link: null },

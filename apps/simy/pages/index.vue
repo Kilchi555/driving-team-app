@@ -331,10 +331,10 @@
             <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-5"
               :style="{ background: `rgba(var(--brand-rgb), 0.12)`, color: primaryColor }">📱</div>
             <h3 class="font-extrabold text-xl text-gray-900 mb-2">Fahrlehrer-App</h3>
-            <p class="text-sm text-gray-500 leading-relaxed mb-5 flex-1">Native iOS- und Android-App: Kalender, Schülerinfos, Rechnungen und Push-Erinnerungen – auch offline im Auto verfügbar.</p>
+            <p class="text-sm text-gray-500 leading-relaxed mb-5 flex-1">Native iOS- und Android-App: Kalender, Schülerinfos, Rechnungen und Push-Erinnerungen – alles direkt auf dem Smartphone.</p>
             <ul class="space-y-1.5 mb-5 text-sm text-gray-600">
               <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> iOS & Android (nativ)</li>
-              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Offline-fähig im Fahrzeug</li>
+              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Immer aktuell & synchronisiert</li>
               <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Optional als deine eigene Branded App</li>
             </ul>
             <span class="inline-flex items-center gap-1 text-sm font-bold group-hover:gap-2 transition-all" :style="{ color: primaryColor }">
@@ -2290,7 +2290,7 @@ const features = computed(() => [
   { icon: '📅', title: 'Kalender & Terminplanung', desc: 'Intelligente Lektionsplanung direkt online und vollautomatisiert, Live-Sync und mit automatischen Erinnerungen.', alpha: 0.10, link: '/features/kalender' },
   { icon: '💳', title: 'Rechnungen & TWINT-Zahlungen', desc: 'Online-Zahlung mit TWINT, Debit- und Kreditkarte inkl. PostFinance, Rechnungen mit 2 Klicks erstellt und versendet, Mahnungen und Gutschriften einfach erstellt.', alpha: 0.07, link: '/features/rechnungen' },
   { icon: '👥', title: 'Schülerverwaltung', desc: 'Alle Schülerdaten, Lernfortschritte, Dokumente und Notizen zentral an einem Ort.', alpha: 0.13, link: '/fahrschule/software' },
-  { icon: '📱', title: 'Fahrlehrer-App (iOS & Android)', desc: 'Native App für unterwegs – Kalender, Schüler, Rechnungen, Push-Erinnerungen und offline-fähig.', alpha: 0.10, link: '/fahrschule/app' },
+  { icon: '📱', title: 'Fahrlehrer-App (iOS & Android)', desc: 'Native App für unterwegs – Kalender, Schüler, Rechnungen und Push-Erinnerungen immer griffbereit.', alpha: 0.10, link: '/fahrschule/app' },
   { icon: '🌐', title: 'Online-Buchungssystem', desc: 'Schüler buchen freie Termine selbstständig – mit Bestätigung, Erinnerungen und Multi-Fahrlehrer-Sync.', alpha: 0.12, link: '/fahrschule/buchungssystem' },
   { icon: '📊', title: 'Auswertungen & Statistiken', desc: 'Umsatz, Auslastung, No-Show-Rate, Top-Schüler – alle wichtigen Kennzahlen auf einen Blick.', alpha: 0.09, link: '/fahrschule/software' },
   { icon: '🎓', title: 'Prüfungsverwaltung', desc: 'Prüfungsdaten erfassen, Experten zuweisen und bewerten, Ergebnisse tracken. Alles dokumentiert.', alpha: 0.12, link: '/fahrschule/software' },
