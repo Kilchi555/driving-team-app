@@ -1102,11 +1102,13 @@
           </div>
           <!-- Andere Details... -->
 
-          <!-- Unassign action -->
+          <!-- Assign / Unassign action -->
           <div class="pt-2 border-t border-gray-100">
+            <!-- Already assigned: show remove button -->
             <button
+              v-if="isAssignedToMe"
               @click="unassignStudent"
-              :disabled="isUnassigning"
+              :disabled="isUnassigning || isAssigning"
               class="w-full px-4 py-2.5 text-red-500 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               <svg v-if="isUnassigning" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -1117,6 +1119,22 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6"/>
               </svg>
               <span>{{ isUnassigning ? 'Wird entfernt...' : 'Aus meiner Schülerliste entfernen' }}</span>
+            </button>
+            <!-- Not assigned: show add button -->
+            <button
+              v-else
+              @click="assignStudent"
+              :disabled="isAssigning || isUnassigning"
+              class="w-full px-4 py-2.5 text-green-600 bg-white border border-green-200 rounded-xl hover:bg-green-50 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <svg v-if="isAssigning" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h6"/>
+              </svg>
+              <span>{{ isAssigning ? 'Wird hinzugefügt...' : 'Zu meiner Schülerliste hinzufügen' }}</span>
             </button>
           </div>
         </div>
@@ -1430,6 +1448,13 @@ const activeTab = ref<'details' | 'progress' | 'payments' | 'documents'>(props.i
 // Details Edit Modal
 const showDetailsEditModal = ref(false)
 const isUnassigning = ref(false)
+const isAssigning = ref(false)
+
+const isAssignedToMe = computed(() => {
+  if (!props.currentUser?.id || !props.selectedStudent) return false
+  const ids: string[] = (props.selectedStudent as any).assigned_staff_ids || []
+  return ids.includes(props.currentUser.id)
+})
 
 // Billing Address Edit Modal
 const showBillingAddressModal = ref(false)
@@ -1460,7 +1485,6 @@ async function deleteBillingAddress(id: string) {
 
 const unassignStudent = async () => {
   if (!props.selectedStudent?.id) return
-  if (!confirm('Diesen Schüler aus deiner Liste entfernen? Die Terminshistorie bleibt erhalten.')) return
   try {
     isUnassigning.value = true
     await $fetch('/api/staff/unassign-student', { method: 'POST', body: { user_id: props.selectedStudent.id } })
@@ -1470,6 +1494,20 @@ const unassignStudent = async () => {
     console.error('❌ Error unassigning student:', error)
   } finally {
     isUnassigning.value = false
+  }
+}
+
+const assignStudent = async () => {
+  if (!props.selectedStudent?.id) return
+  try {
+    isAssigning.value = true
+    await $fetch('/api/staff/assign-student', { method: 'POST', body: { user_id: props.selectedStudent.id } })
+    emit('studentUpdated', { id: props.selectedStudent.id, _assigned: true })
+    emit('close')
+  } catch (error: any) {
+    console.error('❌ Error assigning student:', error)
+  } finally {
+    isAssigning.value = false
   }
 }
 
