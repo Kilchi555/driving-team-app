@@ -42,12 +42,15 @@ export default defineNuxtPlugin(() => {
   }
 
   function getUtmParams() {
+    // Prefer stored attribution (persisted across pages) over current URL params
+    const attr = (window as any).__dtMarketingAttribution ?? {}
     const p = new URLSearchParams(window.location.search)
     return {
-      utm_source: p.get('utm_source') || null,
-      utm_medium: p.get('utm_medium') || null,
-      utm_campaign: p.get('utm_campaign') || null,
-      utm_content: p.get('utm_content') || null,
+      utm_source: attr.utm_source || p.get('utm_source') || null,
+      utm_medium: attr.utm_medium || p.get('utm_medium') || null,
+      utm_campaign: attr.utm_campaign || p.get('utm_campaign') || null,
+      utm_content: attr.utm_content || p.get('utm_content') || null,
+      utm_term: attr.utm_term || p.get('utm_term') || null,
     }
   }
 

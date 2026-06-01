@@ -122,6 +122,10 @@
       "schedule": "10 4 * * *"
     },
     {
+      "path": "/api/cron/sync-marketing-google-ads-keywords",
+      "schedule": "30 4 * * *"
+    },
+    {
       "path": "/api/cron/sync-marketing-meta-ads",
       "schedule": "20 4 * * *"
     },
