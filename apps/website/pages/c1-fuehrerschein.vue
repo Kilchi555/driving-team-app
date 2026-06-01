@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>C1 Führerschein Schweiz | Kosten, Ablauf & Anmeldung | Driving Team</Title>
-      <Meta name="description" content="C1 Führerschein Schweiz – Fahrschule Driving Team in Zürich & Lachen. Kategorie C1 für LKW bis 7,5t & Wohnmobile. Kosten, Ablauf, Prüfung. Ab CHF 150.- / 45 Min. Jetzt anmelden!" />
-      <Meta name="keywords" content="C1 Führerschein Schweiz, C1 Führerschein, C1 Prüfung Schweiz, Führerschein C1 Kosten, C1 Fahrschule Zürich, C1 Wohnmobil Führerschein, C1 Lastwagen, C1E Führerschein Schweiz" />
-      <Meta property="og:title" content="C1 Führerschein Schweiz | Kosten, Ablauf & Prüfung | Driving Team" />
-      <Meta property="og:description" content="C1 Führerschein für LKW bis 7,5t und Wohnmobile. Driving Team Fahrschule Zürich & Lachen. Kosten ab CHF 150.- / 45 Min." />
+      <Title>C1 Führerschein Schweiz – Lieferwagen & Wohnmobil | Driving Team</Title>
+      <Meta name="description" content="C1 Führerschein Schweiz – für Lieferwagen & Transporter (3.5–7.5t) und Wohnmobile. Fahrstunden ab CHF 150.-/45 Min. in Zürich & Lachen. Kosten, Ablauf & Anmeldung. Jetzt anmelden!" />
+      <Meta name="keywords" content="C1 Führerschein Schweiz, C1 Lieferwagen Führerschein, Lieferwagen Fahrschule, C1 Führerschein, C1 Prüfung Schweiz, Führerschein C1 Kosten, C1 Fahrschule Zürich, C1 Wohnmobil Führerschein, C1E Führerschein Schweiz" />
+      <Meta property="og:title" content="C1 Führerschein Schweiz – Lieferwagen & Wohnmobil | Driving Team" />
+      <Meta property="og:description" content="C1 Führerschein für Lieferwagen (3.5–7.5t) und Wohnmobile. Driving Team Fahrschule Zürich & Lachen. Kosten ab CHF 150.- / 45 Min." />
       <Meta property="og:image" content="https://drivingteam.ch/images/categories/lastwagen-fahrschule-hero.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />

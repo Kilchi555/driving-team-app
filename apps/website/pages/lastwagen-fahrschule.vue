@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>LKW Fahrschule Zürich ✓ C, C1, CE | ab CHF 170.-</Title>
-      <Meta name="description" content="LKW-Führerschein C, C1 & CE in Zürich – moderne Fahrzeuge, CZV Grundkurs, Prüfung StVA Regensdorf, ab CHF 160.-. Jetzt anmelden!" />
+      <Title>Lastwagen & Lieferwagen Fahrschule Zürich | C1, C, CE | Driving Team</Title>
+      <Meta name="description" content="Lastwagen & Lieferwagen Führerschein in Zürich & Lachen – Kategorie C1 (Lieferwagen bis 7.5t), C & CE. CZV Grundkurs, Prüfung StVA Regensdorf. Ab CHF 150.-. Jetzt anmelden!" />
       <Meta property="og:title" content="Lastwagen Fahrschule Zürich | C1/C/CE | Driving Team" />
       <Meta property="og:description" content="Berufliche Lastwagen Fahrausbildung in Zürich – C1, C & CE Prüfung am StVA Regensdorf. Weg zur Lastwagenprüfung in 5 Schritten" />
       <Meta property="og:url" content="https://drivingteam.ch/lastwagen-fahrschule/" />
@@ -35,6 +35,22 @@
       <div class="max-w-3xl mx-auto">
         <p class="text-lg text-gray-700 mb-4">Solltest du dich zuerst für den Führerschein C1 entscheiden und später doch den Führerschein C machen wollen, müsstest du den Grossteil der Ausbildung noch einmal absolvieren. Spare Zeit und Geld, indem du gleich den Führerschein C machst!</p>
         <p class="text-lg text-gray-700">Worauf wartest du noch? Melde dich noch heute zu deiner ersten Fahrstunde in unserer LKW Fahrschule in Zürich oder Lachen/SZ an und erlebe den Nervenkitzel, selbst einen grossen Lastwagen zu fahren.</p>
+      </div>
+    </section>
+
+    <!-- C1 Lieferwagen Callout -->
+    <section class="section-container py-6">
+      <div class="max-w-3xl mx-auto">
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div class="text-3xl flex-shrink-0">🚐</div>
+          <div class="flex-1">
+            <h2 class="font-bold text-gray-900 mb-1">Nur Lieferwagen oder Wohnmobil (Kategorie C1)?</h2>
+            <p class="text-sm text-gray-600">Der C1-Führerschein berechtigt zum Fahren von Fahrzeugen bis 7.5t – ideal für Lieferwagen, Transporter und Wohnmobile. Günstigere Fahrstunden ab CHF 150.- und kein CZV für private Fahrer.</p>
+          </div>
+          <a href="/c1-fuehrerschein/" class="flex-shrink-0 bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition whitespace-nowrap">
+            → C1 Infos & Preise
+          </a>
+        </div>
       </div>
     </section>
 
