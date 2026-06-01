@@ -232,7 +232,7 @@ const featureCats = [
   },
   {
     title: 'Rechnungen & Kasse', icon: '💶', color: '#059669', tag: 'Must-Have',
-    features: ['Automatische Rechnungserstellung', 'TWINT & Online-Zahlung (CH)', 'Zahlungserinnerungen', 'Guthaben-System', 'QR-Rechnung', 'Exportfunktion'],
+    features: ['Automatische Rechnungserstellung', 'TWINT & Online-Zahlung (CH)', 'Automatische Erinnerungen bei Online-Zahlung', 'Guthaben-System', 'QR-Rechnung', 'Exportfunktion'],
   },
   {
     title: 'Schülerverwaltung', icon: '🎓', color: '#0891B2', tag: 'Must-Have',

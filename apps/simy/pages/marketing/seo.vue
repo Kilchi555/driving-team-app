@@ -28,7 +28,7 @@
           Organisch auf Platz 1, wenn jemand "Fahrschule [deine Stadt]" googelt. Einmal etabliert — kostenloser Traffic für immer. Wir machen das für dich.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
-          <a href="https://app.simy.ch/tenant-register"
+          <a href="/marketing/seo-anfrage"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
             style="background: linear-gradient(135deg, #6000BD, #8B2FE8); box-shadow: 0 8px 24px rgba(96,0,189,0.3)">
             SEO-Analyse anfragen →
@@ -82,17 +82,17 @@
         </div>
         <div class="space-y-5">
           <div v-for="(item, i) in seoActions" :key="i"
-            class="flex gap-6 p-6 rounded-2xl border border-gray-100 hover:border-purple-100 transition-all group">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-white text-sm"
+            class="flex gap-4 p-5 rounded-2xl border border-gray-100 hover:border-purple-100 transition-all group">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-white text-sm mt-0.5"
               style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">{{ i + 1 }}</div>
-            <div>
-              <h3 class="font-bold text-gray-900 mb-1">{{ item.title }}</h3>
+            <div class="flex-1 min-w-0">
+              <div class="flex flex-wrap items-center gap-2 mb-1">
+                <h3 class="font-bold text-gray-900">{{ item.title }}</h3>
+                <span class="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0" :style="{ background: item.impact === 'Hoch' ? 'rgba(96,0,189,0.08)' : 'rgba(5,150,105,0.08)', color: item.impact === 'Hoch' ? '#6000BD' : '#059669' }">
+                  {{ item.impact }}
+                </span>
+              </div>
               <p class="text-sm text-gray-500 leading-relaxed">{{ item.desc }}</p>
-            </div>
-            <div class="ml-auto flex-shrink-0">
-              <span class="text-xs font-bold px-3 py-1.5 rounded-full" :style="{ background: item.impact === 'Hoch' ? 'rgba(96,0,189,0.08)' : 'rgba(5,150,105,0.08)', color: item.impact === 'Hoch' ? '#6000BD' : '#059669' }">
-                {{ item.impact }}
-              </span>
             </div>
           </div>
         </div>
@@ -127,7 +127,7 @@
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Wie gut rankt deine Fahrschule aktuell?</h2>
         <p class="text-purple-200 mb-8">Wir machen eine kostenlose SEO-Analyse für deine Fahrschule und zeigen dir das Potenzial.</p>
-        <a href="https://app.simy.ch/tenant-register"
+        <a href="/marketing/seo-anfrage"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: #6000BD">
           Kostenlose SEO-Analyse →
