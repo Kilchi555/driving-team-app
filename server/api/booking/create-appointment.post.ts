@@ -825,17 +825,25 @@ export default defineEventHandler(async (event: H3Event) => {
       logger.warn('⚠️ Could not queue availability recalc after booking (non-critical):', err.message)
     })
 
-    // Fire-and-forget: send appointment confirmation email (non-blocking)
-    $fetch('/api/reminders/send-appointment-confirmation', {
-      method: 'POST',
-      body: {
-        appointmentId: newAppointment.id,
-        userId: userData.id,
-        tenantId: tenantId
-      }
-    }).catch((err: any) => {
-      logger.warn('⚠️ Could not send appointment confirmation email (non-critical):', err.message)
-    })
+    // Send appointment confirmation email. We AWAIT this (inside try/catch so a
+    // failure never breaks the already-committed booking). A previous
+    // fire-and-forget version was unreliable on Vercel serverless: the function
+    // is frozen right after the response is returned, so the unawaited $fetch was
+    // frequently cut off before the email was actually sent — which is why
+    // self-booking customers received no confirmation while staff-created
+    // appointments (different flow) did.
+    try {
+      await $fetch('/api/reminders/send-appointment-confirmation', {
+        method: 'POST',
+        body: {
+          appointmentId: newAppointment.id,
+          userId: userData.id,
+          tenantId: tenantId
+        }
+      })
+    } catch (err: any) {
+      logger.warn('⚠️ Could not send appointment confirmation email (non-critical):', err?.message)
+    }
 
     // ============ LAYER 11: SERVER-SIDE GOOGLE ADS CONVERSION UPLOAD ============
     // Fire-and-forget. Never blocks or fails the booking. If any of:
