@@ -75,7 +75,7 @@
           <!-- Inactive Toggle -->
           <div class="flex items-center gap-3 rounded-lg">
             <span class="text-sm font-medium text-gray-700">
-              {{ showInactive ? 'Inaktive' : 'Aktive' }}
+              {{ showInactive ? 'Abgeschlossen & Inaktiv' : 'Aktive' }}
             </span>
             <label class="relative inline-flex items-center cursor-pointer">
               <input 
@@ -208,12 +208,10 @@
                       <span 
                         v-for="cat in student.category" 
                         :key="cat"
-                        :class="[
-                          'text-xs px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5',
-                          isCategoryPassed(student, cat)
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-blue-100 text-blue-800'
-                        ]"
+                        class="text-xs px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5"
+                        :style="isCategoryPassed(student, cat)
+                          ? { background: `${primaryColor}22`, color: primaryColor, outline: `1.5px solid ${primaryColor}55` }
+                          : { background: `${primaryColor}12`, color: primaryColor }"
                         :title="isCategoryPassed(student, cat) ? `Prüfung ${cat} bestanden` : `Kategorie ${cat}`"
                       >
                         <span v-if="isCategoryPassed(student, cat)">✓</span>
@@ -564,6 +562,13 @@ const isCategoryPassed = (student: any, cat: string): boolean => {
   return passed.some(p => p === cat || p === normalizedCat)
 }
 
+// A student is "completed" if they have enrolled categories and ALL are passed
+const isStudentCompleted = (student: any): boolean => {
+  const categories: string[] = student.category || []
+  if (!categories.length) return false
+  return categories.every(cat => isCategoryPassed(student, cat))
+}
+
 // Mobile optimization methods
 const formatPhone = (phone: string) => {
   if (!phone) return ''
@@ -717,20 +722,23 @@ const loadStudents = async (loadAppointments = true) => {
       return
     }
 
-    // ✅ Client-seitige Filterung für active/inactive users
+    // ✅ Client-seitige Filterung für active/inactive/completed users
     let filteredData = data
     if (showInactive.value) {
-      // Show only INACTIVE students (is_active = false AND not pending/auth_user_id = null)
+      // Show INACTIVE students (deactivated) AND COMPLETED students (all categories passed)
       filteredData = data.filter((student: any) => {
-        return student.is_active === false && student.auth_user_id !== null
+        const deactivated = student.is_active === false && student.auth_user_id !== null
+        const completed = student.is_active === true && isStudentCompleted(student)
+        return deactivated || completed
       })
-      logger.debug(`📊 Client-side filtering (INACTIVE only): ${data.length} total → ${filteredData.length} inactive`)
+      logger.debug(`📊 Client-side filtering (INACTIVE + COMPLETED): ${data.length} total → ${filteredData.length}`)
     } else {
-      // Show ACTIVE students OR pending users (auth_user_id = null)
+      // Show ACTIVE students who have NOT completed all their categories, OR pending users
       filteredData = data.filter((student: any) => {
-        return student.is_active === true || student.auth_user_id === null
+        if (student.auth_user_id === null) return true // always show pending
+        return student.is_active === true && !isStudentCompleted(student)
       })
-      logger.debug(`📊 Client-side filtering (ACTIVE): ${data.length} total → ${filteredData.length} active/pending`)
+      logger.debug(`📊 Client-side filtering (ACTIVE, not completed): ${data.length} total → ${filteredData.length}`)
     }
 
     // ✅ NEU: Intelligente Filterung basierend auf showAllStudents
