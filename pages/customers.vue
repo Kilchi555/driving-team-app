@@ -75,7 +75,7 @@
           <!-- Inactive Toggle -->
           <div class="flex items-center gap-3 rounded-lg">
             <span class="text-sm font-medium text-gray-700">
-              {{ showInactive ? 'Abgeschlossen & Inaktiv' : 'Aktive' }}
+              {{ showInactive ? 'Inaktiv' : 'Aktive' }}
             </span>
             <label class="relative inline-flex items-center cursor-pointer">
               <input 
@@ -640,9 +640,23 @@ const handleStudentUpdated = (updateData: { id: string, [key: string]: any }) =>
 
   // If staff unassigned themselves, remove from list and close modal
   if (updateData._unassigned) {
+    const removedStudent = students.value.find(s => s.id === updateData.id)
     students.value = students.value.filter(s => s.id !== updateData.id)
     selectedStudent.value = null
+    const removedName = removedStudent ? `${removedStudent.first_name} ${removedStudent.last_name}` : 'Schüler'
+    showSuccessToast('Aus Schülerliste entfernt', `${removedName} wurde erfolgreich aus deiner Liste entfernt.`)
     logger.debug('✅ Student removed from list after unassign')
+    return
+  }
+
+  // If staff assigned themselves, reload list and show toast
+  if (updateData._assigned) {
+    const addedStudent = students.value.find(s => s.id === updateData.id)
+    selectedStudent.value = null
+    const addedName = addedStudent ? `${addedStudent.first_name} ${addedStudent.last_name}` : 'Schüler'
+    showSuccessToast('Zur Schülerliste hinzugefügt', `${addedName} wurde erfolgreich zu deiner Liste hinzugefügt.`)
+    loadStudents()
+    logger.debug('✅ Student added to list after assign')
     return
   }
 
@@ -1126,11 +1140,10 @@ const showSuccessToast = (title: string, message: string = '') => {
   showToast.value = true
   logger.debug('🔔 Toast state updated:', { showToast: showToast.value })
   
-  // Auto-hide after 6 seconds (increased from 3 seconds for better readability)
   toastTimeoutId = setTimeout(() => {
     showToast.value = false
     toastTimeoutId = null
-  }, 6000)
+  }, 2500)
 }
 
 const showErrorToast = (title: string, message: string = '') => {
@@ -1142,11 +1155,10 @@ const showErrorToast = (title: string, message: string = '') => {
   showToast.value = true
   logger.debug('🔔 Toast state updated:', { showToast: showToast.value })
   
-  // Auto-hide after 8 seconds for errors (longer to read error message)
   toastTimeoutId = setTimeout(() => {
     showToast.value = false
     toastTimeoutId = null
-  }, 8000)
+  }, 4000)
 }
 </script>
 
