@@ -151,7 +151,7 @@ const appFeatures = [
 const comparison = [
   {
     feature: 'iOS & Android Fahrlehrer-App',
-    simy: true, carzi: 'Web-App', orphy: true, admin: false
+    simy: true, carzi: true, orphy: true, admin: false
   },
   {
     feature: 'Schüler buchen selbst online',
