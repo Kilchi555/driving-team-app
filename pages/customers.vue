@@ -637,18 +637,22 @@ const handleEvaluateLesson = (lesson: any) => {
 
 const handleStudentUpdated = (updateData: { id: string, [key: string]: any }) => {
   logger.debug('📡 Received student update:', updateData)
-  
+
+  // If staff unassigned themselves, remove from list and close modal
+  if (updateData._unassigned) {
+    students.value = students.value.filter(s => s.id !== updateData.id)
+    selectedStudent.value = null
+    logger.debug('✅ Student removed from list after unassign')
+    return
+  }
+
   // Find and update the student in the local students array
   const studentIndex = students.value.findIndex(s => s.id === updateData.id)
   if (studentIndex !== -1) {
-    // Update the student object with new data
     Object.assign(students.value[studentIndex], updateData)
     logger.debug('✅ Updated local student data')
-    
-    // Also update selectedStudent if it's the same student
     if (selectedStudent.value?.id === updateData.id) {
       Object.assign(selectedStudent.value, updateData)
-      logger.debug('✅ Updated selectedStudent data')
     }
   }
 }

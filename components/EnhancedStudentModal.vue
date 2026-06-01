@@ -1309,6 +1309,7 @@
       :student="selectedStudent"
       @close="showDetailsEditModal = false"
       @save="handleDetailsUpdated"
+      @unassigned="handleStudentUnassigned"
     />
 
     <!-- Billing Address Edit Modal -->
@@ -1437,6 +1438,12 @@ async function deleteBillingAddress(id: string) {
   } catch (error: any) {
     logger.error('❌ Error deleting billing address:', error)
   }
+}
+
+const handleStudentUnassigned = () => {
+  showDetailsEditModal.value = false
+  emit('close')
+  emit('studentUpdated', { id: props.selectedStudent?.id ?? '', _unassigned: true })
 }
 
 const handleDetailsUpdated = async (updatedData: any) => {
