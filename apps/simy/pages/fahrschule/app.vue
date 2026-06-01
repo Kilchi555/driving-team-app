@@ -42,6 +42,77 @@
       </div>
     </section>
 
+    <!-- Device Mockup Showcase -->
+    <section class="py-20 px-6 overflow-hidden" style="background: linear-gradient(180deg, #faf8ff 0%, #f3f0ff 100%)">
+      <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-14">
+          <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-4 border"
+            style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
+            Auf jedem Gerät
+          </div>
+          <h2 class="text-3xl font-extrabold text-gray-900 mb-3">iPhone, iPad & Desktop — immer dabei</h2>
+          <p class="text-gray-500 max-w-xl mx-auto text-base">Simy passt sich automatisch an dein Gerät an. Ob auf dem Smartphone zwischen zwei Fahrstunden oder am Computer im Büro — du hast immer alles im Griff.</p>
+        </div>
+
+        <!-- Devices row -->
+        <div class="flex items-end justify-center gap-6 md:gap-10">
+
+          <!-- iPhone -->
+          <div class="flex-shrink-0 w-[140px] md:w-[180px]">
+            <div class="relative rounded-[2.2rem] border-[6px] border-gray-800 bg-gray-800 shadow-2xl"
+              style="box-shadow: 0 40px 80px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.15)">
+              <!-- Notch -->
+              <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[60px] h-[16px] bg-gray-800 rounded-b-2xl z-10"></div>
+              <!-- Screen -->
+              <div class="rounded-[1.7rem] overflow-hidden bg-white">
+                <img src="/screenshots/iphone-calendar.png" alt="Simy iPhone Kalender"
+                  class="w-full block" loading="lazy" />
+              </div>
+            </div>
+            <p class="text-center text-xs text-gray-400 mt-3 font-medium">iPhone</p>
+          </div>
+
+          <!-- iPad (center, larger) -->
+          <div class="flex-shrink-0 w-[240px] md:w-[320px] mb-4">
+            <div class="relative rounded-[1.8rem] border-[8px] border-gray-800 bg-gray-800 shadow-2xl"
+              style="box-shadow: 0 40px 80px rgba(96,0,189,0.2), 0 0 0 1px rgba(0,0,0,0.15)">
+              <!-- Camera dot -->
+              <div class="absolute top-2 left-1/2 -translate-x-1/2 w-[7px] h-[7px] bg-gray-600 rounded-full z-10"></div>
+              <!-- Screen -->
+              <div class="rounded-[1.2rem] overflow-hidden bg-white">
+                <img src="/screenshots/ipad-dashboard.png" alt="Simy iPad Dashboard"
+                  class="w-full block" loading="lazy" />
+              </div>
+            </div>
+            <p class="text-center text-xs text-gray-400 mt-3 font-medium">iPad</p>
+          </div>
+
+          <!-- Desktop browser -->
+          <div class="flex-shrink-0 w-[260px] md:w-[380px]">
+            <div class="rounded-xl border border-gray-200 bg-white shadow-2xl overflow-hidden"
+              style="box-shadow: 0 40px 80px rgba(0,0,0,0.15)">
+              <!-- Browser chrome -->
+              <div class="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
+                <div class="flex gap-1.5">
+                  <div class="w-2.5 h-2.5 rounded-full bg-red-400"></div>
+                  <div class="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
+                  <div class="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+                </div>
+                <div class="flex-1 bg-white rounded-md px-2.5 py-1 text-[10px] text-gray-400 border border-gray-200 text-center truncate">
+                  app.simy.ch
+                </div>
+              </div>
+              <!-- Screenshot -->
+              <img src="/screenshots/desktop-dashboard.png" alt="Simy Desktop Dashboard"
+                class="w-full block" loading="lazy" />
+            </div>
+            <p class="text-center text-xs text-gray-400 mt-3 font-medium">Desktop</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
     <!-- App Features -->
     <section class="py-24 px-6 bg-gray-50">
       <div class="max-w-5xl mx-auto">
