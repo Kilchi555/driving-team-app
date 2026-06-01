@@ -56,7 +56,7 @@ export default defineEventHandler(async (event) => {
       // This covers old assignments
       const { data: oldAssignedStudents, error: oldError } = await serviceSupabase
         .from('users')
-        .select('id, first_name, last_name, email, phone, category, assigned_staff_id, assigned_staff_ids, preferred_location_id, role, is_active, onboarding_status')
+        .select('id, first_name, last_name, email, phone, category, exam_passed_categories, assigned_staff_id, assigned_staff_ids, preferred_location_id, role, is_active, onboarding_status')
         .eq('role', 'client') // Only clients, not staff
         .eq('tenant_id', tenantId)
         .eq('assigned_staff_id', userId)
@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
       // Load students with assigned_staff_ids regardless of is_active status
       const { data: allStudents, error: allError } = await serviceSupabase
         .from('users')
-        .select('id, first_name, last_name, email, phone, category, assigned_staff_id, assigned_staff_ids, preferred_location_id, role, is_active, onboarding_status')
+        .select('id, first_name, last_name, email, phone, category, exam_passed_categories, assigned_staff_id, assigned_staff_ids, preferred_location_id, role, is_active, onboarding_status')
         .eq('role', 'client')
         .eq('tenant_id', tenantId)
         .not('assigned_staff_ids', 'is', null)
@@ -103,7 +103,7 @@ export default defineEventHandler(async (event) => {
       
       const { data: appointmentStudents, error: appointmentError } = await serviceSupabase
         .from('appointments')
-        .select('user_id, users!appointments_user_id_fkey(id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active, onboarding_status)')
+        .select('user_id, users!appointments_user_id_fkey(id, first_name, last_name, email, phone, category, exam_passed_categories, assigned_staff_id, preferred_location_id, role, is_active, onboarding_status)')
         .eq('staff_id', userId)
         .eq('tenant_id', tenantId)
         .not('users', 'is', null)
@@ -139,7 +139,7 @@ export default defineEventHandler(async (event) => {
 
       const { data, error: fetchError } = await serviceSupabase
         .from('users')
-        .select('id, first_name, last_name, email, phone, category, assigned_staff_id, preferred_location_id, role, is_active, onboarding_status')
+        .select('id, first_name, last_name, email, phone, category, exam_passed_categories, assigned_staff_id, preferred_location_id, role, is_active, onboarding_status')
         .eq('role', 'client')
         .eq('tenant_id', tenantId)
         .or('is_active.eq.true,onboarding_status.eq.pending')

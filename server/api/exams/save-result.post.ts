@@ -82,7 +82,7 @@ export default defineEventHandler(async (event) => {
     // ✅ 3. VERIFY APPOINTMENT BELONGS TO TENANT + load customer & location for email
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
-      .select('id, tenant_id, user_id, location_id')
+      .select('id, tenant_id, user_id, location_id, type')
       .eq('id', appointment_id)
       .eq('tenant_id', tenantId)
       .single()
@@ -141,7 +141,24 @@ export default defineEventHandler(async (event) => {
       examResultId: examResult.id
     })
 
-    // ✅ 6. SEND CONGRATULATIONS EMAIL (only if passed)
+    // ✅ 6. UPDATE exam_passed_categories ON USER (only if passed)
+    if (passed && appointment.type) {
+      const category = appointment.type.trim().toUpperCase()
+      // Use Postgres array append — avoids duplicates via array_append + array_remove trick
+      const { error: categoryUpdateError } = await supabase.rpc('append_exam_passed_category', {
+        p_user_id: appointment.user_id,
+        p_category: category
+      })
+
+      if (categoryUpdateError) {
+        // Non-critical: log but don't fail the request
+        logger.warn('⚠️ Could not update exam_passed_categories:', categoryUpdateError.message)
+      } else {
+        logger.debug('✅ exam_passed_categories updated for user:', appointment.user_id, 'category:', category)
+      }
+    }
+
+    // ✅ 7. SEND CONGRATULATIONS EMAIL (only if passed)
     if (passed) {
       try {
         const [customerRes, locationRes, tenantRes] = await Promise.all([

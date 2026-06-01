@@ -208,8 +208,15 @@
                       <span 
                         v-for="cat in student.category" 
                         :key="cat"
-                        class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded font-medium"
+                        :class="[
+                          'text-xs px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5',
+                          (student.exam_passed_categories || []).includes(cat)
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-blue-100 text-blue-800'
+                        ]"
+                        :title="(student.exam_passed_categories || []).includes(cat) ? `Prüfung ${cat} bestanden` : `Kategorie ${cat}`"
                       >
+                        <span v-if="(student.exam_passed_categories || []).includes(cat)">✓</span>
                         {{ cat }}
                       </span>
                     </div>

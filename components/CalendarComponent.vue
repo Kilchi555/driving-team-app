@@ -1255,7 +1255,13 @@ const loadAppointments = async (forceReload = false) => {
   const viewEnd = currentView?.activeEnd || new Date()
   
   if (forceReload) {
-    clearCache()
+    // Only invalidate the current view's cache entry, not prefetched adjacent weeks
+    const { invalidate: invalidateCurrentView } = useCalendarCache()
+    invalidateCurrentView('/api/calendar/get-appointments', {
+      viewStart: viewStart.toISOString(),
+      viewEnd: viewEnd.toISOString(),
+      adminStaffFilter: props.adminStaffFilter || null,
+    })
   }
   
   isLoadingEvents.value = true
@@ -1293,6 +1299,9 @@ const loadAppointments = async (forceReload = false) => {
     
     // Set calendarEvents - the watcher handles FullCalendar update
     calendarEvents.value = allEvents
+
+    // Prefetch adjacent weeks silently in the background
+    prefetchAdjacentWeeks(viewStart, viewEnd)
   } catch (error) {
     console.error('❌ Error loading calendar events:', error)
     // ✅ Fehler nicht weiterwerfen, nur loggen
@@ -1300,6 +1309,44 @@ const loadAppointments = async (forceReload = false) => {
     isLoadingEvents.value = false
     isUpdating.value = false
   }
+}
+
+// Silently prefetch prev/next week into cache so navigation feels instant
+const prefetchAdjacentWeeks = (viewStart: Date, viewEnd: Date) => {
+  const weekMs = 7 * 24 * 60 * 60 * 1000
+
+  const ranges = [
+    { start: new Date(viewStart.getTime() - weekMs), end: new Date(viewEnd.getTime() - weekMs) },
+    { start: new Date(viewStart.getTime() + weekMs), end: new Date(viewEnd.getTime() + weekMs) },
+  ]
+
+  const schedule = typeof requestIdleCallback !== 'undefined' ? requestIdleCallback : (cb: () => void) => setTimeout(cb, 100)
+
+  schedule(() => {
+    for (const { start, end } of ranges) {
+      const params = new URLSearchParams()
+      params.append('viewStart', start.toISOString())
+      params.append('viewEnd', end.toISOString())
+      if (props.adminStaffFilter) params.append('adminStaffFilter', props.adminStaffFilter)
+
+      const cacheParams = {
+        viewStart: start.toISOString(),
+        viewEnd: end.toISOString(),
+        adminStaffFilter: props.adminStaffFilter || null,
+      }
+
+      getCachedOrFetch(
+        '/api/calendar/get-appointments',
+        () => $fetch(`/api/calendar/get-appointments?${params.toString()}`, { method: 'GET' }),
+        cacheParams,
+        5 * 60 * 1000
+      ).then(() => {
+        logger.debug('📦 Prefetched week:', start.toISOString().slice(0, 10), '→', end.toISOString().slice(0, 10))
+      }).catch(() => {
+        // Prefetch failures are silent — next load will fetch normally
+      })
+    }
+  })
 }
 
 // ✅ Helper-Funktion für Event-Farben
@@ -1761,7 +1808,7 @@ showConfirmDialog({
     headerToolbar: {
       left: 'customTitle',
       center: 'viewSwitcher',
-      right: 'prev,next today'
+      right: 'prev,next heute'
     },
     customButtons: {
       customTitle: {
@@ -1773,6 +1820,12 @@ showConfirmDialog({
       viewSwitcher: {
         text: 'Tag',
         click: switchView
+      },
+      heute: {
+        text: 'Heute',
+        click: () => {
+          calendar.value?.getApi()?.today()
+        }
       }
     },
     events: calendarEvents.value,
@@ -1787,10 +1840,8 @@ showConfirmDialog({
         logger.debug('📅 Initial load, skipping datesSet reload')
         return
       }
-      logger.debug('📅 Week changed, loading events for new viewport')
-      // ✅ Don't invalidate cache here - let loadAppointments handle it
-      // This is where viewport caching should shine!
-      refreshCalendar()
+      logger.debug('📅 Week changed, loading events for new viewport (using cache if available)')
+      loadAppointments(false)
     },
   // Klick auf leeren Zeitslot
 
