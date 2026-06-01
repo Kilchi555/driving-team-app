@@ -143,7 +143,8 @@ export default defineEventHandler(async (event) => {
 
     // ✅ 6. UPDATE exam_passed_categories ON USER (only if passed)
     if (passed && appointment.type) {
-      const category = appointment.type.trim().toUpperCase()
+      // Normalize: "B Automatik" → "B", "B Schaltung" → "B", "BE" → "BE"
+      const category = appointment.type.trim().split(' ')[0]
       // Use Postgres array append — avoids duplicates via array_append + array_remove trick
       const { error: categoryUpdateError } = await supabase.rpc('append_exam_passed_category', {
         p_user_id: appointment.user_id,

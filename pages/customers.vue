@@ -210,13 +210,13 @@
                         :key="cat"
                         :class="[
                           'text-xs px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5',
-                          (student.exam_passed_categories || []).includes(cat)
+                          isCategoryPassed(student, cat)
                             ? 'bg-green-100 text-green-800'
                             : 'bg-blue-100 text-blue-800'
                         ]"
-                        :title="(student.exam_passed_categories || []).includes(cat) ? `Prüfung ${cat} bestanden` : `Kategorie ${cat}`"
+                        :title="isCategoryPassed(student, cat) ? `Prüfung ${cat} bestanden` : `Kategorie ${cat}`"
                       >
-                        <span v-if="(student.exam_passed_categories || []).includes(cat)">✓</span>
+                        <span v-if="isCategoryPassed(student, cat)">✓</span>
                         {{ cat }}
                       </span>
                     </div>
@@ -553,6 +553,15 @@ const handleStudentAdded = async (newStudent: any) => {
   showAddStudentModal.value = false
   // Reload students list
   await loadStudents()
+}
+
+// Check if a student has passed the exam for a given category
+// Normalizes both sides: "B Automatik" → "B" to match exam_passed_categories
+const isCategoryPassed = (student: any, cat: string): boolean => {
+  const passed: string[] = student.exam_passed_categories || []
+  if (!passed.length) return false
+  const normalizedCat = cat.trim().split(' ')[0]
+  return passed.some(p => p === cat || p === normalizedCat)
 }
 
 // Mobile optimization methods
