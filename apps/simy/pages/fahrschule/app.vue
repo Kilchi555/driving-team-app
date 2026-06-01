@@ -64,34 +64,48 @@
 
     <!-- vs. other apps comparison -->
     <section class="py-20 px-6">
-      <div class="max-w-3xl mx-auto">
-        <h2 class="text-3xl font-extrabold text-gray-900 mb-10 text-center">Simy vs. andere Fahrlehrer-Apps</h2>
+      <div class="max-w-5xl mx-auto">
+        <h2 class="text-3xl font-extrabold text-gray-900 mb-3 text-center">Simy im Direktvergleich</h2>
+        <p class="text-sm text-gray-400 text-center mb-10">Vergleich mit den bekanntesten Schweizer Fahrschul-Apps (Stand Juni 2026)</p>
         <div class="overflow-x-auto rounded-2xl border border-gray-100">
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-gray-50 border-b border-gray-100">
-                <th class="px-5 py-4 text-left font-bold text-gray-700">Feature</th>
-                <th class="px-5 py-4 text-center font-bold" style="color: #6000BD">Simy</th>
-                <th class="px-5 py-4 text-center font-bold text-gray-400">Andere Apps</th>
+                <th class="px-4 py-4 text-left font-bold text-gray-700 min-w-[180px]">Feature</th>
+                <th class="px-4 py-4 text-center font-bold min-w-[110px]" style="color: #6000BD">Simy</th>
+                <th class="px-4 py-4 text-center font-bold text-gray-500 min-w-[110px]">Carzi</th>
+                <th class="px-4 py-4 text-center font-bold text-gray-500 min-w-[110px]">OrphyDrive</th>
+                <th class="px-4 py-4 text-center font-bold text-gray-500 min-w-[110px]">AdminDrive</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
-              <tr v-for="row in comparison" :key="row.feature">
-                <td class="px-5 py-3.5 text-gray-700">{{ row.feature }}</td>
-                <td class="px-5 py-3.5 text-center">
-                  <span v-if="row.simy === true" class="text-green-500">✓</span>
+              <tr v-for="row in comparison" :key="row.feature" class="hover:bg-gray-50/50">
+                <td class="px-4 py-3.5 text-gray-700 font-medium">{{ row.feature }}</td>
+                <td class="px-4 py-3.5 text-center">
+                  <span v-if="row.simy === true" class="text-green-500 font-bold">✓</span>
                   <span v-else-if="row.simy === false" class="text-red-400">✗</span>
-                  <span v-else class="text-xs text-gray-600 font-medium">{{ row.simy }}</span>
+                  <span v-else class="text-xs text-gray-700 font-semibold">{{ row.simy }}</span>
                 </td>
-                <td class="px-5 py-3.5 text-center">
-                  <span v-if="row.other === true" class="text-green-500">✓</span>
-                  <span v-else-if="row.other === false" class="text-red-400">✗</span>
-                  <span v-else class="text-xs text-gray-400">{{ row.other }}</span>
+                <td class="px-4 py-3.5 text-center">
+                  <span v-if="row.carzi === true" class="text-green-500">✓</span>
+                  <span v-else-if="row.carzi === false" class="text-red-400">✗</span>
+                  <span v-else class="text-xs text-gray-400">{{ row.carzi }}</span>
+                </td>
+                <td class="px-4 py-3.5 text-center">
+                  <span v-if="row.orphy === true" class="text-green-500">✓</span>
+                  <span v-else-if="row.orphy === false" class="text-red-400">✗</span>
+                  <span v-else class="text-xs text-gray-400">{{ row.orphy }}</span>
+                </td>
+                <td class="px-4 py-3.5 text-center">
+                  <span v-if="row.admin === true" class="text-green-500">✓</span>
+                  <span v-else-if="row.admin === false" class="text-red-400">✗</span>
+                  <span v-else class="text-xs text-gray-400">{{ row.admin }}</span>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
+        <p class="text-xs text-gray-400 text-center mt-4">Angaben basieren auf öffentlich verfügbaren Informationen der jeweiligen Anbieter.</p>
       </div>
     </section>
 
@@ -135,14 +149,41 @@ const appFeatures = [
 ]
 
 const comparison = [
-  { feature: 'iOS & Android', simy: true, other: true },
-  { feature: 'Online-Buchungssystem für Schüler', simy: true, other: false },
-  { feature: 'Automatische Rechnungen', simy: true, other: false },
-  { feature: 'TWINT & Online-Zahlung (CH)', simy: true, other: false },
-  { feature: 'Echtzeit-Synchronisation', simy: true, other: 'Teilweise' },
-  { feature: 'Website-Generator', simy: true, other: false },
-  { feature: 'Google Ads & SEO Service', simy: true, other: false },
-  { feature: 'Auf Schweizer Servern', simy: true, other: 'Meist nein' },
-  { feature: 'Preis / Monat', simy: 'Ab CHF 49', other: 'Ab CHF 29–99' },
+  {
+    feature: 'iOS & Android Fahrlehrer-App',
+    simy: true, carzi: 'Web-App', orphy: true, admin: false
+  },
+  {
+    feature: 'Schüler buchen selbst online',
+    simy: true, carzi: 'Mit Bestätigung', orphy: false, admin: false
+  },
+  {
+    feature: 'TWINT & Online-Zahlung (CH)',
+    simy: true, carzi: true, orphy: false, admin: false
+  },
+  {
+    feature: 'Automatische Rechnungen',
+    simy: true, carzi: 'Teilweise', orphy: true, admin: 'Add-on'
+  },
+  {
+    feature: 'Push-Benachrichtigungen',
+    simy: true, carzi: 'SMS', orphy: false, admin: 'Add-on'
+  },
+  {
+    feature: 'Kostenlose Schüler-App',
+    simy: true, carzi: true, orphy: true, admin: 'Add-on'
+  },
+  {
+    feature: 'Auf Schweizer Servern',
+    simy: true, carzi: true, orphy: 'k. A.', admin: true
+  },
+  {
+    feature: 'Kostenloser Test',
+    simy: '60 Tage', carzi: 'Auf Anfrage', orphy: '30 Tage', admin: 'k. A.'
+  },
+  {
+    feature: 'Preis / Monat',
+    simy: 'Ab CHF 49', carzi: 'Auf Anfrage', orphy: 'Ab CHF 15/User', admin: 'Ab CHF 39.90'
+  },
 ]
 </script>
