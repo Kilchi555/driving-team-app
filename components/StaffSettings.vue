@@ -82,11 +82,6 @@
       <div class="overflow-y-auto flex-1 px-4 pb-6">
         <div class="space-y-2">
         
-        <!-- Loading State -->
-        <div v-if="isLoading" class="space-y-4">
-          <div v-for="i in 3" :key="i" class="h-16 bg-gray-200 rounded animate-pulse"></div>
-        </div>
-
         <!-- Error State -->
         <div v-if="error" class="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
           ❌ {{ error }}
@@ -98,7 +93,7 @@
         </div>
 
         <!-- Accordion Sections -->
-        <div v-if="!isLoading" class="space-y-2">
+        <div class="space-y-2">
 
         <!-- Externe Kalender Einstellungen -->
         <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -464,7 +459,7 @@
           <p class="mt-4 text-sm text-gray-500">Gutschein- & Rabattcodes werden in Kürze verfügbar sein.</p>
         </div>
       </div>
-      </div><!-- end v-if="!isLoading" accordion wrapper -->
+      </div><!-- end accordion wrapper -->
 
         <!-- Footer Actions -->
         <div class="mt-2 space-y-2">
