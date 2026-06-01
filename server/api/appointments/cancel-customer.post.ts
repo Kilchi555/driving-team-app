@@ -92,7 +92,7 @@ export default defineEventHandler(async (event) => {
     const supabaseAdmin = getSupabaseAdmin()
     const { data: userProfileData, error: profileError } = await supabaseAdmin
       .from('users')
-      .select('id, tenant_id, role, email')
+      .select('id, tenant_id, role, email, first_name, last_name')
       .eq('auth_user_id', user.id)
       .single()
 
@@ -561,84 +561,109 @@ export default defineEventHandler(async (event) => {
         logger.debug('✅ Payment cancelled (pending)')
       }
     }
-    // ============ LAYER 9: NOTIFY STAFF + ADMIN ============
-    ;(async () => {
-      try {
-        const supabaseAdmin = getSupabaseAdmin()
+    // ============ LAYER 9: NOTIFY STAFF + CLIENT ============
+    // Awaited (inside try/catch so a notification failure never rolls back the
+    // already-committed cancellation). Previously this was a fire-and-forget IIFE
+    // which was unreliable on Vercel serverless.
+    try {
+      const supabaseAdmin = getSupabaseAdmin()
 
-        // Format appointment date/time (Zurich TZ)
-        const apptDate = new Date(appointment.start_time).toLocaleDateString('de-CH', {
-          timeZone: 'Europe/Zurich', weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric'
-        })
-        const apptTime = new Date(appointment.start_time).toLocaleTimeString('de-CH', {
-          timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit'
-        })
-        const customerName = `${appointment.first_name || ''} ${appointment.last_name || ''}`.trim() || userProfile.email || 'Unbekannt'
+      // Format appointment date/time (Zurich TZ)
+      const apptDate = new Date(appointment.start_time).toLocaleDateString('de-CH', {
+        timeZone: 'Europe/Zurich', weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric'
+      })
+      const apptTime = new Date(appointment.start_time).toLocaleTimeString('de-CH', {
+        timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit'
+      })
+      const appointmentDateTime = `${apptDate} ${apptTime}`
+      const customerName = [userProfile.first_name, userProfile.last_name].filter(Boolean).join(' ')
+        || userProfile.email
+        || 'Unbekannt'
 
-        // Fetch staff name + email
-        let staffName = 'Unbekannt'
-        let staffEmail: string | null = null
-        if (appointment.staff_id) {
-          const { data: staff } = await supabaseAdmin
-            .from('users')
-            .select('first_name, last_name, email')
-            .eq('id', appointment.staff_id)
-            .single()
-          if (staff) {
-            staffName = `${staff.first_name || ''} ${staff.last_name || ''}`.trim() || 'Fahrlehrer'
-            staffEmail = staff.email || null
-          }
-        }
-
-        // Fetch tenant contact info
-        const { data: tenant } = await supabaseAdmin
-          .from('tenants')
-          .select('name, contact_email, contact_person_first_name, contact_person_last_name')
-          .eq('id', tenantId)
+      // Fetch staff name + email
+      let staffName = 'Unbekannt'
+      let staffEmail: string | null = null
+      if (appointment.staff_id) {
+        const { data: staff } = await supabaseAdmin
+          .from('users')
+          .select('first_name, last_name, email')
+          .eq('id', appointment.staff_id)
           .single()
-
-        const tenantName = tenant?.name || 'Fahrschule'
-        const adminEmail = tenant?.contact_email
-        const adminName = [tenant?.contact_person_first_name, tenant?.contact_person_last_name]
-          .filter(Boolean).join(' ') || 'Administrator'
-
-        const emailParams = {
-          customerName,
-          customerEmail: userProfile.email,
-          appointmentDate: apptDate,
-          appointmentTime: apptTime,
-          staffName,
-          reason: reason.name_de,
-          chargePercentage,
-          tenantName,
-          requiresMedicalCertificate: reason.requires_proof || false,
+        if (staff) {
+          staffName = `${staff.first_name || ''} ${staff.last_name || ''}`.trim() || 'Fahrlehrer'
+          staffEmail = staff.email || null
         }
-
-        // Notify staff
-        if (staffEmail) {
-          const html = generateCustomerCancelledAdminEmail({ ...emailParams, recipientName: staffName })
-          await sendTenantEmail(tenantId!, {
-            to: staffEmail,
-            subject: `Termin abgesagt – ${customerName} (${apptDate})`,
-            html,
-          })
-          logger.debug('✅ Staff cancellation notification sent to:', staffEmail)
-        }
-
-        // Notify admin (only if different from staff)
-        if (adminEmail && adminEmail !== staffEmail) {
-          const html = generateCustomerCancelledAdminEmail({ ...emailParams, recipientName: adminName })
-          await sendTenantEmail(tenantId!, {
-            to: adminEmail,
-            subject: `Termin abgesagt – ${customerName} (${apptDate})`,
-            html,
-          })
-          logger.debug('✅ Admin cancellation notification sent to:', adminEmail)
-        }
-      } catch (notifyErr: any) {
-        logger.warn('⚠️ Cancellation notification failed (non-critical):', notifyErr.message)
       }
-    })()
+
+      // Fetch tenant info
+      const { data: tenant } = await supabaseAdmin
+        .from('tenants')
+        .select('name, slug')
+        .eq('id', tenantId)
+        .single()
+
+      const tenantName = tenant?.name || 'Fahrschule'
+      const tenantSlug = tenant?.slug || ''
+
+      // Refund info for customer email
+      const wasPaid = payment?.payment_status === 'completed'
+      const refundAmountRappen = wasPaid && chargePercentage === 0
+        ? (payment?.total_amount_rappen ?? 0)
+        : 0
+      const chargeAmountRappen = !wasPaid ? 0 : Math.round(((payment?.total_amount_rappen ?? 0) * chargePercentage) / 100)
+      const refundAmountFormatted = refundAmountRappen > 0 ? `CHF ${(refundAmountRappen / 100).toFixed(2)}` : undefined
+      const chargeAmountFormatted = chargeAmountRappen > 0 ? `CHF ${(chargeAmountRappen / 100).toFixed(2)}` : undefined
+
+      const emailParams = {
+        customerName,
+        customerEmail: userProfile.email,
+        appointmentDate: apptDate,
+        appointmentTime: apptTime,
+        staffName,
+        reason: reason.name_de,
+        chargePercentage,
+        tenantName,
+        requiresMedicalCertificate: reason.requires_proof || false,
+      }
+
+      // 1. Notify staff
+      if (staffEmail) {
+        const html = generateCustomerCancelledAdminEmail({ ...emailParams, recipientName: staffName })
+        await sendTenantEmail(tenantId!, {
+          to: staffEmail,
+          subject: `Termin abgesagt – ${customerName} (${apptDate})`,
+          html,
+        })
+        logger.debug('✅ Staff cancellation notification sent to:', staffEmail)
+      }
+
+      // 2. Notify customer (using the existing cancelled template in send-appointment-notification)
+      if (userProfile.email) {
+        await $fetch('/api/email/send-appointment-notification', {
+          method: 'POST',
+          body: {
+            email: userProfile.email,
+            studentName: customerName,
+            appointmentTime: appointmentDateTime,
+            type: 'cancelled',
+            cancellationReason: reason.name_de,
+            staffName,
+            tenantName,
+            tenantId,
+            tenantSlug,
+            customerDashboard: `https://app.simy.ch/${tenantSlug}`,
+            wasPaid,
+            chargePercentage,
+            refundAmount: refundAmountFormatted,
+            chargeAmount: chargeAmountFormatted,
+            userId: userProfile.id,
+          },
+        })
+        logger.debug('✅ Customer cancellation confirmation sent to:', userProfile.email)
+      }
+    } catch (notifyErr: any) {
+      logger.warn('⚠️ Cancellation notification failed (non-critical):', notifyErr.message)
+    }
 
     // ============ LAYER 10: QUEUE AVAILABILITY RECALCULATION ============
     // Release the appointment slots and regenerate availability for the freed time
