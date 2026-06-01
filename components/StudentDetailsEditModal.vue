@@ -140,43 +140,24 @@
         </div>
 
         <!-- Actions -->
-        <div class="px-6 pt-4 pb-2 bg-gray-50 border-t flex-shrink-0">
-          <div class="flex gap-3">
-            <button
-              @click="$emit('close')"
-              class="flex-1 px-4 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm"
-            >
-              Abbrechen
-            </button>
-            <button
-              @click="saveChanges"
-              :disabled="isSaving"
-              class="flex-1 px-4 py-2.5 text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              <svg v-if="isSaving" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span>{{ isSaving ? 'Wird gespeichert...' : 'Speichern' }}</span>
-            </button>
-          </div>
-          <!-- Unassign action — separated visually -->
-          <div class="mt-2 pt-2 border-t border-gray-200">
-            <button
-              @click="unassignStudent"
-              :disabled="isUnassigning"
-              class="w-full px-4 py-2 text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              <svg v-if="isUnassigning" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6"/>
-              </svg>
-              <span>{{ isUnassigning ? 'Wird entfernt...' : 'Aus meiner Schülerliste entfernen' }}</span>
-            </button>
-          </div>
+        <div class="flex gap-3 px-6 py-4 bg-gray-50 border-t flex-shrink-0">
+          <button
+            @click="$emit('close')"
+            class="flex-1 px-4 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm"
+          >
+            Abbrechen
+          </button>
+          <button
+            @click="saveChanges"
+            :disabled="isSaving"
+            class="flex-1 px-4 py-2.5 text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            <svg v-if="isSaving" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>{{ isSaving ? 'Wird gespeichert...' : 'Speichern' }}</span>
+          </button>
         </div>
       </div>
     </div>
@@ -196,11 +177,9 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'save', data: any): void
-  (e: 'unassigned'): void
 }>()
 
 const isSaving = ref(false)
-const isUnassigning = ref(false)
 const saveError = ref<string | null>(null)
 const loadingCategories = ref(false)
 const categories = ref<any[]>([])
@@ -299,26 +278,6 @@ watch(
   },
   { immediate: true, deep: true }
 )
-
-async function unassignStudent() {
-  if (!props.student?.id) return
-  if (!confirm('Diesen Schüler aus deiner Liste entfernen? Die Terminshistorie bleibt erhalten.')) return
-
-  try {
-    isUnassigning.value = true
-    await $fetch('/api/staff/unassign-student', {
-      method: 'POST',
-      body: { user_id: props.student.id }
-    })
-    emit('unassigned')
-    emit('close')
-  } catch (error: any) {
-    logger.error('❌ Error unassigning student:', error)
-    saveError.value = error.data?.statusMessage || 'Fehler beim Entfernen'
-  } finally {
-    isUnassigning.value = false
-  }
-}
 
 async function saveChanges() {
   if (!props.student?.id) {
