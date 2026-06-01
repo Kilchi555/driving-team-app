@@ -94,29 +94,29 @@
 useHead({
   title: 'Demo & Gratis-Test – simy | 60 Tage kostenlos testen',
   meta: [
-    { name: 'description', content: 'simy 60 Tage kostenlos testen. Kein Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar. Jetzt Fahrschulsoftware Demo starten.' },
+    { name: 'description', content: 'Simy 60 Tage kostenlos testen. Kein Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar. Jetzt Fahrschulsoftware Demo starten.' },
     { property: 'og:title', content: 'Demo & Gratis-Test – simy | 60 Tage kostenlos' },
-    { property: 'og:description', content: 'simy 60 Tage kostenlos testen — kein Kreditkarte, keine Kündigung.' },
+    { property: 'og:description', content: 'Simy 60 Tage kostenlos testen — kein Kreditkarte, keine Kündigung.' },
     { property: 'og:url', content: 'https://simy.ch/demo' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/demo' }],
 })
 
-const checks = ['Kein Kreditkarte nötig', '60 Tage vollständig kostenlos', 'Alle Features freigeschaltet', 'Jederzeit kündbar', 'In 5 Min. eingerichtet']
+const checks = ['Keine Kreditkarte nötig', '60 Tage vollständig kostenlos', 'Alle Features freigeschaltet (ausser Online-Zahlung)', 'Jederzeit kündbar', 'In 5 Min. eingerichtet']
 
 const steps = [
-  { title: 'Registrieren', desc: 'E-Mail, Fahrschulname, Passwort — fertig. Keine weiteren Angaben nötig.' },
+  { title: 'Registrieren', desc: 'Angaben von der Fahrschule und Fahrlehrer eingeben — fertig. Keine weiteren Angaben nötig.' },
   { title: 'Einrichten', desc: 'Setup-Wizard führt dich durch Kategorien, Preise und Standorte.' },
   { title: 'Ausprobieren', desc: '60 Tage alle Features nutzen — Terminbuchung, Rechnungen, App, Website.' },
-  { title: 'Entscheiden', desc: 'Weiter mit ab CHF 69/Mt. oder gratis kündigen — ohne Diskussion.' },
+  { title: 'Entscheiden', desc: 'Nach 60 Tagen ab CHF 49/Mt. oder gratis kündigen — ohne Diskussion.' },
 ]
 
 const trialFeatures = [
-  { icon: '📅', title: 'Online-Terminbuchung', desc: 'Sofort einen Buchungslink erhalten und mit Schülern testen.' },
+  { icon: '📅', title: 'Online-Terminbuchung', desc: 'Sofort Schüler einladen und mit mit echten Terminen testen.' },
   { icon: '💶', title: 'Automatische Rechnungen', desc: 'Erste Rechnung in 2 Minuten erstellen und per Mail versenden.' },
   { icon: '📱', title: 'Fahrlehrer-App', desc: 'iOS und Android — sofort installieren und Kalender im Griff haben.' },
-  { icon: '🌐', title: 'Website-Generator', desc: 'Automatisch eine professionelle Website aus deinen Daten generieren.' },
-  { icon: '🎨', title: 'Eigenes Branding', desc: 'Logo hochladen, Farben anpassen — simy sieht aus wie deine eigene App.' },
+  { icon: '💵', title: 'Barzahlungen erfassen', desc: 'Barzahlungen direkt eingeben und jederzeit den aktuellen Stand im Überblick behalten.' },
+  { icon: '🎨', title: 'Eigenes Branding', desc: 'Logo hochladen, Farben anpassen — Simy sieht innerhalb der App wie deine eigene App aus.' },
   { icon: '📊', title: 'Statistiken & Berichte', desc: 'Alle Einnahmen, Fahrstunden und Schüler auf einen Blick sehen.' },
 ]
 </script>
