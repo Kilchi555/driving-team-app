@@ -287,6 +287,182 @@
         </div>
       </div>
 
+      <!-- LTV nach Akquisitionskanal -->
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100">
+          <h3 class="font-semibold text-gray-800">Umsatz nach Akquisitionskanal (LTV)</h3>
+          <p class="text-xs text-gray-500 mt-0.5">Welcher Kanal hat wieviel Umsatz gebracht · basiert auf der Herkunft des Kunden bei seiner ersten Buchung</p>
+        </div>
+
+        <!-- Summary -->
+        <div v-if="ltv" class="px-5 pt-4 pb-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="text-center">
+            <p class="text-2xl font-bold text-gray-900">{{ ltv.summary.total_attributed_customers }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Attributierte Kunden</p>
+          </div>
+          <div class="text-center">
+            <p class="text-2xl font-bold" :style="{ color: primaryColor }">CHF {{ ltv.summary.total_revenue_chf.toFixed(0) }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Gesamtumsatz</p>
+          </div>
+          <div class="text-center">
+            <p class="text-2xl font-bold text-amber-500">CHF {{ ltv.summary.ads_revenue_chf.toFixed(0) }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">via Google Ads</p>
+          </div>
+          <div class="text-center">
+            <p class="text-2xl font-bold text-blue-500">CHF {{ ltv.summary.organic_revenue_chf.toFixed(0) }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">via Organisch</p>
+          </div>
+        </div>
+
+        <!-- Kanal-Tabelle -->
+        <div v-if="ltv?.byChannel?.length" class="border-t border-gray-50">
+          <div class="px-5 py-3 grid grid-cols-5 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-50">
+            <div class="col-span-2">Kanal</div>
+            <div class="text-right">Kunden</div>
+            <div class="text-right">Ø LTV</div>
+            <div class="text-right">Umsatz</div>
+          </div>
+          <div v-for="ch in ltv.byChannel" :key="ch.label" class="px-5 py-3 hover:bg-gray-50 grid grid-cols-5 items-center border-b border-gray-50 last:border-0">
+            <div class="col-span-2 flex items-center gap-2">
+              <span class="text-xs font-semibold px-1.5 py-0.5 rounded"
+                :class="ch.is_ads ? 'bg-amber-100 text-amber-700' : 'bg-blue-50 text-blue-600'">
+                {{ ch.is_ads ? 'Ads' : 'Organisch' }}
+              </span>
+              <span class="text-sm text-gray-700 truncate">{{ ch.label }}</span>
+            </div>
+            <div class="text-right text-sm font-medium text-gray-700">{{ ch.customers }}</div>
+            <div class="text-right text-sm text-gray-500">CHF {{ ch.avg_ltv_chf.toFixed(0) }}</div>
+            <div class="text-right text-sm font-bold" :style="{ color: ch.total_revenue_chf > 0 ? primaryColor : '#9ca3af' }">
+              CHF {{ ch.total_revenue_chf.toFixed(0) }}
+            </div>
+          </div>
+        </div>
+
+        <!-- User-Liste -->
+        <div v-if="ltv?.users?.length" class="border-t border-gray-100">
+          <p class="px-5 pt-4 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">Einzelne Kunden</p>
+          <div class="divide-y divide-gray-50">
+            <div v-for="u in ltv.users" :key="u.user_id" class="px-5 py-3 hover:bg-gray-50 flex items-center gap-3">
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-800">{{ u.name }}</p>
+                <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <span class="text-xs px-1.5 py-0.5 rounded font-semibold"
+                    :class="u.is_ads ? 'bg-amber-100 text-amber-700' : 'bg-blue-50 text-blue-600'">
+                    {{ u.is_ads ? 'Google Ads' : 'Organisch' }}
+                  </span>
+                  <span v-if="u.acquisition_campaign" class="text-xs text-gray-400">{{ u.acquisition_campaign }}</span>
+                  <span v-if="u.acquisition_referrer_page" class="text-xs text-gray-400">{{ u.acquisition_referrer_page }}</span>
+                </div>
+              </div>
+              <div class="shrink-0 flex gap-4 text-center">
+                <div>
+                  <p class="text-sm font-semibold text-gray-700">{{ u.total_appointments }}</p>
+                  <p class="text-xs text-gray-400">Termine</p>
+                </div>
+                <div>
+                  <p class="text-sm font-bold" :style="{ color: u.total_revenue_chf > 0 ? primaryColor : '#d1d5db' }">
+                    CHF {{ u.total_revenue_chf.toFixed(0) }}
+                  </p>
+                  <p class="text-xs text-gray-400">Umsatz</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!ltv || (!ltv.byChannel?.length && !ltv.users?.length)" class="px-5 py-8 text-center text-sm text-gray-400">
+          Noch keine Daten · Attribution wird ab jetzt bei jeder Neukunden-Buchung gespeichert
+        </div>
+
+        <div class="px-5 py-3 bg-gray-50 border-t border-gray-100">
+          <p class="text-xs text-gray-400">{{ ltv?.note }}</p>
+        </div>
+      </div>
+
+      <!-- Google Ads Keywords -->
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100">
+          <h3 class="font-semibold text-gray-800">Google Ads: Spend nach Conversion-Typ</h3>
+          <p class="text-xs text-gray-500 mt-0.5">Welches Keyword hat wieviel Spend generiert und zu welcher Conversion geführt · letzte {{ days }} Tage</p>
+        </div>
+
+        <!-- Campaign summary -->
+        <div v-if="adsKeywords?.summary" class="px-5 pt-4 pb-3 grid grid-cols-2 md:grid-cols-5 gap-3 border-b border-gray-50">
+          <div class="text-center">
+            <p class="text-xl font-bold text-gray-900">CHF {{ adsKeywords.summary.total_cost_chf?.toFixed(0) }}</p>
+            <p class="text-xs text-gray-400 mt-0.5">Gesamtspend</p>
+          </div>
+          <div class="text-center">
+            <p class="text-xl font-bold" :style="{ color: primaryColor }">{{ adsKeywords.summary.total_online_bookings }}</p>
+            <p class="text-xs text-gray-400 mt-0.5">Online-Buchungen</p>
+            <p class="text-xs text-gray-300">CHF {{ adsKeywords.summary.cost_per_booking_chf?.toFixed(0) }}/Buch.</p>
+          </div>
+          <div class="text-center">
+            <p class="text-xl font-bold text-blue-500">{{ adsKeywords.summary.total_phone_clicks }}</p>
+            <p class="text-xs text-gray-400 mt-0.5">Anruf-Klicks</p>
+            <p class="text-xs text-gray-300" v-if="adsKeywords.summary.total_phone_clicks > 0">
+              CHF {{ (adsKeywords.summary.total_cost_chf / adsKeywords.summary.total_phone_clicks).toFixed(0) }}/Anruf
+            </p>
+          </div>
+          <div class="text-center">
+            <p class="text-xl font-bold text-purple-500">{{ adsKeywords.summary.total_form_submissions }}</p>
+            <p class="text-xs text-gray-400 mt-0.5">Kontaktformulare</p>
+          </div>
+          <div class="text-center">
+            <p class="text-xl font-bold text-green-500">CHF {{ adsKeywords.summary.total_revenue_chf?.toFixed(0) }}</p>
+            <p class="text-xs text-gray-400 mt-0.5">Gemessener Umsatz</p>
+            <p class="text-xs text-gray-300">(nur Online-Buchungen)</p>
+          </div>
+        </div>
+
+        <!-- Keyword table -->
+        <div v-if="adsKeywords?.keywords?.length">
+          <div class="px-5 py-2 grid grid-cols-8 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-50">
+            <div class="col-span-2">Keyword</div>
+            <div class="text-right">Spend</div>
+            <div class="text-right">CPC</div>
+            <div class="text-right" title="Online-Buchungen">📅 Buch.</div>
+            <div class="text-right" title="Anruf-Klicks">📞 Anrufe</div>
+            <div class="text-right" title="Kontaktformulare">✉️ Form.</div>
+            <div class="text-right">Umsatz</div>
+          </div>
+          <div
+            v-for="kw in adsKeywords.keywords.slice(0, 20)"
+            :key="kw.keyword + kw.campaign"
+            class="px-5 py-3 hover:bg-gray-50 grid grid-cols-8 items-center border-b border-gray-50 last:border-0"
+          >
+            <div class="col-span-2">
+              <p class="text-sm font-medium text-gray-800 truncate">{{ kw.keyword }}</p>
+              <p class="text-xs text-gray-400 truncate">{{ kw.campaign }}</p>
+            </div>
+            <div class="text-right text-sm text-gray-700">CHF {{ kw.cost_chf?.toFixed(0) }}</div>
+            <div class="text-right text-xs text-gray-400">{{ kw.cpc_chf?.toFixed(2) }}</div>
+            <div class="text-right">
+              <span class="text-sm font-semibold" :style="{ color: kw.online_bookings > 0 ? primaryColor : '#d1d5db' }">{{ kw.online_bookings || '—' }}</span>
+            </div>
+            <div class="text-right">
+              <span class="text-sm font-semibold" :class="kw.phone_clicks > 0 ? 'text-blue-500' : 'text-gray-200'">{{ kw.phone_clicks || '—' }}</span>
+            </div>
+            <div class="text-right">
+              <span class="text-sm font-semibold" :class="kw.form_submissions > 0 ? 'text-purple-500' : 'text-gray-200'">{{ kw.form_submissions || '—' }}</span>
+            </div>
+            <div class="text-right text-sm font-bold" :style="{ color: kw.revenue_chf > 0 ? '#10b981' : '#d1d5db' }">
+              {{ kw.revenue_chf > 0 ? 'CHF ' + kw.revenue_chf.toFixed(0) : '—' }}
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="px-5 py-6 text-center">
+          <p class="text-sm text-gray-400">Noch keine Keyword-Daten · Cron läuft täglich 04:30</p>
+        </div>
+
+        <div class="px-5 py-3 bg-amber-50 border-t border-amber-100 space-y-1">
+          <p class="text-xs text-amber-800 font-semibold">Einmaliger Setup für Keyword-Tracking:</p>
+          <p class="text-xs text-amber-700">In Google Ads → Kampagnen → Einstellungen → "Finale URL-Suffix":</p>
+          <code class="block text-xs bg-amber-100 px-2 py-1 rounded text-amber-900 break-all">utm_source=google&amp;utm_medium=cpc&amp;utm_campaign={campaignname}&amp;utm_term={keyword}</code>
+        </div>
+      </div>
+
       <!-- CTR Bugs: Top Ranks, 0 Clicks -->
       <div v-if="ctrBugs.length > 0" class="bg-white rounded-xl border border-amber-200 overflow-hidden">
         <div class="px-5 py-4 border-b border-amber-100 bg-amber-50">
@@ -336,18 +512,20 @@ const weeklyReview = ref<any>(null)
 const seoOpportunities = ref<any[]>([])
 const ctrBugs = ref<any[]>([])
 const attribution = ref<any>(null)
+const ltv = ref<any>(null)
+const adsKeywords = ref<any>(null)
 const fetchingData = ref(false)
 
 onMounted(async () => {
   await fetchCurrentUser()
   if (currentUser.value) {
-    await Promise.all([fetchMarketingData(), fetchWeeklyReview(), fetchSeoData(), fetchAttribution()])
+    await Promise.all([fetchMarketingData(), fetchWeeklyReview(), fetchSeoData(), fetchAttribution(), fetchLtv(), fetchAdsKeywords()])
   }
 })
 
 async function changeDays(d: number) {
   days.value = d
-  await Promise.all([fetchMarketingData(), fetchAttribution()])
+  await Promise.all([fetchMarketingData(), fetchAttribution(), fetchAdsKeywords()])
 }
 
 async function fetchMarketingData() {
@@ -371,6 +549,18 @@ async function fetchAttribution() {
   try {
     attribution.value = await $fetch(`/api/admin/marketing-attribution?days=${days.value}`)
   } catch (e) { console.error('attribution fetch failed', e) }
+}
+
+async function fetchLtv() {
+  try {
+    ltv.value = await $fetch('/api/admin/marketing-ltv')
+  } catch (e) { console.error('ltv fetch failed', e) }
+}
+
+async function fetchAdsKeywords() {
+  try {
+    adsKeywords.value = await $fetch(`/api/admin/marketing-ads-keywords?days=${days.value}`)
+  } catch (e) { console.error('ads keywords fetch failed', e) }
 }
 
 async function fetchSeoData() {

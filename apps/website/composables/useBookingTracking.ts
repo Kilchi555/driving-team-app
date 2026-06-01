@@ -26,6 +26,7 @@ export const useBookingTracking = () => {
    */
   const trackBookingRedirect = async (category: string, sessionId: string) => {
     try {
+      const attr = (window as any).__dtMarketingAttribution ?? {}
       await fetch('/api/booking-redirect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -33,6 +34,11 @@ export const useBookingTracking = () => {
           category,
           session_id: sessionId,
           referrer_page: window.location.pathname,
+          utm_source: attr.utm_source ?? null,
+          utm_medium: attr.utm_medium ?? null,
+          utm_campaign: attr.utm_campaign ?? null,
+          utm_content: attr.utm_content ?? null,
+          utm_term: attr.utm_term ?? null,
         }),
       }).catch(() => {}) // Fire and forget
     } catch (err) {

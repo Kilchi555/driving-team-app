@@ -900,6 +900,57 @@ export default defineEventHandler(async (event: H3Event) => {
       })()
     }
 
+    // ============ LAYER 13: STORE ACQUISITION ATTRIBUTION ON USER ============
+    // For new customers only, and only if not already set.
+    // This lets us attribute ALL future bookings and revenue back to the original
+    // marketing source — enabling true LTV-per-channel analysis.
+    if (isNewCustomer && (marketingAttr || body.marketing_session_id)) {
+      ;(async () => {
+        try {
+          // Resolve referrer page from booking_redirects if we have a marketing_session_id
+          let referrerPage: string | null = null
+          if (body.marketing_session_id) {
+            const { data: redirect } = await supabase
+              .from('booking_redirects')
+              .select('referrer_page')
+              .eq('session_id', body.marketing_session_id)
+              .maybeSingle()
+            referrerPage = redirect?.referrer_page ?? null
+          }
+
+          const source = marketingAttr?.utm_source ?? (referrerPage ? 'organic/direct' : null)
+          const medium = marketingAttr?.utm_medium ?? (marketingAttr?.gclid ? 'cpc' : referrerPage ? 'organic' : null)
+
+          // Also read utm_term from booking_redirects if not in marketingAttr
+          let utmTerm = marketingAttr?.utm_term ?? null
+          if (!utmTerm && body.marketing_session_id) {
+            const { data: redirectTerm } = await supabase
+              .from('booking_redirects')
+              .select('utm_term')
+              .eq('session_id', body.marketing_session_id)
+              .maybeSingle()
+            utmTerm = redirectTerm?.utm_term ?? null
+          }
+
+          await supabase
+            .from('users')
+            .update({
+              acquisition_source: source,
+              acquisition_medium: medium,
+              acquisition_campaign: marketingAttr?.utm_campaign ?? null,
+              acquisition_term: utmTerm,
+              acquisition_referrer_page: referrerPage,
+              acquisition_gclid: marketingAttr?.gclid ?? null,
+              acquisition_at: new Date().toISOString(),
+            })
+            .eq('id', userData.id)
+            .is('acquisition_at', null) // Never overwrite existing attribution
+        } catch (err: any) {
+          logger.warn('⚠️ Could not write acquisition attribution to user (non-critical):', err?.message ?? err)
+        }
+      })()
+    }
+
     // ============ LAYER 10: RETURN RESPONSE ============
     return {
       success: true,

@@ -11,6 +11,7 @@ interface PhoneClickPayload {
   utm_medium?: string | null
   utm_campaign?: string | null
   utm_content?: string | null
+  utm_term?: string | null
 }
 
 export default defineEventHandler(async (event) => {
@@ -36,6 +37,7 @@ export default defineEventHandler(async (event) => {
       utm_medium: body.utm_medium || null,
       utm_campaign: body.utm_campaign || null,
       utm_content: body.utm_content || null,
+      utm_term: body.utm_term || null,
     })
 
     if (error) console.error('phone-click insert error:', error)
