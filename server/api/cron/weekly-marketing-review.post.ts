@@ -84,11 +84,16 @@ async function generateReview(supabase: any, tenantId: string, since: string) {
   const ads = adsRes.data ?? []
 
   // ── Compute metrics ──────────────────────────────────────────────────────
-  const totalSessions = ga4.reduce((s: number, r: any) => s + (r.sessions ?? 0), 0)
-  const totalConversions = ga4.reduce((s: number, r: any) => s + (r.conversions ?? 0), 0)
+  // Only count known marketing channels — exclude "Unassigned" (existing students via app)
+  // and "Direct" (ambiguous: mix of new visitors and existing students typing URL directly)
+  const MARKETING_CHANNELS = ['Organic Search', 'Paid Search', 'Referral', 'Organic Social', 'Email', 'Affiliates']
+  const marketingGa4 = ga4.filter((r: any) => MARKETING_CHANNELS.includes(r.channel))
+
+  const totalSessions = marketingGa4.reduce((s: number, r: any) => s + (r.sessions ?? 0), 0)
+  const totalConversions = marketingGa4.reduce((s: number, r: any) => s + (r.conversions ?? 0), 0)
   const cvr = totalSessions > 0 ? (totalConversions / totalSessions * 100).toFixed(1) : '0'
 
-  // Channel breakdown
+  // Channel breakdown (all channels for reference, but CVR only on marketing channels)
   const channelMap = new Map<string, { sessions: number; conversions: number }>()
   for (const r of ga4) {
     const ch = r.channel ?? 'Unbekannt'
@@ -175,7 +180,7 @@ async function generateReview(supabase: any, tenantId: string, since: string) {
   }
 
   // Summary
-  const summary = `Diese Woche: ${totalSessions} Sessions, ${totalConversions} Conversions (CVR ${cvr}%), CHF ${totalSpendCHF.toFixed(0)} Ads-Spend. ${topOpps.length} SEO-Chancen in Position 4–15 identifiziert.`
+  const summary = `Diese Woche: ${totalSessions} Marketing-Sessions (ohne Unassigned/Direct), ${totalConversions} Conversions (CVR ${cvr}%), CHF ${totalSpendCHF.toFixed(0)} Ads-Spend. ${topOpps.length} SEO-Chancen in Position 4–15 identifiziert.`
 
   // ── Save to DB ────────────────────────────────────────────────────────────
   const { error } = await supabase
