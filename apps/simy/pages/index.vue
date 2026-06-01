@@ -2300,8 +2300,8 @@ const features = computed(() => [
 
 const automations = [
   { icon: '📧', label: 'Lektionserinnerungen', desc: 'Automatisch E-Mail mindestens 24h vor der Lektion.' },
-  { icon: '🧾', label: 'Rechnungsversand', desc: 'Pendente Zahlung wird direkt bei der Buchung im Kundenportal erstellt und automatisch erinnert.' },
-  { icon: '🔁', label: 'Mahnungen', desc: 'Offene Rechnungen kannst du mit wenigen Klicks mahnen.' },
+  { icon: '🧾', label: 'Rechnungsversand', desc: 'Rechnung wird direkt bei der Buchung erstellt und per E-Mail versendet.' },
+  { icon: '🔁', label: 'Mahnungen', desc: 'Mit Online-Zahlung vollautomatisch. Bei E-Mail-Rechnung mit wenigen Klicks — einfach und schnell.' },
   { icon: '📈', label: 'Wochenbericht', desc: 'Jeden Montag dein persönlicher Bericht mit Umsatz, Lektionen und Auslastung.' },
   { icon: '🎯', label: 'Zieltracking', desc: 'Fortschrittsziele für Schüler werden automatisch aktualisiert und gemeldet.' },
   { icon: '🗓️', label: 'Verfügbarkeit', desc: 'Schüler sehen nur freie Slots und buchen direkt online.' },

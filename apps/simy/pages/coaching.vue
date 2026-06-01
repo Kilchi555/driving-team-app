@@ -17,7 +17,7 @@
         <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight mb-6">
           Simy für<br>
           <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-            Coaches & Trainer
+            Coaches & Trainer & Therapeuten
           </span>
         </h1>
 
@@ -223,7 +223,7 @@ const highlights = [
     visual: '💶',
     title: 'Rechnungen auf Knopfdruck',
     desc: 'Nach der Session wird die Rechnung automatisch erstellt. TWINT, Kreditkarte oder Rechnung — du entscheidest, wie deine Klienten zahlen.',
-    points: ['TWINT & Kreditkarte integriert', 'Automatische Zahlungserinnerungen', 'Monatliche Auswertung auf einen Blick'],
+    points: ['TWINT & Kreditkarte integriert', 'Automatische Zahlungserinnerungen bei Online-Zahlung', 'Monatliche Auswertung auf einen Blick'],
   },
   {
     visual: '📱',

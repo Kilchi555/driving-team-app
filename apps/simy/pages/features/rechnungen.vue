@@ -25,7 +25,7 @@
           </span>
         </h1>
         <p class="text-xl text-gray-500 max-w-2xl mb-10 leading-relaxed">
-          Simy erstellt Rechnungen automatisch, versendet sie per E-Mail und erinnert Schüler bei offenen Beträgen. Du siehst jederzeit, wer was bezahlt hat.
+          Simy erstellt Rechnungen automatisch und versendet sie per E-Mail. Bei Online-Zahlung (TWINT/Kreditkarte) werden Zahlungserinnerungen vollautomatisch verschickt. Bezahlt der Schüler per Rechnung, kannst du Mahnungen mit wenigen Klicks versenden. Du siehst jederzeit, wer was bezahlt hat.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
           <a href="https://app.simy.ch/tenant-register"
@@ -148,7 +148,7 @@ const paymentMethods = [
 const invoiceFeatures = [
   { icon: '⚡', title: 'Automatische Erstellung', desc: 'Nach jeder Fahrstunde erstellt Simy automatisch die Rechnung — ohne dein Zutun.' },
   { icon: '📧', title: 'Direktversand per E-Mail', desc: 'Rechnung direkt per E-Mail an den Schüler — mit Zahlungslink und PDF-Anhang.' },
-  { icon: '🔔', title: 'Automatische Mahnungen', desc: 'Bei offenen Rechnungen erinnert Simy den Schüler automatisch — du musst nichts tun.' },
+  { icon: '🔔', title: 'Zahlungserinnerungen', desc: 'Mit Online-Zahlung: vollautomatisch. Bei E-Mail-Rechnung: Mahnung mit wenigen Klicks versenden — schnell und einfach.' },
   { icon: '💳', title: 'TWINT & Online-Zahlung', desc: 'Schüler zahlen per TWINT, Kreditkarte oder QR-Rechnung — alles ohne Extra-Setup.' },
   { icon: '📊', title: 'Einnahmen-Übersicht', desc: 'Tages-, Wochen- und Monatsumsatz auf einen Blick. Offene und bezahlte Rechnungen sortiert.' },
   { icon: '🎟️', title: 'Guthaben-System', desc: 'Schüler kaufen Stunden-Pakete im Voraus. Guthaben wird automatisch abgezogen.' },
