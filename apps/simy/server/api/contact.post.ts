@@ -14,8 +14,8 @@ export default defineEventHandler(async (event) => {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw createError({ statusCode: 400, statusMessage: 'Ungültige E-Mail-Adresse.' })
   }
-  if (!message?.trim() || message.trim().length < 10) {
-    throw createError({ statusCode: 400, statusMessage: 'Nachricht zu kurz.' })
+  if (!message?.trim()) {
+    throw createError({ statusCode: 400, statusMessage: 'Bitte gib eine Nachricht ein.' })
   }
 
   const ip =
