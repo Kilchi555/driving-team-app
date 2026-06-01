@@ -77,7 +77,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Bereit loszulegen?</h2>
-        <p class="text-purple-200 mb-8">Hunderte Schweizer Fahrlehrer haben so angefangen.</p>
+        <p class="text-purple-200 mb-8">Hunderte Benutzer lieben Simy.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: #6000BD">
@@ -92,10 +92,10 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'Demo & Gratis-Test – simy | 60 Tage kostenlos testen',
+  title: 'Demo & Gratis-Test – Simy | 60 Tage kostenlos testen',
   meta: [
     { name: 'description', content: 'Simy 60 Tage kostenlos testen. Kein Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar. Jetzt Fahrschulsoftware Demo starten.' },
-    { property: 'og:title', content: 'Demo & Gratis-Test – simy | 60 Tage kostenlos' },
+    { property: 'og:title', content: 'Demo & Gratis-Test – Simy | 60 Tage kostenlos' },
     { property: 'og:description', content: 'Simy 60 Tage kostenlos testen — kein Kreditkarte, keine Kündigung.' },
     { property: 'og:url', content: 'https://simy.ch/demo' },
   ],
@@ -113,7 +113,7 @@ const steps = [
 
 const trialFeatures = [
   { icon: '📅', title: 'Online-Terminbuchung', desc: 'Sofort Schüler einladen und mit mit echten Terminen testen.' },
-  { icon: '💶', title: 'Automatische Rechnungen', desc: 'Erste Rechnung in 2 Minuten erstellen und per Mail versenden.' },
+  { icon: '💶', title: 'Einfache Rechnungsstellung', desc: 'Erste Rechnung in 2 Minuten erstellen und per Mail versenden.' },
   { icon: '📱', title: 'Fahrlehrer-App', desc: 'iOS und Android — sofort installieren und Kalender im Griff haben.' },
   { icon: '💵', title: 'Barzahlungen erfassen', desc: 'Barzahlungen direkt eingeben und jederzeit den aktuellen Stand im Überblick behalten.' },
   { icon: '🎨', title: 'Eigenes Branding', desc: 'Logo hochladen, Farben anpassen — Simy sieht innerhalb der App wie deine eigene App aus.' },

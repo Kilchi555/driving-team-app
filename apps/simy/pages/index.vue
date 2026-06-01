@@ -2320,7 +2320,7 @@ const personas = computed(() => [
     benefits: [
       'Umsatz & Auslastung in Echtzeit',
       'Alle Fahrlehrer im Überblick',
-      'Automatische Rechnungen & Mahnungen',
+      'Einfache Rechnungsstellung & Mahnungen',
       'DSGVO-konforme Datenverwaltung',
       'Zahlungseingänge auf einen Blick',
       'Eigenes Branding & Domain',

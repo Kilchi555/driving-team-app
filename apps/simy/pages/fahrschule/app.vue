@@ -162,7 +162,7 @@ const comparison = [
     simy: true, carzi: true, orphy: false, admin: false
   },
   {
-    feature: 'Automatische Rechnungen',
+    feature: 'Einfache Rechnungsstellung',
     simy: true, carzi: false, orphy: true, admin: 'Add-on'
   },
   {
