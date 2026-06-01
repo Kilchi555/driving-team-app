@@ -167,7 +167,7 @@ const comparison = [
   },
   {
     feature: 'Push-Benachrichtigungen',
-    simy: true, carzi: 'SMS', orphy: false, admin: 'Add-on'
+    simy: true, carzi: true, orphy: false, admin: 'Add-on'
   },
   {
     feature: 'Kostenlose Schüler-App',
