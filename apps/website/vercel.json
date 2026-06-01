@@ -1583,6 +1583,81 @@
       "permanent": true
     },
     {
+      "source": "/weiterbildung/",
+      "destination": "https://drivingteam.ch/weiterbildungen/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-motorrad-theorie",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-motorrad-theorie/",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/it/czv-kurse",
+      "destination": "https://drivingteam.ch/czv-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/it/czv-kurse/",
+      "destination": "https://drivingteam.ch/czv-kurse/",
+      "permanent": true
+    },
+    {
+      "source": "/en/team",
+      "destination": "https://drivingteam.ch/team/",
+      "permanent": true
+    },
+    {
+      "source": "/en/team/",
+      "destination": "https://drivingteam.ch/team/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrlehrer-zuerich",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/fahrlehrer-zuerich/",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrlehrer-zuerich",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/it/fahrlehrer-zuerich/",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrlehrer-zuerich",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/en/fahrlehrer-zuerich/",
+      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/auto-theoriepruefung",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
+      "source": "/sq/auto-theoriepruefung/",
+      "destination": "https://drivingteam.ch/auto-theorie/",
+      "permanent": true
+    },
+    {
       "source": "/nothelfer",
       "destination": "https://drivingteam.ch/nothelferkurs/",
       "permanent": true
@@ -1754,22 +1829,32 @@
     },
     {
       "source": "/bustheorie",
-      "destination": "https://drivingteam.ch/bus-theorie/",
+      "destination": "https://drivingteam.ch/bus-fahrschule-zuerich/",
       "permanent": true
     },
     {
       "source": "/bustheorie/",
-      "destination": "https://drivingteam.ch/bus-theorie/",
+      "destination": "https://drivingteam.ch/bus-fahrschule-zuerich/",
       "permanent": true
     },
     {
       "source": "/carbustheorie",
-      "destination": "https://drivingteam.ch/bus-theorie/",
+      "destination": "https://drivingteam.ch/bus-fahrschule-zuerich/",
       "permanent": true
     },
     {
       "source": "/carbustheorie/",
-      "destination": "https://drivingteam.ch/bus-theorie/",
+      "destination": "https://drivingteam.ch/bus-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/bus-theorie",
+      "destination": "https://drivingteam.ch/bus-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/bus-theorie/",
+      "destination": "https://drivingteam.ch/bus-fahrschule-zuerich/",
       "permanent": true
     },
     {
@@ -1818,7 +1903,17 @@
       "permanent": true
     },
     {
+      "source": "/motorrad/",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
       "source": "/taxi-fahrschule-aargau",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/taxi-fahrschule-aargau/",
       "destination": "https://drivingteam.ch/taxi-fahrschule/",
       "permanent": true
     },
