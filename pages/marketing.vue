@@ -83,9 +83,9 @@
           <p class="text-xs text-gray-400 mt-0.5">{{ days }} Tage</p>
         </div>
         <div class="bg-white rounded-xl border border-gray-200 p-4">
-          <p class="text-xs text-gray-500 font-medium">Conversions</p>
-          <p class="text-2xl font-bold mt-1" :style="{ color: primaryColor }">{{ totalConversions }}</p>
-          <p class="text-xs text-gray-400 mt-0.5">CVR {{ cvrFormatted }}%</p>
+          <p class="text-xs text-gray-500 font-medium">Marketing-Conversions</p>
+          <p class="text-2xl font-bold mt-1" :style="{ color: primaryColor }">{{ marketingConversions }}</p>
+          <p class="text-xs text-gray-400 mt-0.5">CVR {{ marketingCvrFormatted }}% (exkl. Unassigned)</p>
         </div>
         <div class="bg-white rounded-xl border border-gray-200 p-4">
           <p class="text-xs text-gray-500 font-medium">Ads Spend</p>
@@ -106,15 +106,20 @@
           <h3 class="font-semibold text-gray-800 mb-4 text-sm">Traffic nach Kanal</h3>
           <div class="space-y-3">
             <div v-for="ch in channelStats" :key="ch.channel" class="flex items-center gap-3">
-              <div class="w-24 text-xs text-gray-600 truncate shrink-0">{{ ch.channel.replace('Organic ', '').replace('Paid ', 'Paid ') }}</div>
-              <div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-                <div class="h-2 rounded-full transition-all" :style="{ width: ch.pct + '%', background: primaryColor }"></div>
+              <div class="w-24 text-xs truncate shrink-0" :class="ch.isMarketing ? 'text-gray-600' : 'text-gray-400'">
+                {{ ch.channel.replace('Organic ', '').replace('Paid ', 'Paid ') }}
               </div>
-              <div class="text-xs font-semibold text-gray-700 w-10 text-right">{{ ch.sessions }}</div>
-              <div class="text-xs text-gray-400 w-12 text-right">{{ ch.cvr }}%</div>
+              <div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                <div class="h-2 rounded-full transition-all" :style="{ width: ch.pct + '%', background: ch.isMarketing ? primaryColor : '#d1d5db' }"></div>
+              </div>
+              <div class="text-xs font-semibold w-10 text-right" :class="ch.isMarketing ? 'text-gray-700' : 'text-gray-400'">{{ ch.sessions }}</div>
+              <div class="text-xs w-12 text-right" :class="ch.isMarketing ? 'text-gray-500' : 'text-gray-300'">{{ ch.cvr }}%</div>
             </div>
           </div>
-          <p class="text-xs text-gray-400 mt-4">Sessions · CVR</p>
+          <div class="flex items-center gap-2 mt-3">
+            <div class="w-2 h-2 rounded-full shrink-0" :style="{ background: primaryColor }"></div>
+            <p class="text-xs text-gray-400">Marketing-Kanäle · grau = bestehende Schüler / nicht zuordenbar</p>
+          </div>
         </div>
 
         <!-- Booking Funnel -->
@@ -289,14 +294,36 @@ const totalSessions = computed(() => {
   return data.value.ga4.reduce((sum: number, r: any) => sum + (r.sessions ?? 0), 0)
 })
 
+const MARKETING_CHANNELS = ['Organic Search', 'Paid Search', 'Referral', 'Organic Social', 'Email', 'Affiliates']
+
 const totalConversions = computed(() => {
   if (!data.value?.ga4) return 0
   return data.value.ga4.reduce((sum: number, r: any) => sum + (r.conversions ?? 0), 0)
 })
 
+// Marketing-only: exclude Unassigned (existing students via app) and Direct (ambiguous)
+const marketingConversions = computed(() => {
+  if (!data.value?.ga4) return 0
+  return data.value.ga4
+    .filter((r: any) => MARKETING_CHANNELS.includes(r.channel))
+    .reduce((sum: number, r: any) => sum + (r.conversions ?? 0), 0)
+})
+
+const marketingSessions = computed(() => {
+  if (!data.value?.ga4) return 0
+  return data.value.ga4
+    .filter((r: any) => MARKETING_CHANNELS.includes(r.channel))
+    .reduce((sum: number, r: any) => sum + (r.sessions ?? 0), 0)
+})
+
 const cvrFormatted = computed(() => {
   if (!totalSessions.value) return '0'
   return ((totalConversions.value / totalSessions.value) * 100).toFixed(1)
+})
+
+const marketingCvrFormatted = computed(() => {
+  if (!marketingSessions.value) return '0'
+  return ((marketingConversions.value / marketingSessions.value) * 100).toFixed(1)
 })
 
 const channelStats = computed(() => {
@@ -317,7 +344,11 @@ const channelStats = computed(() => {
       pct: Math.round((v.sessions / total) * 100),
     }))
     .sort((a, b) => b.sessions - a.sessions)
-    .slice(0, 6)
+    .slice(0, 7)
+    .map(ch => ({
+      ...ch,
+      isMarketing: MARKETING_CHANNELS.includes(ch.channel),
+    }))
 })
 
 const adsCampaigns = computed(() => {
