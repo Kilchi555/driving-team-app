@@ -10,7 +10,7 @@
       </div>
       <div class="relative max-w-4xl mx-auto">
         <nav class="flex items-center gap-2 text-xs text-gray-400 mb-8">
-          <a href="/" class="hover:text-gray-600">simy</a><span>›</span>
+          <a href="/" class="hover:text-gray-600">Simy</a><span>›</span>
           <a href="/fahrschule" class="hover:text-gray-600">Fahrschule</a><span>›</span>
           <span class="text-gray-600">Buchungssystem</span>
         </nav>
@@ -18,7 +18,7 @@
           style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
           Online-Buchungssystem
         </div>
-        <h1 class="text-5xl font-black text-gray-900 mb-6 leading-tight">
+        <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
           Buchungssystem für Fahrschulen —<br/>
           <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Termine, die sich selbst organisieren
@@ -66,7 +66,7 @@
       <div class="max-w-5xl mx-auto">
         <div class="text-center mb-14">
           <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Alles was ein Buchungssystem braucht</h2>
-          <p class="text-gray-500 max-w-xl mx-auto">simy bietet das vollständigste Buchungssystem speziell für Schweizer Fahrschulen.</p>
+          <p class="text-gray-500 max-w-xl mx-auto">Simy bietet das vollständigste Buchungssystem speziell für Schweizer Fahrschulen.</p>
         </div>
         <div class="grid md:grid-cols-2 gap-6">
           <div v-for="f in bookingFeatures" :key="f.title"
@@ -103,11 +103,11 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'Buchungssystem Fahrschule – Online-Terminbuchung | simy',
+  title: 'Buchungssystem Fahrschule – Online-Terminbuchung | Simy',
   meta: [
     { name: 'description', content: 'Online-Buchungssystem für Fahrschulen: Schüler buchen Fahrstunden selbst. Automatische Bestätigung, Erinnerungen, Kalender-Sync. 60 Tage kostenlos testen.' },
     { name: 'keywords', content: 'buchungssystem fahrschule, online terminbuchung fahrschule, fahrschule online buchen, terminverwaltung fahrschule' },
-    { property: 'og:title', content: 'Buchungssystem Fahrschule – simy | Termine auf Autopilot' },
+    { property: 'og:title', content: 'Buchungssystem Fahrschule – Simy | Termine auf Autopilot' },
     { property: 'og:description', content: 'Schüler buchen Fahrstunden selbst. Automatisch bestätigt, erinnert und synchronisiert.' },
     { property: 'og:url', content: 'https://simy.ch/fahrschule/buchungssystem' },
   ],
@@ -123,7 +123,7 @@ const steps = [
 const bookingFeatures = [
   { icon: '🔗', title: 'Persönlicher Buchungslink', desc: 'Jede Fahrschule und jeder Fahrlehrer erhält einen eigenen Buchungslink — direkt teilbar per WhatsApp, QR-Code oder auf der Website.' },
   { icon: '📱', title: 'Funktioniert auf jedem Gerät', desc: 'Schüler buchen auf dem Smartphone, Tablet oder Desktop — ohne App-Download. Direkt im Browser.' },
-  { icon: '🔔', title: 'Automatische Erinnerungen', desc: 'simy sendet 24h vor dem Termin automatisch eine SMS oder E-Mail. Weniger No-Shows, weniger Arbeit für dich.' },
+  { icon: '🔔', title: 'Automatische Erinnerungen', desc: 'Simy sendet 24h vor dem Termin automatisch eine SMS oder E-Mail. Weniger No-Shows, weniger Arbeit für dich.' },
   { icon: '📅', title: 'Zwei-Wege-Kalender-Sync', desc: 'Simy-Termine erscheinen automatisch in deinem Google Calendar, Apple Calendar oder Outlook. Und umgekehrt: Hast du dort einen privaten Termin eingetragen, blockiert Simy diese Zeit automatisch — Schüler können dann genau dort keinen Slot buchen.' },
   { icon: '🔄', title: 'Stornierung & Umbuchung', desc: 'Schüler können Termine selbst absagen oder umbuchen — innerhalb der von dir definierten Fristen.' },
   { icon: '🏫', title: 'Multi-Fahrlehrer', desc: 'Jeder Fahrlehrer hat seinen eigenen Kalender. Die Admin-Ansicht zeigt alle Fahrlehrer auf einen Blick.' },

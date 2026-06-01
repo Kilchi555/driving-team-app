@@ -10,7 +10,7 @@
       </div>
       <div class="relative max-w-4xl mx-auto">
         <nav class="flex items-center gap-2 text-xs text-gray-400 mb-8">
-          <a href="/" class="hover:text-gray-600">simy</a><span>›</span>
+          <a href="/" class="hover:text-gray-600">Simy</a><span>›</span>
           <span class="hover:text-gray-600">Features</span><span>›</span>
           <span class="text-gray-600">Kalender & Planung</span>
         </nav>
@@ -18,14 +18,14 @@
           style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
           Feature — Kalender
         </div>
-        <h1 class="text-5xl font-black text-gray-900 mb-6 leading-tight">
+        <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
           Kalender & Planung —<br/>
           <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Dein Stundenplan auf Autopilot
           </span>
         </h1>
         <p class="text-xl text-gray-500 max-w-2xl mb-10 leading-relaxed">
-          Immer aktuell, automatisch synchronisiert. simy zeigt dir und deinen Schülern genau, wann wer wo fährt — ohne manuelles Pflegen.
+          Immer aktuell, automatisch synchronisiert. Simy zeigt dir und deinen Schülern genau, wann wer wo fährt — ohne manuelles Pflegen.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
           <a href="https://app.simy.ch/tenant-register"
@@ -48,7 +48,7 @@
               <div class="w-2 h-2 rounded-full bg-yellow-400"></div>
               <div class="w-2 h-2 rounded-full bg-green-400"></div>
             </div>
-            <span class="text-xs text-gray-400 font-medium">simy — Kalender</span>
+            <span class="text-xs text-gray-400 font-medium">Simy — Kalender</span>
             <div></div>
           </div>
           <!-- Weekday header -->
@@ -122,11 +122,11 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'Kalender & Terminplanung – simy | Fahrlehrer Kalender App',
+  title: 'Kalender & Terminplanung – Simy | Fahrlehrer Kalender App',
   meta: [
-    { name: 'description', content: 'Der simy Kalender synchronisiert alle Fahrlehrer automatisch. Online-Buchung, iCal-Sync, Push-Benachrichtigungen. Für iOS, Android und Browser. 60 Tage kostenlos.' },
+    { name: 'description', content: 'Der Simy Kalender synchronisiert alle Fahrlehrer automatisch. Online-Buchung, iCal-Sync, Push-Benachrichtigungen. Für iOS, Android und Browser. 60 Tage kostenlos.' },
     { name: 'keywords', content: 'fahrlehrer kalender app, fahrschule kalender, terminplanung fahrschule' },
-    { property: 'og:title', content: 'Kalender & Terminplanung – simy | Stundenplan auf Autopilot' },
+    { property: 'og:title', content: 'Kalender & Terminplanung – Simy | Stundenplan auf Autopilot' },
     { property: 'og:description', content: 'Multi-Fahrlehrer Kalender, iCal-Sync, automatische Erinnerungen. Alles synchronisiert.' },
     { property: 'og:url', content: 'https://simy.ch/features/kalender' },
   ],

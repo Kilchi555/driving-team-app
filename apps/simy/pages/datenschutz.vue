@@ -4,7 +4,7 @@
     <section class="pt-16 pb-24 px-6">
       <div class="max-w-3xl mx-auto">
         <nav class="flex items-center gap-2 text-xs text-gray-400 mb-8">
-          <a href="/" class="hover:text-gray-600">simy</a><span>›</span>
+          <a href="/" class="hover:text-gray-600">Simy</a><span>›</span>
           <span class="text-gray-600">Datenschutz</span>
         </nav>
         <h1 class="text-3xl font-black text-gray-900 mb-3">Datenschutzerklärung</h1>
@@ -24,7 +24,7 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'Datenschutz – simy',
+  title: 'Datenschutz – Simy',
   meta: [{ name: 'description', content: 'Datenschutzerklärung der Simy IT Systems Kilchenmann. DSGVO-konform, Schweizer Server.' }],
 })
 
@@ -39,7 +39,7 @@ const sections = [
   },
   {
     title: '3. Zweck der Datenverarbeitung',
-    content: 'Bereitstellung und Verbesserung der simy-Plattform\nKontoverwaltung und Abrechnung\nKundenservice und Support\nSicherheit und Betrugsprävention\nMarketing (nur mit ausdrücklicher Einwilligung)',
+    content: 'Bereitstellung und Verbesserung der Simy-Plattform\nKontoverwaltung und Abrechnung\nKundenservice und Support\nSicherheit und Betrugsprävention\nMarketing (nur mit ausdrücklicher Einwilligung)',
   },
   {
     title: '4. Datenspeicherung',
@@ -51,7 +51,7 @@ const sections = [
   },
   {
     title: '6. Cookies',
-    content: 'simy verwendet technisch notwendige Cookies für den Betrieb der Plattform (Session, Auth). Optionale Analyse-Cookies werden nur mit deiner Einwilligung gesetzt.',
+    content: 'Simy verwendet technisch notwendige Cookies für den Betrieb der Plattform (Session, Auth). Optionale Analyse-Cookies werden nur mit deiner Einwilligung gesetzt.',
   },
   {
     title: '7. Drittanbieter',

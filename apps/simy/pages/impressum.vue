@@ -4,7 +4,7 @@
     <section class="pt-16 pb-24 px-6">
       <div class="max-w-2xl mx-auto">
         <nav class="flex items-center gap-2 text-xs text-gray-400 mb-8">
-          <a href="/" class="hover:text-gray-600">simy</a><span>›</span>
+          <a href="/" class="hover:text-gray-600">Simy</a><span>›</span>
           <span class="text-gray-600">Impressum</span>
         </nav>
         <h1 class="text-3xl font-black text-gray-900 mb-10">Impressum</h1>

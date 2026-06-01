@@ -6,7 +6,7 @@
         <!-- Brand -->
         <div class="col-span-2">
           <a href="/">
-            <img :src="'/simy-logo.png'" alt="simy Fahrschulsoftware" class="h-7 mb-4 opacity-90" style="filter: brightness(0) invert(1)" />
+            <img :src="'/simy-logo.png'" alt="Simy Fahrschulsoftware" class="h-7 mb-4 opacity-90" style="filter: brightness(0) invert(1)" />
           </a>
           <p class="text-sm leading-relaxed max-w-xs">
             All-in-One Fahrschulsoftware: Terminbuchung, Rechnungen, Website und Marketing aus einer Hand.

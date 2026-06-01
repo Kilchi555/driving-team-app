@@ -10,7 +10,7 @@
       </div>
       <div class="relative max-w-4xl mx-auto">
         <nav class="flex items-center gap-2 text-xs text-gray-400 mb-8">
-          <a href="/" class="hover:text-gray-600">simy</a><span>›</span>
+          <a href="/" class="hover:text-gray-600">Simy</a><span>›</span>
           <a href="/marketing" class="hover:text-gray-600">Marketing</a><span>›</span>
           <span class="text-gray-600">SEO</span>
         </nav>
@@ -18,7 +18,7 @@
           style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
           🔍 Lokales SEO für Fahrschulen
         </div>
-        <h1 class="text-5xl font-black text-gray-900 mb-6 leading-tight">
+        <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
           SEO für Fahrschulen —<br/>
           <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Dauerhaft oben bei Google
@@ -141,11 +141,11 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'SEO für Fahrschulen – Organisch auf Platz 1 bei Google | simy',
+  title: 'SEO für Fahrschulen – Organisch auf Platz 1 bei Google | Simy',
   meta: [
-    { name: 'description', content: 'Lokales SEO für Fahrschulen: simy optimiert dein Google Business Profile, deine Website und dein lokales Ranking. Dauerhaft mehr Schüler ohne Werbekosten.' },
+    { name: 'description', content: 'Lokales SEO für Fahrschulen: Simy optimiert dein Google Business Profile, deine Website und dein lokales Ranking. Dauerhaft mehr Schüler ohne Werbekosten.' },
     { name: 'keywords', content: 'seo fahrschule, lokales seo fahrschule, google fahrschule, fahrschule google maps, fahrschule suchmaschinenoptimierung' },
-    { property: 'og:title', content: 'SEO für Fahrschulen – simy | Dauerhaft auf Platz 1 bei Google' },
+    { property: 'og:title', content: 'SEO für Fahrschulen – Simy | Dauerhaft auf Platz 1 bei Google' },
     { property: 'og:description', content: 'Lokales SEO für Fahrschulen: Google Business, Keywords, Website-Optimierung. Nachhaltig mehr Schüler.' },
     { property: 'og:url', content: 'https://simy.ch/marketing/seo' },
   ],
@@ -156,7 +156,7 @@ useHead({
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'simy', item: 'https://simy.ch/' },
+        { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://simy.ch/' },
         { '@type': 'ListItem', position: 2, name: 'Marketing', item: 'https://simy.ch/marketing' },
         { '@type': 'ListItem', position: 3, name: 'SEO für Fahrschulen' },
       ],

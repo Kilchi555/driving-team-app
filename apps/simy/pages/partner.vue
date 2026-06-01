@@ -13,7 +13,7 @@
           Partner
         </div>
         <h1 class="text-4xl font-black text-gray-900 mb-5 leading-tight">Unsere Partner</h1>
-        <p class="text-xl text-gray-500 max-w-2xl mb-16">simy arbeitet mit den besten Anbietern zusammen, um Fahrschulen eine vollständige, integrierte Lösung zu bieten.</p>
+        <p class="text-xl text-gray-500 max-w-2xl mb-16">Simy arbeitet mit den besten Anbietern zusammen, um Fahrschulen eine vollständige, integrierte Lösung zu bieten.</p>
 
         <!-- Technology Partners -->
         <h2 class="text-lg font-bold text-gray-900 mb-6">Technologie-Partner</h2>
@@ -47,18 +47,18 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'Partner – simy | Technologie & Integrationspartner',
+  title: 'Partner – Simy | Technologie & Integrationspartner',
   meta: [
-    { name: 'description', content: 'simy arbeitet mit Wallee, asa.ch und weiteren Partnern zusammen. Erfahre mehr über unsere Integrationen und werde selbst Partner.' },
+    { name: 'description', content: 'Simy arbeitet mit Wallee, asa.ch und weiteren Partnern zusammen. Erfahre mehr über unsere Integrationen und werde selbst Partner.' },
   ],
 })
 
 const techPartners = [
-  { icon: '💳', name: 'Wallee', category: 'Zahlungsabwicklung', desc: 'Schweizer Zahlungsgateway für TWINT, Kreditkarte und PostFinance. Nahtlos in simy integriert.' },
+  { icon: '💳', name: 'Wallee', category: 'Zahlungsabwicklung', desc: 'Schweizer Zahlungsgateway für TWINT, Kreditkarte und PostFinance. Nahtlos in Simy integriert.' },
   { icon: '📋', name: 'asa.ch', category: 'Branchenverband', desc: 'Der Verband Schweizerischer Fahrlehrerinnen und Fahrlehrer — Referenzpartner für Schweizer Standards.' },
   { icon: '📧', name: 'Resend', category: 'E-Mail Delivery', desc: 'Professioneller E-Mail-Versand für automatische Rechnungen, Erinnerungen und Bestätigungen.' },
-  { icon: '☁️', name: 'Supabase', category: 'Datenbank & Auth', desc: 'Sichere, skalierbare Datenbankinfrastruktur für alle simy-Kundendaten. DSGVO-konform.' },
+  { icon: '☁️', name: 'Supabase', category: 'Datenbank & Auth', desc: 'Sichere, skalierbare Datenbankinfrastruktur für alle Simy-Kundendaten. DSGVO-konform.' },
   { icon: '🌐', name: 'Vercel', category: 'Hosting', desc: 'Website und App werden auf Vercel gehostet — für maximale Performance und Verfügbarkeit.' },
-  { icon: '🗺️', name: 'Google Maps', category: 'Standorte & Navigation', desc: 'Standortkarten und Adressvalidierung in der simy-App und auf generierten Websites.' },
+  { icon: '🗺️', name: 'Google Maps', category: 'Standorte & Navigation', desc: 'Standortkarten und Adressvalidierung in der Simy-App und auf generierten Websites.' },
 ]
 </script>

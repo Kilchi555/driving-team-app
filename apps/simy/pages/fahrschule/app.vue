@@ -18,7 +18,7 @@
           style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
           Fahrlehrer App
         </div>
-        <h1 class="text-5xl font-black text-gray-900 mb-6 leading-tight">
+        <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
           Die Fahrlehrer App, die<br/>
           <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             wirklich an alles denkt.
@@ -65,7 +65,7 @@
               <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[60px] h-[16px] bg-gray-800 rounded-b-2xl z-10"></div>
               <!-- Screen -->
               <div class="rounded-[1.7rem] overflow-hidden bg-white">
-                <img src="/screenshots/iphone-calendar.png" alt="Simy iPhone Kalender"
+                <img src="/screenshots/iphone-dashboard.png" alt="Simy iPhone Dashboard"
                   class="w-full block" loading="lazy" />
               </div>
             </div>
@@ -103,7 +103,7 @@
                 </div>
               </div>
               <!-- Screenshot -->
-              <img src="/screenshots/desktop-dashboard.png" alt="Simy Desktop Dashboard"
+              <img src="/screenshots/desktop-calendar.png" alt="Simy Desktop Kalender"
                 class="w-full block" loading="lazy" />
             </div>
             <p class="text-center text-xs text-gray-400 mt-3 font-medium">Desktop</p>
@@ -143,10 +143,11 @@
             <thead>
               <tr class="bg-gray-50 border-b border-gray-100">
                 <th class="px-4 py-4 text-left font-bold text-gray-700 min-w-[180px]">Feature</th>
-                <th class="px-4 py-4 text-center font-bold min-w-[110px]" style="color: #6000BD">Simy</th>
-                <th class="px-4 py-4 text-center font-bold text-gray-500 min-w-[110px]">Carzi</th>
-                <th class="px-4 py-4 text-center font-bold text-gray-500 min-w-[110px]">OrphyDrive</th>
-                <th class="px-4 py-4 text-center font-bold text-gray-500 min-w-[110px]">AdminDrive</th>
+                <th class="px-4 py-4 text-center font-bold min-w-[100px]" style="color: #6000BD">Simy</th>
+                <th class="px-4 py-4 text-center font-bold text-gray-500 min-w-[100px]">Carzi</th>
+                <th class="px-4 py-4 text-center font-bold text-gray-500 min-w-[100px]">OrphyDrive</th>
+                <th class="px-4 py-4 text-center font-bold text-gray-500 min-w-[100px]">AdminDrive</th>
+                <th class="px-4 py-4 text-center font-bold text-gray-500 min-w-[100px]">QualiDrive</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -172,18 +173,23 @@
                   <span v-else-if="row.admin === false" class="text-red-400">✗</span>
                   <span v-else class="text-xs text-gray-400">{{ row.admin }}</span>
                 </td>
+                <td class="px-4 py-3.5 text-center">
+                  <span v-if="row.quali === true" class="text-green-500">✓</span>
+                  <span v-else-if="row.quali === false" class="text-red-400">✗</span>
+                  <span v-else class="text-xs text-gray-400">{{ row.quali }}</span>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
-        <p class="text-xs text-gray-400 text-center mt-4">Angaben basieren auf öffentlich verfügbaren Informationen der jeweiligen Anbieter.</p>
+        <p class="text-xs text-gray-400 text-center mt-4">Angaben basieren auf öffentlich verfügbaren Informationen der jeweiligen Anbieter (Stand Juni 2026). QualiDrive-Preis: pro neu erfasstem Schüler (einmalig), ohne Setup-Pauschale.</p>
       </div>
     </section>
 
     <!-- CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
       <div class="max-w-2xl mx-auto text-center">
-        <h2 class="text-3xl font-black text-white mb-4">simy Fahrlehrer-App kostenlos testen</h2>
+        <h2 class="text-3xl font-black text-white mb-4">Simy Fahrlehrer-App kostenlos testen</h2>
         <p class="text-purple-200 mb-8">60 Tage gratis. Kein Kreditkarte.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
@@ -199,11 +205,11 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'Fahrlehrer App – simy | iOS & Android Fahrschulsoftware',
+  title: 'Fahrlehrer App – Simy | iOS & Android Fahrschulsoftware',
   meta: [
-    { name: 'description', content: 'Die simy Fahrlehrer App für iOS und Android. Kalender, Schüler, Rechnungen auf dem Smartphone. 60 Tage kostenlos testen.' },
+    { name: 'description', content: 'Die Simy Fahrlehrer App für iOS und Android. Kalender, Schüler, Rechnungen auf dem Smartphone. 60 Tage kostenlos testen.' },
     { name: 'keywords', content: 'fahrlehrer app, fahrschulapp, app für fahrschule, fahrlehrer kalender app, fahrschule app' },
-    { property: 'og:title', content: 'Fahrlehrer App – simy | iOS & Android' },
+    { property: 'og:title', content: 'Fahrlehrer App – Simy | iOS & Android' },
     { property: 'og:description', content: 'Kalender, Schüler und Rechnungen in einer App — iOS und Android.' },
     { property: 'og:url', content: 'https://simy.ch/fahrschule/app' },
   ],
@@ -222,39 +228,43 @@ const appFeatures = [
 const comparison = [
   {
     feature: 'iOS & Android Fahrlehrer-App',
-    simy: true, carzi: true, orphy: true, admin: false
+    simy: true, carzi: true, orphy: true, admin: false, quali: 'Nur GeoLoc'
   },
   {
     feature: 'Schüler buchen selbst online',
-    simy: true, carzi: 'Mit Bestätigung', orphy: false, admin: false
+    simy: true, carzi: 'Mit Bestätigung', orphy: false, admin: false, quali: 'Add-on'
   },
   {
     feature: 'TWINT & Online-Zahlung (CH)',
-    simy: true, carzi: true, orphy: false, admin: false
+    simy: true, carzi: true, orphy: false, admin: false, quali: 'Add-on'
   },
   {
     feature: 'Einfache Rechnungsstellung',
-    simy: true, carzi: false, orphy: true, admin: 'Add-on'
+    simy: true, carzi: false, orphy: true, admin: 'Add-on', quali: true
   },
   {
     feature: 'Push-Benachrichtigungen',
-    simy: true, carzi: true, orphy: false, admin: 'Add-on'
+    simy: true, carzi: true, orphy: false, admin: 'Add-on', quali: false
+  },
+  {
+    feature: 'Privattermine sperren Buchungen automatisch',
+    simy: true, carzi: false, orphy: false, admin: false, quali: false
   },
   {
     feature: 'Kostenlose Schüler-App',
-    simy: true, carzi: true, orphy: true, admin: 'Add-on'
+    simy: true, carzi: true, orphy: true, admin: 'Add-on', quali: 'Add-on'
   },
   {
     feature: 'Auf Schweizer Servern',
-    simy: true, carzi: true, orphy: 'k. A.', admin: true
+    simy: true, carzi: true, orphy: 'k. A.', admin: true, quali: true
   },
   {
     feature: 'Kostenloser Test',
-    simy: '60 Tage', carzi: 'Auf Anfrage', orphy: '30 Tage', admin: 'k. A.'
+    simy: '60 Tage', carzi: 'Auf Anfrage', orphy: '30 Tage', admin: 'k. A.', quali: 'k. A.'
   },
   {
     feature: 'Preis / Monat',
-    simy: 'Ab CHF 49', carzi: 'Auf Anfrage', orphy: 'Ab CHF 15/User', admin: 'Ab CHF 39.90'
+    simy: 'Ab CHF 49', carzi: 'Auf Anfrage', orphy: 'Ab CHF 15/User', admin: 'Ab CHF 39.90', quali: 'Ab CHF 12/Schüler'
   },
 ]
 </script>

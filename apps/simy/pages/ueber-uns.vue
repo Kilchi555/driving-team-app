@@ -13,11 +13,11 @@
           <div>
             <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
               style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
-              Über simy
+              Über Simy
             </div>
             <h1 class="text-4xl font-black text-gray-900 mb-5 leading-tight">Wir kennen Fahrschulen von innen</h1>
-            <p class="text-gray-500 leading-relaxed mb-4">simy wurde von Pascal Kilchenmann gegründet — selbst aktiver Fahrlehrer und Inhaber der Driving Team Fahrschule in Zürich. Die erste Version von simy haben wir gebaut, weil wir die täglich frustrierenden Admin-Aufgaben satt hatten.</p>
-            <p class="text-gray-500 leading-relaxed mb-4">Was als interne Lösung startete, ist heute eine Plattform, die über 50 Schweizer Fahrschulen täglich nutzen. Wir bauen simy für uns selbst — und für alle, die genauso unterrichten wollen statt verwalten.</p>
+            <p class="text-gray-500 leading-relaxed mb-4">Simy wurde von Pascal Kilchenmann gegründet — selbst aktiver Fahrlehrer und Inhaber der Driving Team Fahrschule in Zürich. Die erste Version von Simy haben wir gebaut, weil wir die täglich frustrierenden Admin-Aufgaben satt hatten.</p>
+            <p class="text-gray-500 leading-relaxed mb-4">Was als interne Lösung startete, ist heute eine Plattform, die über 50 Schweizer Fahrschulen täglich nutzen. Wir bauen Simy für uns selbst — und für alle, die genauso unterrichten wollen statt verwalten.</p>
             <p class="text-gray-500 leading-relaxed">Unser Ziel: Software + Website + Marketing aus einer Hand. Damit sich Fahrlehrer auf das konzentrieren können, was sie wirklich können — und lieben.</p>
           </div>
           <!-- Numbers -->
@@ -59,7 +59,7 @@
         <a href="/demo"
           class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-white font-bold text-sm transition-all hover:opacity-90"
           style="color: #6000BD">
-          simy kostenlos testen →
+          Simy kostenlos testen →
         </a>
       </div>
     </section>
@@ -70,11 +70,11 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'Über simy – Fahrschulsoftware von Fahrlehrern, für Fahrlehrer',
+  title: 'Über Simy – Fahrschulsoftware von Fahrlehrern, für Fahrlehrer',
   meta: [
-    { name: 'description', content: 'simy wurde von einem echten Fahrlehrer gebaut. Erfahre unsere Geschichte, Mission und Team. Schweizer Software für Fahrschulen — seit 2022.' },
-    { property: 'og:title', content: 'Über simy – Fahrschulsoftware aus der Praxis' },
-    { property: 'og:description', content: 'simy wurde von einem echten Fahrlehrer gebaut — für alle, die unterrichten statt verwalten wollen.' },
+    { name: 'description', content: 'Simy wurde von einem echten Fahrlehrer gebaut. Erfahre unsere Geschichte, Mission und Team. Schweizer Software für Fahrschulen — seit 2022.' },
+    { property: 'og:title', content: 'Über Simy – Fahrschulsoftware aus der Praxis' },
+    { property: 'og:description', content: 'Simy wurde von einem echten Fahrlehrer gebaut — für alle, die unterrichten statt verwalten wollen.' },
     { property: 'og:url', content: 'https://simy.ch/ueber-uns' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/ueber-uns' }],
@@ -82,13 +82,13 @@ useHead({
 
 const facts = [
   { value: '2022', label: 'Gegründet in der Schweiz', desc: 'Von einem aktiven Fahrlehrer, für Fahrlehrer' },
-  { value: '50+', label: 'Fahrschulen vertrauen simy', desc: 'Täglich aktive Nutzer in der ganzen Schweiz' },
+  { value: '50+', label: 'Fahrschulen vertrauen Simy', desc: 'Täglich aktive Nutzer in der ganzen Schweiz' },
   { value: '100%', label: 'Swiss Made', desc: 'Team, Server und Support in der Schweiz' },
   { value: '3', label: 'Produkte unter einem Dach', desc: 'Software + Website + Marketing' },
 ]
 
 const team = [
-  { name: 'Pascal Kilchenmann', role: 'Gründer & CEO', bio: 'Fahrlehrer seit 2011, Inhaber Driving Team Zürich. Hat simy gebaut, weil er die eigene Admin-Hölle satt hatte.' },
+  { name: 'Pascal Kilchenmann', role: 'Gründer & CEO', bio: 'Fahrlehrer seit 2011, Inhaber Driving Team Zürich. Hat Simy gebaut, weil er die eigene Admin-Hölle satt hatte.' },
   { name: 'Dev Team', role: 'Engineering', bio: 'Schweizer Software-Entwickler, die täglich mit Fahrlehrern sprechen und sofort reagieren.' },
   { name: 'Support', role: 'Customer Success', bio: 'Persönliche Betreuung auf Deutsch — erreichbar per E-Mail, Chat und Telefon.' },
 ]

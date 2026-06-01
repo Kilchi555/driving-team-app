@@ -63,6 +63,7 @@
     "google-ads-api": "^23.0.0",
     "googleapis": "^171.4.0",
     "isomorphic-dompurify": "^2.35.0",
+    "jose": "^6.2.3",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^3.0.1",
     "nuxt": "^3.17.7",

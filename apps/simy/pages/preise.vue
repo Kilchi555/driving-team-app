@@ -13,7 +13,7 @@
           style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
           Preise
         </div>
-        <h1 class="text-5xl font-black text-gray-900 mb-4 leading-tight">Fahrschulsoftware Preise — transparent &amp; fair</h1>
+        <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-4 leading-tight">Fahrschulsoftware Preise — transparent &amp; fair</h1>
         <p class="text-xl text-gray-500 max-w-xl mx-auto mb-10">60 Tage kostenlos testen — keine Kreditkarte, keine Jahresbindung.</p>
       </div>
     </section>
@@ -211,15 +211,15 @@
 import { ref, computed } from 'vue'
 
 useHead({
-  title: 'Preise – simy | Fahrschulsoftware ab CHF 49/Monat',
+  title: 'Preise – Simy | Fahrschulsoftware ab CHF 49/Monat',
   meta: [
-    { name: 'description', content: 'simy Preise: Fahrschulsoftware ab CHF 49/Monat. 60 Tage kostenlos testen, kein Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.' },
-    { name: 'keywords', content: 'simy preis, fahrschulapp kosten, fahrschulsoftware preis' },
-    { property: 'og:title', content: 'Preise – simy | Fahrschulsoftware ab CHF 49/Monat' },
-    { property: 'og:description', content: 'simy Preise: ab CHF 49/Monat. 60 Tage kostenlos testen, kein Kreditkarte, monatlich kündbar.' },
+    { name: 'description', content: 'Simy Preise: Fahrschulsoftware ab CHF 49/Monat. 60 Tage kostenlos testen, kein Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.' },
+    { name: 'keywords', content: 'Simy preis, fahrschulapp kosten, fahrschulsoftware preis' },
+    { property: 'og:title', content: 'Preise – Simy | Fahrschulsoftware ab CHF 49/Monat' },
+    { property: 'og:description', content: 'Simy Preise: ab CHF 49/Monat. 60 Tage kostenlos testen, kein Kreditkarte, monatlich kündbar.' },
     { property: 'og:url', content: 'https://simy.ch/preise' },
-    { name: 'twitter:title', content: 'Preise – simy | Fahrschulsoftware ab CHF 49/Monat' },
-    { name: 'twitter:description', content: 'simy Preise: ab CHF 49/Monat. 60 Tage kostenlos testen.' },
+    { name: 'twitter:title', content: 'Preise – Simy | Fahrschulsoftware ab CHF 49/Monat' },
+    { name: 'twitter:description', content: 'Simy Preise: ab CHF 49/Monat. 60 Tage kostenlos testen.' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/preise' }],
   script: [{
@@ -229,7 +229,7 @@ useHead({
       '@type': 'FAQPage',
       mainEntity: [
         { '@type': 'Question', name: 'Brauche ich eine Kreditkarte für den Trial?', acceptedAnswer: { '@type': 'Answer', text: 'Nein. Die 60 Tage sind vollständig kostenlos und ohne Kreditkarte. Du wirst erst danach zur Kasse gebeten.' } },
-        { '@type': 'Question', name: 'Was kostet simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: 'simy bietet Pläne ab CHF 49/Monat. Monatlich kündbar, keine Jahresbindung.' } },
+        { '@type': 'Question', name: 'Was kostet Simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: 'Simy bietet Pläne ab CHF 49/Monat. Monatlich kündbar, keine Jahresbindung.' } },
         { '@type': 'Question', name: 'Kann ich jederzeit kündigen?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Monatlich kündbar, keine Jahresbindung. Kündigung mit 30 Tagen Frist auf Ende des Monats.' } },
         { '@type': 'Question', name: 'Wie funktioniert die Abrechnung?', acceptedAnswer: { '@type': 'Answer', text: 'Monatlich per TWINT, Kreditkarte oder Banküberweisung. Bei Jahresabo einmal jährlich.' } },
       ],

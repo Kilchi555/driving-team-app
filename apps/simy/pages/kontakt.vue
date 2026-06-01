@@ -13,7 +13,7 @@
           style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
           Kontakt
         </div>
-        <h1 class="text-5xl font-black text-gray-900 mb-4 leading-tight">Wie können wir helfen?</h1>
+        <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-4 leading-tight">Wie können wir helfen?</h1>
         <p class="text-lg text-gray-500">Schreib uns — wir antworten innerhalb von 24 Stunden.</p>
       </div>
     </section>
@@ -148,10 +148,10 @@
 import { ref, reactive } from 'vue'
 
 useHead({
-  title: 'Kontakt – simy | Fahrschulsoftware Schweiz',
+  title: 'Kontakt – Simy | Fahrschulsoftware Schweiz',
   meta: [
     { name: 'description', content: 'Kontaktiere Simy IT Systems bei Fragen zu Fahrschulsoftware, Support oder Partnerships. Antwort innerhalb von 24h.' },
-    { property: 'og:title', content: 'Kontakt – simy' },
+    { property: 'og:title', content: 'Kontakt – Simy' },
     { property: 'og:description', content: 'Schreib uns — wir antworten innerhalb von 24 Stunden.' },
     { property: 'og:url', content: 'https://simy.ch/kontakt' },
     { name: 'robots', content: 'index, follow' },
@@ -163,7 +163,7 @@ useHead({
       innerHTML: JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'ContactPage',
-        name: 'Kontakt – simy',
+        name: 'Kontakt – Simy',
         url: 'https://simy.ch/kontakt',
         mainEntity: {
           '@type': 'Organization',

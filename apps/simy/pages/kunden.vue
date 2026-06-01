@@ -13,7 +13,7 @@
           style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
           Kundenstories
         </div>
-        <h1 class="text-5xl font-black text-gray-900 mb-5 leading-tight">Was unsere Kunden sagen</h1>
+        <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-5 leading-tight">Was unsere Kunden sagen</h1>
         <p class="text-xl text-gray-500 max-w-xl mx-auto">Echte Fahrschulen. Echte Zahlen. Echte Ergebnisse.</p>
       </div>
     </section>
@@ -41,7 +41,7 @@
               </svg>
             </div>
             <blockquote class="text-2xl font-bold text-gray-900 leading-relaxed mb-6">
-              "simy hat unsere gesamte Administration digitalisiert. Wir sparen täglich über 2 Stunden — das sind <span style="color: #6000BD">40+ Fahrstunden pro Monat</span>, die wir früher mit Papierkram verloren haben."
+              "Simy hat unsere gesamte Administration digitalisiert. Wir sparen täglich über 2 Stunden — das sind <span style="color: #6000BD">40+ Fahrstunden pro Monat</span>, die wir früher mit Papierkram verloren haben."
             </blockquote>
             <div class="grid md:grid-cols-3 gap-4 mb-8">
               <div v-for="m in drivingTeamMetrics" :key="m.label" class="rounded-xl p-4 bg-white border border-gray-100 text-center">
@@ -90,7 +90,7 @@
     <!-- CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
       <div class="max-w-xl mx-auto text-center">
-        <h2 class="text-3xl font-black text-white mb-4">Werde Teil der simy-Familie</h2>
+        <h2 class="text-3xl font-black text-white mb-4">Werde Teil der Simy-Familie</h2>
         <p class="text-purple-200 mb-8">Starte kostenlos und erlebe selbst, was andere schon täglich nutzen.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
@@ -106,10 +106,10 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'Kundenstories – simy | Erfahrungen aus der Praxis',
+  title: 'Kundenstories – Simy | Erfahrungen aus der Praxis',
   meta: [
-    { name: 'description', content: 'Erfahrungsberichte von Fahrschulen, die simy nutzen. Echte Zahlen: weniger Verwaltungsaufwand, mehr Buchungen, höherer Umsatz. 50+ Fahrschulen in der Schweiz.' },
-    { property: 'og:title', content: 'Kundenstories – simy | Erfahrungen aus der Praxis' },
+    { name: 'description', content: 'Erfahrungsberichte von Fahrschulen, die Simy nutzen. Echte Zahlen: weniger Verwaltungsaufwand, mehr Buchungen, höherer Umsatz. 50+ Fahrschulen in der Schweiz.' },
+    { property: 'og:title', content: 'Kundenstories – Simy | Erfahrungen aus der Praxis' },
     { property: 'og:description', content: '50+ Schweizer Fahrschulen vertrauen simy. Echte Erfahrungsberichte.' },
     { property: 'og:url', content: 'https://simy.ch/kunden' },
   ],
@@ -119,7 +119,7 @@ useHead({
     children: JSON.stringify({
       '@context': 'https://schema.org',
       '@type': 'ItemList',
-      name: 'simy Kundenstories',
+      name: 'Simy Kundenstories',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Driving Team Zürich – Pascal Kilchenmann' },
         { '@type': 'ListItem', position: 2, name: 'Fahrschule Rapperswil – Marco R.' },
@@ -132,7 +132,7 @@ const stats = [
   { value: '50+', label: 'Fahrschulen in der Schweiz' },
   { value: '2–3h', label: 'Admin täglich gespart' },
   { value: '4.9★', label: 'Durchschnittsbewertung' },
-  { value: '95%', label: 'würden simy weiterempfehlen' },
+  { value: '95%', label: 'würden Simy weiterempfehlen' },
 ]
 
 const drivingTeamMetrics = [
@@ -142,7 +142,7 @@ const drivingTeamMetrics = [
 ]
 
 const testimonials = [
-  { name: 'Sandra M.', school: 'Fahrschule Muster, Bern', quote: 'Endlich kein Excel mehr. simy erinnert unsere Schüler automatisch an Termine und versendet Rechnungen von selbst. Ich kann mich wieder aufs Unterrichten konzentrieren.' },
+  { name: 'Sandra M.', school: 'Fahrschule Muster, Bern', quote: 'Endlich kein Excel mehr. Simy erinnert unsere Schüler automatisch an Termine und versendet Rechnungen von selbst. Ich kann mich wieder aufs Unterrichten konzentrieren.' },
   { name: 'Marco R.', school: 'Fahrschule Rapperswil', quote: 'Die Online-Buchung hat alles verändert. Früher haben wir Termine per WhatsApp koordiniert — heute buchen Schüler selbst und ich werde nur noch informiert.' },
   { name: 'Rahel S.', school: 'Lachen SZ', quote: 'Der Website-Generator war ein echtes Highlight. In einer Stunde hatte ich eine professionelle Website, die meine Preise und Kurse zeigt. Hätte ich sonst tausende Franken bezahlt.' },
   { name: 'Thomas B.', school: 'Fahrschule Winterthur', quote: 'Als jemand, der nicht technikaffin ist, war die Einrichtung überraschend einfach. Der Setup-Wizard führt durch alles — nach 20 Minuten war ich komplett startklar.' },
