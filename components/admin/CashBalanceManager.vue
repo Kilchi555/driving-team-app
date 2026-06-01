@@ -239,12 +239,7 @@
                   <span class="text-xs text-gray-400">{{ formatDateTime(item.data.created_at) }}</span>
                   <span v-if="item.type === 'transaction' && item.data.student_name" class="text-xs text-gray-400">{{ item.data.student_name }}</span>
                 </div>
-                <p v-if="item.data.notes" class="text-xs text-gray-500 mt-1 italic">{{ item.data.notes }}</p>
-                <div v-if="item.type === 'transaction' && item.data.status === 'pending'" class="flex items-center gap-2 mt-2">
-                  <button class="text-xs px-2.5 py-1 rounded-md bg-green-50 text-green-700 hover:bg-green-100 font-medium transition-colors" @click="confirmTransaction(item.data)">Bestätigen</button>
-                  <button class="text-xs px-2.5 py-1 rounded-md bg-red-50 text-red-700 hover:bg-red-100 font-medium transition-colors" @click="disputeTransaction(item.data)">Bestreiten</button>
-                  <button class="text-xs px-2.5 py-1 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium transition-colors" @click="editTransaction(item.data)">Notiz</button>
-                </div>
+                <p v-if="item.data.notes && !item.data.notes.startsWith('Automatisch erstellt aus Payment ID')" class="text-xs text-gray-500 mt-1 italic">{{ item.data.notes }}</p>
               </div>
               <div class="text-right ml-4 flex-shrink-0">
                 <p class="text-sm font-semibold tabular-nums" :class="getItemAmountClass(item)">{{ getItemAmountText(item) }}</p>
