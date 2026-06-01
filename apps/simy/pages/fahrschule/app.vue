@@ -163,7 +163,7 @@ const comparison = [
   },
   {
     feature: 'Automatische Rechnungen',
-    simy: true, carzi: 'Teilweise', orphy: true, admin: 'Add-on'
+    simy: true, carzi: false, orphy: true, admin: 'Add-on'
   },
   {
     feature: 'Push-Benachrichtigungen',
