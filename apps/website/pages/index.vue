@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Fahrschule Zürich & Lachen | Auto, Anhänger & Lastwagen</Title>
-      <Meta name="description" content="Willst du deine Fahrprüfung beim 1. Versuch bestehen? ✓ ab CHF 95.- ✓ 85% Erfolgsquote ✓ Flexible Termine. Dann buche deine Fahrstunde jetzt direkt online!" />
+      <Meta name="description" content="Fahrschule Zürich & Lachen – ab CHF 95.–, 85% Prüfungserfolg, diplom. Fahrlehrer. Auto, Motorrad, Anhänger, Lastwagen. Jetzt online Termin buchen!" />
       <Meta name="keywords" content="Fahrschule Zürich, Auto Fahrschule Zürich, Fahrschule Lachen, Motorrad Fahrschule Zürich, Anhänger Fahrschule Zürich, Lastwagen Fahrschule Zürich, Taxi Fahrschule Zürich, Bus Fahrschule Zürich, Motorboot Fahrschule Lachen" />
       <Meta name="author" content="Driving Team" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
@@ -209,6 +209,13 @@
           >
             Alle Kurse ansehen ↓
           </a>
+        </div>
+
+        <!-- SEO-Intro: Fahrschule Zürich – für Google und Besucher -->
+        <div class="max-w-3xl mx-auto text-center mt-8 pb-8 px-4">
+          <p class="text-base text-gray-600 leading-relaxed">
+            Die <strong>Fahrschule Zürich</strong> von Driving Team bietet dir alle Führerschein-Kategorien unter einem Dach – von <a href="/auto-fahrschule/" class="text-primary-600 hover:underline">Auto (Kat. B)</a> über <a href="/motorrad-fahrschule/" class="text-primary-600 hover:underline">Motorrad</a> bis <a href="/lastwagen-fahrschule/" class="text-primary-600 hover:underline">Lastwagen und Anhänger</a>. Mit Standorten in <strong>Zürich-Altstetten</strong> und <strong>Lachen (SZ)</strong> sind wir für dich in der ganzen Region Zürich erreichbar. Über <strong>85% unserer Fahrschüler</strong> bestehen die Prüfung beim ersten Versuch. <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="text-primary-600 font-semibold hover:underline">Buche jetzt online deinen ersten Termin</a> – ab CHF 95.– pro Lektion.
+          </p>
         </div>
       </div>
     </section>

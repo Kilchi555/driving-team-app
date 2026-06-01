@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Spreitenbach | Auto & Anhänger | Driving Team</Title>
-      <Meta name="description" content="Auto & Anhänger im Limmattal mit diplomierten Fahrlehrern. 85% Erfolgsquote, flexible Treffpunkte in Spreitenbach. Jetzt deine Fahrstunde buchen!" />
-      <Meta property="og:title" content="Fahrschule Spreitenbach | Auto & Anhänger | Driving Team" />
-      <Meta property="og:description" content="Professionelle Fahrausbildung in Spreitenbach und Umgebung. Auto, Anhänger. StVA Wettingen. 85% Erfolgsquote." />
+      <Title>Fahrschule Spreitenbach – ab CHF 95.- | Driving Team</Title>
+      <Meta name="description" content="Deine Fahrschule in Spreitenbach: Fahrlehrer kommt zu dir – ab CHF 95.–, 85% Prüfungserfolg, flexible Termine. Jetzt online Termin buchen!" />
+      <Meta property="og:title" content="Fahrschule Spreitenbach – ab CHF 95.- | Driving Team" />
+      <Meta property="og:description" content="Fahrschule im Limmattal – ab CHF 95.–, 85% Erfolgsquote. Flexible Treffpunkte in Spreitenbach, Dietikon und Umgebung. Online buchen." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-spreitenbach/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-spreitenbach/" />
       <Link rel="preload" as="image" href="/images/locations/aargau-hero.webp" fetchpriority="high" />
