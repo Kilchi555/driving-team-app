@@ -99,7 +99,7 @@
           </div>
         </div>
         <div class="text-center mt-12">
-          <p class="text-2xl font-black" style="color: #6000BD">simy automatisiert das alles für dich.</p>
+          <p class="text-2xl font-black" style="color: #6000BD">Simy automatisiert das alles für dich.</p>
         </div>
       </div>
     </section>
@@ -110,7 +110,7 @@
         <div class="text-center mb-16">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: #6000BD">Features</p>
           <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Alles was deine Fahrschule braucht</h2>
-          <p class="text-gray-500 text-lg max-w-xl mx-auto">Vom ersten Schüler-Kontakt bis zur bezahlten Rechnung — simy deckt den ganzen Workflow ab.</p>
+          <p class="text-gray-500 text-lg max-w-xl mx-auto">Vom ersten Schüler-Kontakt bis zur bezahlten Rechnung — Simy deckt den ganzen Workflow ab.</p>
         </div>
 
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -144,7 +144,7 @@
                 NEU — Website-Generator
               </div>
               <h2 class="text-3xl font-extrabold text-gray-900 mb-4">In 24h zu einer professionellen Website</h2>
-              <p class="text-gray-500 leading-relaxed mb-6">simy generiert automatisch eine hochwertige Website aus deinen Daten — mit deinen Preisen, deinen Fahrlehrern und deinen Farben. Kein Designer nötig.</p>
+              <p class="text-gray-500 leading-relaxed mb-6">Simy generiert automatisch eine hochwertige Website aus deinen Daten — mit deinen Preisen, deinen Fahrlehrern und deinen Farben. Kein Designer nötig.</p>
               <ul class="space-y-3 mb-8">
                 <li v-for="item in websiteFeatures" :key="item" class="flex items-center gap-3 text-sm text-gray-700">
                   <svg class="w-5 h-5 flex-shrink-0" style="color: #6000BD" fill="currentColor" viewBox="0 0 20 20">
@@ -190,7 +190,7 @@
       <div class="max-w-4xl mx-auto text-center">
         <p class="text-xs font-bold uppercase tracking-widest mb-4 text-purple-400">Marketing</p>
         <h2 class="text-3xl font-extrabold text-white mb-4">Mehr Schüler durch Google Ads & SEO</h2>
-        <p class="text-gray-400 max-w-xl mx-auto mb-8">simy ist mehr als Software — wir bringen dir auch neue Kunden. Mit gezielten Google Ads und lokalem SEO, das wirklich funktioniert.</p>
+        <p class="text-gray-400 max-w-xl mx-auto mb-8">Simy ist mehr als Software — wir bringen dir auch neue Kunden. Mit gezielten Google Ads und lokalem SEO, das wirklich funktioniert.</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="/marketing/google-ads"
             class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-white font-bold text-sm border border-purple-500/30 hover:border-purple-500/60 transition-all"
@@ -210,7 +210,7 @@
       <div class="max-w-4xl mx-auto">
         <div class="text-center mb-14">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: #6000BD">Kundenstimmen</p>
-          <h2 class="text-3xl font-extrabold text-gray-900">Was Fahrschulen über simy sagen</h2>
+          <h2 class="text-3xl font-extrabold text-gray-900">Was Fahrschulen über Simy sagen</h2>
         </div>
         <div class="grid md:grid-cols-2 gap-6">
           <div v-for="t in testimonials" :key="t.name"
@@ -277,7 +277,7 @@
           </svg>
           Jetzt kostenlos starten
         </a>
-        <p class="text-purple-300 text-sm mt-5">Bereits über 50 Fahrschulen vertrauen simy</p>
+        <p class="text-purple-300 text-sm mt-5">Bereits über 50 Fahrschulen vertrauen Simy</p>
       </div>
     </section>
 
@@ -289,14 +289,14 @@
 import { ref } from 'vue'
 
 useHead({
-  title: 'Fahrschulsoftware Schweiz – simy | Verwaltung, Website & Marketing',
+  title: 'Fahrschulsoftware Schweiz – Simy | Verwaltung, Website & Marketing',
   meta: [
-    { name: 'description', content: 'simy ist die All-in-One Fahrschulsoftware für die Schweiz. Terminbuchung, automatische Rechnungen, Fahrlehrer-App und professionelle Website. 60 Tage kostenlos.' },
+    { name: 'description', content: 'Simy ist die All-in-One Fahrschulsoftware für die Schweiz. Terminbuchung, automatische Rechnungen, Fahrlehrer-App und professionelle Website. 60 Tage kostenlos.' },
     { name: 'keywords', content: 'fahrschulsoftware, software fahrschule, fahrschule app, verwaltungssoftware fahrschule, fahrlehrer app' },
-    { property: 'og:title', content: 'Fahrschulsoftware Schweiz – simy | Die All-in-One Lösung' },
+    { property: 'og:title', content: 'Fahrschulsoftware Schweiz – Simy | Die All-in-One Lösung' },
     { property: 'og:description', content: 'Terminbuchung, Rechnungen, App und Website — alles in simy. 60 Tage kostenlos testen.' },
     { property: 'og:url', content: 'https://simy.ch/fahrschule' },
-    { name: 'twitter:title', content: 'Fahrschulsoftware Schweiz – simy' },
+    { name: 'twitter:title', content: 'Fahrschulsoftware Schweiz – Simy' },
     { name: 'twitter:description', content: 'All-in-One Fahrschulsoftware: Terminbuchung, Rechnungen, App, Website. 60 Tage gratis.' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/fahrschule' }],
@@ -306,7 +306,7 @@ useHead({
       children: JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'SoftwareApplication',
-        name: 'simy',
+        name: 'Simy',
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web',
         description: 'All-in-One Fahrschulsoftware für die Schweiz',
@@ -320,7 +320,7 @@ useHead({
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
         mainEntity: [
-          { '@type': 'Question', name: 'Was kostet simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: 'simy bietet Pläne ab CHF 69/Monat. Die ersten 60 Tage sind vollständig kostenlos — keine Kreditkarte nötig.' } },
+          { '@type': 'Question', name: 'Was kostet Simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: 'Simy bietet Pläne ab CHF 69/Monat. Die ersten 60 Tage sind vollständig kostenlos — keine Kreditkarte nötig.' } },
           { '@type': 'Question', name: 'Wie lange dauert die Einrichtung?', acceptedAnswer: { '@type': 'Answer', text: 'In der Regel unter 15 Minuten. Der Setup-Wizard führt durch alle Schritte.' } },
           { '@type': 'Question', name: 'Können meine Schüler selbst Termine buchen?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Jede Fahrschule erhält einen personalisierten Buchungslink, den du auf deiner Website oder per WhatsApp teilen kannst.' } },
         ],
@@ -348,13 +348,13 @@ const features = [
   { icon: '📅', title: 'Online-Terminbuchung', desc: 'Schüler buchen selbst — per Link, rund um die Uhr. Simy-Termine synchronisieren mit deinem privaten Kalender. Private Termine dort blockieren automatisch deine Verfügbarkeit.', link: '/fahrschule/buchungssystem' },
   { icon: '💶', title: 'Einfache Rechnungsstellung', desc: 'Rechnungen werden automatisch erstellt und per E-Mail versendet. Zahlungserinnerungen laufen von selbst.', link: null },
   { icon: '📱', title: 'Fahrlehrer-App', desc: 'Dein Kalender, deine Schüler, deine Einnahmen — alles auf dem Smartphone, immer aktuell.', link: '/fahrschule/app' },
-  { icon: '🌐', title: 'Website-Generator', desc: 'simy erstellt automatisch eine professionelle Website mit deinen Daten, Preisen und Fahrlehrern.', link: null },
+  { icon: '🌐', title: 'Website-Generator', desc: 'Simy erstellt automatisch eine professionelle Website mit deinen Daten, Preisen und Fahrlehrern.', link: null },
   { icon: '📊', title: 'Statistiken & Berichte', desc: 'Einnahmen, Fahrstunden, Prüfungsquote — alle Zahlen auf einen Blick.', link: null },
-  { icon: '🎨', title: 'Dein Branding', desc: 'simy läuft in deinen Farben und mit deinem Logo — für deine Schüler sieht es aus wie deine eigene App.', link: null },
+  { icon: '🎨', title: 'Dein Branding', desc: 'Simy läuft in deinen Farben und mit deinem Logo — für deine Schüler sieht es aus wie deine eigene App.', link: null },
 ]
 
 const websiteFeatures = [
-  'Automatisch aus deinen simy-Daten generiert',
+  'Automatisch aus deinen Simy-Daten generiert',
   'Mit deinen Preisen, Fahrlehrern & Fotos',
   'Professionelles Design, mobiloptimiert',
   'SEO-optimiert für Google',
@@ -362,17 +362,17 @@ const websiteFeatures = [
 ]
 
 const testimonials = [
-  { name: 'Pascal Kilchenmann', school: 'Driving Team, Zürich', quote: 'simy hat unsere Administration komplett digitalisiert. Wir sparen täglich Stunden an Büroarbeit und unsere Schüler lieben die einfache Online-Buchung.' },
-  { name: 'Sandra M.', school: 'Fahrschule Muster, Bern', quote: 'Endlich kein Excel mehr! simy erinnert unsere Schüler automatisch an Termine und versendet Rechnungen von selbst. Ich kann mich wieder aufs Unterrichten konzentrieren.' },
+  { name: 'Pascal Kilchenmann', school: 'Driving Team, Zürich', quote: 'Simy hat unsere Administration komplett digitalisiert. Wir sparen täglich Stunden an Büroarbeit und unsere Schüler lieben die einfache Online-Buchung.' },
+  { name: 'Sandra M.', school: 'Fahrschule Muster, Bern', quote: 'Endlich kein Excel mehr! Simy erinnert unsere Schüler automatisch an Termine und versendet Rechnungen von selbst. Ich kann mich wieder aufs Unterrichten konzentrieren.' },
 ]
 
 const faqs = [
-  { q: 'Was kostet simy für Fahrschulen?', a: 'simy bietet verschiedene Pläne ab CHF 69/Monat. Du kannst 60 Tage vollständig kostenlos testen — ohne Kreditkarte.' },
+  { q: 'Was kostet Simy für Fahrschulen?', a: 'Simy bietet verschiedene Pläne ab CHF 69/Monat. Du kannst 60 Tage vollständig kostenlos testen — ohne Kreditkarte.' },
   { q: 'Wie lange dauert die Einrichtung?', a: 'In der Regel bist du in unter 15 Minuten startklar. Der Setup-Wizard führt dich durch alle Schritte: Kategorien, Preise, Standorte und Fahrlehrer.' },
   { q: 'Können meine Schüler selbst Termine buchen?', a: 'Ja. Jede Fahrschule erhält einen personalisierten Buchungslink, den du auf deiner Website oder in WhatsApp teilen kannst.' },
-  { q: 'Funktioniert simy auch auf dem Smartphone?', a: 'Ja. Die Fahrlehrer-App läuft auf iOS und Android. Deine Schüler können den Buchungslink direkt im Browser öffnen.' },
-  { q: 'Sind meine Daten in der Schweiz gespeichert?', a: 'Ja. simy speichert alle Daten auf Schweizer Servern und ist vollständig DSGVO-konform.' },
-  { q: 'Kann ich simy zusammen mit meiner bestehenden Website nutzen?', a: 'Ja. Du kannst einfach den Buchungslink auf deiner Website einbinden. Optional generiert simy auch eine komplette Website für dich.' },
+  { q: 'Funktioniert Simy auch auf dem Smartphone?', a: 'Ja. Die Fahrlehrer-App läuft auf iOS und Android. Deine Schüler können den Buchungslink direkt im Browser öffnen.' },
+  { q: 'Sind meine Daten in der Schweiz gespeichert?', a: 'Ja. Simy speichert alle Daten auf Schweizer Servern und ist vollständig DSGVO-konform.' },
+  { q: 'Kann ich Simy zusammen mit meiner bestehenden Website nutzen?', a: 'Ja. Du kannst einfach den Buchungslink auf deiner Website einbinden. Optional generiert Simy auch eine komplette Website für dich.' },
 ]
 </script>
 

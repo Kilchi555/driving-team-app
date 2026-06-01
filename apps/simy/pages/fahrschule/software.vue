@@ -11,7 +11,7 @@
       <div class="relative max-w-4xl mx-auto">
         <!-- Breadcrumb -->
         <nav class="flex items-center gap-2 text-xs text-gray-400 mb-8">
-          <a href="/" class="hover:text-gray-600 transition-colors">simy</a>
+          <a href="/" class="hover:text-gray-600 transition-colors">Simy</a>
           <span>›</span>
           <a href="/fahrschule" class="hover:text-gray-600 transition-colors">Fahrschule</a>
           <span>›</span>
@@ -22,7 +22,7 @@
           style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
           Fahrschulsoftware Schweiz
         </div>
-        <h1 class="text-5xl font-black text-gray-900 mb-6 leading-tight">
+        <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
           Fahrschulsoftware — <br />
           <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Der komplette Ratgeber 2026
@@ -106,10 +106,10 @@
         </div>
       </section>
 
-      <!-- Section 3 — simy CTA Block -->
+      <!-- Section 3 — Simy CTA Block -->
       <section :id="toc[2].id">
-        <h2 class="text-3xl font-extrabold text-gray-900 mb-6">simy — Die beste Fahrschulsoftware für die Schweiz</h2>
-        <p class="text-gray-600 leading-relaxed mb-8">simy ist speziell für den Schweizer Markt entwickelt. Mit TWINT-Integration, Schweizer Datenschutz und auf Deutsch verfügbar — simy ist die einzige All-in-One Lösung, die auch Website und Marketing einschliesst.</p>
+        <h2 class="text-3xl font-extrabold text-gray-900 mb-6">Simy — Die beste Fahrschulsoftware für die Schweiz</h2>
+        <p class="text-gray-600 leading-relaxed mb-8">Simy ist speziell für den Schweizer Markt entwickelt. Mit TWINT-Integration, Schweizer Datenschutz und auf Deutsch verfügbar — Simy ist die einzige All-in-One Lösung, die auch Website und Marketing einschliesst.</p>
         <div class="grid sm:grid-cols-3 gap-5 mb-8">
           <div v-for="usp in usps" :key="usp.title"
             class="rounded-2xl p-6 text-center border border-gray-100 hover:border-purple-100 transition-all">
@@ -121,8 +121,9 @@
         <a href="https://app.simy.ch/tenant-register"
           class="flex items-center justify-center gap-2 w-full py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
           style="background: linear-gradient(135deg, #6000BD, #8B2FE8); box-shadow: 0 8px 24px rgba(96,0,189,0.25)">
-          60 Tage kostenlos testen — kein Kreditkarte →
+          60 Tage kostenlos testen →
         </a>
+        <p class="text-center text-xs text-gray-400 mt-2">Keine Kreditkarte erforderlich</p>
       </section>
 
       <!-- Section 4 -->
@@ -159,7 +160,7 @@
     <!-- Final CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
       <div class="max-w-2xl mx-auto text-center">
-        <h2 class="text-3xl font-black text-white mb-4">simy 60 Tage kostenlos testen</h2>
+        <h2 class="text-3xl font-black text-white mb-4">Simy 60 Tage kostenlos testen</h2>
         <p class="text-purple-200 mb-8">Überzeuge dich selbst. Keine Kreditkarte, keine Kündigung nötig.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
@@ -175,12 +176,12 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'Fahrschulsoftware Schweiz 2026 – Der komplette Ratgeber | simy',
+  title: 'Fahrschulsoftware Schweiz 2026 – Der komplette Ratgeber | Simy',
   meta: [
     { name: 'description', content: 'Was ist die beste Fahrschulsoftware für die Schweiz? Ratgeber zu Funktionen, Kosten und Vergleich. simy: All-in-One Lösung für Fahrschulen. 60 Tage kostenlos.' },
     { name: 'keywords', content: 'fahrschulsoftware, software fahrschule, verwaltungssoftware fahrschule, software für fahrschulen, fahrschule software schweiz' },
     { property: 'og:title', content: 'Fahrschulsoftware Schweiz 2026 – Der komplette Ratgeber' },
-    { property: 'og:description', content: 'Was ist die beste Fahrschulsoftware? Vergleich, Funktionen, Kosten. simy gewinnt.' },
+    { property: 'og:description', content: 'Was ist die beste Fahrschulsoftware? Vergleich, Funktionen, Kosten. Simy gewinnt.' },
     { property: 'og:url', content: 'https://simy.ch/fahrschule/software' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/fahrschule/software' }],
@@ -190,7 +191,7 @@ useHead({
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'simy', item: 'https://simy.ch/' },
+        { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://simy.ch/' },
         { '@type': 'ListItem', position: 2, name: 'Fahrschule', item: 'https://simy.ch/fahrschule' },
         { '@type': 'ListItem', position: 3, name: 'Fahrschulsoftware' },
       ],
@@ -201,8 +202,8 @@ useHead({
       '@context': 'https://schema.org',
       '@type': 'FAQPage',
       mainEntity: [
-        { '@type': 'Question', name: 'Was kostet Fahrschulsoftware?', acceptedAnswer: { '@type': 'Answer', text: 'Fahrschulsoftware kostet je nach Anbieter zwischen CHF 29 und CHF 199 pro Monat. simy bietet Pläne ab CHF 69/Monat mit 60 Tagen kostenlosem Test.' } },
-        { '@type': 'Question', name: 'Welche Fahrschulsoftware ist die beste?', acceptedAnswer: { '@type': 'Answer', text: 'simy ist die einzige All-in-One Lösung für Schweizer Fahrschulen mit Terminbuchung, automatischen Rechnungen, Fahrlehrer-App und integriertem Website-Generator.' } },
+        { '@type': 'Question', name: 'Was kostet Fahrschulsoftware?', acceptedAnswer: { '@type': 'Answer', text: 'Fahrschulsoftware kostet je nach Anbieter zwischen CHF 29 und CHF 199 pro Monat. Simy bietet Pläne ab CHF 69/Monat mit 60 Tagen kostenlosem Test.' } },
+        { '@type': 'Question', name: 'Welche Fahrschulsoftware ist die beste?', acceptedAnswer: { '@type': 'Answer', text: 'Simy ist die einzige All-in-One Lösung für Schweizer Fahrschulen mit Terminbuchung, automatischen Rechnungen, Fahrlehrer-App und integriertem Website-Generator.' } },
       ],
     }),
   }],
@@ -211,7 +212,7 @@ useHead({
 const toc = [
   { id: 'was-ist', label: 'Was ist Fahrschulsoftware?' },
   { id: 'funktionen', label: 'Welche Funktionen braucht man?' },
-  { id: 'simy', label: 'simy — Die beste Lösung' },
+  { id: 'Simy', label: 'Simy — Die beste Lösung' },
   { id: 'kosten', label: 'Was kostet es?' },
 ]
 
@@ -246,12 +247,12 @@ const featureCats = [
 const usps = [
   { icon: '🇨🇭', title: 'Swiss Made', desc: 'Server in der Schweiz, DSGVO-konform, TWINT & QR-Rechnung inklusive' },
   { icon: '⚡', title: 'Schnell startklar', desc: 'In 15 Minuten vollständig eingerichtet — mit Wizard und Vorlagen' },
-  { icon: '🌐', title: 'Website inklusive', desc: 'simy generiert automatisch eine professionelle Website für deine Fahrschule' },
+  { icon: '🌐', title: 'Website inklusive', desc: 'Simy generiert automatisch eine professionelle Website für deine Fahrschule' },
 ]
 
 const pricingTable = [
   { model: 'Excel / Paper', price: 'Gratis', pro: 'Keine Lizenzkosten', con: 'Sehr zeitaufwendig, fehleranfällig', highlight: false },
   { model: 'Einmalige Software', price: 'CHF 500–2000', pro: 'Keine monatlichen Kosten', con: 'Kein Updates, kein Support', highlight: false },
-  { model: 'SaaS / Abo (simy)', price: 'Ab CHF 49/Mt.', pro: 'Immer aktuell, inkl. Support & Website', con: 'Monatliche Kosten', highlight: true },
+  { model: 'SaaS / Abo (Simy)', price: 'Ab CHF 49/Mt.', pro: 'Immer aktuell, inkl. Support & Website', con: 'Monatliche Kosten', highlight: true },
 ]
 </script>

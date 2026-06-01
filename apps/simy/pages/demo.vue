@@ -13,9 +13,9 @@
           style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
           ⚡ Kostenloser Demo-Zugang
         </div>
-        <h1 class="text-5xl font-black text-gray-900 mb-5 leading-tight">In 5 Minuten startklar</h1>
+        <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-5 leading-tight">In 5 Minuten startklar</h1>
         <p class="text-xl text-gray-500 mb-10 leading-relaxed">
-          Teste simy 60 Tage lang vollständig kostenlos — ohne Kreditkarte, ohne Risiko. Alles eingerichtet, sofort bereit.
+          Teste Simy 60 Tage lang vollständig kostenlos — ohne Kreditkarte, ohne Risiko. Alles eingerichtet, sofort bereit.
         </p>
 
         <!-- Checklist -->

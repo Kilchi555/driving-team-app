@@ -591,7 +591,7 @@
 
           <div class="rounded-2xl p-6 text-center" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));">
             <p class="text-sm mb-1" style="color: rgba(255,255,255,0.65);">Dein monatliches Einsparungspotenzial</p>
-            <div class="text-5xl font-black text-white">CHF {{ roiSaving }}.–</div>
+            <div class="text-3xl md:text-5xl font-black text-white">CHF {{ roiSaving }}.–</div>
             <p class="text-sm mt-2" style="color: rgba(255,255,255,0.65);">{{ roiHours }} Stunden × CHF {{ roi.hourlyRate }} × 22 Arbeitstage</p>
           </div>
 

@@ -3311,15 +3311,16 @@ const handleEventTypeSelected = (eventType: any) => {
   formData.value.duration_minutes = eventType.default_duration_minutes || 60
   calculateEndTime()
 
-  // Bei Ferien: Von/Bis auf morgen vorbelegen + Saldo laden
+  // Bei Ferien: Von/Bis vorbelegen + Saldo laden.
+  // Das gewählte Datum wird übernommen (auch in der Vergangenheit erlaubt);
+  // nur wenn gar kein Datum gesetzt ist, fällt es auf morgen zurück.
   if (eventType.code === 'vacation') {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const tomorrowStr = tomorrow.toISOString().slice(0, 10)
-    if (!formData.value.startDate || formData.value.startDate < tomorrowStr) {
-      handleStartDateUpdate(tomorrowStr)
+    if (!formData.value.startDate) {
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      handleStartDateUpdate(tomorrow.toISOString().slice(0, 10))
     }
-    vacationEndDate.value = formData.value.startDate >= tomorrowStr ? formData.value.startDate : tomorrowStr
+    vacationEndDate.value = formData.value.startDate
     // Ferien-Guthaben und Überzeit laden für Validierung
     const staffIdForBalance = formData.value.staff_id || currentUser.value?.id
     if (staffIdForBalance) loadVacationBalance(staffIdForBalance)

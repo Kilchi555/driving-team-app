@@ -10,7 +10,7 @@
       </div>
       <div class="relative max-w-4xl mx-auto">
         <nav class="flex items-center gap-2 text-xs text-gray-400 mb-8">
-          <a href="/" class="hover:text-gray-600">simy</a><span>›</span>
+          <a href="/" class="hover:text-gray-600">Simy</a><span>›</span>
           <a href="/marketing" class="hover:text-gray-600">Marketing</a><span>›</span>
           <span class="text-gray-600">Google Ads</span>
         </nav>
@@ -18,14 +18,14 @@
           style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
           📢 Google Ads für Fahrschulen
         </div>
-        <h1 class="text-5xl font-black text-gray-900 mb-6 leading-tight">
+        <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
           Google Ads für Fahrschulen —<br/>
           <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Sofort gefunden werden
           </span>
         </h1>
         <p class="text-xl text-gray-500 max-w-2xl mb-10 leading-relaxed">
-          Wenn jemand "Fahrschule [deine Stadt]" googelt, erscheinst du zuoberst. simy erstellt und optimiert deine Kampagnen — du konzentrierst dich aufs Unterrichten.
+          Wenn jemand "Fahrschule [deine Stadt]" googelt, erscheinst du zuoberst. Simy erstellt und optimiert deine Kampagnen — du konzentrierst dich aufs Unterrichten.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
           <a href="https://app.simy.ch/tenant-register"
@@ -139,11 +139,11 @@
 import { ref } from 'vue'
 
 useHead({
-  title: 'Google Ads für Fahrschulen – Sofort mehr Schüler | simy',
+  title: 'Google Ads für Fahrschulen – Sofort mehr Schüler | Simy',
   meta: [
-    { name: 'description', content: 'Google Ads für Fahrschulen: simy erstellt und betreut deine Kampagnen. Sofort in Google Top-Positionen. Mehr Anfragen, mehr Buchungen. Jetzt Beratung anfragen.' },
+    { name: 'description', content: 'Google Ads für Fahrschulen: Simy erstellt und betreut deine Kampagnen. Sofort in Google Top-Positionen. Mehr Anfragen, mehr Buchungen. Jetzt Beratung anfragen.' },
     { name: 'keywords', content: 'google ads fahrschule, google adwords fahrschule, werbung fahrschule, online marketing fahrschule' },
-    { property: 'og:title', content: 'Google Ads für Fahrschulen – simy | Sofort sichtbar bei Google' },
+    { property: 'og:title', content: 'Google Ads für Fahrschulen – Simy | Sofort sichtbar bei Google' },
     { property: 'og:description', content: 'Wir erstellen & betreuen Google Ads für Fahrschulen. Sofortige Leads, messbare Ergebnisse.' },
     { property: 'og:url', content: 'https://simy.ch/marketing/google-ads' },
   ],
@@ -154,7 +154,7 @@ useHead({
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'simy', item: 'https://simy.ch/' },
+        { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://simy.ch/' },
         { '@type': 'ListItem', position: 2, name: 'Marketing', item: 'https://simy.ch/marketing' },
         { '@type': 'ListItem', position: 3, name: 'Google Ads für Fahrschulen' },
       ],
@@ -176,14 +176,14 @@ const included = [
   { icon: '✍️', title: 'Anzeigentexte', desc: 'Professionelle, getestete Texte, die Klicks und Anfragen generieren.' },
   { icon: '🎯', title: 'Geo-Targeting', desc: 'Anzeigen nur für Nutzer in deinem Einzugsgebiet — kein Budget verschwenden.' },
   { icon: '📊', title: 'Monatliches Reporting', desc: 'Klares Report mit Kosten, Klicks, Anfragen und ROI — keine Blackbox.' },
-  { icon: '🔗', title: 'Integration mit simy', desc: 'Anfragen aus Google Ads landen direkt im simy-Dashboard als Lead.' },
+  { icon: '🔗', title: 'Integration mit Simy', desc: 'Anfragen aus Google Ads landen direkt im Simy-Dashboard als Lead.' },
   { icon: '📞', title: 'Persönliche Betreuung', desc: 'Du hast einen festen Ansprechpartner — erreichbar per E-Mail und Telefon.' },
 ]
 
 const faqs = [
-  { q: 'Was kostet Google Ads für eine Fahrschule?', a: 'Das Werbebudget liegt je nach Region bei CHF 200–500/Monat. Hinzu kommt die simy-Verwaltungsgebühr. Im Durchschnitt kostet eine neue Schüler-Anfrage CHF 8–20.' },
+  { q: 'Was kostet Google Ads für eine Fahrschule?', a: 'Das Werbebudget liegt je nach Region bei CHF 200–500/Monat. Hinzu kommt die Simy-Verwaltungsgebühr. Im Durchschnitt kostet eine neue Schüler-Anfrage CHF 8–20.' },
   { q: 'Wie schnell sieht man Ergebnisse?', a: 'Die ersten Anfragen kommen in der Regel innerhalb von 48 Stunden nach dem Start. Die Optimierung der Kampagnen dauert 2–4 Wochen.' },
-  { q: 'Muss ich ein simy-Konto haben?', a: 'Für die optimale Integration ja — aber wir können Google Ads auch standalone betreuen. Empfehlenswert ist die Kombination, da Anfragen direkt als Leads im System landen.' },
+  { q: 'Muss ich ein Simy-Konto haben?', a: 'Für die optimale Integration ja — aber wir können Google Ads auch standalone betreuen. Empfehlenswert ist die Kombination, da Anfragen direkt als Leads im System landen.' },
   { q: 'Kann ich das Budget selbst festlegen?', a: 'Ja, du bestimmst das monatliche Budget. Wir empfehlen ein Mindestbudget von CHF 200/Monat, damit die Kampagne genug Daten für die Optimierung sammeln kann.' },
 ]
 </script>

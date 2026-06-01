@@ -22,7 +22,7 @@
           </span>
         </h1>
         <p class="text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-          simy ist mehr als Verwaltungssoftware. Wir bringen dir aktiv neue Schüler — durch Google Ads und lokales SEO, das für Fahrschulen wirklich funktioniert.
+          Simy ist mehr als Verwaltungssoftware. Wir bringen dir aktiv neue Schüler — durch Google Ads und lokales SEO, das für Fahrschulen wirklich funktioniert.
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="#angebote"
@@ -110,13 +110,13 @@
       </div>
     </section>
 
-    <!-- Why simy for marketing -->
+    <!-- Why Simy for marketing -->
     <section class="py-20 px-6 bg-gray-950">
       <div class="max-w-4xl mx-auto">
         <div class="text-center mb-12">
-          <p class="text-xs font-bold uppercase tracking-widest mb-3 text-purple-400">Warum simy</p>
+          <p class="text-xs font-bold uppercase tracking-widest mb-3 text-purple-400">Warum Simy</p>
           <h2 class="text-3xl font-extrabold text-white mb-4">Marketing + Software = Der Vorteil</h2>
-          <p class="text-gray-400 max-w-xl mx-auto">Wer nur Werbeschalten macht, verliert potenzielle Schüler durch eine schlechte Website oder ein fehlendes Buchungssystem. simy schliesst diese Lücke.</p>
+          <p class="text-gray-400 max-w-xl mx-auto">Wer nur Werbeschalten macht, verliert potenzielle Schüler durch eine schlechte Website oder ein fehlendes Buchungssystem. Simy schliesst diese Lücke.</p>
         </div>
         <div class="grid md:grid-cols-2 gap-6">
           <div v-for="benefit in whySimy" :key="benefit.title"
@@ -152,11 +152,11 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'Marketing für Fahrschulen – Google Ads & SEO | simy',
+  title: 'Marketing für Fahrschulen – Google Ads & SEO | Simy',
   meta: [
-    { name: 'description', content: 'simy bringt mehr Schüler zu deiner Fahrschule. Google Ads und lokales SEO, speziell für Fahrschulen. Mehr Anfragen, mehr Umsatz.' },
+    { name: 'description', content: 'Simy bringt mehr Schüler zu deiner Fahrschule. Google Ads und lokales SEO, speziell für Fahrschulen. Mehr Anfragen, mehr Umsatz.' },
     { name: 'keywords', content: 'marketing fahrschule, google ads fahrschule, seo fahrschule, fahrschule mehr schüler' },
-    { property: 'og:title', content: 'Marketing für Fahrschulen – simy | Mehr Schüler gewinnen' },
+    { property: 'og:title', content: 'Marketing für Fahrschulen – Simy | Mehr Schüler gewinnen' },
     { property: 'og:description', content: 'Google Ads und lokales SEO für Fahrschulen. Simy bringt dir aktiv neue Schüler.' },
     { property: 'og:url', content: 'https://simy.ch/marketing' },
   ],
@@ -166,7 +166,7 @@ useHead({
 const valueProps = [
   { icon: '⚡', title: 'Sofort messbar', desc: 'Jede Anfrage wird erfasst. Du siehst genau, welche Kampagne Schüler bringt.' },
   { icon: '🎯', title: 'Lokal & präzise', desc: 'Wir schalten Werbung nur in deinem Einzugsgebiet — kein Geld verschwenden.' },
-  { icon: '🔄', title: 'Closed Loop', desc: 'Von der Google-Suche bis zur Buchung in simy — alles ist verbunden.' },
+  { icon: '🔄', title: 'Closed Loop', desc: 'Von der Google-Suche bis zur Buchung in Simy — alles ist verbunden.' },
 ]
 
 const adsHighlights = [
@@ -174,20 +174,20 @@ const adsHighlights = [
   'Zielgruppen-Targeting nach PLZ & Radius',
   'Monatliches Reporting mit klaren KPIs',
   'Nur für Klicks von echten Interessenten zahlen',
-  'Nahtlose Integration mit simy-Buchungssystem',
+  'Nahtlose Integration mit Simy-Buchungssystem',
 ]
 
 const seoHighlights = [
   'Google Business Profile Optimierung',
   'Lokale Keyword-Strategie für deine Stadt',
-  'SEO-optimierte Website durch simy',
+  'SEO-optimierte Website durch Simy',
   'Bewertungsmanagement & Reputation',
   'Langfristiger Traffic ohne Werbekosten',
 ]
 
 const whySimy = [
-  { icon: '🔗', title: 'Alles aus einer Hand', desc: 'Website, Buchungssystem und Marketing kommen von simy — perfekt abgestimmt.' },
-  { icon: '📊', title: 'Echter ROI', desc: 'Du siehst direkt in simy, welche Marketing-Massnahmen Buchungen generieren.' },
+  { icon: '🔗', title: 'Alles aus einer Hand', desc: 'Website, Buchungssystem und Marketing kommen von Simy — perfekt abgestimmt.' },
+  { icon: '📊', title: 'Echter ROI', desc: 'Du siehst direkt in Simy, welche Marketing-Massnahmen Buchungen generieren.' },
   { icon: '🇨🇭', title: 'Schweizer Marktkenntnis', desc: 'Wir kennen den Schweizer Fahrschulmarkt — keine generischen Kampagnen.' },
   { icon: '🤝', title: 'Persönlicher Ansprechpartner', desc: 'Kein anonymes Support-Ticket. Du hast einen festen Ansprechpartner bei simy.' },
 ]
