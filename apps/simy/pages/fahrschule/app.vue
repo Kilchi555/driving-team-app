@@ -140,7 +140,7 @@ useHead({
 })
 
 const appFeatures = [
-  { icon: '📅', title: 'Tageskalender', desc: 'Alle Termine des Tages auf einen Blick. Schülername, Uhrzeit, Standort — alles direkt sichtbar.' },
+  { icon: '📅', title: 'Tageskalender & Kalender-Sync', desc: 'Alle Termine des Tages auf einen Blick. Simy-Fahrstunden erscheinen automatisch in Google/Apple/Outlook. Trägst du dort einen privaten Termin ein, sperrt Simy diese Zeit automatisch für Buchungen.' },
   { icon: '👤', title: 'Schülerprofil unterwegs', desc: 'Fahrstunden-History, Notizen, Kontaktdaten — alles griffbereit, immer aktuell.' },
   { icon: '💶', title: 'Einnahmen-Übersicht', desc: 'Tages-, Wochen- und Monatseinnahmen auf einen Blick. Offene Rechnungen sofort sichtbar.' },
   { icon: '🔔', title: 'Push-Benachrichtigungen', desc: 'Neue Buchungen, Absagen, Zahlungseingänge — du wirst sofort benachrichtigt.' },

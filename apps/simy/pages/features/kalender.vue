@@ -171,7 +171,8 @@ const calendarSlots = [
 
 const calFeatures = [
   { icon: '🔄', title: 'Echtzeit-Synchronisation', desc: 'Änderungen sind sofort sichtbar — für dich, alle Fahrlehrer und deine Schüler.' },
-  { icon: '📲', title: 'iCal / Google Sync', desc: 'Exportiere deinen Kalender in Google Calendar, Apple Calendar oder Outlook.' },
+  { icon: '📲', title: 'Simy-Termine im privaten Kalender', desc: 'Jede Fahrstunde erscheint automatisch in deinem Google Calendar, Apple Calendar oder Outlook. Du siehst deinen ganzen Tag in einer App — ohne manuelles Übertragen.' },
+  { icon: '🪄', title: 'Privatkalender blockiert Verfügbarkeit automatisch', desc: 'Du hast Zahnarzt, Ferien oder einen privaten Termin im Kalender? Simy erkennt das und zeigt Schülern in dieser Zeit gar keine freien Slots an. Du musst nichts extra einstellen — dein Kalender erledigt das für dich.' },
   { icon: '👥', title: 'Multi-Fahrlehrer Ansicht', desc: 'Alle Fahrlehrer auf einem Bildschirm — perfekt für den Überblick als Schulinhaber.' },
   { icon: '🎨', title: 'Farbcodierung', desc: 'Verschiedene Kategorien (Fahrstunde, VKU, Prüfung) in verschiedenen Farben.' },
   { icon: '📍', title: 'Standort-Info', desc: 'Treffpunkt direkt im Termin — ein Klick öffnet die Navigation.' },

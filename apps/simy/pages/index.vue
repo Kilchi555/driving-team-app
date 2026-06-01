@@ -2287,7 +2287,7 @@ const pains = [
 ]
 
 const features = computed(() => [
-  { icon: '📅', title: 'Kalender & Terminplanung', desc: 'Intelligente Lektionsplanung direkt online und vollautomatisiert, Live-Sync und mit automatischen Erinnerungen.', alpha: 0.10, link: '/features/kalender' },
+  { icon: '📅', title: 'Kalender & Terminplanung', desc: 'Simy-Termine erscheinen in Google/Apple/Outlook. Private Termine dort blockieren automatisch deine Verfügbarkeit — Schüler sehen dort keine freien Slots.', alpha: 0.10, link: '/features/kalender' },
   { icon: '💳', title: 'Rechnungen & TWINT-Zahlungen', desc: 'Online-Zahlung mit TWINT, Debit- und Kreditkarte inkl. PostFinance, Rechnungen mit 2 Klicks erstellt und versendet, Mahnungen und Gutschriften einfach erstellt.', alpha: 0.07, link: '/features/rechnungen' },
   { icon: '👥', title: 'Schülerverwaltung', desc: 'Alle Schülerdaten, Lernfortschritte, Dokumente und Notizen zentral an einem Ort.', alpha: 0.13, link: '/fahrschule/software' },
   { icon: '📱', title: 'Fahrlehrer-App (iOS & Android)', desc: 'Native App für unterwegs – Kalender, Schüler, Rechnungen und Push-Erinnerungen immer griffbereit.', alpha: 0.10, link: '/fahrschule/app' },
@@ -2320,7 +2320,7 @@ const personas = computed(() => [
     benefits: [
       'Umsatz & Auslastung in Echtzeit',
       'Alle Fahrlehrer im Überblick',
-      'Einfache Rechnungsstellung & Mahnungen',
+      'Einfache Rechnungsstellung',
       'DSGVO-konforme Datenverwaltung',
       'Zahlungseingänge auf einen Blick',
       'Eigenes Branding & Domain',
