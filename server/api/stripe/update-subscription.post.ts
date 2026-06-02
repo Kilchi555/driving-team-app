@@ -234,9 +234,9 @@ export default defineEventHandler(async (event) => {
             </p>
             <table width="100%" cellpadding="0" cellspacing="0"><tr>
               <td align="center" style="padding:0 0 8px">
-                <a href="${baseUrl}/admin"
+                <a href="${baseUrl}/admin/billing"
                    style="display:inline-block;background:linear-gradient(135deg,#6000BD,#8B2FE8);color:#fff;text-decoration:none;padding:14px 40px;border-radius:8px;font-size:15px;font-weight:600">
-                  Zum Admin-Dashboard →
+                  Zum Abonnement →
                 </a>
               </td>
             </tr></table>
