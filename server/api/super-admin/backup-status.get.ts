@@ -1,0 +1,124 @@
+import { defineEventHandler, createError } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3'
+
+const R2_ENDPOINT = 'https://ef798a1b8d9eca6377e8c3b35fd1d21b.eu.r2.cloudflarestorage.com'
+const R2_BUCKET = 'driving-team-backups'
+const GITHUB_REPO = 'Kilchi555/driving-team-app'
+const GITHUB_WORKFLOW = 'database-backup.yml'
+
+export default defineEventHandler(async (event) => {
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) throw createError({ statusCode: 401, message: 'Unauthorized' })
+
+  const supabase = getSupabaseAdmin()
+  const { data: caller } = await supabase
+    .from('users')
+    .select('role')
+    .eq('auth_user_id', authUser.id)
+    .single()
+
+  if (caller?.role !== 'super_admin') {
+    throw createError({ statusCode: 403, message: 'Super admin only' })
+  }
+
+  const [r2Result, githubResult] = await Promise.allSettled([
+    fetchR2Backups(),
+    fetchGithubRuns(),
+  ])
+
+  return {
+    r2: r2Result.status === 'fulfilled' ? r2Result.value : { error: r2Result.reason?.message, folders: [] },
+    github: githubResult.status === 'fulfilled' ? githubResult.value : { error: githubResult.reason?.message, runs: [] },
+  }
+})
+
+async function fetchR2Backups() {
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY
+
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error('R2 credentials not configured in environment')
+  }
+
+  const s3 = new S3Client({
+    region: 'auto',
+    endpoint: R2_ENDPOINT,
+    credentials: { accessKeyId, secretAccessKey },
+  })
+
+  const response = await s3.send(new ListObjectsV2Command({
+    Bucket: R2_BUCKET,
+    Delimiter: '/',
+  }))
+
+  const folders = (response.CommonPrefixes || [])
+    .map(p => p.Prefix?.replace('/', '') ?? '')
+    .filter(Boolean)
+    .sort()
+    .reverse()
+
+  // Get objects for the latest 3 folders for size info
+  const detailedFolders = await Promise.all(
+    folders.slice(0, 10).map(async (date) => {
+      const detail = await s3.send(new ListObjectsV2Command({
+        Bucket: R2_BUCKET,
+        Prefix: `${date}/`,
+      }))
+      const objects = detail.Contents || []
+      const totalSize = objects.reduce((sum, o) => sum + (o.Size ?? 0), 0)
+      const lastModified = objects.reduce((latest, o) => {
+        const d = o.LastModified?.getTime() ?? 0
+        return d > latest ? d : latest
+      }, 0)
+      return {
+        date,
+        files: objects.map(o => ({
+          name: o.Key?.replace(`${date}/`, '') ?? '',
+          size: o.Size ?? 0,
+          lastModified: o.LastModified?.toISOString(),
+        })),
+        totalSize,
+        lastModified: lastModified ? new Date(lastModified).toISOString() : null,
+        status: objects.length >= 2 ? 'complete' : 'partial',
+      }
+    })
+  )
+
+  return {
+    bucket: R2_BUCKET,
+    totalFolders: folders.length,
+    folders: detailedFolders,
+    latestBackup: detailedFolders[0] ?? null,
+  }
+}
+
+async function fetchGithubRuns() {
+  const token = process.env.GH_API_TOKEN
+  if (!token) throw new Error('GH_API_TOKEN not configured')
+
+  const response = await $fetch<any>(
+    `https://api.github.com/repos/${GITHUB_REPO}/actions/workflows/${GITHUB_WORKFLOW}/runs?per_page=10`,
+    {
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: 'application/vnd.github+json',
+      },
+    }
+  )
+
+  return {
+    runs: (response.workflow_runs ?? []).map((run: any) => ({
+      id: run.id,
+      status: run.status,
+      conclusion: run.conclusion,
+      created_at: run.created_at,
+      updated_at: run.updated_at,
+      run_started_at: run.run_started_at,
+      html_url: run.html_url,
+      name: run.display_title || run.name,
+      triggerType: run.event,
+    })),
+  }
+}
