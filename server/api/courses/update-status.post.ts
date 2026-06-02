@@ -1,7 +1,6 @@
 import { defineEventHandler, createError, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
-import { sendEmail } from '~/server/utils/email'
 import { generateWaitlistAvailableEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
 
@@ -93,6 +92,8 @@ async function notifyWaitlistEntries(
     .eq('id', tenantId)
     .single()
 
+  const tenantName = tenant?.name || 'Simy'
+
   const sessions = (course.course_sessions || [])
     .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
     .slice(0, 5)
@@ -109,28 +110,45 @@ async function notifyWaitlistEntries(
   const base = process.env.NUXT_PUBLIC_APP_URL || 'https://app.drivingteam.ch'
   const bookingUrl = tenant?.slug ? `${base}/customer/courses/${tenant.slug}#course-${courseId}` : base
 
-  await Promise.allSettled(
-    entries.map(async (entry) => {
-      if (!entry.email) return
-      try {
-        const { subject, html } = generateWaitlistAvailableEmail({
-          firstName: entry.first_name,
-          lastName: entry.last_name,
-          courseName: course.name,
-          courseDescription: course.description || undefined,
-          sessions,
-          bookingUrl,
-          tenantName: tenant?.name,
-          tenantEmail: tenant?.contact_email,
-          primaryColor: tenant?.primary_color || undefined,
-        })
-        await sendEmail({ to: entry.email, subject, html })
-        logger.debug(`✅ Waitlist available email → ${entry.email}`)
-      } catch (err: any) {
-        logger.warn(`⚠️ Failed to send to ${entry.email}: ${err.message}`)
+  const now = new Date().toISOString()
+
+  const toQueue = entries
+    .filter((entry) => !!entry.email)
+    .map((entry) => {
+      const { subject, html } = generateWaitlistAvailableEmail({
+        firstName: entry.first_name,
+        lastName: entry.last_name,
+        courseName: course.name,
+        courseDescription: course.description || undefined,
+        sessions,
+        bookingUrl,
+        tenantName,
+        tenantEmail: tenant?.contact_email,
+        primaryColor: tenant?.primary_color || undefined,
+      })
+
+      return {
+        tenant_id: tenantId,
+        channel: 'email',
+        recipient_email: entry.email,
+        subject,
+        body: html,
+        status: 'pending',
+        send_at: now,
+        context_data: {
+          stage: 'waitlist_available',
+          entry_id: entry.id,
+          course_id: courseId,
+          course_name: course.name,
+          tenant_name: tenantName,
+        },
       }
     })
-  )
 
-  logger.info(`📬 Waitlist notified: ${entries.length} entries for course "${course.name}"`)
+  const { error } = await supabase.from('outbound_messages_queue').insert(toQueue)
+  if (error) {
+    logger.warn(`⚠️ Failed to queue waitlist emails: ${error.message}`)
+  } else {
+    logger.info(`📬 Queued ${toQueue.length} waitlist-available emails for course "${course.name}"`)
+  }
 }
