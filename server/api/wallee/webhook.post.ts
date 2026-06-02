@@ -1365,7 +1365,9 @@ async function processVouchersAndCredits(payments: any[]) {
 
         logger.info('✅ Voucher created in webhook:', newVoucher.code)
 
-        // ── Send voucher email automatically (with PDF attachment) ──────────
+        // ── Send voucher email with PDF attachment (direct, not queued) ─────────
+        // NOTE: outbound_messages_queue does not support binary attachments.
+        // Voucher emails must remain direct (Puppeteer-generated PDF inline).
         if (customerEmail) {
           try {
             const { generateVoucherEmailContent, generateVoucherPDFContent } = await import('~/utils/voucherGenerator')

@@ -3,7 +3,6 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { SARISyncEngine } from '~/server/utils/sari-sync-engine'
 import { getPaymentProviderForTenant } from '~/server/payment-providers/factory'
-import { sendEmail } from '~/server/utils/email'
 import { generateSARIEnrollmentConfirmationEmail, generateNonSARIEnrollmentConfirmationEmail, generateAdminEnrollmentNotificationEmail } from '~/server/utils/email-templates'
 import { SARIClient } from '~/utils/sariClient'
 import { logger } from '~/utils/logger'
@@ -188,7 +187,8 @@ export default defineEventHandler(async (event) => {
 })
 
 /**
- * Send confirmation email
+ * Queue confirmation + admin notification via outbound_messages_queue.
+ * Non-blocking — enrollment success is independent of email delivery.
  */
 async function sendConfirmationEmail(
   course: any,
@@ -199,23 +199,21 @@ async function sendConfirmationEmail(
   try {
     const supabase = getSupabaseAdmin()
 
-    // Get tenant info
     const { data: tenant } = await supabase
       .from('tenants')
       .select('name, slug, contact_email')
       .eq('id', tenantId)
       .single()
 
-    // Determine email recipient
     const emailTo = participantData.email || enrollmentDetails.email
     if (!emailTo) {
       console.warn('No email address for enrollment confirmation')
       return
     }
 
+    const tenantName = tenant?.name || 'Simy'
     const participantName = `${participantData.first_name || 'Teilnehmer'} ${participantData.last_name || ''}`.trim()
 
-    // Get first course session for date display
     const { data: sessions } = await supabase
       .from('course_sessions')
       .select('start_time')
@@ -225,15 +223,11 @@ async function sendConfirmationEmail(
 
     const courseDate = sessions?.[0]?.start_time
       ? new Date(sessions[0].start_time).toLocaleDateString('de-CH', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          timeZone: 'Europe/Zurich'
+          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+          timeZone: 'Europe/Zurich',
         })
       : undefined
 
-    // Generate email
     const emailData = enrollmentDetails.isSARI
       ? generateSARIEnrollmentConfirmationEmail({
           participantName,
@@ -241,7 +235,7 @@ async function sendConfirmationEmail(
           courseDate,
           location: course.external_instructor_name,
           paymentAmount: enrollmentDetails.paymentAmount,
-          tenantName: tenant?.name || 'Driving Team'
+          tenantName,
         })
       : generateNonSARIEnrollmentConfirmationEmail({
           participantName,
@@ -249,20 +243,28 @@ async function sendConfirmationEmail(
           courseDate,
           location: course.external_instructor_name,
           instructorName: course.external_instructor_name,
-          tenantName: tenant?.name || 'Driving Team'
+          tenantName,
         })
 
-    // Send email via Resend
-    await sendEmail({
-      to: emailTo,
-      subject: emailData.subject,
-      html: emailData.html,
-      senderName: tenant?.name || undefined
-    })
+    const now = new Date().toISOString()
+    const toQueue: any[] = [
+      {
+        tenant_id: tenantId,
+        channel: 'email',
+        recipient_email: emailTo,
+        subject: emailData.subject,
+        body: emailData.html,
+        status: 'pending',
+        send_at: now,
+        context_data: {
+          stage: 'enrollment_confirmation',
+          course_id: course.id,
+          course_name: course.name,
+          tenant_name: tenantName,
+        },
+      },
+    ]
 
-    console.log('✅ Enrollment confirmation email sent to:', emailTo)
-
-    // Send admin notification (non-blocking)
     if (tenant?.contact_email) {
       const { subject: adminSubject, html: adminHtml } = generateAdminEnrollmentNotificationEmail({
         participantFirstName: participantData.first_name || participantName.split(' ')[0] || '',
@@ -270,24 +272,41 @@ async function sendConfirmationEmail(
         participantEmail: emailTo,
         participantPhone: participantData.phone,
         courseName: course.name,
-        courseDate: courseDate,
+        courseDate,
         courseLocation: course.description || undefined,
         paymentMethod: 'Online (Wallee)',
         paymentAmount: enrollmentDetails.paymentAmount
           ? String((enrollmentDetails.paymentAmount / 100).toFixed(2))
           : undefined,
-        tenantName: tenant.name
+        tenantName,
       })
-      sendEmail({
-        to: tenant.contact_email,
+
+      toQueue.push({
+        tenant_id: tenantId,
+        channel: 'email',
+        recipient_email: tenant.contact_email,
         subject: adminSubject,
-        html: adminHtml,
-        senderName: tenant.name
-      }).catch((err: any) => console.warn('⚠️ Admin notification email failed:', err.message))
+        body: adminHtml,
+        status: 'pending',
+        send_at: now,
+        context_data: {
+          stage: 'enrollment_confirmation_admin',
+          course_id: course.id,
+          course_name: course.name,
+          tenant_name: tenantName,
+        },
+      })
+    }
+
+    const { error: queueError } = await supabase.from('outbound_messages_queue').insert(toQueue)
+    if (queueError) {
+      console.warn('⚠️ Failed to queue enrollment emails:', queueError.message)
+    } else {
+      console.log(`✅ Queued ${toQueue.length} enrollment email(s) for`, emailTo)
     }
   } catch (err: any) {
-    console.error('Error sending confirmation email:', err)
-    // Don't throw - enrollment was successful, email failure shouldn't block it
+    console.error('Error queuing confirmation email:', err)
+    // Don't throw — enrollment was successful, email failure shouldn't block it
   }
 }
 
