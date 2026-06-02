@@ -24,28 +24,34 @@ jobs:
 
       - name: Resolve Supabase IPv4
         run: |
-          # GitHub Actions has broken IPv6 – force IPv4 by resolving hostname
-          DB_HOST=$(echo "${{ secrets.SUPABASE_DB_URL }}" | sed -E 's|.*@([^:/]+).*|\1|')
-          DB_IP=$(getent hosts "$DB_HOST" | awk '{print $1}' | grep -v ':' | head -1)
-          echo "Resolved $DB_HOST → $DB_IP"
-          # Build IPv4 connection string
-          DB_URL_IPV4=$(echo "${{ secrets.SUPABASE_DB_URL }}" | sed "s/$DB_HOST/$DB_IP/")
-          echo "DB_URL_IPV4=$DB_URL_IPV4" >> $GITHUB_ENV
+          DB_HOST=$(python3 -c "
+import re
+url = '${{ secrets.SUPABASE_DB_URL }}'
+m = re.search(r'@([^:/]+)', url)
+print(m.group(1) if m else '')
+")
+          DB_IPV4=$(python3 -c "
+import socket
+try:
+    infos = socket.getaddrinfo('$DB_HOST', None, socket.AF_INET)
+    print(infos[0][4][0])
+except Exception as e:
+    print('')
+")
+          echo "Resolved $DB_HOST → $DB_IPV4"
+          echo "PGHOSTADDR=$DB_IPV4" >> $GITHUB_ENV
+          echo "PGSSLMODE=require" >> $GITHUB_ENV
 
       - name: Dump schema
-        env:
-          PGSSLMODE: require
         run: |
-          pg_dump "$DB_URL_IPV4" \
+          pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
             --schema-only \
             -f schema.sql
           echo "✅ Schema: $(du -sh schema.sql | cut -f1)"
 
       - name: Dump data
-        env:
-          PGSSLMODE: require
         run: |
-          pg_dump "$DB_URL_IPV4" \
+          pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
             --data-only \
             --column-inserts \
             -f data.sql
