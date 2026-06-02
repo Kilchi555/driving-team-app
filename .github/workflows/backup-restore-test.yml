@@ -117,7 +117,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{
               \"from\": \"Backup System <noreply@simy.ch>\",
-              \"to\": [\"pascal@simy.ch\"],
+              \"to\": [\"info@simy.ch\"],
               \"subject\": \"✅ Backup Restore-Test erfolgreich – $LATEST\",
               \"html\": \"<h2>✅ Wöchentlicher Backup-Test bestanden</h2><p>Das Backup vom <strong>$LATEST</strong> wurde erfolgreich in einer PostgreSQL 17 Testdatenbank wiederhergestellt.</p><ul><li>Schema: $SCHEMA_SIZE</li><li>Daten: $DATA_SIZE</li><li>Zeilenzahlen: users, appointments, tenants geprüft</li></ul><p><a href='https://github.com/Kilchi555/driving-team-app/actions/workflows/backup-restore-test.yml'>Details auf GitHub →</a></p>\"
             }"
@@ -131,7 +131,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{
               \"from\": \"Backup System <noreply@simy.ch>\",
-              \"to\": [\"pascal@simy.ch\"],
+              \"to\": [\"info@simy.ch\"],
               \"subject\": \"🚨 ALARM: Backup Restore-Test fehlgeschlagen!\",
               \"html\": \"<h2>🚨 Backup Restore-Test FEHLGESCHLAGEN</h2><p>Der wöchentliche Restore-Test ist heute Nacht fehlgeschlagen. Das Backup ist möglicherweise <strong>nicht wiederherstellbar</strong>.</p><p><strong>Sofortmassnahme:</strong> Backup manuell prüfen und testen.</p><p><a href='https://github.com/Kilchi555/driving-team-app/actions/workflows/backup-restore-test.yml'>Details &amp; Logs auf GitHub →</a></p><p><a href='https://dash.cloudflare.com'>Cloudflare R2 Backups →</a></p>\"
             }"
