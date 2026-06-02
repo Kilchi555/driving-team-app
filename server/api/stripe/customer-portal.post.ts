@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
 
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
-    return_url: `${baseUrl}/upgrade`,
+    return_url: `${baseUrl}/admin/billing`,
   })
 
   return { url: session.url }
