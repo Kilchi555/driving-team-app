@@ -193,12 +193,12 @@
         Noch keine Restore-Tests durchgeführt.
       </div>
       <div v-else class="space-y-2">
-        <a
+        <div
           v-for="run in backupData.restoreTest.runs"
           :key="run.id"
-          :href="run.html_url"
-          target="_blank"
-          class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
+          @click="run.conclusion === 'success' ? (selectedRestoreRun = run, showRestoreModal = true) : null"
+          class="flex items-center justify-between p-3 rounded-lg border border-gray-100 transition-colors"
+          :class="run.conclusion === 'success' ? 'hover:bg-gray-50 cursor-pointer' : ''"
         >
           <div class="flex items-center gap-3">
             <div class="w-2 h-2 rounded-full flex-shrink-0"
@@ -212,17 +212,20 @@
             <div class="text-sm font-medium text-gray-900">{{ formatDate(run.created_at) }}</div>
             <div class="text-xs text-gray-500">{{ run.triggerType === 'schedule' ? 'Automatisch' : 'Manuell' }}</div>
           </div>
-          <span class="text-xs px-2 py-0.5 rounded-full font-medium"
-            :class="{
-              'bg-emerald-100 text-emerald-700': run.conclusion === 'success',
-              'bg-red-100 text-red-700': run.conclusion === 'failure',
-              'bg-amber-100 text-amber-700': run.status === 'in_progress',
-              'bg-gray-100 text-gray-600': !run.conclusion,
-            }"
-          >
-            {{ run.conclusion === 'success' ? '✓ Backup wiederherstellbar' : run.conclusion === 'failure' ? '✗ Restore fehlgeschlagen' : run.status === 'in_progress' ? '⟳ Läuft' : run.status }}
-          </span>
-        </a>
+          <div class="flex items-center gap-2">
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+              :class="{
+                'bg-emerald-100 text-emerald-700': run.conclusion === 'success',
+                'bg-red-100 text-red-700': run.conclusion === 'failure',
+                'bg-amber-100 text-amber-700': run.status === 'in_progress',
+                'bg-gray-100 text-gray-600': !run.conclusion,
+              }"
+            >
+              {{ run.conclusion === 'success' ? '✓ Backup wiederherstellbar' : run.conclusion === 'failure' ? '✗ Restore fehlgeschlagen' : run.status === 'in_progress' ? '⟳ Läuft' : run.status }}
+            </span>
+            <svg v-if="run.conclusion === 'success'" class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -317,6 +320,60 @@
                 {{ run.conclusion === 'success' ? '✓ Erfolgreich' : run.conclusion === 'failure' ? '✗ Fehler' : run.status === 'in_progress' ? '⟳ Läuft' : run.status }}
               </span>
             </a>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Restore Detail Modal -->
+    <Teleport to="body">
+      <div v-if="showRestoreModal && backupData?.restoreReport" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showRestoreModal = false"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
+          <div class="flex items-center justify-between p-5 border-b border-gray-100">
+            <div>
+              <h3 class="font-semibold text-gray-900">Restore-Test Details</h3>
+              <p class="text-xs text-gray-500 mt-0.5">Backup {{ backupData.restoreReport.backupDate }} · getestet {{ formatDate(backupData.restoreReport.testedAt) }}</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <a :href="selectedRestoreRun?.html_url" target="_blank" class="text-xs text-indigo-600 hover:underline flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                GitHub
+              </a>
+              <button @click="showRestoreModal = false" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="p-5 space-y-4">
+            <!-- File sizes -->
+            <div class="grid grid-cols-2 gap-3">
+              <div class="bg-gray-50 rounded-xl p-3 text-center">
+                <div class="text-sm font-semibold text-gray-900">{{ formatBytes(backupData.restoreReport.schemaBytes) }}</div>
+                <div class="text-xs text-gray-500 mt-0.5">schema.sql</div>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-3 text-center">
+                <div class="text-sm font-semibold text-gray-900">{{ formatBytes(backupData.restoreReport.dataBytes) }}</div>
+                <div class="text-xs text-gray-500 mt-0.5">data.sql</div>
+              </div>
+            </div>
+            <!-- Row counts -->
+            <div>
+              <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Zeilenzahlen (Backup vs. Live)</div>
+              <div class="space-y-2">
+                <div v-for="row in backupData.restoreReport.rows" :key="row.table" class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                  <span class="text-sm text-gray-700 font-mono">{{ row.table }}</span>
+                  <div class="flex items-center gap-3">
+                    <span class="text-xs text-gray-500">Live: <span class="font-semibold text-gray-800">{{ row.live || '–' }}</span></span>
+                    <span class="text-xs px-2 py-0.5 rounded-full"
+                      :class="row.backup === row.live ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                    >
+                      Backup: {{ row.backup || '–' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -422,6 +479,8 @@ const backupData = ref<any>(null)
 const healthData = ref<any>(null)
 const showR2Modal = ref(false)
 const showGitHubModal = ref(false)
+const showRestoreModal = ref(false)
+const selectedRestoreRun = ref<any>(null)
 
 const incidentSteps = [
   {

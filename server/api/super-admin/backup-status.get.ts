@@ -1,7 +1,7 @@
 import { defineEventHandler, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3'
+import { S3Client, ListObjectsV2Command, GetObjectCommand } from '@aws-sdk/client-s3'
 
 const R2_ENDPOINT = 'https://ef798a1b8d9eca6377e8c3b35fd1d21b.eu.r2.cloudflarestorage.com'
 const R2_BUCKET = 'driving-team-backups'
@@ -24,16 +24,18 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: 'Super admin only' })
   }
 
-  const [r2Result, githubResult, restoreResult] = await Promise.allSettled([
+  const [r2Result, githubResult, restoreResult, restoreReportResult] = await Promise.allSettled([
     fetchR2Backups(),
     fetchGithubRuns(),
     fetchRestoreTestRuns(),
+    fetchRestoreReport(),
   ])
 
   return {
     r2: r2Result.status === 'fulfilled' ? r2Result.value : { error: r2Result.reason?.message, folders: [] },
     github: githubResult.status === 'fulfilled' ? githubResult.value : { error: githubResult.reason?.message, runs: [] },
     restoreTest: restoreResult.status === 'fulfilled' ? restoreResult.value : { error: restoreResult.reason?.message, runs: [] },
+    restoreReport: restoreReportResult.status === 'fulfilled' ? restoreReportResult.value : null,
   }
 })
 
@@ -95,6 +97,26 @@ async function fetchR2Backups() {
     folders: detailedFolders,
     latestBackup: detailedFolders[0] ?? null,
   }
+}
+
+async function fetchRestoreReport() {
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY
+  if (!accessKeyId || !secretAccessKey) return null
+
+  const s3 = new S3Client({
+    region: 'auto',
+    endpoint: R2_ENDPOINT,
+    credentials: { accessKeyId, secretAccessKey },
+  })
+
+  const response = await s3.send(new GetObjectCommand({
+    Bucket: R2_BUCKET,
+    Key: 'restore-report.json',
+  }))
+
+  const body = await response.Body?.transformToString()
+  return body ? JSON.parse(body) : null
 }
 
 async function fetchRestoreTestRuns() {
