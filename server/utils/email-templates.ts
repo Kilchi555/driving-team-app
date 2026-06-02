@@ -15,7 +15,7 @@ export function generateSARIEnrollmentConfirmationEmail(data: {
     courseDate,
     location,
     paymentAmount,
-    tenantName = 'Driving Team'
+    tenantName = 'Simy'
   } = data
 
   const subject = `Bestätigung: Kursanmeldung für ${courseName}`
@@ -183,7 +183,7 @@ export function generateNonSARIEnrollmentConfirmationEmail(data: {
     courseDate,
     location,
     instructorName,
-    tenantName = 'Driving Team'
+    tenantName = 'Simy'
   } = data
 
   const subject = `Bestätigung: Kursanmeldung für ${courseName}`
@@ -330,7 +330,7 @@ export function generateWaitlistConfirmationEmail(data: {
     courseName,
     courseDescription,
     position,
-    tenantName = 'Driving Team',
+    tenantName = 'Simy',
     tenantEmail,
     primaryColor = '#1d4ed8',
   } = data
@@ -427,7 +427,7 @@ export function generateAdminEnrollmentNotificationEmail(data: {
     courseLocation,
     paymentMethod,
     paymentAmount,
-    tenantName = 'Driving Team'
+    tenantName = 'Simy'
   } = data
 
   const subject = `Neue Anmeldung: ${participantFirstName} ${participantLastName} → ${courseName}`
@@ -509,7 +509,7 @@ export function generateAdminWaitlistNotificationEmail(data: {
     participantPhone,
     courseName,
     position,
-    tenantName = 'Driving Team'
+    tenantName = 'Simy'
   } = data
 
   const subject = `Neue Wartelisten-Anmeldung: ${participantFirstName} ${participantLastName} → ${courseName}`
@@ -588,7 +588,7 @@ export function generateCourseRegistrationCancellationEmail(data: {
     courseName,
     courseDate,
     location,
-    tenantName = 'Driving Team',
+    tenantName = 'Simy',
     tenantEmail
   } = data
 
@@ -656,7 +656,7 @@ export function generateWaitlistAvailableEmail(data: {
     courseDescription,
     sessions = [],
     bookingUrl,
-    tenantName = 'Driving Team',
+    tenantName = 'Simy',
     tenantEmail,
     primaryColor = '#1d4ed8',
   } = data
