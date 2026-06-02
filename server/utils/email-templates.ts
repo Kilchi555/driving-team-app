@@ -322,8 +322,18 @@ export function generateWaitlistConfirmationEmail(data: {
   position: number
   tenantName?: string
   tenantEmail?: string
+  primaryColor?: string
 }): { subject: string; html: string } {
-  const { firstName, lastName, courseName, courseDescription, position, tenantName = 'Driving Team', tenantEmail } = data
+  const {
+    firstName,
+    lastName,
+    courseName,
+    courseDescription,
+    position,
+    tenantName = 'Driving Team',
+    tenantEmail,
+    primaryColor = '#1d4ed8',
+  } = data
 
   const subject = `Warteliste bestätigt: ${courseName}`
 
@@ -341,9 +351,9 @@ export function generateWaitlistConfirmationEmail(data: {
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
           <tr>
-            <td style="background-color:#1d4ed8;padding:32px 40px;text-align:center;">
+            <td style="background-color:${primaryColor};padding:32px 40px;text-align:center;">
               <h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:700;">Warteliste bestätigt</h1>
-              <p style="color:#bfdbfe;margin:8px 0 0;font-size:14px;">${tenantName}</p>
+              <p style="color:rgba(255,255,255,0.75);margin:8px 0 0;font-size:14px;">${tenantName}</p>
             </td>
           </tr>
           <tr>
@@ -352,11 +362,11 @@ export function generateWaitlistConfirmationEmail(data: {
               <p style="font-size:15px;color:#374151;margin:0 0 24px;">
                 Sie sind erfolgreich auf der Warteliste für den folgenden Kurs eingetragen:
               </p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;margin-bottom:24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border:2px solid ${primaryColor};border-radius:8px;margin-bottom:24px;">
                 <tr>
                   <td style="padding:20px 24px;">
-                    <p style="margin:0 0 8px;font-size:14px;color:#1e40af;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Kurs</p>
-                    <p style="margin:0 0 12px;font-size:18px;color:#1e3a8a;font-weight:700;">${courseName}</p>
+                    <p style="margin:0 0 8px;font-size:14px;color:${primaryColor};font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Kurs</p>
+                    <p style="margin:0 0 12px;font-size:18px;color:#111827;font-weight:700;">${courseName}</p>
                     ${courseDescription ? `<p style="margin:0 0 12px;font-size:14px;color:#374151;">${courseDescription}</p>` : ''}
                     <p style="margin:0;font-size:14px;color:#374151;">
                       Ihre Position auf der Warteliste: <strong>#${position}</strong>
@@ -376,7 +386,7 @@ export function generateWaitlistConfirmationEmail(data: {
                 </tr>
               </table>
               <p style="font-size:14px;color:#6b7280;margin:0 0 8px;">Bei Fragen wenden Sie sich an:</p>
-              <p style="font-size:14px;color:#1d4ed8;margin:0;">${tenantEmail || tenantName}</p>
+              <p style="font-size:14px;color:${primaryColor};margin:0;">${tenantEmail || tenantName}</p>
             </td>
           </tr>
           <tr>
