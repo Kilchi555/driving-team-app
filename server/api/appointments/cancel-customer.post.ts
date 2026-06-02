@@ -7,7 +7,7 @@ import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateUUID } from '~/server/utils/validators'
-import { sendTenantEmail, generateCustomerCancelledAdminEmail } from '~/server/utils/email'
+import { generateCustomerCancelledAdminEmail } from '~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -626,15 +626,23 @@ export default defineEventHandler(async (event) => {
         requiresMedicalCertificate: reason.requires_proof || false,
       }
 
-      // 1. Notify staff
+      // 1. Notify staff (queued for retry/audit)
       if (staffEmail) {
         const html = generateCustomerCancelledAdminEmail({ ...emailParams, recipientName: staffName })
-        await sendTenantEmail(tenantId!, {
-          to: staffEmail,
+        await supabaseAdmin.from('outbound_messages_queue').insert({
+          tenant_id: tenantId,
+          channel: 'email',
+          recipient_email: staffEmail,
           subject: `Termin abgesagt – ${customerName} (${apptDate})`,
-          html,
+          body: html,
+          status: 'pending',
+          send_at: new Date().toISOString(),
+          context_data: {
+            stage: 'appointment_cancellation_staff',
+            tenant_name: tenantName,
+          },
         })
-        logger.debug('✅ Staff cancellation notification sent to:', staffEmail)
+        logger.debug('✅ Staff cancellation notification queued for:', staffEmail)
       }
 
       // 2. Notify customer (using the existing cancelled template in send-appointment-notification)
