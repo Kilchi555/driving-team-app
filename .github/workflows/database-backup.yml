@@ -25,20 +25,17 @@ jobs:
         run: echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
 
       - name: Dump schema
-        # WICHTIG: SUPABASE_DB_URL muss der Session-Mode Pooler URL sein (IPv4)
-        # Supabase Dashboard → Settings → Database → Connection string → Session mode (Port 5432)
-        # Format: postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres
         env:
           PGSSLMODE: require
         run: |
-          pg_dump "${{ secrets.SUPABASE_DB_URL }}" --schema-only -f schema.sql
+          /usr/lib/postgresql/17/bin/pg_dump "${{ secrets.SUPABASE_DB_URL }}" --schema-only -f schema.sql
           echo "✅ Schema: $(du -sh schema.sql | cut -f1)"
 
       - name: Dump data
         env:
           PGSSLMODE: require
         run: |
-          pg_dump "${{ secrets.SUPABASE_DB_URL }}" --data-only --column-inserts -f data.sql
+          /usr/lib/postgresql/17/bin/pg_dump "${{ secrets.SUPABASE_DB_URL }}" --data-only --column-inserts -f data.sql
           echo "✅ Daten: $(du -sh data.sql | cut -f1)"
 
       - name: Install rclone
