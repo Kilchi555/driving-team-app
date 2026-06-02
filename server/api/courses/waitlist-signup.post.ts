@@ -102,7 +102,7 @@ export default defineEventHandler(async (event) => {
   // 5. Get tenant info for email
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, contact_email')
+    .select('name, contact_email, primary_color')
     .eq('id', course.tenant_id)
     .single()
 
@@ -117,7 +117,8 @@ export default defineEventHandler(async (event) => {
         : (course.description || undefined),
       position,
       tenantName: tenant?.name,
-      tenantEmail: tenant?.contact_email
+      tenantEmail: tenant?.contact_email,
+      primaryColor: tenant?.primary_color || undefined,
     })
     await sendEmail({ to: email, subject, html })
     logger.debug(`✅ Waitlist confirmation sent to ${email}`)
