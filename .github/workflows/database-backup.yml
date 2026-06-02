@@ -22,16 +22,30 @@ jobs:
         id: date
         run: echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
 
-      - name: Dump schema
+      - name: Resolve Supabase IPv4
         run: |
-          pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
+          # GitHub Actions has broken IPv6 – force IPv4 by resolving hostname
+          DB_HOST=$(echo "${{ secrets.SUPABASE_DB_URL }}" | sed -E 's|.*@([^:/]+).*|\1|')
+          DB_IP=$(getent hosts "$DB_HOST" | awk '{print $1}' | grep -v ':' | head -1)
+          echo "Resolved $DB_HOST → $DB_IP"
+          # Build IPv4 connection string
+          DB_URL_IPV4=$(echo "${{ secrets.SUPABASE_DB_URL }}" | sed "s/$DB_HOST/$DB_IP/")
+          echo "DB_URL_IPV4=$DB_URL_IPV4" >> $GITHUB_ENV
+
+      - name: Dump schema
+        env:
+          PGSSLMODE: require
+        run: |
+          pg_dump "$DB_URL_IPV4" \
             --schema-only \
             -f schema.sql
           echo "✅ Schema: $(du -sh schema.sql | cut -f1)"
 
       - name: Dump data
+        env:
+          PGSSLMODE: require
         run: |
-          pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
+          pg_dump "$DB_URL_IPV4" \
             --data-only \
             --column-inserts \
             -f data.sql
