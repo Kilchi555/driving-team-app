@@ -84,15 +84,25 @@ jobs:
           PGSSLMODE: require
         run: |
           echo "=== Row counts in restored backup ==="
-          TABLES="users appointments tenants"
+          TABLES="users appointments tenants lessons payments"
+          REPORT_ROWS=""
           for TABLE in $TABLES; do
-            RESTORED=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -c "SELECT COUNT(*) FROM $TABLE;" 2>/dev/null | tr -d ' ')
-            LIVE=$(/usr/lib/postgresql/17/bin/psql "${{ secrets.SUPABASE_DB_URL }}" -t -c "SELECT COUNT(*) FROM $TABLE;" 2>/dev/null | tr -d ' ')
+            RESTORED=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -c "SELECT COUNT(*) FROM $TABLE;" 2>/dev/null | tr -d ' \n')
+            LIVE=$(/usr/lib/postgresql/17/bin/psql "${{ secrets.SUPABASE_DB_URL }}" -t -c "SELECT COUNT(*) FROM $TABLE;" 2>/dev/null | tr -d ' \n')
             echo "  $TABLE: backup=$RESTORED, live=$LIVE"
-            if [ -z "$RESTORED" ] || [ "$RESTORED" = "0" ]; then
-              echo "⚠️  Warnung: $TABLE hat 0 Zeilen im Backup!"
-            fi
+            if [ -n "$REPORT_ROWS" ]; then REPORT_ROWS="$REPORT_ROWS,"; fi
+            REPORT_ROWS="$REPORT_ROWS{\"table\":\"$TABLE\",\"backup\":\"$RESTORED\",\"live\":\"$LIVE\"}"
           done
+          SCHEMA_SIZE=$(du -sb schema.sql | cut -f1)
+          DATA_SIZE=$(du -sb data.sql | cut -f1)
+          LATEST=${{ steps.latest.outputs.LATEST }}
+          echo "{\"backupDate\":\"$LATEST\",\"testedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"schemaBytes\":$SCHEMA_SIZE,\"dataBytes\":$DATA_SIZE,\"rows\":[$REPORT_ROWS],\"status\":\"success\"}" > restore-report.json
+          cat restore-report.json
+
+      - name: Upload restore report to R2
+        run: |
+          rclone copyto restore-report.json "r2:${{ secrets.R2_BUCKET }}/restore-report.json"
+          echo "✅ Report hochgeladen"
 
       - name: Summary
         run: |
