@@ -75,6 +75,12 @@
             </svg>
             Business Types
           </NuxtLink>
+          <NuxtLink to="/tenant-admin/backup" class="sa-nav-link" :class="{ 'sa-nav-active': $route.path === '/tenant-admin/backup' }">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582 4 8 4" />
+            </svg>
+            Backup
+          </NuxtLink>
           <NuxtLink to="/admin/cron-status" class="sa-nav-link" :class="{ 'sa-nav-active': $route.path === '/admin/cron-status' }">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
