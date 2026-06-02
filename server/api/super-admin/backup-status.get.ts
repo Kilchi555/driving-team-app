@@ -7,6 +7,7 @@ const R2_ENDPOINT = 'https://ef798a1b8d9eca6377e8c3b35fd1d21b.eu.r2.cloudflarest
 const R2_BUCKET = 'driving-team-backups'
 const GITHUB_REPO = 'Kilchi555/driving-team-app'
 const GITHUB_WORKFLOW = 'database-backup.yml'
+const GITHUB_RESTORE_WORKFLOW = 'backup-restore-test.yml'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -23,14 +24,16 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: 'Super admin only' })
   }
 
-  const [r2Result, githubResult] = await Promise.allSettled([
+  const [r2Result, githubResult, restoreResult] = await Promise.allSettled([
     fetchR2Backups(),
     fetchGithubRuns(),
+    fetchRestoreTestRuns(),
   ])
 
   return {
     r2: r2Result.status === 'fulfilled' ? r2Result.value : { error: r2Result.reason?.message, folders: [] },
     github: githubResult.status === 'fulfilled' ? githubResult.value : { error: githubResult.reason?.message, runs: [] },
+    restoreTest: restoreResult.status === 'fulfilled' ? restoreResult.value : { error: restoreResult.reason?.message, runs: [] },
   }
 })
 
@@ -91,6 +94,32 @@ async function fetchR2Backups() {
     totalFolders: folders.length,
     folders: detailedFolders,
     latestBackup: detailedFolders[0] ?? null,
+  }
+}
+
+async function fetchRestoreTestRuns() {
+  const token = process.env.GH_API_TOKEN
+  if (!token) throw new Error('GH_API_TOKEN not configured')
+
+  const response = await $fetch<any>(
+    `https://api.github.com/repos/${GITHUB_REPO}/actions/workflows/${GITHUB_RESTORE_WORKFLOW}/runs?per_page=5`,
+    {
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: 'application/vnd.github+json',
+      },
+    }
+  )
+
+  return {
+    runs: (response.workflow_runs ?? []).map((run: any) => ({
+      id: run.id,
+      status: run.status,
+      conclusion: run.conclusion,
+      created_at: run.created_at,
+      html_url: run.html_url,
+      triggerType: run.event,
+    })),
   }
 }
 
