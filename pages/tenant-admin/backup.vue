@@ -86,7 +86,7 @@
         </div>
 
         <div v-if="loading" class="space-y-2">
-          <div v-for="i in 5" :key="i" class="h-12 bg-gray-100 rounded-lg animate-pulse"></div>
+          <div v-for="i in 3" :key="i" class="h-12 bg-gray-100 rounded-lg animate-pulse"></div>
         </div>
         <div v-else-if="backupData?.r2?.error" class="text-sm text-red-600 bg-red-50 rounded-lg p-3">
           ⚠️ {{ backupData.r2.error }}
@@ -110,6 +110,9 @@
               <div class="text-xs text-gray-400">{{ folder.files.length }} Dateien</div>
             </div>
           </div>
+          <button v-if="(backupData?.r2?.folders ?? []).length > 3" @click="showR2Modal = true" class="w-full text-xs text-indigo-600 hover:underline pt-1 text-center">
+            Alle {{ backupData.r2.folders.length }} Backups anzeigen →
+          </button>
         </div>
       </div>
 
@@ -122,18 +125,18 @@
             </svg>
             GitHub Actions Runs
           </h2>
-          <a href="https://github.com/Kilchi555/driving-team-app/actions" target="_blank" class="text-xs text-indigo-600 hover:underline">Alle anzeigen →</a>
+          <button @click="showGitHubModal = true" class="text-xs text-indigo-600 hover:underline">Alle anzeigen →</button>
         </div>
 
         <div v-if="loading" class="space-y-2">
-          <div v-for="i in 5" :key="i" class="h-12 bg-gray-100 rounded-lg animate-pulse"></div>
+          <div v-for="i in 3" :key="i" class="h-12 bg-gray-100 rounded-lg animate-pulse"></div>
         </div>
         <div v-else-if="backupData?.github?.error" class="text-sm text-amber-700 bg-amber-50 rounded-lg p-3">
           ⚠️ GitHub Token nicht konfiguriert – Runs nicht abrufbar
         </div>
         <div v-else class="space-y-2">
           <a
-            v-for="run in backupData?.github?.runs ?? []"
+            v-for="run in (backupData?.github?.runs ?? []).slice(0, 3)"
             :key="run.id"
             :href="run.html_url"
             target="_blank"
@@ -167,6 +170,157 @@
         </div>
       </div>
     </div>
+
+    <!-- Restore Test Status -->
+    <div class="sa-card mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="sa-card-title">
+          <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+          Wöchentlicher Restore-Test
+        </h2>
+        <a href="https://github.com/Kilchi555/driving-team-app/actions/workflows/backup-restore-test.yml" target="_blank" class="text-xs text-indigo-600 hover:underline flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+          GitHub
+        </a>
+      </div>
+      <p class="text-xs text-gray-500 mb-3">Jeden Montag 03:00 Uhr – stellt das Backup in einer echten PostgreSQL 17 DB wieder her und vergleicht Zeilenzahlen mit der Live-DB.</p>
+      <div v-if="loading" class="space-y-2">
+        <div v-for="i in 3" :key="i" class="h-10 bg-gray-100 rounded-lg animate-pulse"></div>
+      </div>
+      <div v-else-if="!backupData?.restoreTest?.runs?.length" class="text-sm text-gray-500 bg-gray-50 rounded-lg p-3">
+        Noch keine Restore-Tests durchgeführt.
+      </div>
+      <div v-else class="space-y-2">
+        <a
+          v-for="run in backupData.restoreTest.runs"
+          :key="run.id"
+          :href="run.html_url"
+          target="_blank"
+          class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
+        >
+          <div class="flex items-center gap-3">
+            <div class="w-2 h-2 rounded-full flex-shrink-0"
+              :class="{
+                'bg-emerald-500': run.conclusion === 'success',
+                'bg-red-500': run.conclusion === 'failure',
+                'bg-amber-400 animate-pulse': run.status === 'in_progress',
+                'bg-gray-400': !run.conclusion && run.status !== 'in_progress',
+              }"
+            ></div>
+            <div class="text-sm font-medium text-gray-900">{{ formatDate(run.created_at) }}</div>
+            <div class="text-xs text-gray-500">{{ run.triggerType === 'schedule' ? 'Automatisch' : 'Manuell' }}</div>
+          </div>
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+            :class="{
+              'bg-emerald-100 text-emerald-700': run.conclusion === 'success',
+              'bg-red-100 text-red-700': run.conclusion === 'failure',
+              'bg-amber-100 text-amber-700': run.status === 'in_progress',
+              'bg-gray-100 text-gray-600': !run.conclusion,
+            }"
+          >
+            {{ run.conclusion === 'success' ? '✓ Backup wiederherstellbar' : run.conclusion === 'failure' ? '✗ Restore fehlgeschlagen' : run.status === 'in_progress' ? '⟳ Läuft' : run.status }}
+          </span>
+        </a>
+      </div>
+    </div>
+
+    <!-- R2 Modal -->
+    <Teleport to="body">
+      <div v-if="showR2Modal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showR2Modal = false"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+          <div class="flex items-center justify-between p-5 border-b border-gray-100">
+            <h3 class="font-semibold text-gray-900">Alle Cloudflare R2 Backups</h3>
+            <div class="flex items-center gap-3">
+              <a href="https://dash.cloudflare.com" target="_blank" class="text-xs text-indigo-600 hover:underline flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                Cloudflare öffnen
+              </a>
+              <button @click="showR2Modal = false" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="overflow-y-auto p-5 space-y-2">
+            <div
+              v-for="folder in backupData?.r2?.folders ?? []"
+              :key="folder.date"
+              class="flex items-center justify-between p-3 rounded-lg border"
+              :class="folder.status === 'complete' ? 'border-emerald-100 bg-emerald-50' : 'border-amber-100 bg-amber-50'"
+            >
+              <div class="flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full" :class="folder.status === 'complete' ? 'bg-emerald-500' : 'bg-amber-500'"></div>
+                <div>
+                  <div class="font-mono text-sm font-semibold text-gray-900">{{ folder.date }}</div>
+                  <div class="text-xs text-gray-500">{{ folder.files.map((f: any) => f.name).join(', ') }}</div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-medium text-gray-700">{{ formatBytes(folder.totalSize) }}</div>
+                <div class="text-xs text-gray-400">{{ folder.files.length }} Dateien</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- GitHub Modal -->
+    <Teleport to="body">
+      <div v-if="showGitHubModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showGitHubModal = false"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+          <div class="flex items-center justify-between p-5 border-b border-gray-100">
+            <h3 class="font-semibold text-gray-900">Alle GitHub Actions Runs</h3>
+            <div class="flex items-center gap-3">
+              <a href="https://github.com/Kilchi555/driving-team-app/actions" target="_blank" class="text-xs text-indigo-600 hover:underline flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                GitHub öffnen
+              </a>
+              <button @click="showGitHubModal = false" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="overflow-y-auto p-5 space-y-2">
+            <a
+              v-for="run in backupData?.github?.runs ?? []"
+              :key="run.id"
+              :href="run.html_url"
+              target="_blank"
+              class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-colors"
+            >
+              <div class="flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full flex-shrink-0"
+                  :class="{
+                    'bg-emerald-500': run.conclusion === 'success',
+                    'bg-red-500': run.conclusion === 'failure',
+                    'bg-amber-400 animate-pulse': run.status === 'in_progress',
+                    'bg-gray-400': !run.conclusion && run.status !== 'in_progress',
+                  }"
+                ></div>
+                <div>
+                  <div class="text-sm font-medium text-gray-900">{{ formatDate(run.created_at) }}</div>
+                  <div class="text-xs text-gray-500">{{ run.triggerType === 'schedule' ? 'Automatisch' : 'Manuell' }}</div>
+                </div>
+              </div>
+              <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                :class="{
+                  'bg-emerald-100 text-emerald-700': run.conclusion === 'success',
+                  'bg-red-100 text-red-700': run.conclusion === 'failure',
+                  'bg-amber-100 text-amber-700': run.status === 'in_progress',
+                  'bg-gray-100 text-gray-600': !run.conclusion,
+                }"
+              >
+                {{ run.conclusion === 'success' ? '✓ Erfolgreich' : run.conclusion === 'failure' ? '✗ Fehler' : run.status === 'in_progress' ? '⟳ Läuft' : run.status }}
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- DB Health -->
     <div class="sa-card mb-6">
@@ -266,6 +420,8 @@ definePageMeta({ layout: 'tenant-admin' })
 const loading = ref(true)
 const backupData = ref<any>(null)
 const healthData = ref<any>(null)
+const showR2Modal = ref(false)
+const showGitHubModal = ref(false)
 
 const incidentSteps = [
   {
