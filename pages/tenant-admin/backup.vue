@@ -329,8 +329,9 @@
     <Teleport to="body">
       <div v-if="showRestoreModal && backupData?.restoreReport" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showRestoreModal = false"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
-          <div class="flex items-center justify-between p-5 border-b border-gray-100">
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+          <!-- Header -->
+          <div class="flex items-center justify-between p-5 border-b border-gray-100 flex-shrink-0">
             <div>
               <h3 class="font-semibold text-gray-900">Restore-Test Details</h3>
               <p class="text-xs text-gray-500 mt-0.5">Backup {{ backupData.restoreReport.backupDate }} · getestet {{ formatDate(backupData.restoreReport.testedAt) }}</p>
@@ -345,35 +346,117 @@
               </button>
             </div>
           </div>
-          <div class="p-5 space-y-4">
-            <!-- File sizes -->
-            <div class="grid grid-cols-2 gap-3">
-              <div class="bg-gray-50 rounded-xl p-3 text-center">
-                <div class="text-sm font-semibold text-gray-900">{{ formatBytes(backupData.restoreReport.schemaBytes) }}</div>
-                <div class="text-xs text-gray-500 mt-0.5">schema.sql</div>
-              </div>
-              <div class="bg-gray-50 rounded-xl p-3 text-center">
-                <div class="text-sm font-semibold text-gray-900">{{ formatBytes(backupData.restoreReport.dataBytes) }}</div>
-                <div class="text-xs text-gray-500 mt-0.5">data.sql</div>
-              </div>
+
+          <!-- KPIs -->
+          <div class="grid grid-cols-3 gap-3 p-5 border-b border-gray-100 flex-shrink-0">
+            <div class="bg-gray-50 rounded-xl p-3 text-center">
+              <div class="text-sm font-semibold text-gray-900">{{ formatBytes(backupData.restoreReport.dumpBytes) }}</div>
+              <div class="text-xs text-gray-500 mt-0.5">backup.dump</div>
             </div>
-            <!-- Row counts -->
-            <div>
-              <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Zeilenzahlen (Backup vs. Live)</div>
-              <div class="space-y-2">
-                <div v-for="row in backupData.restoreReport.rows" :key="row.table" class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <span class="text-sm text-gray-700 font-mono">{{ row.table }}</span>
-                  <div class="flex items-center gap-3">
-                    <span class="text-xs text-gray-500">Live: <span class="font-semibold text-gray-800">{{ row.live || '–' }}</span></span>
-                    <span class="text-xs px-2 py-0.5 rounded-full"
-                      :class="row.backup === row.live ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
-                    >
-                      Backup: {{ row.backup || '–' }}
-                    </span>
-                  </div>
+            <div class="bg-emerald-50 rounded-xl p-3 text-center">
+              <div class="text-sm font-semibold text-emerald-700">{{ backupData.restoreReport.rows?.filter((r: any) => r.backup === r.live).length }}/{{ backupData.restoreReport.rows?.length }}</div>
+              <div class="text-xs text-gray-500 mt-0.5">Tabellen identisch</div>
+            </div>
+            <div class="bg-gray-50 rounded-xl p-3 text-center">
+              <div class="text-sm font-semibold text-gray-900">pg_restore</div>
+              <div class="text-xs text-gray-500 mt-0.5">Methode</div>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="flex border-b border-gray-100 flex-shrink-0">
+            <button v-for="tab in restoreTabs" :key="tab.id" @click="activeRestoreTab = tab.id"
+              class="px-4 py-2.5 text-xs font-medium transition-colors border-b-2 -mb-px"
+              :class="activeRestoreTab === tab.id ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
+
+          <!-- Tab Content -->
+          <div class="overflow-y-auto flex-1 p-5">
+
+            <!-- Zeilenzahlen -->
+            <div v-if="activeRestoreTab === 'counts'" class="space-y-2">
+              <div v-for="row in backupData.restoreReport.rows" :key="row.table"
+                class="flex items-center justify-between py-2.5 px-3 rounded-lg border"
+                :class="row.backup === row.live ? 'border-emerald-100 bg-emerald-50' : 'border-amber-100 bg-amber-50'"
+              >
+                <span class="text-sm font-mono font-medium text-gray-800">{{ row.table }}</span>
+                <div class="flex items-center gap-4">
+                  <span class="text-xs text-gray-500">Live: <span class="font-semibold text-gray-800">{{ row.live || '–' }}</span></span>
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded-full"
+                    :class="row.backup === row.live ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'"
+                  >
+                    {{ row.backup === row.live ? '✓' : '≠' }} Backup: {{ row.backup || '–' }}
+                  </span>
                 </div>
               </div>
             </div>
+
+            <!-- Users Stichprobe -->
+            <div v-else-if="activeRestoreTab === 'users'">
+              <div v-if="!backupData.restoreReport.samples?.users?.length" class="text-sm text-gray-400 text-center py-4">Keine Daten (nächster Test liefert Stichproben)</div>
+              <div v-else class="overflow-x-auto">
+                <table class="w-full text-xs">
+                  <thead><tr class="text-left text-gray-500 border-b border-gray-100">
+                    <th class="pb-2 pr-4 font-medium">Name</th>
+                    <th class="pb-2 pr-4 font-medium">Rolle</th>
+                    <th class="pb-2 font-medium">Erstellt</th>
+                  </tr></thead>
+                  <tbody class="divide-y divide-gray-50">
+                    <tr v-for="u in backupData.restoreReport.samples.users" :key="u.id" class="hover:bg-gray-50">
+                      <td class="py-2 pr-4 font-medium text-gray-800">{{ u.name }}</td>
+                      <td class="py-2 pr-4"><span class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600">{{ u.role }}</span></td>
+                      <td class="py-2 text-gray-400">{{ u.created_at?.slice(0,10) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Tenants Stichprobe -->
+            <div v-else-if="activeRestoreTab === 'tenants'">
+              <div v-if="!backupData.restoreReport.samples?.tenants?.length" class="text-sm text-gray-400 text-center py-4">Keine Daten (nächster Test liefert Stichproben)</div>
+              <div v-else class="overflow-x-auto">
+                <table class="w-full text-xs">
+                  <thead><tr class="text-left text-gray-500 border-b border-gray-100">
+                    <th class="pb-2 pr-4 font-medium">Name</th>
+                    <th class="pb-2 pr-4 font-medium">Slug</th>
+                    <th class="pb-2 font-medium">Erstellt</th>
+                  </tr></thead>
+                  <tbody class="divide-y divide-gray-50">
+                    <tr v-for="t in backupData.restoreReport.samples.tenants" :key="t.id" class="hover:bg-gray-50">
+                      <td class="py-2 pr-4 font-medium text-gray-800">{{ t.name }}</td>
+                      <td class="py-2 pr-4 font-mono text-gray-500">{{ t.slug }}</td>
+                      <td class="py-2 text-gray-400">{{ t.created_at?.slice(0,10) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Appointments Stichprobe -->
+            <div v-else-if="activeRestoreTab === 'appointments'">
+              <div v-if="!backupData.restoreReport.samples?.appointments?.length" class="text-sm text-gray-400 text-center py-4">Keine Daten (nächster Test liefert Stichproben)</div>
+              <div v-else class="overflow-x-auto">
+                <table class="w-full text-xs">
+                  <thead><tr class="text-left text-gray-500 border-b border-gray-100">
+                    <th class="pb-2 pr-4 font-medium">Start</th>
+                    <th class="pb-2 pr-4 font-medium">Ende</th>
+                    <th class="pb-2 font-medium">Status</th>
+                  </tr></thead>
+                  <tbody class="divide-y divide-gray-50">
+                    <tr v-for="a in backupData.restoreReport.samples.appointments" :key="a.id" class="hover:bg-gray-50">
+                      <td class="py-2 pr-4 text-gray-700">{{ a.start_time?.slice(0,16).replace('T',' ') }}</td>
+                      <td class="py-2 pr-4 text-gray-700">{{ a.end_time?.slice(0,16).replace('T',' ') }}</td>
+                      <td class="py-2"><span class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600">{{ a.status }}</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -481,6 +564,14 @@ const showR2Modal = ref(false)
 const showGitHubModal = ref(false)
 const showRestoreModal = ref(false)
 const selectedRestoreRun = ref<any>(null)
+const activeRestoreTab = ref('counts')
+
+const restoreTabs = [
+  { id: 'counts', label: 'Zeilenzahlen' },
+  { id: 'users', label: 'Users (5)' },
+  { id: 'tenants', label: 'Tenants (5)' },
+  { id: 'appointments', label: 'Termine (5)' },
+]
 
 const incidentSteps = [
   {
