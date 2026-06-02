@@ -2,12 +2,14 @@
  * POST /api/courses/waitlist-signup
  *
  * Public endpoint — no auth required.
- * Allows anyone to join the waitlist for a course with status='waitlist'.
+ * Allows anyone to join the waitlist for a course with status='waitlist'
+ * or for a fully-booked (free_slots=0) active/scheduled course.
+ *
+ * Emails are queued via outbound_messages_queue (processed by cron).
  */
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { sendEmail } from '~/server/utils/email'
 import { generateWaitlistConfirmationEmail, generateAdminWaitlistNotificationEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
 
@@ -57,7 +59,7 @@ export default defineEventHandler(async (event) => {
     if (existing.status === 'waiting' || existing.status === 'offered') {
       throw createError({ statusCode: 409, statusMessage: 'Sie sind bereits auf der Warteliste eingetragen' })
     }
-    // Previously declined/expired → allow re-entry by updating existing row
+    // Previously declined/expired → allow re-entry
     const { data: updated } = await supabase
       .from('course_waitlist')
       .update({ status: 'waiting', added_date: new Date().toISOString() })
@@ -99,46 +101,82 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'Eintragung fehlgeschlagen' })
   }
 
-  // 5. Get tenant info for email
+  // 5. Get tenant info for emails
   const { data: tenant } = await supabase
     .from('tenants')
     .select('name, contact_email, primary_color')
     .eq('id', course.tenant_id)
     .single()
 
-  // 6. Send confirmation email (non-blocking)
-  try {
-    const { subject, html } = generateWaitlistConfirmationEmail({
-      firstName: first_name.trim(),
-      lastName: last_name.trim(),
-      courseName: course.name,
-      courseDescription: isFullCourse && !course.description
-        ? 'Dieser Kurs ist derzeit ausgebucht. Sie werden benachrichtigt, sobald ein Platz frei wird.'
-        : (course.description || undefined),
-      position,
-      tenantName: tenant?.name,
-      tenantEmail: tenant?.contact_email,
-      primaryColor: tenant?.primary_color || undefined,
-    })
-    await sendEmail({ to: email, subject, html })
-    logger.debug(`✅ Waitlist confirmation sent to ${email}`)
+  // 6. Queue confirmation + optional admin notification via outbound_messages_queue
+  const now = new Date().toISOString()
+  const tenantName = tenant?.name || 'Simy'
+  const toQueue: any[] = []
 
-    // Send admin notification (non-blocking)
-    if (tenant?.contact_email) {
-      const { subject: adminSubject, html: adminHtml } = generateAdminWaitlistNotificationEmail({
-        participantFirstName: first_name.trim(),
-        participantLastName: last_name.trim(),
-        participantEmail: email,
-        participantPhone: phone?.trim() || undefined,
-        courseName: course.name,
-        position,
-        tenantName: tenant.name
-      })
-      sendEmail({ to: tenant.contact_email, subject: adminSubject, html: adminHtml })
-        .catch((err: any) => logger.warn(`⚠️ Admin waitlist notification failed: ${err.message}`))
-    }
-  } catch (emailErr: any) {
-    logger.warn(`⚠️ Waitlist confirmation email failed: ${emailErr.message}`)
+  const { subject: confirmSubject, html: confirmHtml } = generateWaitlistConfirmationEmail({
+    firstName: first_name.trim(),
+    lastName: last_name.trim(),
+    courseName: course.name,
+    courseDescription: isFullCourse && !course.description
+      ? 'Dieser Kurs ist derzeit ausgebucht. Sie werden benachrichtigt, sobald ein Platz frei wird.'
+      : (course.description || undefined),
+    position,
+    tenantName,
+    tenantEmail: tenant?.contact_email,
+    primaryColor: tenant?.primary_color || undefined,
+  })
+
+  toQueue.push({
+    tenant_id: course.tenant_id,
+    channel: 'email',
+    recipient_email: email.toLowerCase().trim(),
+    subject: confirmSubject,
+    body: confirmHtml,
+    status: 'pending',
+    send_at: now,
+    context_data: {
+      stage: 'waitlist_signup',
+      entry_id: entry.id,
+      course_id,
+      course_name: course.name,
+      tenant_name: tenantName,
+    },
+  })
+
+  if (tenant?.contact_email) {
+    const { subject: adminSubject, html: adminHtml } = generateAdminWaitlistNotificationEmail({
+      participantFirstName: first_name.trim(),
+      participantLastName: last_name.trim(),
+      participantEmail: email,
+      participantPhone: phone?.trim() || undefined,
+      courseName: course.name,
+      position,
+      tenantName,
+    })
+
+    toQueue.push({
+      tenant_id: course.tenant_id,
+      channel: 'email',
+      recipient_email: tenant.contact_email,
+      subject: adminSubject,
+      body: adminHtml,
+      status: 'pending',
+      send_at: now,
+      context_data: {
+        stage: 'waitlist_signup_admin',
+        entry_id: entry.id,
+        course_id,
+        course_name: course.name,
+        tenant_name: tenantName,
+      },
+    })
+  }
+
+  const { error: queueError } = await supabase.from('outbound_messages_queue').insert(toQueue)
+  if (queueError) {
+    logger.warn(`⚠️ Failed to queue waitlist emails: ${queueError.message}`)
+  } else {
+    logger.debug(`✅ Queued ${toQueue.length} waitlist email(s) for entry ${entry.id}`)
   }
 
   logger.info(`✅ Waitlist signup: ${first_name} ${last_name} → course ${course.name} (pos #${position})`)

@@ -1,12 +1,12 @@
 /**
  * POST /api/admin/courses/notify-waitlist
- * Sends "course now available" emails to all active waitlist entries for a course.
+ * Queues "course now available" emails for all active waitlist entries.
+ * Emails are processed via outbound_messages_queue (cron).
  * Admin only.
  */
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
-import { sendEmail } from '~/server/utils/email'
 import { generateWaitlistAvailableEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
 
@@ -47,49 +47,60 @@ export default defineEventHandler(async (event) => {
     .in('status', ['waiting', 'offered'])
 
   if (!entries || entries.length === 0) {
-    return { success: true, sent: 0, message: 'Keine Wartelisten-Einträge gefunden.' }
+    return { success: true, queued: 0, message: 'Keine Wartelisten-Einträge gefunden.' }
   }
 
+  const tenantName = tenant?.name || 'Simy'
   const sessions = buildSessions(course.course_sessions || [])
   const bookingUrl = buildBookingUrl(tenant?.slug, body.courseId)
+  const now = new Date().toISOString()
 
-  let sent = 0
-  const errors: string[] = []
+  const toQueue = entries
+    .filter((entry) => !!entry.email)
+    .map((entry) => {
+      const { subject, html } = generateWaitlistAvailableEmail({
+        firstName: entry.first_name,
+        lastName: entry.last_name,
+        courseName: course.name,
+        courseDescription: course.description || undefined,
+        sessions,
+        bookingUrl,
+        tenantName,
+        tenantEmail: tenant?.contact_email,
+        primaryColor: tenant?.primary_color || undefined,
+      })
 
-  await Promise.allSettled(
-    entries.map(async (entry) => {
-      if (!entry.email) return
-
-      try {
-        const { subject, html } = generateWaitlistAvailableEmail({
-          firstName: entry.first_name,
-          lastName: entry.last_name,
-          courseName: course.name,
-          courseDescription: course.description || undefined,
-          sessions,
-          bookingUrl,
-          tenantName: tenant?.name,
-          tenantEmail: tenant?.contact_email,
-          primaryColor: tenant?.primary_color || undefined,
-        })
-
-        await sendEmail({ to: entry.email, subject, html })
-        sent++
-        logger.debug(`✅ Waitlist available email sent to ${entry.email}`)
-      } catch (err: any) {
-        logger.warn(`⚠️ Failed to send to ${entry.email}: ${err.message}`)
-        errors.push(entry.email)
+      return {
+        tenant_id: profile.tenant_id,
+        channel: 'email',
+        recipient_email: entry.email,
+        subject,
+        body: html,
+        status: 'pending',
+        send_at: now,
+        context_data: {
+          stage: 'waitlist_available',
+          entry_id: entry.id,
+          course_id: body.courseId,
+          course_name: course.name,
+          tenant_name: tenantName,
+        },
       }
     })
-  )
 
-  logger.info(`📬 Waitlist notify: ${sent}/${entries.length} emails sent for course "${course.name}"`)
+  const { error: queueError } = await supabase.from('outbound_messages_queue').insert(toQueue)
+
+  if (queueError) {
+    logger.error('❌ Failed to queue waitlist available emails:', queueError.message)
+    throw createError({ statusCode: 500, statusMessage: 'Fehler beim Queuen der Emails' })
+  }
+
+  logger.info(`📬 Queued ${toQueue.length} waitlist-available emails for course "${course.name}"`)
 
   return {
     success: true,
-    sent,
+    queued: toQueue.length,
     total: entries.length,
-    errors,
   }
 })
 
