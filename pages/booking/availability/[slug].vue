@@ -1,9 +1,13 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-4">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div
+    ref="scrollContainerRef"
+    class="h-[100svh] overflow-y-auto bg-gray-50"
+    style="padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px)"
+  >
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       
       <!-- Back Button & Header -->
-      <div class="mb-4 flex items-center gap-4 pt-safe">
+      <div class="mb-4 flex items-center gap-4">
         <button 
           v-if="currentStep > 0"
           @click="handleBackButton"
@@ -88,7 +92,19 @@
 
       <!-- Verfügbarkeitstool (wenn Online-Buchung aktiviert) -->
       <div v-else class="space-y-4">
-        
+
+        <!-- Restoring preferences loading state -->
+        <div v-if="isRestoringPrefs" class="flex flex-col items-center justify-center py-16 gap-4">
+          <div
+            class="animate-spin rounded-full h-10 w-10 border-b-2"
+            :style="{ borderBottomColor: getBrandPrimary() }"
+          ></div>
+          <p class="text-sm text-gray-500">Letzte Auswahl wird geladen…</p>
+        </div>
+
+        <!-- Booking steps (hidden while preferences are being restored) -->
+        <div v-show="!isRestoringPrefs" class="space-y-4">
+
         <!-- Progress Steps -->
         <div 
           v-if="currentStep >= 1"
@@ -127,6 +143,28 @@
                 </div>
           </div>
         </div>
+
+        <!-- Restored preferences banner -->
+        <Transition name="fade">
+          <div
+            v-if="prefsRestoredBanner"
+            class="flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm"
+            :style="{ background: `${getBrandPrimary()}15`, borderLeft: `3px solid ${getBrandPrimary()}` }"
+          >
+            <span :style="{ color: getBrandPrimary() }">
+              ✓ Letzte Auswahl wiederhergestellt — tippe auf einen Schritt oben um etwas zu ändern.
+            </span>
+            <button
+              @click="prefsRestoredBanner = false"
+              class="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Schliessen"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </Transition>
 
         <!-- Summary Info - Show at every step for context -->
         <div v-if="currentStep > 0" class="text-center">
@@ -1056,6 +1094,8 @@
             Anmelden / Registrieren →
           </button>
         </div>
+
+        </div><!-- end v-show !isRestoringPrefs -->
       </div>
     </div>
   </div>
@@ -1482,6 +1522,7 @@ const serviceTypes = [
 const selectServiceType = (id: 'fahrstunde' | 'theorie' | 'beratung') => {
   selectedServiceType.value = id
   currentStep.value = 1
+  saveBookingPrefs()
 }
 const selectedMainCategory = ref<any>(null)  // NEW: Main category (B Auto, A Auto)
 const selectedCategory = ref<any>(null)      // CHANGED: Now represents selected subcategory
@@ -1515,6 +1556,115 @@ const referrerUrl = ref<string | null>(null)
 // Responsive state for step scrolling
 const isScreenSmall = ref(false)
 const stepsContainerRef = ref<HTMLDivElement | null>(null)
+const scrollContainerRef = ref<HTMLDivElement | null>(null)
+
+// ─── Booking Preferences Persistence (localStorage) ───────────────────────────
+const prefsRestoredBanner = ref(false)
+const isRestoringPrefs = ref(false)
+
+const saveBookingPrefs = () => {
+  if (!process.client || !slug.value) return
+  try {
+    localStorage.setItem(`simy_booking_prefs_${slug.value}`, JSON.stringify({
+      serviceType: selectedServiceType.value,
+      mainCategoryId: selectedMainCategory.value?.id ?? null,
+      categoryId: selectedCategory.value?.id ?? null,
+      canton: selectedCanton.value,
+      locationId: selectedLocation.value?.id ?? null,
+      instructorId: selectedInstructor.value?.id ?? null,
+      duration: selectedDuration.value,
+      savedAt: Date.now(),
+    }))
+  } catch { /* ignore storage errors (quota / private mode) */ }
+}
+
+const clearBookingPrefs = () => {
+  if (!process.client || !slug.value) return
+  try { localStorage.removeItem(`simy_booking_prefs_${slug.value}`) } catch {}
+}
+
+// Find any category (main or sub) by id, searching through the nested structure
+const findCategoryById = (id: string): { cat: any; parent: any | null } | null => {
+  for (const mainCat of categories.value) {
+    if (mainCat.id === id) return { cat: mainCat, parent: null }
+    for (const child of mainCat.children || []) {
+      if (child.id === id) return { cat: child, parent: mainCat }
+    }
+  }
+  return null
+}
+
+const restoreBookingPrefs = async () => {
+  if (!process.client || !slug.value) return
+  try {
+    const raw = localStorage.getItem(`simy_booking_prefs_${slug.value}`)
+    if (!raw) return
+    isRestoringPrefs.value = true
+    const prefs = JSON.parse(raw)
+    const TTL = 30 * 24 * 60 * 60 * 1000 // 30 days
+    if (!prefs.savedAt || Date.now() - prefs.savedAt > TTL) {
+      clearBookingPrefs()
+      return
+    }
+
+    // Restore service type
+    if (prefs.serviceType) {
+      selectedServiceType.value = prefs.serviceType
+      currentStep.value = 1
+    }
+
+    // Restore category — use the most specific (sub)category if available, else main
+    const targetCategoryId = prefs.categoryId || prefs.mainCategoryId
+    if (!targetCategoryId) return
+    const found = findCategoryById(targetCategoryId)
+    if (!found) return
+
+    if (found.parent) {
+      // It's a subcategory: set main category manually, then call selectSubcategory
+      selectedMainCategory.value = found.parent
+      await selectSubcategory(found.cat)
+    } else {
+      // It's a top-level category (no children, or user only selected main)
+      await selectMainCategory(found.cat)
+    }
+
+    // Restore duration
+    if (prefs.duration && durationOptions.value.includes(prefs.duration)) {
+      selectedDuration.value = prefs.duration
+      filters.value.duration_minutes = prefs.duration
+      currentStep.value = 4
+    } else if (durationOptions.value.length === 1) {
+      selectedDuration.value = durationOptions.value[0]
+      filters.value.duration_minutes = durationOptions.value[0]
+      currentStep.value = 4
+    } else {
+      return // can't auto-advance without a valid duration
+    }
+
+    // Restore canton
+    if (prefs.canton) selectedCanton.value = prefs.canton
+
+    // Restore location
+    if (!prefs.locationId) return
+    const location = availableLocations.value.find((l: any) => l.id === prefs.locationId)
+    if (!location) return
+    await selectLocation(location)
+
+    // Restore instructor (skip if staff is locked via URL param — it auto-selects)
+    if (prefs.instructorId && !lockedStaffId.value) {
+      const instructor = availableInstructors.value.find((i: any) => i.id === prefs.instructorId)
+      if (!instructor) return
+      await selectInstructor(instructor)
+    }
+
+    // Show banner only when we fully advanced to slot selection
+    if (currentStep.value >= 6) {
+      prefsRestoredBanner.value = true
+    }
+  } catch { /* ignore restore errors silently */ }
+  finally { isRestoringPrefs.value = false }
+}
+// ──────────────────────────────────────────────────────────────────────────────
 
 // Reservation state
 const currentReservationId = ref<string | null>(null)
@@ -2208,6 +2358,7 @@ const selectDurationOption = async (duration: number) => {
   await waitForPressEffect()
 
   currentStep.value = 4
+  saveBookingPrefs()
 }
 
 // NEW: Load pricing for a duration
@@ -2429,6 +2580,7 @@ const selectMainCategory = async (category: any) => {
     logger.debug('📌 Found', subcategories.length, 'subcategories - going to subcategory selection')
     currentStep.value = 2
   }
+  saveBookingPrefs()
 }
 
 // MODIFIED: Select subcategory (was selectCategory, now step 2)
@@ -2563,6 +2715,7 @@ const selectSubcategory = async (category: any) => {
   
   await waitForPressEffect()
   currentStep.value = 3
+  saveBookingPrefs()
 }
 
 // Check pickup availability for entered PLZ
@@ -2721,6 +2874,7 @@ const selectLocation = async (location: any) => {
 
   await waitForPressEffect()
   currentStep.value = 5
+  saveBookingPrefs()
 }
 
 const selectInstructor = async (instructor: any) => {
@@ -2732,10 +2886,12 @@ const selectInstructor = async (instructor: any) => {
   if (selectedServiceType.value === 'theorie' || selectedServiceType.value === 'beratung') {
     showProposalFormManually.value = true
     currentStep.value = 6
+    saveBookingPrefs()
     return
   }
 
   currentStep.value = 6 // Wechsel zu Termin-Auswahl (inkl. Loading-State)
+  saveBookingPrefs()
   
   // Generate time slots for this specific instructor-location combination
   await generateTimeSlotsForSpecificCombination()
@@ -2991,10 +3147,7 @@ const handleProposalSubmitted = async (proposalId: string) => {
   
   // Scroll to top of page - works on iOS and all browsers
   await nextTick()
-  // Try multiple scroll methods to ensure it works on all devices
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-  document.documentElement.scrollTop = 0
-  document.body.scrollTop = 0
+  scrollContainerRef.value?.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 // Initialize Google Places Autocomplete
@@ -4343,6 +4496,9 @@ onMounted(async () => {
             currentStep.value = 2
             logger.debug('✅ Category pre-selected, staff will auto-select after location')
           }
+        } else if (!prefill) {
+          // No URL-based prefill → restore last session from localStorage
+          await restoreBookingPrefs()
         }
       } else {
         console.error('❌ No tenant slug provided in URL')
@@ -4405,5 +4561,15 @@ onBeforeUnmount(async () => {
 .tenant-focus:focus {
   --tw-ring-color: var(--color-primary, #111827);
   border-color: var(--color-primary, #111827);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 </style>
