@@ -316,6 +316,20 @@
                 >
                   Anmelden
                 </button>
+
+                <!-- Ausgebucht: Warteliste Button -->
+                <a
+                  v-if="course.free_slots === 0"
+                  :href="`/booking/waitlist/${course.id}`"
+                  @click.stop
+                  class="block w-full px-4 py-2 font-medium rounded-lg border-2 transition-colors text-center"
+                  :style="{
+                    'color': tenantBranding?.primary_color || '#10B981',
+                    'borderColor': tenantBranding?.primary_color || '#10B981'
+                  }"
+                >
+                  Auf Warteliste eintragen
+                </a>
               </div>
             </template>
           </div>

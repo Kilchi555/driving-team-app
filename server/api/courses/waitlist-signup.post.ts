@@ -26,10 +26,10 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdmin()
 
-  // 1. Verify course exists and is in waitlist mode
+  // 1. Verify course exists and accepts waitlist entries
   const { data: course, error: courseError } = await supabase
     .from('courses')
-    .select('id, name, description, status, tenant_id, max_participants')
+    .select('id, name, description, status, tenant_id, max_participants, free_slots')
     .eq('id', course_id)
     .eq('is_public', true)
     .single()
@@ -38,7 +38,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Kurs nicht gefunden' })
   }
 
-  if (course.status !== 'waitlist') {
+  const isWaitlistMode = course.status === 'waitlist'
+  const isFullCourse = (course.status === 'active' || course.status === 'scheduled') && (course.free_slots ?? 1) === 0
+
+  if (!isWaitlistMode && !isFullCourse) {
     throw createError({ statusCode: 409, statusMessage: 'Dieser Kurs nimmt keine Wartelisten-Einträge an' })
   }
 
@@ -109,7 +112,9 @@ export default defineEventHandler(async (event) => {
       firstName: first_name.trim(),
       lastName: last_name.trim(),
       courseName: course.name,
-      courseDescription: course.description || undefined,
+      courseDescription: isFullCourse && !course.description
+        ? 'Dieser Kurs ist derzeit ausgebucht. Sie werden benachrichtigt, sobald ein Platz frei wird.'
+        : (course.description || undefined),
       position,
       tenantName: tenant?.name,
       tenantEmail: tenant?.contact_email
