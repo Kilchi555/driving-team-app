@@ -396,9 +396,13 @@
                       {{ course.current_participants || 0 }} / {{ course.max_participants }}
                       <span class="text-gray-500 ml-1">({{ Math.max(0, (course.max_participants || 0) - (course.current_participants || 0)) }} frei)</span>
                     </div>
-                    <div v-if="course.waitlist_count > 0" class="text-xs text-amber-600 mt-1">
-                      +{{ course.waitlist_count }} auf Warteliste
-                    </div>
+                    <button
+                      v-if="course.waitlist_count > 0"
+                      @click.stop="openWaitlistModal(course)"
+                      class="text-xs text-amber-600 mt-1 hover:underline cursor-pointer"
+                    >
+                      +{{ course.waitlist_count }} auf Warteliste →
+                    </button>
                     <div v-if="course.status === 'waitlist'" class="mt-1">
                       <a
                         :href="`/booking/waitlist/${course.id}`"
@@ -1679,6 +1683,25 @@
               </div>
             </div>
 
+            <!-- Notify waitlist (only shown when leaving waitlist status) -->
+            <div v-if="oldStatus === 'waitlist' && (newStatus === 'active' || newStatus === 'scheduled')" class="flex items-start space-x-3">
+              <input
+                v-model="statusChangeOptions.notifyWaitlist"
+                type="checkbox"
+                id="notifyWaitlist"
+                class="tenant-focus mt-1 h-4 w-4 border-gray-300 rounded"
+                :style="{ accentColor: primaryColor }"
+              />
+              <div class="flex-1">
+                <label for="notifyWaitlist" class="text-sm font-medium text-gray-700 cursor-pointer">
+                  Warteliste per E-Mail benachrichtigen
+                </label>
+                <p class="text-xs text-gray-500 mt-1">
+                  Alle Personen auf der Warteliste erhalten eine "Jetzt buchbar"-Benachrichtigung mit den Kursdaten
+                </p>
+              </div>
+            </div>
+
             <!-- Landing Page option -->
             <div class="flex items-start space-x-3">
               <input
@@ -1752,6 +1775,74 @@
               {{ isCanceling ? 'Ändere Status...' : 'Status ändern' }}
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+    </Teleport>
+
+    <!-- Waitlist Entries Modal -->
+    <Teleport to="body">
+    <div
+      v-if="showWaitlistModal"
+      class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4"
+      @click.self="showWaitlistModal = false"
+    >
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
+        <!-- Header -->
+        <div class="flex items-center justify-between p-5 border-b">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Warteliste</h3>
+            <p class="text-sm text-gray-500 mt-0.5">{{ waitlistModalCourse?.name }}</p>
+          </div>
+          <button @click="showWaitlistModal = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-5">
+          <div v-if="isLoadingWaitlistEntries" class="text-center py-8 text-gray-500">
+            <div class="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2" :style="{ borderColor: primaryColor, borderTopColor: 'transparent' }"></div>
+            Lädt...
+          </div>
+          <div v-else-if="waitlistEntries.length === 0" class="text-center py-8 text-gray-500">
+            Keine Einträge auf der Warteliste.
+          </div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="entry in waitlistEntries"
+              :key="entry.id"
+              class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+            >
+              <div>
+                <p class="text-sm font-medium text-gray-900">#{{ entry.position }} {{ entry.first_name }} {{ entry.last_name }}</p>
+                <p class="text-xs text-gray-500">{{ entry.email }}</p>
+                <p v-if="entry.phone" class="text-xs text-gray-500">{{ entry.phone }}</p>
+              </div>
+              <span class="text-xs text-gray-400">{{ formatDate(entry.added_date) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer: Notify button -->
+        <div v-if="waitlistEntries.length > 0" class="p-5 border-t">
+          <button
+            @click="notifyWaitlistEntries"
+            :disabled="isNotifyingWaitlist"
+            class="w-full px-4 py-2 text-white font-medium rounded-lg transition-opacity hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+            :style="{ backgroundColor: primaryColor }"
+          >
+            <svg v-if="!isNotifyingWaitlist" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <div v-else class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            {{ isNotifyingWaitlist ? 'Sende...' : `Alle ${waitlistEntries.length} Personen benachrichtigen` }}
+          </button>
+          <p class="text-xs text-gray-500 text-center mt-2">
+            Alle erhalten eine "Jetzt buchbar"-Email mit den aktuellen Kursdaten
+          </p>
         </div>
       </div>
     </div>
@@ -3909,7 +4000,8 @@ const statusChangeOptions = ref({
   notifyParticipants: true,
   updateLandingPage: true,
   cancellationReasonId: null as string | null,
-  customMessage: ''
+  customMessage: '',
+  notifyWaitlist: false,
 })
 
 // Create Category Modal
@@ -5324,12 +5416,14 @@ const updateCourseStatus = (course: any, newStatusValue: string) => {
       newStatus: newStatus.value
     })
     
-    // Reset options
+    // Reset options; pre-check waitlist notification when leaving waitlist status
+    const leavingWaitlist = (newStatusValue === 'active' || newStatusValue === 'scheduled') && oldStatus.value === 'waitlist'
     statusChangeOptions.value = {
       notifyParticipants: true,
       updateLandingPage: true,
       cancellationReasonId: null,
-      customMessage: ''
+      customMessage: '',
+      notifyWaitlist: leavingWaitlist,
     }
     
     logger.debug('🎨 Setting showStatusChangeModal to true...')
@@ -5368,7 +5462,11 @@ const confirmStatusChange = async () => {
 
     const result = await $fetch('/api/courses/update-status', {
       method: 'POST',
-      body: { courseId, status: newStatusForLogging },
+      body: {
+        courseId,
+        status: newStatusForLogging,
+        notifyWaitlist: statusChangeOptions.value.notifyWaitlist,
+      },
     })
 
     const updatedCourse = (result as any).course
@@ -5403,6 +5501,55 @@ const closeStatusChangeModal = () => {
   newStatus.value = ''
   logger.debug('✅ Modal closed, reopening edit modal if needed...')
 }
+
+// ─── Waitlist Modal ───────────────────────────────────────────────────────────
+
+const showWaitlistModal = ref(false)
+const waitlistModalCourse = ref<any>(null)
+const waitlistEntries = ref<any[]>([])
+const isLoadingWaitlistEntries = ref(false)
+const isNotifyingWaitlist = ref(false)
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+const openWaitlistModal = async (course: any) => {
+  waitlistModalCourse.value = course
+  showWaitlistModal.value = true
+  isLoadingWaitlistEntries.value = true
+  waitlistEntries.value = []
+
+  try {
+    const result = await $fetch<{ entries: any[] }>(`/api/admin/courses/waitlist-entries?courseId=${course.id}`)
+    waitlistEntries.value = result.entries || []
+  } catch (err: any) {
+    logger.error('❌ Failed to load waitlist entries:', err.message)
+  } finally {
+    isLoadingWaitlistEntries.value = false
+  }
+}
+
+const notifyWaitlistEntries = async () => {
+  if (!waitlistModalCourse.value) return
+  isNotifyingWaitlist.value = true
+
+  try {
+    const result = await $fetch<{ sent: number; total: number }>('/api/admin/courses/notify-waitlist', {
+      method: 'POST',
+      body: { courseId: waitlistModalCourse.value.id },
+    })
+    success.value = `${result.sent} von ${result.total} Personen auf der Warteliste wurden benachrichtigt.`
+    showWaitlistModal.value = false
+  } catch (err: any) {
+    error.value = `Fehler beim Benachrichtigen: ${err.data?.message || err.message}`
+  } finally {
+    isNotifyingWaitlist.value = false
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const cancelCourse = (course: any) => {
   // Load course participants for the cancellation modal

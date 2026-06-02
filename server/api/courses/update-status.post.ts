@@ -1,6 +1,9 @@
 import { defineEventHandler, createError, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
+import { sendEmail } from '~/server/utils/email'
+import { generateWaitlistAvailableEmail } from '~/server/utils/email-templates'
+import { logger } from '~/utils/logger'
 
 const VALID_STATUSES = ['draft', 'active', 'scheduled', 'completed', 'cancelled', 'waitlist'] as const
 type CourseStatus = typeof VALID_STATUSES[number]
@@ -8,12 +11,13 @@ type CourseStatus = typeof VALID_STATUSES[number]
 /**
  * POST /api/courses/update-status
  * Updates the status of a course (admin/staff only).
- * Uses service role key to avoid client-side RLS/JWT expiry issues.
+ * When notifyWaitlist=true and status changes from 'waitlist' to active/scheduled,
+ * sends "now available" emails to all waiting entries.
  */
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
 
-  const body = await readBody<{ courseId: string; status: CourseStatus }>(event)
+  const body = await readBody<{ courseId: string; status: CourseStatus; notifyWaitlist?: boolean }>(event)
 
   if (!body?.courseId) {
     throw createError({ statusCode: 400, statusMessage: 'courseId is required' })
@@ -27,7 +31,7 @@ export default defineEventHandler(async (event) => {
   // Verify course belongs to the caller's tenant
   const { data: course } = await supabase
     .from('courses')
-    .select('id, tenant_id, status, name')
+    .select('id, tenant_id, status, name, description, course_sessions (start_time, end_time)')
     .eq('id', body.courseId)
     .eq('tenant_id', profile.tenant_id)
     .single()
@@ -58,5 +62,75 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: `Status update failed: ${error.message}` })
   }
 
+  const wasWaitlist = course.status === 'waitlist'
+  const isNowActive = body.status === 'active' || body.status === 'scheduled'
+
+  if (body.notifyWaitlist && wasWaitlist && isNowActive) {
+    notifyWaitlistEntries(supabase, body.courseId, course, profile.tenant_id)
+      .catch((err: any) => logger.warn(`⚠️ Waitlist notification failed: ${err.message}`))
+  }
+
   return { success: true, course: updated }
 })
+
+async function notifyWaitlistEntries(
+  supabase: ReturnType<typeof import('~/server/utils/supabase-admin').getSupabaseAdmin>,
+  courseId: string,
+  course: { name: string; description?: string | null; course_sessions?: Array<{ start_time: string; end_time?: string | null }> | null },
+  tenantId: string
+) {
+  const { data: entries } = await supabase
+    .from('course_waitlist')
+    .select('id, first_name, last_name, email')
+    .eq('course_id', courseId)
+    .in('status', ['waiting', 'offered'])
+
+  if (!entries || entries.length === 0) return
+
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('name, contact_email, primary_color, slug')
+    .eq('id', tenantId)
+    .single()
+
+  const sessions = (course.course_sessions || [])
+    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    .slice(0, 5)
+    .map((s) => {
+      const start = new Date(s.start_time)
+      const date = start.toLocaleDateString('de-CH', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
+      const startTime = start.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+      const time = s.end_time
+        ? `${startTime} – ${new Date(s.end_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })} Uhr`
+        : `${startTime} Uhr`
+      return { date, time }
+    })
+
+  const base = process.env.NUXT_PUBLIC_APP_URL || 'https://app.drivingteam.ch'
+  const bookingUrl = tenant?.slug ? `${base}/customer/courses/${tenant.slug}#course-${courseId}` : base
+
+  await Promise.allSettled(
+    entries.map(async (entry) => {
+      if (!entry.email) return
+      try {
+        const { subject, html } = generateWaitlistAvailableEmail({
+          firstName: entry.first_name,
+          lastName: entry.last_name,
+          courseName: course.name,
+          courseDescription: course.description || undefined,
+          sessions,
+          bookingUrl,
+          tenantName: tenant?.name,
+          tenantEmail: tenant?.contact_email,
+          primaryColor: tenant?.primary_color || undefined,
+        })
+        await sendEmail({ to: entry.email, subject, html })
+        logger.debug(`✅ Waitlist available email → ${entry.email}`)
+      } catch (err: any) {
+        logger.warn(`⚠️ Failed to send to ${entry.email}: ${err.message}`)
+      }
+    })
+  )
+
+  logger.info(`📬 Waitlist notified: ${entries.length} entries for course "${course.name}"`)
+}
