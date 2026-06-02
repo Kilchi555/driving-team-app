@@ -6,6 +6,26 @@
   >
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       
+      <!-- Already-booked banner: shown when user navigates back after a successful booking -->
+      <div
+        v-if="justCompletedBooking"
+        class="mb-4 flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg"
+      >
+        <svg class="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        <div class="flex-1">
+          <p class="text-sm font-medium text-green-800">Dein Termin wurde erfolgreich gebucht.</p>
+          <p class="text-xs text-green-700 mt-0.5">Du wirst automatisch weitergeleitet oder klicke auf den Button.</p>
+        </div>
+        <button
+          @click="navigateTo('/customer-dashboard')"
+          class="text-sm font-medium text-green-700 underline flex-shrink-0"
+        >
+          Zum Dashboard →
+        </button>
+      </div>
+
       <!-- Back Button & Header -->
       <div class="mb-4 flex items-center gap-4">
         <button 
@@ -1087,11 +1107,11 @@
             ← Neue Anfrage
           </button>
           <button
-            @click="navigateTo('/register/' + route.params.slug + '?service=fahrlektion')"
+            @click="navigateTo('/customer-dashboard')"
             :style="{ backgroundColor: getBrandPrimary() }"
             class="flex-1 px-4 py-3 text-white font-medium rounded-lg hover:opacity-90 transition-opacity"
           >
-            Anmelden / Registrieren →
+            Zum Dashboard →
           </button>
         </div>
 
@@ -1166,6 +1186,9 @@ const error = ref<string | null>(null)
 // Session management for slot reservation
 const sessionId = ref(generateSessionId())
 const reservedSlotId = ref<string | null>(null)
+
+// Show banner when user navigates back after a completed booking
+const justCompletedBooking = ref(false)
 const reservationExpiry = ref<Date | null>(null)
 const remainingSeconds = ref(300) // 5 minutes in seconds
 const countdownInterval = ref<NodeJS.Timeout | null>(null)
@@ -3477,6 +3500,11 @@ const confirmBooking = async () => {
     }
     
     isCreatingBooking.value = false
+
+    // Mark this session as completed so the banner appears if the user navigates back
+    try {
+      localStorage.setItem('booking_just_completed', '1')
+    } catch {}
     
     // Redirect to customer dashboard with success message
     try {
@@ -4370,6 +4398,16 @@ onMounted(async () => {
     // Seed initial history entry so first back-press is intercepted
     history.replaceState({ bookingStep: 0 }, '')
     
+    // Show banner if user navigated back after a completed booking
+    try {
+      if (localStorage.getItem('booking_just_completed') === '1') {
+        justCompletedBooking.value = true
+        localStorage.removeItem('booking_just_completed')
+        // Auto-redirect after 4 seconds so they don't accidentally re-book
+        setTimeout(() => navigateTo('/customer-dashboard'), 4000)
+      }
+    } catch {}
+
     // ✅ Reload time slots when returning to this page (e.g., from EventModal after booking)
     watch(() => route.path, async () => {
       if (route.path.includes('/booking/availability/') && selectedInstructor.value) {
