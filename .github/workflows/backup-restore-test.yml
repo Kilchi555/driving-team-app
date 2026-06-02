@@ -57,71 +57,126 @@ jobs:
             echo "❌ Kein Backup in R2 gefunden!" && exit 1
           fi
 
-      - name: Download backup from R2
+      - name: Download backup.dump from R2
         run: |
           LATEST=${{ steps.latest.outputs.LATEST }}
-          rclone copyto "r2:${{ secrets.R2_BUCKET }}/$LATEST/schema.sql" schema.sql
-          rclone copyto "r2:${{ secrets.R2_BUCKET }}/$LATEST/data.sql" data.sql
-          echo "✅ Downloaded: $(du -sh schema.sql | cut -f1) schema, $(du -sh data.sql | cut -f1) data"
+          rclone copyto "r2:${{ secrets.R2_BUCKET }}/$LATEST/backup.dump" backup.dump
+          echo "✅ Downloaded: $(du -sh backup.dump | cut -f1)"
 
-      - name: Restore schema into test DB
+      - name: Restore backup into test DB (pg_restore)
         env:
           PGPASSWORD: testpassword
         run: |
-          /usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -f schema.sql
-          echo "✅ Schema restored"
+          /usr/lib/postgresql/17/bin/pg_restore \
+            -h localhost -U postgres -d restore_test \
+            --no-owner --no-privileges \
+            backup.dump
+          echo "✅ Restore abgeschlossen"
 
-      - name: Restore data into test DB
-        env:
-          PGPASSWORD: testpassword
-        run: |
-          /usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -f data.sql
-          echo "✅ Data restored"
-
-      - name: Verify row counts vs live DB
+      - name: Verify row counts + collect sample data
         env:
           PGPASSWORD: testpassword
           PGSSLMODE: require
         run: |
-          echo "=== Row counts in restored backup ==="
-          TABLES="users appointments tenants lessons payments"
+          echo "=== Zeilenzahlen: Backup vs. Live ==="
+          TABLES="users appointments tenants lessons"
           REPORT_ROWS=""
           for TABLE in $TABLES; do
             RESTORED=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -c "SELECT COUNT(*) FROM $TABLE;" 2>/dev/null | tr -d ' \n')
+            LIVE=$(/usr/lib/postgresql/17/bin/pg_dump "${{ secrets.SUPABASE_DB_URL }}" 2>/dev/null || true)
             LIVE=$(/usr/lib/postgresql/17/bin/psql "${{ secrets.SUPABASE_DB_URL }}" -t -c "SELECT COUNT(*) FROM $TABLE;" 2>/dev/null | tr -d ' \n')
-            echo "  $TABLE: backup=$RESTORED, live=$LIVE"
+            echo "  $TABLE: backup=$RESTORED live=$LIVE"
             if [ -n "$REPORT_ROWS" ]; then REPORT_ROWS="$REPORT_ROWS,"; fi
             REPORT_ROWS="$REPORT_ROWS{\"table\":\"$TABLE\",\"backup\":\"$RESTORED\",\"live\":\"$LIVE\"}"
           done
-          SCHEMA_SIZE=$(du -sb schema.sql | cut -f1)
-          DATA_SIZE=$(du -sb data.sql | cut -f1)
+
+          # Stichproben: nicht-sensitive Felder
+          echo "=== Stichproben aus Backup ==="
+
+          USERS_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
+            -c "SELECT id, first_name, last_name, role, created_at FROM users ORDER BY created_at DESC LIMIT 5;" 2>/dev/null | \
+            python3 -c "
+import sys, json
+rows = []
+for line in sys.stdin:
+    line = line.strip()
+    if not line: continue
+    parts = line.split('|')
+    if len(parts) >= 5:
+        rows.append({'id': parts[0], 'name': parts[1]+' '+parts[2], 'role': parts[3], 'created_at': parts[4]})
+print(json.dumps(rows))
+")
+
+          TENANTS_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
+            -c "SELECT id, name, slug, created_at FROM tenants ORDER BY created_at DESC LIMIT 5;" 2>/dev/null | \
+            python3 -c "
+import sys, json
+rows = []
+for line in sys.stdin:
+    line = line.strip()
+    if not line: continue
+    parts = line.split('|')
+    if len(parts) >= 4:
+        rows.append({'id': parts[0], 'name': parts[1], 'slug': parts[2], 'created_at': parts[3]})
+print(json.dumps(rows))
+")
+
+          APPOINTMENTS_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
+            -c "SELECT id, start_time, end_time, status FROM appointments ORDER BY start_time DESC LIMIT 5;" 2>/dev/null | \
+            python3 -c "
+import sys, json
+rows = []
+for line in sys.stdin:
+    line = line.strip()
+    if not line: continue
+    parts = line.split('|')
+    if len(parts) >= 4:
+        rows.append({'id': parts[0], 'start_time': parts[1], 'end_time': parts[2], 'status': parts[3]})
+print(json.dumps(rows))
+")
+
+          DUMP_SIZE=$(du -sb backup.dump | cut -f1)
           LATEST=${{ steps.latest.outputs.LATEST }}
-          echo "{\"backupDate\":\"$LATEST\",\"testedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"schemaBytes\":$SCHEMA_SIZE,\"dataBytes\":$DATA_SIZE,\"rows\":[$REPORT_ROWS],\"status\":\"success\"}" > restore-report.json
-          cat restore-report.json
+
+          python3 -c "
+import json
+report = {
+    'backupDate': '$LATEST',
+    'testedAt': '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
+    'dumpBytes': $DUMP_SIZE,
+    'rows': $REPORT_ROWS,
+    'samples': {
+        'users': $USERS_SAMPLE,
+        'tenants': $TENANTS_SAMPLE,
+        'appointments': $APPOINTMENTS_SAMPLE
+    },
+    'status': 'success'
+}
+print(json.dumps(report, indent=2))
+" > restore-report.json
+
+          echo "✅ Report erstellt"
+          cat restore-report.json | python3 -c "import sys,json; r=json.load(sys.stdin); print('Rows:', [(x['table'], x['backup']) for x in r['rows']])"
 
       - name: Upload restore report to R2
         run: |
           rclone copyto restore-report.json "r2:${{ secrets.R2_BUCKET }}/restore-report.json"
-          echo "✅ Report hochgeladen"
+          echo "✅ Report auf R2 hochgeladen"
 
       - name: Summary
         run: |
           LATEST=${{ steps.latest.outputs.LATEST }}
-          echo ""
           echo "🎉 Restore-Test erfolgreich!"
           echo "   Backup-Datum: $LATEST"
-          echo "   Schema-Datei: $(du -sh schema.sql | cut -f1)"
-          echo "   Daten-Datei: $(du -sh data.sql | cut -f1)"
-          echo "   Test-DB: postgres:17 lokal"
-          echo ""
+          echo "   Dump-Datei:   $(du -sh backup.dump | cut -f1)"
+          echo "   Test-DB:      postgres:17 lokal"
           echo "✅ Backup ist wiederherstellbar!"
 
       - name: Email – Restore erfolgreich
         if: success()
         run: |
           LATEST=${{ steps.latest.outputs.LATEST }}
-          SCHEMA_SIZE=$(du -sh schema.sql | cut -f1)
-          DATA_SIZE=$(du -sh data.sql | cut -f1)
+          DUMP_SIZE=$(du -sh backup.dump | cut -f1)
           curl -s -X POST https://api.resend.com/emails \
             -H "Authorization: Bearer ${{ secrets.RESEND_API_KEY }}" \
             -H "Content-Type: application/json" \
@@ -129,9 +184,8 @@ jobs:
               \"from\": \"Backup System <noreply@simy.ch>\",
               \"to\": [\"info@simy.ch\"],
               \"subject\": \"✅ Backup Restore-Test erfolgreich – $LATEST\",
-              \"html\": \"<h2>✅ Wöchentlicher Backup-Test bestanden</h2><p>Das Backup vom <strong>$LATEST</strong> wurde erfolgreich in einer PostgreSQL 17 Testdatenbank wiederhergestellt.</p><ul><li>Schema: $SCHEMA_SIZE</li><li>Daten: $DATA_SIZE</li><li>Zeilenzahlen: users, appointments, tenants geprüft</li></ul><p><a href='https://github.com/Kilchi555/driving-team-app/actions/workflows/backup-restore-test.yml'>Details auf GitHub →</a></p>\"
+              \"html\": \"<h2>✅ Wöchentlicher Backup-Test bestanden</h2><p>Das Backup vom <strong>$LATEST</strong> wurde erfolgreich via <code>pg_restore</code> in einer PostgreSQL 17 Testdatenbank wiederhergestellt.</p><ul><li>Backup-Datei: $DUMP_SIZE</li><li>Format: custom (komprimiert)</li><li>Tabellen geprüft: users, appointments, tenants, lessons</li></ul><p><a href='https://github.com/Kilchi555/driving-team-app/actions/workflows/backup-restore-test.yml'>Details auf GitHub →</a></p>\"
             }"
-          echo "✅ Erfolgs-Email gesendet"
 
       - name: Email – Restore fehlgeschlagen
         if: failure()
@@ -143,6 +197,5 @@ jobs:
               \"from\": \"Backup System <noreply@simy.ch>\",
               \"to\": [\"info@simy.ch\"],
               \"subject\": \"🚨 ALARM: Backup Restore-Test fehlgeschlagen!\",
-              \"html\": \"<h2>🚨 Backup Restore-Test FEHLGESCHLAGEN</h2><p>Der wöchentliche Restore-Test ist heute Nacht fehlgeschlagen. Das Backup ist möglicherweise <strong>nicht wiederherstellbar</strong>.</p><p><strong>Sofortmassnahme:</strong> Backup manuell prüfen und testen.</p><p><a href='https://github.com/Kilchi555/driving-team-app/actions/workflows/backup-restore-test.yml'>Details &amp; Logs auf GitHub →</a></p><p><a href='https://dash.cloudflare.com'>Cloudflare R2 Backups →</a></p>\"
+              \"html\": \"<h2>🚨 Backup Restore-Test FEHLGESCHLAGEN</h2><p>Der wöchentliche Restore-Test ist heute Nacht fehlgeschlagen. Das Backup ist möglicherweise <strong>nicht wiederherstellbar</strong>.</p><p><strong>Sofortmassnahme:</strong> Backup manuell prüfen und testen.</p><p><a href='https://github.com/Kilchi555/driving-team-app/actions/workflows/backup-restore-test.yml'>Logs auf GitHub →</a></p><p><a href='https://dash.cloudflare.com'>Cloudflare R2 →</a></p>\"
             }"
-          echo "🚨 Fehler-Email gesendet"

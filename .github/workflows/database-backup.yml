@@ -4,7 +4,6 @@ on:
   schedule:
     # Täglich um 02:00 UTC (04:00 MESZ)
     - cron: '0 2 * * *'
-  # Manueller Trigger für Tests
   workflow_dispatch:
 
 jobs:
@@ -24,19 +23,24 @@ jobs:
         id: date
         run: echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
 
-      - name: Dump schema
+      - name: Dump schema (plain SQL – lesbar)
         env:
           PGSSLMODE: require
         run: |
-          /usr/lib/postgresql/17/bin/pg_dump "${{ secrets.SUPABASE_DB_URL }}" --schema-only -f schema.sql
+          /usr/lib/postgresql/17/bin/pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
+            --schema-only \
+            -f schema.sql
           echo "✅ Schema: $(du -sh schema.sql | cut -f1)"
 
-      - name: Dump data
+      - name: Dump full backup (custom format – komprimiert)
         env:
           PGSSLMODE: require
         run: |
-          /usr/lib/postgresql/17/bin/pg_dump "${{ secrets.SUPABASE_DB_URL }}" --data-only --column-inserts -f data.sql
-          echo "✅ Daten: $(du -sh data.sql | cut -f1)"
+          /usr/lib/postgresql/17/bin/pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
+            --format=custom \
+            --compress=9 \
+            -f backup.dump
+          echo "✅ Backup: $(du -sh backup.dump | cut -f1)"
 
       - name: Install rclone
         run: |
@@ -56,18 +60,51 @@ jobs:
         run: |
           DATE=${{ steps.date.outputs.DATE }}
           rclone copyto schema.sql "r2:${{ secrets.R2_BUCKET }}/$DATE/schema.sql"
-          rclone copyto data.sql "r2:${{ secrets.R2_BUCKET }}/$DATE/data.sql"
-          echo "✅ R2 Upload erfolgreich: ${{ secrets.R2_BUCKET }}/$DATE"
+          rclone copyto backup.dump "r2:${{ secrets.R2_BUCKET }}/$DATE/backup.dump"
+          echo "✅ R2 Upload: ${{ secrets.R2_BUCKET }}/$DATE (schema.sql + backup.dump)"
 
-      - name: Delete backups older than 30 days
+      - name: GFS Retention – Grandfather-Father-Son
         run: |
-          CUTOFF=$(date -d '30 days ago' +%Y-%m-%d)
-          echo "🗑️ Lösche Backups älter als $CUTOFF..."
-          rclone lsf "r2:${{ secrets.R2_BUCKET }}" --dirs-only | while read folder; do
+          TODAY=$(date +%Y-%m-%d)
+          CUTOFF_DAILY=$(date -d '7 days ago' +%Y-%m-%d)
+          CUTOFF_WEEKLY=$(date -d '28 days ago' +%Y-%m-%d)
+          CUTOFF_MONTHLY=$(date -d '365 days ago' +%Y-%m-%d)
+
+          echo "🗂️  GFS Retention:"
+          echo "   Täglich behalten: >= $CUTOFF_DAILY"
+          echo "   Wöchentlich (Mo): >= $CUTOFF_WEEKLY"
+          echo "   Monatlich (1.):   >= $CUTOFF_MONTHLY"
+          echo "   Jährlich (1.1.):  immer"
+
+          rclone lsf "r2:${{ secrets.R2_BUCKET }}" --dirs-only | sort | while read folder; do
             folder="${folder%/}"
-            if [[ "$folder" < "$CUTOFF" ]]; then
+            if ! [[ "$folder" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then continue; fi
+
+            DAY="${folder:8:2}"
+            MONTH="${folder:5:2}"
+            DOW=$(date -d "$folder" +%u 2>/dev/null) # 1=Montag
+
+            KEEP=false
+
+            # Täglich: letzte 7 Tage
+            if [[ "$folder" > "$CUTOFF_DAILY" ]] || [[ "$folder" == "$CUTOFF_DAILY" ]]; then
+              KEEP=true
+            # Wöchentlich: Montage der letzten 4 Wochen
+            elif [[ "$folder" > "$CUTOFF_WEEKLY" ]] && [[ "$DOW" == "1" ]]; then
+              KEEP=true
+            # Monatlich: 1. des Monats der letzten 12 Monate
+            elif [[ "$folder" > "$CUTOFF_MONTHLY" ]] && [[ "$DAY" == "01" ]]; then
+              KEEP=true
+            # Jährlich: 1. Januar – für immer (DSG/DSGVO Compliance)
+            elif [[ "$MONTH" == "01" ]] && [[ "$DAY" == "01" ]]; then
+              KEEP=true
+            fi
+
+            if [[ "$KEEP" == "false" ]]; then
               rclone purge "r2:${{ secrets.R2_BUCKET }}/$folder"
-              echo "🗑️ Gelöscht: $folder"
+              echo "🗑️  Gelöscht: $folder"
+            else
+              echo "✅ Behalten: $folder"
             fi
           done
 
@@ -75,7 +112,7 @@ jobs:
         run: |
           DATE=${{ steps.date.outputs.DATE }}
           echo "🎉 Backup abgeschlossen!"
-          echo "   Datum: $DATE"
-          echo "   Schema: $(du -sh schema.sql | cut -f1)"
-          echo "   Daten: $(du -sh data.sql | cut -f1)"
-          echo "   R2: ${{ secrets.R2_BUCKET }}/$DATE"
+          echo "   Datum:    $DATE"
+          echo "   Schema:   $(du -sh schema.sql | cut -f1)"
+          echo "   Backup:   $(du -sh backup.dump | cut -f1)"
+          echo "   R2:       ${{ secrets.R2_BUCKET }}/$DATE"
