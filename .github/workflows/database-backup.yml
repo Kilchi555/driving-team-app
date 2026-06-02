@@ -22,25 +22,31 @@ jobs:
         id: date
         run: echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
 
+      - name: Resolve Supabase IPv4
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          DB_HOST=$(echo "$SUPABASE_DB_URL" | sed -E 's|.*@([^:/]+).*|\1|')
+          DB_IPV4=$(dig +short A "$DB_HOST" | grep -E '^[0-9]+\.' | head -1)
+          echo "Resolved $DB_HOST → $DB_IPV4"
+          if [ -z "$DB_IPV4" ]; then
+            echo "❌ IPv4 resolution failed!" && exit 1
+          fi
+          echo "PGHOSTADDR=$DB_IPV4" >> $GITHUB_ENV
+          echo "PGSSLMODE=require" >> $GITHUB_ENV
+
       - name: Dump schema
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-          PGSSLMODE: require
         run: |
-          DB_HOST=$(echo "$SUPABASE_DB_URL" | sed -E 's|.*@([^:/]+).*|\1|')
-          DB_IPV4=$(getent ahostsv4 "$DB_HOST" | awk '{print $1}' | head -1)
-          echo "Resolved $DB_HOST → $DB_IPV4"
-          PGHOSTADDR=$DB_IPV4 pg_dump "$SUPABASE_DB_URL" --schema-only -f schema.sql
+          pg_dump "$SUPABASE_DB_URL" --schema-only -f schema.sql
           echo "✅ Schema: $(du -sh schema.sql | cut -f1)"
 
       - name: Dump data
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-          PGSSLMODE: require
         run: |
-          DB_HOST=$(echo "$SUPABASE_DB_URL" | sed -E 's|.*@([^:/]+).*|\1|')
-          DB_IPV4=$(getent ahostsv4 "$DB_HOST" | awk '{print $1}' | head -1)
-          PGHOSTADDR=$DB_IPV4 pg_dump "$SUPABASE_DB_URL" --data-only --column-inserts -f data.sql
+          pg_dump "$SUPABASE_DB_URL" --data-only --column-inserts -f data.sql
           echo "✅ Daten: $(du -sh data.sql | cut -f1)"
 
       - name: Install rclone
