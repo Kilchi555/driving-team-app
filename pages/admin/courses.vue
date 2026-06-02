@@ -1577,19 +1577,13 @@
                 </label>
               </div>
 
-              <!-- SMS Notification -->
-              <div class="flex items-center justify-between">
-                <div class="flex items-center">
+              <!-- SMS Notification (not yet implemented) -->
+              <div class="flex items-center justify-between opacity-40 cursor-not-allowed">
+                <div class="flex items-center gap-2">
                   <span class="text-gray-700">📱 SMS</span>
+                  <span class="text-xs text-gray-400">(demnächst)</span>
                 </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input 
-                    v-model="notifyBySMS" 
-                    type="checkbox" 
-                    class="sr-only peer"
-                  >
-                  <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                </label>
+                <div class="w-11 h-6 bg-gray-200 rounded-full"></div>
               </div>
             </div>
           </div>
@@ -5441,10 +5435,13 @@ const executeCourseCancellation = async () => {
       method: 'POST',
       body: {
         courseId: cancelingCourse.value.id,
-        courseName: cancelingCourse.value.name,
         notifyByEmail: notifyByEmail.value,
-        notifyBySMS: notifyBySMS.value,
-        participants: courseParticipants.value.map((p: any) => ({ user_id: p.user_id })),
+        participants: courseParticipants.value.map((p: any) => ({
+          user_id: p.user_id,
+          email: p.email,
+          first_name: p.first_name,
+          last_name: p.last_name,
+        })),
       },
     })
 
