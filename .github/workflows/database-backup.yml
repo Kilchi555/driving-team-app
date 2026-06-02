@@ -1,0 +1,80 @@
+name: Daily Database Backup
+
+on:
+  schedule:
+    # Täglich um 02:00 UTC (04:00 MESZ)
+    - cron: '0 2 * * *'
+  # Manueller Trigger für Tests
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+
+      - name: Set backup date
+        id: date
+        run: echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
+      - name: Dump schema
+        run: |
+          pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
+            --schema-only \
+            -f schema.sql
+          echo "✅ Schema: $(du -sh schema.sql | cut -f1)"
+
+      - name: Dump data
+        run: |
+          pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
+            --data-only \
+            --column-inserts \
+            -f data.sql
+          echo "✅ Daten: $(du -sh data.sql | cut -f1)"
+
+      - name: Install rclone
+        run: |
+          curl -sSL https://rclone.org/install.sh | sudo bash -s beta 2>/dev/null
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf << EOF
+          [r2]
+          type = s3
+          provider = Cloudflare
+          access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
+          secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          endpoint = ${{ secrets.R2_ENDPOINT }}
+          acl = private
+          EOF
+
+      - name: Upload to Cloudflare R2
+        run: |
+          DATE=${{ steps.date.outputs.DATE }}
+          rclone copy schema.sql "r2:${{ secrets.R2_BUCKET }}/$DATE/schema.sql"
+          rclone copy data.sql "r2:${{ secrets.R2_BUCKET }}/$DATE/data.sql"
+          echo "✅ R2 Upload erfolgreich: ${{ secrets.R2_BUCKET }}/$DATE"
+
+      - name: Delete backups older than 30 days
+        run: |
+          CUTOFF=$(date -d '30 days ago' +%Y-%m-%d)
+          echo "🗑️ Lösche Backups älter als $CUTOFF..."
+          rclone lsf "r2:${{ secrets.R2_BUCKET }}" --dirs-only | while read folder; do
+            folder="${folder%/}"
+            if [[ "$folder" < "$CUTOFF" ]]; then
+              rclone purge "r2:${{ secrets.R2_BUCKET }}/$folder"
+              echo "🗑️ Gelöscht: $folder"
+            fi
+          done
+
+      - name: Summary
+        run: |
+          DATE=${{ steps.date.outputs.DATE }}
+          echo "🎉 Backup abgeschlossen!"
+          echo "   Datum: $DATE"
+          echo "   Schema: $(du -sh schema.sql | cut -f1)"
+          echo "   Daten: $(du -sh data.sql | cut -f1)"
+          echo "   R2: ${{ secrets.R2_BUCKET }}/$DATE"
