@@ -600,10 +600,9 @@ const quickAction = (student: any) => {
   selectedStudent.value = student
 }
 
-const editStudent = (student: any) => {
+const editStudent = () => {
+  logger.debug('Edit student:', selectedStudent.value)
   selectedStudent.value = null
-  // TODO: Implement edit modal
-  logger.debug('Edit student:', student)
 }
 
 const viewLessons = (student: any) => {
@@ -617,22 +616,14 @@ const callStudent = (student: any) => {
   }
 }
 
-const handleCreateAppointment = (student: any) => {
+const handleCreateAppointment = () => {
+  logger.debug('Create appointment for:', selectedStudent.value)
   selectedStudent.value = null
-  // Verwende deine bestehende createAppointment Funktion oder navigiere direkt
-  logger.debug('Create appointment for:', student)
-  // navigateTo(`/appointments/create?student=${student.id}`)
-  
-  // Oder falls du die bestehende Funktion verwenden willst:
-  // createAppointment(student)
 }
 
-const handleEvaluateLesson = (lesson: any) => {
+const handleEvaluateLesson = () => {
+  logger.debug('Evaluate lesson for:', selectedStudent.value)
   selectedStudent.value = null
-  // TODO: Öffne Bewertungsmodal für diese spezifische Lektion
-  logger.debug('Evaluate lesson:', lesson)
-  // showEvaluationModal.value = true
-  // selectedAppointment.value = lesson
 }
 
 const handleStudentUpdated = (updateData: { id: string, [key: string]: any }) => {
