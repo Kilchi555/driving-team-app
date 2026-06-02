@@ -55,8 +55,8 @@ jobs:
       - name: Upload to Cloudflare R2
         run: |
           DATE=${{ steps.date.outputs.DATE }}
-          rclone copy schema.sql "r2:${{ secrets.R2_BUCKET }}/$DATE/schema.sql"
-          rclone copy data.sql "r2:${{ secrets.R2_BUCKET }}/$DATE/data.sql"
+          rclone copyto schema.sql "r2:${{ secrets.R2_BUCKET }}/$DATE/schema.sql"
+          rclone copyto data.sql "r2:${{ secrets.R2_BUCKET }}/$DATE/data.sql"
           echo "✅ R2 Upload erfolgreich: ${{ secrets.R2_BUCKET }}/$DATE"
 
       - name: Delete backups older than 30 days
