@@ -203,7 +203,7 @@ export default defineEventHandler(async (event) => {
               <tbody>${paymentRows}</tbody>
               <tfoot>
                 <tr style="background:#fef2f2">
-                  <td colspan="2" style="padding:12px;font-size:14px;font-weight:700;color:#111827">Total</td>
+                  <td style="padding:12px;font-size:14px;font-weight:700;color:#111827">Total</td>
                   <td style="padding:12px;font-size:16px;font-weight:700;color:#dc2626">CHF ${totalCHF}</td>
                 </tr>
               </tfoot>
