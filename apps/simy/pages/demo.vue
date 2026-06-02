@@ -13,9 +13,9 @@
           style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
           ⚡ Kostenloser Demo-Zugang
         </div>
-        <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-5 leading-tight">In 5 Minuten startklar</h1>
+        <h1 class="text-5xl font-black text-gray-900 mb-5 leading-tight">In 5 Minuten startklar</h1>
         <p class="text-xl text-gray-500 mb-10 leading-relaxed">
-          Teste Simy 60 Tage lang vollständig kostenlos — ohne Kreditkarte, ohne Risiko. Alles eingerichtet, sofort bereit.
+          Teste simy 60 Tage lang vollständig kostenlos — ohne Kreditkarte, ohne Risiko. Alles eingerichtet, sofort bereit.
         </p>
 
         <!-- Checklist -->
@@ -36,7 +36,7 @@
           </svg>
           Jetzt kostenlos starten
         </a>
-        <p class="text-xs text-gray-400 mt-4">Kein Kreditkarte · Keine Kündigung nötig · Sofort verfügbar</p>
+        <p class="text-xs text-gray-400 mt-4">Keine Kreditkarte · Keine Kündigung nötig · Sofort verfügbar</p>
       </div>
     </section>
 
@@ -94,9 +94,9 @@
 useHead({
   title: 'Demo & Gratis-Test – Simy | 60 Tage kostenlos testen',
   meta: [
-    { name: 'description', content: 'Simy 60 Tage kostenlos testen. Kein Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar. Jetzt Fahrschulsoftware Demo starten.' },
+    { name: 'description', content: 'Simy 60 Tage kostenlos testen. Keine Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar. Jetzt Fahrschulsoftware Demo starten.' },
     { property: 'og:title', content: 'Demo & Gratis-Test – Simy | 60 Tage kostenlos' },
-    { property: 'og:description', content: 'Simy 60 Tage kostenlos testen — kein Kreditkarte, keine Kündigung.' },
+    { property: 'og:description', content: 'Simy 60 Tage kostenlos testen — keine Kreditkarte, keine Kündigung.' },
     { property: 'og:url', content: 'https://simy.ch/demo' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/demo' }],
@@ -112,7 +112,7 @@ const steps = [
 ]
 
 const trialFeatures = [
-  { icon: '📅', title: 'Online-Terminbuchung', desc: 'Sofort Schüler einladen und mit mit echten Terminen testen.' },
+  { icon: '📅', title: 'Online-Terminbuchung', desc: 'Sofort Schüler einladen und mit echten Terminen testen.' },
   { icon: '💶', title: 'Einfache Rechnungsstellung', desc: 'Erste Rechnung in 2 Minuten erstellen und per Mail versenden.' },
   { icon: '📱', title: 'Fahrlehrer-App', desc: 'iOS und Android — sofort installieren und Kalender im Griff haben.' },
   { icon: '💵', title: 'Barzahlungen erfassen', desc: 'Barzahlungen direkt eingeben und jederzeit den aktuellen Stand im Überblick behalten.' },

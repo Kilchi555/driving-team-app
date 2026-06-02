@@ -194,7 +194,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Kostenlos starten — heute noch</h2>
-        <p class="text-purple-200 mb-8">60 Tage gratis. Kein Kreditkarte. In 5 Minuten eingerichtet.</p>
+        <p class="text-purple-200 mb-8">60 Tage gratis. Keine Kreditkarte. In 5 Minuten eingerichtet.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: #6000BD">
@@ -213,10 +213,10 @@ import { ref, computed } from 'vue'
 useHead({
   title: 'Preise – Simy | Fahrschulsoftware ab CHF 49/Monat',
   meta: [
-    { name: 'description', content: 'Simy Preise: Fahrschulsoftware ab CHF 49/Monat. 60 Tage kostenlos testen, kein Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.' },
+    { name: 'description', content: 'Simy Preise: Fahrschulsoftware ab CHF 49/Monat. 60 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.' },
     { name: 'keywords', content: 'Simy preis, fahrschulapp kosten, fahrschulsoftware preis' },
     { property: 'og:title', content: 'Preise – Simy | Fahrschulsoftware ab CHF 49/Monat' },
-    { property: 'og:description', content: 'Simy Preise: ab CHF 49/Monat. 60 Tage kostenlos testen, kein Kreditkarte, monatlich kündbar.' },
+    { property: 'og:description', content: 'Simy Preise: ab CHF 49/Monat. 60 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar.' },
     { property: 'og:url', content: 'https://simy.ch/preise' },
     { name: 'twitter:title', content: 'Preise – Simy | Fahrschulsoftware ab CHF 49/Monat' },
     { name: 'twitter:description', content: 'Simy Preise: ab CHF 49/Monat. 60 Tage kostenlos testen.' },

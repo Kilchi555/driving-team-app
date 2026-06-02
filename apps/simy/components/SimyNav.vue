@@ -108,7 +108,7 @@
 
     <!-- Mobile menu -->
     <Transition name="slide-down">
-      <div v-if="mobileOpen" class="md:hidden border-t border-gray-100 bg-white px-6 py-4 space-y-1">
+      <div v-if="mobileOpen" class="md:hidden border-t border-gray-100 bg-white px-6 py-4 space-y-1 overflow-y-auto" style="max-height: calc(100dvh - 64px)">
         <p class="text-xs font-bold uppercase tracking-widest text-gray-400 px-3 pt-2 pb-1">Fahrschule</p>
         <a href="/fahrschule" class="mobile-nav-link" @click="mobileOpen=false">Übersicht</a>
         <a href="/fahrschule/software" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Fahrschulsoftware</a>

@@ -53,7 +53,7 @@
         <div class="flex flex-wrap items-center justify-center gap-5 mt-12 text-sm text-gray-400">
           <span class="flex items-center gap-1.5">
             <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-            Kein Kreditkarte nötig
+            Keine Kreditkarte nötig
           </span>
           <span class="flex items-center gap-1.5">
             <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
@@ -268,7 +268,7 @@
     <section class="py-28 px-6" style="background: linear-gradient(135deg, #6000BD 0%, #8B2FE8 100%)">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-4xl font-black text-white mb-5">Bereit, deine Fahrschule auf Autopilot zu stellen?</h2>
-        <p class="text-purple-200 text-lg mb-10">60 Tage kostenlos testen. Kein Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar.</p>
+        <p class="text-purple-200 text-lg mb-10">60 Tage kostenlos testen. Keine Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90 hover:-translate-y-1"
           style="color: #6000BD; box-shadow: 0 12px 40px rgba(0,0,0,0.2)">
