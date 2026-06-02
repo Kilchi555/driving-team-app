@@ -93,7 +93,7 @@
         </div>
         <div v-else class="space-y-2">
           <div
-            v-for="folder in backupData?.r2?.folders ?? []"
+            v-for="folder in (backupData?.r2?.folders ?? []).slice(0, 3)"
             :key="folder.date"
             class="flex items-center justify-between p-3 rounded-lg border"
             :class="folder.status === 'complete' ? 'border-emerald-100 bg-emerald-50' : 'border-amber-100 bg-amber-50'"

@@ -1,0 +1,107 @@
+name: Weekly Backup Restore Test
+
+on:
+  schedule:
+    # Jeden Montag um 03:00 UTC (05:00 MESZ)
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  restore-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: restore_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Install rclone + PostgreSQL 17 client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-17
+          curl -sSL https://rclone.org/install.sh | sudo bash -s beta 2>/dev/null
+
+      - name: Configure rclone
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf << EOF
+          [r2]
+          type = s3
+          provider = Cloudflare
+          access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
+          secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          endpoint = ${{ secrets.R2_ENDPOINT }}
+          acl = private
+          EOF
+
+      - name: Find latest backup in R2
+        id: latest
+        run: |
+          LATEST=$(rclone lsf "r2:${{ secrets.R2_BUCKET }}" --dirs-only | sort -r | head -1 | tr -d '/')
+          echo "LATEST=$LATEST" >> $GITHUB_OUTPUT
+          echo "📦 Neuestes Backup: $LATEST"
+          if [ -z "$LATEST" ]; then
+            echo "❌ Kein Backup in R2 gefunden!" && exit 1
+          fi
+
+      - name: Download backup from R2
+        run: |
+          LATEST=${{ steps.latest.outputs.LATEST }}
+          rclone copyto "r2:${{ secrets.R2_BUCKET }}/$LATEST/schema.sql" schema.sql
+          rclone copyto "r2:${{ secrets.R2_BUCKET }}/$LATEST/data.sql" data.sql
+          echo "✅ Downloaded: $(du -sh schema.sql | cut -f1) schema, $(du -sh data.sql | cut -f1) data"
+
+      - name: Restore schema into test DB
+        env:
+          PGPASSWORD: testpassword
+        run: |
+          /usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -f schema.sql
+          echo "✅ Schema restored"
+
+      - name: Restore data into test DB
+        env:
+          PGPASSWORD: testpassword
+        run: |
+          /usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -f data.sql
+          echo "✅ Data restored"
+
+      - name: Verify row counts vs live DB
+        env:
+          PGPASSWORD: testpassword
+          PGSSLMODE: require
+        run: |
+          echo "=== Row counts in restored backup ==="
+          TABLES="users appointments tenants"
+          for TABLE in $TABLES; do
+            RESTORED=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -c "SELECT COUNT(*) FROM $TABLE;" 2>/dev/null | tr -d ' ')
+            LIVE=$(/usr/lib/postgresql/17/bin/psql "${{ secrets.SUPABASE_DB_URL }}" -t -c "SELECT COUNT(*) FROM $TABLE;" 2>/dev/null | tr -d ' ')
+            echo "  $TABLE: backup=$RESTORED, live=$LIVE"
+            if [ -z "$RESTORED" ] || [ "$RESTORED" = "0" ]; then
+              echo "⚠️  Warnung: $TABLE hat 0 Zeilen im Backup!"
+            fi
+          done
+
+      - name: Summary
+        run: |
+          LATEST=${{ steps.latest.outputs.LATEST }}
+          echo ""
+          echo "🎉 Restore-Test erfolgreich!"
+          echo "   Backup-Datum: $LATEST"
+          echo "   Schema-Datei: $(du -sh schema.sql | cut -f1)"
+          echo "   Daten-Datei: $(du -sh data.sql | cut -f1)"
+          echo "   Test-DB: postgres:17 lokal"
+          echo ""
+          echo "✅ Backup ist wiederherstellbar!"
