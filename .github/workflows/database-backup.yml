@@ -53,7 +53,7 @@ jobs:
           access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
           secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
           endpoint = ${{ secrets.R2_ENDPOINT }}
-          acl = private
+          no_check_bucket = true
           EOF
 
       - name: Upload to Cloudflare R2
