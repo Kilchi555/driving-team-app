@@ -102,7 +102,7 @@
               <div class="w-2 h-2 rounded-full" :class="folder.status === 'complete' ? 'bg-emerald-500' : 'bg-amber-500'"></div>
               <div>
                 <div class="font-mono text-sm font-semibold text-gray-900">{{ folder.date }}</div>
-                <div class="text-xs text-gray-500">{{ folder.files.map(f => f.name).join(', ') }}</div>
+                <div class="text-xs text-gray-500">{{ folder.files.map((f: any) => f.name).join(', ') }}</div>
               </div>
             </div>
             <div class="text-right">
@@ -260,6 +260,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
 definePageMeta({ layout: 'tenant-admin' })
 
 const loading = ref(true)
@@ -402,10 +403,100 @@ onMounted(refresh)
 </script>
 
 <style scoped>
+.sa-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+.sa-page-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  letter-spacing: -0.03em;
+}
+.sa-page-sub {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+.sa-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.3);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.sa-btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.sa-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
 .sa-card {
-  @apply bg-white rounded-2xl border border-gray-200 p-6 shadow-sm;
+  background: white;
+  border-radius: 1rem;
+  border: 1px solid #e5e7eb;
+  padding: 1.5rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 .sa-card-title {
-  @apply flex items-center gap-2 text-base font-semibold text-gray-900;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.sa-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+@media (min-width: 640px) { .sa-kpi-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.sa-kpi-card {
+  border-radius: 14px;
+  padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+}
+.sa-kpi-indigo  { background: rgba(99, 102, 241, 0.08); border-color: rgba(99, 102, 241, 0.2); }
+.sa-kpi-emerald { background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.2); }
+.sa-kpi-amber   { background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.2); }
+.sa-kpi-violet  { background: rgba(139, 92, 246, 0.08); border-color: rgba(139, 92, 246, 0.2); }
+
+.sa-kpi-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 0.75rem;
+}
+.sa-kpi-indigo  .sa-kpi-icon { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+.sa-kpi-emerald .sa-kpi-icon { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+.sa-kpi-amber   .sa-kpi-icon { background: rgba(245,158,11,0.15);  color: #fcd34d; }
+.sa-kpi-violet  .sa-kpi-icon { background: rgba(139,92,246,0.15);  color: #c4b5fd; }
+
+.sa-kpi-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+.sa-kpi-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.375rem;
+  font-weight: 500;
 }
 </style>
