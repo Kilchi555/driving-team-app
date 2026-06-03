@@ -535,6 +535,12 @@ const submitInquiry = async () => {
 
       const label = isSpecificRequest.value ? 'specific-inquiry' : 'general-inquiry'
 
+      // Enhanced Conversions: pass user data so Google can match the server-side import
+      gtag('set', 'user_data', {
+        email: email.value.trim().toLowerCase(),
+        phone_number: phone.value.replace(/\s+/g, ''),
+      })
+
       gtag('event', 'form_submit', {
         event_category: 'conversion',
         event_label: label,
