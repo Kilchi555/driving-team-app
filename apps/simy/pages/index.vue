@@ -596,7 +596,7 @@
           </div>
 
           <p class="text-center text-xs text-gray-400 mt-4">
-            Simy Starter ab CHF {{ stripePrices?.starter?.formatted ?? '69' }}.– / Monat — Amortisation am ersten Tag.
+            Simy Starter ab CHF {{ stripePrices?.starter?.formatted ?? '49' }}.– / Monat — Amortisation am ersten Tag.
           </p>
         </div>
       </div>
@@ -1921,7 +1921,7 @@ useHead({
             name: 'Was kostet Simy?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Simy bietet verschiedene Preispläne ab CHF 69/Monat. Die ersten 60 Tage sind vollständig kostenlos – keine Kreditkarte, keine Bindung.',
+              text: 'Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 60 Tage sind vollständig kostenlos – keine Kreditkarte, keine Bindung.',
             },
           },
           {
@@ -2375,7 +2375,7 @@ const PLAN_STATIC = [
     key: 'starter',
     name: 'Starter',
     tagline: 'Alles für den Einzelfahrlehrer',
-    fallbackPrice: '69',
+    fallbackPrice: '49',
     highlighted: true,
     featureList: ['1 Fahrlehrer', 'Onlineterminbuchung', 'Kundenverwaltung', 'Rechnungen & Zahlungen', 'Prüfungsverwaltung', 'E-Mail Support'],
   },
@@ -2383,7 +2383,7 @@ const PLAN_STATIC = [
     key: 'professional',
     name: 'Professional',
     tagline: 'Für wachsende Fahrschulen',
-    fallbackPrice: '129',
+    fallbackPrice: '149',
     highlighted: false,
     featureList: ['Bis 5 Fahrlehrer', 'Alles aus Starter', 'Kursbuchungsseite', 'Prioritäts-Support'],
   },
