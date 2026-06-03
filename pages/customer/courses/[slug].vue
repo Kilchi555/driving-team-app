@@ -278,9 +278,9 @@
                 </div>
                 <div class="text-right">
                   <p class="text-sm text-slate-500">Freie Plätze</p>
-                  <p class="font-semibold" :class="{'text-red-500': course.free_slots === 0}" :style="course.free_slots > 0 ? {'color': tenantBranding?.primary_color || '#10B981'} : {}">
+                  <p class="font-semibold" :class="{'text-red-500': course.free_slots <= 0}" :style="course.free_slots > 0 ? {'color': tenantBranding?.primary_color || '#10B981'} : {}">
                     <span v-if="course.free_slots > 3">mehr als 3</span>
-                    <span v-else-if="course.free_slots === 0">Ausgebucht</span>
+                    <span v-else-if="course.free_slots <= 0">Ausgebucht</span>
                     <span v-else-if="course.free_slots !== undefined">{{ course.free_slots }}</span>
                     <span v-else>?</span>
                   </p>
@@ -319,7 +319,7 @@
 
                 <!-- Ausgebucht: Warteliste Button -->
                 <a
-                  v-if="course.free_slots === 0"
+                  v-if="course.free_slots <= 0"
                   :href="`/booking/waitlist/${course.id}`"
                   @click.stop
                   class="block w-full px-4 py-2 font-medium rounded-lg border-2 transition-colors text-center"
