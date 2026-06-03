@@ -132,7 +132,7 @@ jobs:
           PGPASSWORD: testpassword
         run: |
           echo "=== Zeilenzahlen: Backup vs. Live ==="
-          TABLES="users appointments tenants payments"
+          TABLES="users appointments tenants payments locations exam_results course_sessions course_registrations student_credits credit_transactions invoices notes"
           REPORT_ROWS=""
           for TABLE in $TABLES; do
             RESTORED=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -c "SELECT COUNT(*) FROM public.$TABLE;" 2>/dev/null | tr -d ' \n')
@@ -187,6 +187,48 @@ jobs:
           print(json.dumps(rows))
           ")
 
+          PAYMENTS_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
+            -c "SELECT id, total_amount_rappen, payment_method, payment_status, created_at FROM payments ORDER BY created_at DESC LIMIT 5;" 2>/dev/null | \
+            python3 -c "
+          import sys, json
+          rows = []
+          for line in sys.stdin:
+              line = line.strip()
+              if not line: continue
+              parts = line.split('|')
+              if len(parts) >= 5:
+                  rows.append({'id': parts[0], 'amount_rappen': parts[1], 'method': parts[2], 'status': parts[3], 'created_at': parts[4]})
+          print(json.dumps(rows))
+          ")
+
+          COURSES_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
+            -c "SELECT id, title, start_time, end_time, current_participants, max_participants FROM course_sessions ORDER BY start_time DESC LIMIT 5;" 2>/dev/null | \
+            python3 -c "
+          import sys, json
+          rows = []
+          for line in sys.stdin:
+              line = line.strip()
+              if not line: continue
+              parts = line.split('|')
+              if len(parts) >= 6:
+                  rows.append({'id': parts[0], 'title': parts[1], 'start_time': parts[2], 'end_time': parts[3], 'participants': parts[4], 'max': parts[5]})
+          print(json.dumps(rows))
+          ")
+
+          LOCATIONS_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
+            -c "SELECT id, name, city, canton, is_active FROM locations ORDER BY created_at DESC LIMIT 5;" 2>/dev/null | \
+            python3 -c "
+          import sys, json
+          rows = []
+          for line in sys.stdin:
+              line = line.strip()
+              if not line: continue
+              parts = line.split('|')
+              if len(parts) >= 5:
+                  rows.append({'id': parts[0], 'name': parts[1], 'city': parts[2], 'canton': parts[3], 'active': parts[4]})
+          print(json.dumps(rows))
+          ")
+
           DUMP_SIZE=$(du -sb backup.dump | cut -f1)
           LATEST=${{ steps.latest.outputs.LATEST }}
 
@@ -200,7 +242,10 @@ jobs:
               'samples': {
                   'users': $USERS_SAMPLE,
                   'tenants': $TENANTS_SAMPLE,
-                  'appointments': $APPOINTMENTS_SAMPLE
+                  'appointments': $APPOINTMENTS_SAMPLE,
+                  'payments': $PAYMENTS_SAMPLE,
+                  'courses': $COURSES_SAMPLE,
+                  'locations': $LOCATIONS_SAMPLE
               },
               'status': 'success'
           }
@@ -236,7 +281,7 @@ jobs:
               \"from\": \"Backup System <noreply@simy.ch>\",
               \"to\": [\"info@simy.ch\"],
               \"subject\": \"✅ Backup Restore-Test erfolgreich – $LATEST\",
-              \"html\": \"<h2>✅ Wöchentlicher Backup-Test bestanden</h2><p>Das Backup vom <strong>$LATEST</strong> wurde erfolgreich via <code>pg_restore</code> in einer PostgreSQL 17 Testdatenbank wiederhergestellt.</p><ul><li>Backup-Datei: $DUMP_SIZE</li><li>Format: custom (komprimiert)</li><li>Tabellen geprüft: users, appointments, tenants, lessons</li></ul><p><a href='https://github.com/Kilchi555/driving-team-app/actions/workflows/backup-restore-test.yml'>Details auf GitHub →</a></p>\"
+              \"html\": \"<h2>✅ Wöchentlicher Backup-Test bestanden</h2><p>Das Backup vom <strong>$LATEST</strong> wurde erfolgreich via <code>pg_restore</code> in einer PostgreSQL 17 Testdatenbank wiederhergestellt.</p><ul><li>Backup-Datei: $DUMP_SIZE</li><li>Format: custom (komprimiert)</li><li>Tabellen geprüft: users, appointments, tenants, payments, locations, exam_results, course_sessions, course_registrations, student_credits, credit_transactions, invoices, notes</li></ul><p><a href='https://github.com/Kilchi555/driving-team-app/actions/workflows/backup-restore-test.yml'>Details auf GitHub →</a></p>\"
             }"
 
       - name: Email – Restore fehlgeschlagen
