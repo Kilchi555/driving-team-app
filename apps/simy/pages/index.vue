@@ -2391,7 +2391,7 @@ const PLAN_STATIC = [
     key: 'enterprise',
     name: 'Enterprise',
     tagline: 'Für grosse Fahrschulen & Ketten',
-    fallbackPrice: '249',
+    fallbackPrice: '259',
     highlighted: false,
     featureList: ['Bis zu 10 Fahrlehrer', 'Alles aus Professional', 'Affiliate-System', 'Dedizierter Support'],
   },

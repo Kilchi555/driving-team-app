@@ -258,7 +258,7 @@ const openFaq = ref<number | null>(null)
 
 const { data: stripePrices } = await useFetch('/api/prices', { default: () => ({ starter: null, professional: null, enterprise: null }) })
 
-const FALLBACK = { starter: { monthly: 49 }, professional: { monthly: 149 }, enterprise: { monthly: 249 } }
+const FALLBACK = { starter: { monthly: 49 }, professional: { monthly: 149 }, enterprise: { monthly: 259 } }
 
 function monthlyPrice(key: 'starter' | 'professional' | 'enterprise'): number {
   const stripe = stripePrices.value?.[key]
