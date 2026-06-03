@@ -116,6 +116,22 @@
           </div>
 
         </div>
+
+        <!-- Flexibility strip -->
+        <div class="mt-8 flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm text-gray-500">
+          <span class="flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            Jederzeit upgraden oder downgraden
+          </span>
+          <span class="flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            Sofort wirksam, anteilsmässig abgerechnet
+          </span>
+          <span class="flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            Kündigung mit 30 Tagen Frist
+          </span>
+        </div>
       </div>
     </section>
 
@@ -231,6 +247,7 @@ useHead({
         { '@type': 'Question', name: 'Brauche ich eine Kreditkarte für den Trial?', acceptedAnswer: { '@type': 'Answer', text: 'Nein. Die 60 Tage sind vollständig kostenlos und ohne Kreditkarte. Du wirst erst danach zur Kasse gebeten.' } },
         { '@type': 'Question', name: 'Was kostet Simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: 'Simy bietet Pläne ab CHF 49/Monat. Monatlich kündbar, keine Jahresbindung.' } },
         { '@type': 'Question', name: 'Kann ich jederzeit kündigen?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Monatlich kündbar, keine Jahresbindung. Kündigung mit 30 Tagen Frist auf Ende des Monats.' } },
+        { '@type': 'Question', name: 'Kann ich jederzeit upgraden oder downgraden?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Planwechsel sind jederzeit möglich und wirken sofort. Beim Upgrade wird der Differenzbetrag anteilsmässig berechnet, beim Downgrade gibt es eine Gutschrift auf die nächste Rechnung.' } },
         { '@type': 'Question', name: 'Wie funktioniert die Abrechnung?', acceptedAnswer: { '@type': 'Answer', text: 'Monatlich per TWINT, Kreditkarte oder Banküberweisung. Bei Jahresabo einmal jährlich.' } },
       ],
     }),
@@ -291,20 +308,26 @@ const comparison: { label: string; starter: boolean | string; pro: boolean | str
   { label: 'Fahrlehrer inkl.', starter: '1', pro: '5', enterprise: '10' },
   { label: 'Online-Terminbuchung', starter: true, pro: true, enterprise: true },
   { label: 'Kundenverwaltung', starter: true, pro: true, enterprise: true },
+  { label: 'E-Mail-Erinnerungen & Benachrichtigungen', starter: true, pro: true, enterprise: true },
   { label: 'Rechnungen & Zahlungen', starter: true, pro: true, enterprise: true },
-  { label: 'Auswertungen & Statistiken', starter: true, pro: true, enterprise: true },
+  { label: 'QR-Einzahlungsschein', starter: true, pro: true, enterprise: true },
   { label: 'Kassenverwaltung', starter: true, pro: true, enterprise: true },
   { label: 'Gutscheine & Rabatte', starter: true, pro: true, enterprise: true },
+  { label: 'Auswertungen & Statistiken', starter: true, pro: true, enterprise: true },
   { label: 'Prüfungsverwaltung', starter: true, pro: true, enterprise: true },
+  { label: 'Ausbildungsauswertungen', starter: true, pro: true, enterprise: true },
+  { label: 'Native App (iOS & Android)', starter: true, pro: true, enterprise: true },
   { label: 'Kursbuchungsseite', starter: 'Add-on', pro: true, enterprise: true },
   { label: 'Affiliate-System', starter: 'Add-on', pro: 'Add-on', enterprise: true },
   { label: 'Online-Zahlungen (Wallee)', starter: true, pro: true, enterprise: true },
+  { label: 'Planwechsel (Self-Service)', starter: true, pro: true, enterprise: true },
+  { label: 'Einrichtungsgebühr', starter: 'Keine', pro: 'Keine', enterprise: 'Keine' },
   { label: 'Support', starter: 'E-Mail', pro: 'Priorität', enterprise: 'Dediziert' },
 ]
 
 const faqs = [
   { q: 'Brauche ich eine Kreditkarte für den Trial?', a: 'Nein. Die 60 Tage sind vollständig kostenlos und ohne Kreditkarte. Du wirst erst danach zur Kasse gebeten — und kannst jederzeit kündigen.' },
-  { q: 'Kann ich jederzeit upgraden oder downgraden?', a: 'Ja. Du kannst deinen Plan jederzeit im Dashboard ändern. Das neue Abo gilt ab dem nächsten Monat.' },
+  { q: 'Kann ich jederzeit upgraden oder downgraden?', a: 'Ja. Planwechsel sind jederzeit möglich und wirken sofort. Beim Upgrade wird der Differenzbetrag anteilsmässig für die verbleibenden Tage des Monats berechnet. Beim Downgrade erhältst du eine Gutschrift auf die nächste Rechnung. Keine Wartezeit, keine manuelle Freischaltung.' },
   { q: 'Wie funktioniert die Abrechnung?', a: 'Wir stellen monatlich per TWINT, Kreditkarte oder Banküberweisung in Rechnung. Bei Jahresabo wird einmal jährlich abgerechnet.' },
   { q: 'Was passiert mit meinen Daten, wenn ich kündige?', a: 'Du kannst alle deine Daten jederzeit exportieren. Nach der Kündigung werden die Daten für 30 Tage gespeichert, dann endgültig gelöscht.' },
   { q: 'Gibt es Rabatte für mehrere Standorte?', a: 'Ja, für Fahrschulen mit mehreren Standorten haben wir individuelle Enterprise-Angebote. Kontaktiere uns für ein massgeschneidertes Angebot.' },

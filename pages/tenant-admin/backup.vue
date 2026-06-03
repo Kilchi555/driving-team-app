@@ -92,6 +92,7 @@
           ⚠️ {{ backupData.r2.error }}
         </div>
         <div v-else class="space-y-2">
+          <!-- DB Backup folders -->
           <div
             v-for="folder in (backupData?.r2?.folders ?? []).slice(0, 3)"
             :key="folder.date"
@@ -110,8 +111,26 @@
               <div class="text-xs text-gray-400">{{ folder.files.length }} Dateien</div>
             </div>
           </div>
+
+          <!-- Storage backup summary (no individual file listing) -->
+          <div v-if="backupData?.r2?.storageSummary" class="flex items-center justify-between p-3 rounded-lg border border-blue-100 bg-blue-50">
+            <div class="flex items-center gap-3">
+              <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+              <div>
+                <div class="text-sm font-semibold text-gray-900">Storage-Backup</div>
+                <div class="text-xs text-gray-500">
+                  Zuletzt: {{ backupData.r2.storageSummary.lastModified ? formatDate(backupData.r2.storageSummary.lastModified) : '–' }}
+                </div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-sm font-medium text-gray-700">{{ formatBytes(backupData.r2.storageSummary.totalSize) }}</div>
+              <div class="text-xs text-gray-400">{{ backupData.r2.storageSummary.fileCount.toLocaleString('de-CH') }} Dateien</div>
+            </div>
+          </div>
+
           <button v-if="(backupData?.r2?.folders ?? []).length > 3" @click="showR2Modal = true" class="w-full text-xs text-indigo-600 hover:underline pt-1 text-center">
-            Alle {{ backupData.r2.folders.length }} Backups anzeigen →
+            Alle {{ backupData.r2.folders.length }} DB-Backups anzeigen →
           </button>
         </div>
       </div>
@@ -247,6 +266,24 @@
             </div>
           </div>
           <div class="overflow-y-auto p-5 space-y-2">
+            <!-- Storage summary at the top -->
+            <div v-if="backupData?.r2?.storageSummary" class="flex items-center justify-between p-3 rounded-lg border border-blue-100 bg-blue-50">
+              <div class="flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                <div>
+                  <div class="text-sm font-semibold text-gray-900">Storage-Backup (inkrementell)</div>
+                  <div class="text-xs text-gray-500">
+                    Zuletzt: {{ backupData.r2.storageSummary.lastModified ? formatDate(backupData.r2.storageSummary.lastModified) : '–' }}
+                  </div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-medium text-gray-700">{{ formatBytes(backupData.r2.storageSummary.totalSize) }}</div>
+                <div class="text-xs text-gray-400">{{ backupData.r2.storageSummary.fileCount.toLocaleString('de-CH') }} Dateien</div>
+              </div>
+            </div>
+
+            <!-- DB Backup folders -->
             <div
               v-for="folder in backupData?.r2?.folders ?? []"
               :key="folder.date"
@@ -390,19 +427,21 @@
           <div v-if="backupData?.restoreReport" class="overflow-y-auto flex-1 p-5">
 
             <!-- Zeilenzahlen -->
-            <div v-if="activeRestoreTab === 'counts'" class="space-y-2">
-              <div v-for="row in backupData.restoreReport.rows" :key="row.table"
-                class="flex items-center justify-between py-2.5 px-3 rounded-lg border"
-                :class="row.backup === row.live ? 'border-emerald-100 bg-emerald-50' : 'border-amber-100 bg-amber-50'"
-              >
-                <span class="text-sm font-mono font-medium text-gray-800">{{ row.table }}</span>
-                <div class="flex items-center gap-4">
-                  <span class="text-xs text-gray-500">Live: <span class="font-semibold text-gray-800">{{ row.live || '–' }}</span></span>
-                  <span class="text-xs font-semibold px-2 py-0.5 rounded-full"
-                    :class="row.backup === row.live ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'"
+            <div v-if="activeRestoreTab === 'counts'">
+              <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                <div v-for="row in backupData.restoreReport.rows" :key="row.table"
+                  class="rounded-lg border p-2.5"
+                  :class="row.backup === row.live ? 'border-emerald-100 bg-emerald-50' : 'border-amber-100 bg-amber-50'"
+                >
+                  <div class="text-[10px] font-mono text-gray-400 mb-0.5 truncate">{{ row.table }}</div>
+                  <div class="text-lg font-bold leading-tight"
+                    :class="row.backup === row.live ? 'text-emerald-700' : 'text-amber-700'"
                   >
-                    {{ row.backup === row.live ? '✓' : '≠' }} Backup: {{ row.backup || '–' }}
-                  </span>
+                    {{ Number(row.backup || 0).toLocaleString('de-CH') }}
+                  </div>
+                  <div class="text-[10px] mt-1" :class="row.backup === row.live ? 'text-emerald-600' : 'text-amber-600'">
+                    {{ row.backup === row.live ? '✓' : '≠' }} Live: {{ Number(row.live || 0).toLocaleString('de-CH') }}
+                  </div>
                 </div>
               </div>
             </div>

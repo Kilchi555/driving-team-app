@@ -160,6 +160,7 @@ const navLinks = [
   { to: '/tenant-admin/websites', label: 'Websites', exact: false, icon: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9' },
   { to: '/tenant-admin/business-types', label: 'Business Types', exact: true, icon: 'M4 6h16M4 10h16M4 14h16M4 18h16' },
   { to: '/tenant-admin/backup', label: 'Backup', exact: true, icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582 4 8 4' },
+  { to: '/tenant-admin/credentials', label: 'Credentials', exact: true, icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z' },
   { to: '/admin/cron-status', label: 'Cron Status', exact: true, icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
 ]
 

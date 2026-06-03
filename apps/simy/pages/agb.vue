@@ -46,6 +46,10 @@ const sections = [
     content: 'Die Preise sind dem aktuellen Preisblatt unter simy.ch/preise zu entnehmen. Alle Preise verstehen sich in CHF inkl. MwSt. Die Abrechnung erfolgt monatlich oder jährlich im Voraus per TWINT, Kreditkarte oder Rechnung.',
   },
   {
+    title: '4a. Planwechsel',
+    content: 'Der Nutzer kann seinen Tarif jederzeit im Nutzer-Dashboard upgraden oder downgraden. Planwechsel wirken sofort. Beim Upgrade wird der Differenzbetrag anteilsmässig für die verbleibenden Tage des laufenden Abrechnungsmonats berechnet. Beim Downgrade wird die Differenz als Gutschrift auf die nächste Rechnung angerechnet. Es gilt keine Kündigungsfrist für Planwechsel.',
+  },
+  {
     title: '5. Kündigung',
     content: 'Der Nutzer kann den Vertrag jederzeit mit einer Frist von 30 Tagen auf Ende des laufenden Abrechnungsmonats kündigen. Die Kündigung erfolgt über das Nutzer-Dashboard oder per E-Mail an support@simy.ch.',
   },
