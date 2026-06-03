@@ -604,14 +604,22 @@
         Incident Response Plan – Supabase Ausfall
       </h2>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <div class="rounded-xl border border-red-100 bg-red-50 p-4">
-          <div class="font-semibold text-red-800 mb-1">🎯 Ziel: App in &lt; 4h wieder live</div>
-          <div class="text-sm text-red-700">Backup auf neue Supabase-Instanz importieren und DNS/Env umzeigen.</div>
+          <div class="font-semibold text-red-800 mb-1">🎯 Ziel: App in &lt; 2.5h wieder live</div>
+          <div class="text-sm text-red-700">backup.dump via pg_restore auf neue Supabase-Instanz importieren, GitHub Secrets + Vercel Env aktualisieren, Redeploy.</div>
         </div>
         <div class="rounded-xl border border-amber-100 bg-amber-50 p-4">
           <div class="font-semibold text-amber-800 mb-1">⚠️ Datenverlust-Fenster</div>
-          <div class="text-sm text-amber-700">Max. 24h (tägliches Backup). Supabase selbst hat zusätzlich PITR.</div>
+          <div class="text-sm text-amber-700">Max. ~24h (tägl. Backup um 02:00 UTC). Supabase hat zusätzlich PITR. Dateien in Storage sind <strong>nicht</strong> im Backup enthalten!</div>
+        </div>
+        <div class="rounded-xl border border-blue-100 bg-blue-50 p-4">
+          <div class="font-semibold text-blue-800 mb-1">📦 Backup-Format</div>
+          <div class="text-sm text-blue-700">pg_dump --format=custom (backup.dump) + schema.sql. Restore via pg_restore mit --disable-triggers. Letzter Test: {{ backupData?.restoreReport?.testedAt?.slice(0,10) ?? '–' }}.</div>
+        </div>
+        <div class="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+          <div class="font-semibold text-emerald-800 mb-1">✅ Wöchentlich verifiziert</div>
+          <div class="text-sm text-emerald-700">Jeden Montag wird das Backup automatisch in einer echten PostgreSQL 17 DB wiederhergestellt und alle Zeilenzahlen gegen die Live-DB geprüft.</div>
         </div>
       </div>
 
@@ -666,71 +674,93 @@ const restoreTabs = [
 
 const incidentSteps = [
   {
-    title: 'Ausfall bestätigen',
+    title: 'Ausfall bestätigen & Team alarmieren',
     time: '0–5 min',
     critical: true,
-    description: 'Supabase Status-Seite prüfen: status.supabase.com. Wenn bestätigt, Pascal + Team per Telegram informieren.',
+    description: 'Supabase Status-Seite prüfen. Erst wenn Status-Seite einen Incident zeigt ODER Ausfall > 10 min: Pascal + Team informieren. Nicht sofort Recovery starten – abwarten ob Supabase selbst recovered (die meisten Ausfälle dauern < 30 min).',
     link: 'https://status.supabase.com',
   },
   {
     title: 'Neues Supabase-Projekt erstellen',
     time: '5–15 min',
     critical: false,
-    description: 'Auf supabase.com neues Projekt anlegen. Region: EU West. Plan: Pro (für bessere Performance). Zugangsdaten notieren.',
+    description: 'Auf supabase.com neues Projekt anlegen. Gleiche Organisation. Region: Europe West (Frankfurt). Plan: Pro. Starkes Passwort notieren. Project-Ref notieren (aus URL: app.supabase.com/project/[REF]).',
     link: 'https://app.supabase.com/new/project',
   },
   {
-    title: 'Letztes Backup herunterladen',
-    time: '15–25 min',
+    title: 'Backup von Cloudflare R2 herunterladen',
+    time: '15–20 min',
     critical: true,
-    description: 'Auf dash.cloudflare.com → R2 → driving-team-backups → neuestes Datum → schema.sql + data.sql herunterladen.',
-    link: 'https://dash.cloudflare.com',
+    description: 'R2 → driving-team-backups → neuestes Datum-Ordner → backup.dump (Vollbackup) + schema.sql (zur Referenz) herunterladen. backup.dump ist das pg_dump --format=custom Archiv mit Schema + Daten.',
+    link: 'https://dash.cloudflare.com/?to=/:account/r2/default/buckets/driving-team-backups',
   },
   {
-    title: 'Schema importieren',
-    time: '25–35 min',
+    title: 'Schema + Daten via pg_restore importieren',
+    time: '20–50 min',
     critical: true,
-    description: 'Im neuen Supabase SQL-Editor oder via psql: zuerst schema.sql, dann data.sql importieren.',
-    command: 'psql "postgresql://postgres:[PW]@[HOST]:5432/postgres" < schema.sql\npsql "postgresql://postgres:[PW]@[HOST]:5432/postgres" < data.sql',
+    description: 'pg_restore mit Session-Mode Pooler URL des NEUEN Projekts. --disable-triggers ist nötig wegen FK-Constraints. Extension-Fehler (hypopg, supabase_vault) sind normal und können ignoriert werden.',
+    command: '# Session Pooler URL aus: neues Projekt → Settings → Database → Session Pooler\npg_restore \\\n  --host=[NEUE_HOST] --port=5432 \\\n  --username=postgres.NEUE_REF \\\n  --dbname=postgres \\\n  --no-owner --no-privileges \\\n  --disable-triggers \\\n  backup.dump',
   },
   {
-    title: 'RLS Policies prüfen',
-    time: '35–45 min',
+    title: 'Wichtige Extensions manuell aktivieren',
+    time: '50–55 min',
     critical: false,
-    description: 'Im neuen Projekt sicherstellen dass alle RLS Policies aktiv sind (werden mit schema.sql importiert). Im Supabase Dashboard unter Authentication → Policies prüfen.',
+    description: 'Im Supabase SQL-Editor des neuen Projekts: Extensions aktivieren die pg_restore nicht installieren konnte (Supabase-spezifische Extensions werden automatisch bereitgestellt, aber pgcrypto und uuid-ossp müssen evtl. manuell aktiviert werden).',
+    command: '-- Im Supabase SQL-Editor ausführen:\nCREATE EXTENSION IF NOT EXISTS "uuid-ossp";\nCREATE EXTENSION IF NOT EXISTS "pgcrypto";\nCREATE EXTENSION IF NOT EXISTS "pg_trgm";',
   },
   {
-    title: 'Vercel Env Variables aktualisieren',
-    time: '45–55 min',
+    title: 'Supabase Storage Buckets wiederherstellen',
+    time: '55–65 min',
+    critical: false,
+    description: '⚠️ WICHTIG: Dateien (Lernfahrausweise, Dokumente) liegen in Supabase Storage und sind NICHT im pg_dump enthalten! Im alten Projekt (falls noch lesbar): Storage → Download. Oder rclone zwischen alten und neuen Storage Buckets synchronisieren. Bucket-Namen und Public/Private-Einstellungen neu konfigurieren.',
+    command: '# Falls altes Projekt noch lesbar:\nrclone copy supabase-old:driving-team supabase-new:driving-team',
+  },
+  {
+    title: 'RLS Policies und Auth bestätigen',
+    time: '65–70 min',
+    critical: false,
+    description: 'RLS Policies werden mit schema.sql importiert. Im neuen Projekt unter Authentication → Policies prüfen ob alle Tabellen RLS enabled haben. Besonders: users, appointments, payments, tenants.',
+  },
+  {
+    title: 'GitHub Secrets updaten (Backups!)',
+    time: '70–75 min',
     critical: true,
-    description: 'In Vercel → Settings → Environment Variables: SUPABASE_URL und SUPABASE_SERVICE_ROLE_KEY auf neue Werte setzen. Deployment triggern.',
+    description: 'GitHub → Settings → Secrets → Actions: SUPABASE_DB_URL auf Session Pooler URL des NEUEN Projekts setzen. Sonst läuft das tägliche Backup weiterhin gegen das alte (kaputte) Projekt.',
+    link: 'https://github.com/Kilchi555/driving-team-app/settings/secrets/actions',
+  },
+  {
+    title: 'Nuxt / Vercel Env Variables aktualisieren',
+    time: '75–85 min',
+    critical: true,
+    description: 'Vercel → Settings → Environment Variables aktualisieren: SUPABASE_URL (neues Projekt), SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY. Danach Redeploy triggern (oder automatisch nach Env-Änderung).',
     link: 'https://vercel.com/dashboard',
   },
   {
     title: 'Edge Functions neu deployen',
-    time: '55–70 min',
+    time: '85–95 min',
     critical: false,
-    description: 'Supabase Edge Functions (send-email, send-payment-reminder etc.) auf neues Projekt deployen via Supabase CLI.',
-    command: 'supabase functions deploy --project-ref [NEUE_PROJECT_REF]',
+    description: 'Supabase Edge Functions (send-email, send-payment-reminder etc.) auf neues Projekt deployen. Supabase CLI lokal installiert vorausgesetzt.',
+    command: 'supabase login\nsupabase link --project-ref [NEUE_PROJECT_REF]\nsupabase functions deploy',
   },
   {
-    title: 'OAuth & Auth Konfiguration',
-    time: '70–90 min',
+    title: 'OAuth & Auth konfigurieren',
+    time: '95–110 min',
     critical: false,
-    description: 'In neuem Supabase: Authentication → Providers: Google OAuth Client ID/Secret eintragen. Redirect URLs konfigurieren.',
+    description: 'Neues Projekt → Authentication → Providers: Google OAuth Client ID + Secret aus Google Cloud Console eintragen. Redirect URLs auf neue Supabase-URL anpassen. Auch in Google Cloud Console die neue Supabase-Auth-URL als Authorized Redirect URI eintragen.',
+    link: 'https://console.cloud.google.com/apis/credentials',
   },
   {
     title: 'Smoke Test',
-    time: '90–110 min',
+    time: '110–130 min',
     critical: true,
-    description: 'Login testen, Kalender laden, Termin erstellen, Zahlung prüfen. Alle kritischen Flows einmal durchgehen.',
+    description: 'Login (Email + Google OAuth), Kalender laden, Termin erstellen, Schüler suchen, Zahlung erstellen, PDF generieren, Backup-Dashboard prüfen. Erst wenn alle kritischen Flows grün sind: Recovery als abgeschlossen melden.',
   },
   {
-    title: 'Altes Backup-Script updaten',
+    title: 'Restore-Test nach Recovery manuell triggern',
     time: 'Nach Recovery',
     critical: false,
-    description: 'In ~/.supabase-backup.env und GitHub Secrets: SUPABASE_DB_URL auf neue Instanz aktualisieren damit Backups wieder laufen.',
-    command: 'crontab -e  # SUPABASE_DB_URL aktualisieren',
+    description: 'Nach erfolgreichem Recovery den wöchentlichen Restore-Test manuell triggern um zu bestätigen dass das erste Backup der neuen Instanz sauber wiederherstellbar ist.',
+    link: 'https://github.com/Kilchi555/driving-team-app/actions/workflows/backup-restore-test.yml',
   },
 ]
 
