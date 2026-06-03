@@ -70,6 +70,7 @@ jobs:
           /usr/lib/postgresql/17/bin/pg_restore \
             -h localhost -U postgres -d restore_test \
             --no-owner --no-privileges \
+            --disable-triggers \
             backup.dump
           echo "✅ Restore abgeschlossen"
 
