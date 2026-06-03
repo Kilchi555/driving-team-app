@@ -130,10 +130,9 @@ jobs:
       - name: Verify row counts + collect sample data
         env:
           PGPASSWORD: testpassword
-          PGSSLMODE: require
         run: |
           echo "=== Zeilenzahlen: Backup vs. Live ==="
-          TABLES="users appointments tenants lessons"
+          TABLES="users appointments tenants payments"
           REPORT_ROWS=""
           for TABLE in $TABLES; do
             RESTORED=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -c "SELECT COUNT(*) FROM public.$TABLE;" 2>/dev/null | tr -d ' \n')
@@ -197,7 +196,7 @@ jobs:
               'backupDate': '$LATEST',
               'testedAt': '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
               'dumpBytes': $DUMP_SIZE,
-              'rows': $REPORT_ROWS,
+              'rows': [$REPORT_ROWS],
               'samples': {
                   'users': $USERS_SAMPLE,
                   'tenants': $TENANTS_SAMPLE,
