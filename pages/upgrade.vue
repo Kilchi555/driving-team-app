@@ -844,20 +844,18 @@ watch(totalSeats, (seats) => {
 
 onMounted(async () => {
   try {
-    const { getSupabase } = await import('~/utils/supabase')
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-
-    // Also check Pinia store as fallback (covers HTTP-only cookie sessions on admin redirect)
+    // Also check Pinia store (covers sessions already loaded by 00-session-persist plugin)
     const { useAuthStore } = await import('~/stores/auth')
     const authStore = useAuthStore()
-    isLoggedIn.value = !!session?.user || authStore.isLoggedIn
+
+    // Try to get a fresh token (refreshes the httpOnly cookie session if needed)
+    const token = await resolveFreshToken()
+    isLoggedIn.value = !!token || authStore.isLoggedIn
 
     if (isLoggedIn.value) {
       try {
-        // Pass Bearer token if available; otherwise the server reads the HTTP-only cookie automatically
-        const prefillHeaders: Record<string, string> = session?.access_token
-          ? { Authorization: `Bearer ${session.access_token}` }
+        const prefillHeaders: Record<string, string> = token
+          ? { Authorization: `Bearer ${token}` }
           : {}
         const prefill = await $fetch<{ activeStaffCount: number; staffList: StaffMember[]; hasCourseSessions: boolean; hasAffiliateCodes: boolean; hasUid: boolean }>(
           '/api/tenants/upgrade-prefill',
@@ -963,18 +961,37 @@ watch(selectedPlan, () => {
 const toggleCourses = () => { if (!planIncludesCourses.value) addonCourses.value = !addonCourses.value }
 const toggleAffiliate = () => { if (!planIncludesAffiliate.value) addonAffiliate.value = !addonAffiliate.value }
 
+/** Resolve a fresh access token.
+ *  1. Try the @nuxtjs/supabase client session (in-memory / module cookie).
+ *  2. If missing or expired, call /api/auth/refresh which uses the httpOnly
+ *     sb-refresh-token cookie to get new tokens from Supabase.
+ *  Returns null only when the user has no valid session at all. */
+async function resolveFreshToken(): Promise<string | null> {
+  try {
+    const { getSupabase } = await import('~/utils/supabase')
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.access_token) return session.access_token
+  } catch { /* ignore */ }
+
+  try {
+    const refreshed = await $fetch<{ session: { access_token: string } }>('/api/auth/refresh', { method: 'POST' })
+    if (refreshed?.session?.access_token) return refreshed.session.access_token
+  } catch { /* no valid refresh cookie → truly unauthenticated */ }
+
+  return null
+}
+
 const startCheckout = async () => {
   loading.value = true
   error.value = null
   try {
-    const { getSupabase } = await import('~/utils/supabase')
-    const supabase = getSupabase()
-    const { data: { session: authSession } } = await supabase.auth.getSession()
-    const token = authSession?.access_token
+    const token = await resolveFreshToken()
+    if (!token) { showAuthPrompt.value = true; return }
 
     const session = await $fetch<{ id: string; url: string }>('/api/stripe/create-checkout-session', {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { Authorization: `Bearer ${token}` },
       body: {
         plan: selectedPlan.value,
         addons: {
@@ -1004,13 +1021,11 @@ const openBillingPortal = async () => {
   portalLoading.value = true
   error.value = null
   try {
-    const { getSupabase } = await import('~/utils/supabase')
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    const token = session?.access_token
+    const token = await resolveFreshToken()
+    if (!token) { error.value = 'Bitte melde dich an, um das Billing-Portal zu öffnen.'; return }
     const res = await $fetch<{ url: string }>('/api/stripe/customer-portal', {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { Authorization: `Bearer ${token}` },
     })
     if (res?.url) window.location.href = res.url
   } catch (err: any) {
