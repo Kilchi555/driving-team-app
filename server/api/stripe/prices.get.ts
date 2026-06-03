@@ -45,13 +45,31 @@ async function fetchPrices(): Promise<PricingResponse> {
   const plans: Record<string, PriceInfo> = {}
   const addons: Record<string, PriceInfo> = {}
 
+  // Known live prices as fallback (in Rappen) — update when Stripe prices change
+  const FALLBACK_PLAN_AMOUNTS: Record<string, number> = {
+    starter: 4900,       // CHF 49.–
+    professional: 14900, // CHF 149.–
+    enterprise: 25900,   // CHF 259.–
+  }
+  const FALLBACK_ADDON_AMOUNTS: Record<string, number> = {
+    seats: 1900,    // CHF 19.–
+    courses: 2900,  // CHF 29.–
+    affiliate: 900, // CHF 9.–
+  }
+
   planPriceIds.forEach(({ key }, i) => {
     const result = results[i]
     if (result.status === 'fulfilled') {
       plans[key] = toInfo(result.value)
     } else {
-      console.error(`❌ Failed to fetch price for plan ${key}:`, result.reason?.message)
-      plans[key] = { id: '', unitAmount: 0, currency: 'CHF', formatted: 'Preis fehlt' }
+      const fallback = FALLBACK_PLAN_AMOUNTS[key] ?? 0
+      console.error(`❌ Failed to fetch price for plan ${key} (using fallback CHF ${fallback / 100}):`, result.reason?.message)
+      plans[key] = {
+        id: '',
+        unitAmount: fallback,
+        currency: 'CHF',
+        formatted: fallback ? `CHF ${(fallback / 100).toFixed(2)}` : 'Preis fehlt',
+      }
     }
   })
 
@@ -60,8 +78,14 @@ async function fetchPrices(): Promise<PricingResponse> {
     if (result.status === 'fulfilled') {
       addons[key] = toInfo(result.value)
     } else {
-      console.error(`❌ Failed to fetch price for addon ${key}:`, result.reason?.message)
-      addons[key] = { id: '', unitAmount: 0, currency: 'CHF', formatted: 'Preis fehlt' }
+      const fallback = FALLBACK_ADDON_AMOUNTS[key] ?? 0
+      console.error(`❌ Failed to fetch price for addon ${key} (using fallback CHF ${fallback / 100}):`, result.reason?.message)
+      addons[key] = {
+        id: '',
+        unitAmount: fallback,
+        currency: 'CHF',
+        formatted: fallback ? `CHF ${(fallback / 100).toFixed(2)}` : 'Preis fehlt',
+      }
     }
   })
 
@@ -69,11 +93,13 @@ async function fetchPrices(): Promise<PricingResponse> {
 }
 
 // Cache prices for 5 minutes — they rarely change and each fetch hits Stripe 6 times
+// Use a shorter cache (30s) when fallback prices are used so real prices load quickly after fix
 export default defineCachedEventHandler(
   () => fetchPrices(),
   {
     maxAge: 60 * 5,
     name: 'stripe-prices',
     getKey: () => 'prices',
+    shouldBypassCache: () => false,
   }
 )
