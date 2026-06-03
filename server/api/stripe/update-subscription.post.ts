@@ -2,6 +2,7 @@ import Stripe from 'stripe'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { PLANS, ADDONS, type SubscriptionPlan } from '~/utils/planFeatures'
 import { sendEmail } from '~/server/utils/email'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 interface UpdateBody {
   plan?: SubscriptionPlan
@@ -19,30 +20,21 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Auth ────────────────────────────────────────────────────────────────────
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
   const supabase = getSupabaseAdmin()
-  const token = authHeader.replace('Bearer ', '')
-  const { data: { user } } = await supabase.auth.getUser(token)
-  if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  const tenantId = authUser.tenant_id || authUser.profile?.tenant_id
+  const userRole = authUser.role || authUser.profile?.role
 
-  const { data: userRow } = await supabase
-    .from('users')
-    .select('tenant_id, role')
-    .eq('auth_user_id', user.id)
-    .single()
-
-  if (!userRow?.tenant_id || userRow.role !== 'admin') {
+  if (!tenantId || userRole !== 'admin') {
     throw createError({ statusCode: 403, statusMessage: 'Only admins can update subscriptions' })
   }
 
   const { data: tenant } = await supabase
     .from('tenants')
     .select('stripe_subscription_id, stripe_customer_id, subscription_plan, addon_seats, addon_courses_enabled, addon_affiliate_enabled, name, contact_email')
-    .eq('id', userRow.tenant_id)
+    .eq('id', tenantId)
     .single()
 
   if (!tenant?.stripe_subscription_id) {
@@ -156,7 +148,7 @@ export default defineEventHandler(async (event) => {
       addon_seats: String(desiredSeats),
       addon_courses: String(desiredCourses),
       addon_affiliate: String(desiredAffiliate),
-      tenant_id: userRow.tenant_id,
+      tenant_id: tenantId,
     },
   })
 
@@ -173,9 +165,9 @@ export default defineEventHandler(async (event) => {
       addon_affiliate_enabled: desiredAffiliate,
       is_trial: false,
     })
-    .eq('id', userRow.tenant_id)
+    .eq('id', tenantId)
 
-  console.log(`✅ Subscription updated for tenant ${userRow.tenant_id}: plan=${desiredPlan}, seats=+${desiredSeats}`)
+  console.log(`✅ Subscription updated for tenant ${tenantId}: plan=${desiredPlan}, seats=+${desiredSeats}`)
 
   // Send plan change confirmation to tenant
   if (tenant?.contact_email) {
