@@ -54,7 +54,7 @@ async function fetchPrices(): Promise<PricingResponse> {
   const FALLBACK_ADDON_AMOUNTS: Record<string, number> = {
     seats: 1900,    // CHF 19.–
     courses: 2900,  // CHF 29.–
-    affiliate: 900, // CHF 9.–
+    affiliate: 3900, // CHF 39.–
   }
 
   planPriceIds.forEach(({ key }, i) => {
