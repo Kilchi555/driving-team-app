@@ -1,6 +1,7 @@
 import Stripe from 'stripe'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { sendEmail } from '~/server/utils/email'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   const stripeSecret = process.env.STRIPE_SECRET_KEY
@@ -8,30 +9,21 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'Stripe not configured' })
   }
 
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
   const supabase = getSupabaseAdmin()
-  const token = authHeader.replace('Bearer ', '')
-  const { data: { user } } = await supabase.auth.getUser(token)
-  if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  const tenantId = authUser.tenant_id || authUser.profile?.tenant_id
+  const userRole = authUser.role || authUser.profile?.role
 
-  const { data: userRow } = await supabase
-    .from('users')
-    .select('tenant_id, role')
-    .eq('auth_user_id', user.id)
-    .single()
-
-  if (!userRow?.tenant_id || userRow.role !== 'admin') {
+  if (!tenantId || userRole !== 'admin') {
     throw createError({ statusCode: 403, statusMessage: 'Only admins can revoke cancellations' })
   }
 
   const { data: tenant } = await supabase
     .from('tenants')
     .select('stripe_subscription_id, subscription_cancel_at, name, contact_email, subscription_plan')
-    .eq('id', userRow.tenant_id)
+    .eq('id', tenantId)
     .single()
 
   if (!tenant?.stripe_subscription_id) {
@@ -51,7 +43,7 @@ export default defineEventHandler(async (event) => {
   await supabase
     .from('tenants')
     .update({ subscription_cancel_at: null })
-    .eq('id', userRow.tenant_id)
+    .eq('id', tenantId)
 
   if (tenant?.contact_email) {
     const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
