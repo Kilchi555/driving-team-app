@@ -58,15 +58,21 @@ async function fetchR2Backups() {
     Delimiter: '/',
   }))
 
-  const folders = (response.CommonPrefixes || [])
+  const allPrefixes = (response.CommonPrefixes || [])
     .map(p => p.Prefix?.replace('/', '') ?? '')
     .filter(Boolean)
+
+  // Separate date-based backup folders from special folders (storage, credentials-*, etc.)
+  const dateFolders = allPrefixes
+    .filter(p => /^\d{4}-\d{2}-\d{2}$/.test(p))
     .sort()
     .reverse()
 
-  // Get objects for the latest 3 folders for size info
+  const hasStorageBackup = allPrefixes.includes('storage')
+
+  // Detailed info for each date folder (only DB backup files, never storage)
   const detailedFolders = await Promise.all(
-    folders.slice(0, 10).map(async (date) => {
+    dateFolders.slice(0, 10).map(async (date) => {
       const detail = await s3.send(new ListObjectsV2Command({
         Bucket: R2_BUCKET,
         Prefix: `${date}/`,
@@ -91,11 +97,41 @@ async function fetchR2Backups() {
     })
   )
 
+  // Storage summary — count + total size only, no individual file listing
+  let storageSummary: { fileCount: number; totalSize: number; lastModified: string | null } | null = null
+  if (hasStorageBackup) {
+    let continuationToken: string | undefined
+    let fileCount = 0
+    let totalSize = 0
+    let lastModifiedMs = 0
+    do {
+      const page = await s3.send(new ListObjectsV2Command({
+        Bucket: R2_BUCKET,
+        Prefix: 'storage/',
+        ContinuationToken: continuationToken,
+      }))
+      for (const obj of page.Contents ?? []) {
+        fileCount++
+        totalSize += obj.Size ?? 0
+        const ms = obj.LastModified?.getTime() ?? 0
+        if (ms > lastModifiedMs) lastModifiedMs = ms
+      }
+      continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined
+    } while (continuationToken)
+
+    storageSummary = {
+      fileCount,
+      totalSize,
+      lastModified: lastModifiedMs ? new Date(lastModifiedMs).toISOString() : null,
+    }
+  }
+
   return {
     bucket: R2_BUCKET,
-    totalFolders: folders.length,
+    totalFolders: dateFolders.length,
     folders: detailedFolders,
     latestBackup: detailedFolders[0] ?? null,
+    storageSummary,
   }
 }
 

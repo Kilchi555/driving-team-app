@@ -268,7 +268,7 @@
 
         <!-- Online-Zahlungen (Wallee) -->
         <div @click="withWallee = !withWallee"
-          :class="['rounded-2xl border-2 p-5 transition-all bg-white cursor-pointer col-span-full',
+          :class="['rounded-2xl border-2 p-5 transition-all bg-white cursor-pointer col-span-full mt-4',
             withWallee ? 'shadow-lg' : 'border-gray-100 shadow-sm']"
           :style="withWallee ? { borderColor: primaryColor, boxShadow: `0 10px 25px rgba(var(--brand-rgb), 0.12)` } : {}">
           <div class="flex items-start justify-between mb-3">
