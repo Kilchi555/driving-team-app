@@ -9,7 +9,7 @@ on:
 jobs:
   backup:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
       - name: Install PostgreSQL 17 client
@@ -46,15 +46,7 @@ jobs:
         run: |
           curl -sSL https://rclone.org/install.sh | sudo bash -s beta 2>/dev/null
           mkdir -p ~/.config/rclone
-          cat > ~/.config/rclone/rclone.conf << EOF
-          [r2]
-          type = s3
-          provider = Cloudflare
-          access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
-          secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          endpoint = ${{ secrets.R2_ENDPOINT }}
-          no_check_bucket = true
-          EOF
+          printf '[r2]\ntype = s3\nprovider = Cloudflare\naccess_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}\nsecret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}\nendpoint = ${{ secrets.R2_ENDPOINT }}\nno_check_bucket = true\n\n[supabase]\ntype = s3\nprovider = Other\naccess_key_id = ${{ secrets.SUPABASE_S3_ACCESS_KEY_ID }}\nsecret_access_key = ${{ secrets.SUPABASE_S3_SECRET_ACCESS_KEY }}\nendpoint = https://unyjaetebnaexaflpyoc.supabase.co/storage/v1/s3\nregion = auto\nno_check_bucket = true\n' > ~/.config/rclone/rclone.conf
 
       - name: Upload to Cloudflare R2
         run: |
@@ -62,6 +54,25 @@ jobs:
           rclone copyto schema.sql "r2:${{ secrets.R2_BUCKET }}/$DATE/schema.sql"
           rclone copyto backup.dump "r2:${{ secrets.R2_BUCKET }}/$DATE/backup.dump"
           echo "✅ R2 Upload: ${{ secrets.R2_BUCKET }}/$DATE (schema.sql + backup.dump)"
+
+      - name: Sync Supabase Storage → R2
+        run: |
+          # Inkrementell: nur neue/geänderte Dateien werden übertragen.
+          # Erste Ausführung ~700 MB, danach nur Deltas.
+          # Ziel: r2:driving-team-backups/storage/<bucket>/...
+          if [ -z "${{ secrets.SUPABASE_S3_ACCESS_KEY_ID }}" ]; then
+            echo "⚠️  SUPABASE_S3_ACCESS_KEY_ID nicht gesetzt – Storage-Backup übersprungen."
+            echo "    Bitte in GitHub Secrets hinterlegen (Supabase → Storage → S3 Access Keys)."
+            exit 0
+          fi
+          echo "📂 Starte Storage-Sync..."
+          rclone sync supabase: "r2:${{ secrets.R2_BUCKET }}/storage" \
+            --transfers=8 \
+            --checkers=16 \
+            --stats=30s \
+            --stats-one-line \
+            2>&1 | tail -20
+          echo "✅ Storage-Sync abgeschlossen: $(rclone size "r2:${{ secrets.R2_BUCKET }}/storage" --json 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(str(round(d.get('bytes',0)/1024/1024,1))+' MB, '+str(d.get('count',0))+' Dateien')" 2>/dev/null || echo 'Grösse unbekannt')"
 
       - name: GFS Retention – Grandfather-Father-Son
         run: |
@@ -115,4 +126,5 @@ jobs:
           echo "   Datum:    $DATE"
           echo "   Schema:   $(du -sh schema.sql | cut -f1)"
           echo "   Backup:   $(du -sh backup.dump | cut -f1)"
-          echo "   R2:       ${{ secrets.R2_BUCKET }}/$DATE"
+          echo "   DB:       r2:${{ secrets.R2_BUCKET }}/$DATE"
+          echo "   Storage:  r2:${{ secrets.R2_BUCKET }}/storage/ (inkrementell)"
