@@ -644,7 +644,7 @@
         Jetzt kostenlos registrieren
       </a>
       <a
-        href="/login"
+        href="/login?returnTo=/upgrade"
         class="block w-full py-3 rounded-2xl font-semibold text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
       >
         Ich habe bereits ein Konto → Einloggen

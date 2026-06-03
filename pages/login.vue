@@ -984,7 +984,12 @@ const handleLogin = async () => {
       }
     }
     
-    // Keine Toast-Meldung nötig - Benutzer wird weitergeleitet
+    // If a returnTo param was provided (e.g. from /upgrade), honour it for safe internal paths
+    const returnTo = route.query.returnTo as string | undefined
+    if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
+      redirectPath = returnTo
+    }
+
     logger.debug('🔄 Redirecting to:', redirectPath)
     if (isNativeApp.value && biometricAvailable.value && !biometricCredentialsStored.value && !loginViaBiometric.value) {
       pendingRedirectPath.value = redirectPath
@@ -1113,7 +1118,11 @@ const handleMFAVerify = async () => {
       }
     }
     
-    // Keine Toast-Meldung nötig - Benutzer wird weitergeleitet
+    const returnTo2 = route.query.returnTo as string | undefined
+    if (returnTo2 && returnTo2.startsWith('/') && !returnTo2.startsWith('//')) {
+      redirectPath = returnTo2
+    }
+
     logger.debug('🔄 Redirecting to:', redirectPath)
     router.push(redirectPath)
   }
