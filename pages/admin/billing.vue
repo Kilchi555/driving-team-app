@@ -248,7 +248,7 @@ const getToken = async (): Promise<string | null> => {
   return session?.access_token ?? null
 }
 
-const authHeaders = async () => {
+const authHeaders = async (): Promise<Record<string, string>> => {
   const token = await getToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
