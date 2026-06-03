@@ -656,12 +656,12 @@ const activeRestoreTab = ref('counts')
 
 const restoreTabs = [
   { id: 'counts', label: 'Zeilenzahlen' },
-  { id: 'users', label: 'Users (5)' },
-  { id: 'tenants', label: 'Tenants (5)' },
-  { id: 'appointments', label: 'Termine (5)' },
-  { id: 'payments', label: 'Zahlungen (5)' },
-  { id: 'courses', label: 'Kurse (5)' },
-  { id: 'locations', label: 'Standorte (5)' },
+  { id: 'users', label: 'Users (10)' },
+  { id: 'tenants', label: 'Tenants (10)' },
+  { id: 'appointments', label: 'Termine (10)' },
+  { id: 'payments', label: 'Zahlungen (10)' },
+  { id: 'courses', label: 'Kurse (10)' },
+  { id: 'locations', label: 'Standorte (10)' },
 ]
 
 const incidentSteps = [

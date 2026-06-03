@@ -146,7 +146,7 @@ jobs:
           echo "=== Stichproben aus Backup ==="
 
           USERS_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
-            -c "SELECT id, first_name, last_name, role, created_at FROM users ORDER BY created_at DESC LIMIT 5;" 2>/dev/null | \
+            -c "SELECT id, first_name, last_name, role, created_at FROM users ORDER BY created_at DESC LIMIT 10;" 2>/dev/null | \
             python3 -c "
           import sys, json
           rows = []
@@ -160,7 +160,7 @@ jobs:
           ")
 
           TENANTS_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
-            -c "SELECT id, name, slug, created_at FROM tenants ORDER BY created_at DESC LIMIT 5;" 2>/dev/null | \
+            -c "SELECT id, name, slug, created_at FROM tenants ORDER BY created_at DESC LIMIT 10;" 2>/dev/null | \
             python3 -c "
           import sys, json
           rows = []
@@ -174,7 +174,7 @@ jobs:
           ")
 
           APPOINTMENTS_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
-            -c "SELECT id, start_time, end_time, status FROM appointments ORDER BY start_time DESC LIMIT 5;" 2>/dev/null | \
+            -c "SELECT id, start_time, end_time, status FROM appointments ORDER BY start_time DESC LIMIT 10;" 2>/dev/null | \
             python3 -c "
           import sys, json
           rows = []
@@ -188,7 +188,7 @@ jobs:
           ")
 
           PAYMENTS_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
-            -c "SELECT id, total_amount_rappen, payment_method, payment_status, created_at FROM payments ORDER BY created_at DESC LIMIT 5;" 2>/dev/null | \
+            -c "SELECT id, total_amount_rappen, payment_method, payment_status, created_at FROM payments ORDER BY created_at DESC LIMIT 10;" 2>/dev/null | \
             python3 -c "
           import sys, json
           rows = []
@@ -202,7 +202,7 @@ jobs:
           ")
 
           COURSES_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
-            -c "SELECT id, title, start_time, end_time, current_participants, max_participants FROM course_sessions ORDER BY start_time DESC LIMIT 5;" 2>/dev/null | \
+            -c "SELECT id, title, start_time, end_time, current_participants, max_participants FROM course_sessions ORDER BY start_time DESC LIMIT 10;" 2>/dev/null | \
             python3 -c "
           import sys, json
           rows = []
@@ -216,7 +216,7 @@ jobs:
           ")
 
           LOCATIONS_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
-            -c "SELECT id, name, city, canton, is_active FROM locations ORDER BY created_at DESC LIMIT 5;" 2>/dev/null | \
+            -c "SELECT id, name, city, canton, is_active FROM locations ORDER BY created_at DESC LIMIT 10;" 2>/dev/null | \
             python3 -c "
           import sys, json
           rows = []
