@@ -470,6 +470,81 @@
               </div>
             </div>
 
+            <!-- Payments Stichprobe -->
+            <div v-else-if="activeRestoreTab === 'payments'">
+              <div v-if="!backupData.restoreReport.samples?.payments?.length" class="text-sm text-gray-400 text-center py-4">Keine Daten (nächster Test liefert Stichproben)</div>
+              <div v-else class="overflow-x-auto">
+                <table class="w-full text-xs">
+                  <thead><tr class="text-left text-gray-500 border-b border-gray-100">
+                    <th class="pb-2 pr-4 font-medium">Betrag</th>
+                    <th class="pb-2 pr-4 font-medium">Methode</th>
+                    <th class="pb-2 pr-4 font-medium">Status</th>
+                    <th class="pb-2 font-medium">Erstellt</th>
+                  </tr></thead>
+                  <tbody class="divide-y divide-gray-50">
+                    <tr v-for="p in backupData.restoreReport.samples.payments" :key="p.id" class="hover:bg-gray-50">
+                      <td class="py-2 pr-4 font-medium text-gray-800">CHF {{ (Number(p.amount_rappen || 0) / 100).toFixed(2) }}</td>
+                      <td class="py-2 pr-4"><span class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600">{{ p.method || '–' }}</span></td>
+                      <td class="py-2 pr-4">
+                        <span class="px-1.5 py-0.5 rounded"
+                          :class="p.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : p.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'"
+                        >{{ p.status }}</span>
+                      </td>
+                      <td class="py-2 text-gray-400">{{ p.created_at?.slice(0,10) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Courses Stichprobe -->
+            <div v-else-if="activeRestoreTab === 'courses'">
+              <div v-if="!backupData.restoreReport.samples?.courses?.length" class="text-sm text-gray-400 text-center py-4">Keine Daten (nächster Test liefert Stichproben)</div>
+              <div v-else class="overflow-x-auto">
+                <table class="w-full text-xs">
+                  <thead><tr class="text-left text-gray-500 border-b border-gray-100">
+                    <th class="pb-2 pr-4 font-medium">Titel</th>
+                    <th class="pb-2 pr-4 font-medium">Start</th>
+                    <th class="pb-2 font-medium">Teilnehmer</th>
+                  </tr></thead>
+                  <tbody class="divide-y divide-gray-50">
+                    <tr v-for="c in backupData.restoreReport.samples.courses" :key="c.id" class="hover:bg-gray-50">
+                      <td class="py-2 pr-4 font-medium text-gray-800">{{ c.title || '–' }}</td>
+                      <td class="py-2 pr-4 text-gray-700">{{ c.start_time?.slice(0,16).replace('T',' ') }}</td>
+                      <td class="py-2 text-gray-500">{{ c.participants || 0 }}<span v-if="c.max"> / {{ c.max }}</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Locations Stichprobe -->
+            <div v-else-if="activeRestoreTab === 'locations'">
+              <div v-if="!backupData.restoreReport.samples?.locations?.length" class="text-sm text-gray-400 text-center py-4">Keine Daten (nächster Test liefert Stichproben)</div>
+              <div v-else class="overflow-x-auto">
+                <table class="w-full text-xs">
+                  <thead><tr class="text-left text-gray-500 border-b border-gray-100">
+                    <th class="pb-2 pr-4 font-medium">Name</th>
+                    <th class="pb-2 pr-4 font-medium">Ort</th>
+                    <th class="pb-2 pr-4 font-medium">Kanton</th>
+                    <th class="pb-2 font-medium">Aktiv</th>
+                  </tr></thead>
+                  <tbody class="divide-y divide-gray-50">
+                    <tr v-for="l in backupData.restoreReport.samples.locations" :key="l.id" class="hover:bg-gray-50">
+                      <td class="py-2 pr-4 font-medium text-gray-800">{{ l.name || '–' }}</td>
+                      <td class="py-2 pr-4 text-gray-700">{{ l.city || '–' }}</td>
+                      <td class="py-2 pr-4 text-gray-500">{{ l.canton || '–' }}</td>
+                      <td class="py-2">
+                        <span class="px-1.5 py-0.5 rounded" :class="l.active === 't' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'">
+                          {{ l.active === 't' ? 'Ja' : 'Nein' }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -584,6 +659,9 @@ const restoreTabs = [
   { id: 'users', label: 'Users (5)' },
   { id: 'tenants', label: 'Tenants (5)' },
   { id: 'appointments', label: 'Termine (5)' },
+  { id: 'payments', label: 'Zahlungen (5)' },
+  { id: 'courses', label: 'Kurse (5)' },
+  { id: 'locations', label: 'Standorte (5)' },
 ]
 
 const incidentSteps = [
