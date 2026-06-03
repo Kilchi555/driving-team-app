@@ -1,6 +1,8 @@
 import { defineEventHandler, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { loadRotationLog, loadCredentialConfig, DEFAULT_INTERVALS } from '~/server/api/super-admin/credential-status.get'
+import { sendEmail } from '~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -9,17 +11,6 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
   const { data: caller } = await supabase.from('users').select('role').eq('auth_user_id', authUser.id).single()
   if (caller?.role !== 'super_admin') throw createError({ statusCode: 403, message: 'Super admin only' })
-
-  // Delegate to the cron handler with test flag
-  const cronHandler = await import('~/server/api/cron/check-credentials')
-  const fakeEvent = {
-    ...event,
-    headers: new Headers({ 'x-test-email': '1' }),
-    node: event.node,
-  }
-  // Call the underlying logic directly
-  const { loadRotationLog, loadCredentialConfig, DEFAULT_INTERVALS } = await import('~/server/api/super-admin/credential-status.get')
-  const { sendEmail } = await import('~/server/utils/email')
 
   const [rotationLog, config] = await Promise.all([
     loadRotationLog(),
@@ -49,15 +40,6 @@ export default defineEventHandler(async (event) => {
 
   const appUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
 
-  // Import the email builder from the cron module by re-implementing a minimal call
-  // We trigger the cron handler directly with the test header set
-  const { default: handler } = cronHandler
-
-  // Build a minimal H3 event-like object with test header
-  const mockEvent = Object.create(event)
-  mockEvent._testEmail = true
-
-  // Simply re-use sendEmail directly with a clear test subject
   const formatDate = (iso?: string) =>
     iso ? new Date(iso).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Nie rotiert'
 
