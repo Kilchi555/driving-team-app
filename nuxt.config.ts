@@ -92,7 +92,7 @@ export default defineNuxtConfig({
         "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://js.hcaptcha.com https://app-wallee.com",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "img-src 'self' data: https: blob:",
-        "connect-src 'self' https://unyjaetebnaexaflpyoc.supabase.co https://maps.googleapis.com https://hcaptcha.com https://newassets.hcaptcha.com https://api.resend.com https://app-wallee.com wss://unyjaetebnaexaflpyoc.supabase.co",
+        "connect-src 'self' https://unyjaetebnaexaflpyoc.supabase.co https://maps.googleapis.com https://hcaptcha.com https://*.hcaptcha.com https://newassets.hcaptcha.com https://api.resend.com https://app-wallee.com wss://unyjaetebnaexaflpyoc.supabase.co",
         "font-src 'self' data: https://fonts.gstatic.com",
         "frame-src 'self' https://js.hcaptcha.com https://app-wallee.com",
         "media-src 'self' blob:",
