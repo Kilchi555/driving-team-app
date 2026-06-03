@@ -73,7 +73,7 @@
     <!-- Two column layout -->
     <div class="sa-two-col">
       <!-- Recent Tenants -->
-      <div class="sa-card" style="grid-column: span 2">
+      <div class="sa-card sa-full-span">
         <div class="sa-card-header">
           <h2 class="sa-card-title">Neueste Tenants</h2>
           <NuxtLink to="/tenant-admin/tenants" class="sa-link-sm">Alle anzeigen →</NuxtLink>
@@ -330,6 +330,7 @@ onMounted(() => { loadStats(); loadRecentTenants(); loadRecentActivities() })
 }
 @media (min-width: 1024px) {
   .sa-two-col { grid-template-columns: 1fr 1fr; }
+  .sa-full-span { grid-column: span 2; }
 }
 
 /* ── Cards ── */
@@ -404,8 +405,11 @@ onMounted(() => { loadStats(); loadRecentTenants(); loadRecentActivities() })
 /* Quick actions */
 .sa-quick-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 0.5rem;
+}
+@media (min-width: 480px) {
+  .sa-quick-grid { grid-template-columns: 1fr 1fr; }
 }
 .sa-quick-item {
   display: flex;
