@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event)
   const config: CredentialConfig = {
-    notificationEmail: body.notificationEmail || 'info@simy.ch',
+    notificationEmail: 'info@simy.ch', // hardcoded, never changeable
     reminderDaysAhead: Number(body.reminderDaysAhead) || 14,
     intervals: body.intervals || {},
   }

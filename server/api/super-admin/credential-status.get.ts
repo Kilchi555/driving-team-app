@@ -75,12 +75,15 @@ export async function saveRotationLog(log: Record<string, string>) {
   await saveToR2('credentials-rotation-log.json', log)
 }
 
+const NOTIFICATION_EMAIL = 'info@simy.ch'
+
 export async function loadCredentialConfig(): Promise<CredentialConfig> {
-  return loadFromR2<CredentialConfig>('credentials-config.json', {
-    notificationEmail: process.env.ADMIN_NOTIFICATION_EMAIL || 'info@simy.ch',
-    reminderDaysAhead: 14,
-    intervals: {},
-  })
+  const stored = await loadFromR2<Partial<CredentialConfig>>('credentials-config.json', {})
+  return {
+    notificationEmail: NOTIFICATION_EMAIL, // always fixed, never user-configurable
+    reminderDaysAhead: stored.reminderDaysAhead ?? 14,
+    intervals: stored.intervals ?? {},
+  }
 }
 
 export async function saveCredentialConfig(config: CredentialConfig) {

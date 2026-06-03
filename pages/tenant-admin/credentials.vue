@@ -31,11 +31,71 @@
       </div>
       <div class="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-center">
         <div class="text-2xl font-bold text-emerald-400">{{ rotatedCount }}</div>
-        <div class="text-xs text-gray-500 mt-1">Rotiert (je {{ maxAgeDays }}d)</div>
+        <div class="text-xs text-gray-500 mt-1">Im Intervall aktuell</div>
       </div>
       <div class="rounded-xl bg-amber-500/10 border border-amber-500/20 p-4 text-center">
         <div class="text-2xl font-bold text-amber-400">{{ overdueCount }}</div>
         <div class="text-xs text-gray-500 mt-1">Überfällig / Nie rotiert</div>
+      </div>
+    </div>
+
+    <!-- E-Mail Reminder Settings -->
+    <div class="mb-6 rounded-xl border border-white/7 bg-white/3 overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+        <div class="flex items-center gap-2.5">
+          <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          </svg>
+          <h2 class="text-sm font-semibold text-gray-200">E-Mail Erinnerungen</h2>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-medium">Jeden Montag 08:00</span>
+        </div>
+        <button @click="sendingTest ? null : sendTestEmail()"
+          :disabled="sendingTest"
+          class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all font-medium"
+          :class="sendingTest ? 'border-white/10 text-gray-600 cursor-not-allowed' : 'border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/15 hover:border-indigo-400/50'">
+          <svg v-if="sendingTest" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <svg v-else class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          {{ sendingTest ? 'Wird gesendet…' : 'Test-E-Mail senden' }}
+        </button>
+      </div>
+      <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1.5">Benachrichtigungs-E-Mail</label>
+          <div class="flex items-center gap-2 bg-black/20 border border-white/8 rounded-lg px-3 py-2">
+            <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+            <span class="text-sm text-gray-300 font-medium">info@simy.ch</span>
+            <span class="ml-auto text-xs text-gray-600">Fest konfiguriert</span>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1.5">
+            Erinnerung X Tage vor Fälligkeit
+          </label>
+          <div class="flex items-center gap-3">
+            <input v-model.number="reminderDays" type="number" min="7" max="60"
+              class="w-24 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-indigo-500/50"/>
+            <span class="text-xs text-gray-500">Tage</span>
+          </div>
+        </div>
+        <div class="sm:col-span-2 flex justify-end">
+          <button @click="saveConfig"
+            :disabled="savingConfig"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+            :class="savingConfig ? 'bg-white/5 text-gray-600 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white'">
+            <svg v-if="savingConfig" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            {{ savingConfig ? 'Speichert…' : 'Einstellungen speichern' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -83,12 +143,16 @@
               <div class="text-xs text-gray-600 mt-0.5">{{ cred.description }}</div>
             </div>
 
-            <!-- Last rotation -->
-            <div class="text-right flex-shrink-0 hidden sm:block">
-              <div v-if="rotationLog[cred.key]" class="text-xs" :class="isOverdue(rotationLog[cred.key]) ? 'text-amber-400' : 'text-gray-500'">
-                {{ formatAge(rotationLog[cred.key]) }}
-              </div>
-              <div v-else class="text-xs text-gray-600">Nie rotiert</div>
+            <!-- Interval + due date -->
+            <div class="text-right flex-shrink-0 hidden md:block min-w-[110px]">
+              <template v-if="getInterval(cred.key) === 0">
+                <div class="text-xs text-gray-600">Kein Intervall</div>
+                <div class="text-xs text-gray-700">Manuell</div>
+              </template>
+              <template v-else>
+                <div class="text-xs" :class="getStatusClass(cred.key)">{{ getStatusLabel(cred.key) }}</div>
+                <div class="text-xs text-gray-700">alle {{ getInterval(cred.key) }}d</div>
+              </template>
             </div>
 
             <!-- Rotate button -->
@@ -219,7 +283,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useUIStore } from '~/stores/ui'
 definePageMeta({ layout: 'tenant-admin' })
 
-const maxAgeDays = 90
+const { showSuccess, showError } = useUIStore()
 
 interface Credential {
   key: string
@@ -349,7 +413,9 @@ const credentialGroups: CredentialGroup[] = [
   },
 ]
 
+// ── State ────────────────────────────────────────────────────────────────────
 const rotationLog = ref<Record<string, string>>({})
+const defaultIntervals = ref<Record<string, number>>({})
 const loading = ref(true)
 const modalOpen = ref(false)
 const selectedCred = ref<Credential | null>(null)
@@ -359,42 +425,76 @@ const rotating = ref(false)
 const rotateError = ref('')
 const setupOk = ref(true)
 
+// Notification settings
+const notifEmail = ref('info@simy.ch')
+const reminderDays = ref(14)
+const configIntervals = ref<Record<string, number>>({})
+const savingConfig = ref(false)
+const sendingTest = ref(false)
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function getInterval(key: string): number {
+  return configIntervals.value[key] ?? defaultIntervals.value[key] ?? 90
+}
+
+function getDaysOverdue(key: string): number {
+  const interval = getInterval(key)
+  if (interval === 0) return -Infinity
+  const lastRotated = rotationLog.value[key]
+  if (!lastRotated) return Infinity
+  const ageDays = (Date.now() - new Date(lastRotated).getTime()) / (1000 * 60 * 60 * 24)
+  return ageDays - interval
+}
+
+function getStatusClass(key: string): string {
+  const overdue = getDaysOverdue(key)
+  if (overdue === Infinity) return 'text-gray-600'
+  if (overdue > 0) return 'text-amber-400 font-semibold'
+  if (overdue > -reminderDays.value) return 'text-yellow-500'
+  return 'text-gray-500'
+}
+
+function getStatusLabel(key: string): string {
+  const overdue = getDaysOverdue(key)
+  const last = rotationLog.value[key]
+  if (overdue === Infinity) return 'Nie rotiert'
+  if (overdue > 0) return `${Math.round(overdue)}d überfällig`
+  if (overdue > -reminderDays.value) return `in ${Math.round(-overdue)}d fällig`
+  const days = Math.floor((Date.now() - new Date(last).getTime()) / (1000 * 60 * 60 * 24))
+  return days === 0 ? 'Heute' : days === 1 ? 'Gestern' : `vor ${days}d`
+}
+
+function getStatusColor(key: string): string {
+  const overdue = getDaysOverdue(key)
+  if (overdue === Infinity) return 'bg-gray-600'
+  if (overdue > 0) return 'bg-amber-400'
+  if (overdue > -reminderDays.value) return 'bg-yellow-400'
+  return 'bg-emerald-500'
+}
+
+// ── Computed ─────────────────────────────────────────────────────────────────
 const totalCredentials = computed(() => credentialGroups.reduce((acc, g) => acc + g.credentials.length, 0))
 
 const rotatedCount = computed(() =>
-  Object.entries(rotationLog.value).filter(([, date]) => !isOverdue(date)).length,
+  credentialGroups.flatMap(g => g.credentials).filter(c => {
+    const interval = getInterval(c.key)
+    if (interval === 0) return true // "never" = always ok
+    return getDaysOverdue(c.key) <= 0
+  }).length,
 )
-const overdueCount = computed(() => {
-  const rotated = new Set(Object.keys(rotationLog.value).filter(k => !isOverdue(rotationLog.value[k])))
-  return totalCredentials.value - rotated.size
-})
+
+const overdueCount = computed(() => totalCredentials.value - rotatedCount.value)
 
 const sortedLog = computed(() =>
   Object.entries(rotationLog.value).sort(([, a], [, b]) => new Date(b).getTime() - new Date(a).getTime()),
 )
 
-function isOverdue(dateStr: string) {
-  const age = (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24)
-  return age > maxAgeDays
-}
-
-function getStatusColor(key: string) {
-  const date = rotationLog.value[key]
-  if (!date) return 'bg-gray-600'
-  return isOverdue(date) ? 'bg-amber-400' : 'bg-emerald-500'
-}
-
-function formatAge(dateStr: string) {
-  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24))
-  if (days === 0) return 'Heute'
-  if (days === 1) return 'Gestern'
-  return `vor ${days} Tagen`
-}
-
+// ── Formatting ────────────────────────────────────────────────────────────────
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
+// ── Actions ───────────────────────────────────────────────────────────────────
 function openRotateModal(cred: Credential, group: CredentialGroup) {
   selectedCred.value = cred
   selectedGroup.value = group
@@ -410,8 +510,6 @@ function closeModal() {
   newValue.value = ''
   rotateError.value = ''
 }
-
-const { showSuccess, showError } = useUIStore()
 
 async function executeRotation() {
   if (!selectedCred.value || !newValue.value.trim() || rotating.value) return
@@ -437,10 +535,49 @@ async function executeRotation() {
   }
 }
 
+async function saveConfig() {
+  if (savingConfig.value) return
+  savingConfig.value = true
+  try {
+    await $fetch('/api/super-admin/credential-config', {
+      method: 'POST',
+      body: {
+        notificationEmail: notifEmail.value,
+        reminderDaysAhead: reminderDays.value,
+        intervals: configIntervals.value,
+      },
+    })
+    showSuccess('Einstellungen gespeichert')
+  } catch (err: any) {
+    showError(err?.data?.message || 'Fehler beim Speichern')
+  } finally {
+    savingConfig.value = false
+  }
+}
+
+async function sendTestEmail() {
+  if (sendingTest.value) return
+  sendingTest.value = true
+  try {
+    await $fetch('/api/super-admin/test-credential-email', { method: 'POST' })
+    showSuccess(`Test-E-Mail an ${notifEmail.value} gesendet`)
+  } catch (err: any) {
+    showError(err?.data?.message || 'Test-E-Mail konnte nicht gesendet werden')
+  } finally {
+    sendingTest.value = false
+  }
+}
+
 onMounted(async () => {
   try {
     const data = await $fetch('/api/super-admin/credential-status') as any
     rotationLog.value = data.rotationLog ?? {}
+    defaultIntervals.value = data.defaultIntervals ?? {}
+    if (data.config) {
+      notifEmail.value = data.config.notificationEmail || 'info@simy.ch'
+      reminderDays.value = data.config.reminderDaysAhead || 14
+      configIntervals.value = data.config.intervals || {}
+    }
   } catch {
     // ignore
   } finally {
