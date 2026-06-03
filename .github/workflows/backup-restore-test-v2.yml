@@ -37,15 +37,7 @@ jobs:
       - name: Configure rclone
         run: |
           mkdir -p ~/.config/rclone
-          cat > ~/.config/rclone/rclone.conf << EOF
-          [r2]
-          type = s3
-          provider = Cloudflare
-          access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
-          secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          endpoint = ${{ secrets.R2_ENDPOINT }}
-          no_check_bucket = true
-          EOF
+          printf '[r2]\ntype = s3\nprovider = Cloudflare\naccess_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}\nsecret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}\nendpoint = ${{ secrets.R2_ENDPOINT }}\nno_check_bucket = true\n' > ~/.config/rclone/rclone.conf
 
       - name: Find latest backup in R2
         id: latest
@@ -97,64 +89,64 @@ jobs:
           USERS_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
             -c "SELECT id, first_name, last_name, role, created_at FROM users ORDER BY created_at DESC LIMIT 5;" 2>/dev/null | \
             python3 -c "
-import sys, json
-rows = []
-for line in sys.stdin:
-    line = line.strip()
-    if not line: continue
-    parts = line.split('|')
-    if len(parts) >= 5:
-        rows.append({'id': parts[0], 'name': parts[1]+' '+parts[2], 'role': parts[3], 'created_at': parts[4]})
-print(json.dumps(rows))
-")
+          import sys, json
+          rows = []
+          for line in sys.stdin:
+              line = line.strip()
+              if not line: continue
+              parts = line.split('|')
+              if len(parts) >= 5:
+                  rows.append({'id': parts[0], 'name': parts[1]+' '+parts[2], 'role': parts[3], 'created_at': parts[4]})
+          print(json.dumps(rows))
+          ")
 
           TENANTS_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
             -c "SELECT id, name, slug, created_at FROM tenants ORDER BY created_at DESC LIMIT 5;" 2>/dev/null | \
             python3 -c "
-import sys, json
-rows = []
-for line in sys.stdin:
-    line = line.strip()
-    if not line: continue
-    parts = line.split('|')
-    if len(parts) >= 4:
-        rows.append({'id': parts[0], 'name': parts[1], 'slug': parts[2], 'created_at': parts[3]})
-print(json.dumps(rows))
-")
+          import sys, json
+          rows = []
+          for line in sys.stdin:
+              line = line.strip()
+              if not line: continue
+              parts = line.split('|')
+              if len(parts) >= 4:
+                  rows.append({'id': parts[0], 'name': parts[1], 'slug': parts[2], 'created_at': parts[3]})
+          print(json.dumps(rows))
+          ")
 
           APPOINTMENTS_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
             -c "SELECT id, start_time, end_time, status FROM appointments ORDER BY start_time DESC LIMIT 5;" 2>/dev/null | \
             python3 -c "
-import sys, json
-rows = []
-for line in sys.stdin:
-    line = line.strip()
-    if not line: continue
-    parts = line.split('|')
-    if len(parts) >= 4:
-        rows.append({'id': parts[0], 'start_time': parts[1], 'end_time': parts[2], 'status': parts[3]})
-print(json.dumps(rows))
-")
+          import sys, json
+          rows = []
+          for line in sys.stdin:
+              line = line.strip()
+              if not line: continue
+              parts = line.split('|')
+              if len(parts) >= 4:
+                  rows.append({'id': parts[0], 'start_time': parts[1], 'end_time': parts[2], 'status': parts[3]})
+          print(json.dumps(rows))
+          ")
 
           DUMP_SIZE=$(du -sb backup.dump | cut -f1)
           LATEST=${{ steps.latest.outputs.LATEST }}
 
           python3 -c "
-import json
-report = {
-    'backupDate': '$LATEST',
-    'testedAt': '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
-    'dumpBytes': $DUMP_SIZE,
-    'rows': $REPORT_ROWS,
-    'samples': {
-        'users': $USERS_SAMPLE,
-        'tenants': $TENANTS_SAMPLE,
-        'appointments': $APPOINTMENTS_SAMPLE
-    },
-    'status': 'success'
-}
-print(json.dumps(report, indent=2))
-" > restore-report.json
+          import json
+          report = {
+              'backupDate': '$LATEST',
+              'testedAt': '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
+              'dumpBytes': $DUMP_SIZE,
+              'rows': $REPORT_ROWS,
+              'samples': {
+                  'users': $USERS_SAMPLE,
+                  'tenants': $TENANTS_SAMPLE,
+                  'appointments': $APPOINTMENTS_SAMPLE
+              },
+              'status': 'success'
+          }
+          print(json.dumps(report, indent=2))
+          " > restore-report.json
 
           echo "✅ Report erstellt"
           cat restore-report.json | python3 -c "import sys,json; r=json.load(sys.stdin); print('Rows:', [(x['table'], x['backup']) for x in r['rows']])"
