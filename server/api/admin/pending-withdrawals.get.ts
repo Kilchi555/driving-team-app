@@ -18,11 +18,11 @@ export default defineEventHandler(async (event) => {
         id,
         first_name,
         last_name,
-        email
-      ),
-      student_withdrawal_preferences (
-        iban_last4,
-        account_holder
+        email,
+        student_withdrawal_preferences (
+          iban_last4,
+          account_holder
+        )
       )
     `)
     .eq('tenant_id', profile.tenant_id)
