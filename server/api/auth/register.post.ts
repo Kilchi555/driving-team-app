@@ -4,6 +4,7 @@ import { getServerSession } from '#auth'
 import { createClient } from '@supabase/supabase-js'
 import { setAuthCookies } from '~/server/utils/cookies'
 import { validatePassword, logPasswordValidationAttempt } from '~/server/utils/password-validator'
+import { checkPasswordPwned } from '~/server/utils/hibp-checker'
 import { logger } from '~/utils/logger'
 
 const supabase = createClient(
@@ -102,6 +103,20 @@ async function registerCustomer(event: any, body: RegisterRequest) {
     throw createError({
       statusCode: 400,
       statusMessage: 'Passwort erfüllt die Sicherheitsanforderungen nicht. ' + passwordValidation.errors[0]
+    })
+  }
+
+  // Breach check (HaveIBeenPwned, k-anonymity). Replaces composition rules as the
+  // real security gate. Fails open if HIBP is unreachable (checkPasswordPwned).
+  const breach = await checkPasswordPwned(password)
+  if (breach.isPwned) {
+    logger.warn('❌ [REGISTER-CUSTOMER] Password found in breach corpus', {
+      email: email.substring(0, 3) + '***',
+      count: breach.count
+    })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Dieses Passwort taucht in bekannten Datenlecks auf. Bitte wähle ein anderes Passwort.'
     })
   }
 

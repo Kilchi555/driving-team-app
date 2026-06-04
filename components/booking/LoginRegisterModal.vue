@@ -100,251 +100,335 @@
 
         <!-- Register Form -->
         <form v-if="activeTab === 'register'" @submit.prevent="handleRegister" class="space-y-4">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Vorname <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="registerForm.first_name"
-                type="text"
-                required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
-                placeholder="Max"
-              >
+          <!-- Step indicator -->
+          <div class="flex items-center gap-2 text-xs font-medium text-gray-500">
+            <span :style="registerStep === 1 ? { color: primaryColor } : {}">1. Konto</span>
+            <span class="flex-1 h-px bg-gray-200"></span>
+            <span :style="registerStep === 2 ? { color: primaryColor } : {}">2. Persönliche Angaben</span>
+          </div>
+
+          <!-- ============ STEP 1: Konto & Kontakt ============ -->
+          <div v-show="registerStep === 1" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Vorname <span class="text-red-500">*</span>
+                </label>
+                <input
+                  v-model="registerForm.first_name"
+                  type="text"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
+                  placeholder="Max"
+                >
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Nachname <span class="text-red-500">*</span>
+                </label>
+                <input
+                  v-model="registerForm.last_name"
+                  type="text"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
+                  placeholder="Mustermann"
+                >
+              </div>
             </div>
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                Nachname <span class="text-red-500">*</span>
+                E-Mail <span class="text-red-500">*</span>
               </label>
               <input
-                v-model="registerForm.last_name"
-                type="text"
-                required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
-                placeholder="Mustermann"
+                v-model="registerForm.email"
+                type="email"
+                @input="checkEmailAvailability"
+                @blur="checkEmailAvailability"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                :class="emailCheckStatus === 'taken' || emailCheckStatus === 'invalid' ? 'border-red-400' : 'border-gray-300'"
+                placeholder="ihre@email.com"
               >
+              <!-- Email already registered → offer a login shortcut -->
+              <div v-if="emailCheckStatus === 'taken'" class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p class="text-sm text-amber-800">
+                  Diese E-Mail-Adresse ist bereits registriert.
+                </p>
+                <button
+                  type="button"
+                  @click="switchToLoginWithEmail"
+                  class="mt-1 text-sm font-semibold underline"
+                  :style="{ color: primaryColor }"
+                >
+                  Stattdessen anmelden →
+                </button>
+              </div>
+              <p v-else-if="emailCheckStatus === 'invalid'" class="mt-1 text-xs text-red-600">
+                {{ emailCheckMessage }}
+              </p>
+              <p v-else-if="emailCheckStatus === 'checking'" class="mt-1 text-xs text-gray-500">
+                E-Mail wird geprüft…
+              </p>
+              <p v-else-if="emailCheckStatus === 'available'" class="mt-1 text-xs text-green-600">
+                ✓ E-Mail verfügbar
+              </p>
             </div>
-          </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              E-Mail <span class="text-red-500">*</span>
-            </label>
-            <input
-              v-model="registerForm.email"
-              type="email"
-              required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
-              placeholder="ihre@email.com"
-            >
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Telefon <span class="text-red-500">*</span>
-            </label>
-            <input
-              v-model="registerForm.phone"
-              type="tel"
-              required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
-              placeholder="+41 79 123 45 67"
-            >
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Geburtsdatum <span class="text-red-500">*</span>
-            </label>
-            <input
-              v-model="registerForm.birthdate"
-              type="date"
-              required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
-            >
-          </div>
-
-          <div class="grid grid-cols-3 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                Straße <span class="text-red-500">*</span>
+                Telefon <span class="text-red-500">*</span>
               </label>
               <input
-                v-model="registerForm.street"
-                type="text"
-                required
+                v-model="registerForm.phone"
+                type="tel"
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
-                placeholder="Hauptstraße"
+                placeholder="+41 79 123 45 67"
               >
             </div>
+
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Nr. <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="registerForm.street_nr"
-                type="text"
-                required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
-                placeholder="42"
-              >
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                PLZ <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="registerForm.zip"
-                type="text"
-                required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
-                placeholder="8000"
-              >
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Stadt <span class="text-red-500">*</span>
-            </label>
-            <input
-              v-model="registerForm.city"
-              type="text"
-              required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
-              placeholder="Zürich"
-            >
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Beruf
-            </label>
-            <input
-              v-model="registerForm.profession"
-              type="text"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
-              placeholder="z.B. Student/in, Software Engineer"
-            >
-          </div>
-
-          <!-- Document Upload: Fahrausweis -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Fahrausweis (Kopie) <span class="text-red-500">*</span>
-            </label>
-            <p class="text-xs text-gray-600 mb-3">
-              Bitte laden Sie eine Kopie Ihres gültigen Führerscheins hoch (PDF, JPG, PNG)
-            </p>
-            
-            <!-- File Upload Input -->
-            <div class="relative">
-              <input
-                ref="documentFileInput"
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                @change="handleDocumentUpload"
-                class="sr-only"
-              >
-              <button
-                type="button"
-                @click="$refs.documentFileInput?.click()"
-                class="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg transition-colors"
-                :style="{ '--hover-border': primaryColor }"
-                @mouseenter="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.borderColor = primaryColor"
-                @mouseleave="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.borderColor = ''"
-              >
-                <div class="flex flex-col items-center gap-2">
-                  <svg v-if="!uploadedDocument" class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              <div class="flex items-center justify-between mb-2">
+                <label class="block text-sm font-medium text-gray-700">
+                  Passwort <span class="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  @click="useGeneratedPassword"
+                  class="text-xs font-semibold underline"
+                  :style="{ color: primaryColor }"
+                >
+                  Sicheres Passwort vorschlagen
+                </button>
+              </div>
+              <div class="relative">
+                <input
+                  v-model="registerForm.password"
+                  :type="showRegisterPassword ? 'text' : 'password'"
+                  minlength="12"
+                  autocomplete="new-password"
+                  class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
+                  placeholder="Mindestens 12 Zeichen"
+                >
+                <button
+                  type="button"
+                  @click="showRegisterPassword = !showRegisterPassword"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  tabindex="-1"
+                >
+                  <svg v-if="!showRegisterPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                   </svg>
-                  <span v-if="!uploadedDocument" class="text-sm text-gray-600">Klicken zum Hochladen</span>
-                  <span v-else class="text-sm text-green-600">✓ {{ uploadedDocument.name }}</span>
+                  <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Length hint -->
+              <p class="mt-2 text-xs" :class="registerForm.password.length >= 12 ? 'text-green-600' : 'text-gray-500'">
+                {{ registerForm.password.length >= 12 ? '✓' : '○' }} Mindestens 12 Zeichen
+              </p>
+
+              <!-- zxcvbn strength bar (once 12+ chars) -->
+              <div v-if="zxcvbnScore !== null" class="mt-2">
+                <div class="flex gap-1">
+                  <div
+                    v-for="i in 4"
+                    :key="i"
+                    class="h-1.5 flex-1 rounded-full"
+                    :class="i <= zxcvbnScore
+                      ? (zxcvbnScore <= 1 ? 'bg-red-500' : zxcvbnScore === 2 ? 'bg-yellow-400' : zxcvbnScore === 3 ? 'bg-blue-400' : 'bg-green-500')
+                      : 'bg-gray-200'"
+                  ></div>
                 </div>
-              </button>
+                <p class="mt-1 text-xs" :class="zxcvbnScore <= 1 ? 'text-red-500' : zxcvbnScore === 2 ? 'text-yellow-600' : zxcvbnScore === 3 ? 'text-blue-600' : 'text-green-600'">
+                  {{ strengthLabel }}<span v-if="zxcvbnScore < 2"> – zu leicht erratbar</span>
+                </p>
+              </div>
+
+              <!-- HIBP breach feedback -->
+              <div v-if="hibpStatus !== 'idle'" class="mt-1 text-xs">
+                <span v-if="hibpStatus === 'checking'" class="text-gray-400">⏳ Sicherheitsprüfung läuft…</span>
+                <span v-else-if="hibpStatus === 'pwned'" class="text-red-600 font-medium">
+                  ✗ Dieses Passwort taucht {{ hibpCount.toLocaleString('de-CH') }}× in Datenlecks auf – bitte ein anderes wählen.
+                </span>
+                <span v-else-if="hibpStatus === 'safe'" class="text-green-600">✓ Passwort sieht sicher aus</span>
+              </div>
+
             </div>
-            
-            <!-- Upload Status -->
-            <div v-if="isUploadingDocument" class="mt-2 flex items-center gap-2 text-sm">
-              <div class="animate-spin rounded-full h-4 w-4 border-b-2" :style="{ borderColor: primaryColor }"></div>
-              <span :style="{ color: primaryColor }">Wird hochgeladen...</span>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Passwort wiederholen <span class="text-red-500">*</span>
+              </label>
+              <div class="relative">
+                <input
+                  v-model="registerForm.password_confirm"
+                  :type="showRegisterPassword ? 'text' : 'password'"
+                  minlength="12"
+                  class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
+                  :class="{ 'border-red-500': registerForm.password_confirm && registerForm.password !== registerForm.password_confirm }"
+                  placeholder="Passwort wiederholen"
+                >
+              </div>
+              <p v-if="registerForm.password_confirm && registerForm.password !== registerForm.password_confirm" class="text-xs text-red-600 mt-1">
+                ⚠️ Passwörter stimmen nicht überein
+              </p>
             </div>
-            <div v-else-if="documentUploadError" class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
-              {{ documentUploadError }}
-            </div>
+
+            <button
+              type="button"
+              :disabled="!canProceedStep1"
+              @click="goToRegisterStep(2)"
+              class="w-full py-3 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              :style="{ backgroundColor: primaryColor }"
+            >
+              Weiter
+            </button>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Passwort <span class="text-red-500">*</span>
-            </label>
-            <div class="relative">
+          <!-- ============ STEP 2: Persönliche Angaben ============ -->
+          <div v-show="registerStep === 2" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Geburtsdatum <span class="text-red-500">*</span>
+              </label>
               <input
-                v-model="registerForm.password"
-                :type="showRegisterPassword ? 'text' : 'password'"
-                required
-                minlength="12"
-                class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
-                placeholder="Mindestens 12 Zeichen"
+                v-model="registerForm.birthdate"
+                type="date"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
               >
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Straße <span class="text-red-500">*</span>
+                </label>
+                <input
+                  v-model="registerForm.street"
+                  type="text"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
+                  placeholder="Hauptstraße"
+                >
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Nr. <span class="text-red-500">*</span>
+                </label>
+                <input
+                  v-model="registerForm.street_nr"
+                  type="text"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
+                  placeholder="42"
+                >
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  PLZ <span class="text-red-500">*</span>
+                </label>
+                <input
+                  v-model="registerForm.zip"
+                  type="text"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
+                  placeholder="8000"
+                >
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Stadt <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="registerForm.city"
+                type="text"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
+                placeholder="Zürich"
+              >
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Beruf
+              </label>
+              <input
+                v-model="registerForm.profession"
+                type="text"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
+                placeholder="z.B. Student/in, Software Engineer"
+              >
+            </div>
+
+            <!-- Document Upload: Fahrausweis (optional) -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Fahrausweis (Kopie)
+                <span class="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <p class="text-xs text-gray-600 mb-3">
+                Du kannst eine Kopie deines Führer-/Lernfahrausweises hochladen (PDF, JPG, PNG) – oder das später bequem im Dashboard nachreichen.
+              </p>
+              
+              <!-- File Upload Input -->
+              <div class="relative">
+                <input
+                  ref="documentFileInput"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  @change="handleDocumentUpload"
+                  class="sr-only"
+                >
+                <button
+                  type="button"
+                  @click="$refs.documentFileInput?.click()"
+                  class="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg transition-colors"
+                  :style="{ '--hover-border': primaryColor }"
+                  @mouseenter="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.borderColor = primaryColor"
+                  @mouseleave="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.borderColor = ''"
+                >
+                  <div class="flex flex-col items-center gap-2">
+                    <svg v-if="!uploadedDocument" class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span v-if="!uploadedDocument" class="text-sm text-gray-600">Klicken zum Hochladen</span>
+                    <span v-else class="text-sm text-green-600">✓ {{ uploadedDocument.name }}</span>
+                  </div>
+                </button>
+              </div>
+              
+              <!-- Upload Status -->
+              <div v-if="isUploadingDocument" class="mt-2 flex items-center gap-2 text-sm">
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2" :style="{ borderColor: primaryColor }"></div>
+                <span :style="{ color: primaryColor }">Wird hochgeladen...</span>
+              </div>
+              <div v-else-if="documentUploadError" class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
+                {{ documentUploadError }}
+              </div>
+            </div>
+
+            <div v-if="error" class="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p class="text-sm text-red-800">{{ error }}</p>
+            </div>
+
+            <div class="flex gap-3">
               <button
                 type="button"
-                @click="showRegisterPassword = !showRegisterPassword"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                tabindex="-1"
+                @click="goToRegisterStep(1)"
+                class="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
               >
-                <svg v-if="!showRegisterPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                </svg>
-                <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
-                </svg>
+                Zurück
+              </button>
+              <button
+                type="submit"
+                :disabled="isLoading || !isPasswordValid || registerForm.password !== registerForm.password_confirm || emailCheckStatus === 'taken' || emailCheckStatus === 'invalid' || emailCheckStatus === 'checking'"
+                class="flex-1 py-3 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                :style="{ backgroundColor: primaryColor }"
+              >
+                {{ isLoading ? 'Wird registriert...' : 'Registrieren' }}
               </button>
             </div>
-            <p class="text-xs text-gray-600 mt-2">
-              <span :class="{ 'text-green-600': passwordRequirements.minLength }">✓ Mindestens 12 Zeichen</span><br>
-              <span :class="{ 'text-green-600': passwordRequirements.hasUpperCase }">✓ Großbuchstaben (A-Z)</span><br>
-              <span :class="{ 'text-green-600': passwordRequirements.hasLowerCase }">✓ Kleinbuchstaben (a-z)</span><br>
-              <span :class="{ 'text-green-600': passwordRequirements.hasNumber }">✓ Zahlen (0-9)</span><br>
-              <span :class="{ 'text-green-600': passwordRequirements.hasSpecialChar }">✓ Sonderzeichen (!@#$%^&* etc.)</span>
-            </p>
           </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Passwort wiederholen <span class="text-red-500">*</span>
-            </label>
-            <div class="relative">
-              <input
-                v-model="registerForm.password_confirm"
-                :type="showRegisterPassword ? 'text' : 'password'"
-                required
-                minlength="12"
-                class="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
-                :class="{ 'border-red-500': registerForm.password_confirm && registerForm.password !== registerForm.password_confirm }"
-                placeholder="Passwort wiederholen"
-              >
-            </div>
-            <p v-if="registerForm.password_confirm && registerForm.password !== registerForm.password_confirm" class="text-xs text-red-600 mt-1">
-              ⚠️ Passwörter stimmen nicht überein
-            </p>
-          </div>
-
-          <div v-if="error" class="p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p class="text-sm text-red-800">{{ error }}</p>
-          </div>
-
-          <button
-            type="submit"
-            :disabled="isLoading || !uploadedDocument || (registerForm.password && registerForm.password_confirm && registerForm.password !== registerForm.password_confirm)"
-            class="w-full py-3 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            :style="{ backgroundColor: primaryColor }"
-          >
-            {{ isLoading ? 'Wird registriert...' : 'Registrieren' }}
-          </button>
         </form>
       </div>
     </div>
@@ -352,11 +436,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { usePasswordStrength, generateStrongPassword } from '~/composables/usePasswordStrength'
 
 const { primaryColor: tenantPrimary } = useTenantBranding()
 
@@ -366,6 +451,7 @@ interface Props {
   initialTab?: 'login' | 'register'
   selectedStaffId?: string
   selectedCategory?: string
+  tenantId?: string
   primaryColor?: string | undefined
 }
 
@@ -373,6 +459,7 @@ const props = withDefaults(defineProps<Props>(), {
   initialTab: 'login',
   selectedStaffId: undefined,
   selectedCategory: undefined,
+  tenantId: undefined,
   primaryColor: undefined
 })
 
@@ -389,6 +476,16 @@ const error = ref('')
 // Password visibility toggles
 const showLoginPassword = ref(false)
 const showRegisterPassword = ref(false)
+
+// Real-time email availability check (register tab)
+type EmailCheckStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
+const emailCheckStatus = ref<EmailCheckStatus>('idle')
+const emailCheckMessage = ref('')
+let emailCheckTimer: ReturnType<typeof setTimeout> | null = null
+let emailCheckSeq = 0
+
+// Multi-step register form (1 = Konto & Kontakt, 2 = Persönliche Angaben)
+const registerStep = ref<1 | 2>(1)
 
 // Document Upload state
 const uploadedDocument = ref<File | null>(null)
@@ -417,22 +514,50 @@ const registerForm = ref({
   category: props.selectedCategory || ''
 })
 
-// Password strength validation
-const passwordRequirements = computed(() => {
-  const password = registerForm.value.password
-  return {
-    minLength: password.length >= 12,
-    hasUpperCase: /[A-Z]/.test(password),
-    hasLowerCase: /[a-z]/.test(password),
-    hasNumber: /[0-9]/.test(password),
-        hasSpecialChar: /[!@#$%^&*()_\-]/.test(password)
-  }
+// Unified password policy: length ≥ 12 + zxcvbn strength + HIBP breach check.
+// No mandatory composition rules (NIST SP 800-63B) — see usePasswordStrength.
+const {
+  zxcvbnScore,
+  hibpStatus,
+  hibpCount,
+  strengthLabel,
+  evaluate: evaluatePassword,
+  isPasswordAcceptable,
+} = usePasswordStrength()
+
+watch(() => registerForm.value.password, (pw) => { evaluatePassword(pw) })
+
+const isPasswordValid = computed(() => isPasswordAcceptable(registerForm.value.password))
+
+// Fill both password fields with a generated strong password and reveal it.
+const useGeneratedPassword = () => {
+  const pw = generateStrongPassword()
+  registerForm.value.password = pw
+  registerForm.value.password_confirm = pw
+  showRegisterPassword.value = true
+  evaluatePassword(pw)
+}
+
+// Step 1 (account + contact) must be complete & valid before continuing.
+const canProceedStep1 = computed(() => {
+  const f = registerForm.value
+  return Boolean(
+    f.first_name.trim() &&
+    f.last_name.trim() &&
+    f.email.trim() &&
+    f.phone.trim() &&
+    isPasswordValid.value &&
+    f.password === f.password_confirm &&
+    emailCheckStatus.value !== 'taken' &&
+    emailCheckStatus.value !== 'invalid' &&
+    emailCheckStatus.value !== 'checking'
+  )
 })
 
-const isPasswordValid = computed(() => {
-  const req = passwordRequirements.value
-  return req.minLength && req.hasUpperCase && req.hasLowerCase && req.hasNumber && req.hasSpecialChar
-})
+const goToRegisterStep = (step: 1 | 2) => {
+  error.value = ''
+  registerStep.value = step
+}
 
 // Format phone number to +41 format
 const formatPhoneNumber = (phone: string): string => {
@@ -453,6 +578,69 @@ const formatPhoneNumber = (phone: string): string => {
   
   // Otherwise, assume Switzerland and add +41
   return '+41' + digits
+}
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// Debounced check whether the entered email is already registered. Lets the
+// customer find out BEFORE filling the whole form (and offer a login shortcut)
+// instead of only hitting a 409 error on submit.
+const checkEmailAvailability = () => {
+  if (emailCheckTimer) clearTimeout(emailCheckTimer)
+  const email = registerForm.value.email.trim().toLowerCase()
+
+  if (!email) {
+    emailCheckStatus.value = 'idle'
+    emailCheckMessage.value = ''
+    return
+  }
+  if (!EMAIL_REGEX.test(email)) {
+    emailCheckStatus.value = 'invalid'
+    emailCheckMessage.value = 'Bitte eine gültige E-Mail-Adresse eingeben.'
+    return
+  }
+  // Without a tenant we cannot check tenant-scoped availability — skip silently.
+  if (!props.tenantId) {
+    emailCheckStatus.value = 'idle'
+    emailCheckMessage.value = ''
+    return
+  }
+
+  emailCheckStatus.value = 'checking'
+  emailCheckMessage.value = ''
+  const seq = ++emailCheckSeq
+
+  emailCheckTimer = setTimeout(async () => {
+    try {
+      const res = await $fetch('/api/students/check-email', {
+        method: 'POST',
+        body: { email, tenantId: props.tenantId }
+      }) as { available: boolean; message?: string }
+
+      // Ignore stale responses (user kept typing)
+      if (seq !== emailCheckSeq) return
+
+      if (res.available) {
+        emailCheckStatus.value = 'available'
+        emailCheckMessage.value = ''
+      } else {
+        emailCheckStatus.value = 'taken'
+        emailCheckMessage.value = 'Diese E-Mail-Adresse ist bereits registriert.'
+      }
+    } catch {
+      // Network/server hiccup must never block registration — fail open.
+      if (seq !== emailCheckSeq) return
+      emailCheckStatus.value = 'idle'
+      emailCheckMessage.value = ''
+    }
+  }, 500)
+}
+
+// Switch to the login tab, carrying over the already-typed email.
+const switchToLoginWithEmail = () => {
+  loginForm.value.email = registerForm.value.email.trim()
+  error.value = ''
+  activeTab.value = 'login'
 }
 
 const handleLogin = async () => {
@@ -500,15 +688,19 @@ const handleRegister = async () => {
   error.value = ''
 
   try {
-    // Validate password confirmation
-    if (registerForm.value.password !== registerForm.value.password_confirm) {
-      error.value = 'Passwörter stimmen nicht überein'
+    // Step 1 must be valid (also guards against submitting while on step 1)
+    if (!canProceedStep1.value) {
+      registerStep.value = 1
+      error.value = 'Bitte fülle die Konto-Angaben vollständig aus.'
       isLoading.value = false
       return
     }
 
-    if (!registerForm.value.password) {
-      error.value = 'Passwort ist erforderlich'
+    // Step 2 required fields (validated here since hidden v-show fields can't use native `required`)
+    const f = registerForm.value
+    if (!f.birthdate || !f.street.trim() || !f.street_nr.trim() || !f.zip.trim() || !f.city.trim()) {
+      registerStep.value = 2
+      error.value = 'Bitte fülle Geburtsdatum und Adresse vollständig aus.'
       isLoading.value = false
       return
     }
@@ -593,7 +785,16 @@ const handleRegister = async () => {
     }
   } catch (err: any) {
     console.error('Registration error:', err)
-    error.value = err.message || 'Fehler bei der Registrierung. Bitte versuchen Sie es erneut.'
+    const msg = err?.statusMessage || err?.data?.statusMessage || err?.message || ''
+    // Server-side duplicate-email fallback (e.g. registered under another tenant
+    // or a race with the live check) → surface the login shortcut.
+    if (err?.statusCode === 409 || /bereits registriert|already registered/i.test(msg)) {
+      emailCheckStatus.value = 'taken'
+      emailCheckMessage.value = 'Diese E-Mail-Adresse ist bereits registriert.'
+      error.value = ''
+    } else {
+      error.value = msg || 'Fehler bei der Registrierung. Bitte versuchen Sie es erneut.'
+    }
   } finally {
     isLoading.value = false
   }

@@ -531,7 +531,10 @@
                   {{ showPassword ? '🙈' : '👁️' }}
                 </button>
               </div>
-              
+              <button type="button" @click="useGeneratedPassword" class="mt-2 text-xs font-semibold underline" :style="{ color: primaryColor }">
+                Sicheres Passwort vorschlagen
+              </button>
+
               <!-- Passwort-Validierung -->
               <div class="mt-2 space-y-1">
                 <div class="flex items-center space-x-2">
@@ -830,6 +833,7 @@ import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { useAffiliateRef } from '~/composables/useAffiliateRef'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { generateStrongPassword } from '~/composables/usePasswordStrength'
 
 const { primaryColor, accentColor } = useTenantBranding()
 
@@ -887,6 +891,14 @@ const hibpStatus = ref<'idle' | 'checking' | 'pwned' | 'safe'>('idle')
 const hibpCount = ref(0)
 const zxcvbnScore = ref<0 | 1 | 2 | 3 | 4 | null>(null)
 let hibpDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+const useGeneratedPassword = () => {
+  const pw = generateStrongPassword()
+  formData.value.password = pw
+  formData.value.confirmPassword = pw
+  showPassword.value = true
+  checkHibp(pw)
+}
 
 const checkHibp = async (password: string) => {
   // zxcvbn runs synchronously in the browser

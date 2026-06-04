@@ -32,27 +32,46 @@
             </label>
             <input
               v-model="newPassword"
-              type="password"
+              :type="showPw ? 'text' : 'password'"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               placeholder="Mindestens 12 Zeichen"
             />
+            <div class="flex items-center justify-between mt-2">
+              <button type="button" @click="useGeneratedPassword" class="text-xs font-semibold text-orange-600 underline">
+                Sicheres Passwort vorschlagen
+              </button>
+              <button type="button" @click="showPw = !showPw" class="text-xs text-gray-500 hover:text-gray-700">
+                {{ showPw ? 'Verbergen' : 'Anzeigen' }}
+              </button>
+            </div>
             <div class="mt-2 space-y-1">
-              <p class="text-xs" :class="passwordChecks.length ? 'text-green-600' : 'text-gray-500'">
-                {{ passwordChecks.length ? '✓' : '○' }} Mindestens 12 Zeichen
+              <p class="text-xs" :class="newPassword.length >= 12 ? 'text-green-600' : 'text-gray-500'">
+                {{ newPassword.length >= 12 ? '✓' : '○' }} Mindestens 12 Zeichen
               </p>
-              <p class="text-xs" :class="passwordChecks.uppercase ? 'text-green-600' : 'text-gray-500'">
-                {{ passwordChecks.uppercase ? '✓' : '○' }} Großbuchstabe
-              </p>
-              <p class="text-xs" :class="passwordChecks.lowercase ? 'text-green-600' : 'text-gray-500'">
-                {{ passwordChecks.lowercase ? '✓' : '○' }} Kleinbuchstabe
-              </p>
-              <p class="text-xs" :class="passwordChecks.number ? 'text-green-600' : 'text-gray-500'">
-                {{ passwordChecks.number ? '✓' : '○' }} Zahl
-              </p>
-              <p class="text-xs" :class="passwordChecks.special ? 'text-green-600' : 'text-gray-500'">
-                {{ passwordChecks.special ? '✓' : '○' }} Sonderzeichen (!@#$%^&*)
-              </p>
+              <!-- zxcvbn strength bar -->
+              <div v-if="zxcvbnScore !== null" class="mt-1">
+                <div class="flex gap-1 h-1.5">
+                  <div v-for="i in 4" :key="i" class="flex-1 rounded-full transition-colors duration-300"
+                    :class="i <= zxcvbnScore ? [
+                      zxcvbnScore <= 1 ? 'bg-red-500' :
+                      zxcvbnScore === 2 ? 'bg-yellow-400' :
+                      zxcvbnScore === 3 ? 'bg-blue-400' : 'bg-green-500'
+                    ] : 'bg-gray-200'"
+                  />
+                </div>
+                <p class="text-xs mt-1" :class="
+                  zxcvbnScore <= 1 ? 'text-red-500' :
+                  zxcvbnScore === 2 ? 'text-yellow-600' :
+                  zxcvbnScore === 3 ? 'text-blue-600' : 'text-green-600'
+                ">
+                  {{ strengthLabel }}<span v-if="zxcvbnScore < 2"> – zu leicht erratbar</span>
+                </p>
+              </div>
+              <!-- HIBP -->
+              <p v-if="hibpStatus === 'checking'" class="text-xs text-gray-400">⏳ Sicherheitsprüfung läuft...</p>
+              <p v-else-if="hibpStatus === 'pwned'" class="text-xs text-red-600 font-medium">✗ Passwort {{ hibpCount.toLocaleString('de-CH') }}× in Datenlecks gefunden</p>
+              <p v-else-if="hibpStatus === 'safe'" class="text-xs text-green-600">✓ Nicht in bekannten Datenlecks gefunden</p>
             </div>
           </div>
 
@@ -103,8 +122,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { logger } from '~/utils/logger'
+import { usePasswordStrength, generateStrongPassword } from '~/composables/usePasswordStrength'
 
 const props = defineProps({
   modelValue: {
@@ -124,28 +144,25 @@ const newPassword = ref('')
 const confirmPassword = ref('')
 const error = ref('')
 const isSubmitting = ref(false)
+const showPw = ref(false)
 
-// Helper function for password validation
-const hasSpecialChar = (password: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password)
+// Unified password policy (length + zxcvbn strength + HIBP breach check)
+const { zxcvbnScore, hibpStatus, hibpCount, strengthLabel, evaluate, isPasswordAcceptable } = usePasswordStrength()
+watch(newPassword, (pw) => evaluate(pw))
 
-const passwordChecks = computed(() => ({
-  length: newPassword.value.length >= 12,
-  uppercase: /[A-Z]/.test(newPassword.value),
-  lowercase: /[a-z]/.test(newPassword.value),
-  number: /[0-9]/.test(newPassword.value),
-  special: hasSpecialChar(newPassword.value)
-}))
+const useGeneratedPassword = () => {
+  const pw = generateStrongPassword()
+  newPassword.value = pw
+  confirmPassword.value = pw
+  showPw.value = true
+  evaluate(pw)
+}
 
-const canSubmit = computed(() => {
-  return newPassword.value && 
-         confirmPassword.value && 
-         newPassword.value === confirmPassword.value &&
-         passwordChecks.value.length &&
-         passwordChecks.value.uppercase &&
-         passwordChecks.value.lowercase &&
-         passwordChecks.value.number &&
-         passwordChecks.value.special
-})
+const canSubmit = computed(() =>
+  !!newPassword.value &&
+  newPassword.value === confirmPassword.value &&
+  isPasswordAcceptable(newPassword.value)
+)
 
 const updatePassword = async () => {
   if (!canSubmit.value) return

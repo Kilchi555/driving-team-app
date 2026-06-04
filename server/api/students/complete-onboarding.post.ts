@@ -5,6 +5,7 @@ import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
+import { checkPasswordPwned } from '~/server/utils/hibp-checker'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -35,32 +36,23 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Unified password policy (NIST SP 800-63B): length + breach check, no
+    // mandatory composition rules. Matches the onboarding client (zxcvbn + HIBP).
     if (password && password.length < 12) {
       throw createError({
         statusCode: 400,
         message: 'Passwort muss mindestens 12 Zeichen lang sein'
       })
     }
-    
-    if (password && !/[A-Z]/.test(password)) {
-      throw createError({
-        statusCode: 400,
-        message: 'Passwort muss mindestens einen Großbuchstaben enthalten'
-      })
-    }
-    
-    if (password && !/[a-z]/.test(password)) {
-      throw createError({
-        statusCode: 400,
-        message: 'Passwort muss mindestens einen Kleinbuchstaben enthalten'
-      })
-    }
-    
-    if (password && !/[0-9]/.test(password)) {
-      throw createError({
-        statusCode: 400,
-        message: 'Passwort muss mindestens eine Zahl enthalten'
-      })
+
+    if (password) {
+      const breach = await checkPasswordPwned(password)
+      if (breach.isPwned) {
+        throw createError({
+          statusCode: 400,
+          message: 'Dieses Passwort taucht in bekannten Datenlecks auf. Bitte wähle ein anderes Passwort.'
+        })
+      }
     }
 
     if (firstName && firstName.length > 100) {
@@ -415,6 +407,37 @@ export default defineEventHandler(async (event) => {
       }
     } catch (reminderCheckError) {
       logger.warn('⚠️ Error in reminder check (non-critical):', reminderCheckError)
+    }
+
+    // ✅ LAYER 9b: Backfill appointment confirmation email(s)
+    // Bookings made BEFORE onboarding completion skip the confirmation email
+    // (send-appointment-confirmation bails while onboarding_status === 'pending').
+    // Now that the status is 'completed', send confirmations for upcoming
+    // confirmed appointments so the customer finally receives them.
+    try {
+      const { data: upcomingAppts } = await supabaseAdmin
+        .from('appointments')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('tenant_id', user.tenant_id)
+        .eq('status', 'confirmed')
+        .gte('start_time', new Date().toISOString())
+        .order('start_time', { ascending: true })
+        .limit(5)
+
+      for (const appt of upcomingAppts || []) {
+        try {
+          await $fetch('/api/reminders/send-appointment-confirmation', {
+            method: 'POST',
+            body: { appointmentId: appt.id, userId: user.id, tenantId: user.tenant_id }
+          })
+          logger.debug(`✅ Backfilled appointment confirmation for ${appt.id}`)
+        } catch (apptErr: any) {
+          logger.warn(`⚠️ Could not send backfilled confirmation for ${appt.id} (non-critical):`, apptErr?.message)
+        }
+      }
+    } catch (apptCheckErr: any) {
+      logger.warn('⚠️ Error backfilling appointment confirmations (non-critical):', apptCheckErr?.message)
     }
 
     // ✅ LAYER 10: Audit logging

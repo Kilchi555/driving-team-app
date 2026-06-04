@@ -96,22 +96,13 @@
                 </svg>
               </button>
             </div>
+            <button type="button" @click="useGeneratedPassword" class="mt-2 text-xs font-semibold underline" :style="{ color: primaryColor || '#2563eb' }">
+              Sicheres Passwort vorschlagen
+            </button>
           <!-- Password Requirements + Strength -->
             <div class="mt-2 space-y-1">
               <p :class="form.password.length >= 12 ? 'text-green-600' : 'text-gray-400'" class="text-xs">
                 {{ form.password.length >= 12 ? '✓' : '○' }} Mindestens 12 Zeichen
-              </p>
-              <p :class="hasUpperCase ? 'text-green-600' : 'text-gray-400'" class="text-xs">
-                {{ hasUpperCase ? '✓' : '○' }} Mindestens ein Großbuchstabe
-              </p>
-              <p :class="hasLowerCase ? 'text-green-600' : 'text-gray-400'" class="text-xs">
-                {{ hasLowerCase ? '✓' : '○' }} Mindestens ein Kleinbuchstabe
-              </p>
-              <p :class="hasNumber ? 'text-green-600' : 'text-gray-400'" class="text-xs">
-                {{ hasNumber ? '✓' : '○' }} Mindestens eine Ziffer
-              </p>
-              <p :class="hasSpecial ? 'text-green-600' : 'text-gray-400'" class="text-xs">
-                {{ hasSpecial ? '✓' : '○' }} Mindestens ein Sonderzeichen (!@#$%^&*)
               </p>
 
               <!-- zxcvbn strength bar (shown once password entered) -->
@@ -267,6 +258,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { useRoute, definePageMeta, navigateTo } from '#imports'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { generateStrongPassword } from '~/composables/usePasswordStrength'
 import { useUIStore } from '~/stores/ui'
 
 // Meta
@@ -304,11 +296,16 @@ const form = ref({
 })
 
 // Computed
-const hasUpperCase = computed(() => /[A-Z]/.test(form.value.password))
-const hasLowerCase = computed(() => /[a-z]/.test(form.value.password))
-const hasNumber = computed(() => /\d/.test(form.value.password))
-const hasSpecial = computed(() => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(form.value.password))
 const passwordsMatch = computed(() => form.value.password === form.value.confirmPassword && form.value.password.length > 0)
+
+const useGeneratedPassword = () => {
+  const pw = generateStrongPassword()
+  form.value.password = pw
+  form.value.confirmPassword = pw
+  showPassword.value = true
+  showConfirmPassword.value = true
+  checkPasswordStrength(pw)
+}
 
 // zxcvbn + HIBP
 const zxcvbnScore = ref<0 | 1 | 2 | 3 | 4 | null>(null)
@@ -351,13 +348,9 @@ watch(() => form.value.password, (pw) => checkPasswordStrength(pw))
 
 const isFormValid = computed(() =>
   form.value.password.length >= 12 &&
-  hasUpperCase.value &&
-  hasLowerCase.value &&
-  hasNumber.value &&
-  hasSpecial.value &&
   passwordsMatch.value &&
   hibpStatus.value !== 'pwned' &&
-  (zxcvbnScore.value === null || zxcvbnScore.value >= 2)
+  zxcvbnScore.value !== null && zxcvbnScore.value >= 2
 )
 
 // Methods
