@@ -67,7 +67,6 @@ export default defineEventHandler(async (event) => {
     .single()
 
   // ── 1. SARI de-enrollment ──────────────────────────────────────────────────
-  const course = reg.courses as any
   const user   = reg.users as any
   const faberid = user?.sari_faberid
 
