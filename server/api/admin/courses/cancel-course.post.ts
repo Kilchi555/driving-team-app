@@ -164,6 +164,9 @@ export default defineEventHandler(async (event) => {
         const firstName = p.first_name || 'Teilnehmer'
 
         const subject = `Kurs abgesagt: ${course.name}`
+        const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
+        const bookingUrl = tenant?.slug ? `${baseUrl}/booking/availability/${tenant.slug}` : undefined
+
         const html = buildCancellationEmail({
           firstName,
           courseName: course.name,
@@ -173,6 +176,7 @@ export default defineEventHandler(async (event) => {
           tenantEmail: tenant?.contact_email || '',
           primaryColor: tenant?.primary_color || '#ef4444',
           reason: reason || '',
+          bookingUrl,
         })
 
         try {
@@ -207,6 +211,7 @@ function buildCancellationEmail({
   tenantEmail,
   primaryColor,
   reason,
+  bookingUrl,
 }: {
   firstName: string
   courseName: string
@@ -216,6 +221,7 @@ function buildCancellationEmail({
   tenantEmail: string
   primaryColor: string
   reason?: string
+  bookingUrl?: string
 }): string {
   return `
     <!DOCTYPE html>
@@ -284,6 +290,18 @@ function buildCancellationEmail({
                       </td>
                     </tr>
                   </table>
+
+                  ${bookingUrl ? `
+                  <!-- Rebooking CTA -->
+                  <table role="presentation" cellspacing="0" cellpadding="0" style="margin-bottom:24px;">
+                    <tr>
+                      <td style="border-radius:8px;background:${primaryColor || '#ef4444'};">
+                        <a href="${bookingUrl}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">
+                          Neuen Termin buchen →
+                        </a>
+                      </td>
+                    </tr>
+                  </table>` : ''}
 
                   <p style="margin:20px 0 5px 0;font-size:15px;">Freundliche Grüsse,<br>${tenantName}</p>
                   ${tenantEmail ? `<p style="margin:8px 0 0 0;font-size:12px;color:#6b7280;">${tenantEmail}</p>` : ''}
