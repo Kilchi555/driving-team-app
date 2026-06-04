@@ -581,6 +581,7 @@ export function generateCourseRegistrationCancellationEmail(data: {
   location?: string
   tenantName?: string
   tenantEmail?: string
+  reason?: string
 }): { subject: string; html: string } {
   const {
     firstName,
@@ -589,7 +590,8 @@ export function generateCourseRegistrationCancellationEmail(data: {
     courseDate,
     location,
     tenantName = 'Simy',
-    tenantEmail
+    tenantEmail,
+    reason
   } = data
 
   const subject = `Ihre Kursanmeldung wurde storniert: ${courseName}`
@@ -622,6 +624,7 @@ export function generateCourseRegistrationCancellationEmail(data: {
                   </td>
                 </tr>
               </table>
+              ${reason ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;margin-bottom:24px;"><tr><td style="padding:16px 24px;"><p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#92400e;">Grund der Stornierung:</p><p style="margin:0;font-size:14px;color:#78350f;">${reason}</p></td></tr></table>` : ''}
               <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">Falls Sie Fragen haben oder sich erneut anmelden möchten, kontaktieren Sie uns bitte direkt.</p>
               ${tenantEmail ? '<table cellpadding="0" cellspacing="0" style="margin-bottom:24px;"><tr><td style="background:#dc2626;border-radius:8px;padding:12px 24px;"><a href="mailto:' + tenantEmail + '" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">' + tenantEmail + '</a></td></tr></table>' : ''}
               <p style="margin:0;font-size:14px;color:#9ca3af;">${tenantName} · Automatisch generierte E-Mail</p>

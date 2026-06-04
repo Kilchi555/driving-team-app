@@ -18,7 +18,7 @@ import { logger } from '~/utils/logger'
  */
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
-  const { enrollmentId } = await readBody(event) as { enrollmentId: string }
+  const { enrollmentId, reason } = await readBody(event) as { enrollmentId: string; reason?: string }
 
   if (!enrollmentId) throw createError({ statusCode: 400, statusMessage: 'Missing enrollmentId' })
 
@@ -158,6 +158,7 @@ export default defineEventHandler(async (event) => {
         location:   course?.description || undefined,
         tenantName: tenant?.name        || 'Driving Team',
         tenantEmail: tenant?.contact_email || undefined,
+        reason:     reason || undefined,
       })
 
       const { Resend } = await import('resend')

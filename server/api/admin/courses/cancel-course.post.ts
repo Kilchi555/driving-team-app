@@ -18,9 +18,10 @@ import { logger } from '~/utils/logger'
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
   const body = await readBody(event)
-  const { courseId, notifyByEmail, participants } = body as {
+  const { courseId, notifyByEmail, participants, reason } = body as {
     courseId: string
     notifyByEmail?: boolean
+    reason?: string
     participants?: Array<{ user_id: string; email?: string; first_name?: string; last_name?: string }>
   }
 
@@ -171,6 +172,7 @@ export default defineEventHandler(async (event) => {
           tenantName: tenant?.name || '',
           tenantEmail: tenant?.contact_email || '',
           primaryColor: tenant?.primary_color || '#ef4444',
+          reason: reason || '',
         })
 
         try {
@@ -204,6 +206,7 @@ function buildCancellationEmail({
   tenantName,
   tenantEmail,
   primaryColor,
+  reason,
 }: {
   firstName: string
   courseName: string
@@ -212,6 +215,7 @@ function buildCancellationEmail({
   tenantName: string
   tenantEmail: string
   primaryColor: string
+  reason?: string
 }): string {
   return `
     <!DOCTYPE html>
@@ -258,6 +262,17 @@ function buildCancellationEmail({
                       </td>
                     </tr>
                   </table>
+
+                  ${reason ? `
+                  <!-- Reason -->
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fffbeb;border-radius:8px;margin-bottom:20px;border-left:4px solid #f59e0b;">
+                    <tr>
+                      <td style="padding:16px;">
+                        <p style="margin:0 0 6px 0;font-size:13px;font-weight:600;color:#92400e;">Grund der Absage:</p>
+                        <p style="margin:0;font-size:13px;color:#78350f;">${reason}</p>
+                      </td>
+                    </tr>
+                  </table>` : ''}
 
                   <!-- Apology -->
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef3c7;border-radius:8px;margin-bottom:20px;border-left:4px solid #f59e0b;">
