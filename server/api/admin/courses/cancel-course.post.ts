@@ -1,11 +1,14 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { SARIClient } from '~/utils/sariClient'
+import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { logger } from '~/utils/logger'
 
 /**
  * POST /api/admin/courses/cancel-course
- * Cancels a course, all its confirmed registrations, and sends cancellation emails.
+ * Cancels a course, all its confirmed registrations, sends cancellation emails,
+ * and unenrolls all participants from SARI (if the course is SARI-managed).
  *
  * Body:
  *   courseId      – id of the course to cancel
@@ -26,13 +29,13 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
   const now = new Date().toISOString()
 
-  // Fetch course with sessions and tenant for email
+  // Fetch course with sessions, SARI info and tenant for email
   const { data: course } = await supabase
     .from('courses')
     .select(`
-      id, name, description,
-      course_sessions(id, start_time, end_time),
-      tenants!inner(id, name, slug, contact_email, primary_color)
+      id, name, description, sari_managed, sari_course_id,
+      course_sessions(id, start_time, end_time, sari_session_id),
+      tenants!inner(id, name, slug, contact_email, primary_color, sari_enabled, sari_environment)
     `)
     .eq('id', courseId)
     .eq('tenant_id', profile.tenant_id)
@@ -45,6 +48,7 @@ export default defineEventHandler(async (event) => {
     .from('courses')
     .update({
       status: 'cancelled',
+      is_active: false,
       cancelled_at: now,
       cancelled_by: profile.id,
       status_changed_at: now,
@@ -71,9 +75,68 @@ export default defineEventHandler(async (event) => {
 
   logger.debug('✅ Course cancelled:', courseId)
 
+  // ── SARI: Unenroll all participants ──────────────────────────────────────
+  const tenant = (course as any).tenants
+  if ((course as any).sari_managed && tenant?.sari_enabled) {
+    try {
+      // Load SARI credentials
+      const sariSecrets = await getTenantSecretsSecure(
+        profile.tenant_id,
+        ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD'],
+        'CANCEL_COURSE_SARI_UNENROLL'
+      )
+
+      const sariClient = new SARIClient({
+        environment: (tenant.sari_environment || 'test') as 'test' | 'production',
+        clientId: sariSecrets.SARI_CLIENT_ID,
+        clientSecret: sariSecrets.SARI_CLIENT_SECRET,
+        username: sariSecrets.SARI_USERNAME,
+        password: sariSecrets.SARI_PASSWORD,
+      })
+
+      // Extract all numeric SARI session IDs from the group id (GROUP_111_222_333)
+      const sariIdStr: string = (course as any).sari_course_id || ''
+      const sariSessionIds = sariIdStr
+        .split('_')
+        .filter((p: string) => p && !isNaN(parseInt(p)))
+        .map((p: string) => parseInt(p))
+
+      // Fetch confirmed registrations with user faberid
+      const { data: regs } = await supabase
+        .from('course_registrations')
+        .select('id, user_id, users!inner(id, faberid, first_name, last_name)')
+        .eq('course_id', courseId)
+        .eq('status', 'cancelled') // already cancelled above
+        .not('users.faberid', 'is', null)
+
+      let unenrolled = 0
+      for (const reg of regs || []) {
+        const faberid = (reg as any).users?.faberid
+        if (!faberid) continue
+        for (const sariSessionId of sariSessionIds) {
+          try {
+            await sariClient.unenrollStudent(sariSessionId, faberid)
+            unenrolled++
+          } catch (err: any) {
+            // Non-fatal: student may already have been removed or wasn't in SARI
+            logger.warn(`⚠️ SARI unenroll skipped for faberid ${faberid} / session ${sariSessionId}: ${err.message}`)
+          }
+        }
+        // Mark local registration as sari_synced
+        await supabase
+          .from('course_registrations')
+          .update({ sari_synced: true, sari_synced_at: now })
+          .eq('id', reg.id)
+      }
+      logger.info(`✅ SARI: unenrolled ${unenrolled} participant-session(s) for cancelled course ${courseId}`)
+    } catch (sariErr: any) {
+      // Non-fatal: log but don't fail the overall cancellation
+      logger.error(`⚠️ SARI unenrollment failed during course cancellation: ${sariErr.message}`)
+    }
+  }
+
   // Send cancellation emails if requested
   if (notifyByEmail && participants && participants.length > 0) {
-    const tenant = (course as any).tenants
     const sessions: any[] = (course as any).course_sessions || []
 
     const sortedSessions = [...sessions].sort(

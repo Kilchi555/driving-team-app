@@ -294,7 +294,7 @@ export class SARISyncEngine {
     // Check if course already exists
     const { data: existing } = await this.supabase
       .from('courses')
-      .select('id, current_participants, price_per_participant_rappen, is_partial_only')
+      .select('id, status, current_participants, price_per_participant_rappen, is_partial_only')
       .eq('sari_course_id', groupSariId)
       .eq('tenant_id', this.tenantId)
       .maybeSingle()
@@ -302,6 +302,12 @@ export class SARISyncEngine {
     let courseId: string
 
     if (existing) {
+      // Skip courses that were manually cancelled by an admin — don't re-activate them
+      if (existing.status === 'cancelled') {
+        logger.debug(`⏭️ Skipping SARI sync for manually cancelled course "${group.name}" (${groupSariId})`)
+        return null
+      }
+
       // Update existing course - preserve manually-set fields
       const updateData = {
         ...courseData,
