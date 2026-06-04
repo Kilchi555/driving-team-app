@@ -346,7 +346,7 @@
                       <div class="ml-4">
                         <div class="text-sm font-medium text-gray-900">{{ course.name }}</div>
                         <div v-if="course.description" class="text-sm text-gray-500 mt-1">{{ course.description }}</div>
-                        <div class="mt-1 flex items-center gap-1">
+                        <div v-if="course.status !== 'cancelled'" class="mt-1 flex items-center gap-1">
                           <span
                             class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                             :class="getCoursePaymentBadge(course).cssClass"
