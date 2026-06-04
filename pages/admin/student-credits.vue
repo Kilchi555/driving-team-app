@@ -255,6 +255,15 @@
 
     <!-- Pending Withdrawals Table (only for withdrawals tab) -->
     <div v-if="activeTab === 'withdrawals'" class="bg-white shadow rounded-lg">
+      <!-- Success Toast -->
+      <Transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0 translate-y-2" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100" leave-to-class="opacity-0">
+        <div v-if="withdrawalSuccessMessage" class="mx-4 mt-4 flex items-center gap-3 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
+          <svg class="h-5 w-5 flex-shrink-0 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          {{ withdrawalSuccessMessage }}
+        </div>
+      </Transition>
       <div class="px-4 py-5 sm:p-6">
         <div v-if="isLoadingWithdrawals" class="text-center py-8">
           <svg class="animate-spin h-8 w-8 text-gray-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -313,6 +322,9 @@
                   Angefordert am
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Adresse
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   IBAN
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -354,6 +366,13 @@
                 
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {{ formatDate(withdrawal.last_withdrawal_at) }}
+                </td>
+
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <div v-if="withdrawal.users?.zip || withdrawal.users?.city">
+                    <div>{{ withdrawal.users?.zip }} {{ withdrawal.users?.city }}</div>
+                  </div>
+                  <span v-else class="text-gray-400 italic">—</span>
                 </td>
 
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -583,6 +602,7 @@ const activeTab = ref<'students' | 'withdrawals'>('students')
 const pendingWithdrawals = ref<any[]>([])
 const isLoadingWithdrawals = ref(false)
 const processingWithdrawalId = ref<string | null>(null)
+const withdrawalSuccessMessage = ref<string | null>(null)
 const revealedIbans = ref<Record<string, string>>({})
 const copiedIbanUserId = ref<string | null>(null)
 
@@ -755,7 +775,9 @@ const processWithdrawal = async (withdrawal: any) => {
 
 // Mark single withdrawal as completed (after bank transfer)
 const completeWithdrawal = async (withdrawal: any) => {
-  if (!confirm(`Auszahlung von CHF ${(withdrawal.pending_withdrawal_rappen / 100).toFixed(2)} an ${withdrawal.user?.first_name} ${withdrawal.user?.last_name} als überwiesen markieren?`)) return
+  const name = `${withdrawal.users?.first_name} ${withdrawal.users?.last_name}`
+  const amount = `CHF ${(withdrawal.pending_withdrawal_rappen / 100).toFixed(2)}`
+  if (!confirm(`Auszahlung von ${amount} an ${name} als überwiesen markieren?`)) return
   try {
     processingWithdrawalId.value = withdrawal.id
     const res = await $fetch('/api/admin/complete-withdrawal', {
@@ -763,6 +785,8 @@ const completeWithdrawal = async (withdrawal: any) => {
       body: { userId: withdrawal.user_id }
     }) as any
     if (res?.success) {
+      withdrawalSuccessMessage.value = `✓ ${amount} an ${name} als überwiesen markiert — E-Mail wurde versendet.`
+      setTimeout(() => { withdrawalSuccessMessage.value = null }, 6000)
       await loadPendingWithdrawals()
     } else {
       alert(`❌ Fehler: ${res?.error}`)
@@ -784,6 +808,8 @@ const completeAllWithdrawals = async () => {
       body: { all: true }
     }) as any
     if (res?.success) {
+      withdrawalSuccessMessage.value = `✓ Alle Auszahlungen als überwiesen markiert — E-Mails wurden versendet.`
+      setTimeout(() => { withdrawalSuccessMessage.value = null }, 6000)
       await loadPendingWithdrawals()
     } else {
       alert(`❌ Fehler: ${res?.error}`)
