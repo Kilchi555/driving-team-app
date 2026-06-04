@@ -1561,6 +1561,24 @@
             </div>
           </div>
 
+          <!-- Cancellation Reason -->
+          <div class="space-y-3">
+            <h3 class="font-semibold text-gray-900">Grund der Absage:</h3>
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                v-for="r in cancellationReasons" :key="r"
+                @click="cancellationReason = cancellationReason === r ? '' : r"
+                :class="['px-3 py-2 rounded-lg text-sm border transition-colors text-left', cancellationReason === r ? 'bg-red-50 border-red-400 text-red-700 font-medium' : 'border-gray-200 text-gray-600 hover:border-gray-300']"
+              >{{ r }}</button>
+            </div>
+            <textarea
+              v-model="cancellationReasonCustom"
+              placeholder="Eigener Grund (optional)…"
+              rows="2"
+              class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+            />
+          </div>
+
           <!-- Notification Options -->
           <div class="space-y-4">
             <h3 class="font-semibold text-gray-900">Benachrichtigung der Teilnehmer:</h3>
@@ -1607,6 +1625,38 @@
               {{ isCanceling ? 'Absage...' : 'Kurs absagen' }}
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Remove Participant Reason Modal -->
+    <div v-if="showRemoveParticipantModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click.self="showRemoveParticipantModal = false">
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm max-w-md w-full" @click.stop>
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-bold text-gray-900">Teilnehmer entfernen</h2>
+          <p class="text-sm text-gray-500 mt-1">{{ removingParticipant?.first_name }} {{ removingParticipant?.last_name }}</p>
+        </div>
+        <div class="px-6 py-4 space-y-4">
+          <div class="space-y-3">
+            <h3 class="font-semibold text-gray-900 text-sm">Grund (optional):</h3>
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                v-for="r in removalReasons" :key="r"
+                @click="removalReason = removalReason === r ? '' : r"
+                :class="['px-3 py-2 rounded-lg text-sm border transition-colors text-left', removalReason === r ? 'bg-red-50 border-red-400 text-red-700 font-medium' : 'border-gray-200 text-gray-600 hover:border-gray-300']"
+              >{{ r }}</button>
+            </div>
+            <textarea
+              v-model="removalReasonCustom"
+              placeholder="Eigener Grund (optional)…"
+              rows="2"
+              class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+            />
+          </div>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+          <button @click="showRemoveParticipantModal = false" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition-colors">Abbrechen</button>
+          <button @click="confirmRemoveParticipant" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors">Entfernen & E-Mail senden</button>
         </div>
       </div>
     </div>
@@ -3935,6 +3985,16 @@ const courseParticipants = ref<any[]>([])
 const isCanceling = ref(false)
 const notifyByEmail = ref(true)
 const notifyBySMS = ref(false)
+const cancellationReasons = ['Ausfall Kursleiter', 'Zu wenig Teilnehmer', 'Technische Probleme', 'Veranstaltungsort nicht verfügbar']
+const cancellationReason = ref('')
+const cancellationReasonCustom = ref('')
+
+// Remove Participant Modal
+const showRemoveParticipantModal = ref(false)
+const removingParticipant = ref<any>(null)
+const removalReasons = ['Krankheit', 'Persönliche Gründe', 'Umplanung', 'Keine Zahlung']
+const removalReason = ref('')
+const removalReasonCustom = ref('')
 
 // Status Change Modal
 const showStatusChangeModal = ref(false)
@@ -5578,11 +5638,14 @@ const executeCourseCancellation = async () => {
   error.value = null
 
   try {
+    const finalReason = cancellationReasonCustom.value.trim() || cancellationReason.value || undefined
+
     const res = await $fetch('/api/admin/courses/cancel-course', {
       method: 'POST',
       body: {
         courseId: cancelingCourse.value.id,
         notifyByEmail: notifyByEmail.value,
+        reason: finalReason,
         participants: courseParticipants.value.map((p: any) => ({
           user_id: p.user_id,
           email: p.email,
@@ -5608,6 +5671,8 @@ const executeCourseCancellation = async () => {
     showCancelCourseModal.value = false
     cancelingCourse.value = null
     courseParticipants.value = []
+    cancellationReason.value = ''
+    cancellationReasonCustom.value = ''
     await loadCourses()
 
   } catch (err: any) {
@@ -6070,13 +6135,26 @@ const addParticipant = async () => {
   }
 }
 
-const removeParticipant = async (enrollment: any) => {
-  if (!confirm('Möchten Sie diesen Teilnehmer wirklich entfernen?')) return
+const removeParticipant = (enrollment: any) => {
+  removingParticipant.value = enrollment
+  removalReason.value = ''
+  removalReasonCustom.value = ''
+  showRemoveParticipantModal.value = true
+}
+
+const confirmRemoveParticipant = async () => {
+  if (!removingParticipant.value) return
+  const enrollment = removingParticipant.value
+  showRemoveParticipantModal.value = false
+
+  const reasonText = removalReasonCustom.value.trim()
+    || removalReason.value
+    || ''
 
   try {
     await $fetch('/api/admin/courses/remove-participant', {
       method: 'POST',
-      body: { enrollmentId: enrollment.id },
+      body: { enrollmentId: enrollment.id, reason: reasonText || undefined },
     })
 
     // Reload enrollments
