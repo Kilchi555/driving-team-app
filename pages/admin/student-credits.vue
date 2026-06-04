@@ -357,7 +357,23 @@
                 </td>
 
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span v-if="withdrawal.iban_last4" class="font-mono">****{{ withdrawal.iban_last4 }}</span>
+                  <div v-if="withdrawal.iban_last4" class="flex items-center gap-2">
+                    <span class="font-mono">
+                      {{ revealedIbans[withdrawal.user_id] || `****${withdrawal.iban_last4}` }}
+                    </span>
+                    <button
+                      @click="copyIban(withdrawal.user_id)"
+                      :title="revealedIbans[withdrawal.user_id] ? 'IBAN kopieren' : 'IBAN anzeigen & kopieren'"
+                      class="text-gray-400 hover:text-blue-600 transition-colors"
+                    >
+                      <svg v-if="copiedIbanUserId !== withdrawal.user_id" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                      </svg>
+                      <svg v-else class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                      </svg>
+                    </button>
+                  </div>
                   <span v-else class="text-gray-400 italic">Keine IBAN</span>
                 </td>
 
@@ -567,6 +583,22 @@ const activeTab = ref<'students' | 'withdrawals'>('students')
 const pendingWithdrawals = ref<any[]>([])
 const isLoadingWithdrawals = ref(false)
 const processingWithdrawalId = ref<string | null>(null)
+const revealedIbans = ref<Record<string, string>>({})
+const copiedIbanUserId = ref<string | null>(null)
+
+const copyIban = async (userId: string) => {
+  try {
+    if (!revealedIbans.value[userId]) {
+      const res = await $fetch<{ iban: string }>(`/api/admin/get-iban?userId=${userId}`)
+      revealedIbans.value[userId] = res.iban
+    }
+    await navigator.clipboard.writeText(revealedIbans.value[userId])
+    copiedIbanUserId.value = userId
+    setTimeout(() => { copiedIbanUserId.value = null }, 2000)
+  } catch (err) {
+    console.error('Error fetching/copying IBAN:', err)
+  }
+}
 const isExportingPain001 = ref(false)
 const isCompletingAll = ref(false)
 
