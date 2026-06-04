@@ -967,13 +967,25 @@ const toggleAffiliate = () => { if (!planIncludesAffiliate.value) addonAffiliate
  *     sb-refresh-token cookie to get new tokens from Supabase.
  *  Returns null only when the user has no valid session at all. */
 async function resolveFreshToken(): Promise<string | null> {
+  // Only trust the client session token if it is still valid for a bit.
+  // getSession() returns the stored session even when its access_token is
+  // already expired (the client-side auto-refresh can fail in our split
+  // cookie/localStorage setup), and an expired token makes the server return
+  // 401 → the upgrade page shows "Konto erforderlich" even though the user is
+  // logged in. So we verify expiry and fall through to the server refresh.
   try {
     const { getSupabase } = await import('~/utils/supabase')
     const supabase = getSupabase()
     const { data: { session } } = await supabase.auth.getSession()
-    if (session?.access_token) return session.access_token
+    const nowSec = Math.floor(Date.now() / 1000)
+    const expiresAt = session?.expires_at ?? 0
+    // Require at least 60s of remaining validity to avoid races near expiry.
+    if (session?.access_token && expiresAt - nowSec > 60) {
+      return session.access_token
+    }
   } catch { /* ignore */ }
 
+  // Token missing/expired → refresh server-side via the httpOnly refresh cookie.
   try {
     const refreshed = await $fetch<{ session: { access_token: string } }>('/api/auth/refresh', { method: 'POST' })
     if (refreshed?.session?.access_token) return refreshed.session.access_token
