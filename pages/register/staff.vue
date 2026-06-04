@@ -436,7 +436,15 @@
 
             <div>
               <label class="label">Passwort *</label>
-              <input v-model="form.password" type="password" required class="input" placeholder="Mindestens 12 Zeichen" autocomplete="new-password" name="new-password">
+              <input v-model="form.password" :type="showPw ? 'text' : 'password'" required class="input" placeholder="Mindestens 12 Zeichen" autocomplete="new-password" name="new-password">
+              <div class="flex items-center justify-between mt-2">
+                <button type="button" @click="useGeneratedPassword" class="text-xs font-semibold underline" :style="{ color: tenantColor }">
+                  Sicheres Passwort vorschlagen
+                </button>
+                <button type="button" @click="showPw = !showPw" class="text-xs text-gray-500 hover:text-gray-700">
+                  {{ showPw ? 'Verbergen' : 'Anzeigen' }}
+                </button>
+              </div>
               <!-- zxcvbn strength bar -->
               <div v-if="zxcvbnScore !== null" class="mt-2">
                 <div class="flex gap-1 h-1.5">
@@ -465,7 +473,7 @@
 
             <div>
               <label class="label">Passwort bestätigen *</label>
-              <input v-model="form.confirmPassword" type="password" required class="input" placeholder="Passwort wiederholen" autocomplete="new-password" name="confirm-password">
+              <input v-model="form.confirmPassword" :type="showPw ? 'text' : 'password'" required class="input" placeholder="Passwort wiederholen" autocomplete="new-password" name="confirm-password">
               <p v-if="form.confirmPassword && form.password !== form.confirmPassword" class="text-xs text-red-500 mt-1">
                 Passwörter stimmen nicht überein
               </p>
@@ -523,6 +531,7 @@ definePageMeta({ name: 'register-staff-invite' })
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from '#app'
 import { useAuthStore } from '~/stores/auth'
+import { generateStrongPassword } from '~/composables/usePasswordStrength'
 
 const route              = useRoute()
 const router             = useRouter()
@@ -659,7 +668,16 @@ const form = reactive({
 const zxcvbnScore    = ref<0 | 1 | 2 | 3 | 4 | null>(null)
 const hibpStatus     = ref<'idle' | 'checking' | 'pwned' | 'safe'>('idle')
 const hibpCount      = ref(0)
+const showPw         = ref(false)
 let hibpDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+const useGeneratedPassword = () => {
+  const pw = generateStrongPassword()
+  form.password = pw
+  form.confirmPassword = pw
+  showPw.value = true
+  checkPasswordStrength(pw)
+}
 
 const checkPasswordStrength = async (password: string) => {
   if (!password || password.length < 12) { zxcvbnScore.value = null; hibpStatus.value = 'idle'; return }

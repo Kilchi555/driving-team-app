@@ -164,27 +164,6 @@
           </div>
         </div>
 
-        <!-- Restored preferences banner -->
-        <Transition name="fade">
-          <div
-            v-if="prefsRestoredBanner"
-            class="flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm"
-            :style="{ background: `${getBrandPrimary()}15`, borderLeft: `3px solid ${getBrandPrimary()}` }"
-          >
-            <span :style="{ color: getBrandPrimary() }">
-              ✓ Letzte Auswahl wiederhergestellt — tippe auf einen Schritt oben um etwas zu ändern.
-            </span>
-            <button
-              @click="prefsRestoredBanner = false"
-              class="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
-              aria-label="Schliessen"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </Transition>
 
         <!-- Summary Info - Show at every step for context -->
         <div v-if="currentStep > 0" class="text-center">
@@ -1028,6 +1007,7 @@
     :initial-tab="loginModalTab"
     :selected-staff-id="selectedInstructor?.id"
     :selected-category="selectedCategory?.code"
+    :tenant-id="currentTenant?.id"
     :primary-color="getBrandPrimary()"
     @close="showLoginModal = false"
     @success="handleAuthSuccess"
@@ -1582,7 +1562,6 @@ const stepsContainerRef = ref<HTMLDivElement | null>(null)
 const scrollContainerRef = ref<HTMLDivElement | null>(null)
 
 // ─── Booking Preferences Persistence (localStorage) ───────────────────────────
-const prefsRestoredBanner = ref(false)
 const isRestoringPrefs = ref(false)
 
 const saveBookingPrefs = () => {
@@ -1680,10 +1659,6 @@ const restoreBookingPrefs = async () => {
       await selectInstructor(instructor)
     }
 
-    // Show banner only when we fully advanced to slot selection
-    if (currentStep.value >= 6) {
-      prefsRestoredBanner.value = true
-    }
   } catch { /* ignore restore errors silently */ }
   finally { isRestoringPrefs.value = false }
 }

@@ -57,15 +57,34 @@
 
           <!-- Password Fields -->
           <div>
-            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
-              Neues Passwort
-            </label>
+            <div class="flex items-center justify-between mb-1">
+              <label for="password" class="block text-sm font-medium text-gray-700">
+                Neues Passwort
+              </label>
+              <div class="flex items-center gap-3">
+                <button
+                  type="button"
+                  @click="showPassword = !showPassword"
+                  class="text-xs text-gray-500 underline"
+                >
+                  {{ showPassword ? 'Verbergen' : 'Anzeigen' }}
+                </button>
+                <button
+                  type="button"
+                  @click="useGeneratedPassword"
+                  class="text-xs font-semibold text-blue-600 underline"
+                >
+                  Sicheres Passwort vorschlagen
+                </button>
+              </div>
+            </div>
             <input
               id="password"
               v-model="password"
-              type="password"
+              :type="showPassword ? 'text' : 'password'"
               required
-              minlength="8"
+              minlength="12"
+              autocomplete="new-password"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               placeholder="Mindestens 12 Zeichen"
             />
@@ -78,37 +97,49 @@
             <input
               id="confirmPassword"
               v-model="confirmPassword"
-              type="password"
+              :type="showPassword ? 'text' : 'password'"
               required
-              minlength="8"
+              minlength="12"
+              autocomplete="new-password"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               placeholder="Passwort wiederholen"
             />
           </div>
 
-          <!-- Password Requirements -->
-          <div class="text-xs text-gray-500">
-            <p class="font-medium mb-1">Passwort-Anforderungen:</p>
-            <ul class="list-disc list-inside space-y-1">
-              <li :class="password.length >= 12 ? 'text-green-600' : 'text-gray-500'">
-                Mindestens 12 Zeichen
-              </li>
-              <li :class="hasUppercase ? 'text-green-600' : 'text-gray-500'">
-                Mindestens ein Großbuchstabe
-              </li>
-              <li :class="hasLowercase ? 'text-green-600' : 'text-gray-500'">
-                Mindestens ein Kleinbuchstabe
-              </li>
-              <li :class="hasNumber ? 'text-green-600' : 'text-gray-500'">
-                Mindestens eine Zahl
-              </li>
-              <li :class="hasSpecial ? 'text-green-600' : 'text-gray-500'">
-                Mindestens ein Sonderzeichen (!@#$%^&*)
-              </li>
-              <li :class="passwordsMatch ? 'text-green-600' : 'text-gray-500'">
-                Passwörter stimmen überein
-              </li>
-            </ul>
+          <!-- Password strength + breach check -->
+          <div class="text-xs space-y-1">
+            <p :class="password.length >= 12 ? 'text-green-600' : 'text-gray-500'">
+              {{ password.length >= 12 ? '✓' : '○' }} Mindestens 12 Zeichen
+            </p>
+
+            <div v-if="zxcvbnScore !== null">
+              <div class="flex gap-1">
+                <div
+                  v-for="i in 4"
+                  :key="i"
+                  class="h-1.5 flex-1 rounded-full"
+                  :class="i <= zxcvbnScore
+                    ? (zxcvbnScore <= 1 ? 'bg-red-500' : zxcvbnScore === 2 ? 'bg-yellow-400' : zxcvbnScore === 3 ? 'bg-blue-400' : 'bg-green-500')
+                    : 'bg-gray-200'"
+                ></div>
+              </div>
+              <p class="mt-1" :class="zxcvbnScore <= 1 ? 'text-red-500' : zxcvbnScore === 2 ? 'text-yellow-600' : zxcvbnScore === 3 ? 'text-blue-600' : 'text-green-600'">
+                {{ strengthLabel }}<span v-if="zxcvbnScore < 2"> – zu leicht erratbar</span>
+              </p>
+            </div>
+
+            <div v-if="hibpStatus !== 'idle'">
+              <span v-if="hibpStatus === 'checking'" class="text-gray-400">⏳ Sicherheitsprüfung läuft…</span>
+              <span v-else-if="hibpStatus === 'pwned'" class="text-red-600 font-medium">
+                ✗ Dieses Passwort taucht {{ hibpCount.toLocaleString('de-CH') }}× in Datenlecks auf – bitte ein anderes wählen.
+              </span>
+              <span v-else-if="hibpStatus === 'safe'" class="text-green-600">✓ Passwort sieht sicher aus</span>
+            </div>
+
+            <p :class="passwordsMatch ? 'text-green-600' : 'text-gray-500'">
+              {{ passwordsMatch ? '✓' : '○' }} Passwörter stimmen überein
+            </p>
+
           </div>
 
           <!-- Error Display -->
@@ -133,35 +164,47 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from '#app'
+import { usePasswordStrength, generateStrongPassword } from '~/composables/usePasswordStrength'
 
 const route = useRoute()
 
 // State
 const password = ref('')
 const confirmPassword = ref('')
+const showPassword = ref(false)
 const isLoading = ref(false)
 const error = ref('')
 const isSuccess = ref(false)
 const userInfo = ref<any>(null)
 const tenantSlug = ref('')
 
-// Computed
-const hasUppercase = computed(() => /[A-Z]/.test(password.value))
-const hasLowercase = computed(() => /[a-z]/.test(password.value))
-const hasNumber = computed(() => /\d/.test(password.value))
-const hasSpecial = computed(() => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password.value))
+// Unified password policy: length ≥ 12 + zxcvbn strength + HIBP breach check.
+const {
+  zxcvbnScore,
+  hibpStatus,
+  hibpCount,
+  strengthLabel,
+  evaluate: evaluatePassword,
+  isPasswordAcceptable,
+} = usePasswordStrength()
+
+watch(password, (pw) => { evaluatePassword(pw) })
+
 const passwordsMatch = computed(() => password.value === confirmPassword.value && password.value.length > 0)
 
-const isValidPassword = computed(() => {
-  return password.value.length >= 12 && 
-         hasUppercase.value && 
-         hasLowercase.value &&
-         hasNumber.value && 
-         hasSpecial.value &&
-         passwordsMatch.value
-})
+const isValidPassword = computed(() =>
+  isPasswordAcceptable(password.value) && passwordsMatch.value
+)
+
+const useGeneratedPassword = () => {
+  const pw = generateStrongPassword()
+  password.value = pw
+  confirmPassword.value = pw
+  showPassword.value = true
+  evaluatePassword(pw)
+}
 
 // Methods
 const setPassword = async () => {

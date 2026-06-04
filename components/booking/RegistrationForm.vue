@@ -26,9 +26,35 @@
             {{ showPassword ? '👁️' : '🔒' }}
           </button>
         </div>
-        <p class="text-xs text-gray-500 mt-1">
-          Mindestens 12 Zeichen, ein Großbuchstabe und eine Zahl
-        </p>
+        <div class="flex items-center justify-between mt-2">
+          <button type="button" @click="useGeneratedPassword" class="text-xs font-semibold text-blue-600 underline">
+            Sicheres Passwort vorschlagen
+          </button>
+        </div>
+        <!-- zxcvbn strength bar -->
+        <div v-if="zxcvbnScore !== null" class="mt-2">
+          <div class="flex gap-1 h-1.5">
+            <div v-for="i in 4" :key="i" class="flex-1 rounded-full transition-colors duration-300"
+              :class="i <= zxcvbnScore ? [
+                zxcvbnScore <= 1 ? 'bg-red-500' :
+                zxcvbnScore === 2 ? 'bg-yellow-400' :
+                zxcvbnScore === 3 ? 'bg-blue-400' : 'bg-green-500'
+              ] : 'bg-gray-200'"
+            />
+          </div>
+          <p class="text-xs mt-1" :class="
+            zxcvbnScore <= 1 ? 'text-red-500' :
+            zxcvbnScore === 2 ? 'text-yellow-600' :
+            zxcvbnScore === 3 ? 'text-blue-600' : 'text-green-600'
+          ">
+            {{ strengthLabel }}<span v-if="zxcvbnScore < 2"> – zu leicht erratbar</span>
+          </p>
+        </div>
+        <!-- HIBP -->
+        <p v-if="hibpStatus === 'checking'" class="text-xs text-gray-400 mt-1">⏳ Sicherheitsprüfung läuft...</p>
+        <p v-else-if="hibpStatus === 'pwned'" class="text-xs text-red-600 font-medium mt-1">✗ Passwort {{ hibpCount.toLocaleString('de-CH') }}× in Datenlecks gefunden – bitte ein anderes wählen</p>
+        <p v-else-if="hibpStatus === 'safe'" class="text-xs text-green-600 mt-1">✓ Nicht in bekannten Datenlecks gefunden</p>
+        <p v-else class="text-xs text-gray-500 mt-1">Mindestens 12 Zeichen – ein Satz oder eine Phrase ist ideal.</p>
       </div>
 
       <!-- Passwort wiederholen -->
@@ -36,7 +62,7 @@
         <label class="block text-sm font-medium text-gray-700 mb-1">Passwort bestätigen *</label>
         <input
           v-model="formData.confirmPassword"
-          type="password"
+          :type="showPassword ? 'text' : 'password'"
           required
           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           placeholder="Passwort wiederholen"
@@ -86,10 +112,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { navigateTo } from '#app'
 import { logger } from '~/utils/logger'
+import { usePasswordStrength, generateStrongPassword } from '~/composables/usePasswordStrength'
 
 const props = defineProps<{
   tenantSlug: string
@@ -118,13 +145,23 @@ const showPassword = ref(false)
 const isSubmitting = ref(false)
 const error = ref<string | null>(null)
 
+// Unified password policy (length + zxcvbn strength + HIBP breach check)
+const { zxcvbnScore, hibpStatus, hibpCount, strengthLabel, evaluate, isPasswordAcceptable } = usePasswordStrength()
+watch(() => formData.value.password, (pw) => evaluate(pw))
+
+const useGeneratedPassword = () => {
+  const pw = generateStrongPassword()
+  formData.value.password = pw
+  formData.value.confirmPassword = pw
+  showPassword.value = true
+  evaluate(pw)
+}
+
 const canSubmit = computed(() => {
   return formData.value.password &&
          formData.value.confirmPassword &&
          formData.value.password === formData.value.confirmPassword &&
-         formData.value.password.length >= 8 &&
-         /[A-Z]/.test(formData.value.password) &&
-         /[0-9]/.test(formData.value.password) &&
+         isPasswordAcceptable(formData.value.password) &&
          formData.value.acceptTerms
 })
 

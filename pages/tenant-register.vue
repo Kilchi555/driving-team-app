@@ -788,12 +788,20 @@
             <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Passwort *</label>
-                <input v-model="adminForm.password" type="password" required minlength="12" autocomplete="new-password" name="new-password"
+                <input v-model="adminForm.password" :type="showPw ? 'text' : 'password'" required minlength="12" autocomplete="new-password" name="new-password"
                   :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
                     adminForm.password && !passwordValid ? 'border-red-300 focus:ring-red-500' :
                     adminForm.password && passwordValid ? 'border-green-300 focus:ring-green-500' :
                     'border-gray-200 focus:ring-blue-500']"
                   placeholder="Mindestens 12 Zeichen">
+                <div class="flex items-center justify-between mt-1.5">
+                  <button type="button" @click="useGeneratedPassword" class="text-xs font-semibold text-blue-600 underline">
+                    Sicheres Passwort vorschlagen
+                  </button>
+                  <button type="button" @click="showPw = !showPw" class="text-xs text-gray-500 hover:text-gray-700">
+                    {{ showPw ? 'Verbergen' : 'Anzeigen' }}
+                  </button>
+                </div>
                 <div v-if="zxcvbnScore !== null" class="mt-2">
                   <div class="flex gap-1 h-1">
                     <div v-for="i in 4" :key="i" class="flex-1 rounded-full transition-colors duration-300"
@@ -820,7 +828,7 @@
               </div>
               <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Passwort bestätigen *</label>
-                <input v-model="adminForm.passwordConfirm" type="password" required minlength="12" autocomplete="new-password" name="confirm-password"
+                <input v-model="adminForm.passwordConfirm" :type="showPw ? 'text' : 'password'" required minlength="12" autocomplete="new-password" name="confirm-password"
                   :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
                     adminForm.passwordConfirm && passwordMismatch ? 'border-red-300 focus:ring-red-500' :
                     adminForm.passwordConfirm && !passwordMismatch && passwordValid ? 'border-green-300 focus:ring-green-500' :
@@ -1250,6 +1258,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { navigateTo, useRoute } from '#app'
+import { generateStrongPassword } from '~/composables/usePasswordStrength'
 import { compressImage } from '~/utils/imageCompression'
 import { getSupabase } from '~/utils/supabase'
 
@@ -1548,7 +1557,16 @@ const passwordMismatch = computed(() => adminForm.value.password !== adminForm.v
 const zxcvbnScore    = ref<0 | 1 | 2 | 3 | 4 | null>(null)
 const hibpStatus     = ref<'idle' | 'checking' | 'pwned' | 'safe'>('idle')
 const hibpCount      = ref(0)
+const showPw         = ref(false)
 let hibpDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+const useGeneratedPassword = () => {
+  const pw = generateStrongPassword()
+  adminForm.value.password = pw
+  adminForm.value.passwordConfirm = pw
+  showPw.value = true
+  checkPasswordStrength(pw)
+}
 
 const checkPasswordStrength = async (password: string) => {
   if (!password || password.length < 12) { zxcvbnScore.value = null; hibpStatus.value = 'idle'; return }
