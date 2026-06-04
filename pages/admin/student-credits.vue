@@ -677,8 +677,8 @@ const loadPendingWithdrawals = async () => {
       pending_withdrawal_rappen: credit.pending_withdrawal_rappen,
       last_withdrawal_at: credit.last_withdrawal_at,
       user: credit.users,
-      iban_last4: credit.student_withdrawal_preferences?.iban_last4 || null,
-      account_holder: credit.student_withdrawal_preferences?.account_holder || null,
+      iban_last4: credit.users?.student_withdrawal_preferences?.iban_last4 || null,
+      account_holder: credit.users?.student_withdrawal_preferences?.account_holder || null,
     }))
 
   } catch (err: any) {
