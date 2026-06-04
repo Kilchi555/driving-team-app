@@ -5578,7 +5578,7 @@ const executeCourseCancellation = async () => {
   error.value = null
 
   try {
-    await $fetch('/api/admin/courses/cancel-course', {
+    const res = await $fetch('/api/admin/courses/cancel-course', {
       method: 'POST',
       body: {
         courseId: cancelingCourse.value.id,
@@ -5590,9 +5590,19 @@ const executeCourseCancellation = async () => {
           last_name: p.last_name,
         })),
       },
-    })
+    }) as any
 
-    success.value = `Kurs "${cancelingCourse.value.name}" erfolgreich abgesagt!`
+    const sari = res?.sari
+    let msg = `Kurs "${cancelingCourse.value.name}" erfolgreich abgesagt.`
+    if (sari) {
+      if (sari.error) {
+        msg += ` ⚠️ SARI-Abmeldung fehlgeschlagen: ${sari.error}`
+      } else {
+        msg += ` ${sari.unenrolled} Teilnehmer wurden aus SARI abgemeldet.`
+      }
+      msg += ` Hinweis: Den Kurs selbst musst du manuell in SARI löschen.`
+    }
+    success.value = msg
     
     // Close modal and reload courses
     showCancelCourseModal.value = false

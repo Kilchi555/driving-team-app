@@ -77,7 +77,11 @@ export default defineEventHandler(async (event) => {
 
   // ── SARI: Unenroll all participants ──────────────────────────────────────
   const tenant = (course as any).tenants
-  if ((course as any).sari_managed && tenant?.sari_enabled) {
+  let sariUnenrolled = 0
+  let sariError: string | null = null
+  const isSariManaged = !!(course as any).sari_managed && !!tenant?.sari_enabled
+
+  if (isSariManaged) {
     try {
       // Load SARI credentials
       const sariSecrets = await getTenantSecretsSecure(
@@ -129,9 +133,11 @@ export default defineEventHandler(async (event) => {
           .eq('id', reg.id)
       }
       logger.info(`✅ SARI: unenrolled ${unenrolled} participant-session(s) for cancelled course ${courseId}`)
+      sariUnenrolled = (regs || []).filter((r: any) => r.users?.faberid).length
     } catch (sariErr: any) {
       // Non-fatal: log but don't fail the overall cancellation
       logger.error(`⚠️ SARI unenrollment failed during course cancellation: ${sariErr.message}`)
+      sariError = sariErr.message
     }
   }
 
@@ -182,7 +188,12 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  return { success: true }
+  return {
+    success: true,
+    sari: isSariManaged
+      ? { unenrolled: sariUnenrolled, error: sariError }
+      : null,
+  }
 })
 
 function buildCancellationEmail({
