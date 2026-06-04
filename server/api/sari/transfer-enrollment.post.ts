@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
   // Load old registration
   const { data: oldReg } = await supabaseAdmin
     .from('course_registrations')
-    .select('id, course_id, tenant_id, user_id, sari_faberid, first_name, last_name, payment_id, payment_method, amount_paid_rappen, sari_data, sari_licenses, email, phone, street, zip, city')
+    .select('id, course_id, tenant_id, user_id, sari_faberid, is_partial_enrollment, first_name, last_name, payment_id, payment_method, amount_paid_rappen, sari_data, sari_licenses, email, phone, street, zip, city')
     .eq('id', registrationId)
     .eq('tenant_id', callerProfile.tenant_id)
     .in('status', ['confirmed', 'enrolled', 'pending'])
@@ -76,10 +76,14 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Load old course
+  // Load old course (with category config for partial enrollment)
   const { data: oldCourse } = await supabaseAdmin
     .from('courses')
-    .select('id, name, sari_managed, sari_course_id, category, current_participants, max_participants, course_start_date, tenant_id')
+    .select(`
+      id, name, sari_managed, sari_course_id, category,
+      current_participants, max_participants, course_start_date, tenant_id,
+      course_categories(partial_start_position)
+    `)
     .eq('id', oldReg.course_id)
     .eq('tenant_id', callerProfile.tenant_id)
     .single()
@@ -168,44 +172,74 @@ export default defineEventHandler(async (event) => {
     password: sariSecrets.SARI_PASSWORD,
   })
 
-  // Helper: extract first numeric SARI ID from GROUP_X_Y_Z string
-  const extractSariId = (sariCourseId: string): number => {
-    const match = String(sariCourseId).match(/(\d+)/)
-    if (!match) throw new Error(`Ungültige SARI-Kurs-ID: ${sariCourseId}`)
-    return parseInt(match[1])
+  // Helper: extract all numeric session IDs from a GROUP_X_Y_Z string (preserves order)
+  const extractAllSariIds = (sariCourseId: string): string[] => {
+    const parts = String(sariCourseId).split('_')
+    return parts.filter(p => p && !isNaN(parseInt(p)))
   }
 
-  const oldSariId = extractSariId(oldCourse.sari_course_id)
-  const targetSariId = extractSariId(targetCourse.sari_course_id)
+  // Determine which session IDs to transfer (full course or partial)
+  const partialStartPos: number = (oldCourse.course_categories as any)?.partial_start_position ?? 3
+  const isPartial = !!oldReg.is_partial_enrollment
 
-  // === SARI operations first — if SARI fails we abort before touching the DB ===
-  logger.info(`🔄 Transfer ${faberid}: SARI unenroll from ${oldSariId}, enroll in ${targetSariId}`)
-
-  try {
-    await sari.unenrollStudent(oldSariId, faberid)
-  } catch (err: any) {
-    logger.error(`SARI unenroll failed for ${faberid}: ${err.message}`)
-    // If already not enrolled, treat as OK (idempotent)
-    if (!err.message?.includes('PERSON_NOT_FOUND') && !err.message?.includes('PERSON_NOT_REGISTERED')) {
-      throw createError({ statusCode: 502, statusMessage: `SARI-Abmeldung fehlgeschlagen: ${err.message}` })
-    }
+  const filterSessions = (ids: string[]): string[] => {
+    if (!isPartial) return ids
+    // Partial enrollment: only sessions from partialStartPos onwards (1-indexed)
+    return ids.slice(partialStartPos - 1)
   }
 
-  try {
-    await sari.enrollStudent(targetSariId, faberid, birthdate ?? '')
-  } catch (err: any) {
-    logger.error(`SARI enroll failed for ${faberid}: ${err.message}`)
-    // Roll back unenroll by re-enrolling in old course
+  const oldSariIds = filterSessions(extractAllSariIds(oldCourse.sari_course_id))
+  const targetSariIds = filterSessions(extractAllSariIds(targetCourse.sari_course_id))
+
+  if (oldSariIds.length === 0 || targetSariIds.length === 0) {
+    throw createError({ statusCode: 400, statusMessage: 'Keine gültigen SARI-Session-IDs gefunden' })
+  }
+
+  // Validate all target sessions before making any changes (checks deadline, capacity, order)
+  logger.info(`🔍 Validating ${targetSariIds.length} target sessions for ${faberid}`)
+  const validation = await sari.validateAllSessions(targetSariIds, faberid, birthdate ?? '')
+  if (!validation.canEnroll) {
+    throw createError({ statusCode: 409, statusMessage: validation.reason || 'Anmeldung im Ziel-Kurs nicht möglich' })
+  }
+
+  // === SARI operations — unenroll from all old sessions, enroll in all new sessions ===
+  logger.info(`🔄 Transfer ${faberid}: unenroll [${oldSariIds}] → enroll [${targetSariIds}]`)
+
+  // 1. Unenroll from all old sessions
+  for (const sessionId of oldSariIds) {
     try {
-      await sari.enrollStudent(oldSariId, faberid, birthdate ?? '')
-    } catch (rollbackErr: any) {
-      logger.error(`SARI rollback re-enroll failed: ${rollbackErr.message}`)
+      await sari.unenrollStudent(parseInt(sessionId), faberid)
+      logger.debug(`✅ Unenrolled session ${sessionId}`)
+    } catch (err: any) {
+      // Already not enrolled is fine (idempotent)
+      if (!err.message?.includes('PERSON_NOT_FOUND') && !err.message?.includes('PERSON_NOT_REGISTERED')) {
+        logger.error(`SARI unenroll failed for session ${sessionId}: ${err.message}`)
+        throw createError({ statusCode: 502, statusMessage: `SARI-Abmeldung (Session ${sessionId}) fehlgeschlagen: ${err.message}` })
+      }
     }
+  }
 
-    if (err.message?.includes('PERSON_ALREADY_ADDED')) {
-      throw createError({ statusCode: 409, statusMessage: 'Teilnehmer ist bereits im Ziel-Kurs angemeldet' })
+  // 2. Enroll in all new sessions (with rollback if any fail)
+  const enrolledSessions: string[] = []
+  for (const sessionId of targetSariIds) {
+    try {
+      await sari.enrollStudent(parseInt(sessionId), faberid, birthdate ?? '')
+      enrolledSessions.push(sessionId)
+      logger.debug(`✅ Enrolled session ${sessionId}`)
+    } catch (err: any) {
+      logger.error(`SARI enroll failed for session ${sessionId}: ${err.message}`)
+      // Rollback: unenroll newly enrolled sessions + re-enroll in old course
+      for (const sid of enrolledSessions) {
+        try { await sari.unenrollStudent(parseInt(sid), faberid) } catch {}
+      }
+      for (const sid of oldSariIds) {
+        try { await sari.enrollStudent(parseInt(sid), faberid, birthdate ?? '') } catch {}
+      }
+      if (err.message?.includes('PERSON_ALREADY_ADDED')) {
+        throw createError({ statusCode: 409, statusMessage: 'Teilnehmer ist bereits im Ziel-Kurs angemeldet' })
+      }
+      throw createError({ statusCode: 502, statusMessage: `SARI-Anmeldung (Session ${sessionId}) fehlgeschlagen: ${err.message}` })
     }
-    throw createError({ statusCode: 502, statusMessage: `SARI-Anmeldung fehlgeschlagen: ${err.message}` })
   }
 
   // === DB changes — SARI operations succeeded ===
