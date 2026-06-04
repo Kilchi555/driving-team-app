@@ -41,12 +41,27 @@ export default defineEventHandler(async (event) => {
   const stripe = new Stripe(stripeSecret, { apiVersion: '2025-08-27.basil' })
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
 
-  // Create customer if not yet existing (edge case: trial without checkout)
+  // Resolve or create a valid Stripe customer for the current mode (test vs live).
+  // A stored ID may come from the other mode (e.g. cus_test_… used with live key) —
+  // detect that via resource_missing and create a fresh customer in the current mode.
   let customerId = tenant?.stripe_customer_id
+  if (customerId) {
+    try {
+      await stripe.customers.retrieve(customerId)
+    } catch (err: any) {
+      if (err?.code === 'resource_missing') {
+        console.warn(`⚠️ Stripe customer ${customerId} not found in current mode — creating new one`)
+        customerId = null as any
+      } else {
+        throw err
+      }
+    }
+  }
+
   if (!customerId) {
     const customer = await stripe.customers.create({
       name: tenant?.name || undefined,
-      email: tenant?.email || undefined,
+      email: (tenant as any)?.contact_email || (tenant as any)?.email || undefined,
       metadata: { tenant_id: userRow.tenant_id },
     })
     customerId = customer.id
