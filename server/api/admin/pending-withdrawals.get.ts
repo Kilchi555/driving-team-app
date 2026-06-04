@@ -19,6 +19,8 @@ export default defineEventHandler(async (event) => {
         first_name,
         last_name,
         email,
+        zip,
+        city,
         student_withdrawal_preferences (
           iban_last4,
           account_holder
