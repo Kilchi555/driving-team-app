@@ -105,10 +105,27 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       }
     }
     
-    // If we have a user but no Supabase session, we need to get fresh tokens
-    // This happens when Supabase localStorage was cleared but HTTP-Only cookies are still valid
+    // If we have a user but no Supabase session, initialize the Supabase client via the
+    // httpOnly refresh cookie so that future getSession() calls return a valid session.
+    // Without this step, every component's resolveFreshToken() would silently fail and
+    // the user would get a 401 on the first API call that requires a Bearer token.
     if (authStore.user && !existingSession?.session) {
-      logger.debug('⚠️ User in store but no Supabase session - tokens needed from server')
+      logger.debug('⚠️ User in store but no Supabase session — refreshing via cookie to init client...')
+      try {
+        const refreshed = await $fetch<{ session: { access_token: string; refresh_token: string; expires_in: number; expires_at: number } }>(
+          '/api/auth/refresh',
+          { method: 'POST' }
+        )
+        if (refreshed?.session?.access_token) {
+          await supabase.auth.setSession({
+            access_token: refreshed.session.access_token,
+            refresh_token: refreshed.session.refresh_token,
+          })
+          logger.debug('✅ Supabase client session initialized from cookie refresh')
+        }
+      } catch (refreshErr: any) {
+        logger.debug('⚠️ Cookie refresh failed during auth restore (user may need to re-login):', refreshErr?.message)
+      }
     }
 
     // Ensure tenantTrialInfo is always loaded — regardless of which restore path was taken.
