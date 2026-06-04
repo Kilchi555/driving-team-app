@@ -241,15 +241,31 @@ interface BillingStatus {
 const billing = ref<BillingStatus | null>(null)
 const pricing = ref<PricingResponse | null>(null)
 
-const getToken = async (): Promise<string | null> => {
-  const { getSupabase } = await import('~/utils/supabase')
-  const supabase = getSupabase()
-  const { data: { session } } = await supabase.auth.getSession()
-  return session?.access_token ?? null
+/** Resolve a fresh access token – mirrors the logic in upgrade.vue.
+ *  1. Check client-side session (only trust if still valid for ≥60s).
+ *  2. Fall back to server-side refresh via the httpOnly refresh-token cookie.
+ *  Returns null only when the user has no valid session at all. */
+const resolveFreshToken = async (): Promise<string | null> => {
+  try {
+    const { getSupabase } = await import('~/utils/supabase')
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    const nowSec = Math.floor(Date.now() / 1000)
+    if (session?.access_token && (session.expires_at ?? 0) - nowSec > 60) {
+      return session.access_token
+    }
+  } catch { /* ignore */ }
+
+  try {
+    const refreshed = await $fetch<{ session: { access_token: string } }>('/api/auth/refresh', { method: 'POST' })
+    if (refreshed?.session?.access_token) return refreshed.session.access_token
+  } catch { /* no valid refresh cookie → truly unauthenticated */ }
+
+  return null
 }
 
 const authHeaders = async (): Promise<Record<string, string>> => {
-  const token = await getToken()
+  const token = await resolveFreshToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
