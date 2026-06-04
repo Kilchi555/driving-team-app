@@ -109,17 +109,18 @@ export async function getAuthenticatedUser(event: H3Event) {
 
         if (refreshToken) {
           try {
-            const { createClient } = await import('@supabase/supabase-js')
-            const supabase = createClient(supabaseUrl, supabaseKey)
-            const { data, error: refreshError } = await supabase.auth.refreshSession({ refresh_token: refreshToken })
+            // Deduplicated refresh: avoids the refresh-token-rotation race where
+            // parallel endpoints consume the same single-use refresh token and 401.
+            const { refreshSessionDeduped } = await import('~/server/utils/token-refresh')
+            const session = await refreshSessionDeduped(refreshToken)
 
-            if (!refreshError && data.session) {
+            if (session) {
               logger.debug('✅ Server-side token refreshed via refresh token fallback')
               // Set new cookies with refreshed tokens
               const { setAuthCookies } = await import('~/server/utils/cookies')
-              setAuthCookies(event, data.session.access_token, data.session.refresh_token)
+              setAuthCookies(event, session.access_token, session.refresh_token)
               // Re-use the new access token for this request
-              token = data.session.access_token
+              token = session.access_token
               const retryResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
                 headers: { 'Authorization': `Bearer ${token}`, 'apikey': supabaseKey }
               })

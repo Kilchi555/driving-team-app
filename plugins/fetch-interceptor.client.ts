@@ -46,11 +46,20 @@ export default defineNuxtPlugin((nuxtApp) => {
 
       const currentPath = route.path
 
-      // 🚨 CRITICAL: Don't redirect if we're already on a login page (/:slug or /login)
-      // A login attempt returning 401 = wrong credentials, NOT an expired session
-      const isOnLoginPage = !currentPath.includes('/customer') && !currentPath.includes('/staff') && !currentPath.includes('/admin') && !currentPath.includes('/booking')
-      if (status === 401 && isOnLoginPage) {
-        console.debug('ℹ️ 401 on login page - wrong credentials, let component handle it')
+      // 🚨 CRITICAL: A 401 while there is NO active client session = a login
+      // attempt with wrong credentials (or a guest), NOT an expired session.
+      // We detect this via the auth store rather than a path blacklist: the old
+      // blacklist treated any path outside /customer|/staff|/admin|/booking as a
+      // "login page", which wrongly classified authenticated app routes like
+      // /upgrade and suppressed the expired-cookie recovery flow below → hard 401.
+      let hasActiveSession = false
+      try {
+        hasActiveSession = useAuthStore().isLoggedIn
+      } catch {
+        // Auth store not ready yet — treat as no active session.
+      }
+      if (status === 401 && !hasActiveSession) {
+        console.debug('ℹ️ 401 without active session - login/guest attempt, let component handle it')
         const d = (response as any)?._data
         throw createError({ statusCode: status, statusMessage: d?.statusMessage || response?.statusText || 'Request failed', data: d?.data ?? d ?? undefined })
       }
