@@ -13,8 +13,8 @@
  */
 
 import { defineEventHandler, createError, getHeader } from 'h3'
-import { createClient } from '@supabase/supabase-js'
 import { getAuthCookies, setAuthCookies } from '~/server/utils/cookies'
+import { refreshSessionDeduped } from '~/server/utils/token-refresh'
 import { logger } from '~/utils/logger'
 
 // Lightweight in-memory rate limit (per warm serverless instance). A legitimate
@@ -71,24 +71,19 @@ export default defineEventHandler(async (event) => {
   try {
     logger.debug('✅ Refresh token found, attempting refresh...')
 
-    const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!supabaseUrl || !supabaseKey) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       throw createError({
         statusCode: 500,
         statusMessage: 'Server configuration error'
       })
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    // Deduplicated refresh: parallel refresh calls reusing the same rotated
+    // (single-use) refresh token would otherwise fail with "already used".
+    const session = await refreshSessionDeduped(refreshToken)
 
-    const { data, error } = await supabase.auth.refreshSession({
-      refresh_token: refreshToken
-    })
-
-    if (error || !data.session) {
-      logger.warn('❌ Token refresh failed:', error?.message)
+    if (!session) {
+      logger.warn('❌ Token refresh failed')
       throw createError({
         statusCode: 401,
         statusMessage: 'Refresh token expired or invalid. Please log in again.'
@@ -98,10 +93,10 @@ export default defineEventHandler(async (event) => {
     logger.debug('✅ Tokens refreshed successfully')
 
     // Determine if this is a "Remember Me" session based on refresh token maxAge
-    const refreshTokenTTL = data.session.expires_in || 3600
+    const refreshTokenTTL = session.expires_in || 3600
     const isRememberMeSession = refreshTokenTTL > (24 * 60 * 60) // > 1 day = remember me
 
-    setAuthCookies(event, data.session.access_token, data.session.refresh_token, {
+    setAuthCookies(event, session.access_token, session.refresh_token, {
       rememberMe: isRememberMeSession
     })
 
@@ -110,10 +105,10 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       session: {
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-        expires_in: data.session.expires_in,
-        expires_at: data.session.expires_at
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        expires_in: session.expires_in,
+        expires_at: session.expires_at
       }
     }
 

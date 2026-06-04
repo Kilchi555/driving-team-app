@@ -45,53 +45,45 @@ export default defineEventHandler(async (event) => {
   const stripe = new Stripe(stripeSecret, { apiVersion: '2025-08-27.basil' })
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
 
+  // ── Resolve the authenticated tenant FIRST ───────────────────────────────
+  // Auth must run OUTSIDE the Stripe-customer try/catch below — otherwise an
+  // auth/refresh failure gets swallowed and surfaces as a confusing 401 only
+  // because tenantId ends up undefined. getAuthenticatedUser handles cookie
+  // fallback, deduplicated token refresh, and tenant resolution.
+  const authUser = await getAuthenticatedUser(event)
+  const tenantId = authUser?.tenant_id || authUser?.profile?.tenant_id
+
+  // Require an authenticated tenant — no anonymous checkouts allowed
+  if (!tenantId) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthenticated: please log in or create an account before upgrading.' })
+  }
+
   // ── Resolve Stripe Customer for this tenant ──────────────────────────────
   // Accounts V2 requires a customer for Checkout. We always ensure one exists.
+  // Failures here are tolerated: we fall back to a transient customer below.
   let stripeCustomerId: string | undefined
-  let tenantId: string | undefined
   let wallleeAlreadyActive = false
 
-  // Use getAuthenticatedUser which handles: cookie fallback, token refresh, and tenant resolution
   try {
-    const authUser = await getAuthenticatedUser(event)
-    if (authUser) {
-      tenantId = authUser.tenant_id || authUser.profile?.tenant_id
+    const supabase = getSupabaseAdmin()
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('stripe_customer_id, name, contact_email, wallee_onboarding_status')
+      .eq('id', tenantId)
+      .single()
 
-      if (tenantId) {
-        const supabase = getSupabaseAdmin()
-        const { data: tenant } = await supabase
-          .from('tenants')
-          .select('stripe_customer_id, name, contact_email, wallee_onboarding_status')
-          .eq('id', tenantId)
-          .single()
+    wallleeAlreadyActive = tenant?.wallee_onboarding_status === 'active'
 
-        wallleeAlreadyActive = tenant?.wallee_onboarding_status === 'active'
-
-        if (tenant?.stripe_customer_id) {
-          // Verify the customer actually exists in the current Stripe mode (live vs test)
-          try {
-            await stripe.customers.retrieve(tenant.stripe_customer_id)
-            stripeCustomerId = tenant.stripe_customer_id
-          } catch (retrieveErr: any) {
-            if (retrieveErr?.code === 'resource_missing') {
-              // Customer exists in wrong Stripe mode (e.g. test key ID used with live key)
-              // Create a new customer and overwrite the stale ID
-              console.warn(`⚠️ Stripe customer ${tenant.stripe_customer_id} not found in current mode — creating new one`)
-              const customer = await stripe.customers.create({
-                name: tenant.name || undefined,
-                email: tenant.contact_email || undefined,
-                metadata: { tenant_id: tenantId },
-              })
-              stripeCustomerId = customer.id
-              await supabase
-                .from('tenants')
-                .update({ stripe_customer_id: customer.id })
-                .eq('id', tenantId)
-            } else {
-              throw retrieveErr
-            }
-          }
-        } else if (tenant) {
+    if (tenant?.stripe_customer_id) {
+      // Verify the customer actually exists in the current Stripe mode (live vs test)
+      try {
+        await stripe.customers.retrieve(tenant.stripe_customer_id)
+        stripeCustomerId = tenant.stripe_customer_id
+      } catch (retrieveErr: any) {
+        if (retrieveErr?.code === 'resource_missing') {
+          // Customer exists in wrong Stripe mode (e.g. test key ID used with live key)
+          // Create a new customer and overwrite the stale ID
+          console.warn(`⚠️ Stripe customer ${tenant.stripe_customer_id} not found in current mode — creating new one`)
           const customer = await stripe.customers.create({
             name: tenant.name || undefined,
             email: tenant.contact_email || undefined,
@@ -102,16 +94,24 @@ export default defineEventHandler(async (event) => {
             .from('tenants')
             .update({ stripe_customer_id: customer.id })
             .eq('id', tenantId)
+        } else {
+          throw retrieveErr
         }
       }
+    } else if (tenant) {
+      const customer = await stripe.customers.create({
+        name: tenant.name || undefined,
+        email: tenant.contact_email || undefined,
+        metadata: { tenant_id: tenantId },
+      })
+      stripeCustomerId = customer.id
+      await supabase
+        .from('tenants')
+        .update({ stripe_customer_id: customer.id })
+        .eq('id', tenantId)
     }
   } catch (err: any) {
     console.error('⚠️ Could not resolve tenant customer:', err?.message)
-  }
-
-  // Require an authenticated tenant — no anonymous checkouts allowed
-  if (!tenantId) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthenticated: please log in or create an account before upgrading.' })
   }
 
   // Accounts V2: always requires a customer — create a transient one if none resolved
