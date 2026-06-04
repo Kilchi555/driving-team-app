@@ -24,7 +24,9 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdmin()
 
-  // Load full registration with course, sessions, user and tenant data
+  // Load full registration with course, sessions, user and tenant data.
+  // Tenant ownership is verified via the courses join (not tenant_id on the
+  // registration itself, which may be null or differ for externally-created records).
   const { data: reg } = await supabase
     .from('course_registrations')
     .select(`
@@ -37,6 +39,7 @@ export default defineEventHandler(async (event) => {
       is_partial_enrollment,
       courses!inner(
         id,
+        tenant_id,
         name,
         description,
         sari_managed,
@@ -46,10 +49,15 @@ export default defineEventHandler(async (event) => {
       users(sari_faberid, birthdate)
     `)
     .eq('id', enrollmentId)
-    .eq('tenant_id', profile.tenant_id)
     .single()
 
   if (!reg) throw createError({ statusCode: 404, statusMessage: 'Registration not found' })
+
+  // Verify the course belongs to this admin's tenant
+  const course = reg.courses as any
+  if (course?.tenant_id !== profile.tenant_id) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
 
   // Load tenant info for the email
   const { data: tenant } = await supabase
