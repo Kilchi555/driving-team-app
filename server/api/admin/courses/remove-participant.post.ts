@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
   // Load full registration with course, sessions, user and tenant data.
   // Tenant ownership is verified via the courses join (not tenant_id on the
   // registration itself, which may be null or differ for externally-created records).
-  const { data: reg } = await supabase
+  const { data: reg, error: regError } = await supabase
     .from('course_registrations')
     .select(`
       id,
@@ -46,11 +46,15 @@ export default defineEventHandler(async (event) => {
         sari_course_id,
         course_sessions(id, sari_session_id, start_time, session_number)
       ),
-      users(sari_faberid, birthdate)
+      users(faberid, birthdate)
     `)
     .eq('id', enrollmentId)
     .single()
 
+  if (regError) {
+    logger.error('❌ remove-participant query error:', regError)
+    throw createError({ statusCode: 500, statusMessage: regError.message })
+  }
   if (!reg) throw createError({ statusCode: 404, statusMessage: 'Registration not found' })
 
   // Verify the course belongs to this admin's tenant
@@ -68,11 +72,11 @@ export default defineEventHandler(async (event) => {
 
   // ── 1. SARI de-enrollment ──────────────────────────────────────────────────
   const user   = reg.users as any
-  const faberid = user?.sari_faberid
+  const faberid = user?.faberid
 
   if (course?.sari_managed && course?.sari_course_id && faberid) {
     try {
-      const credentials = await getSARICredentialsSecure(reg.tenant_id, 'ADMIN_REMOVE_PARTICIPANT')
+      const credentials = await getSARICredentialsSecure(profile.tenant_id, 'ADMIN_REMOVE_PARTICIPANT')
       if (!credentials) throw new Error('SARI not configured for this tenant')
       const sari = new SARIClient(credentials)
       const sessions: any[] = course.course_sessions || []
