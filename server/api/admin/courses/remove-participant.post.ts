@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
         sari_course_id,
         course_sessions(id, sari_session_id, start_time, session_number)
       ),
-      users(faberid, birthdate)
+      users!course_registrations_user_id_fkey(faberid, birthdate)
     `)
     .eq('id', enrollmentId)
     .single()
