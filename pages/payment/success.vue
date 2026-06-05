@@ -234,6 +234,7 @@ definePageMeta({
 
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { useAuthStore } from '~/stores/auth'
 
 const route = useRoute()
 
@@ -260,20 +261,29 @@ const stripeBrandColor = ref<string | null>(null)
 const stripeLogo = ref<string | null>(null)
 
 // Load tenant branding for the Stripe success card.
-// The user arrives here right after Stripe checkout — their Supabase session
-// is still active in the browser (localStorage/cookie), so we can read it.
+// After a Stripe redirect the Supabase client-side session is not yet hydrated
+// (auth-restore runs 500ms later). Instead we read the tenant_id from the auth
+// store (populated by session-persist before any plugin runs) and fetch branding
+// via the public /api/tenants/branding endpoint which needs no Supabase session.
 const loadStripeBranding = async () => {
   try {
-    const supabase = getSupabase()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) return
-    const { data: userRow } = await supabase
-      .from('users').select('tenant_id').eq('auth_user_id', session.user.id).single()
-    if (!userRow?.tenant_id) return
-    const { data: tenant } = await supabase
-      .from('tenants').select('primary_color, logo_url').eq('id', userRow.tenant_id).single()
-    if (tenant?.primary_color) stripeBrandColor.value = tenant.primary_color
-    if (tenant?.logo_url) stripeLogo.value = tenant.logo_url
+    const authStore = useAuthStore()
+
+    // Give auth-restore up to 1.5s to populate the store if needed.
+    let waited = 0
+    while (!authStore.userProfile?.tenant_id && waited < 1500) {
+      await new Promise(r => setTimeout(r, 150))
+      waited += 150
+    }
+
+    const tenantId = authStore.userProfile?.tenant_id
+    if (!tenantId) return
+
+    const res = await $fetch<{ data: { primary_color?: string; logo_url?: string } }>(
+      `/api/tenants/branding?id=${tenantId}`
+    )
+    if (res?.data?.primary_color) stripeBrandColor.value = res.data.primary_color
+    if (res?.data?.logo_url) stripeLogo.value = res.data.logo_url
   } catch { /* ignore */ }
 }
 
