@@ -78,10 +78,15 @@ export default defineEventHandler(async (event) => {
         .from('users')
         .update(safeData)
         .eq('id', user_id)
-        .select()
+        .select('*, auth_user_id')
         .single()
 
       if (error) throw error
+
+      if ((safeData as any).email && data?.auth_user_id) {
+        await supabase.auth.admin.updateUserById(data.auth_user_id, { email: (safeData as any).email })
+      }
+
       return { success: true, data }
     }
 
@@ -128,10 +133,15 @@ export default defineEventHandler(async (event) => {
         .from('users')
         .update(safeData)
         .eq('id', user_id)
-        .select()
+        .select('*, auth_user_id')
         .single()
 
       if (error) throw error
+
+      if ((safeData as any).email && data?.auth_user_id) {
+        await supabase.auth.admin.updateUserById(data.auth_user_id, { email: (safeData as any).email })
+      }
+
       return { success: true, data }
     }
 
