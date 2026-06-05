@@ -947,11 +947,30 @@ async function copyDefaultDataToTenant(
       .or(`business_type.eq.${businessType},business_type.is.null`)
 
     if (!etErr && etTemplates?.length) {
+      // Determine if the tenant explicitly enabled the "theory" pricing row.
+      // If not, the theory event type is created but set inactive so it doesn't
+      // clutter the calendar for schools that don't offer theory lessons.
+      let theoryEnabled = false
+      try {
+        if (data.pricing_json?.trim()) {
+          const pricingItems = JSON.parse(data.pricing_json)
+          theoryEnabled = Array.isArray(pricingItems) && pricingItems.some((p: any) => p.rule_type === 'theory')
+        }
+      } catch { /* non-critical — default to inactive */ }
+
       const { error: etInsertErr } = await supabase.from('event_types').insert(
-        etTemplates.map(et => ({ ...et, id: crypto.randomUUID(), tenant_id: tenantId, created_at: now, updated_at: now }))
+        etTemplates.map(et => ({
+          ...et,
+          id: crypto.randomUUID(),
+          tenant_id: tenantId,
+          created_at: now,
+          updated_at: now,
+          // Deactivate theory event type unless tenant enabled it in the pricing step
+          ...(et.code === 'theory' && !theoryEnabled ? { is_active: false } : {}),
+        }))
       )
       if (etInsertErr) logger.warn('⚠️ Event types insert failed:', etInsertErr)
-      else logger.debug(`✅ Copied ${etTemplates.length} event types`)
+      else logger.debug(`✅ Copied ${etTemplates.length} event types (theory active: ${theoryEnabled})`)
     }
   } catch (err) { logger.warn('⚠️ Event type copy failed:', err) }
 
