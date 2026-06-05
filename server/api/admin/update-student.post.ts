@@ -101,10 +101,24 @@ export default defineEventHandler(async (event) => {
         .from('users')
         .update(safeUpdates)
         .eq('id', student_id)
-        .select()
+        .select('*, auth_user_id')
         .single()
 
       if (updateError) throw updateError
+
+      // If email changed, sync it to Supabase Auth as well so the user can log in
+      // with their new email address. Without this, auth.users still has the old email.
+      if (safeUpdates.email && data?.auth_user_id) {
+        const { error: authUpdateError } = await supabase.auth.admin.updateUserById(
+          data.auth_user_id,
+          { email: safeUpdates.email }
+        )
+        if (authUpdateError) {
+          logger.warn(`⚠️ Email updated in users table but failed to sync to auth.users for ${student_id}: ${authUpdateError.message}`)
+        } else {
+          logger.info(`✅ Email synced to auth.users for user ${student_id}`)
+        }
+      }
 
       await logAudit({
         user_id: authUser.id,
