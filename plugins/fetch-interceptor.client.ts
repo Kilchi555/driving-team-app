@@ -82,6 +82,17 @@ export default defineNuxtPlugin((nuxtApp) => {
         throw createError({ statusCode: status, statusMessage: d?.statusMessage || response?.statusText || 'Request failed', data: d?.data ?? d ?? undefined })
       }
 
+      // 💳 Stripe checkout/portal — these send an explicit Bearer token. A 401 here must
+      // NOT trigger a full-page reload (that loses the checkout intent and feels broken).
+      // The calling page (upgrade.vue / billing.vue) handles the 401 by refreshing the
+      // token and retrying, or by prompting re-login.
+      const isStripeRequest = url.includes('/api/stripe/')
+      if (isStripeRequest && status === 401) {
+        console.debug('ℹ️ Stripe 401 - letting the page retry/handle it (no reload)')
+        const d = (response as any)?._data
+        throw createError({ statusCode: status, statusMessage: d?.statusMessage || response?.statusText || 'Request failed', data: d?.data ?? d ?? undefined })
+      }
+
       // Handle 401 - Session expired or invalid token (for non-auth and non-booking endpoints)
       // DON'T redirect for booking flow - let component show modal
       if (status === 401 && !isRedirecting && !isBookingFlow && !onAffiliateDashboard) {
