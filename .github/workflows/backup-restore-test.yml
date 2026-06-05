@@ -257,8 +257,17 @@ jobs:
 
       - name: Upload restore report to R2
         run: |
-          rclone copyto restore-report.json "r2:${{ secrets.R2_BUCKET }}/restore-report.json"
-          echo "✅ Report auf R2 hochgeladen"
+          set -e
+          echo "📤 Uploading restore-report.json to R2..."
+          ls -la restore-report.json
+          rclone copyto restore-report.json "r2:${{ secrets.R2_BUCKET }}/restore-report.json" --verbose
+          echo "✅ Upload command completed"
+          # Verify the file actually landed in R2
+          rclone lsf "r2:${{ secrets.R2_BUCKET }}/restore-report.json" || {
+            echo "❌ Verification failed: restore-report.json not found in R2 after upload!"
+            exit 1
+          }
+          echo "✅ Verified: restore-report.json is accessible in R2"
 
       - name: Summary
         run: |

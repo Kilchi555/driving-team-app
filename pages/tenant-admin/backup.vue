@@ -388,15 +388,19 @@
           </div>
 
           <!-- No report fallback -->
-          <div v-if="!backupData?.restoreReport" class="flex flex-col items-center justify-center p-10 gap-3 text-center">
+          <div v-if="!backupData?.restoreReport || backupData.restoreReport.__error"
+               class="flex flex-col items-center justify-center p-10 gap-3 text-center">
             <svg class="w-10 h-10 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             <p class="text-sm font-medium text-gray-700">Kein Detailbericht verfügbar</p>
+            <p v-if="backupData?.restoreReport?.__error" class="text-xs font-mono text-red-500 bg-red-50 px-2 py-1 rounded">
+              {{ backupData.restoreReport.__error }}: {{ backupData.restoreReport.__message }}
+            </p>
             <p class="text-xs text-gray-500 max-w-xs">Der <code>restore-report.json</code> konnte nicht aus R2 geladen werden. Der Run war erfolgreich, aber der Bericht fehlt oder wurde überschrieben.</p>
             <a :href="selectedRestoreRun?.html_url" target="_blank" class="text-xs text-indigo-600 hover:underline">Logs auf GitHub ansehen →</a>
           </div>
 
           <!-- KPIs -->
-          <template v-if="backupData?.restoreReport">
+          <template v-if="backupData?.restoreReport && !backupData.restoreReport.__error">
           <div class="grid grid-cols-3 gap-3 p-5 border-b border-gray-100 flex-shrink-0">
             <div class="bg-gray-50 rounded-xl p-3 text-center">
               <div class="text-sm font-semibold text-gray-900">{{ formatBytes(backupData.restoreReport.dumpBytes) }}</div>
