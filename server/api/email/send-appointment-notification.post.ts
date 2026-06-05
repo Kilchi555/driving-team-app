@@ -28,25 +28,54 @@ interface AppointmentNotificationBody {
   chargePercentage?: number
   refundAmount?: string
   chargeAmount?: string
+  // ✅ NEW: Event type + duration (shown on all templates)
+  eventTypeName?: string    // e.g. "Fahrstunde", "Prüfung", "Theorie", or custom name
+  durationMinutes?: number  // e.g. 50
+  showPrice?: boolean       // false for non-billable event types (theory, other, custom)
   // Optional: if provided, a push notification is sent alongside the email
   userId?: string
 }
 
 // ========== TEMPLATES - Dynamic with tenant colors ==========
 
+/** Renders the appointment detail box used in all student-facing templates. */
+function buildDetailBox(data: AppointmentNotificationBody, primaryColor: string): string {
+  const showPrice = data.showPrice !== false  // default true for backward compat
+  const durationStr = data.durationMinutes ? ` (${data.durationMinutes} Min.)` : ''
+
+  const rows = [
+    data.appointmentTime
+      ? `<p style="margin:5px 0;color:#374151"><strong>Termin:</strong> ${data.appointmentTime}${durationStr}</p>`
+      : '',
+    data.eventTypeName
+      ? `<p style="margin:5px 0;color:#374151"><strong>Art:</strong> ${data.eventTypeName}</p>`
+      : '',
+    data.staffName
+      ? `<p style="margin:5px 0;color:#374151"><strong>Fahrlehrer:</strong> ${data.staffName}</p>`
+      : '',
+    data.location
+      ? `<p style="margin:5px 0;color:#374151"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px;color:#6b7280">${data.locationAddress}</span>` : ''}</p>`
+      : '',
+    (showPrice && data.amount)
+      ? `<p style="margin:5px 0;color:#374151"><strong>Betrag:</strong> ${data.amount}</p>`
+      : '',
+  ].filter(Boolean).join('\n')
+
+  return `<div style="background-color:#f8f9fa;border-left:4px solid ${primaryColor};padding:15px;margin:20px 0;border-radius:4px">
+    ${rows}
+  </div>`
+}
+
 const TEMPLATES = {
   appointment_confirmation: {
     subject: 'Terminbestätigung',
     getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
-      // ✅ SECURITY FIX: Immer zum Login/Dashboard leiten, NIE zu /confirm/[token]
-      const confirmUrl = data.customerDashboard || (data.tenantSlug 
-        ? `https://app.simy.ch/${data.tenantSlug}` 
+      const showPrice = data.showPrice !== false
+      const confirmUrl = data.customerDashboard || (data.tenantSlug
+        ? `https://app.simy.ch/${data.tenantSlug}`
         : 'https://app.simy.ch/login')
-      const dashboardUrl = data.customerDashboard || (data.tenantSlug 
-        ? `https://app.simy.ch/${data.tenantSlug}` 
-        : 'https://app.simy.ch/login')
-      
+
       return `
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
@@ -61,24 +90,20 @@ const TEMPLATES = {
           <tr>
             <td style="padding: 30px;">
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hallo ${firstName},</p>
-              
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">ein neuer Termin wurde für dich erstellt. Bitte überprüfe die Details:</p>
-              
-              <div style="background-color: #f8f9fa; border-left: 4px solid ${primaryColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                ${data.appointmentTime ? `<p style="margin: 5px 0; color: #374151;"><strong>Termin:</strong> ${data.appointmentTime}</p>` : ''}
-                ${data.staffName ? `<p style="margin: 5px 0; color: #374151;"><strong>Fahrlehrer:</strong> ${data.staffName}</p>` : ''}
-                ${data.location ? `<p style="margin: 5px 0; color: #374151;"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px;color:#6b7280">${data.locationAddress}</span>` : ''}</p>` : ''}
-                ${data.amount ? `<p style="margin: 5px 0; color: #374151;"><strong>Betrag:</strong> ${data.amount}</p>` : ''}
-              </div>
-              
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Überprüfe die Zahlungsdetails in deinem Kundenkonto.</p>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${confirmUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
-                  Jetzt bezahlen
-                </a>
-              </div>
-              
+
+              ${buildDetailBox(data, primaryColor)}
+
+              ${showPrice
+                ? `<p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Überprüfe die Zahlungsdetails in deinem Kundenkonto.</p>
+                   <div style="text-align: center; margin: 30px 0;">
+                     <a href="${confirmUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">Jetzt bezahlen</a>
+                   </div>`
+                : `<div style="text-align: center; margin: 30px 0;">
+                     <a href="${confirmUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">Zum Kundenkonto</a>
+                   </div>`
+              }
+
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || 'Driving Team'}</strong></p>
             </td>
           </tr>
@@ -91,8 +116,7 @@ const TEMPLATES = {
       </td>
     </tr>
   </table>
-</body>
-      `
+</body>`
     }
   },
   
@@ -100,10 +124,10 @@ const TEMPLATES = {
     subject: 'Terminbestätigung',
     getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
-      const dashboardUrl = data.tenantSlug 
-        ? `https://app.simy.ch/${data.tenantSlug}` 
+      const dashboardUrl = data.tenantSlug
+        ? `https://app.simy.ch/${data.tenantSlug}`
         : 'https://app.simy.ch/login'
-      
+
       return `
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
@@ -118,24 +142,14 @@ const TEMPLATES = {
           <tr>
             <td style="padding: 30px;">
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hallo ${firstName},</p>
-              
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">ein neuer Termin wurde für dich erstellt. Bitte überprüfe die Details:</p>
-              
-              <div style="background-color: #f8f9fa; border-left: 4px solid ${primaryColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                ${data.appointmentTime ? `<p style="margin: 5px 0; color: #374151;"><strong>Termin:</strong> ${data.appointmentTime}</p>` : ''}
-                ${data.staffName ? `<p style="margin: 5px 0; color: #374151;"><strong>Fahrlehrer:</strong> ${data.staffName}</p>` : ''}
-                ${data.location ? `<p style="margin: 5px 0; color: #374151;"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px;color:#6b7280">${data.locationAddress}</span>` : ''}</p>` : ''}
-                ${data.amount ? `<p style="margin: 5px 0; color: #374151;"><strong>Betrag:</strong> ${data.amount}</p>` : ''}
-              </div>
-              
+
+              ${buildDetailBox(data, primaryColor)}
+
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Bitte bezahle die offene Zahlung in deinem Kundenkonto.</p>
-              
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${dashboardUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
-                  Zum Kundenkonto
-                </a>
+                <a href="${dashboardUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">Zum Kundenkonto</a>
               </div>
-              
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || 'Driving Team'}</strong></p>
             </td>
           </tr>
@@ -148,8 +162,7 @@ const TEMPLATES = {
       </td>
     </tr>
   </table>
-</body>
-      `
+</body>`
     }
   },
   
@@ -304,7 +317,9 @@ const TEMPLATES = {
 
   staff_new_booking: {
     subject: 'Neue Online-Buchung',
-    getHtml: (data: AppointmentNotificationBody, primaryColor: string) => `
+    getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
+      const durationStr = data.durationMinutes ? ` (${data.durationMinutes} Min.)` : ''
+      return `
 <body style="margin:0;padding:0;font-family:Arial,sans-serif;background-color:#f3f4f6;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:40px 20px;">
     <tr><td>
@@ -321,7 +336,8 @@ const TEMPLATES = {
               <strong>${data.studentName}</strong> hat soeben online einen Termin bei dir gebucht.
             </p>
             <div style="background-color:#f8f9fa;border-left:4px solid ${primaryColor};padding:15px;margin:20px 0;border-radius:4px;">
-              ${data.appointmentTime ? `<p style="margin:5px 0;color:#374151;"><strong>Termin:</strong> ${data.appointmentTime}</p>` : ''}
+              ${data.appointmentTime ? `<p style="margin:5px 0;color:#374151;"><strong>Termin:</strong> ${data.appointmentTime}${durationStr}</p>` : ''}
+              ${data.eventTypeName ? `<p style="margin:5px 0;color:#374151;"><strong>Art:</strong> ${data.eventTypeName}</p>` : ''}
               <p style="margin:5px 0;color:#374151;"><strong>Schüler:</strong> ${data.studentName}</p>
               ${data.location ? `<p style="margin:5px 0;color:#374151;"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px;color:#6b7280">${data.locationAddress}</span>` : ''}</p>` : ''}
               ${data.amount ? `<p style="margin:5px 0;color:#374151;"><strong>Betrag:</strong> ${data.amount}</p>` : ''}
@@ -338,6 +354,7 @@ const TEMPLATES = {
     </td></tr>
   </table>
 </body>`
+    }
   }
 }
 
