@@ -626,6 +626,50 @@
                   <p v-if="availableCategories.length === 0" class="col-span-2 text-sm text-gray-400 italic">Keine Kategorien verfügbar</p>
                 </div>
               </div>
+
+              <!-- Documents -->
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1.5">Führerausweis</label>
+                <div v-if="isLoadingDocuments" class="flex gap-2">
+                  <div class="w-24 h-16 bg-gray-100 rounded-xl animate-pulse"/>
+                  <div class="w-24 h-16 bg-gray-100 rounded-xl animate-pulse"/>
+                </div>
+                <div v-else-if="staffDocuments.length > 0" class="flex flex-wrap gap-2">
+                  <button
+                    v-for="doc in staffDocuments"
+                    :key="doc.id"
+                    type="button"
+                    @click="lightboxUrl = doc.signedUrl"
+                    class="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50 w-24 h-16 flex-shrink-0 flex items-center justify-center hover:border-gray-400 transition-colors"
+                    :title="doc.title || doc.file_name"
+                  >
+                    <img
+                      v-if="doc.signedUrl && (doc.file_type?.startsWith('image/') || !doc.file_type)"
+                      :src="doc.signedUrl"
+                      class="w-full h-full object-cover"
+                      alt=""
+                    />
+                    <div v-else class="flex flex-col items-center gap-1 text-gray-400">
+                      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                      <span class="text-[10px]">PDF</span>
+                    </div>
+                    <!-- Hover overlay -->
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                      <svg class="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z"/></svg>
+                    </div>
+                    <!-- Side label -->
+                    <span
+                      v-if="doc.side"
+                      class="absolute bottom-0.5 left-0.5 text-[9px] font-semibold text-white bg-black/50 rounded px-1"
+                    >{{ doc.side === 'front' ? 'Vorne' : doc.side === 'back' ? 'Hinten' : doc.side }}</span>
+                    <!-- Verified badge -->
+                    <span v-if="doc.is_verified" class="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full flex items-center justify-center">
+                      <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </span>
+                  </button>
+                </div>
+                <p v-else class="text-sm text-gray-400 italic">Noch kein Dokument hochgeladen</p>
+              </div>
               </template>
             </div>
 
@@ -642,6 +686,16 @@
               </button>
             </div>
           </div>
+        </div>
+      </Transition>
+
+      <!-- Document Lightbox -->
+      <Transition enter-active-class="transition ease-out duration-150" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="transition ease-in duration-100" leave-from-class="opacity-100" leave-to-class="opacity-0">
+        <div v-if="lightboxUrl" class="fixed inset-0 z-[500] bg-black/90 flex items-center justify-center p-4" @click="lightboxUrl = null">
+          <img :src="lightboxUrl" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl" alt="Dokument" />
+          <button @click="lightboxUrl = null" class="absolute top-4 right-4 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
         </div>
       </Transition>
     </Teleport>
@@ -1355,6 +1409,34 @@ const editForm = ref({
 const isLoadingProfile = ref(false)
 const availableCategories = ref<{ id: string; code: string; name: string }[]>([])
 
+interface StaffDocument {
+  id: string
+  document_type: string
+  side: string | null
+  file_name: string
+  file_type: string
+  storage_path: string
+  title: string | null
+  is_verified: boolean
+  created_at: string
+  signedUrl: string | null
+}
+const staffDocuments = ref<StaffDocument[]>([])
+const isLoadingDocuments = ref(false)
+const lightboxUrl = ref<string | null>(null)
+
+const loadStaffDocuments = async () => {
+  isLoadingDocuments.value = true
+  try {
+    const res = await $fetch<{ data: StaffDocument[] }>('/api/staff/get-my-documents')
+    staffDocuments.value = res?.data || []
+  } catch (err: any) {
+    logger.warn('⚠️ Could not load staff documents:', err?.message)
+  } finally {
+    isLoadingDocuments.value = false
+  }
+}
+
 const openEditProfile = async () => {
   editProfileSuccess.value = false
   editProfileError.value = null
@@ -1385,6 +1467,7 @@ const openEditProfile = async () => {
       availableCategories.value.length === 0
         ? $fetch<{ success: boolean; data: any[] }>('/api/staff/get-categories')
         : Promise.resolve(null),
+      loadStaffDocuments(),
     ])
 
     if (profileRes?.data) {
