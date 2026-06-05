@@ -111,20 +111,14 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     // the user would get a 401 on the first API call that requires a Bearer token.
     if (authStore.user && !existingSession?.session) {
       logger.debug('⚠️ User in store but no Supabase session — refreshing via cookie to init client...')
-      try {
-        const refreshed = await $fetch<{ session: { access_token: string; refresh_token: string; expires_in: number; expires_at: number } }>(
-          '/api/auth/refresh',
-          { method: 'POST' }
-        )
-        if (refreshed?.session?.access_token) {
-          await supabase.auth.setSession({
-            access_token: refreshed.session.access_token,
-            refresh_token: refreshed.session.refresh_token,
-          })
-          logger.debug('✅ Supabase client session initialized from cookie refresh')
-        }
-      } catch (refreshErr: any) {
-        logger.debug('⚠️ Cookie refresh failed during auth restore (user may need to re-login):', refreshErr?.message)
+      // Shared single-flight helper: hydrates the Supabase client + localStorage
+      // and prevents concurrent refreshers from racing on the single-use cookie.
+      const { refreshClientSession } = await import('~/utils/client-session-refresh')
+      const refreshed = await refreshClientSession()
+      if (refreshed?.access_token) {
+        logger.debug('✅ Supabase client session initialized from cookie refresh')
+      } else {
+        logger.debug('⚠️ Cookie refresh failed during auth restore (user may need to re-login)')
       }
     }
 

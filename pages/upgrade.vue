@@ -661,6 +661,7 @@ import { useLazyFetch, useHead, useRoute } from '#imports'
 import { PLANS } from '~/utils/planFeatures'
 import { useTrialFeatures } from '~/composables/useTrialFeatures'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { refreshClientSession } from '~/utils/client-session-refresh'
 import type { PricingResponse } from '~/server/api/stripe/prices.get'
 
 definePageMeta({ layout: 'minimal' })
@@ -986,42 +987,18 @@ async function resolveFreshToken(): Promise<string | null> {
   } catch { /* ignore */ }
 
   // Token missing/expired → refresh server-side via the httpOnly refresh cookie.
-  try {
-    const refreshed = await $fetch<{ session: { access_token: string; refresh_token: string } }>('/api/auth/refresh', { method: 'POST' })
-    if (refreshed?.session?.access_token) {
-      // Hydrate the Supabase client so future getSession() calls return a valid session.
-      try {
-        const { getSupabase } = await import('~/utils/supabase')
-        await getSupabase().auth.setSession({
-          access_token: refreshed.session.access_token,
-          refresh_token: refreshed.session.refresh_token,
-        })
-      } catch { /* non-fatal – we still have the token to use */ }
-      return refreshed.session.access_token
-    }
-  } catch { /* no valid refresh cookie → truly unauthenticated */ }
-
-  return null
+  // Routed through the shared single-flight helper so parallel refreshers across
+  // the app never redeem the same single-use refresh token concurrently.
+  const session = await refreshClientSession()
+  return session?.access_token ?? null
 }
 
 /** Force a server-side refresh via the httpOnly cookie, ignoring the (possibly stale)
  *  client session. Updates the Supabase client too. Returns a guaranteed-fresh token
  *  or null if the refresh cookie itself is dead (→ truly logged out). */
 async function forceServerRefresh(): Promise<string | null> {
-  try {
-    const refreshed = await $fetch<{ session: { access_token: string; refresh_token: string } }>('/api/auth/refresh', { method: 'POST' })
-    if (refreshed?.session?.access_token) {
-      try {
-        const { getSupabase } = await import('~/utils/supabase')
-        await getSupabase().auth.setSession({
-          access_token: refreshed.session.access_token,
-          refresh_token: refreshed.session.refresh_token,
-        })
-      } catch { /* non-fatal */ }
-      return refreshed.session.access_token
-    }
-  } catch { /* refresh cookie dead */ }
-  return null
+  const session = await refreshClientSession({ force: true })
+  return session?.access_token ?? null
 }
 
 const buildCheckoutBody = () => ({
