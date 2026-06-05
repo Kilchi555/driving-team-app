@@ -410,20 +410,31 @@
                 <p class="text-sm font-bold text-gray-800">{{ cat.name }}</p>
                 <span v-if="cat.code" class="text-xs text-gray-400 font-mono ml-auto">{{ cat.code }}</span>
               </div>
-              <!-- 3 price rows (flat array access — no nested undefined) -->
+              <!-- price rows with enable/disable toggle -->
               <div class="divide-y divide-gray-50">
                 <div v-for="row in pricingRows.filter(r => r.catId === cat.id)" :key="row.type"
-                  class="flex items-center gap-3 px-4 py-2.5">
+                  class="flex items-center gap-3 px-4 py-2.5 transition-opacity"
+                  :class="row.enabled ? '' : 'opacity-40'">
+                  <!-- toggle -->
+                  <button type="button" @click="row.enabled = !row.enabled"
+                    class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+                    :style="row.enabled ? { background: formData.primary_color || '#2563EB' } : {}"
+                    :class="!row.enabled ? 'bg-gray-200' : ''"
+                    :title="row.enabled ? `${row.typeLabel} deaktivieren` : `${row.typeLabel} aktivieren`">
+                    <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                      :class="row.enabled ? 'translate-x-3' : 'translate-x-0'" />
+                  </button>
                   <span class="text-xs font-medium text-gray-500 w-20 flex-shrink-0">{{ row.typeLabel }}</span>
                   <div class="flex items-center gap-1 flex-1">
                     <span class="text-xs text-gray-400">CHF</span>
                     <input
                       v-model.number="row.price_chf"
                       type="number" min="0" step="5"
-                      class="w-20 px-2 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      :disabled="!row.enabled"
+                      class="w-20 px-2 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed"
                     />
                   </div>
-                  <DurationPicker v-model="row.duration_minutes" />
+                  <DurationPicker v-model="row.duration_minutes" :disabled="!row.enabled" />
                 </div>
               </div>
             </div>
@@ -909,38 +920,24 @@
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Vorname</label>
+                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Vorname *</label>
                   <input v-model="staff.first_name" type="text" placeholder="Max"
-                    class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-colors">
+                    :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-white text-sm transition-colors',
+                      !staff.first_name.trim() ? 'border-red-200 focus:ring-red-400' : 'border-gray-200 focus:ring-blue-500']">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Nachname</label>
                   <input v-model="staff.last_name" type="text" placeholder="Mustermann"
                     class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-colors">
                 </div>
-                <div>
+                <div class="sm:col-span-2">
                   <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                    Telefon
+                    Telefon *
                     <span class="normal-case font-normal text-blue-500 ml-1">für Einladungs-SMS</span>
                   </label>
                   <input v-model="staff.phone" type="tel" placeholder="+41 79 123 45 67"
-                    class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-colors">
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                    E-Mail
-                    <span class="normal-case font-normal text-gray-400 ml-1">für Einladungs-E-Mail</span>
-                  </label>
-                  <input v-model="staff.email" type="email" placeholder="fahrlehrer@beispiel.ch"
                     :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-white text-sm transition-colors',
-                      staff.email && staff.email.toLowerCase() === adminForm.email.toLowerCase()
-                        ? 'border-red-300 focus:ring-red-400'
-                        : 'border-gray-200 focus:ring-blue-500']">
-                  <p v-if="staff.email && staff.email.toLowerCase() === adminForm.email.toLowerCase()"
-                    class="text-xs text-red-600 mt-1 font-medium flex items-center gap-1">
-                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
-                    Diese E-Mail ist bereits dein Admin-Login — der Fahrlehrer-Account braucht eine andere E-Mail.
-                  </p>
+                      !staff.phone.trim() ? 'border-red-200 focus:ring-red-400' : 'border-gray-200 focus:ring-blue-500']">
                 </div>
               </div>
             </div>
@@ -954,12 +951,12 @@
             Weiteren Fahrlehrer hinzufügen
           </button>
 
-          <p v-if="!staffList.some(s => s.first_name.trim() && s.last_name.trim())"
+          <p v-if="!staffList.every(s => s.first_name.trim() && s.phone.trim())"
             class="flex items-center gap-1.5 text-xs text-red-500 font-medium">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/>
             </svg>
-            Bitte mindestens einen Fahrlehrer mit Vor- und Nachname erfassen.
+            Bitte Vorname und Telefonnummer für jeden Fahrlehrer erfassen.
           </p>
         </div>
 
@@ -1008,7 +1005,7 @@
                 <div v-for="cat in effectiveCategoryList" :key="cat.id">
                   <p class="text-xs font-semibold text-gray-600 mb-1">{{ cat.name }}</p>
                   <div class="grid grid-cols-3 gap-1 text-xs">
-                    <span v-for="row in pricingRows.filter(r => r.catId === cat.id)" :key="row.type" class="text-gray-500">
+                    <span v-for="row in pricingRows.filter(r => r.catId === cat.id && r.enabled)" :key="row.type" class="text-gray-500">
                       {{ row.typeLabel }}: <strong>CHF {{ row.price_chf }}</strong> / {{ row.duration_minutes }} Min.
                     </span>
                   </div>
@@ -1333,12 +1330,13 @@ interface PricingRow {
   typeLabel: string
   price_chf: number
   duration_minutes: number
+  enabled: boolean
 }
 
 const PRICING_TYPES = [
-  { key: 'driving' as const, label: 'Fahrstunde', defaultPrice: 95,  defaultDuration: 45 },
-  { key: 'exam'    as const, label: 'Prüfung',    defaultPrice: 160, defaultDuration: 60 },
-  { key: 'theory'  as const, label: 'Theorie',    defaultPrice: 85,  defaultDuration: 45 },
+  { key: 'driving' as const, label: 'Fahrstunde', defaultPrice: 95,  defaultDuration: 45, defaultEnabled: true  },
+  { key: 'exam'    as const, label: 'Prüfung',    defaultPrice: 160, defaultDuration: 60, defaultEnabled: true  },
+  { key: 'theory'  as const, label: 'Theorie',    defaultPrice: 85,  defaultDuration: 45, defaultEnabled: false },
 ]
 
 const pricingRows = ref<PricingRow[]>([])
@@ -1371,6 +1369,7 @@ watch(effectiveCategoryList, (cats) => {
         typeLabel: t.label,
         price_chf: t.defaultPrice,
         duration_minutes: t.defaultDuration,
+        enabled: t.defaultEnabled,
       })
     }
   }
@@ -1488,10 +1487,10 @@ const prefillFirstLocation = () => {
 }
 
 // ─── Staff ─────────────────────────────────────────────────────────────────
-interface StaffEntry { first_name: string; last_name: string; phone: string; email: string }
+interface StaffEntry { first_name: string; last_name: string; phone: string }
 
-const staffList = ref<StaffEntry[]>([{ first_name: '', last_name: '', phone: '', email: '' }])
-const addStaff = () => staffList.value.push({ first_name: '', last_name: '', phone: '', email: '' })
+const staffList = ref<StaffEntry[]>([{ first_name: '', last_name: '', phone: '' }])
+const addStaff = () => staffList.value.push({ first_name: '', last_name: '', phone: '' })
 const removeStaff = (index: number) => staffList.value.splice(index, 1)
 const staffAdminIsSelf = ref(false)
 
@@ -1501,10 +1500,9 @@ const applyAdminToStaff = () => {
       first_name: adminForm.value.first_name || formData.value.contact_person_first_name,
       last_name:  adminForm.value.last_name  || formData.value.contact_person_last_name,
       phone:      adminForm.value.phone      || formData.value.contact_phone,
-      email:      '', // intentionally empty — must be a DIFFERENT email than admin login
     }
   } else {
-    staffList.value[0] = { first_name: '', last_name: '', phone: '', email: '' }
+    staffList.value[0] = { first_name: '', last_name: '', phone: '' }
   }
 }
 const staffInviteResults = ref<Array<{ name: string; status: string; message: string; invite_link?: string }> | null>(null)
@@ -1634,12 +1632,7 @@ const canProceed = computed(() => {
                 !passwordMismatch.value && hibpStatus.value !== 'pwned' && hibpStatus.value !== 'checking' &&
                 emailCheck.value !== 'taken')
     case 6: {
-      const hasValidStaff = staffList.value.some(s => s.first_name.trim() && s.last_name.trim())
-      const adminEmail = adminForm.value.email?.toLowerCase().trim()
-      const hasEmailConflict = staffList.value.some(
-        s => s.email?.trim().toLowerCase() === adminEmail && !!adminEmail
-      )
-      return hasValidStaff && !hasEmailConflict
+      return staffList.value.every(s => s.first_name.trim() && s.phone.trim())
     }
     default:
       return true
@@ -1808,7 +1801,7 @@ const submitRegistration = async () => {
     }
 
     // Pricing rules from flat pricingRows array
-    fd.append('pricing_json', JSON.stringify(pricingRows.value.map(r => ({
+    fd.append('pricing_json', JSON.stringify(pricingRows.value.filter(r => r.enabled).map(r => ({
       label: `${r.catName} – ${r.typeLabel}`,
       rule_type: r.type === 'driving' ? 'base_price' : r.type,
       category_code: r.catCode || r.catName.toUpperCase().replace(/\s+/g, '_'),
@@ -2000,7 +1993,7 @@ const loadFromStorage = () => {
   } catch { /* ignore */ }
 }
 
-watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, staffList, staffAdminIsSelf, selectedCategoryIds, pricingRows], saveToStorage, { deep: true })
+watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, staffList, staffAdminIsSelf, selectedCategoryIds, pricingRows, logoPreview, logoSquarePreview], saveToStorage, { deep: true })
 
 const route = useRoute()
 const isWebsiteMode = computed(() => route.query.mode === 'website')
@@ -2026,14 +2019,6 @@ onMounted(async () => {
   if (q.secondary_color && typeof q.secondary_color === 'string') formData.value.secondary_color = q.secondary_color
   if (q.accent_color && typeof q.accent_color === 'string') formData.value.accent_color = q.accent_color
 
-  // Pre-populate logo from sessionStorage only — never from URL params
-  // (URL params end up in browser history, server logs, analytics, referrer headers)
-  const savedLogo = sessionStorage.getItem('simy_preview_logo')
-  if (savedLogo) {
-    logoPreview.value = savedLogo
-    sessionStorage.removeItem('simy_preview_logo')
-  }
-
   // Pre-populate brand colors from sessionStorage (fallback for same-origin)
   const savedPrimary   = sessionStorage.getItem('simy_preview_primary')
   const savedSecondary = sessionStorage.getItem('simy_preview_secondary')
@@ -2043,6 +2028,16 @@ onMounted(async () => {
   if (savedAccent)    { formData.value.accent_color    = savedAccent;    sessionStorage.removeItem('simy_preview_accent') }
 
   loadFromStorage()
+
+  // Pre-populate logo from sessionStorage — read AFTER loadFromStorage so it takes
+  // precedence over any stale null value from a previous registration attempt.
+  // Never read from URL params (end up in browser history / referrer headers).
+  const savedLogo = sessionStorage.getItem('simy_preview_logo')
+  if (savedLogo) {
+    logoPreview.value = savedLogo
+    logoFile.value = base64ToFile(savedLogo, `logo-${Date.now()}.webp`)
+    sessionStorage.removeItem('simy_preview_logo')
+  }
   if (adminSameAsCompany.value) applyAdminFromCompany()
   // Pre-load categories if already past step 0
   if (currentStep.value >= 1) await loadTemplateCategories()

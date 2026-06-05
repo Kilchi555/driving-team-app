@@ -1,10 +1,11 @@
 <template>
-  <div class="relative" ref="rootEl">
+  <div class="relative" ref="rootEl" :class="disabled ? 'pointer-events-none' : ''">
     <!-- Trigger -->
     <button
       type="button"
       @click="open = !open"
-      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-sm font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 min-w-[86px] justify-between"
+      :disabled="disabled"
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-sm font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 min-w-[86px] justify-between disabled:bg-gray-50 disabled:cursor-not-allowed"
       :class="open ? 'border-blue-400 bg-blue-50 text-blue-700 ring-2 ring-blue-200' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'"
     >
       <span>{{ modelValue }} Min.</span>
@@ -99,7 +100,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 
-const props = defineProps<{ modelValue: number }>()
+const props = defineProps<{ modelValue: number; disabled?: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [val: number] }>()
 
 const open = ref(false)
@@ -152,7 +153,7 @@ function scrollToValue(val: number, smooth = true) {
 }
 
 function onDrumScroll() {
-  if (!drumEl.value) return
+  if (!drumEl.value || props.disabled) return
   const idx = Math.round(drumEl.value.scrollTop / 40)
   const val = drumValues.value[Math.max(0, Math.min(idx, drumValues.value.length - 1))]
   if (val !== props.modelValue) {
