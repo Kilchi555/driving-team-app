@@ -65,10 +65,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: `Unknown plan: ${desiredPlan}` })
   }
 
-  const planPriceId = process.env[planDef.priceEnvKey]
-  const seatPriceId = process.env[ADDONS.find(a => a.key === 'seats')!.priceEnvKey]
-  const coursesPriceId = process.env[ADDONS.find(a => a.key === 'courses')!.priceEnvKey]
-  const affiliatePriceId = process.env[ADDONS.find(a => a.key === 'affiliate')!.priceEnvKey]
+  // .trim() defensively against trailing newlines pasted into Vercel env vars.
+  const planPriceId = process.env[planDef.priceEnvKey]?.trim()
+  const seatPriceId = process.env[ADDONS.find(a => a.key === 'seats')!.priceEnvKey]?.trim()
+  const coursesPriceId = process.env[ADDONS.find(a => a.key === 'courses')!.priceEnvKey]?.trim()
+  const affiliatePriceId = process.env[ADDONS.find(a => a.key === 'affiliate')!.priceEnvKey]?.trim()
 
   if (!planPriceId) {
     throw createError({ statusCode: 500, statusMessage: `Missing env var ${planDef.priceEnvKey}` })
@@ -80,7 +81,7 @@ export default defineEventHandler(async (event) => {
     priceId ? currentItems.find(i => i.price.id === priceId) : undefined
 
   const currentPlanItem = currentItems.find(i =>
-    PLANS.some(p => p.priceEnvKey && process.env[p.priceEnvKey] === i.price.id)
+    PLANS.some(p => p.priceEnvKey && process.env[p.priceEnvKey]?.trim() === i.price.id)
   )
   const currentSeatItem = findItem(seatPriceId)
   const currentCoursesItem = findItem(coursesPriceId)

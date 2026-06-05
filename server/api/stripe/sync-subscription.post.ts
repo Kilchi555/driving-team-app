@@ -121,7 +121,7 @@ export default defineEventHandler(async (event) => {
 function resolvePlanFromPrices(sub: Stripe.Subscription): string {
   const envMap: Record<string, string> = {}
   for (const p of PLANS) {
-    const priceId = process.env[p.priceEnvKey]
+    const priceId = process.env[p.priceEnvKey]?.trim()
     if (priceId) envMap[priceId] = p.id
   }
   for (const item of sub.items.data) {
