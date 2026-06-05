@@ -1,14 +1,35 @@
 // server/api/tenants/rollback-registration.post.ts
 // Called by the frontend when create-admin fails after a successful tenant insert.
 // Deletes the orphaned tenant so the slug becomes available again.
-import { getSupabaseAdmin } from '~/utils/supabase'
+import { defineEventHandler, createError, readBody, getHeader } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { verifyRegistrationToken } from '~/server/utils/registration-token'
 
 export default defineEventHandler(async (event) => {
+  const ipAddress =
+    getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() ||
+    getHeader(event, 'x-real-ip') ||
+    event.node.req.socket.remoteAddress ||
+    'unknown'
+
+  // Rate limit: 10 rollback attempts per IP per hour
+  const rateLimit = await checkRateLimit(ipAddress, 'rollback_registration', 10, 3600)
+  if (!rateLimit.allowed) {
+    throw createError({ statusCode: 429, statusMessage: 'Zu viele Anfragen. Bitte warten.' })
+  }
+
   const body = await readBody(event)
   const tenantId = body?.tenant_id as string | undefined
+  const registrationToken = body?.registration_token as string | undefined
 
   if (!tenantId || typeof tenantId !== 'string' || !/^[0-9a-f-]{36}$/.test(tenantId)) {
     throw createError({ statusCode: 400, statusMessage: 'Ungültige tenant_id' })
+  }
+
+  // ✅ Verify the short-lived registration token
+  if (!verifyRegistrationToken(registrationToken, tenantId)) {
+    throw createError({ statusCode: 403, statusMessage: 'Ungültiger oder abgelaufener Registrierungstoken' })
   }
 
   const supabase = getSupabaseAdmin()

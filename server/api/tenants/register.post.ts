@@ -7,6 +7,11 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
 import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
+import { generateRegistrationToken } from '~/server/utils/registration-token'
+
+const VALID_BUSINESS_TYPES = new Set([
+  'driving_school', 'motorcycle_school', 'truck_school', 'other'
+])
 
 interface TenantRegistrationData {
   name: string
@@ -161,7 +166,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     logger.debug('📊 Final data object:', JSON.stringify(data, null, 2))
 
     // ✅ LAYER 3: Email validation (format + disposable check)
-    if (!validateEmail(data.contact_email)) {
+    if (!validateEmail(data.contact_email).valid) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Ungültige E-Mail-Adresse'
@@ -303,7 +308,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         contact_email: data.contact_email.toLowerCase().trim(),
         contact_phone: sanitizedPhone,
         address: `${sanitizedStreet} ${sanitizedStreetNr}, ${data.zip} ${sanitizedCity}`,
-        business_type: data.business_type,
+        business_type: VALID_BUSINESS_TYPES.has(data.business_type) ? data.business_type : 'driving_school',
         primary_color: data.primary_color,
         secondary_color: data.secondary_color,
         // Standard-Farben setzen
@@ -372,7 +377,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       
       throw createError({
         statusCode: 500,
-        statusMessage: `Tenant-Erstellung fehlgeschlagen: ${insertError.message}`
+        statusMessage: 'Tenant-Erstellung fehlgeschlagen. Bitte versuche es erneut.'
       })
     }
 
@@ -477,6 +482,9 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     try {
       await $fetch('/api/admin/notify-new-tenant', {
         method: 'POST',
+        headers: {
+          'x-internal-secret': process.env.NUXT_INTERNAL_API_SECRET || ''
+        },
         body: {
           tenantId: newTenant.id,
           tenantName: newTenant.name,
@@ -527,6 +535,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
 
     const response = {
       success: true,
+      registration_token: generateRegistrationToken(newTenant.id),
       tenant: {
         id: newTenant.id,
         name: newTenant.name,
@@ -590,6 +599,19 @@ function validateTenantData(data: TenantRegistrationData): string | null {
 
   if (data.slug.length > 50) {
     return 'URL-Kennung darf maximal 50 Zeichen lang sein'
+  }
+
+  // Reserved slugs that would conflict with app routes
+  const RESERVED_SLUGS = new Set([
+    'admin', 'api', 'login', 'logout', 'register', 'booking',
+    'tenant-register', 'onboarding', 'billing', 'dashboard',
+    'reset-password', 'password-reset', 'set-password',
+    'staff', 'customers', 'calendar', 'settings', 'profile',
+    'help', 'support', 'terms', 'privacy', 'agb', 'datenschutz',
+    'static', 'assets', 'public', 'simy', 'app', 'www', 'mail',
+  ])
+  if (RESERVED_SLUGS.has(data.slug.toLowerCase())) {
+    return 'Diese URL-Kennung ist reserviert. Bitte wähle eine andere.'
   }
 
   if (!data.contact_email?.trim()) {
