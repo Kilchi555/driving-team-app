@@ -45,6 +45,20 @@ export default defineEventHandler(async (event) => {
   const stripe = new Stripe(stripeSecret, { apiVersion: '2025-08-27.basil' })
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
 
+  // Diagnostic: detect key/price mode so a live/test mismatch is obvious in logs.
+  const keyMode = stripeSecret.startsWith('sk_live_') || stripeSecret.startsWith('rk_live_')
+    ? 'live'
+    : stripeSecret.startsWith('sk_test_') || stripeSecret.startsWith('rk_test_')
+      ? 'test'
+      : 'unknown'
+  const priceMode = planPriceId.startsWith('price_') ? 'price_id' : 'invalid'
+  console.log('💳 create-checkout-session config', {
+    keyMode,
+    keyPrefix: stripeSecret.slice(0, 8),
+    planPriceId,
+    priceLooksValid: priceMode === 'price_id' && !/\s/.test(planPriceId),
+  })
+
   // ── Resolve the authenticated tenant FIRST ───────────────────────────────
   // Auth must run OUTSIDE the Stripe-customer try/catch below — otherwise an
   // auth/refresh failure gets swallowed and surfaces as a confusing 401 only
@@ -134,13 +148,30 @@ export default defineEventHandler(async (event) => {
     console.error('⚠️ Could not resolve tenant customer:', err?.message)
   }
 
-  // Accounts V2: always requires a customer — create a transient one if none resolved
+  // Accounts V2: always requires a customer — create a transient one if none resolved.
+  // Wrapped so an invalid/revoked Stripe key surfaces as a clear error instead of a
+  // confusing generic 401 "Server Error" bubbling up from the uncaught Stripe call.
   if (!stripeCustomerId) {
-    const transient = await stripe.customers.create({
-      description: 'Transient customer – Simy upgrade flow',
-      metadata: { tenant_id: tenantId },
-    })
-    stripeCustomerId = transient.id
+    try {
+      const transient = await stripe.customers.create({
+        description: 'Transient customer – Simy upgrade flow',
+        metadata: { tenant_id: tenantId },
+      })
+      stripeCustomerId = transient.id
+    } catch (stripeErr: any) {
+      console.error('❌ Stripe customers.create failed', {
+        type: stripeErr?.type,
+        code: stripeErr?.code,
+        statusCode: stripeErr?.statusCode,
+        message: stripeErr?.message,
+        keyMode,
+      })
+      throw createError({
+        statusCode: 502,
+        statusMessage: `Stripe-Fehler (${stripeErr?.type || 'unknown'}): ${stripeErr?.message || 'Zahlungsanbieter nicht erreichbar'}`,
+        data: { stripe: true, type: stripeErr?.type, code: stripeErr?.code, keyMode },
+      })
+    }
   }
 
   // ── Build line_items ──────────────────────────────────────────────────────
@@ -178,32 +209,48 @@ export default defineEventHandler(async (event) => {
     ? `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}&wallee_setup=1`
     : `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`
 
-  const session = await stripe.checkout.sessions.create({
-    mode: 'subscription',
-    customer: stripeCustomerId,
-    line_items: lineItems,
-    subscription_data: {
-      ...(needsWalleeTrial ? { trial_period_days: 30 } : {}),
-      metadata: {
-        plan,
-        addon_seats: String(addons.seats || 0),
-        addon_courses: String(!!addons.courses),
-        addon_affiliate: String(!!addons.affiliate),
-        with_wallee: String(withWallee),
-        ...(staffToDeactivate.length > 0 ? { staff_to_deactivate: staffToDeactivate.join(',') } : {}),
-        ...(tenantId ? { tenant_id: tenantId } : {}),
-      },
-    },
-    ...(needsWalleeTrial ? {
-      custom_text: {
-        submit: {
-          message: 'Du wirst erst belastet, sobald dein Wallee-Konto aktiviert ist. Bis dahin läuft dein Abonnement kostenlos.',
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      customer: stripeCustomerId,
+      line_items: lineItems,
+      subscription_data: {
+        ...(needsWalleeTrial ? { trial_period_days: 30 } : {}),
+        metadata: {
+          plan,
+          addon_seats: String(addons.seats || 0),
+          addon_courses: String(!!addons.courses),
+          addon_affiliate: String(!!addons.affiliate),
+          with_wallee: String(withWallee),
+          ...(staffToDeactivate.length > 0 ? { staff_to_deactivate: staffToDeactivate.join(',') } : {}),
+          ...(tenantId ? { tenant_id: tenantId } : {}),
         },
       },
-    } : {}),
-    success_url: successUrl,
-    cancel_url: `${baseUrl}/upgrade`,
-  })
+      ...(needsWalleeTrial ? {
+        custom_text: {
+          submit: {
+            message: 'Du wirst erst belastet, sobald dein Wallee-Konto aktiviert ist. Bis dahin läuft dein Abonnement kostenlos.',
+          },
+        },
+      } : {}),
+      success_url: successUrl,
+      cancel_url: `${baseUrl}/upgrade`,
+    })
 
-  return { id: session.id, url: session.url }
+    return { id: session.id, url: session.url }
+  } catch (stripeErr: any) {
+    console.error('❌ Stripe checkout.sessions.create failed', {
+      type: stripeErr?.type,
+      code: stripeErr?.code,
+      statusCode: stripeErr?.statusCode,
+      message: stripeErr?.message,
+      keyMode,
+      planPriceId,
+    })
+    throw createError({
+      statusCode: 502,
+      statusMessage: `Stripe-Fehler (${stripeErr?.type || 'unknown'}): ${stripeErr?.message || 'Checkout konnte nicht erstellt werden'}`,
+      data: { stripe: true, type: stripeErr?.type, code: stripeErr?.code, keyMode, planPriceId },
+    })
+  }
 })
