@@ -218,6 +218,7 @@ import { ref, computed, onMounted } from 'vue'
 import { PLANS } from '~/utils/planFeatures'
 import type { PricingResponse } from '~/server/api/stripe/prices.get'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { refreshClientSession } from '~/utils/client-session-refresh'
 
 definePageMeta({ middleware: 'admin', layout: 'admin' })
 
@@ -267,21 +268,10 @@ const resolveFreshToken = async (): Promise<string | null> => {
     }
   } catch { /* ignore */ }
 
-  try {
-    const refreshed = await $fetch<{ session: { access_token: string; refresh_token: string } }>('/api/auth/refresh', { method: 'POST' })
-    if (refreshed?.session?.access_token) {
-      try {
-        const { getSupabase } = await import('~/utils/supabase')
-        await getSupabase().auth.setSession({
-          access_token: refreshed.session.access_token,
-          refresh_token: refreshed.session.refresh_token,
-        })
-      } catch { /* non-fatal */ }
-      return refreshed.session.access_token
-    }
-  } catch { /* no valid refresh cookie → truly unauthenticated */ }
-
-  return null
+  // Routed through the shared single-flight helper so parallel refreshers across
+  // the app never redeem the same single-use refresh token concurrently.
+  const refreshed = await refreshClientSession()
+  return refreshed?.access_token ?? null
 }
 
 const authHeaders = async (): Promise<Record<string, string>> => {

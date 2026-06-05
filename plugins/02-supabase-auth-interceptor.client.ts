@@ -183,13 +183,14 @@ export default defineNuxtPlugin(async (nuxtApp) => {
                 logger.warn('⚠️ Supabase token refresh failed:', refreshError?.message)
               }
             } else {
-              // No Supabase session — refresh via HTTP-Only cookie endpoint
-              const response = await $fetch('/api/auth/refresh', {
-                method: 'POST'
-              }) as any
-              if (response?.session?.access_token && response?.session?.refresh_token) {
-                newAccessToken = response.session.access_token
-                newRefreshToken = response.session.refresh_token
+              // No Supabase session — refresh via HTTP-Only cookie endpoint.
+              // Routed through the shared single-flight helper so this proactive
+              // refresher never races other refreshers on the single-use cookie.
+              const { refreshClientSession } = await import('~/utils/client-session-refresh')
+              const refreshed = await refreshClientSession()
+              if (refreshed?.access_token && refreshed?.refresh_token) {
+                newAccessToken = refreshed.access_token
+                newRefreshToken = refreshed.refresh_token
               }
             }
 
