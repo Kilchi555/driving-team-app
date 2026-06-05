@@ -148,7 +148,7 @@
                   required
                   placeholder="dein@login.ch"
                   @blur="checkAdminEmail(adminEmailEarly)"
-                  @input="emailCheck = 'idle'"
+                  @input="onAdminEmailInput(adminEmailEarly)"
                   :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
                     emailCheck === 'taken'     ? 'border-red-300 focus:ring-red-400' :
                     emailCheck === 'available' ? 'border-green-300 focus:ring-green-400' :
@@ -163,9 +163,9 @@
                   E-Mail ist verfügbar
                 </p>
                 <p v-else-if="emailCheck === 'taken'" class="text-xs text-red-500 mt-1 flex items-center gap-1">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-                  Diese E-Mail ist bereits registriert –
-                  <a href="/login" class="underline">Einloggen</a>
+                  <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                  Diese E-Mail ist bereits registriert —
+                  <a href="/login" class="underline font-medium">Einloggen</a>
                 </p>
               </div>
             </div>
@@ -793,13 +793,25 @@
               <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">E-Mail *</label>
               <input v-model="adminForm.email" type="email" required
                 @blur="checkAdminEmail(adminForm.email)"
-                @input="emailCheck = 'idle'"
+                @input="onAdminEmailInput(adminForm.email)"
                 :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
                   emailCheck === 'taken'     ? 'border-red-300 focus:ring-red-400' :
                   emailCheck === 'available' ? 'border-green-300 focus:ring-green-400' :
                   'border-gray-200 focus:ring-blue-500']">
-              <p v-if="emailCheck === 'taken'" class="text-xs text-red-500 mt-1">Diese E-Mail ist bereits registriert</p>
-              <p v-else-if="emailCheck === 'available'" class="text-xs text-green-600 mt-1">E-Mail ist verfügbar</p>
+              <p v-if="emailCheck === 'checking'" class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                Wird geprüft…
+              </p>
+              <p v-else-if="emailCheck === 'taken'" class="text-xs text-red-500 mt-1 flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                <span>Diese E-Mail ist bereits registriert —
+                  <a href="/login" class="underline font-medium">Jetzt einloggen</a>
+                </span>
+              </p>
+              <p v-else-if="emailCheck === 'available'" class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                E-Mail ist verfügbar
+              </p>
             </div>
             <div>
               <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Telefon</label>
@@ -1224,9 +1236,16 @@
           <svg class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
           </svg>
-          <div>
+          <div class="flex-1">
             <p class="text-sm font-semibold text-red-800">Fehler bei der Registrierung</p>
             <p class="text-sm text-red-700 mt-0.5">{{ error }}</p>
+            <a v-if="emailCheck === 'taken'" href="/login"
+              class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-red-800 underline underline-offset-2 hover:text-red-900">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+              </svg>
+              Jetzt einloggen →
+            </a>
           </div>
         </div>
 
@@ -1650,7 +1669,8 @@ const canProceed = computed(() => {
                 formData.value.contact_person_first_name && formData.value.contact_person_last_name &&
                 formData.value.contact_email && formData.value.contact_phone &&
                 formData.value.street && formData.value.streetNr && formData.value.zip && formData.value.city) &&
-             slugCheck.value !== 'taken' && emailCheck.value !== 'taken' &&
+             slugCheck.value !== 'taken' && slugCheck.value !== 'checking' &&
+             emailCheck.value === 'available' &&
              !!adminEmailEarly.value && adminEmailEarly.value.includes('@')
     case 1: {
       if (selectedCategoryIds.value.size === 0) return false
@@ -1672,7 +1692,7 @@ const canProceed = computed(() => {
                 adminForm.value.email && adminForm.value.password &&
                 adminForm.value.passwordConfirm && passwordValid.value &&
                 !passwordMismatch.value && hibpStatus.value !== 'pwned' && hibpStatus.value !== 'checking' &&
-                emailCheck.value !== 'taken')
+                emailCheck.value === 'available')
     case 6: {
       return staffList.value.every(s => s.first_name.trim() && s.phone.trim())
     }
@@ -1735,6 +1755,21 @@ const checkAdminEmail = (val: string) => {
       emailCheck.value = res.email.available ? 'available' : 'taken'
     } catch { emailCheck.value = 'error' }
   }, 600)
+}
+
+// Debounced check while typing — triggers after 700ms of no input
+const onAdminEmailInput = (val: string) => {
+  emailCheck.value = 'idle'
+  if (emailDebounce) clearTimeout(emailDebounce)
+  const email = val.trim()
+  if (!email.includes('@') || email.length < 5) return
+  emailCheck.value = 'checking'
+  emailDebounce = setTimeout(async () => {
+    try {
+      const res = await $fetch<{ email: { available: boolean } }>('/api/tenants/check-availability', { query: { email } })
+      emailCheck.value = res.email.available ? 'available' : 'taken'
+    } catch { emailCheck.value = 'error' }
+  }, 700)
 }
 
 // ─── Form Helpers ─────────────────────────────────────────────────────────
@@ -1954,11 +1989,18 @@ const submitRegistration = async () => {
 
   } catch (err: any) {
     console.error('Registration failed:', err)
-    // Only expose known user-facing messages; hide internal server details
+    const statusCode = err.status || err.statusCode || err.data?.statusCode
     const knownMessage = err.data?.statusMessage || err.statusMessage
-    error.value = knownMessage && knownMessage.length < 200 && err.status < 500
-      ? knownMessage
-      : 'Ein technischer Fehler ist aufgetreten. Bitte versuche es erneut oder kontaktiere support@simy.ch'
+
+    if (statusCode === 409) {
+      // Email already in use — set emailCheck so the field turns red
+      emailCheck.value = 'taken'
+      error.value = '⚠️ Diese E-Mail-Adresse ist bereits registriert. Bitte verwende eine andere E-Mail-Adresse oder logge dich ein.'
+    } else {
+      error.value = knownMessage && knownMessage.length < 200 && statusCode < 500
+        ? knownMessage
+        : 'Ein technischer Fehler ist aufgetreten. Bitte versuche es erneut oder kontaktiere support@simy.ch'
+    }
     currentStep.value = 7 // Back to confirmation so the user can retry without re-entering everything
   }
 }
