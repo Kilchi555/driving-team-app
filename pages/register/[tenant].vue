@@ -837,19 +837,9 @@ import { generateStrongPassword } from '~/composables/usePasswordStrength'
 
 const { primaryColor, accentColor } = useTenantBranding()
 
-// Load hCaptcha script - ensure it loads immediately
-if (typeof window !== 'undefined') {
-  useHead({
-    script: []
-  })
-}
-
 const route = useRoute()
 const router = useRouter()
 const { showError, showSuccess } = useUIStore()
-const { public: publicConfig } = useRuntimeConfig()
-const hcaptchaSiteKey = computed(() => publicConfig.hcaptchaSiteKey)
-const hcaptchaWidgetId = ref<number | null>(null)
 const supabase = getSupabase()
 
 // Get tenant slug from URL parameter
