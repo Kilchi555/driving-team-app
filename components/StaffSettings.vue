@@ -17,11 +17,22 @@
       <div class="px-5 pt-2 pb-4 flex items-center justify-between flex-shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0" :style="{ background: primaryColor }">
-            {{ props.currentUser?.first_name?.charAt(0) || '?' }}{{ props.currentUser?.last_name?.charAt(0) || '' }}
+            {{ localUser.first_name?.charAt(0) || '?' }}{{ localUser.last_name?.charAt(0) || '' }}
           </div>
           <div>
-            <div class="font-semibold text-gray-900 text-base leading-tight">
-              {{ props.currentUser?.first_name }} {{ props.currentUser?.last_name }}
+            <div class="flex items-center gap-1.5">
+              <span class="font-semibold text-gray-900 text-base leading-tight">
+                {{ localUser.first_name }} {{ localUser.last_name }}
+              </span>
+              <button
+                @click="openEditProfile"
+                title="Profil bearbeiten"
+                class="w-6 h-6 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                </svg>
+              </button>
             </div>
             <div class="text-xs text-gray-500 mt-0.5 capitalize">{{ props.currentUser?.role?.replace('_', ' ') }}</div>
           </div>
@@ -494,6 +505,103 @@
       </div><!-- end space-y-2 settings -->
       </div><!-- end overflow-y-auto -->
   </Teleport>
+
+    <!-- Edit Profile Modal -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition ease-out duration-200"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition ease-in duration-150"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div v-if="showEditProfile" class="fixed inset-0 z-[400] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="showEditProfile = false">
+          <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+              <h2 class="text-base font-semibold text-gray-900">Profil bearbeiten</h2>
+              <button @click="showEditProfile = false" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <!-- Form -->
+            <div class="px-5 py-4 space-y-3 max-h-[70svh] overflow-y-auto">
+              <!-- Success / Error -->
+              <Transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 -translate-y-1" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100" leave-to-class="opacity-0">
+                <div v-if="editProfileSuccess" class="flex items-center gap-2 rounded-xl bg-green-50 border border-green-200 px-3 py-2.5 text-sm text-green-800">
+                  <svg class="w-4 h-4 flex-shrink-0 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  Profil erfolgreich gespeichert
+                </div>
+              </Transition>
+              <div v-if="editProfileError" class="rounded-xl bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-700">{{ editProfileError }}</div>
+
+              <!-- Name row -->
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Vorname</label>
+                  <input v-model="editForm.first_name" type="text" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent" :style="{ '--tw-ring-color': primaryColor }" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Nachname</label>
+                  <input v-model="editForm.last_name" type="text" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent" :style="{ '--tw-ring-color': primaryColor }" />
+                </div>
+              </div>
+
+              <!-- Email -->
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">E-Mail</label>
+                <input v-model="editForm.email" type="email" autocomplete="email" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent" :style="{ '--tw-ring-color': primaryColor }" />
+              </div>
+
+              <!-- Phone -->
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Telefon</label>
+                <input v-model="editForm.phone" type="tel" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent" :style="{ '--tw-ring-color': primaryColor }" />
+              </div>
+
+              <!-- Street + Nr -->
+              <div class="grid grid-cols-3 gap-3">
+                <div class="col-span-2">
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Strasse</label>
+                  <input v-model="editForm.street" type="text" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent" :style="{ '--tw-ring-color': primaryColor }" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Nr.</label>
+                  <input v-model="editForm.street_nr" type="text" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent" :style="{ '--tw-ring-color': primaryColor }" />
+                </div>
+              </div>
+
+              <!-- PLZ + City -->
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">PLZ</label>
+                  <input v-model="editForm.zip" type="text" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent" :style="{ '--tw-ring-color': primaryColor }" />
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Ort</label>
+                  <input v-model="editForm.city" type="text" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent" :style="{ '--tw-ring-color': primaryColor }" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-5 pb-5 pt-3 border-t border-gray-100" style="padding-bottom: max(20px, env(safe-area-inset-bottom, 20px))">
+              <button
+                @click="saveEditProfile"
+                :disabled="isSavingProfile"
+                class="w-full py-3 rounded-2xl text-sm font-semibold text-white transition-opacity active:opacity-70 disabled:opacity-50 flex items-center justify-center gap-2"
+                :style="{ background: primaryColor }"
+              >
+                <svg v-if="isSavingProfile" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                {{ isSavingProfile ? 'Speichern…' : 'Speichern' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- Exam Statistics Modal -->
     <StaffExamStatistics
@@ -1178,6 +1286,66 @@ const handleSessionError = (err: any): boolean => {
     return true
   }
   return false
+}
+
+// ── Edit Profile ──────────────────────────────────────────────────────────────
+// Local copy of user data so the header updates immediately after save
+const localUser = ref({ ...props.currentUser })
+
+const showEditProfile = ref(false)
+const isSavingProfile = ref(false)
+const editProfileSuccess = ref(false)
+const editProfileError = ref<string | null>(null)
+
+const editForm = ref({
+  first_name: '',
+  last_name: '',
+  email: '',
+  phone: '',
+  street: '',
+  street_nr: '',
+  zip: '',
+  city: '',
+})
+
+const openEditProfile = () => {
+  editForm.value = {
+    first_name: localUser.value.first_name || '',
+    last_name: localUser.value.last_name || '',
+    email: localUser.value.email || '',
+    phone: localUser.value.phone || '',
+    street: localUser.value.street || '',
+    street_nr: localUser.value.street_nr || '',
+    zip: localUser.value.zip || '',
+    city: localUser.value.city || '',
+  }
+  editProfileSuccess.value = false
+  editProfileError.value = null
+  showEditProfile.value = true
+}
+
+const saveEditProfile = async () => {
+  isSavingProfile.value = true
+  editProfileError.value = null
+  editProfileSuccess.value = false
+  try {
+    const res = await $fetch<{ success: boolean; data: any }>('/api/staff/update-profile', {
+      method: 'POST',
+      body: editForm.value,
+    })
+    if (res?.data) {
+      Object.assign(localUser.value, res.data)
+    }
+    editProfileSuccess.value = true
+    setTimeout(() => {
+      showEditProfile.value = false
+      editProfileSuccess.value = false
+    }, 1500)
+  } catch (err: any) {
+    editProfileError.value = err?.data?.statusMessage || 'Speichern fehlgeschlagen'
+  } finally {
+    isSavingProfile.value = false
+  }
 }
 
 // Exam Statistics Modal State
