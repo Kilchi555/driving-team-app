@@ -15,7 +15,9 @@ interface CheckoutBody {
 }
 
 export default defineEventHandler(async (event) => {
-  const stripeSecret = process.env.STRIPE_SECRET_KEY
+  // .trim() defensively: env values pasted into Vercel sometimes carry a trailing
+  // newline (price_…\n), which makes Stripe reject the key/price ("No such price").
+  const stripeSecret = process.env.STRIPE_SECRET_KEY?.trim()
   if (!stripeSecret) {
     throw createError({ statusCode: 500, statusMessage: 'Stripe not configured' })
   }
@@ -37,7 +39,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: `Unknown plan: ${plan}` })
   }
 
-  const planPriceId = process.env[planDef.priceEnvKey]
+  const planPriceId = process.env[planDef.priceEnvKey]?.trim()
   if (!planPriceId) {
     throw createError({ statusCode: 500, statusMessage: `Missing env var ${planDef.priceEnvKey}` })
   }
@@ -181,21 +183,21 @@ export default defineEventHandler(async (event) => {
 
   // Add-on: extra seats (per unit)
   if (addons.seats && addons.seats > 0) {
-    const seatPriceId = process.env[ADDONS.find(a => a.key === 'seats')!.priceEnvKey]
+    const seatPriceId = process.env[ADDONS.find(a => a.key === 'seats')!.priceEnvKey]?.trim()
     if (!seatPriceId) throw createError({ statusCode: 500, statusMessage: 'Missing STRIPE_PRICE_ADDON_SEATS' })
     lineItems.push({ price: seatPriceId, quantity: addons.seats })
   }
 
   // Add-on: courses
   if (addons.courses) {
-    const coursesPriceId = process.env[ADDONS.find(a => a.key === 'courses')!.priceEnvKey]
+    const coursesPriceId = process.env[ADDONS.find(a => a.key === 'courses')!.priceEnvKey]?.trim()
     if (!coursesPriceId) throw createError({ statusCode: 500, statusMessage: 'Missing STRIPE_PRICE_ADDON_COURSES' })
     lineItems.push({ price: coursesPriceId, quantity: 1 })
   }
 
   // Add-on: affiliate
   if (addons.affiliate) {
-    const affiliatePriceId = process.env[ADDONS.find(a => a.key === 'affiliate')!.priceEnvKey]
+    const affiliatePriceId = process.env[ADDONS.find(a => a.key === 'affiliate')!.priceEnvKey]?.trim()
     if (!affiliatePriceId) throw createError({ statusCode: 500, statusMessage: 'Missing STRIPE_PRICE_ADDON_AFFILIATE' })
     lineItems.push({ price: affiliatePriceId, quantity: 1 })
   }

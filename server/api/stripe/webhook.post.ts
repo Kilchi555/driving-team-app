@@ -394,10 +394,12 @@ async function resolveTenantId(
 }
 
 function resolvePlanFromPrices(sub: Stripe.Subscription): string {
+  // .trim() defensively: a trailing newline in the env var would make the map key
+  // never match the (clean) price.id from Stripe → plan silently falls back to 'starter'.
   const envMap: Record<string, string> = {
-    [process.env.STRIPE_PRICE_STARTER || '_']: 'starter',
-    [process.env.STRIPE_PRICE_PROFESSIONAL || '_']: 'professional',
-    [process.env.STRIPE_PRICE_ENTERPRISE || '_']: 'enterprise',
+    [process.env.STRIPE_PRICE_STARTER?.trim() || '_']: 'starter',
+    [process.env.STRIPE_PRICE_PROFESSIONAL?.trim() || '_']: 'professional',
+    [process.env.STRIPE_PRICE_ENTERPRISE?.trim() || '_']: 'enterprise',
   }
   for (const item of sub.items.data) {
     const match = envMap[item.price.id]

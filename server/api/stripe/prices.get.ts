@@ -14,20 +14,21 @@ export interface PricingResponse {
 }
 
 async function fetchPrices(): Promise<PricingResponse> {
-  const stripeSecret = process.env.STRIPE_SECRET_KEY
+  const stripeSecret = process.env.STRIPE_SECRET_KEY?.trim()
   if (!stripeSecret) {
     throw createError({ statusCode: 500, statusMessage: 'Stripe not configured' })
   }
 
   const stripe = new Stripe(stripeSecret, { apiVersion: '2025-08-27.basil' as any })
 
+  // .trim() defensively against trailing newlines pasted into Vercel env vars.
   const planPriceIds = PLANS
-    .filter(p => p.priceEnvKey && process.env[p.priceEnvKey])
-    .map(p => ({ key: p.id, priceId: process.env[p.priceEnvKey!]! }))
+    .filter(p => p.priceEnvKey && process.env[p.priceEnvKey]?.trim())
+    .map(p => ({ key: p.id, priceId: process.env[p.priceEnvKey!]!.trim() }))
 
   const addonPriceIds = ADDONS
-    .filter(a => process.env[a.priceEnvKey])
-    .map(a => ({ key: a.key, priceId: process.env[a.priceEnvKey]! }))
+    .filter(a => process.env[a.priceEnvKey]?.trim())
+    .map(a => ({ key: a.key, priceId: process.env[a.priceEnvKey]!.trim() }))
 
   const allPriceIds = [...planPriceIds, ...addonPriceIds]
 
