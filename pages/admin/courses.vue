@@ -6166,6 +6166,8 @@ const printParticipantList = () => {
   win.focus()
   win.print()
 }
+
+const loadCourseEnrollments = async (courseId: string) => {
   logger.debug('🔍 loadCourseEnrollments called with courseId:', courseId)
   try {
     const data = await $fetch<any[]>(`/api/courses/enrollments?courseId=${courseId}`)
