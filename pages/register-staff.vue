@@ -84,8 +84,23 @@
               type="email"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              :class="{ '!border-red-300': emailCheck === 'taken', '!border-green-300': emailCheck === 'available' }"
               placeholder="max@example.com"
+              @input="onEmailInput(email)"
+              @blur="onEmailInput(email)"
             />
+            <p v-if="emailCheck === 'checking'" class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+              <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              Wird geprüft…
+            </p>
+            <p v-else-if="emailCheck === 'available'" class="text-xs text-green-600 mt-1 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+              E-Mail ist verfügbar
+            </p>
+            <p v-else-if="emailCheck === 'taken'" class="text-xs text-red-500 mt-1 flex items-center gap-2">
+              <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+              <span>Diese E-Mail ist bereits registriert — <a href="/login" class="underline font-medium">Jetzt einloggen</a></span>
+            </p>
           </div>
 
           <!-- Telefon -->
@@ -400,6 +415,24 @@ const street = ref('')
 const streetNr = ref('')
 const zip = ref('')
 const city = ref('')
+
+// ─── Email availability check ───────────────────────────────────────────────
+const emailCheck = ref<'idle' | 'checking' | 'available' | 'taken' | 'error'>('idle')
+let emailDebounce: ReturnType<typeof setTimeout> | null = null
+
+const onEmailInput = (val: string) => {
+  emailCheck.value = 'idle'
+  if (emailDebounce) clearTimeout(emailDebounce)
+  const v = val.trim()
+  if (!v.includes('@') || v.length < 5) return
+  emailCheck.value = 'checking'
+  emailDebounce = setTimeout(async () => {
+    try {
+      const res = await $fetch<{ email: { available: boolean } }>('/api/tenants/check-availability', { query: { email: v } })
+      emailCheck.value = res.email.available ? 'available' : 'taken'
+    } catch { emailCheck.value = 'error' }
+  }, 700)
+}
 const availableCategories = ref<any[]>([])
 const selectedCategories = ref<string[]>([])
 const licenseFrontFile = ref<File | null>(null)
@@ -432,7 +465,8 @@ const passwordIsValid = computed(() => {
 const canSubmit = computed(() => {
   return passwordIsValid.value && 
          password.value === confirmPassword.value &&
-         password.value.length > 0
+         password.value.length > 0 &&
+         emailCheck.value === 'available'
 })
 
 // Load invitation
@@ -469,6 +503,7 @@ const loadInvitation = async () => {
     firstName.value = data.first_name || ''
     lastName.value = data.last_name || ''
     email.value = data.email || ''
+    if (email.value) onEmailInput(email.value)
     phone.value = data.phone || ''
     logger.debug('✅ Invitation loaded:', data)
 

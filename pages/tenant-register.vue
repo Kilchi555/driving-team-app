@@ -909,8 +909,12 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/>
             </svg>
             <div class="text-sm text-amber-800">
-              <p class="font-semibold mb-0.5">Wichtig: Zwei separate Logins</p>
-              <p class="text-xs leading-relaxed">Dein Admin-Dashboard (<span class="font-mono font-medium">{{ adminForm.email }}</span>) und deine Fahrlehrer-Plattform sind getrennte Accounts. Trage unten eine <strong>andere E-Mail</strong> für den Fahrlehrer-Login ein.</p>
+              <p class="font-semibold mb-0.5">Zwei separate Logins</p>
+              <p class="text-xs leading-relaxed">
+                Du erhältst eine <strong>Einladungs-SMS</strong> auf die eingetragene Telefonnummer.
+                Beim Fahrlehrer-Onboarding musst du eine <strong>andere E-Mail</strong> als
+                <span class="font-mono">{{ adminForm.email }}</span> verwenden — das sind zwei getrennte Accounts.
+              </p>
             </div>
           </div>
 
