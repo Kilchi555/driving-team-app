@@ -73,6 +73,9 @@ export default defineEventHandler(async (event) => {
         title,
         start_time,
         end_time,
+        duration_minutes,
+        event_type_code,
+        type,
         staff_id,
         confirmation_token,
         location_id,
@@ -136,6 +139,28 @@ export default defineEventHandler(async (event) => {
       .eq('id', appointment.location_id)
       .single()
 
+    // 7b. Get event type label from DB (fallback to code-based map)
+    const EVENT_TYPE_LABELS: Record<string, string> = {
+      lesson: 'Fahrstunde', exam: 'Prüfung', theory: 'Theorie', other: 'Termin'
+    }
+    let eventTypeName: string | undefined
+    if (appointment.event_type_code) {
+      const { data: etRow } = await supabase
+        .from('event_types')
+        .select('name')
+        .eq('code', appointment.event_type_code)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+      eventTypeName = etRow?.name
+        || EVENT_TYPE_LABELS[appointment.event_type_code]
+        || appointment.event_type_code
+    }
+
+    // Price is only relevant for standard billable event types
+    const BILLABLE_TYPES = new Set(['lesson', 'exam'])
+    const showPrice = !appointment.event_type_code
+      || BILLABLE_TYPES.has(appointment.event_type_code)
+
     // 8. Get payment data
     const payment = Array.isArray(appointment.payments)
       ? appointment.payments[0]
@@ -143,6 +168,7 @@ export default defineEventHandler(async (event) => {
 
     // 9. Format data for email
     const startTime = new Date(appointment.start_time)
+    const endTime   = appointment.end_time ? new Date(appointment.end_time) : null
     const appointmentDateTime = startTime.toLocaleString('de-CH', {
       timeZone: 'Europe/Zurich',
       weekday: 'long',
@@ -153,8 +179,13 @@ export default defineEventHandler(async (event) => {
       minute: '2-digit'
     })
 
+    // Duration: prefer stored value, fall back to start/end diff
+    const durationMinutes: number | undefined =
+      appointment.duration_minutes
+      || (endTime ? Math.round((endTime.getTime() - startTime.getTime()) / 60000) : undefined)
+
     const customerDashboard = `${CUSTOMER_PORTAL_BASE_URL}/${tenant.slug}`
-    const confirmationLink = customerDashboard // ✅ Simple dashboard link, no token needed
+    const confirmationLink  = customerDashboard
     const amount = payment ? `CHF ${(payment.total_amount_rappen / 100).toFixed(2)}` : 'CHF 0.00'
 
     // 10. Send email using centralized appointment notification endpoint
@@ -177,7 +208,10 @@ export default defineEventHandler(async (event) => {
           amount,
           confirmationLink,
           customerDashboard,
-          userId
+          userId,
+          eventTypeName,
+          durationMinutes,
+          showPrice,
         }
       })
 
@@ -212,7 +246,10 @@ export default defineEventHandler(async (event) => {
           tenantName: tenant.name,
           tenantId,
           tenantSlug: tenant.slug,
-          amount
+          amount,
+          eventTypeName,
+          durationMinutes,
+          showPrice,
         }
       }).catch((err: any) => {
         logger.warn('⚠️ Could not send staff new booking notification (non-critical):', err.message)

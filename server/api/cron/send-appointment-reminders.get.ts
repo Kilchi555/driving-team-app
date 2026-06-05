@@ -205,8 +205,10 @@ export default defineEventHandler(async (event) => {
       if (apt.custom_location_address) meetingPoint += `, ${apt.custom_location_address}`
     }
 
-    // Payment section — always shown if a payment exists
-    const payment = paymentMap.get(apt.id) || null
+    // Payment section — only for billable event types (lesson, exam)
+    const BILLABLE_TYPES = new Set(['lesson', 'exam'])
+    const isBillable = !apt.event_type_code || BILLABLE_TYPES.has(apt.event_type_code)
+    const payment = isBillable ? (paymentMap.get(apt.id) || null) : null
     const paymentHtml = payment ? buildPaymentSection(payment, primaryColor, loginLink) : ''
 
     const html = buildEmailHtml({
