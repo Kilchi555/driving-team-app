@@ -56,6 +56,7 @@ export interface TenantBrandingContact {
   email?: string
   phone?: string
   address?: string
+  smsSender?: string
 }
 
 export interface TenantBranding {
@@ -258,6 +259,7 @@ export const useTenantBranding = () => {
           email: data.contact_email,
           phone: data.contact_phone,
           address: data.address,
+          smsSender: data.twilio_from_sender || '',
         },
         customCss: data.custom_css,
         customJs: data.custom_js,
@@ -384,6 +386,9 @@ export const useTenantBranding = () => {
         updateData.contact_email = updates.contact.email
         updateData.contact_phone = updates.contact.phone
         updateData.address = updates.contact.address
+        if (updates.contact.smsSender !== undefined) {
+          updateData.twilio_from_sender = updates.contact.smsSender || null
+        }
       }
 
       if (updates.customCss !== undefined) {
