@@ -1056,8 +1056,13 @@ const startCheckout = async () => {
       // The token was rejected (e.g. client session out of sync / rotated). Force a
       // fresh server refresh and retry once before giving up.
       if (err?.status === 401 || err?.statusCode === 401) {
+        console.warn('⚠️ Checkout 401 (first attempt):', err?.data?.reason || err?.data?.statusMessage || err?.statusMessage)
         const freshToken = await forceServerRefresh()
-        if (!freshToken) { showAuthPrompt.value = true; return }
+        if (!freshToken) {
+          console.warn('⚠️ forceServerRefresh returned null → refresh cookie dead, showing auth prompt')
+          showAuthPrompt.value = true
+          return
+        }
         session = await createCheckout(freshToken)
       } else {
         throw err
@@ -1068,6 +1073,7 @@ const startCheckout = async () => {
     throw new Error('Keine Checkout-URL erhalten')
   } catch (err: any) {
     if (err?.status === 401 || err?.statusCode === 401) {
+      console.warn('⚠️ Checkout 401 (after retry):', err?.data?.reason || err?.data?.statusMessage || err?.statusMessage, err?.data)
       showAuthPrompt.value = true
       return
     }

@@ -50,12 +50,32 @@ export default defineEventHandler(async (event) => {
   // auth/refresh failure gets swallowed and surfaces as a confusing 401 only
   // because tenantId ends up undefined. getAuthenticatedUser handles cookie
   // fallback, deduplicated token refresh, and tenant resolution.
+  const authHeaderPresent = !!getHeader(event, 'authorization')?.startsWith('Bearer ')
+  const cookieHeaderPresent = !!getHeader(event, 'cookie')
+
   const authUser = await getAuthenticatedUser(event)
   const tenantId = authUser?.tenant_id || authUser?.profile?.tenant_id
 
   // Require an authenticated tenant — no anonymous checkouts allowed
   if (!tenantId) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthenticated: please log in or create an account before upgrading.' })
+    // Distinguish the failure mode so we can debug 401s in production:
+    //  - no authUser at all → token + cookie both failed to verify (expired/rotated session)
+    //  - authUser but no tenant_id → token verified but DB user/tenant lookup failed
+    const reason = !authUser
+      ? 'token_and_cookie_invalid'
+      : 'user_resolved_but_no_tenant'
+    console.error('❌ create-checkout-session 401', {
+      reason,
+      authHeaderPresent,
+      cookieHeaderPresent,
+      authUserId: authUser?.id || null,
+      hasProfile: !!authUser?.profile,
+    })
+    throw createError({
+      statusCode: 401,
+      statusMessage: `Unauthenticated (${reason}). Bitte erneut anmelden.`,
+      data: { reason, authHeaderPresent, cookieHeaderPresent },
+    })
   }
 
   // ── Resolve Stripe Customer for this tenant ──────────────────────────────
