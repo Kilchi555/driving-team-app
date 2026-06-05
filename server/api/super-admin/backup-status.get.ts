@@ -146,13 +146,19 @@ async function fetchRestoreReport() {
     credentials: { accessKeyId, secretAccessKey },
   })
 
-  const response = await s3.send(new GetObjectCommand({
-    Bucket: R2_BUCKET,
-    Key: 'restore-report.json',
-  }))
-
-  const body = await response.Body?.transformToString()
-  return body ? JSON.parse(body) : null
+  try {
+    const response = await s3.send(new GetObjectCommand({
+      Bucket: R2_BUCKET,
+      Key: 'restore-report.json',
+    }))
+    const body = await response.Body?.transformToString()
+    return body ? JSON.parse(body) : null
+  } catch (err: any) {
+    const code = err?.name || err?.Code || err?.code || 'unknown'
+    console.warn(`⚠️ [backup-status] restore-report.json not readable from R2: ${code} – ${err?.message}`)
+    // Surface the error code so the UI can show a meaningful message
+    return { __error: code, __message: err?.message ?? 'Datei nicht verfügbar' }
+  }
 }
 
 async function fetchRestoreTestRuns() {
