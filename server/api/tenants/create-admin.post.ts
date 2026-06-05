@@ -1,13 +1,14 @@
 // server/api/tenants/create-admin.post.ts
 // Creates the first admin user for a newly registered tenant
 // ✅ No auth required (called during registration flow)
-// ✅ Rate limited + tenant_id verification
+// ✅ Rate limited + registration token verification
 
 import { defineEventHandler, createError, getHeader, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
 import { normalizePhoneNumber } from '~/server/utils/sms'
+import { verifyRegistrationToken } from '~/server/utils/registration-token'
 
 export default defineEventHandler(async (event) => {
   const ipAddress =
@@ -23,13 +24,18 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { email, password, first_name, last_name, phone, tenant_id } = body || {}
+  const { email, password, first_name, last_name, phone, tenant_id, registration_token } = body || {}
 
   if (!email || !password || !first_name || !last_name || !tenant_id) {
     throw createError({ statusCode: 400, statusMessage: 'Pflichtfelder fehlen: email, password, first_name, last_name, tenant_id' })
   }
 
-  if (!validateEmail(email)) {
+  // ✅ Verify the short-lived registration token issued by register.post.ts
+  if (!verifyRegistrationToken(registration_token, tenant_id)) {
+    throw createError({ statusCode: 403, statusMessage: 'Ungültiger oder abgelaufener Registrierungstoken' })
+  }
+
+  if (!validateEmail(email).valid) {
     throw createError({ statusCode: 400, statusMessage: 'Ungültige E-Mail-Adresse' })
   }
 
@@ -76,7 +82,7 @@ export default defineEventHandler(async (event) => {
 
   if (authError || !authData?.user) {
     console.error('❌ Admin auth creation failed:', authError)
-    throw createError({ statusCode: 500, statusMessage: `Auth-Erstellung fehlgeschlagen: ${authError?.message || 'Unbekannter Fehler'}` })
+    throw createError({ statusCode: 500, statusMessage: 'Admin-Konto konnte nicht erstellt werden. Bitte erneut versuchen.' })
   }
 
   // 2. Create users row
@@ -101,7 +107,7 @@ export default defineEventHandler(async (event) => {
   if (userErr) {
     await supabase.auth.admin.deleteUser(authData.user.id).catch(() => {})
     console.error('❌ Admin users row creation failed:', userErr)
-    throw createError({ statusCode: 500, statusMessage: `Benutzerprofil konnte nicht erstellt werden: ${userErr.message}` })
+    throw createError({ statusCode: 500, statusMessage: 'Benutzerprofil konnte nicht erstellt werden. Bitte erneut versuchen.' })
   }
 
   console.log(`✅ Admin user created for tenant ${tenant_id}: ${email}`)

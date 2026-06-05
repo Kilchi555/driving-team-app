@@ -1,9 +1,18 @@
 // server/api/admin/notify-new-tenant.post.ts
 // Sends notification to super-admins when a new tenant registers
-import { getSupabaseAdmin } from '~/utils/supabase'
+// ✅ Protected by internal secret header
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
+const INTERNAL_SECRET = process.env.NUXT_INTERNAL_API_SECRET
+
 export default defineEventHandler(async (event) => {
+  // ✅ Verify internal secret so this endpoint can only be called server-side
+  const providedSecret = getHeader(event, 'x-internal-secret')
+  if (!INTERNAL_SECRET || providedSecret !== INTERNAL_SECRET) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+
   try {
     const body = await readBody(event)
     const { tenantId, tenantName, contactEmail, customerNumber } = body

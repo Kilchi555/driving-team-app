@@ -308,7 +308,7 @@
                 <!-- SVG Icon -->
                 <div v-if="cat.icon_svg"
                   class="mb-3 h-8 w-full flex items-center [&_svg]:h-7 [&_svg]:w-auto [&_svg]:max-w-full"
-                  v-html="cat.icon_svg">
+                  v-html="DOMPurify.sanitize(cat.icon_svg, { USE_PROFILES: { svg: true } })">
                 </div>
                 <div v-else class="mb-3 w-8 h-8 rounded-lg flex items-center justify-center"
                   :style="{ backgroundColor: (cat.color || '#6b7280') + '20' }">
@@ -727,6 +727,17 @@
                 <span class="text-amber-600 font-medium">Maximal 11 Zeichen</span> – Einschränkung des SMS-Providers.
                 Leer lassen = Fahrschulname wird automatisch verwendet.
             </p>
+            <!-- Vorschläge basierend auf Firmenname -->
+            <div v-if="smsSenderSuggestions.length" class="flex flex-wrap gap-1.5 mb-2">
+              <button v-for="s in smsSenderSuggestions" :key="s" type="button"
+                @click="formData.twilio_from_sender = s"
+                class="px-2.5 py-1 rounded-lg text-xs font-medium border transition-all"
+                :class="formData.twilio_from_sender === s
+                  ? 'border-blue-400 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'">
+                {{ s }}
+              </button>
+            </div>
             <div class="relative w-full sm:w-80">
               <input
                 v-model="formData.twilio_from_sender"
@@ -1257,6 +1268,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { generateStrongPassword } from '~/composables/usePasswordStrength'
 import { compressImage } from '~/utils/imageCompression'
+import DOMPurify from 'isomorphic-dompurify'
 import { getSupabase } from '~/utils/supabase'
 
 definePageMeta({ layout: false })
@@ -1530,6 +1542,36 @@ const companyInitials = computed(() => {
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
   return (words[0][0] + words[1][0]).toUpperCase()
 })
+// Generates up to 4 smart SMS sender ID suggestions from the tenant name.
+// All suggestions are max 11 chars, letters/digits/spaces only, at least 1 letter.
+const smsSenderSuggestions = computed((): string[] => {
+  const raw = (formData.value.name || '').trim()
+  if (!raw) return []
+
+  const clean = (s: string) =>
+    s.replace(/ä/gi, 'a').replace(/ö/gi, 'o').replace(/ü/gi, 'u').replace(/ß/g, 'ss')
+     .replace(/[^a-zA-Z0-9 ]/g, '').trim().substring(0, 11).trim()
+
+  const suggestions: string[] = []
+  const seen = new Set<string>()
+  const add = (s: string) => { const c = clean(s); if (c && !seen.has(c)) { seen.add(c); suggestions.push(c) } }
+
+  const words = raw.split(/\s+/).filter(Boolean)
+  // 1. "Fahrschule" – always a valid 10-char suggestion
+  add('Fahrschule')
+  // 2. First word (often already "Fahrschule" or brand name)
+  add(words[0])
+  // 3. "FS " + first non-generic word (skip "Fahrschule"/"FS")
+  const brandWords = words.filter(w => !/^(fahrschule|fs|die|der|die)$/i.test(w))
+  if (brandWords[0]) add('FS ' + brandWords[0])
+  // 4. Full name truncated to 11 chars
+  add(raw)
+  // 5. Initials + rest: "FS.Muster" style
+  if (brandWords[0]) add('FS.' + brandWords[0])
+
+  return suggestions.slice(0, 4)
+})
+
 const userEditedSlug = ref(false)
 
 // ─── Admin Form ────────────────────────────────────────────────────────────
@@ -1828,6 +1870,7 @@ const submitRegistration = async () => {
     createdTenantSlug.value     = response.tenant.slug
     createdCustomerNumber.value = response.tenant.customer_number
     createdTenantId.value       = response.tenant.id
+    const registrationToken     = response.registration_token as string | undefined
 
     // If website mode: set website_status to pending_review
     if (isWebsiteMode.value && response.tenant.id) {
@@ -1845,12 +1888,13 @@ const submitRegistration = async () => {
       adminRes = await $fetch('/api/tenants/create-admin', {
         method: 'POST',
         body: {
-          email:      adminForm.value.email,
-          password:   adminForm.value.password,
-          first_name: adminForm.value.first_name,
-          last_name:  adminForm.value.last_name,
-          phone:      adminForm.value.phone,
-          tenant_id:  response.tenant.id,
+          email:              adminForm.value.email,
+          password:           adminForm.value.password,
+          first_name:         adminForm.value.first_name,
+          last_name:          adminForm.value.last_name,
+          phone:              adminForm.value.phone,
+          tenant_id:          response.tenant.id,
+          registration_token: registrationToken,
         }
       }) as any
     } catch (adminErr: any) {
@@ -1858,7 +1902,7 @@ const submitRegistration = async () => {
       try {
         await $fetch('/api/tenants/rollback-registration', {
           method: 'POST',
-          body: { tenant_id: response.tenant.id }
+          body: { tenant_id: response.tenant.id, registration_token: registrationToken }
         })
       } catch (rollbackErr) {
         console.warn('Rollback failed:', rollbackErr)
@@ -1871,7 +1915,7 @@ const submitRegistration = async () => {
       try {
         await $fetch('/api/tenants/rollback-registration', {
           method: 'POST',
-          body: { tenant_id: response.tenant.id }
+          body: { tenant_id: response.tenant.id, registration_token: registrationToken }
         })
       } catch (rollbackErr) {
         console.warn('Rollback failed:', rollbackErr)
@@ -1881,7 +1925,7 @@ const submitRegistration = async () => {
 
     // 3. Invite staff (non-critical)
     const filledStaff = staffList.value.filter(s =>
-      s.first_name.trim() && s.last_name.trim() && (s.phone.trim() || s.email.trim())
+      s.first_name.trim() && s.last_name.trim() && s.phone.trim()
     )
     if (filledStaff.length > 0) {
       try {
