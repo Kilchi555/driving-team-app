@@ -1004,27 +1004,66 @@ async function resolveFreshToken(): Promise<string | null> {
   return null
 }
 
+/** Force a server-side refresh via the httpOnly cookie, ignoring the (possibly stale)
+ *  client session. Updates the Supabase client too. Returns a guaranteed-fresh token
+ *  or null if the refresh cookie itself is dead (→ truly logged out). */
+async function forceServerRefresh(): Promise<string | null> {
+  try {
+    const refreshed = await $fetch<{ session: { access_token: string; refresh_token: string } }>('/api/auth/refresh', { method: 'POST' })
+    if (refreshed?.session?.access_token) {
+      try {
+        const { getSupabase } = await import('~/utils/supabase')
+        await getSupabase().auth.setSession({
+          access_token: refreshed.session.access_token,
+          refresh_token: refreshed.session.refresh_token,
+        })
+      } catch { /* non-fatal */ }
+      return refreshed.session.access_token
+    }
+  } catch { /* refresh cookie dead */ }
+  return null
+}
+
+const buildCheckoutBody = () => ({
+  plan: selectedPlan.value,
+  addons: {
+    seats: addonSeats.value,
+    courses: addonCourses.value && !planIncludesCourses.value,
+    affiliate: addonAffiliate.value && !planIncludesAffiliate.value,
+  },
+  withWallee: withWallee.value,
+  staffToDeactivate: staffToDeactivate.value.map(s => s.id),
+})
+
+const createCheckout = (token: string) =>
+  $fetch<{ id: string; url: string }>('/api/stripe/create-checkout-session', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: buildCheckoutBody(),
+  })
+
 const startCheckout = async () => {
   loading.value = true
   error.value = null
   try {
-    const token = await resolveFreshToken()
+    let token = await resolveFreshToken()
     if (!token) { showAuthPrompt.value = true; return }
 
-    const session = await $fetch<{ id: string; url: string }>('/api/stripe/create-checkout-session', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: {
-        plan: selectedPlan.value,
-        addons: {
-          seats: addonSeats.value,
-          courses: addonCourses.value && !planIncludesCourses.value,
-          affiliate: addonAffiliate.value && !planIncludesAffiliate.value,
-        },
-        withWallee: withWallee.value,
-        staffToDeactivate: staffToDeactivate.value.map(s => s.id),
-      },
-    })
+    let session
+    try {
+      session = await createCheckout(token)
+    } catch (err: any) {
+      // The token was rejected (e.g. client session out of sync / rotated). Force a
+      // fresh server refresh and retry once before giving up.
+      if (err?.status === 401 || err?.statusCode === 401) {
+        const freshToken = await forceServerRefresh()
+        if (!freshToken) { showAuthPrompt.value = true; return }
+        session = await createCheckout(freshToken)
+      } else {
+        throw err
+      }
+    }
+
     if (session?.url) { window.location.href = session.url; return }
     throw new Error('Keine Checkout-URL erhalten')
   } catch (err: any) {
