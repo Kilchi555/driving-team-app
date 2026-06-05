@@ -608,7 +608,7 @@
                   Kategorien
                   <span class="ml-1 text-gray-400">({{ editForm.category.length }} ausgewählt)</span>
                 </label>
-                <div class="grid grid-cols-2 gap-2 bg-gray-50 rounded-xl border border-gray-200 p-3 max-h-44 overflow-y-auto">
+                <div class="grid grid-cols-2 gap-2 bg-gray-50 rounded-xl border border-gray-200 p-3">
                   <label
                     v-for="cat in availableCategories"
                     :key="cat.id"
