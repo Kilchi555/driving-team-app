@@ -2892,6 +2892,43 @@
           </div>
         </div>
 
+        <!-- Participant list actions: send by email + print -->
+        <div class="mx-5 sm:mx-6 mt-4 flex gap-2">
+          <button
+            @click="sendParticipantListEmail"
+            :disabled="isSendingParticipantList || currentEnrollments.length === 0"
+            class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-colors"
+            :class="isSendingParticipantList || currentEnrollments.length === 0
+              ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+              : 'bg-white hover:bg-blue-50 text-blue-700 border-blue-200 hover:border-blue-400'"
+          >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            {{ isSendingParticipantList ? 'Wird gesendet…' : 'Liste per Email senden' }}
+          </button>
+          <button
+            @click="printParticipantList"
+            :disabled="currentEnrollments.length === 0"
+            class="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-colors"
+            :class="currentEnrollments.length === 0
+              ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+              : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200 hover:border-gray-400'"
+            title="Drucken / PDF"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+            </svg>
+          </button>
+        </div>
+        <div v-if="participantListEmailResult" class="mx-5 sm:mx-6 mt-2 flex items-center gap-2 p-2 rounded-lg text-xs font-medium"
+          :class="participantListEmailResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'">
+          <svg v-if="participantListEmailResult.success" class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          {{ participantListEmailResult.message }}
+        </div>
+
         <!-- Add Participant -->
         <div class="mx-5 sm:mx-6 mt-5">
           <div class="flex items-center justify-between mb-3">
@@ -4107,6 +4144,8 @@ const sariParticipantsSyncMessage = ref('')
 const sariParticipantsSyncSuccess = ref(false)
 const isAddingParticipant = ref(false)
 const showAddParticipantForm = ref(false)
+const isSendingParticipantList = ref(false)
+const participantListEmailResult = ref<{ success: boolean; message: string } | null>(null)
 const enrollmentMode = ref('search') // 'search' or 'new'
 const userSearchQuery = ref('')
 const searchResults = ref<any[]>([])
@@ -6059,7 +6098,74 @@ const selectExistingUser = async (user: any) => {
   }
 }
 
-const loadCourseEnrollments = async (courseId: string) => {
+const sendParticipantListEmail = async () => {
+  if (!selectedCourse.value?.id || isSendingParticipantList.value) return
+  isSendingParticipantList.value = true
+  participantListEmailResult.value = null
+  try {
+    const result = await $fetch<any>('/api/courses/send-participant-list', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authStore.accessToken}` },
+      body: { courseId: selectedCourse.value.id }
+    })
+    participantListEmailResult.value = {
+      success: true,
+      message: result.message || `Liste an ${result.sent} Empfänger gesendet`
+    }
+  } catch (err: any) {
+    participantListEmailResult.value = {
+      success: false,
+      message: err?.data?.statusMessage || err?.message || 'Fehler beim Senden'
+    }
+  } finally {
+    isSendingParticipantList.value = false
+    setTimeout(() => { participantListEmailResult.value = null }, 6000)
+  }
+}
+
+const printParticipantList = () => {
+  if (!selectedCourse.value || currentEnrollments.value.length === 0) return
+  const course = selectedCourse.value
+  const rows = currentEnrollments.value.map((p: any, i: number) => `
+    <tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:center;color:#6b7280">${i + 1}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-weight:500">${p.first_name || ''} ${p.last_name || ''}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#374151">${p.email || '—'}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#374151">${p.phone || '—'}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;width:100px"></td>
+    </tr>`).join('')
+
+  const win = window.open('', '_blank')
+  if (!win) return
+  win.document.write(`<!DOCTYPE html>
+<html lang="de"><head><meta charset="UTF-8">
+<title>Teilnehmerliste: ${course.name}</title>
+<style>
+  body { font-family: -apple-system, Arial, sans-serif; font-size: 13px; color: #111; margin: 0; padding: 24px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .meta { color: #6b7280; font-size: 12px; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 8px 12px; background: #f9fafb; border-bottom: 2px solid #e5e7eb; text-align: left; font-size: 11px; text-transform: uppercase; color: #6b7280; }
+  @media print { @page { margin: 1.5cm; } }
+</style>
+</head><body>
+<h1>Teilnehmerliste: ${course.name}</h1>
+<p class="meta">Stand: ${new Date().toLocaleDateString('de-CH')} · ${currentEnrollments.value.length} Teilnehmer</p>
+<table>
+  <thead><tr>
+    <th style="width:36px">#</th>
+    <th>Name</th>
+    <th>E-Mail</th>
+    <th>Telefon</th>
+    <th>Unterschrift</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+</body></html>`)
+  win.document.close()
+  win.focus()
+  win.print()
+}
   logger.debug('🔍 loadCourseEnrollments called with courseId:', courseId)
   try {
     const data = await $fetch<any[]>(`/api/courses/enrollments?courseId=${courseId}`)
