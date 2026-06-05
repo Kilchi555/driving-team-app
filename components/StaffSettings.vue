@@ -1704,7 +1704,6 @@ const getOvertimeColor = (hours: number): string => {
 
 
 // Data
-const availableCategories = ref<any[]>([])
 const selectedCategories = ref<number[]>([])
 const myLocations = ref<any[]>([])
 const allTenantLocations = ref<any[]>([]) // Alle Standard-Standorte des Tenants
