@@ -629,7 +629,32 @@
 
               <!-- Documents -->
               <div>
-                <label class="block text-xs font-medium text-gray-500 mb-1.5">Führerausweis</label>
+                <div class="flex items-center justify-between mb-1.5">
+                  <label class="text-xs font-medium text-gray-500">Führerausweis</label>
+                  <div class="flex gap-1.5">
+                    <input ref="licUploadFront" type="file" accept="image/*,.pdf" class="hidden" @change="uploadLicense($event, 'front')" />
+                    <input ref="licUploadBack" type="file" accept="image/*,.pdf" class="hidden" @change="uploadLicense($event, 'back')" />
+                    <button
+                      type="button"
+                      @click="(licUploadFront as any)?.click()"
+                      :disabled="isUploadingLicense"
+                      class="text-[11px] font-medium px-2 py-1 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+                    >+ Vorderseite</button>
+                    <button
+                      type="button"
+                      @click="(licUploadBack as any)?.click()"
+                      :disabled="isUploadingLicense"
+                      class="text-[11px] font-medium px-2 py-1 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+                    >+ Rückseite</button>
+                  </div>
+                </div>
+
+                <!-- Upload progress -->
+                <div v-if="isUploadingLicense" class="flex items-center gap-2 text-sm text-gray-500 py-1">
+                  <svg class="w-4 h-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                  Wird hochgeladen…
+                </div>
+
                 <div v-if="isLoadingDocuments" class="flex gap-2">
                   <div class="w-24 h-16 bg-gray-100 rounded-xl animate-pulse"/>
                   <div class="w-24 h-16 bg-gray-100 rounded-xl animate-pulse"/>
@@ -653,22 +678,16 @@
                       <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
                       <span class="text-[10px]">PDF</span>
                     </div>
-                    <!-- Hover overlay -->
                     <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                       <svg class="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z"/></svg>
                     </div>
-                    <!-- Side label -->
-                    <span
-                      v-if="doc.side"
-                      class="absolute bottom-0.5 left-0.5 text-[9px] font-semibold text-white bg-black/50 rounded px-1"
-                    >{{ doc.side === 'front' ? 'Vorne' : doc.side === 'back' ? 'Hinten' : doc.side }}</span>
-                    <!-- Verified badge -->
+                    <span v-if="doc.side" class="absolute bottom-0.5 left-0.5 text-[9px] font-semibold text-white bg-black/50 rounded px-1">{{ doc.side === 'front' ? 'Vorne' : doc.side === 'back' ? 'Hinten' : doc.side }}</span>
                     <span v-if="doc.is_verified" class="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full flex items-center justify-center">
                       <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                     </span>
                   </button>
                 </div>
-                <p v-else class="text-sm text-gray-400 italic">Noch kein Dokument hochgeladen</p>
+                <p v-else-if="!isUploadingLicense" class="text-sm text-gray-400 italic">Noch kein Dokument hochgeladen</p>
               </div>
               </template>
             </div>
@@ -1408,6 +1427,32 @@ const editForm = ref({
 
 const isLoadingProfile = ref(false)
 const availableCategories = ref<{ id: string; code: string; name: string }[]>([])
+const licUploadFront = ref<HTMLInputElement | null>(null)
+const licUploadBack = ref<HTMLInputElement | null>(null)
+const isUploadingLicense = ref(false)
+
+const uploadLicense = async (event: Event, side: 'front' | 'back') => {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+
+  isUploadingLicense.value = true
+  try {
+    const fd = new FormData()
+    fd.append('userId', props.currentUser.id)
+    if (side === 'front') fd.append('frontFile', file)
+    else fd.append('backFile', file)
+
+    await $fetch('/api/admin/upload-license', { method: 'POST', body: fd })
+    await loadStaffDocuments()
+  } catch (err: any) {
+    logger.warn('⚠️ License upload failed:', err?.message)
+  } finally {
+    isUploadingLicense.value = false
+    // Reset input so the same file can be re-selected
+    if (side === 'front' && licUploadFront.value) licUploadFront.value.value = ''
+    if (side === 'back' && licUploadBack.value) licUploadBack.value.value = ''
+  }
+}
 
 interface StaffDocument {
   id: string
