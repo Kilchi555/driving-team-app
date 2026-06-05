@@ -206,7 +206,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Payment section — only for billable event types (lesson, exam)
-    const BILLABLE_TYPES = new Set(['lesson', 'exam'])
+    const BILLABLE_TYPES = new Set(['lesson', 'exam', 'theory'])
     const isBillable = !apt.event_type_code || BILLABLE_TYPES.has(apt.event_type_code)
     const payment = isBillable ? (paymentMap.get(apt.id) || null) : null
     const paymentHtml = payment ? buildPaymentSection(payment, primaryColor, loginLink) : ''
