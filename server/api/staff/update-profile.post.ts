@@ -8,12 +8,20 @@ const ALLOWED_FIELDS = ['first_name', 'last_name', 'email', 'phone', 'street', '
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event, ['admin', 'staff', 'superadmin'])
 
-  const body = await readBody<Partial<Record<typeof ALLOWED_FIELDS[number], string>>>(event)
+  const body = await readBody<Partial<Record<typeof ALLOWED_FIELDS[number], string>> & { category?: string[] }>(event)
 
-  const safeUpdates: Record<string, string> = {}
+  const safeUpdates: Record<string, any> = {}
   for (const field of ALLOWED_FIELDS) {
     if (field in body && body[field] !== undefined) {
       safeUpdates[field] = (body[field] as string).trim()
+    }
+  }
+
+  // category is an array — validate it separately
+  if ('category' in body) {
+    const cats = body.category
+    if (Array.isArray(cats) && cats.every(c => typeof c === 'string')) {
+      safeUpdates.category = cats
     }
   }
 

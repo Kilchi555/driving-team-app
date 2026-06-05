@@ -540,6 +540,8 @@
                   <div class="col-span-2 h-10 bg-gray-100 rounded-xl"/>
                   <div class="h-10 bg-gray-100 rounded-xl"/>
                 </div>
+                <div class="h-10 bg-gray-100 rounded-xl"/>
+                <div class="h-28 bg-gray-100 rounded-xl"/>
               </div>
 
               <template v-else>
@@ -597,6 +599,31 @@
                 <div class="col-span-2">
                   <label class="block text-xs font-medium text-gray-500 mb-1">Ort</label>
                   <input v-model="editForm.city" type="text" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent" :style="{ '--tw-ring-color': primaryColor }" />
+                </div>
+              </div>
+
+              <!-- Categories -->
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1.5">
+                  Kategorien
+                  <span class="ml-1 text-gray-400">({{ editForm.category.length }} ausgewählt)</span>
+                </label>
+                <div class="grid grid-cols-2 gap-2 bg-gray-50 rounded-xl border border-gray-200 p-3 max-h-44 overflow-y-auto">
+                  <label
+                    v-for="cat in availableCategories"
+                    :key="cat.id"
+                    class="flex items-center gap-2 cursor-pointer text-sm text-gray-700 select-none"
+                  >
+                    <input
+                      v-model="editForm.category"
+                      type="checkbox"
+                      :value="cat.code"
+                      class="w-4 h-4 rounded border-gray-300 flex-shrink-0"
+                      :style="{ accentColor: primaryColor }"
+                    />
+                    {{ cat.name || cat.code }}
+                  </label>
+                  <p v-if="availableCategories.length === 0" class="col-span-2 text-sm text-gray-400 italic">Keine Kategorien verfügbar</p>
                 </div>
               </div>
               </template>
@@ -1322,9 +1349,11 @@ const editForm = ref({
   street_nr: '',
   zip: '',
   city: '',
+  category: [] as string[],
 })
 
 const isLoadingProfile = ref(false)
+const availableCategories = ref<{ id: string; code: string; name: string }[]>([])
 
 const openEditProfile = async () => {
   editProfileSuccess.value = false
@@ -1342,31 +1371,49 @@ const openEditProfile = async () => {
     street_nr: localUser.value.street_nr || '',
     zip: localUser.value.zip || '',
     city: localUser.value.city || '',
+    category: localUser.value.category ? [...localUser.value.category] : [],
   }
 
   try {
-    // Fetch full profile since authStore only has a subset of fields
-    const res = await $fetch<{ data: any }>(`/api/staff/get-user`, {
-      query: {
-        id: props.currentUser.id,
-        fields: 'id,first_name,last_name,email,phone,street,street_nr,zip,city',
-      },
-    })
-    if (res?.data) {
-      Object.assign(localUser.value, res.data)
+    const [profileRes, catRes] = await Promise.all([
+      $fetch<{ data: any }>(`/api/staff/get-user`, {
+        query: {
+          id: props.currentUser.id,
+          fields: 'id,first_name,last_name,email,phone,street,street_nr,zip,city,category',
+        },
+      }),
+      availableCategories.value.length === 0
+        ? $fetch<{ success: boolean; data: any[] }>('/api/staff/get-categories')
+        : Promise.resolve(null),
+    ])
+
+    if (profileRes?.data) {
+      Object.assign(localUser.value, profileRes.data)
       editForm.value = {
-        first_name: res.data.first_name || '',
-        last_name: res.data.last_name || '',
-        email: res.data.email || '',
-        phone: res.data.phone || '',
-        street: res.data.street || '',
-        street_nr: res.data.street_nr || '',
-        zip: res.data.zip || '',
-        city: res.data.city || '',
+        first_name: profileRes.data.first_name || '',
+        last_name: profileRes.data.last_name || '',
+        email: profileRes.data.email || '',
+        phone: profileRes.data.phone || '',
+        street: profileRes.data.street || '',
+        street_nr: profileRes.data.street_nr || '',
+        zip: profileRes.data.zip || '',
+        city: profileRes.data.city || '',
+        category: profileRes.data.category ? [...profileRes.data.category] : [],
       }
     }
+
+    if (catRes?.data) {
+      const all = catRes.data
+      const subs = all.filter((c: any) => c.parent_category_id != null)
+      const parents = all.filter((c: any) => c.parent_category_id == null)
+      const parentIdsWithSubs = new Set(subs.map((c: any) => c.parent_category_id).filter(Boolean))
+      const parentsWithoutSubs = parents.filter((p: any) => !parentIdsWithSubs.has(p.id))
+      const merged = [...subs, ...parentsWithoutSubs].sort((a, b) =>
+        String(a.name || a.code || '').localeCompare(String(b.name || b.code || ''), 'de', { sensitivity: 'base' })
+      )
+      availableCategories.value = merged
+    }
   } catch (err: any) {
-    // Non-fatal — form stays pre-filled from localUser
     logger.warn('⚠️ Could not load full profile for edit:', err?.message)
   } finally {
     isLoadingProfile.value = false
