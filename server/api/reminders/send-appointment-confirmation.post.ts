@@ -157,7 +157,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Price is only relevant for standard billable event types
-    const BILLABLE_TYPES = new Set(['lesson', 'exam'])
+    const BILLABLE_TYPES = new Set(['lesson', 'exam', 'theory'])
     const showPrice = !appointment.event_type_code
       || BILLABLE_TYPES.has(appointment.event_type_code)
 
