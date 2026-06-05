@@ -117,6 +117,21 @@
             <p class="text-sm text-red-700">{{ loginError }}</p>
           </div>
 
+          <!-- Passkey Required Banner (super_admin with registered passkey) -->
+          <div v-if="passkeyRequiredBanner" class="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <div class="flex items-start gap-3">
+              <div class="shrink-0 w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <p class="text-sm font-semibold text-blue-800">Passkey erforderlich</p>
+                <p class="text-xs text-blue-600 mt-0.5">Dein Super-Admin Account ist mit einem Passkey gesichert. Bitte melde dich unten mit Passkey an.</p>
+              </div>
+            </div>
+          </div>
+
           <!-- Pending Account Banner -->
           <div v-if="pendingAccount.show" class="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
             <div class="flex items-start gap-2">
@@ -206,8 +221,7 @@
           </template>
 
           <!-- Passkey login (web, role-gated via PASSKEY_ENABLED_ROLES) -->
-          <!-- Only shown for direct platform-admin login (no tenant context) to avoid confusing staff/clients in Phase 1 -->
-          <template v-if="passkeySupported && passkeyEnabledForAnyone && !tenantParam">
+          <template v-if="passkeySupported && (passkeyEnabledForAnyone || passkeyRequiredBanner) && !tenantParam">
             <div class="relative">
               <div class="absolute inset-0 flex items-center">
                 <div class="w-full border-t border-gray-100"></div>
@@ -220,9 +234,16 @@
               type="button"
               @click="handlePasskeyLogin"
               :disabled="isLoading"
-              class="w-full py-3 px-4 rounded-xl border-2 border-violet-200 bg-violet-50 font-semibold text-violet-900 transition-all hover:border-violet-400 hover:bg-violet-100 disabled:opacity-50 flex items-center justify-center gap-3"
+              :class="[
+                'w-full py-3 px-4 rounded-xl border-2 font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-3',
+                passkeyRequiredBanner
+                  ? 'border-blue-500 bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                  : 'border-violet-200 bg-violet-50 text-violet-900 hover:border-violet-400 hover:bg-violet-100'
+              ]"
             >
-              <svg class="w-6 h-6 text-violet-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <svg
+                :class="['w-6 h-6', passkeyRequiredBanner ? 'text-white' : 'text-violet-700']"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M7.864 4.243A8.974 8.974 0 0112 3c.972 0 1.907.155 2.785.443M3.302 8.293A8.99 8.99 0 003 11c0 1.605.422 3.111 1.158 4.421M21 12a8.952 8.952 0 00-1.275-4.624M9 13l2 2 4-4"/>
               </svg>
               <span>Mit Passkey anmelden</span>
@@ -629,6 +650,7 @@ const pendingAccount = ref({
 const passkeySupported = ref(false)
 const passkeyEnabledForAnyone = ref(false)
 const passkeyError = ref<string | null>(null)
+const passkeyRequiredBanner = ref(false)
 const { loginWithPasskey, fetchStatus, isSupported: passkeyBrowserSupported } = usePasskey()
 
 const checkPasskeyAvailability = async () => {
@@ -798,11 +820,10 @@ const handleLogin = async () => {
 
   isLoading.value = true
   loginError.value = null
+  passkeyRequiredBanner.value = false
 
   try {
     logger.debug('🔑 Starting login attempt for:', loginForm.value.email)
-    
-    // Versuche zu authentifizieren über den neuen Login-Endpoint mit MFA-Support
     const response = await $fetch('/api/auth/login', {
       method: 'POST',
       body: {
@@ -1001,6 +1022,9 @@ const handleLogin = async () => {
       loginError.value = errorMsg
     } else if (errorMsg?.includes('Email not confirmed')) {
       loginError.value = 'Bitte bestätigen Sie Ihre E-Mail-Adresse zuerst.'
+    } else if (error?.data?.data?.code === 'PASSKEY_REQUIRED' || error?.data?.code === 'PASSKEY_REQUIRED') {
+      loginError.value = null
+      passkeyRequiredBanner.value = true
     } else if (error?.data?.data?.code === 'ACCOUNT_PENDING' || error?.data?.code === 'ACCOUNT_PENDING') {
       loginError.value = null
       pendingAccount.value.show = true

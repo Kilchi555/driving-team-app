@@ -330,6 +330,37 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // ✅ PASSKEY ENFORCEMENT: super_admin with registered passkeys must use passkey login
+    try {
+      const { data: profileCheck } = await adminSupabase
+        .from('users')
+        .select('id, role')
+        .eq('auth_user_id', data.user.id)
+        .eq('is_active', true)
+        .maybeSingle()
+
+      if (profileCheck?.role === 'super_admin') {
+        const { count: passkeyCount } = await adminSupabase
+          .from('webauthn_credentials')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', profileCheck.id)
+          .eq('is_active', true)
+
+        if ((passkeyCount ?? 0) > 0) {
+          // Don't set cookies — password login not allowed once passkey is registered
+          throw createError({
+            statusCode: 403,
+            data: { code: 'PASSKEY_REQUIRED' },
+            statusMessage: 'Super-Admin Accounts müssen einen Passkey verwenden.'
+          })
+        }
+      }
+    } catch (passkeyCheckErr: any) {
+      if (passkeyCheckErr.statusCode === 403) throw passkeyCheckErr
+      // Non-critical: if check fails, allow password login as fallback
+      logger.warn('⚠️ [LOGIN] Passkey enforcement check failed (non-blocking):', passkeyCheckErr?.message)
+    }
+
     logger.info('✅ [LOGIN] Successful login', {
       email: email?.substring(0, 3) + '***',
       userId: data.user.id,
