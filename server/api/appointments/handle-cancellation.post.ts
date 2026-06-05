@@ -228,26 +228,33 @@ export default defineEventHandler(async (event) => {
     // ✅ Get voucher discount (refundable) from payment
     const voucherDiscountAmount = payment?.voucher_discount_rappen || 0
     
+    // Discount amount must always be subtracted: lesson_price_rappen and admin_fee_rappen
+    // are gross prices (before discount), so crediting them without subtracting the discount
+    // would give the student more back than they actually paid.
+    const discountAmount = payment?.discount_amount_rappen || 0
+
     if (shouldCreditHours && chargePercentage === 0) {
       // Staff cancellation (no charge) - refund original prices + refundable products + voucher discount
       const originalLesson = originalLessonPrice || (lessonPriceRappen || 0)
       const originalAdmin = originalAdminFee || (adminFeeRappen || 0)
-      refundableAmount = originalLesson + originalAdmin + refundableProductsAmount + voucherDiscountAmount
-      logger.debug('💚 Staff cancellation - refunding full original prices + refundable products + voucher discount:', {
+      refundableAmount = originalLesson + originalAdmin + refundableProductsAmount + voucherDiscountAmount - discountAmount
+      logger.debug('💚 Staff cancellation - refunding full original prices + refundable products + voucher discount - discounts:', {
         originalLesson: (originalLesson / 100).toFixed(2),
         originalAdmin: (originalAdmin / 100).toFixed(2),
         refundableProducts: (refundableProductsAmount / 100).toFixed(2),
         voucherDiscount: (voucherDiscountAmount / 100).toFixed(2),
+        discount: (discountAmount / 100).toFixed(2),
         total: (refundableAmount / 100).toFixed(2)
       })
     } else {
       // Regular cancellation - use the passed amounts + refundable products + voucher discount
-      refundableAmount = (lessonPriceRappen || 0) + (adminFeeRappen || 0) + refundableProductsAmount + voucherDiscountAmount
+      refundableAmount = (lessonPriceRappen || 0) + (adminFeeRappen || 0) + refundableProductsAmount + voucherDiscountAmount - discountAmount
       logger.debug('💰 Regular cancellation refund calculation:', {
         lessonPrice: ((lessonPriceRappen || 0) / 100).toFixed(2),
         adminFee: ((adminFeeRappen || 0) / 100).toFixed(2),
         refundableProducts: (refundableProductsAmount / 100).toFixed(2),
         voucherDiscount: (voucherDiscountAmount / 100).toFixed(2),
+        discount: (discountAmount / 100).toFixed(2),
         totalRefund: (refundableAmount / 100).toFixed(2),
         chargePercentage
       })
