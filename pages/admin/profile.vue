@@ -570,6 +570,41 @@
                   placeholder="Musterstrasse 123, 8000 Zürich"
                 ></textarea>
               </div>
+
+              <!-- SMS Absender -->
+              <div class="md:col-span-2 border-t border-gray-100 pt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">SMS Absender</label>
+                <p class="text-xs text-gray-400 mb-2">
+                  Name der bei SMS-Nachrichten erscheint.
+                  <span class="text-amber-600 font-medium">Max. 11 Zeichen</span> (Limit des SMS-Protokolls – gilt weltweit).
+                  Leer lassen = Fahrschulname wird automatisch verwendet.
+                </p>
+                <!-- Suggestions -->
+                <div v-if="brandingForm.meta.brandName" class="flex flex-wrap gap-1.5 mb-2">
+                  <button v-for="s in smsSenderSuggestionsAdmin" :key="s" type="button"
+                    @click="brandingForm.contact.smsSender = s; autoSaveBranding()"
+                    class="px-2.5 py-1 rounded-lg text-xs font-medium border transition-all"
+                    :class="brandingForm.contact.smsSender === s
+                      ? 'border-blue-400 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'">
+                    {{ s }}
+                  </button>
+                </div>
+                <div class="relative w-full sm:w-72">
+                  <input
+                    v-model="brandingForm.contact.smsSender"
+                    @blur="autoSaveBranding"
+                    type="text"
+                    maxlength="11"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 pr-12"
+                    placeholder="Fahrschule"
+                  />
+                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono"
+                    :class="(brandingForm.contact.smsSender?.length || 0) >= 11 ? 'text-amber-500' : 'text-gray-400'">
+                    {{ brandingForm.contact.smsSender?.length || 0 }}/11
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1062,7 +1097,7 @@
 
 <script setup lang="ts">
 
-import { ref, onMounted, markRaw, watch, onUnmounted } from 'vue'
+import { ref, computed, onMounted, markRaw, watch, onUnmounted } from 'vue'
 import { navigateTo, useRoute, useRouter } from '#app'
 import { logger } from '~/utils/logger'
 import { compressImage, validateImageFile, getFileSizeKB } from '~/utils/imageCompression'
@@ -1358,8 +1393,28 @@ const brandingForm = ref({
   contact: {
     email: '',
     phone: '',
-    address: ''
+    address: '',
+    smsSender: ''
   }
+})
+
+const smsSenderSuggestionsAdmin = computed((): string[] => {
+  const raw = (brandingForm.value.meta.brandName || '').trim()
+  if (!raw) return []
+  const clean = (s: string) =>
+    s.replace(/ä/gi, 'a').replace(/ö/gi, 'o').replace(/ü/gi, 'u').replace(/ß/g, 'ss')
+     .replace(/[^a-zA-Z0-9 ]/g, '').trim().substring(0, 11).trim()
+  const suggestions: string[] = []
+  const seen = new Set<string>()
+  const add = (s: string) => { const c = clean(s); if (c && !seen.has(c)) { seen.add(c); suggestions.push(c) } }
+  const words = raw.split(/\s+/).filter(Boolean)
+  add('Fahrschule')
+  add(words[0])
+  const brandWords = words.filter((w: string) => !/^(fahrschule|fs|die|der|die)$/i.test(w))
+  if (brandWords[0]) add('FS ' + brandWords[0])
+  add(raw)
+  if (brandWords[0]) add('FS.' + brandWords[0])
+  return suggestions.slice(0, 4)
 })
 
 // Methods
