@@ -56,7 +56,17 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ sync-session: refreshed via refresh_token, setting new cookies')
     setAuthCookies(event, data.session.access_token, data.session.refresh_token)
-    return { success: true, refreshed: true }
+    // Return new tokens so the client can update its Supabase session via setSession().
+    // Without this, the browser still holds the old (rotated/invalidated) refresh token
+    // and the next sync-session call (e.g. after a page reload) fails with "already used".
+    return {
+      success: true,
+      refreshed: true,
+      session: {
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      },
+    }
   }
 
   logger.debug('✅ sync-session: access_token valid, syncing cookies')
