@@ -109,13 +109,32 @@ export default defineNuxtPlugin((nuxtApp) => {
                 const supabase = getSupabase()
                 const { data: sessionData } = await supabase.auth.getSession()
                 if (sessionData?.session) {
-                  await $fetch('/api/auth/sync-session', {
+                  const syncResult = await $fetch<{
+                    success: boolean
+                    refreshed?: boolean
+                    session?: { access_token: string; refresh_token: string }
+                  }>('/api/auth/sync-session', {
                     method: 'POST',
                     body: {
                       access_token: sessionData.session.access_token,
                       refresh_token: sessionData.session.refresh_token
                     }
                   })
+
+                  // If the server had to rotate the refresh token, update the Supabase client
+                  // so the browser no longer holds the old (invalidated) refresh token.
+                  // Without this, the next sync-session call after reload fails with "already used".
+                  if (syncResult?.refreshed && syncResult?.session?.access_token) {
+                    try {
+                      const { getSupabase } = await import('~/utils/supabase')
+                      await getSupabase().auth.setSession({
+                        access_token: syncResult.session.access_token,
+                        refresh_token: syncResult.session.refresh_token,
+                      })
+                      console.debug('✅ Supabase client updated with rotated tokens before reload')
+                    } catch { /* non-fatal */ }
+                  }
+
                   synced = true
                   sessionStorage.setItem(RELOAD_GUARD_KEY, Date.now().toString())
                   console.debug('✅ Cookie sync succeeded after 401 — reloading page (one-shot)')
