@@ -95,9 +95,8 @@
             :key="link.href"
             :href="link.href"
             class="px-3 py-2 rounded-lg font-semibold transition-all"
-            :class="activeSection === link.href.slice(1)
-              ? 'text-purple-700 bg-purple-50'
-              : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'"
+            :class="activeSection === link.href.slice(1) ? '' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'"
+            :style="activeSection === link.href.slice(1) ? activeDesktopStyle : {}"
             @click.prevent="scrollTo(link.href)"
           >{{ link.label }}</a>
         </template>
@@ -110,7 +109,7 @@
         </a>
         <a href="/demo"
           class="text-sm font-bold px-4 py-2.5 rounded-xl text-white transition-all hover:opacity-90 whitespace-nowrap"
-          style="background: linear-gradient(135deg, #6000BD, #8B2FE8);">
+          :style="ctaStyle">
           60 Tage gratis →
         </a>
         <!-- Mobile menu button -->
@@ -134,9 +133,8 @@
           :key="link.href"
           :href="link.href"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all"
-          :class="activeSection === link.href.slice(1)
-            ? 'bg-purple-600 text-white shadow-sm'
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+          :class="activeSection === link.href.slice(1) ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+          :style="activeSection === link.href.slice(1) ? activePillStyle : {}"
           @click.prevent="scrollTo(link.href); mobileOpen = false"
         >
           <span v-if="link.icon" class="text-sm leading-none">{{ link.icon }}</span>
@@ -165,7 +163,7 @@
         <div class="pt-3 border-t border-gray-100">
           <a href="/demo"
             class="block w-full text-center py-3 rounded-xl text-white font-bold text-sm"
-            style="background: linear-gradient(135deg, #6000BD, #8B2FE8);">
+            :style="ctaStyle">
             60 Tage gratis starten →
           </a>
         </div>
@@ -184,10 +182,25 @@ interface ScrollLink {
 const props = defineProps<{
   logoSrc?: string | null
   scrollLinks?: ScrollLink[]
+  primaryColor?: string
+  secondaryColor?: string
 }>()
 
 const mobileOpen = ref(false)
 const activeSection = ref('')
+
+const ctaStyle = computed(() => ({
+  background: `linear-gradient(135deg, ${props.primaryColor || '#6000BD'}, ${props.secondaryColor || '#8B2FE8'})`
+}))
+
+const activePillStyle = computed(() => ({
+  background: props.primaryColor || '#7C3AED'
+}))
+
+const activeDesktopStyle = computed(() => ({
+  color: props.primaryColor || '#6D28D9',
+  background: `${props.primaryColor || '#6D28D9'}12`
+}))
 
 function scrollTo(href: string) {
   const id = href.startsWith('#') ? href.slice(1) : href
