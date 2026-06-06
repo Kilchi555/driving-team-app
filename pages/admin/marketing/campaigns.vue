@@ -203,7 +203,7 @@
                 class="tenant-focus w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:outline-none focus:ring-2 transition min-h-[38px]"
               >
                 <span class="flex flex-wrap gap-1 flex-1 text-left">
-                  <template v-if="createForm.categories.length === 0">
+                  <template v-if="createForm.categories.length === 0 || createForm.categories.length === drivingCategories.length">
                     <span class="text-gray-400">Alle Kategorien</span>
                   </template>
                   <template v-else>
@@ -231,6 +231,18 @@
                 v-if="catDropdownOpen"
                 class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg py-1 max-h-56 overflow-y-auto"
               >
+                <!-- Select all -->
+                <label class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100">
+                  <input
+                    type="checkbox"
+                    :checked="createForm.categories.length === drivingCategories.length"
+                    :indeterminate="createForm.categories.length > 0 && createForm.categories.length < drivingCategories.length"
+                    @change="createForm.categories.length === drivingCategories.length ? createForm.categories = [] : createForm.categories = drivingCategories.map(d => d.value)"
+                    class="rounded border-gray-300"
+                    :style="{ accentColor: primaryColor }"
+                  />
+                  <span class="text-sm font-medium text-gray-900">Alle auswählen</span>
+                </label>
                 <label
                   v-for="cat in drivingCategories"
                   :key="cat.value"
