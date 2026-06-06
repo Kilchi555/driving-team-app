@@ -113,13 +113,14 @@
               class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent" />
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <div>
+          <div class="grid grid-cols-2 gap-3 overflow-hidden">
+            <div class="min-w-0 overflow-hidden">
               <label class="block text-xs text-gray-500 mb-1">Geburtsdatum <span class="text-red-500">*</span></label>
               <input v-model="form.birth_date" type="date" required
+                style="max-width:100%;box-sizing:border-box"
                 class="w-full min-w-0 px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent" />
             </div>
-            <div>
+            <div class="min-w-0">
               <label class="block text-xs text-gray-500 mb-1">Nationalität <span class="text-red-500">*</span></label>
               <input v-model="form.nationality" type="text" required placeholder="z.B. Schweiz"
                 class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent" />
