@@ -28,6 +28,15 @@ const DEV_OVERRIDE_EMAIL = process.env.NODE_ENV !== 'production'
   ? 'pascal_kilchenmann@icloud.com'
   : null
 
+const NATIONALITY_LABELS: Record<string, string> = {
+  CH: 'Schweiz', DE: 'Deutschland', AT: 'Österreich', IT: 'Italien', FR: 'Frankreich',
+  TR: 'Türkei', XK: 'Kosovo', RS: 'Serbien', HR: 'Kroatien', PT: 'Portugal',
+  ES: 'Spanien', PL: 'Polen', RO: 'Rumänien', AL: 'Albanien', BA: 'Bosnien und Herzegowina',
+  BG: 'Bulgarien', GR: 'Griechenland', LI: 'Liechtenstein', MK: 'Nordmazedonien',
+  NL: 'Niederlande', CZ: 'Tschechien', HU: 'Ungarn', UK: 'Vereinigtes Königreich',
+  US: 'USA', CN: 'China', IN: 'Indien', OTHER: 'Andere',
+}
+
 const INSURANCE_LABELS: Record<string, string> = {
   fahrzeug: 'Fahrzeugversicherung',
   hausrat: 'Hausrat',
@@ -55,6 +64,8 @@ export default defineEventHandler(async (event) => {
   const lastName = field('last_name')
   const email = field('email')
   const phone = field('phone')
+  const birthDate = field('birth_date')   // ISO date string e.g. "1990-05-15"
+  const nationality = field('nationality') // ISO 2-letter code e.g. "CH"
   const notes = field('notes')
   const insuranceTypesRaw = field('insurance_types')
 
@@ -104,6 +115,8 @@ export default defineEventHandler(async (event) => {
       last_name: lastName || null,
       email,
       phone: phone || null,
+      birth_date: birthDate || null,
+      nationality: nationality || null,
       insurance_types: insuranceTypes,
       notes: notes || null,
       status: 'sent',
@@ -127,6 +140,11 @@ export default defineEventHandler(async (event) => {
   const insuranceList = insuranceTypes
     .map(t => INSURANCE_LABELS[t] || t)
     .join(', ')
+
+  const birthDateFormatted = birthDate
+    ? new Date(birthDate).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : '—'
+  const nationalityLabel = nationality ? (NATIONALITY_LABELS[nationality] || nationality) : '—'
 
   const docsHtml = attachments.length > 0
     ? `<div style="margin:20px 0;padding:16px 20px;background:#f0f9ff;border-radius:12px;border:1px solid #bae6fd">
@@ -170,7 +188,9 @@ export default defineEventHandler(async (event) => {
     <div style="margin:0 0 20px;padding:20px;background:#f9fafb;border-radius:12px;border:1px solid #e5e7eb">
       <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px">👤 Kundenangaben</div>
       <table style="width:100%;border-collapse:collapse;font-size:14px">
-        <tr><td style="padding:4px 0;color:#6b7280;width:120px">Name</td><td style="padding:4px 0;color:#111827;font-weight:600">${fullName || '—'}</td></tr>
+        <tr><td style="padding:4px 0;color:#6b7280;width:140px">Name</td><td style="padding:4px 0;color:#111827;font-weight:600">${fullName || '—'}</td></tr>
+        <tr><td style="padding:4px 0;color:#6b7280">Geburtsdatum</td><td style="padding:4px 0;color:#111827;font-weight:600">${birthDateFormatted}</td></tr>
+        <tr><td style="padding:4px 0;color:#6b7280">Nationalität</td><td style="padding:4px 0;color:#111827;font-weight:600">${nationalityLabel}</td></tr>
         <tr><td style="padding:4px 0;color:#6b7280">Email</td><td style="padding:4px 0"><a href="mailto:${email}" style="color:#2563eb">${email}</a></td></tr>
         <tr><td style="padding:4px 0;color:#6b7280">Telefon</td><td style="padding:4px 0;color:#111827">${phone || '—'}</td></tr>
         ${notes ? `<tr><td style="padding:4px 0;color:#6b7280;vertical-align:top">Notiz</td><td style="padding:4px 0;color:#111827">${notes}</td></tr>` : ''}
@@ -250,7 +270,9 @@ export default defineEventHandler(async (event) => {
     <p style="margin:0 0 24px;color:#6b7280;font-size:14px">via ${tenantName} · ${new Date().toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
     <div style="margin:0 0 20px;padding:20px;background:#f9fafb;border-radius:12px;border:1px solid #e5e7eb;font-size:14px">
       <table style="width:100%;border-collapse:collapse">
-        <tr><td style="padding:4px 0;color:#6b7280;width:120px">Name</td><td style="color:#111827;font-weight:600">${fullName || '—'}</td></tr>
+        <tr><td style="padding:4px 0;color:#6b7280;width:140px">Name</td><td style="color:#111827;font-weight:600">${fullName || '—'}</td></tr>
+        <tr><td style="padding:4px 0;color:#6b7280">Geburtsdatum</td><td style="color:#111827;font-weight:600">${birthDateFormatted}</td></tr>
+        <tr><td style="padding:4px 0;color:#6b7280">Nationalität</td><td style="color:#111827;font-weight:600">${nationalityLabel}</td></tr>
         <tr><td style="padding:4px 0;color:#6b7280">Email</td><td><a href="mailto:${email}" style="color:#2563eb">${email}</a></td></tr>
         <tr><td style="padding:4px 0;color:#6b7280">Telefon</td><td style="color:#111827">${phone || '—'}</td></tr>
         <tr><td style="padding:4px 0;color:#6b7280">Offerten</td><td style="color:#111827;font-weight:600">${insuranceList}</td></tr>
