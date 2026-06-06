@@ -4,6 +4,8 @@
     <!-- ── Nav ──────────────────────────────────────────────────────────────── -->
     <SimyNav
       :logo-src="logoPreview"
+      :primary-color="primaryColor"
+      :secondary-color="secondaryColor"
       :scroll-links="[
         { label: 'Demo',     href: '#branding-preview', icon: '🎨' },
         { label: 'Features', href: '#features',         icon: '⚡' },
