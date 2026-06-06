@@ -4,7 +4,8 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 const PIXEL = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64')
 
 export default defineEventHandler(async (event) => {
-  const { cid, lid } = getQuery(event) as { cid?: string; lid?: string }
+  const { cid, lid, v } = getQuery(event) as { cid?: string; lid?: string; v?: string }
+  const variant = v === 'b' ? 'b' : 'a'
 
   if (cid && lid) {
     const supabase = getSupabaseAdmin()
@@ -18,12 +19,13 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (existing && !existing.opened_at) {
+      const rpcName = variant === 'b' ? 'increment_campaign_open_b' : 'increment_campaign_open'
       await Promise.all([
         supabase
           .from('email_campaign_leads')
           .update({ opened_at: new Date().toISOString(), status: 'opened' })
           .eq('id', existing.id),
-        supabase.rpc('increment_campaign_open', { p_campaign_id: cid }),
+        supabase.rpc(rpcName, { p_campaign_id: cid }),
       ])
     }
   }
