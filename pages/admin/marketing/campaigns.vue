@@ -67,25 +67,31 @@
           :key="c.id"
           class="bg-white rounded-xl border p-5"
         >
-          <div class="flex items-start justify-between gap-4">
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-3 flex-wrap">
-                <h3 class="font-semibold text-gray-900">{{ c.name }}</h3>
-                <span :class="statusBadge(c.status)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-                  {{ statusLabel(c.status) }}
-                </span>
+          <div class="flex flex-col gap-3">
+            <!-- Top row: title + status -->
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-semibold text-gray-900 truncate">{{ c.name }}</h3>
+                  <span :class="statusBadge(c.status)" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0">
+                    {{ statusLabel(c.status) }}
+                  </span>
+                </div>
+                <p class="text-sm text-gray-500 mt-0.5">
+                  <template v-if="c.variants?.length > 1">
+                    <span class="font-medium text-purple-700">{{ c.variants.length }} Varianten</span>
+                  </template>
+                  <template v-else>
+                    Template: <span class="font-medium text-gray-700">{{ c.email_template?.name ?? '—' }}</span>
+                  </template>
+                  <span v-if="c.subject_override" class="ml-1 text-gray-400">· "{{ c.subject_override }}"</span>
+                </p>
               </div>
-              <p class="text-sm text-gray-500 mt-1">
-                <template v-if="c.variants?.length > 1">
-                  <span class="font-medium text-purple-700">{{ c.variants.length }} Varianten</span>
-                </template>
-                <template v-else>
-                  Template: <span class="font-medium text-gray-700">{{ c.email_template?.name ?? '—' }}</span>
-                </template>
-                <span v-if="c.subject_override" class="ml-2 text-gray-400">· Betreff-Override: "{{ c.subject_override }}"</span>
-              </p>
-              <div v-if="c.status === 'sent' || c.status === 'pilot'" class="mt-2">
-                <!-- Sent count -->
+              <span class="text-xs text-gray-400 shrink-0">{{ formatDate(c.created_at) }}</span>
+            </div>
+
+            <!-- Metrics (sent/pilot only) -->
+              <div v-if="c.status === 'sent' || c.status === 'pilot'" class="space-y-2">
                 <div class="flex flex-wrap gap-x-4 gap-y-1 items-center">
                   <span class="text-sm text-gray-600">
                     <strong class="text-gray-900">{{ c.sent_count?.toLocaleString('de-CH') ?? 0 }}</strong>
@@ -95,9 +101,8 @@
                   <span v-if="c.unsubscribe_count > 0" class="text-sm text-gray-400"><strong>{{ c.unsubscribe_count }}</strong> Abmeldungen</span>
                 </div>
 
-                <!-- Single variant: simple metrics -->
                 <template v-if="!c.variants || c.variants.length <= 1">
-                  <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1 items-center">
+                  <div class="flex flex-wrap gap-x-4 gap-y-1 items-center">
                     <span class="text-sm" :class="c.open_count > 0 ? 'text-blue-600' : 'text-gray-400'">
                       <strong>{{ c.open_count ?? 0 }}</strong> Öffnungen
                       ({{ c.sent_count ? Math.round((c.open_count ?? 0) / c.sent_count * 100) : 0 }}%)
@@ -111,7 +116,7 @@
 
                 <!-- Multi-variant: grid comparison -->
                 <template v-else>
-                  <div class="mt-2 grid gap-2" :class="c.variants.length === 2 ? 'grid-cols-2' : c.variants.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'">
+                  <div class="mt-2 grid grid-cols-2 gap-2">
                     <div
                       v-for="v in (c.variants || []).slice().sort((a,b) => a.label.localeCompare(b.label))"
                       :key="v.label"
@@ -119,60 +124,73 @@
                       :class="variantCardClass(v.label)"
                     >
                       <div class="font-semibold mb-1" :class="variantLabelClass(v.label)">
-                        Variante {{ v.label.toUpperCase() }} · {{ v.split_pct }}%
+                        {{ v.label.toUpperCase() }} · {{ v.split_pct }}%
                         <div class="font-normal text-gray-500 truncate mt-0.5">{{ v.email_template?.name ?? '—' }}</div>
                         <div v-if="v.subject_override" class="font-normal text-gray-400 truncate italic">"{{ v.subject_override }}"</div>
                       </div>
-                      <div class="text-blue-600">Öffn.: <strong>{{ v.open_count ?? 0 }}</strong> ({{ v.sent_count ? Math.round((v.open_count ?? 0) / v.sent_count * 100) : 0 }}%)</div>
-                      <div class="text-green-600">Klicks: <strong>{{ v.click_count ?? 0 }}</strong> ({{ v.sent_count ? Math.round((v.click_count ?? 0) / v.sent_count * 100) : 0 }}%)</div>
+                      <div class="text-blue-600">↗ <strong>{{ v.open_count ?? 0 }}</strong> ({{ v.sent_count ? Math.round((v.open_count ?? 0) / v.sent_count * 100) : 0 }}%)</div>
+                      <div class="text-green-600">🖱 <strong>{{ v.click_count ?? 0 }}</strong> ({{ v.sent_count ? Math.round((v.click_count ?? 0) / v.sent_count * 100) : 0 }}%)</div>
                     </div>
                   </div>
                 </template>
               </div>
-              <div class="flex flex-wrap gap-1 mt-2">
-                <span
-                  v-for="cat in (c.segment_filter?.categories || [])"
-                  :key="cat"
-                  class="px-1.5 py-0.5 rounded text-xs"
-                  :style="{ background: `${primaryColor}15`, color: primaryColor }"
-                >{{ cat }}</span>
-                <span v-if="!(c.segment_filter?.categories?.length)" class="text-xs text-gray-400">Alle aktiven Leads</span>
+
+            <!-- Segment + Actions row -->
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex flex-wrap gap-1">
+                <template v-if="c.segment_filter?.categories?.length && c.segment_filter.categories.length <= 5">
+                  <span
+                    v-for="cat in c.segment_filter.categories"
+                    :key="cat"
+                    class="px-1.5 py-0.5 rounded text-xs"
+                    :style="{ background: `${primaryColor}15`, color: primaryColor }"
+                  >{{ cat }}</span>
+                </template>
+                <template v-else-if="c.segment_filter?.categories?.length > 5">
+                  <span
+                    v-for="cat in c.segment_filter.categories.slice(0, 3)"
+                    :key="cat"
+                    class="px-1.5 py-0.5 rounded text-xs"
+                    :style="{ background: `${primaryColor}15`, color: primaryColor }"
+                  >{{ cat }}</span>
+                  <span class="px-1.5 py-0.5 rounded text-xs text-gray-400 bg-gray-100">+{{ c.segment_filter.categories.length - 3 }}</span>
+                </template>
+                <span v-else class="text-xs text-gray-400">Alle aktiven Leads</span>
               </div>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <span class="text-xs text-gray-400">{{ formatDate(c.created_at) }}</span>
-              <!-- Duplicate button (always visible) -->
-              <button
-                @click="duplicateCampaign(c)"
-                :disabled="duplicatingId === c.id"
-                class="px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-1.5 disabled:opacity-50"
-                title="Kampagne duplizieren"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-                {{ duplicatingId === c.id ? '...' : 'Duplizieren' }}
-              </button>
-              <button
-                v-if="c.status === 'draft'"
-                @click="openSendConfirm(c)"
-                class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-1.5"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-                Senden
-              </button>
-              <button
-                v-if="c.status === 'pilot'"
-                @click="openSendConfirm(c)"
-                class="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors flex items-center gap-1.5"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                </svg>
-                Weitere senden
-              </button>
+
+              <div class="flex items-center gap-2 shrink-0">
+                <button
+                  @click="duplicateCampaign(c)"
+                  :disabled="duplicatingId === c.id"
+                  class="px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  title="Kampagne duplizieren"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <span class="hidden sm:inline">{{ duplicatingId === c.id ? '…' : 'Duplizieren' }}</span>
+                </button>
+                <button
+                  v-if="c.status === 'draft'"
+                  @click="openSendConfirm(c)"
+                  class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-1.5"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                  Senden
+                </button>
+                <button
+                  v-if="c.status === 'pilot'"
+                  @click="openSendConfirm(c)"
+                  class="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors flex items-center gap-1.5"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                  </svg>
+                  Weitere senden
+                </button>
+              </div>
             </div>
           </div>
         </div>
