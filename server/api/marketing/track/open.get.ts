@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
           .from('email_campaign_leads')
           .update({ opened_at: new Date().toISOString(), status: 'opened' })
           .eq('id', existing.id),
-        supabase.rpc('increment_campaign_open', { campaign_id: cid }),
+        supabase.rpc('increment_campaign_open', { p_campaign_id: cid }),
       ])
     }
   }
