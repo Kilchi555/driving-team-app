@@ -3473,6 +3473,30 @@ const confirmBooking = async () => {
         appointment_id: result.appointment_id,
       })
     }
+
+    // Fire email campaign conversion if this booking came via an email campaign link
+    try {
+      const cid = sessionStorage.getItem('email_campaign_cid')
+      const lid = sessionStorage.getItem('email_campaign_lid')
+      if (cid) {
+        $fetch('/api/marketing/track/event', {
+          method: 'POST',
+          body: {
+            event_type: 'booking_completed',
+            campaign_id: cid,
+            lead_id: lid || null,
+            tenant_id: tenant.value?.id || null,
+            metadata: {
+              appointment_id: result.appointment_id,
+              category: selectedCategory.value?.code ?? null,
+            },
+          },
+        }).catch(() => {})
+        // Clear so a second booking in the same session doesn't double-count
+        sessionStorage.removeItem('email_campaign_cid')
+        sessionStorage.removeItem('email_campaign_lid')
+      }
+    } catch {}
     
     isCreatingBooking.value = false
 
@@ -4403,6 +4427,15 @@ onMounted(async () => {
     } else {
       logger.debug('⚠️ No referrer parameter found')
     }
+
+    // Persist email campaign attribution (cid/lid) from click-tracker URL params
+    // into sessionStorage so they survive SPA navigation before the booking is completed.
+    try {
+      const cid = route.query.cid as string | undefined
+      const lid = route.query.lid as string | undefined
+      if (cid) sessionStorage.setItem('email_campaign_cid', cid)
+      if (lid) sessionStorage.setItem('email_campaign_lid', lid)
+    } catch {}
     
     // Fire-and-forget: features always default to true for guests, no need to block render
     loadFeatures().catch(() => {})
