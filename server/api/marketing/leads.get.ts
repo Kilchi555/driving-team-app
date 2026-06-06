@@ -27,7 +27,10 @@ export default defineEventHandler(async (event) => {
     .order('created_at', { ascending: false })
     .range(offset, offset + pageSize - 1)
 
-  if (status && status !== 'all') q = q.eq('status', status)
+  if (status && status !== 'all') {
+    if (status === 'not_unsubscribed') q = q.neq('status', 'unsubscribed')
+    else q = q.eq('status', status)
+  }
   if (category) q = q.contains('categories', [category])
   if (search) {
     q = q.or(`email.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`)

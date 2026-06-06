@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
     .from('leads')
     .select('id, email, first_name, last_name, unsubscribe_token')
     .eq('tenant_id', tenantId)
-    .eq('status', 'active')
+    .neq('status', 'unsubscribed')
 
   if (filter.categories?.length) leadsQuery = leadsQuery.overlaps('categories', filter.categories)
   if (filter.tags?.length) leadsQuery = leadsQuery.overlaps('tags', filter.tags)

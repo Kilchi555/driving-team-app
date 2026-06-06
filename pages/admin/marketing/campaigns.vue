@@ -323,7 +323,7 @@
           <div v-if="estimatedCount !== null" class="rounded-lg p-3 text-sm"
             :style="{ background: `${primaryColor}10` }">
             <span :style="{ color: primaryColor }">
-              Geschätzte Empfänger: <strong>{{ estimatedCount.toLocaleString('de-CH') }}</strong> aktive Leads
+              Geschätzte Empfänger: <strong>{{ estimatedCount.toLocaleString('de-CH') }}</strong> Leads
               <span v-if="createForm.categories.length"> in den Kategorien {{ createForm.categories.map(v => drivingCategories.find(d => d.value === v)?.label || v).join(', ') }}</span>
             </span>
           </div>
@@ -652,22 +652,21 @@ async function loadEstimatedCount() {
   if (!tenantId) return
   try {
     const cats = createForm.categories
+    const statusFilter = 'not_unsubscribed'
     if (cats.length === 0) {
-      // No filter — get total active leads
       const res = await $fetch<any>('/api/marketing/leads', {
-        query: { tenantId, status: 'active', limit: 1 },
+        query: { tenantId, status: statusFilter, limit: 1 },
       })
       estimatedCount.value = res.total
     } else if (cats.length === 1) {
-      // Single category — use API filter directly
       const res = await $fetch<any>('/api/marketing/leads', {
-        query: { tenantId, status: 'active', category: cats[0], limit: 1 },
+        query: { tenantId, status: statusFilter, category: cats[0], limit: 1 },
       })
       estimatedCount.value = res.total
     } else {
-      // Multiple categories — fetch all active leads and count client-side
+      // Multiple categories — fetch all and count client-side
       const res = await $fetch<any>('/api/marketing/leads', {
-        query: { tenantId, status: 'active', limit: 1000 },
+        query: { tenantId, status: statusFilter, limit: 10000 },
       })
       const all: any[] = res.leads ?? []
       estimatedCount.value = all.filter((l: any) =>
