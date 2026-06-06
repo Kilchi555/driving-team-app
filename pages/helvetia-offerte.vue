@@ -54,7 +54,7 @@
       <form v-else @submit.prevent="submit" class="p-7 space-y-5">
 
         <!-- Intro -->
-        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900">
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 text-center">
           <p class="font-semibold mb-1">💰 Unsere Kunden sparen durchschnittlich CHF 1'200 – 3'800 pro Jahr</p>
           <p class="text-amber-800 text-xs leading-relaxed">Helvetia überzeugt mit einem hervorragenden Preis-Leistungs-Verhältnis — top Versicherungsschutz zu einem fairen Preis.</p>
         </div>
@@ -117,45 +117,12 @@
             <div>
               <label class="block text-xs text-gray-500 mb-1">Geburtsdatum <span class="text-red-500">*</span></label>
               <input v-model="form.birth_date" type="date" required
-                class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent" />
+                class="w-full min-w-0 px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent" />
             </div>
             <div>
               <label class="block text-xs text-gray-500 mb-1">Nationalität <span class="text-red-500">*</span></label>
-              <select v-model="form.nationality" required
-                class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white">
-                <option value="" disabled>Bitte wählen…</option>
-                <optgroup label="Häufig">
-                  <option value="CH">🇨🇭 Schweiz</option>
-                  <option value="DE">🇩🇪 Deutschland</option>
-                  <option value="AT">🇦🇹 Österreich</option>
-                  <option value="IT">🇮🇹 Italien</option>
-                  <option value="FR">🇫🇷 Frankreich</option>
-                  <option value="TR">🇹🇷 Türkei</option>
-                  <option value="XK">🇽🇰 Kosovo</option>
-                  <option value="RS">🇷🇸 Serbien</option>
-                  <option value="HR">🇭🇷 Kroatien</option>
-                  <option value="PT">🇵🇹 Portugal</option>
-                  <option value="ES">🇪🇸 Spanien</option>
-                  <option value="PL">🇵🇱 Polen</option>
-                  <option value="RO">🇷🇴 Rumänien</option>
-                </optgroup>
-                <optgroup label="Weitere">
-                  <option value="AL">Albanien</option>
-                  <option value="BA">Bosnien und Herzegowina</option>
-                  <option value="BG">Bulgarien</option>
-                  <option value="GR">Griechenland</option>
-                  <option value="LI">Liechtenstein</option>
-                  <option value="MK">Nordmazedonien</option>
-                  <option value="NL">Niederlande</option>
-                  <option value="CZ">Tschechien</option>
-                  <option value="HU">Ungarn</option>
-                  <option value="UK">Vereinigtes Königreich</option>
-                  <option value="US">USA</option>
-                  <option value="CN">China</option>
-                  <option value="IN">Indien</option>
-                  <option value="OTHER">Andere</option>
-                </optgroup>
-              </select>
+              <input v-model="form.nationality" type="text" required placeholder="z.B. Schweiz"
+                class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent" />
             </div>
           </div>
 
