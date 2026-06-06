@@ -5,12 +5,11 @@ const PIXEL = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBR
 
 export default defineEventHandler(async (event) => {
   const { cid, lid, v } = getQuery(event) as { cid?: string; lid?: string; v?: string }
-  const variant = v === 'b' ? 'b' : 'a'
+  const variant = v && ['a', 'b', 'c', 'd', 'e'].includes(v) ? v : 'a'
 
   if (cid && lid) {
     const supabase = getSupabaseAdmin()
 
-    // Only count first open per lead per campaign
     const { data: existing } = await supabase
       .from('email_campaign_leads')
       .select('id, opened_at')
@@ -19,13 +18,15 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (existing && !existing.opened_at) {
-      const rpcName = variant === 'b' ? 'increment_campaign_open_b' : 'increment_campaign_open'
       await Promise.all([
         supabase
           .from('email_campaign_leads')
           .update({ opened_at: new Date().toISOString(), status: 'opened' })
           .eq('id', existing.id),
-        supabase.rpc(rpcName, { p_campaign_id: cid }),
+        // Increment aggregate on campaign (legacy columns for backward compat)
+        supabase.rpc(variant === 'b' ? 'increment_campaign_open_b' : 'increment_campaign_open', { p_campaign_id: cid }),
+        // Increment per-variant counter
+        supabase.rpc('increment_variant_open', { p_campaign_id: cid, p_label: variant }),
       ])
     }
   }

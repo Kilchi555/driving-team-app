@@ -2,8 +2,38 @@
   <div class="min-h-screen bg-gray-50">
     <div class="bg-white shadow-sm border-b">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <h1 class="text-2xl font-bold text-gray-900">Marketing</h1>
-        <p class="text-sm text-gray-500 mt-1">Email-Kampagnen, Leads-Datenbank und Templates</p>
+        <div class="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">Marketing</h1>
+            <p class="text-sm text-gray-500 mt-0.5">Email-Kampagnen, Leads-Datenbank und Templates</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <NuxtLink
+              v-for="action in quickActions"
+              :key="action.href"
+              :to="action.href"
+              class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-400 hover:shadow-sm transition-all"
+            >
+              <div class="w-6 h-6 rounded flex items-center justify-center shrink-0" :class="action.iconBg">
+                <svg class="w-3.5 h-3.5" :class="action.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="action.icon" />
+                </svg>
+              </div>
+              {{ action.title }}
+            </NuxtLink>
+            <!-- AI Suggestions -->
+            <NuxtLink
+              to="/admin/marketing/ai"
+              class="flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-all shadow-sm"
+              :style="{ background: primaryColor }"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+              KI-Assistent
+            </NuxtLink>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -187,24 +217,6 @@
         </div>
       </div>
 
-      <!-- Quick Actions -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <NuxtLink
-          v-for="action in quickActions"
-          :key="action.href"
-          :to="action.href"
-          class="tenant-action-card bg-white rounded-xl border p-5 hover:shadow-sm transition-all group"
-        >
-          <div class="w-10 h-10 rounded-lg flex items-center justify-center mb-3" :class="action.iconBg">
-            <svg class="w-5 h-5" :class="action.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="action.icon" />
-            </svg>
-          </div>
-          <div class="font-semibold text-gray-900 tenant-action-title">{{ action.title }}</div>
-          <div class="text-sm text-gray-500 mt-1">{{ action.description }}</div>
-        </NuxtLink>
-      </div>
-
     </div>
   </div>
 </template>
@@ -213,11 +225,13 @@
 import { ref, onMounted } from 'vue'
 import { useHead } from '#app'
 import { useAuthStore } from '~/stores/auth'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useHead({ title: 'Marketing - Admin' })
 
 const authStore = useAuthStore()
+const { primaryColor } = useTenantBranding()
 const stats = ref<any>(null)
 
 // ── User import ───────────────────────────────────────────────────────────────

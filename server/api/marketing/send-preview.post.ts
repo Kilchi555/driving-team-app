@@ -19,12 +19,23 @@ export default defineEventHandler(async (event) => {
 
     const { data: campaign } = await supabase
       .from('email_campaigns')
-      .select('*, email_templates(*), template_b:template_b_id(id,subject,html_body), ab_split_pct')
+      .select('*, email_templates:email_templates!template_id(*)')
       .eq('id', campaignId)
       .eq('tenant_id', tenantId)
       .single()
 
     if (!campaign) throw createError({ statusCode: 404, statusMessage: 'Campaign not found' })
+
+    // Load variants (new system) or fall back to single template
+    const { data: variantRows } = await supabase
+      .from('email_campaign_variants')
+      .select('*, email_templates(*)')
+      .eq('campaign_id', campaignId)
+      .order('label')
+
+    const templates: { label: string; template: any; subjectOverride?: string }[] = variantRows && variantRows.length > 0
+      ? variantRows.map(v => ({ label: v.label, template: v.email_templates, subjectOverride: v.subject_override }))
+      : [{ label: 'a', template: campaign.email_templates }]
 
     const { data: tenant } = await supabase
       .from('tenants')
@@ -32,8 +43,6 @@ export default defineEventHandler(async (event) => {
       .eq('id', tenantId)
       .single()
 
-    const templateA = campaign.email_templates as any
-    const templateB = (campaign as any).template_b as any | null
     const tenantName = tenant?.name ?? 'Fahrschule'
     const tenantSlug = tenant?.slug ?? ''
     const primaryColor = tenant?.primary_color || '#1e293b'
@@ -44,7 +53,7 @@ export default defineEventHandler(async (event) => {
     const unsubscribeLink = buildUnsubscribeLink(baseUrl, fakeLeadId, fakeToken)
     const consentLink = buildConsentLink(baseUrl, fakeLeadId, fakeToken)
 
-    const buildPreview = (template: any, label: string) => {
+    const buildPreview = (template: any, label: string, subjectOverride?: string) => {
       const rendered = renderTemplate(template.html_body, {
         first_name: 'Vorname',
         last_name: 'Nachname',
@@ -56,19 +65,18 @@ export default defineEventHandler(async (event) => {
         primary_color: primaryColor,
         discount_code: (campaign as any).segment_filter?.discount_code || '',
       })
-      const baseSubject = (campaign as any).subject_override || template.subject
-      const subject = `[TEST${label}] ${baseSubject}`
+      const baseSubject = subjectOverride || (campaign as any).subject_override || template.subject
+      const labelSuffix = templates.length > 1 ? ` - Variante ${label.toUpperCase()}` : ''
+      const previewSubject = `[TEST${labelSuffix}] ${baseSubject}`
       const html = wrapMarketingEmail(
         rendered, tenantName, unsubscribeLink, primaryColor,
         tenant?.logo_wide_url || null, tenant?.logo_square_url || null,
         null, tenantId,
       )
-      return { subject, html }
+      return { subject: previewSubject, html }
     }
 
-    const previews = templateB
-      ? [buildPreview(templateA, ' - Variante A'), buildPreview(templateB, ' - Variante B')]
-      : [buildPreview(templateA, '')]
+    const previews = templates.map(t => buildPreview(t.template, t.label, t.subjectOverride))
 
     const results = await Promise.all(previews.map(p =>
       sendEmail({
