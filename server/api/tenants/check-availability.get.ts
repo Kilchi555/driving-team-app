@@ -47,12 +47,12 @@ export default defineEventHandler(async (event) => {
     if (!validateEmail(normalized).valid) {
       result.email = { available: false }
     } else {
-      // Check both public users table AND auth.users to catch orphan auth records
-      const [{ data: publicUser }, { data: authData }] = await Promise.all([
-        supabase.from('users').select('id').eq('email', normalized).maybeSingle(),
-        supabase.auth.admin.getUserByEmail(normalized),
-      ])
-      result.email = { available: !publicUser && !authData?.user }
+      const { data: publicUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', normalized)
+        .maybeSingle()
+      result.email = { available: !publicUser }
     }
   }
 
