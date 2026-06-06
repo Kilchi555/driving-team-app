@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-white font-sans" :style="brandCssVars">
 
     <!-- ── Nav ──────────────────────────────────────────────────────────────── -->
-    <SimyNav />
+    <SimyNav :logo-src="logoPreview" />
 
     <!-- ── Hero ─────────────────────────────────────────────────────────────── -->
     <section class="relative overflow-hidden pt-12 pb-20 px-6">
