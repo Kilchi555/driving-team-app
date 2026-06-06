@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
 
     const { data: campaign } = await supabase
       .from('email_campaigns')
-      .select('*, email_templates(*)')
+      .select('*, email_templates(*), template_b:template_b_id(id,subject,html_body), ab_split_pct')
       .eq('id', campaignId)
       .eq('tenant_id', tenantId)
       .single()
@@ -32,7 +32,8 @@ export default defineEventHandler(async (event) => {
       .eq('id', tenantId)
       .single()
 
-    const template = campaign.email_templates as any
+    const templateA = campaign.email_templates as any
+    const templateB = (campaign as any).template_b as any | null
     const tenantName = tenant?.name ?? 'Fahrschule'
     const tenantSlug = tenant?.slug ?? ''
     const primaryColor = tenant?.primary_color || '#1e293b'
@@ -43,35 +44,44 @@ export default defineEventHandler(async (event) => {
     const unsubscribeLink = buildUnsubscribeLink(baseUrl, fakeLeadId, fakeToken)
     const consentLink = buildConsentLink(baseUrl, fakeLeadId, fakeToken)
 
-    const renderedHtml = renderTemplate(template.html_body, {
-      first_name: 'Vorname',
-      last_name: 'Nachname',
-      email: to,
-      unsubscribe_link: unsubscribeLink,
-      consent_link: consentLink,
-      tenant_name: tenantName,
-      tenant_slug: tenantSlug,
-      primary_color: primaryColor,
-      discount_code: campaign.segment_filter?.discount_code || '',
-    })
+    const buildPreview = (template: any, label: string) => {
+      const rendered = renderTemplate(template.html_body, {
+        first_name: 'Vorname',
+        last_name: 'Nachname',
+        email: to,
+        unsubscribe_link: unsubscribeLink,
+        consent_link: consentLink,
+        tenant_name: tenantName,
+        tenant_slug: tenantSlug,
+        primary_color: primaryColor,
+        discount_code: (campaign as any).segment_filter?.discount_code || '',
+      })
+      const baseSubject = (campaign as any).subject_override || template.subject
+      const subject = `[TEST${label}] ${baseSubject}`
+      const html = wrapMarketingEmail(
+        rendered, tenantName, unsubscribeLink, primaryColor,
+        tenant?.logo_wide_url || null, tenant?.logo_square_url || null,
+        null, tenantId,
+      )
+      return { subject, html }
+    }
 
-    const campaignSubject = campaign.subject_override || template.subject
-    const wrappedHtml = wrapMarketingEmail(
-      renderedHtml, tenantName, unsubscribeLink, primaryColor,
-      tenant?.logo_wide_url || null, tenant?.logo_square_url || null,
-      null, tenantId,
-    )
+    const previews = templateB
+      ? [buildPreview(templateA, ' - Variante A'), buildPreview(templateB, ' - Variante B')]
+      : [buildPreview(templateA, '')]
 
-    const result = await sendEmail({
-      to,
-      subject: `[TEST] ${campaignSubject}`,
-      html: wrappedHtml,
-      fromName: tenantName,
-      fromEmail: tenant?.from_email || null,
-      domainVerified: tenant?.resend_domain_verified ?? false,
-    })
+    const results = await Promise.all(previews.map(p =>
+      sendEmail({
+        to,
+        subject: p.subject,
+        html: p.html,
+        fromName: tenantName,
+        fromEmail: tenant?.from_email || null,
+        domainVerified: tenant?.resend_domain_verified ?? false,
+      })
+    ))
 
-    return { success: true, messageId: result.messageId }
+    return { success: true, sent: previews.length, variants: previews.map((p, i) => ({ subject: p.subject, messageId: results[i].messageId })) }
   }
 
   // Mode A: raw HTML

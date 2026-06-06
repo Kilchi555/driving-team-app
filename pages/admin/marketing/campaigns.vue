@@ -560,7 +560,7 @@
                 {{ testEmailSending ? '...' : 'Senden' }}
               </button>
             </div>
-            <p v-if="testEmailResult === 'ok'" class="text-xs text-green-600 mt-1.5">✅ Test-Email gesendet!</p>
+            <p v-if="testEmailResult === 'ok'" class="text-xs text-green-600 mt-1.5">✅ {{ testEmailSentCount > 1 ? `${testEmailSentCount} Test-Emails gesendet (Variante A + B)!` : 'Test-Email gesendet!' }}</p>
             <p v-if="testEmailResult === 'error'" class="text-xs text-red-600 mt-1.5">❌ Fehler beim Senden.</p>
           </div>
         </div>
@@ -650,6 +650,7 @@ const pilotLimit = ref(500)
 const testEmailAddress = ref('')
 const testEmailSending = ref(false)
 const testEmailResult = ref<'ok' | 'error' | null>(null)
+const testEmailSentCount = ref(1)
 
 const estimatedCount = ref<number | null>(null)
 
@@ -820,10 +821,11 @@ async function sendTestEmail() {
   testEmailSending.value = true
   testEmailResult.value = null
   try {
-    await $fetch('/api/marketing/send-preview', {
+    const res = await $fetch<any>('/api/marketing/send-preview', {
       method: 'POST',
       body: { to: testEmailAddress.value, campaignId: sendConfirmCampaign.value.id, tenantId },
     })
+    testEmailSentCount.value = res.sent ?? 1
     testEmailResult.value = 'ok'
   } catch {
     testEmailResult.value = 'error'
