@@ -8,7 +8,7 @@ const CONVERSION_EVENTS = new Set([
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const { event_type, campaign_id, lead_id, tenant_id, metadata } = body
+  const { event_type, campaign_id, lead_id, tenant_id, metadata, variant } = body
 
   if (!event_type) throw createError({ statusCode: 400, statusMessage: 'event_type is required' })
 
@@ -30,8 +30,9 @@ export default defineEventHandler(async (event) => {
 
   // If this is a conversion event tied to a campaign, increment conversion counters
   if (campaign_id && CONVERSION_EVENTS.has(event_type)) {
+    const rpcName = variant === 'b' ? 'increment_campaign_conversion_b' : 'increment_campaign_conversion'
     const conversions: Promise<any>[] = [
-      supabase.rpc('increment_campaign_conversion', { p_campaign_id: campaign_id }),
+      supabase.rpc(rpcName, { p_campaign_id: campaign_id }),
     ]
 
     // Mark lead as converted (first conversion only, idempotent via converted_at)

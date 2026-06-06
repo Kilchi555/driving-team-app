@@ -79,36 +79,54 @@
                 Template: <span class="font-medium text-gray-700">{{ c.email_templates?.name ?? '—' }}</span>
                 <span v-if="c.subject_override" class="ml-2 text-gray-400">· Betreff-Override: "{{ c.subject_override }}"</span>
               </p>
-              <div v-if="c.status === 'sent' || c.status === 'pilot'" class="flex flex-wrap gap-x-4 gap-y-1 mt-2 items-center">
-                <span class="text-sm text-gray-600">
-                  <strong class="text-gray-900">{{ c.sent_count?.toLocaleString('de-CH') ?? 0 }}</strong>
-                  <span class="text-gray-400"> / {{ c.total_recipients?.toLocaleString('de-CH') ?? '?' }} gesendet</span>
-                </span>
-                <!-- Open rate -->
-                <span class="text-sm" :class="c.open_count > 0 ? 'text-blue-600' : 'text-gray-400'">
-                  <strong>{{ c.open_count ?? 0 }}</strong> Öffnungen
-                  <span class="font-semibold ml-0.5">
-                    ({{ c.sent_count ? Math.round((c.open_count ?? 0) / c.sent_count * 100) : 0 }}%)
+              <div v-if="c.status === 'sent' || c.status === 'pilot'" class="mt-2">
+                <!-- Sent count -->
+                <div class="flex flex-wrap gap-x-4 gap-y-1 items-center">
+                  <span class="text-sm text-gray-600">
+                    <strong class="text-gray-900">{{ c.sent_count?.toLocaleString('de-CH') ?? 0 }}</strong>
+                    <span class="text-gray-400"> / {{ c.total_recipients?.toLocaleString('de-CH') ?? '?' }} gesendet</span>
                   </span>
-                </span>
-                <!-- Click rate -->
-                <span class="text-sm" :class="c.click_count > 0 ? 'text-green-600' : 'text-gray-400'">
-                  <strong>{{ c.click_count ?? 0 }}</strong> Klicks
-                  <span class="font-semibold ml-0.5">
-                    ({{ c.sent_count ? Math.round((c.click_count ?? 0) / c.sent_count * 100) : 0 }}%)
-                  </span>
-                </span>
-                <!-- Conversion rate -->
-                <span v-if="(c.conversion_count ?? 0) > 0 || c.status === 'sent'"
-                  class="text-sm"
-                  :class="(c.conversion_count ?? 0) > 0 ? 'text-purple-600 font-semibold' : 'text-gray-400'">
-                  <strong>{{ c.conversion_count ?? 0 }}</strong> Conversions
-                  <span class="font-semibold ml-0.5">
-                    ({{ c.sent_count ? ((c.conversion_count ?? 0) / c.sent_count * 100).toFixed(1) : 0 }}%)
-                  </span>
-                </span>
-                <span v-if="c.bounce_count > 0" class="text-sm text-red-500"><strong>{{ c.bounce_count }}</strong> Bounces</span>
-                <span v-if="c.unsubscribe_count > 0" class="text-sm text-gray-400"><strong>{{ c.unsubscribe_count }}</strong> Abmeldungen</span>
+                  <span v-if="c.bounce_count > 0" class="text-sm text-red-500"><strong>{{ c.bounce_count }}</strong> Bounces</span>
+                  <span v-if="c.unsubscribe_count > 0" class="text-sm text-gray-400"><strong>{{ c.unsubscribe_count }}</strong> Abmeldungen</span>
+                </div>
+
+                <!-- No A/B: simple metrics row -->
+                <template v-if="!c.template_b_id">
+                  <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1 items-center">
+                    <span class="text-sm" :class="c.open_count > 0 ? 'text-blue-600' : 'text-gray-400'">
+                      <strong>{{ c.open_count ?? 0 }}</strong> Öffnungen
+                      ({{ c.sent_count ? Math.round((c.open_count ?? 0) / c.sent_count * 100) : 0 }}%)
+                    </span>
+                    <span class="text-sm" :class="c.click_count > 0 ? 'text-green-600' : 'text-gray-400'">
+                      <strong>{{ c.click_count ?? 0 }}</strong> Klicks
+                      ({{ c.sent_count ? Math.round((c.click_count ?? 0) / c.sent_count * 100) : 0 }}%)
+                    </span>
+                    <span class="text-sm" :class="(c.conversion_count ?? 0) > 0 ? 'text-purple-600 font-semibold' : 'text-gray-400'">
+                      <strong>{{ c.conversion_count ?? 0 }}</strong> Conversions
+                      ({{ c.sent_count ? ((c.conversion_count ?? 0) / c.sent_count * 100).toFixed(1) : 0 }}%)
+                    </span>
+                  </div>
+                </template>
+
+                <!-- A/B: side-by-side comparison -->
+                <template v-else>
+                  <div class="mt-2 grid grid-cols-2 gap-2">
+                    <!-- Variant A -->
+                    <div class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs space-y-0.5">
+                      <div class="font-semibold text-blue-700 mb-1">Variante A · {{ c.ab_split_pct ?? 50 }}%</div>
+                      <div class="text-blue-600">Öffnungen: <strong>{{ c.open_count ?? 0 }}</strong></div>
+                      <div class="text-green-600">Klicks: <strong>{{ c.click_count ?? 0 }}</strong></div>
+                      <div class="text-purple-600">Conversions: <strong>{{ c.conversion_count ?? 0 }}</strong></div>
+                    </div>
+                    <!-- Variant B -->
+                    <div class="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs space-y-0.5">
+                      <div class="font-semibold text-orange-700 mb-1">Variante B · {{ 100 - (c.ab_split_pct ?? 50) }}%</div>
+                      <div class="text-blue-600">Öffnungen: <strong>{{ c.open_count_b ?? 0 }}</strong></div>
+                      <div class="text-green-600">Klicks: <strong>{{ c.click_count_b ?? 0 }}</strong></div>
+                      <div class="text-purple-600">Conversions: <strong>{{ c.conversion_count_b ?? 0 }}</strong></div>
+                    </div>
+                  </div>
+                </template>
               </div>
               <div class="flex flex-wrap gap-1 mt-2">
                 <span
@@ -189,6 +207,46 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Betreff-Override <span class="text-gray-400 font-normal">(optional)</span></label>
             <input v-model="createForm.subject_override" type="text" placeholder="Leer = Betreff aus Template verwenden" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2" />
+          </div>
+
+          <!-- A/B Test -->
+          <div class="border border-gray-200 rounded-xl overflow-hidden">
+            <button
+              type="button"
+              @click="createForm.showAB = !createForm.showAB"
+              class="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition text-sm font-medium text-gray-700"
+            >
+              <span class="flex items-center gap-2">
+                <span class="text-base">🧪</span>
+                A/B Test
+                <span class="text-gray-400 font-normal">(optional)</span>
+                <span v-if="createForm.template_b_id" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Aktiv</span>
+              </span>
+              <svg class="w-4 h-4 text-gray-400 transition-transform" :class="createForm.showAB ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div v-if="createForm.showAB" class="p-4 space-y-4 bg-white">
+              <p class="text-xs text-gray-500">Wähle eine zweite Vorlage (Variante B). Die Leads werden nach dem Split-Verhältnis aufgeteilt — Variante A bekommt die erste Template, Variante B die zweite.</p>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Variante B — Template</label>
+                <select v-model="createForm.template_b_id" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2">
+                  <option value="">— Kein A/B Test —</option>
+                  <option v-for="t in templates" :key="t.id" :value="t.id" :disabled="t.id === createForm.template_id">{{ t.name }}</option>
+                </select>
+              </div>
+              <div v-if="createForm.template_b_id">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Split: {{ createForm.ab_split_pct }}% A / {{ 100 - createForm.ab_split_pct }}% B</label>
+                <input
+                  v-model.number="createForm.ab_split_pct"
+                  type="range" min="10" max="90" step="5"
+                  class="w-full accent-purple-600"
+                />
+                <div class="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>10% A</span><span>50/50</span><span>90% A</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div>
@@ -574,6 +632,9 @@ const createForm = reactive({
   categories: [] as string[],
   showDiscount: false,
   discount_code: '',
+  showAB: false,
+  template_b_id: '',
+  ab_split_pct: 50,
 })
 
 const sendConfirmCampaign = ref<any>(null)
@@ -685,6 +746,9 @@ function openCreate() {
   createForm.categories = []
   createForm.showDiscount = false
   createForm.discount_code = ''
+  createForm.showAB = false
+  createForm.template_b_id = ''
+  createForm.ab_split_pct = 50
   estimatedCount.value = null
   createModalOpen.value = true
   loadEstimatedCount()
@@ -712,6 +776,8 @@ async function createCampaign() {
         template_id: createForm.template_id,
         subject_override: createForm.subject_override || null,
         segment_filter,
+        template_b_id: createForm.template_b_id || null,
+        ab_split_pct: createForm.template_b_id ? createForm.ab_split_pct : 50,
       },
     })
     createModalOpen.value = false
