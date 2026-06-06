@@ -1800,7 +1800,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, computed, reactive, watch, onMounted, onUnmounted } from 'vue'
 import { useHead, useAsyncData } from 'nuxt/app'
 import { $fetch } from 'ofetch'
 import { getDemoReminderHtml, getDemoInvoiceHtml, getDemoWelcomeHtml } from '../utils/demo-email-templates'
@@ -1978,6 +1978,41 @@ const DEFAULT_ACCENT = '#BEA3FF'
 const primaryColor = ref(DEFAULT_PRIMARY)
 const secondaryColor = ref(DEFAULT_SECONDARY)
 const accentColor = ref(DEFAULT_ACCENT)
+
+// ─── Branding persistence (localStorage) ────────────────────────────────────
+const BRAND_STORAGE_KEY = 'simy_brand_preview'
+
+function saveBrandToStorage() {
+  try {
+    const data: Record<string, string> = {
+      primary: primaryColor.value,
+      secondary: secondaryColor.value,
+      accent: accentColor.value,
+    }
+    if (logoPreview.value) data.logo = logoPreview.value
+    localStorage.setItem(BRAND_STORAGE_KEY, JSON.stringify(data))
+  } catch { /* quota exceeded or private browsing — ignore */ }
+}
+
+function restoreBrandFromStorage() {
+  try {
+    const raw = localStorage.getItem(BRAND_STORAGE_KEY)
+    if (!raw) return
+    const data = JSON.parse(raw) as Record<string, string>
+    if (data.primary) primaryColor.value = data.primary
+    if (data.secondary) secondaryColor.value = data.secondary
+    if (data.accent) accentColor.value = data.accent
+    if (data.logo) logoPreview.value = data.logo
+  } catch { /* corrupted data — ignore */ }
+}
+
+let brandSaveTimer: ReturnType<typeof setTimeout> | null = null
+function debouncedSaveBrand() {
+  if (brandSaveTimer) clearTimeout(brandSaveTimer)
+  brandSaveTimer = setTimeout(saveBrandToStorage, 400)
+}
+
+watch([primaryColor, secondaryColor, accentColor], debouncedSaveBrand)
 const showColorPicker = ref(false)
 const navSoftware = [
   { to: '/fahrschule/software', icon: '💻', title: 'Fahrschulsoftware', desc: 'Die komplette All-in-One-Lösung' },
@@ -2066,6 +2101,9 @@ function resetColors() {
   primaryColor.value = DEFAULT_PRIMARY
   secondaryColor.value = DEFAULT_SECONDARY
   accentColor.value = DEFAULT_ACCENT
+  logoPreview.value = null
+  logoToken.value = null
+  try { localStorage.removeItem(BRAND_STORAGE_KEY) } catch { /* ignore */ }
 }
 
 // ─── Logo Preview ─────────────────────────────────────────────────────────────
@@ -2262,6 +2300,11 @@ let popupTimer: ReturnType<typeof setTimeout> | null = null
 let progressTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
+  // Restore branding from previous visit
+  restoreBrandFromStorage()
+  // Watch logo separately here since logoPreview ref is defined later in the script
+  watch(logoPreview, debouncedSaveBrand)
+
   popupTimer = setTimeout(() => {
     if (!showColorPicker.value) {
       showAutoPopup.value = true
