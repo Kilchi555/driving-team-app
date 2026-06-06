@@ -24,6 +24,18 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const destination = url ? decodeURIComponent(url) : 'https://app.simy.ch'
+  // Append cid + lid to destination so landing pages (e.g. Helvetia form) can
+  // attribute conversions back to the correct campaign and lead.
+  let destination = url ? decodeURIComponent(url) : 'https://app.simy.ch'
+  if (cid || lid) {
+    try {
+      const dest = new URL(destination)
+      if (cid) dest.searchParams.set('cid', cid)
+      if (lid) dest.searchParams.set('lid', lid)
+      destination = dest.toString()
+    } catch {
+      // Malformed URL — redirect as-is
+    }
+  }
   return sendRedirect(event, destination, 302)
 })

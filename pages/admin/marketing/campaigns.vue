@@ -79,19 +79,36 @@
                 Template: <span class="font-medium text-gray-700">{{ c.email_templates?.name ?? '—' }}</span>
                 <span v-if="c.subject_override" class="ml-2 text-gray-400">· Betreff-Override: "{{ c.subject_override }}"</span>
               </p>
-              <div v-if="c.status === 'sent'" class="flex flex-wrap gap-4 mt-2">
-                <span class="text-sm text-gray-600"><strong class="text-gray-900">{{ c.total_recipients?.toLocaleString('de-CH') }}</strong> Empfänger</span>
-                <span class="text-sm text-gray-600"><strong class="text-gray-900">{{ c.sent_count?.toLocaleString('de-CH') }}</strong> gesendet</span>
-                <span v-if="c.open_count > 0" class="text-sm text-blue-600">
-                  <strong>{{ c.open_count }}</strong> Öffnungen
-                  <span class="text-gray-400">({{ c.sent_count ? Math.round(c.open_count / c.sent_count * 100) : 0 }}%)</span>
+              <div v-if="c.status === 'sent' || c.status === 'pilot'" class="flex flex-wrap gap-x-4 gap-y-1 mt-2 items-center">
+                <span class="text-sm text-gray-600">
+                  <strong class="text-gray-900">{{ c.sent_count?.toLocaleString('de-CH') ?? 0 }}</strong>
+                  <span class="text-gray-400"> / {{ c.total_recipients?.toLocaleString('de-CH') ?? '?' }} gesendet</span>
                 </span>
-                <span v-if="c.click_count > 0" class="text-sm text-green-600">
-                  <strong>{{ c.click_count }}</strong> Klicks
-                  <span class="text-gray-400">({{ c.sent_count ? Math.round(c.click_count / c.sent_count * 100) : 0 }}%)</span>
+                <!-- Open rate -->
+                <span class="text-sm" :class="c.open_count > 0 ? 'text-blue-600' : 'text-gray-400'">
+                  <strong>{{ c.open_count ?? 0 }}</strong> Öffnungen
+                  <span class="font-semibold ml-0.5">
+                    ({{ c.sent_count ? Math.round((c.open_count ?? 0) / c.sent_count * 100) : 0 }}%)
+                  </span>
                 </span>
-                <span v-if="c.bounce_count > 0" class="text-sm text-red-600"><strong>{{ c.bounce_count }}</strong> Bounces</span>
-                <span v-if="c.unsubscribe_count > 0" class="text-sm text-gray-500"><strong>{{ c.unsubscribe_count }}</strong> Abmeldungen</span>
+                <!-- Click rate -->
+                <span class="text-sm" :class="c.click_count > 0 ? 'text-green-600' : 'text-gray-400'">
+                  <strong>{{ c.click_count ?? 0 }}</strong> Klicks
+                  <span class="font-semibold ml-0.5">
+                    ({{ c.sent_count ? Math.round((c.click_count ?? 0) / c.sent_count * 100) : 0 }}%)
+                  </span>
+                </span>
+                <!-- Conversion rate -->
+                <span v-if="(c.conversion_count ?? 0) > 0 || c.status === 'sent'"
+                  class="text-sm"
+                  :class="(c.conversion_count ?? 0) > 0 ? 'text-purple-600 font-semibold' : 'text-gray-400'">
+                  <strong>{{ c.conversion_count ?? 0 }}</strong> Conversions
+                  <span class="font-semibold ml-0.5">
+                    ({{ c.sent_count ? ((c.conversion_count ?? 0) / c.sent_count * 100).toFixed(1) : 0 }}%)
+                  </span>
+                </span>
+                <span v-if="c.bounce_count > 0" class="text-sm text-red-500"><strong>{{ c.bounce_count }}</strong> Bounces</span>
+                <span v-if="c.unsubscribe_count > 0" class="text-sm text-gray-400"><strong>{{ c.unsubscribe_count }}</strong> Abmeldungen</span>
               </div>
               <div class="flex flex-wrap gap-1 mt-2">
                 <span
