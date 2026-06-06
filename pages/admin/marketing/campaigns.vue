@@ -603,27 +603,40 @@
 
           <!-- Test Email -->
           <div class="border border-gray-200 rounded-xl p-4">
-            <p class="text-sm font-semibold text-gray-700 mb-2">Test-Email senden</p>
-            <div class="flex gap-2">
+            <p class="text-sm font-semibold text-gray-700 mb-3">Test-Email senden</p>
+            <div class="flex flex-col gap-2">
               <input
                 v-model="testEmailAddress"
                 type="email"
                 placeholder="test@example.com"
-                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
               />
               <button
                 @click="sendTestEmail"
                 :disabled="testEmailSending || !testEmailAddress"
-                class="px-3 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                class="w-full py-2.5 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <svg v-if="testEmailSending" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                {{ testEmailSending ? '...' : 'Senden' }}
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                {{ testEmailSending ? 'Wird gesendet…' : 'Test-Email senden' }}
               </button>
             </div>
-            <p v-if="testEmailResult === 'ok'" class="text-xs text-green-600 mt-1.5">✅ {{ testEmailSentCount > 1 ? `${testEmailSentCount} Test-Emails gesendet (alle Varianten)!` : 'Test-Email gesendet!' }}</p>
-            <p v-if="testEmailResult === 'error'" class="text-xs text-red-600 mt-1.5">❌ Fehler beim Senden.</p>
+            <p v-if="testEmailResult === 'ok'" class="text-xs text-green-600 mt-2 flex items-center gap-1.5">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {{ testEmailSentCount > 1 ? `${testEmailSentCount} Test-Emails gesendet (alle Varianten)!` : 'Test-Email gesendet!' }}
+            </p>
+            <p v-if="testEmailResult === 'error'" class="text-xs text-red-600 mt-2 flex items-center gap-1.5">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Fehler beim Senden — bitte versuche es erneut.
+            </p>
           </div>
         </div>
 
