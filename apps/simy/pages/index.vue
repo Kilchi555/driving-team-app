@@ -2043,6 +2043,7 @@ const registerUrl = computed(() => {
     secondary_color: secondaryColor.value,
     accent_color: accentColor.value,
   })
+  if (logoToken.value) params.set('logo_url', logoToken.value)
   return `https://app.simy.ch/tenant-register?${params.toString()}`
 })
 
@@ -2073,6 +2074,8 @@ const logoInputRef = ref<HTMLInputElement | null>(null)
 const logoInputRefSection = ref<HTMLInputElement | null>(null)
 const extractingColors = ref(false)
 const colorsExtracted = ref(false)
+const logoToken = ref<string | null>(null)
+const logoTokenUploading = ref(false)
 
 function rgbToHex(r: number, g: number, b: number): string {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
@@ -2205,6 +2208,7 @@ async function handleLogoUpload(event: Event) {
   try {
     const dataUrl = await convertImageToWebP(file)
     logoPreview.value = dataUrl
+    logoToken.value = null
     extractingColors.value = true
     colorsExtracted.value = false
     const colors = await extractColorsFromLogo(dataUrl)
@@ -2216,6 +2220,18 @@ async function handleLogoUpload(event: Event) {
       colorsExtracted.value = true
       setTimeout(() => { colorsExtracted.value = false }, 3500)
     }
+    // Upload logo to backend in background so URL is ready when user clicks register
+    logoTokenUploading.value = true
+    $fetch<{ token: string; publicUrl: string }>('/api/brand/temp-logo', {
+      method: 'POST',
+      body: { logoData: dataUrl }
+    }).then(res => {
+      logoToken.value = res.publicUrl
+    }).catch(() => {
+      // Silently ignore — user can still register, logo just won't be pre-filled
+    }).finally(() => {
+      logoTokenUploading.value = false
+    })
   } catch {
     alert('Dieses Bildformat wird leider nicht unterstützt. Bitte laden Sie Ihr Logo als PNG, JPG oder WebP hoch.')
   }
@@ -2223,6 +2239,7 @@ async function handleLogoUpload(event: Event) {
 
 function removeLogo() {
   logoPreview.value = null
+  logoToken.value = null
   if (logoInputRef.value) logoInputRef.value.value = ''
 }
 

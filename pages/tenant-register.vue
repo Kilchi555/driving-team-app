@@ -2121,13 +2121,25 @@ onMounted(async () => {
 
   // Pre-populate logo from sessionStorage — read AFTER loadFromStorage so it takes
   // precedence over any stale null value from a previous registration attempt.
-  // Never read from URL params (end up in browser history / referrer headers).
   const savedLogo = sessionStorage.getItem('simy_preview_logo')
   if (savedLogo) {
     logoPreview.value = savedLogo
     logoFile.value = base64ToFile(savedLogo, `logo-${Date.now()}.webp`)
     sessionStorage.removeItem('simy_preview_logo')
   }
+
+  // Pre-populate logo from temp storage URL (passed from simy.ch marketing preview)
+  if (!logoPreview.value && q.logo_url && typeof q.logo_url === 'string') {
+    try {
+      logoPreview.value = q.logo_url
+      const res = await fetch(q.logo_url)
+      const blob = await res.blob()
+      logoFile.value = new File([blob], `logo-${Date.now()}.webp`, { type: 'image/webp' })
+    } catch {
+      logoPreview.value = null
+    }
+  }
+
   if (adminSameAsCompany.value) applyAdminFromCompany()
   // Pre-load categories if already past step 0
   if (currentStep.value >= 1) await loadTemplateCategories()
