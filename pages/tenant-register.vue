@@ -162,14 +162,6 @@
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                   E-Mail ist verfügbar
                 </p>
-                <p v-if="emailCheck === 'checking'" class="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                  <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                  Wird geprüft…
-                </p>
-                <p v-else-if="emailCheck === 'available'" class="text-xs text-green-600 mt-1 flex items-center gap-1">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                  E-Mail ist verfügbar
-                </p>
                 <p v-else-if="emailCheck === 'taken'" class="text-xs text-red-500 mt-1 flex items-center gap-1">
                   <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
                   Diese E-Mail ist bereits registriert —
