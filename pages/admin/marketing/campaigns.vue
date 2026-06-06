@@ -76,7 +76,7 @@
                 </span>
               </div>
               <p class="text-sm text-gray-500 mt-1">
-                Template: <span class="font-medium text-gray-700">{{ c.email_templates?.name ?? '—' }}</span>
+                Template: <span class="font-medium text-gray-700">{{ c.email_template?.name ?? '—' }}</span>
                 <span v-if="c.subject_override" class="ml-2 text-gray-400">· Betreff-Override: "{{ c.subject_override }}"</span>
               </p>
               <div v-if="c.status === 'sent' || c.status === 'pilot'" class="mt-2">
@@ -678,8 +678,8 @@ async function loadData() {
   loading.value = true
   try {
     const [c, t, cats] = await Promise.all([
-      $fetch<any>('/api/marketing/campaigns', { query: { tenantId } }),
-      $fetch<any>('/api/marketing/templates', { query: { tenantId } }),
+      $fetch<any>('/api/marketing/campaigns', { query: { tenantId } }).catch(() => ({ campaigns: [] })),
+      $fetch<any>('/api/marketing/templates', { query: { tenantId } }).catch(() => ({ templates: [] })),
       $fetch<any>('/api/marketing/lead-categories', { query: { tenantId } }).catch(() => ({ categories: [] })),
     ])
     drivingCategories.value = (cats?.categories || [])
