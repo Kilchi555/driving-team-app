@@ -74,19 +74,28 @@ export default defineEventHandler(async (event) => {
     .eq('tenant_id', tenantId)
     .neq('status', 'unsubscribed')
 
-  // Check total available categories across all three sources
+  // Check total available categories across all three sources using distinct codes
   // Only apply filter if it's a real subset — not "select all"
   let effectiveCategories: string[] = []
   if (filter.categories?.length) {
-    const [{ count: c1 }, { count: c2 }, { count: c3 }] = await Promise.all([
-      supabase.from('categories').select('code', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('is_active', true),
-      supabase.from('course_categories').select('code', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('is_active', true),
-      supabase.from('lead_categories').select('code', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('is_active', true),
+    const [res1, res2, res3] = await Promise.all([
+      supabase.from('categories').select('code').eq('tenant_id', tenantId).eq('is_active', true),
+      supabase.from('course_categories').select('code').eq('tenant_id', tenantId).eq('is_active', true),
+      supabase.from('lead_categories').select('code').eq('tenant_id', tenantId).eq('is_active', true),
     ])
-    const totalCats = (c1 ?? 0) + (c2 ?? 0) + (c3 ?? 0)
+    const allDistinctCodes = new Set([
+      ...(res1.data || []).map((r: any) => r.code),
+      ...(res2.data || []).map((r: any) => r.code),
+      ...(res3.data || []).map((r: any) => r.code),
+    ])
+    const totalDistinctCats = allDistinctCodes.size
     // Apply filter only if it's a genuine subset (not selecting all available categories)
-    if (totalCats > 0 && filter.categories.length < totalCats) {
-      effectiveCategories = filter.categories
+    if (totalDistinctCats > 0 && filter.categories.length < totalDistinctCats) {
+      // Include both original and lowercase variants to handle case mismatches in stored data
+      effectiveCategories = [...new Set([
+        ...filter.categories,
+        ...filter.categories.map((c: string) => c.toLowerCase()),
+      ])]
     }
   }
 
