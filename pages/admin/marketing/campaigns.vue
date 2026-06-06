@@ -76,7 +76,12 @@
                 </span>
               </div>
               <p class="text-sm text-gray-500 mt-1">
-                Template: <span class="font-medium text-gray-700">{{ c.email_template?.name ?? '—' }}</span>
+                <template v-if="c.variants?.length > 1">
+                  <span class="font-medium text-purple-700">{{ c.variants.length }} Varianten</span>
+                </template>
+                <template v-else>
+                  Template: <span class="font-medium text-gray-700">{{ c.email_template?.name ?? '—' }}</span>
+                </template>
                 <span v-if="c.subject_override" class="ml-2 text-gray-400">· Betreff-Override: "{{ c.subject_override }}"</span>
               </p>
               <div v-if="c.status === 'sent' || c.status === 'pilot'" class="mt-2">
@@ -90,8 +95,8 @@
                   <span v-if="c.unsubscribe_count > 0" class="text-sm text-gray-400"><strong>{{ c.unsubscribe_count }}</strong> Abmeldungen</span>
                 </div>
 
-                <!-- No A/B: simple metrics row -->
-                <template v-if="!c.template_b_id">
+                <!-- Single variant: simple metrics -->
+                <template v-if="!c.variants || c.variants.length <= 1">
                   <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1 items-center">
                     <span class="text-sm" :class="c.open_count > 0 ? 'text-blue-600' : 'text-gray-400'">
                       <strong>{{ c.open_count ?? 0 }}</strong> Öffnungen
@@ -101,29 +106,25 @@
                       <strong>{{ c.click_count ?? 0 }}</strong> Klicks
                       ({{ c.sent_count ? Math.round((c.click_count ?? 0) / c.sent_count * 100) : 0 }}%)
                     </span>
-                    <span class="text-sm" :class="(c.conversion_count ?? 0) > 0 ? 'text-purple-600 font-semibold' : 'text-gray-400'">
-                      <strong>{{ c.conversion_count ?? 0 }}</strong> Conversions
-                      ({{ c.sent_count ? ((c.conversion_count ?? 0) / c.sent_count * 100).toFixed(1) : 0 }}%)
-                    </span>
                   </div>
                 </template>
 
-                <!-- A/B: side-by-side comparison -->
+                <!-- Multi-variant: grid comparison -->
                 <template v-else>
-                  <div class="mt-2 grid grid-cols-2 gap-2">
-                    <!-- Variant A -->
-                    <div class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs space-y-0.5">
-                      <div class="font-semibold text-blue-700 mb-1">Variante A · {{ c.ab_split_pct ?? 50 }}%</div>
-                      <div class="text-blue-600">Öffnungen: <strong>{{ c.open_count ?? 0 }}</strong></div>
-                      <div class="text-green-600">Klicks: <strong>{{ c.click_count ?? 0 }}</strong></div>
-                      <div class="text-purple-600">Conversions: <strong>{{ c.conversion_count ?? 0 }}</strong></div>
-                    </div>
-                    <!-- Variant B -->
-                    <div class="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs space-y-0.5">
-                      <div class="font-semibold text-orange-700 mb-1">Variante B · {{ 100 - (c.ab_split_pct ?? 50) }}%</div>
-                      <div class="text-blue-600">Öffnungen: <strong>{{ c.open_count_b ?? 0 }}</strong></div>
-                      <div class="text-green-600">Klicks: <strong>{{ c.click_count_b ?? 0 }}</strong></div>
-                      <div class="text-purple-600">Conversions: <strong>{{ c.conversion_count_b ?? 0 }}</strong></div>
+                  <div class="mt-2 grid gap-2" :class="c.variants.length === 2 ? 'grid-cols-2' : c.variants.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'">
+                    <div
+                      v-for="v in (c.variants || []).slice().sort((a,b) => a.label.localeCompare(b.label))"
+                      :key="v.label"
+                      class="rounded-lg border px-3 py-2 text-xs space-y-0.5"
+                      :class="variantCardClass(v.label)"
+                    >
+                      <div class="font-semibold mb-1" :class="variantLabelClass(v.label)">
+                        Variante {{ v.label.toUpperCase() }} · {{ v.split_pct }}%
+                        <div class="font-normal text-gray-500 truncate mt-0.5">{{ v.email_template?.name ?? '—' }}</div>
+                        <div v-if="v.subject_override" class="font-normal text-gray-400 truncate italic">"{{ v.subject_override }}"</div>
+                      </div>
+                      <div class="text-blue-600">Öffn.: <strong>{{ v.open_count ?? 0 }}</strong> ({{ v.sent_count ? Math.round((v.open_count ?? 0) / v.sent_count * 100) : 0 }}%)</div>
+                      <div class="text-green-600">Klicks: <strong>{{ v.click_count ?? 0 }}</strong> ({{ v.sent_count ? Math.round((v.click_count ?? 0) / v.sent_count * 100) : 0 }}%)</div>
                     </div>
                   </div>
                 </template>
@@ -196,57 +197,100 @@
             <input v-model="createForm.name" type="text" placeholder="z.B. Motorrad-Saison 2026" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2" />
           </div>
 
+          <!-- Variants (A/B/C/D/E testing) -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email-Template <span class="text-red-500">*</span></label>
-            <select v-model="createForm.template_id" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2">
-              <option value="">Template auswählen...</option>
-              <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
-            </select>
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-sm font-medium text-gray-700">
+                Email-Varianten <span class="text-red-500">*</span>
+                <span v-if="createForm.variants.length > 1" class="ml-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                  {{ createForm.variants.length }} Varianten aktiv
+                </span>
+              </label>
+              <div class="flex items-center gap-2">
+                <button
+                  v-if="createForm.variants.length > 1"
+                  type="button"
+                  @click="autoDistribute"
+                  class="text-xs text-gray-500 hover:text-gray-700 underline"
+                >gleichmässig verteilen</button>
+                <button
+                  v-if="createForm.variants.length < 5"
+                  type="button"
+                  @click="addVariant"
+                  class="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border"
+                  :style="{ color: primaryColor, borderColor: primaryColor + '50' }"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Variante
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <div
+                v-for="(variant, idx) in createForm.variants"
+                :key="variant.label"
+                class="rounded-xl border p-3 space-y-2"
+                :class="variantCardClass(variant.label)"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold px-2 py-0.5 rounded-full" :class="variantBadgeClass(variant.label)">
+                    Variante {{ variant.label.toUpperCase() }}
+                  </span>
+                  <button
+                    v-if="createForm.variants.length > 1"
+                    type="button"
+                    @click="removeVariant(idx)"
+                    class="text-gray-400 hover:text-red-500 transition"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <select
+                  v-model="variant.templateId"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 bg-white"
+                >
+                  <option value="">Template auswählen...</option>
+                  <option
+                    v-for="t in templates"
+                    :key="t.id"
+                    :value="t.id"
+                  >{{ t.name }}</option>
+                </select>
+                <input
+                  v-model="variant.subjectOverride"
+                  type="text"
+                  placeholder="Betreff für diese Variante (leer = aus Template)"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 bg-white"
+                />
+                <div v-if="createForm.variants.length > 1">
+                  <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
+                    <span>Anteil</span>
+                    <span class="font-semibold" :class="variantLabelClass(variant.label)">{{ variant.splitPct }}%</span>
+                  </div>
+                  <input
+                    v-model.number="variant.splitPct"
+                    type="range" min="5" max="90" step="5"
+                    class="w-full"
+                    :style="{ accentColor: variantAccentColor(variant.label) }"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Split warning -->
+            <p v-if="createForm.variants.length > 1 && variantSplitTotal !== 100" class="mt-1.5 text-xs text-red-600 font-medium">
+              ⚠ Summe der Anteile: {{ variantSplitTotal }}% (muss 100% ergeben)
+            </p>
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Betreff-Override <span class="text-gray-400 font-normal">(optional)</span></label>
             <input v-model="createForm.subject_override" type="text" placeholder="Leer = Betreff aus Template verwenden" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2" />
-          </div>
-
-          <!-- A/B Test -->
-          <div class="border border-gray-200 rounded-xl overflow-hidden">
-            <button
-              type="button"
-              @click="createForm.showAB = !createForm.showAB"
-              class="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition text-sm font-medium text-gray-700"
-            >
-              <span class="flex items-center gap-2">
-                <span class="text-base">🧪</span>
-                A/B Test
-                <span class="text-gray-400 font-normal">(optional)</span>
-                <span v-if="createForm.template_b_id" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Aktiv</span>
-              </span>
-              <svg class="w-4 h-4 text-gray-400 transition-transform" :class="createForm.showAB ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            <div v-if="createForm.showAB" class="p-4 space-y-4 bg-white">
-              <p class="text-xs text-gray-500">Wähle eine zweite Vorlage (Variante B). Die Leads werden nach dem Split-Verhältnis aufgeteilt — Variante A bekommt die erste Template, Variante B die zweite.</p>
-              <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Variante B — Template</label>
-                <select v-model="createForm.template_b_id" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2">
-                  <option value="">— Kein A/B Test —</option>
-                  <option v-for="t in templates" :key="t.id" :value="t.id" :disabled="t.id === createForm.template_id">{{ t.name }}</option>
-                </select>
-              </div>
-              <div v-if="createForm.template_b_id">
-                <label class="block text-xs font-medium text-gray-600 mb-1">Split: {{ createForm.ab_split_pct }}% A / {{ 100 - createForm.ab_split_pct }}% B</label>
-                <input
-                  v-model.number="createForm.ab_split_pct"
-                  type="range" min="10" max="90" step="5"
-                  class="w-full accent-purple-600"
-                />
-                <div class="flex justify-between text-xs text-gray-400 mt-1">
-                  <span>10% A</span><span>50/50</span><span>90% A</span>
-                </div>
-              </div>
-            </div>
           </div>
 
           <div>
@@ -382,7 +426,8 @@
             :style="{ background: `${primaryColor}10` }">
             <span :style="{ color: primaryColor }">
               Geschätzte Empfänger: <strong>{{ estimatedCount.toLocaleString('de-CH') }}</strong> Leads
-              <span v-if="createForm.categories.length"> in den Kategorien {{ createForm.categories.map(v => drivingCategories.find(d => d.value === v)?.label || v).join(', ') }}</span>
+              <span v-if="createForm.categories.length && createForm.categories.length < drivingCategories.length"> in den Kategorien {{ createForm.categories.map(v => drivingCategories.find(d => d.value === v)?.label || v).join(', ') }}</span>
+              <span v-else-if="!createForm.categories.length || createForm.categories.length === drivingCategories.length"> (alle aktiven Leads)</span>
             </span>
           </div>
         </div>
@@ -393,7 +438,7 @@
           </button>
           <button
             @click="createCampaign"
-            :disabled="saving || !createForm.name || !createForm.template_id"
+            :disabled="saving || !createForm.name || !createForm.variants.every(v => v.templateId) || (createForm.variants.length > 1 && variantSplitTotal !== 100)"
             class="px-4 py-2 text-sm text-white rounded-lg hover:opacity-90 disabled:opacity-50"
             :style="{ background: primaryColor }"
           >
@@ -481,6 +526,25 @@
               + {{ recipientsTotal - recipients.length }} weitere Empfänger (nur erste 50 angezeigt)
             </div>
           </div>
+
+          <!-- Variant distribution preview -->
+          <div
+            v-if="sendConfirmCampaign?.variants?.length > 1"
+            class="mt-3 flex flex-wrap gap-2"
+          >
+            <div
+              v-for="v in sendConfirmCampaign.variants.slice().sort((a,b) => a.label.localeCompare(b.label))"
+              :key="v.label"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+              :class="variantCardClass(v.label)"
+            >
+              <span class="font-bold" :class="variantLabelClass(v.label)">{{ v.label.toUpperCase() }}</span>
+              <span class="text-gray-600">
+                ~{{ Math.round(effectiveSendCount * (v.split_pct / 100)).toLocaleString('de-CH') }} Leads
+              </span>
+              <span class="text-gray-400">({{ v.split_pct }}%)</span>
+            </div>
+          </div>
         </div>
 
         <!-- Daily limit + Test email section -->
@@ -520,22 +584,20 @@
           <!-- Tagesrate (nur bei "Alle senden") -->
           <div v-if="!pilotMode" class="bg-blue-50 border border-blue-200 rounded-xl p-4">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-semibold text-blue-900">Tagesrate (Spam-Schutz)</span>
+              <span class="text-sm font-semibold text-blue-900">Tagesrate</span>
               <span class="text-xs text-blue-600 font-medium">
-                {{ dailyLimit > 0 && recipientsTotal > dailyLimit
-                  ? `ca. ${Math.ceil(recipientsTotal / dailyLimit)} Tage`
+                {{ recipientsTotal > dailyLimit
+                  ? `ca. ${Math.ceil(effectiveSendCount / dailyLimit)} Tage`
                   : 'Alles heute' }}
               </span>
             </div>
             <select v-model="dailyLimit" class="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm bg-white focus:outline-none">
               <option :value="100">100 / Tag</option>
               <option :value="250">250 / Tag</option>
-              <option :value="500">500 / Tag (empfohlen)</option>
-              <option :value="1000">1000 / Tag</option>
-              <option :value="0">Keine Begrenzung (alle sofort)</option>
+              <option :value="500">500 / Tag (Maximum)</option>
             </select>
             <p v-if="dailyLimit > 0 && recipientsTotal > dailyLimit" class="text-xs text-blue-600 mt-2">
-              {{ dailyLimit }} heute, {{ dailyLimit }} morgen, usw. — wird automatisch auf Folgetage verteilt.
+              Max. {{ dailyLimit }}/Tag — wird automatisch auf {{ Math.ceil(effectiveSendCount / dailyLimit) }} Tage verteilt.
             </p>
           </div>
 
@@ -560,7 +622,7 @@
                 {{ testEmailSending ? '...' : 'Senden' }}
               </button>
             </div>
-            <p v-if="testEmailResult === 'ok'" class="text-xs text-green-600 mt-1.5">✅ {{ testEmailSentCount > 1 ? `${testEmailSentCount} Test-Emails gesendet (Variante A + B)!` : 'Test-Email gesendet!' }}</p>
+            <p v-if="testEmailResult === 'ok'" class="text-xs text-green-600 mt-1.5">✅ {{ testEmailSentCount > 1 ? `${testEmailSentCount} Test-Emails gesendet (alle Varianten)!` : 'Test-Email gesendet!' }}</p>
             <p v-if="testEmailResult === 'error'" class="text-xs text-red-600 mt-1.5">❌ Fehler beim Senden.</p>
           </div>
         </div>
@@ -578,6 +640,14 @@
               </span>
             </template>
           </p>
+          <div v-if="sendResult.variants?.length > 1" class="mt-2 flex flex-wrap gap-1.5">
+            <span
+              v-for="v in sendResult.variants"
+              :key="v.label"
+              class="text-xs font-medium px-2 py-0.5 rounded-full"
+              :class="variantBadgeClass(v.label)"
+            >{{ v.label.toUpperCase() }}: {{ v.count }} Leads</span>
+          </div>
         </div>
 
         <div class="flex justify-end gap-2 p-6 border-t">
@@ -625,16 +695,35 @@ const loading = ref(true)
 const createModalOpen = ref(false)
 const quickCreateDiscountOpen = ref(false)
 const saving = ref(false)
+const VARIANT_LABELS = ['a', 'b', 'c', 'd', 'e'] as const
+const VARIANT_COLORS = {
+  a: { card: 'border-blue-200 bg-blue-50', label: 'text-blue-700', badge: 'bg-blue-100 text-blue-700', accent: '#2563eb' },
+  b: { card: 'border-orange-200 bg-orange-50', label: 'text-orange-700', badge: 'bg-orange-100 text-orange-700', accent: '#f97316' },
+  c: { card: 'border-green-200 bg-green-50', label: 'text-green-700', badge: 'bg-green-100 text-green-700', accent: '#16a34a' },
+  d: { card: 'border-purple-200 bg-purple-50', label: 'text-purple-700', badge: 'bg-purple-100 text-purple-700', accent: '#9333ea' },
+  e: { card: 'border-rose-200 bg-rose-50', label: 'text-rose-700', badge: 'bg-rose-100 text-rose-700', accent: '#e11d48' },
+} as Record<string, { card: string; label: string; badge: string; accent: string }>
+
+function variantCardClass(label: string) { return VARIANT_COLORS[label]?.card ?? 'border-gray-200 bg-gray-50' }
+function variantLabelClass(label: string) { return VARIANT_COLORS[label]?.label ?? 'text-gray-700' }
+function variantBadgeClass(label: string) { return VARIANT_COLORS[label]?.badge ?? 'bg-gray-100 text-gray-700' }
+function variantAccentColor(label: string) { return VARIANT_COLORS[label]?.accent ?? '#1e293b' }
+
 const createForm = reactive({
   name: '',
-  template_id: '',
   subject_override: '',
   categories: [] as string[],
   showDiscount: false,
   discount_code: '',
-  showAB: false,
-  template_b_id: '',
-  ab_split_pct: 50,
+  variants: [{ label: 'a', templateId: '', splitPct: 100, subjectOverride: '' }] as { label: string; templateId: string; splitPct: number; subjectOverride: string }[],
+})
+
+const variantSplitTotal = computed(() => createForm.variants.reduce((s, v) => s + (v.splitPct ?? 0), 0))
+
+// How many leads will actually be sent to (pilot limit or total)
+const effectiveSendCount = computed(() => {
+  if (pilotMode.value && pilotLimit.value > 0) return Math.min(pilotLimit.value, recipientsTotal.value)
+  return recipientsTotal.value
 })
 
 const sendConfirmCampaign = ref<any>(null)
@@ -714,25 +803,26 @@ async function loadEstimatedCount() {
   if (!tenantId) return
   try {
     const cats = createForm.categories
-    const statusFilter = 'not_unsubscribed'
-    if (cats.length === 0) {
+    // "All categories selected" is equivalent to no filter
+    const isAll = cats.length === 0 || cats.length === drivingCategories.value.length
+    if (isAll) {
       const res = await $fetch<any>('/api/marketing/leads', {
-        query: { tenantId, status: statusFilter, limit: 1 },
+        query: { tenantId, status: 'not_unsubscribed', limit: 1 },
       })
       estimatedCount.value = res.total
     } else if (cats.length === 1) {
       const res = await $fetch<any>('/api/marketing/leads', {
-        query: { tenantId, status: statusFilter, category: cats[0], limit: 1 },
+        query: { tenantId, status: 'not_unsubscribed', category: cats[0], limit: 1 },
       })
       estimatedCount.value = res.total
     } else {
       // Multiple categories — fetch all and count client-side
       const res = await $fetch<any>('/api/marketing/leads', {
-        query: { tenantId, status: statusFilter, limit: 10000 },
+        query: { tenantId, status: 'not_unsubscribed', limit: 10000 },
       })
       const all: any[] = res.leads ?? []
       estimatedCount.value = all.filter((l: any) =>
-        cats.some((c: string) => l.categories?.includes(c))
+        cats.some((c: string) => Array.isArray(l.categories) ? l.categories.includes(c) : false)
       ).length
     }
   } catch {
@@ -742,18 +832,39 @@ async function loadEstimatedCount() {
 
 function openCreate() {
   createForm.name = ''
-  createForm.template_id = ''
   createForm.subject_override = ''
   createForm.categories = []
   createForm.showDiscount = false
   createForm.discount_code = ''
-  createForm.showAB = false
-  createForm.template_b_id = ''
-  createForm.ab_split_pct = 50
+  createForm.variants = [{ label: 'a', templateId: '', splitPct: 100, subjectOverride: '' }]
   estimatedCount.value = null
   createModalOpen.value = true
   loadEstimatedCount()
   loadDiscounts()
+}
+
+function addVariant() {
+  if (createForm.variants.length >= 5) return
+  const label = VARIANT_LABELS[createForm.variants.length]
+  createForm.variants.push({ label, templateId: '', splitPct: 0, subjectOverride: '' })
+  autoDistribute()
+}
+
+function removeVariant(idx: number) {
+  createForm.variants.splice(idx, 1)
+  // Re-label remaining variants
+  createForm.variants.forEach((v, i) => { v.label = VARIANT_LABELS[i] })
+  autoDistribute()
+}
+
+function autoDistribute() {
+  const count = createForm.variants.length
+  if (count === 0) return
+  const base = Math.floor(100 / count)
+  const remainder = 100 - base * count
+  createForm.variants.forEach((v, i) => {
+    v.splitPct = base + (i === count - 1 ? remainder : 0)
+  })
 }
 
 watch(() => createForm.categories, loadEstimatedCount, { deep: true })
@@ -761,11 +872,14 @@ watch(() => createForm.categories, loadEstimatedCount, { deep: true })
 async function createCampaign() {
   const tenantId = authStore.userProfile?.tenant_id
   const userId = authStore.userProfile?.id
-  if (!tenantId || !createForm.name || !createForm.template_id) return
+  if (!tenantId || !createForm.name) return
+  if (!createForm.variants.every(v => v.templateId)) return
+  if (createForm.variants.length > 1 && variantSplitTotal.value !== 100) return
   saving.value = true
   try {
     const segment_filter: Record<string, any> = {}
-    if (createForm.categories.length) segment_filter.categories = createForm.categories
+    const isAllCategories = createForm.categories.length === 0 || createForm.categories.length === drivingCategories.value.length
+    if (createForm.categories.length && !isAllCategories) segment_filter.categories = createForm.categories
     if (createForm.discount_code) segment_filter.discount_code = createForm.discount_code
 
     await $fetch('/api/marketing/campaigns', {
@@ -774,11 +888,14 @@ async function createCampaign() {
         tenantId,
         createdBy: userId,
         name: createForm.name,
-        template_id: createForm.template_id,
         subject_override: createForm.subject_override || null,
         segment_filter,
-        template_b_id: createForm.template_b_id || null,
-        ab_split_pct: createForm.template_b_id ? createForm.ab_split_pct : 50,
+        variants: createForm.variants.map(v => ({
+          label: v.label,
+          templateId: v.templateId,
+          splitPct: createForm.variants.length === 1 ? 100 : v.splitPct,
+          subjectOverride: v.subjectOverride || null,
+        })),
       },
     })
     createModalOpen.value = false
@@ -795,15 +912,18 @@ async function duplicateCampaign(campaign: any) {
   duplicatingId.value = campaign.id
   try {
     const now = new Date().toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const variants = campaign.variants?.length > 0
+      ? campaign.variants.map((v: any) => ({ label: v.label, templateId: v.template_id, splitPct: v.split_pct, subjectOverride: v.subject_override || null }))
+      : [{ label: 'a', templateId: campaign.template_id, splitPct: 100, subjectOverride: null }]
     await $fetch('/api/marketing/campaigns', {
       method: 'POST',
       body: {
         tenantId,
         createdBy: userId,
         name: `${campaign.name} (Kopie ${now})`,
-        template_id: campaign.template_id,
         subject_override: campaign.subject_override || null,
         segment_filter: campaign.segment_filter || {},
+        variants,
       },
     })
     await loadData()
@@ -847,18 +967,21 @@ async function openSendConfirm(campaign: any) {
   try {
     const tenantId = authStore.userProfile?.tenant_id
     const filter = campaign.segment_filter || {}
+    const cats: string[] = filter.categories || []
+    // If all categories are stored (legacy "select all"), treat as no filter
+    const effectiveCats = cats.length > 0 && cats.length < drivingCategories.value.length ? cats : []
+
     const res = await $fetch<any>('/api/marketing/leads', {
       query: {
         tenantId,
-        status: 'active',
-        category: filter.categories?.[0] || undefined,
+        status: 'not_unsubscribed',
+        category: effectiveCats.length === 1 ? effectiveCats[0] : undefined,
         limit: 50,
       },
     })
-    const cats: string[] = filter.categories || []
     const all: any[] = res.leads ?? []
-    recipients.value = cats.length
-      ? all.filter((l: any) => cats.some((c: string) => l.categories?.includes(c)))
+    recipients.value = effectiveCats.length > 1
+      ? all.filter((l: any) => effectiveCats.some((c: string) => Array.isArray(l.categories) && l.categories.includes(c)))
       : all
     recipientsTotal.value = res.total ?? recipients.value.length
   } catch {
