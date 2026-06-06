@@ -59,6 +59,7 @@ export default defineEventHandler(async (event) => {
     const wrappedHtml = wrapMarketingEmail(
       renderedHtml, tenantName, unsubscribeLink, primaryColor,
       tenant?.logo_wide_url || null, tenant?.logo_square_url || null,
+      null, tenantId,
     )
 
     const result = await sendEmail({
