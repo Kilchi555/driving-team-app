@@ -162,10 +162,22 @@
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                   E-Mail ist verfügbar
                 </p>
+                <p v-if="emailCheck === 'checking'" class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                  <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                  Wird geprüft…
+                </p>
+                <p v-else-if="emailCheck === 'available'" class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                  E-Mail ist verfügbar
+                </p>
                 <p v-else-if="emailCheck === 'taken'" class="text-xs text-red-500 mt-1 flex items-center gap-1">
                   <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
                   Diese E-Mail ist bereits registriert —
                   <a href="/login" class="underline font-medium">Einloggen</a>
+                </p>
+                <p v-else-if="emailCheck === 'error'" class="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/></svg>
+                  Prüfung nicht möglich — du kannst trotzdem fortfahren
                 </p>
               </div>
             </div>
@@ -811,6 +823,10 @@
               <p v-else-if="emailCheck === 'available'" class="text-xs text-green-600 mt-1 flex items-center gap-1">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                 E-Mail ist verfügbar
+              </p>
+              <p v-else-if="emailCheck === 'error'" class="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/></svg>
+                Prüfung nicht möglich — du kannst trotzdem fortfahren
               </p>
             </div>
             <div>
@@ -1674,7 +1690,7 @@ const canProceed = computed(() => {
                 formData.value.contact_email && formData.value.contact_phone &&
                 formData.value.street && formData.value.streetNr && formData.value.zip && formData.value.city) &&
              slugCheck.value !== 'taken' && slugCheck.value !== 'checking' &&
-             emailCheck.value === 'available' &&
+             (emailCheck.value === 'available' || emailCheck.value === 'error') &&
              !!adminEmailEarly.value && adminEmailEarly.value.includes('@')
     case 1: {
       if (selectedCategoryIds.value.size === 0) return false
@@ -1696,7 +1712,7 @@ const canProceed = computed(() => {
                 adminForm.value.email && adminForm.value.password &&
                 adminForm.value.passwordConfirm && passwordValid.value &&
                 !passwordMismatch.value && hibpStatus.value !== 'pwned' && hibpStatus.value !== 'checking' &&
-                emailCheck.value === 'available')
+                (emailCheck.value === 'available' || emailCheck.value === 'error'))
     case 6: {
       return staffList.value.every(s => s.first_name.trim() && s.phone.trim())
     }
