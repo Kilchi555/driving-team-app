@@ -7,12 +7,12 @@
             <h1 class="text-2xl font-bold text-gray-900">Marketing</h1>
             <p class="text-sm text-gray-500 mt-0.5">Email-Kampagnen, Leads-Datenbank und Templates</p>
           </div>
-          <div class="flex flex-wrap gap-2">
+          <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
             <NuxtLink
               v-for="action in quickActions"
               :key="action.href"
               :to="action.href"
-              class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-400 hover:shadow-sm transition-all"
+              class="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-gray-400 hover:shadow-sm transition-all"
             >
               <div class="w-6 h-6 rounded flex items-center justify-center shrink-0" :class="action.iconBg">
                 <svg class="w-3.5 h-3.5" :class="action.iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -24,7 +24,7 @@
             <!-- AI Suggestions -->
             <NuxtLink
               to="/admin/marketing/ai"
-              class="flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-all shadow-sm"
+              class="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-xl text-sm font-medium hover:opacity-90 transition-all shadow-sm"
               :style="{ background: primaryColor }"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
