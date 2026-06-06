@@ -23,10 +23,9 @@ const SIMY_IBAN = 'CH2706300508265621908'
 const PARTNER_EMAIL_HELVETIA = 'michele.cecio@helvetia.ch'
 const SIMY_CC_EMAIL = 'info@simy.ch'
 
-// In development, all emails are redirected to this address instead of real recipients
-const DEV_OVERRIDE_EMAIL = process.env.NODE_ENV !== 'production'
-  ? 'pascal_kilchenmann@icloud.com'
-  : null
+// In development (or when FORCE_EMAIL_OVERRIDE is set), all emails go here instead of real recipients
+const DEV_OVERRIDE_EMAIL = process.env.FORCE_EMAIL_OVERRIDE
+  || (process.env.NODE_ENV !== 'production' ? 'pascal_kilchenmann@icloud.com' : null)
 
 const NATIONALITY_LABELS: Record<string, string> = {
   CH: 'Schweiz', DE: 'Deutschland', AT: 'Österreich', IT: 'Italien', FR: 'Frankreich',
