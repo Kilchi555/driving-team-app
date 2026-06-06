@@ -2,7 +2,16 @@
   <div class="min-h-screen bg-white font-sans" :style="brandCssVars">
 
     <!-- ── Nav ──────────────────────────────────────────────────────────────── -->
-    <SimyNav :logo-src="logoPreview" />
+    <SimyNav
+      :logo-src="logoPreview"
+      :scroll-links="[
+        { label: 'Demo',     href: '#branding-preview', icon: '🎨' },
+        { label: 'Features', href: '#features',         icon: '⚡' },
+        { label: 'Rechner',  href: '#rechner',          icon: '📊' },
+        { label: 'Preise',   href: '#preise',           icon: '💶' },
+        { label: 'FAQ',      href: '#faq',              icon: '❓' },
+      ]"
+    />
 
     <!-- ── Hero ─────────────────────────────────────────────────────────────── -->
     <section class="relative overflow-hidden pt-12 pb-20 px-6">
@@ -565,7 +574,7 @@
     </section>
 
     <!-- ── ROI Calculator ─────────────────────────────────────────────────────── -->
-    <section class="py-20 px-6" :style="{ background: `linear-gradient(180deg, rgba(var(--brand-rgb), 0.05) 0%, #FFFFFF 100%)` }">
+    <section id="rechner" class="py-20 px-6" :style="{ background: `linear-gradient(180deg, rgba(var(--brand-rgb), 0.05) 0%, #FFFFFF 100%)` }">
       <div class="max-w-3xl mx-auto">
         <div class="text-center mb-10">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Dein ROI</p>
@@ -1426,7 +1435,7 @@
     </section>
 
     <!-- ── FAQ ───────────────────────────────────────────────────────────────── -->
-    <section class="py-20 px-6" :style="{ background: `rgba(var(--brand-rgb), 0.04)` }">
+    <section id="faq" class="py-20 px-6" :style="{ background: `rgba(var(--brand-rgb), 0.04)` }">
       <div class="max-w-3xl mx-auto">
         <div class="text-center mb-12">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">FAQ</p>

@@ -1,5 +1,7 @@
 <template>
   <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
+
+    <!-- ── Main bar ─────────────────────────────────────────────────────────── -->
     <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
 
       <!-- Logo -->
@@ -84,6 +86,21 @@
 
         <a href="/preise" class="px-3 py-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all">Preise</a>
         <a href="/kunden" class="px-3 py-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all">Kunden</a>
+
+        <!-- Inline scroll-links on desktop (only when provided) -->
+        <template v-if="scrollLinks?.length">
+          <span class="w-px h-4 bg-gray-200 mx-1" />
+          <a
+            v-for="link in scrollLinks"
+            :key="link.href"
+            :href="link.href"
+            class="px-3 py-2 rounded-lg font-semibold transition-all"
+            :class="activeSection === link.href.slice(1)
+              ? 'text-purple-700 bg-purple-50'
+              : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'"
+            @click.prevent="scrollTo(link.href)"
+          >{{ link.label }}</a>
+        </template>
       </div>
 
       <!-- CTAs -->
@@ -106,7 +123,29 @@
       </div>
     </div>
 
-    <!-- Mobile menu -->
+    <!-- ── Scroll-link pill bar (mobile + tablet, only when links provided) ── -->
+    <div
+      v-if="scrollLinks?.length"
+      class="md:hidden border-t border-gray-100 bg-white/95 overflow-x-auto no-scrollbar"
+    >
+      <div class="flex items-center gap-2 px-4 py-2 w-max">
+        <a
+          v-for="link in scrollLinks"
+          :key="link.href"
+          :href="link.href"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all"
+          :class="activeSection === link.href.slice(1)
+            ? 'bg-purple-600 text-white shadow-sm'
+            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+          @click.prevent="scrollTo(link.href); mobileOpen = false"
+        >
+          <span v-if="link.icon" class="text-sm leading-none">{{ link.icon }}</span>
+          {{ link.label }}
+        </a>
+      </div>
+    </div>
+
+    <!-- ── Mobile full menu ────────────────────────────────────────────────── -->
     <Transition name="slide-down">
       <div v-if="mobileOpen" class="md:hidden border-t border-gray-100 bg-white px-6 py-4 space-y-1 overflow-y-auto" style="max-height: calc(100dvh - 64px)">
         <p class="text-xs font-bold uppercase tracking-widest text-gray-400 px-3 pt-2 pb-1">Fahrschule</p>
@@ -136,8 +175,48 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{ logoSrc?: string | null }>()
+interface ScrollLink {
+  label: string
+  href: string
+  icon?: string
+}
+
+const props = defineProps<{
+  logoSrc?: string | null
+  scrollLinks?: ScrollLink[]
+}>()
+
 const mobileOpen = ref(false)
+const activeSection = ref('')
+
+function scrollTo(href: string) {
+  const id = href.startsWith('#') ? href.slice(1) : href
+  const el = document.getElementById(id)
+  if (!el) return
+  const navHeight = 64 + (props.scrollLinks?.length ? 40 : 0)
+  const top = el.getBoundingClientRect().top + window.scrollY - navHeight - 8
+  window.scrollTo({ top, behavior: 'smooth' })
+}
+
+// Highlight active section while scrolling
+onMounted(() => {
+  if (!props.scrollLinks?.length) return
+
+  const ids = props.scrollLinks.map(l => l.href.slice(1))
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) activeSection.value = entry.target.id
+      }
+    },
+    { rootMargin: '-30% 0px -60% 0px', threshold: 0 }
+  )
+  ids.forEach(id => {
+    const el = document.getElementById(id)
+    if (el) observer.observe(el)
+  })
+  onUnmounted(() => observer.disconnect())
+})
 </script>
 
 <style scoped>
@@ -154,6 +233,8 @@ const mobileOpen = ref(false)
   font-size: 0.9rem; font-weight: 500; color: #374151; text-decoration: none;
 }
 .mobile-nav-link:hover { background: #f9fafb; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .slide-down-enter-active, .slide-down-leave-active { transition: all 0.2s ease; }
 .slide-down-enter-from, .slide-down-leave-to { opacity: 0; transform: translateY(-8px); }
 </style>
