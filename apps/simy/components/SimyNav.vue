@@ -4,7 +4,7 @@
 
       <!-- Logo -->
       <a href="/" class="flex-shrink-0">
-        <img :src="'/simy-logo.png'" alt="Simy – Fahrschulsoftware Schweiz" class="h-8 max-w-[120px] object-contain" />
+        <img :src="logoSrc || '/simy-logo.png'" alt="Simy – Fahrschulsoftware Schweiz" class="h-8 max-w-[120px] object-contain transition-all duration-500" />
       </a>
 
       <!-- Desktop nav -->
@@ -136,6 +136,7 @@
 </template>
 
 <script setup lang="ts">
+const props = defineProps<{ logoSrc?: string | null }>()
 const mobileOpen = ref(false)
 </script>
 
