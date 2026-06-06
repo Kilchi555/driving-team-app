@@ -35,6 +35,19 @@ export function buildConsentLink(baseUrl: string, leadId: string, token: string)
   return `${baseUrl}/api/marketing/confirm-consent?lead_id=${leadId}&token=${token}`
 }
 
+const BASE_URL = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
+
+function resolveLogoUrl(raw: string | null | undefined, tenantId?: string | null, type: 'wide' | 'square' = 'wide'): string | null {
+  if (!raw) return null
+  // Already a proper HTTPS URL — use as-is
+  if (raw.startsWith('https://') || raw.startsWith('http://')) return raw
+  // data: URI — proxy through our API so email clients can load it
+  if (raw.startsWith('data:') && tenantId) {
+    return `${BASE_URL}/api/tenants/logo?id=${encodeURIComponent(tenantId)}&type=${type}`
+  }
+  return null
+}
+
 export function wrapMarketingEmail(
   content: string,
   tenantName: string,
@@ -43,19 +56,23 @@ export function wrapMarketingEmail(
   logoUrl?: string | null,
   logoSquareUrl?: string | null,
   trackingPixelUrl?: string | null,
+  tenantId?: string | null,
 ): string {
-  const hasWideLogo = !!logoUrl
-  const hasSquareLogo = !!logoSquareUrl
+  const resolvedLogoUrl = resolveLogoUrl(logoUrl, tenantId, 'wide')
+  const resolvedSquareUrl = resolveLogoUrl(logoSquareUrl, tenantId, 'square')
+
+  const hasWideLogo = !!resolvedLogoUrl
+  const hasSquareLogo = !!resolvedSquareUrl
 
   // White logo area + primary color bar underneath
   const header = hasWideLogo
     ? `<div style="background:#ffffff;padding:24px 32px;text-align:center">
-        <img src="${logoUrl}" alt="${tenantName}" style="max-height:64px;max-width:280px;display:block;margin:0 auto" />
+        <img src="${resolvedLogoUrl}" alt="${tenantName}" style="max-height:64px;max-width:280px;display:block;margin:0 auto" />
       </div>
       <div style="background:${primaryColor};height:6px;font-size:0;line-height:0">&nbsp;</div>`
     : `<div style="background:#ffffff;padding:20px 32px">
         <table cellpadding="0" cellspacing="0" border="0"><tr>
-          ${hasSquareLogo ? `<td style="padding-right:12px;vertical-align:middle"><img src="${logoSquareUrl}" alt="${tenantName}" style="height:40px;width:40px;border-radius:8px;display:block" /></td>` : ''}
+          ${hasSquareLogo ? `<td style="padding-right:12px;vertical-align:middle"><img src="${resolvedSquareUrl}" alt="${tenantName}" style="height:40px;width:40px;border-radius:8px;display:block" /></td>` : ''}
           <td style="vertical-align:middle"><span style="color:#111827;font-size:18px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,sans-serif">${tenantName}</span></td>
         </tr></table>
       </div>

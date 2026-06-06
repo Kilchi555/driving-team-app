@@ -125,7 +125,7 @@ export default defineEventHandler(async (event) => {
       (_, url) => `href="${baseUrl}/api/marketing/track/click?cid=${campaignId}&lid=${lead.id}&url=${encodeURIComponent(url)}"`,
     )
 
-    const wrappedHtml = wrapMarketingEmail(trackedHtml, tenantName, unsubscribeLink, primaryColor, logoWideUrl, logoSquareUrl, trackingPixelUrl)
+    const wrappedHtml = wrapMarketingEmail(trackedHtml, tenantName, unsubscribeLink, primaryColor, logoWideUrl, logoSquareUrl, trackingPixelUrl, tenantId)
 
     queueRows.push({
       channel: 'email',
