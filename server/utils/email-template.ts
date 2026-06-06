@@ -35,15 +35,17 @@ export function buildConsentLink(baseUrl: string, leadId: string, token: string)
   return `${baseUrl}/api/marketing/confirm-consent?lead_id=${leadId}&token=${token}`
 }
 
-const BASE_URL = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
+// Always use the production URL for logo proxying in emails — email clients
+// cannot reach localhost even when the server runs locally.
+const PROD_URL = 'https://app.simy.ch'
 
 function resolveLogoUrl(raw: string | null | undefined, tenantId?: string | null, type: 'wide' | 'square' = 'wide'): string | null {
   if (!raw) return null
   // Already a proper HTTPS URL — use as-is
   if (raw.startsWith('https://') || raw.startsWith('http://')) return raw
-  // data: URI — proxy through our API so email clients can load it
+  // data: URI — proxy through production API so email clients can always load it
   if (raw.startsWith('data:') && tenantId) {
-    return `${BASE_URL}/api/tenants/logo?id=${encodeURIComponent(tenantId)}&type=${type}`
+    return `${PROD_URL}/api/tenants/logo?id=${encodeURIComponent(tenantId)}&type=${type}`
   }
   return null
 }
