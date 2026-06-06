@@ -1,7 +1,10 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 // Event types that count as a campaign conversion
-const CONVERSION_EVENTS = new Set(['helvetia_form_submitted'])
+const CONVERSION_EVENTS = new Set([
+  'helvetia_form_submitted',
+  'booking_completed',
+])
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
