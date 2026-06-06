@@ -74,16 +74,18 @@ export default defineEventHandler(async (event) => {
     .eq('tenant_id', tenantId)
     .neq('status', 'unsubscribed')
 
-  // Check how many categories exist for this tenant, only filter if it's a real subset
+  // Check total available categories across all three sources
+  // Only apply filter if it's a real subset — not "select all"
   let effectiveCategories: string[] = []
   if (filter.categories?.length) {
-    const { data: catRows } = await supabase
-      .from('lead_categories')
-      .select('code', { count: 'exact', head: false })
-      .eq('tenant_id', tenantId)
-    const totalCats = catRows?.length ?? 0
-    // Only apply category filter if user picked a subset (not all)
-    if (totalCats === 0 || filter.categories.length < totalCats) {
+    const [{ count: c1 }, { count: c2 }, { count: c3 }] = await Promise.all([
+      supabase.from('categories').select('code', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('is_active', true),
+      supabase.from('course_categories').select('code', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('is_active', true),
+      supabase.from('lead_categories').select('code', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('is_active', true),
+    ])
+    const totalCats = (c1 ?? 0) + (c2 ?? 0) + (c3 ?? 0)
+    // Apply filter only if it's a genuine subset (not selecting all available categories)
+    if (totalCats > 0 && filter.categories.length < totalCats) {
       effectiveCategories = filter.categories
     }
   }
