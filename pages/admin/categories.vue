@@ -138,12 +138,20 @@
                   class="hover:bg-gray-50 cursor-pointer transition-colors"
                 >
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      {{ category.code }}
-                    </span>
+                    <div class="flex items-center gap-1.5">
+                      <span v-if="category.parent_category_id" class="text-gray-300 text-xs">↳</span>
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        {{ category.code }}
+                      </span>
+                    </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {{ category.name }}
+                    <div :class="category.parent_category_id ? 'pl-4' : ''">
+                      {{ category.name }}
+                      <span v-if="category.parent_category_id" class="ml-1.5 text-xs text-gray-400 font-normal">
+                        ({{ categories.find(c => c.id === category.parent_category_id)?.name ?? 'Unterkategorie' }})
+                      </span>
+                    </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <label class="relative inline-flex items-center cursor-pointer" @click.stop>
@@ -790,14 +798,18 @@ const categories = ref<Category[]>([])
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 
-// Show subs instead of parent when a parent has children
+// Show all categories; mark subcategories with their parent name for context
 const displayedCategories = computed(() => {
-  const childIds = new Set(
-    categories.value
-      .filter(c => c.parent_category_id != null)
-      .map(c => c.parent_category_id as number)
-  )
-  return categories.value.filter(c => !childIds.has(c.id))
+  return [...categories.value].sort((a, b) => {
+    // Parents first, then children grouped under their parent
+    const aParent = a.parent_category_id ?? a.id
+    const bParent = b.parent_category_id ?? b.id
+    if (aParent !== bParent) return aParent - bParent
+    // Within same group: parent before children
+    if (a.parent_category_id === null && b.parent_category_id !== null) return -1
+    if (a.parent_category_id !== null && b.parent_category_id === null) return 1
+    return (a.code ?? '').localeCompare(b.code ?? '')
+  })
 })
 const showModal = ref(false)
 const editingCategory = ref<Category | null>(null)
