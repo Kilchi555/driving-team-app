@@ -125,7 +125,9 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       selected_category_ids: '',
       working_days_template: '',
       locations_json: '',
-      pricing_json: ''
+      pricing_json: '',
+      custom_categories_json: '',
+      staff_json: ''
     }
 
     let logoFile: File | null = null
@@ -748,7 +750,7 @@ async function uploadTenantLogo(file: File, tenantSlug: string, suffix = 'logo')
   // ✅ LAYER 4: Timestamped filename (no user input)
   const timestamp = Date.now()
   const fileName = `${tenantSlug}-${suffix}-${timestamp}.${fileExtension}`
-  const filePath = `tenant-logos/${fileName}`
+  const filePath = fileName
 
   logger.debug('🔄 Uploading tenant logo:', filePath)
 
@@ -758,7 +760,7 @@ async function uploadTenantLogo(file: File, tenantSlug: string, suffix = 'logo')
 
   // Upload
   const { data: uploadData, error: uploadError } = await supabase.storage
-    .from('public')
+    .from('tenant-logos')
     .upload(filePath, fileBuffer, {
       contentType: contentType, // Use mapped type, not client type
       cacheControl: '3600',
@@ -771,7 +773,7 @@ async function uploadTenantLogo(file: File, tenantSlug: string, suffix = 'logo')
 
   // Öffentliche URL generieren
   const { data: urlData } = supabase.storage
-    .from('public')
+    .from('tenant-logos')
     .getPublicUrl(uploadData.path)
 
   if (!urlData.publicUrl) {
