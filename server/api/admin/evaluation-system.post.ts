@@ -225,12 +225,22 @@ export default defineEventHandler(async (event) => {
 
   // ─── load-standards ───────────────────────────────────────────────────────
   if (action === 'load-standards') {
-    const { data, error } = await supabase
+    const { data: tenantRow } = await supabase
+      .from('tenants')
+      .select('business_type')
+      .eq('id', tenantId)
+      .single()
+    const businessType = tenantRow?.business_type || null
+
+    const q = supabase
       .from('evaluation_categories')
       .select('*')
       .eq('is_active', true)
       .is('tenant_id', null)
       .order('display_order')
+    if (businessType) q.eq('business_type', businessType)
+
+    const { data, error } = await q
     if (error) throw createError({ statusCode: 500, statusMessage: error.message })
     return { success: true, data: data || [] }
   }
@@ -262,12 +272,23 @@ export default defineEventHandler(async (event) => {
 
   // ─── copy-standard-categories ─────────────────────────────────────────────
   if (action === 'copy-standard-categories') {
-    const { data: globalCats, error: fetchError } = await supabase
+    // Get tenant's business_type
+    const { data: tenantRow } = await supabase
+      .from('tenants')
+      .select('business_type')
+      .eq('id', tenantId)
+      .single()
+    const businessType = tenantRow?.business_type || null
+
+    const globalCatsQuery = supabase
       .from('evaluation_categories')
       .select('*')
       .eq('is_active', true)
       .is('tenant_id', null)
       .order('display_order')
+    if (businessType) globalCatsQuery.eq('business_type', businessType)
+
+    const { data: globalCats, error: fetchError } = await globalCatsQuery
     if (fetchError) throw createError({ statusCode: 500, statusMessage: fetchError.message })
     if (!globalCats || globalCats.length === 0) {
       throw createError({ statusCode: 404, statusMessage: 'Keine globalen Standard-Kategorien gefunden' })

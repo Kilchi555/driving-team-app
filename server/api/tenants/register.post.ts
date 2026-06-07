@@ -1045,10 +1045,25 @@ async function copyDefaultDataToTenant(
 
   // ── 3. Evaluation Categories ───────────────────────────────────────────────
   try {
-    const { data: evalCats, error: ecErr } = await supabase
+    // Get tenant's business_type to filter matching templates
+    const { data: tenantRow } = await supabase
+      .from('tenants')
+      .select('business_type')
+      .eq('id', tenantId)
+      .single()
+    const businessType = tenantRow?.business_type || null
+
+    const evalCatsQuery = supabase
       .from('evaluation_categories')
       .select('*')
       .is('tenant_id', null)
+    // Only copy templates that match the tenant's business_type (or have no type set)
+    if (businessType) {
+      evalCatsQuery.eq('business_type', businessType)
+    } else {
+      evalCatsQuery.is('business_type', null)
+    }
+    const { data: evalCats, error: ecErr } = await evalCatsQuery
 
     if (!ecErr && evalCats?.length) {
       const ecIdMap = new Map<string, string>()
