@@ -32,6 +32,7 @@
               :disabled="false"
               :auto-load="true"
               :is-freeslot-mode="false"
+              :show-switch-to-other="false"
               @student-selected="handleStudentSelected"
               @student-cleared="handleStudentCleared"
             />
@@ -49,6 +50,31 @@
               >
                 🛒 Produkte hinzufügen
               </button>
+
+              <!-- Product Catalog (inline) -->
+              <div v-if="productSale.showProductSelector.value" class="border border-blue-200 rounded-lg overflow-hidden">
+                <div class="bg-blue-50 px-3 py-2 flex items-center justify-between">
+                  <span class="text-sm font-medium text-blue-800">Produkt auswählen</span>
+                  <button @click="productSale.closeProductSelector()" class="text-blue-500 hover:text-blue-700 text-sm">✕</button>
+                </div>
+                <div v-if="productSale.isLoading.value" class="p-4 text-center text-sm text-gray-500">
+                  Lade Produkte...
+                </div>
+                <div v-else-if="productSale.availableProducts.value.length === 0" class="p-4 text-center text-sm text-gray-500">
+                  Keine Produkte verfügbar
+                </div>
+                <div v-else class="divide-y divide-gray-100 max-h-60 overflow-y-auto">
+                  <button
+                    v-for="product in productSale.availableProducts.value"
+                    :key="product.id"
+                    @click="productSale.addProduct(product)"
+                    class="w-full px-3 py-2 text-left hover:bg-blue-50 transition-colors flex justify-between items-center"
+                  >
+                    <span class="text-sm text-gray-800">{{ product.name }}</span>
+                    <span class="text-sm font-medium text-blue-700">CHF {{ product.price.toFixed(2) }}</span>
+                  </button>
+                </div>
+              </div>
               
               <!-- Selected Products -->
               <div v-if="productSale.hasProducts.value" class="space-y-2">

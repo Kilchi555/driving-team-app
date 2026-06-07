@@ -295,8 +295,9 @@
     <ProductSaleModal
       v-if="showProductSaleModal"
       :is-visible="showProductSaleModal"
+      :current-user="authStore.userProfile"
       @close="closeProductSaleModal"
-      @sale-completed="handleSaleCompleted"
+      @sale-created="handleSaleCompleted"
     />
 
     <!-- Anonymous Sale Modal -->
