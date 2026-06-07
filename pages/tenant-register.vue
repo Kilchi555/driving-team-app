@@ -995,7 +995,7 @@
             <div>
               <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">E-Mail *</label>
               <input v-model="adminForm.email" type="email" required
-                name="username" autocomplete="username"
+                name="step5-username" autocomplete="username"
                 @blur="checkAdminEmail(adminForm.email)"
                 @input="onAdminEmailInput(adminForm.email)"
                 :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
@@ -1030,7 +1030,7 @@
             <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Passwort *</label>
-                <input v-model="adminForm.password" :type="showPw ? 'text' : 'password'" required minlength="12" autocomplete="new-password" name="password" id="admin-password"
+                <input v-model="adminForm.password" :type="showPw ? 'text' : 'password'" required minlength="12" autocomplete="new-password" name="step5-password" id="admin-password"
                   :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
                     adminForm.password && !passwordValid ? 'border-red-300 focus:ring-red-500' :
                     adminForm.password && passwordValid ? 'border-green-300 focus:ring-green-500' :
@@ -1070,7 +1070,7 @@
               </div>
               <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Passwort bestätigen *</label>
-                <input v-model="adminForm.passwordConfirm" :type="showPw ? 'text' : 'password'" required minlength="12" autocomplete="new-password" name="confirm-password" id="admin-password-confirm"
+                <input v-model="adminForm.passwordConfirm" :type="showPw ? 'text' : 'password'" required minlength="12" autocomplete="new-password" name="step5-confirm-password" id="admin-password-confirm"
                   :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
                     adminForm.passwordConfirm && passwordMismatch ? 'border-red-300 focus:ring-red-500' :
                     adminForm.passwordConfirm && !passwordMismatch && passwordValid ? 'border-green-300 focus:ring-green-500' :
@@ -1480,7 +1480,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
             </svg>
           </button>
-          <button v-else-if="currentStep === 7" @click="submitRegistration" type="button" :disabled="!canSubmit"
+          <button v-else-if="currentStep === 7" type="submit" :disabled="!canSubmit"
             class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl disabled:from-gray-300 disabled:to-gray-300 disabled:text-gray-400 text-white font-bold text-sm transition-all shadow-sm"
             :style="canSubmit ? { background: 'linear-gradient(135deg, #10B981, #059669)' } : {}">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1489,7 +1489,17 @@
             Fahrschule einrichten
           </button>
         </div>
+
+        <!-- iOS Password Autofill: credential mirrors always present in DOM so Safari
+             can offer to save them when the registration form submits on step 7 -->
+        <div aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;height:0;overflow:hidden;top:-9999px;left:-9999px">
+          <input type="email" name="username" autocomplete="username" :value="adminForm.email" tabindex="-1" id="ios-mirror-email">
+          <input type="password" name="password" autocomplete="new-password" :value="adminForm.password" tabindex="-1" id="ios-mirror-password">
+          <input type="password" name="confirm-password" autocomplete="new-password" :value="adminForm.passwordConfirm" tabindex="-1" id="ios-mirror-confirm">
+        </div>
       </form>
+
+
     </div>
   </div>
 </template>
