@@ -2,6 +2,7 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
+import { getSupabase } from '~/utils/supabase'
 
 interface SimpleProduct {
   id: string
@@ -49,21 +50,19 @@ const openProductSelector = () => {
 const loadAvailableProducts = async () => {
   try {
     isLoading.value = true
+    
     const supabase = getSupabase()
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
+
+    const response = await $fetch<{ success: boolean; data: any[] }>('/api/products/list-all', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
     
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order')
-    
-    if (error) throw error
-    
-    // Convert to SimpleProduct format
-    availableProducts.value = (data || []).map(product => ({
+    availableProducts.value = (response.data || []).map((product: any) => ({
       id: product.id,
       name: product.name,
-      price: product.price_rappen / 100, // Convert to CHF
+      price: product.price_rappen / 100,
       description: product.description
     }))
     

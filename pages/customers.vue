@@ -46,14 +46,24 @@
         </div>
 
         <!-- Add Student Button (nur Desktop) -->
-        <button 
-          v-if="currentUser.role !== 'client'"
-          @click="addNewStudent"
-          class="text-white px-4 py-2 rounded-lg transition-colors hover:opacity-90"
-          :style="{ background: primaryColor }"
-        >
-          + Neu
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            v-if="currentUser.role !== 'client'"
+            @click="showPOSModal = true"
+            class="text-white px-4 py-2 rounded-lg transition-colors hover:opacity-90 flex items-center gap-1"
+            :style="{ background: primaryColor }"
+          >
+            🛒 Shop
+          </button>
+          <button 
+            v-if="currentUser.role !== 'client'"
+            @click="addNewStudent"
+            class="text-white px-4 py-2 rounded-lg transition-colors hover:opacity-90"
+            :style="{ background: primaryColor }"
+          >
+            + Neu
+          </button>
+        </div>
       </div>
 
       <!-- Search & Filters -->
@@ -263,6 +273,15 @@
     </div>
   </div>
 
+  <!-- Staff POS Modal -->
+  <StaffPOSModal
+    :is-visible="showPOSModal"
+    :preselected-student="posPreselectedStudent"
+    :current-user="currentUser"
+    @close="showPOSModal = false; posPreselectedStudent = null"
+    @sale-created="showPOSModal = false; posPreselectedStudent = null"
+  />
+
   <!-- Enhanced Student Detail Modal -->
      <EnhancedStudentModal
     :selected-student="selectedStudent"
@@ -405,6 +424,7 @@ import { useUIStore } from '~/stores/ui'
 import EnhancedStudentModal from '~/components/EnhancedStudentModal.vue'
 import AddStudentModal from '~/components/AddStudentModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
+import StaffPOSModal from '~/components/StaffPOSModal.vue'
 import { useTerminology } from '~/composables/useTerminology'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 
@@ -436,6 +456,10 @@ const pendingStudent = ref<any>(null)
 const isResendingSms = ref(false)
 const showReminderModal = ref(false)
 const currentReminderAppointment = ref<any>(null)
+
+// POS Modal
+const showPOSModal = ref(false)
+const posPreselectedStudent = ref<any>(null)
 
 // Toast state
 const showToast = ref(false)
