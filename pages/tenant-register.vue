@@ -353,7 +353,7 @@
                 leave-from-class="opacity-100 translate-y-0"
                 leave-to-class="opacity-0 -translate-y-2"
               >
-                <div v-if="cat.children?.length && selectedCategoryIds.has(cat.id)"
+                <div v-if="(cat.children?.length || customSubsOf(cat.id).length) && selectedCategoryIds.has(cat.id)"
                   class="rounded-2xl border-2 overflow-hidden"
                   :style="{ borderColor: (cat.color || '#3b82f6') + '40' }">
                   <!-- Header -->
@@ -367,7 +367,7 @@
                     </div>
                     <span class="text-xs font-semibold px-2 py-0.5 rounded-full text-white"
                       :style="{ backgroundColor: cat.color || '#3b82f6' }">
-                      {{ cat.children.filter(c => selectedCategoryIds.has(c.id)).length }}/{{ cat.children.length }}
+                      {{ [...(cat.children || []).map(c => c.id), ...customSubsOf(cat.id).map(c => c.tempId)].filter(id => selectedCategoryIds.has(id)).length }}/{{ (cat.children?.length || 0) + customSubsOf(cat.id).length }}
                     </span>
                   </div>
                   <!-- Child pills -->
@@ -391,10 +391,190 @@
                       <span v-else class="w-3 h-3 flex-shrink-0 rounded-sm border-2 border-current opacity-40"></span>
                       {{ 'Kategorie ' + (child.code || child.name) }}
                     </button>
+                    <!-- Custom sub-categories under this template parent -->
+                    <button
+                      v-for="cc in customSubsOf(cat.id)"
+                      :key="cc.tempId"
+                      type="button"
+                      @click="toggleCategory(cc.tempId)"
+                      class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 text-xs font-semibold transition-all duration-150 focus:outline-none"
+                      :class="selectedCategoryIds.has(cc.tempId) ? 'text-white border-transparent shadow-sm' : 'bg-white text-gray-600 hover:border-gray-300'"
+                      :style="selectedCategoryIds.has(cc.tempId)
+                        ? { backgroundColor: cc.color, borderColor: cc.color }
+                        : { borderColor: cc.color + '60' }"
+                    >
+                      <svg v-if="selectedCategoryIds.has(cc.tempId)" class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      <span v-else class="w-3 h-3 flex-shrink-0 rounded-sm border-2 border-current opacity-40"></span>
+                      {{ cc.code || cc.name }}
+                      <button type="button" @click.stop="removeCustomCategory(cc.tempId)"
+                        class="ml-0.5 opacity-60 hover:opacity-100 transition-opacity">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </button>
                   </div>
                 </div>
               </transition>
             </template>
+
+            <!-- Custom main categories (added by user) -->
+            <div v-if="customMainCats.length" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div v-for="cc in customMainCats" :key="cc.tempId" class="relative group rounded-2xl border-2 p-4 text-left transition-all duration-200"
+                :style="selectedCategoryIds.has(cc.tempId)
+                  ? { borderColor: cc.color, backgroundColor: cc.color + '12' }
+                  : { borderColor: '#e5e7eb' }">
+                <!-- Remove button -->
+                <button type="button" @click="removeCustomCategory(cc.tempId)"
+                  class="absolute top-2 left-2 w-5 h-5 rounded-full bg-red-50 border border-red-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <svg class="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+                <!-- Select -->
+                <div class="absolute top-2.5 right-2.5 w-5 h-5 rounded-full flex items-center justify-center transition-all"
+                  :class="selectedCategoryIds.has(cc.tempId) ? 'opacity-100 scale-100' : 'opacity-0 scale-50'"
+                  :style="{ backgroundColor: cc.color }">
+                  <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+                <button type="button" @click="toggleCategory(cc.tempId)" class="w-full text-left focus:outline-none">
+                  <div class="mb-3 w-8 h-8 rounded-lg flex items-center justify-center" :style="{ backgroundColor: cc.color + '20' }">
+                    <svg class="w-4 h-4" :style="{ color: cc.color }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                  </div>
+                  <p class="font-semibold text-sm text-gray-900 leading-snug mb-1.5">{{ cc.name }}</p>
+                  <span v-if="cc.code" class="inline-block text-xs font-bold px-2 py-0.5 rounded-lg text-white" :style="{ backgroundColor: cc.color }">
+                    {{ cc.code }}
+                  </span>
+                  <p v-if="customSubsOf(cc.tempId).length" class="mt-1.5 text-xs text-gray-400">
+                    +{{ customSubsOf(cc.tempId).length }} Unterkategorien
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            <!-- Sub-pills for selected custom main categories -->
+            <template v-for="cc in customMainCats" :key="'custom-subs-' + cc.tempId">
+              <transition enter-active-class="transition-all duration-300 ease-out" enter-from-class="opacity-0 -translate-y-2" enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition-all duration-200 ease-in" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 -translate-y-2">
+                <div v-if="customSubsOf(cc.tempId).length && selectedCategoryIds.has(cc.tempId)"
+                  class="rounded-2xl border-2 overflow-hidden" :style="{ borderColor: cc.color + '40' }">
+                  <div class="flex items-center justify-between px-4 py-2.5" :style="{ backgroundColor: cc.color + '10' }">
+                    <div class="flex items-center gap-2">
+                      <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: cc.color }"></span>
+                      <p class="text-xs font-bold uppercase tracking-wide" :style="{ color: cc.color }">{{ cc.code || cc.name }} – Unterkategorien</p>
+                    </div>
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full text-white" :style="{ backgroundColor: cc.color }">
+                      {{ customSubsOf(cc.tempId).filter(c => selectedCategoryIds.has(c.tempId)).length }}/{{ customSubsOf(cc.tempId).length }}
+                    </span>
+                  </div>
+                  <div class="flex flex-wrap gap-2 p-4">
+                    <button v-for="sub in customSubsOf(cc.tempId)" :key="sub.tempId" type="button" @click="toggleCategory(sub.tempId)"
+                      class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 text-xs font-semibold transition-all duration-150 focus:outline-none"
+                      :class="selectedCategoryIds.has(sub.tempId) ? 'text-white border-transparent shadow-sm' : 'bg-white text-gray-600 hover:border-gray-300'"
+                      :style="selectedCategoryIds.has(sub.tempId) ? { backgroundColor: sub.color, borderColor: sub.color } : { borderColor: sub.color + '60' }">
+                      <svg v-if="selectedCategoryIds.has(sub.tempId)" class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      <span v-else class="w-3 h-3 flex-shrink-0 rounded-sm border-2 border-current opacity-40"></span>
+                      {{ sub.code || sub.name }}
+                      <button type="button" @click.stop="removeCustomCategory(sub.tempId)" class="ml-0.5 opacity-60 hover:opacity-100 transition-opacity">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </button>
+                  </div>
+                </div>
+              </transition>
+            </template>
+
+            <!-- ── Add custom category form ── -->
+            <div class="pt-1">
+              <button type="button" @click="showAddCatForm = !showAddCatForm"
+                class="w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 py-3 text-sm font-semibold text-gray-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50 transition-all duration-150">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Eigene Kategorie hinzufügen
+              </button>
+
+              <transition enter-active-class="transition-all duration-300 ease-out" enter-from-class="opacity-0 -translate-y-2 scale-98" enter-to-class="opacity-100 translate-y-0 scale-100"
+                leave-active-class="transition-all duration-200 ease-in" leave-from-class="opacity-100 translate-y-0 scale-100" leave-to-class="opacity-0 -translate-y-2 scale-98">
+                <div v-if="showAddCatForm" class="mt-3 rounded-2xl border-2 border-blue-200 bg-blue-50 p-4 space-y-4">
+                  <p class="text-xs font-bold uppercase tracking-wide text-blue-700">Neue Kategorie</p>
+
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-600 mb-1">Name <span class="text-red-400">*</span></label>
+                      <input v-model="newCat.name" type="text" placeholder="z.B. Anhänger" maxlength="50"
+                        class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-semibold text-gray-600 mb-1">Kürzel <span class="text-gray-400 font-normal">(optional)</span></label>
+                      <input v-model="newCat.code" type="text" placeholder="z.B. BE2" maxlength="10"
+                        class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white uppercase" />
+                    </div>
+                  </div>
+
+                  <!-- Color picker -->
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-2">Farbe</label>
+                    <div class="flex gap-2 flex-wrap">
+                      <button v-for="c in CUSTOM_PALETTE" :key="c" type="button" @click="newCat.color = c"
+                        class="w-7 h-7 rounded-full border-2 transition-all flex-shrink-0"
+                        :style="{ backgroundColor: c, borderColor: newCat.color === c ? '#1d4ed8' : 'transparent' }"
+                        :class="newCat.color === c ? 'scale-110 shadow-md' : 'hover:scale-105'" />
+                    </div>
+                  </div>
+
+                  <!-- Type: main or sub -->
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-2">Art</label>
+                    <div class="flex gap-2">
+                      <button type="button" @click="newCat.parentTempId = null"
+                        class="px-3 py-1.5 rounded-xl border-2 text-xs font-semibold transition-all"
+                        :class="newCat.parentTempId === null ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'">
+                        Hauptkategorie
+                      </button>
+                      <button type="button" @click="newCat.parentTempId = availableParents[0]?.id ?? null"
+                        class="px-3 py-1.5 rounded-xl border-2 text-xs font-semibold transition-all"
+                        :class="newCat.parentTempId !== null ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'">
+                        Unterkategorie
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Parent selector (visible when "Unterkategorie" chosen) -->
+                  <div v-if="newCat.parentTempId !== null">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Übergeordnete Kategorie</label>
+                    <select v-model="newCat.parentTempId"
+                      class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
+                      <option v-for="p in availableParents" :key="p.id" :value="p.id">
+                        {{ p.code ? p.code + ' – ' : '' }}{{ p.name }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="flex gap-2 pt-1">
+                    <button type="button" @click="addCustomCategory" :disabled="!newCat.name.trim()"
+                      class="flex-1 py-2 rounded-xl text-sm font-semibold text-white transition-all"
+                      :class="newCat.name.trim() ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-200 cursor-not-allowed'">
+                      Hinzufügen
+                    </button>
+                    <button type="button" @click="showAddCatForm = false; newCat.name = ''; newCat.code = ''"
+                      class="px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 bg-white border border-gray-200 hover:bg-gray-50 transition-all">
+                      Abbrechen
+                    </button>
+                  </div>
+                </div>
+              </transition>
+            </div>
           </div>
         </div>
 
@@ -1363,6 +1543,31 @@ interface TemplateCategory {
 const templateCategories = ref<TemplateCategory[]>([])
 const selectedCategoryIds = ref(new Set<number>())
 
+// ─── Custom categories added by the user during registration ─────────────
+interface CustomCat {
+  tempId: number        // negative temp ID, e.g. -1, -2 …
+  name: string
+  code: string
+  color: string
+  parentTempId: number | null  // null = main cat; >0 = template parent; <0 = custom parent
+}
+
+const CUSTOM_PALETTE = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#64748b']
+let _nextCustomId = -1
+const customCategories = ref<CustomCat[]>([])
+const showAddCatForm = ref(false)
+const newCat = ref({ name: '', code: '', color: CUSTOM_PALETTE[0], parentTempId: null as number | null })
+
+// Derived views
+const customMainCats = computed(() => customCategories.value.filter(c => c.parentTempId === null))
+const customSubsOf = (parentId: number) => customCategories.value.filter(c => c.parentTempId === parentId)
+
+// All parents available for the "sub of" selector
+const availableParents = computed(() => [
+  ...templateCategories.value.map(c => ({ id: c.id, name: c.name, code: c.code, color: c.color })),
+  ...customMainCats.value.map(c => ({ id: c.tempId, name: c.name, code: c.code || undefined, color: c.color })),
+])
+
 // ─── Pricing ────────────────────────────────────────────────────────────────
 interface PricingRow {
   catId: number
@@ -1388,10 +1593,27 @@ const effectiveCategoryList = computed((): TemplateCategory[] => {
   const result: TemplateCategory[] = []
   for (const cat of templateCategories.value) {
     const selectedChildren = (cat.children || []).filter(c => selectedCategoryIds.value.has(c.id))
-    if (selectedChildren.length > 0) {
-      result.push(...selectedChildren)
+    // Also include selected custom subs of this template parent
+    const customSubs = customSubsOf(cat.id)
+      .filter(cc => selectedCategoryIds.value.has(cc.tempId))
+      .map(cc => ({ id: cc.tempId, name: cc.name, code: cc.code || undefined, color: cc.color }))
+    const allSubs = [...selectedChildren, ...customSubs]
+    if (allSubs.length > 0) {
+      result.push(...allSubs)
     } else if (selectedCategoryIds.value.has(cat.id)) {
       result.push(cat)
+    }
+  }
+  // Custom main categories
+  for (const cc of customMainCats.value) {
+    if (!selectedCategoryIds.value.has(cc.tempId)) continue
+    const subs = customSubsOf(cc.tempId)
+      .filter(c => selectedCategoryIds.value.has(c.tempId))
+      .map(c => ({ id: c.tempId, name: c.name, code: c.code || undefined, color: c.color }))
+    if (subs.length > 0) {
+      result.push(...subs)
+    } else {
+      result.push({ id: cc.tempId, name: cc.name, code: cc.code || undefined, color: cc.color })
     }
   }
   return result
@@ -1470,11 +1692,12 @@ const loadTemplateCategories = async () => {
 const toggleCategory = (id: number) => {
   if (selectedCategoryIds.value.has(id)) {
     selectedCategoryIds.value.delete(id)
-    // Deselecting a parent also removes all its children
+    // Deselecting a parent also removes all its children (template + custom)
     const parent = templateCategories.value.find(c => c.id === id)
     if (parent?.children) {
       for (const child of parent.children) selectedCategoryIds.value.delete(child.id)
     }
+    for (const cc of customSubsOf(id)) selectedCategoryIds.value.delete(cc.tempId)
   } else {
     selectedCategoryIds.value.add(id)
   }
@@ -1482,11 +1705,40 @@ const toggleCategory = (id: number) => {
 }
 
 const selectAllCategories = () => {
-  selectedCategoryIds.value = new Set<number>(allTemplateCategoryIds.value)
+  const all = new Set<number>(allTemplateCategoryIds.value)
+  for (const cc of customCategories.value) all.add(cc.tempId)
+  selectedCategoryIds.value = all
 }
 
 const deselectAllCategories = () => {
   selectedCategoryIds.value = new Set<number>()
+}
+
+const addCustomCategory = () => {
+  const name = newCat.value.name.trim()
+  if (!name) return
+  const id = _nextCustomId--
+  customCategories.value.push({
+    tempId: id,
+    name,
+    code: newCat.value.code.trim().toUpperCase(),
+    color: newCat.value.color,
+    parentTempId: newCat.value.parentTempId,
+  })
+  // Auto-select the new category
+  selectedCategoryIds.value = new Set([...selectedCategoryIds.value, id])
+  // Reset form
+  newCat.value = { name: '', code: '', color: CUSTOM_PALETTE[0], parentTempId: null }
+  showAddCatForm.value = false
+}
+
+const removeCustomCategory = (tempId: number) => {
+  // Remove this category and any custom children
+  const toRemove = new Set<number>([tempId, ...customSubsOf(tempId).map(c => c.tempId)])
+  customCategories.value = customCategories.value.filter(c => !toRemove.has(c.tempId))
+  const updated = new Set(selectedCategoryIds.value)
+  for (const id of toRemove) updated.delete(id)
+  selectedCategoryIds.value = updated
 }
 
 // ─── Locations ─────────────────────────────────────────────────────────────
@@ -1884,9 +2136,30 @@ const submitRegistration = async () => {
       if (v) fd.append(key, v)
     })
 
-    // Selected category IDs
-    if (selectedCategoryIds.value.size > 0) {
-      fd.append('selected_category_ids', Array.from(selectedCategoryIds.value).join(','))
+    // Selected category IDs (only template IDs — custom categories sent separately)
+    const templateIds = Array.from(selectedCategoryIds.value).filter(id => id > 0)
+    if (templateIds.length > 0) {
+      fd.append('selected_category_ids', templateIds.join(','))
+    }
+
+    // Custom categories defined by the user
+    if (customCategories.value.length > 0) {
+      const customJson = customCategories.value.map(cc => {
+        let parentCode: string | null = null
+        if (cc.parentTempId !== null) {
+          if (cc.parentTempId > 0) {
+            // Template parent — look up its code
+            const tmpl = templateCategories.value.find(c => c.id === cc.parentTempId)
+            parentCode = tmpl?.code ?? null
+          } else {
+            // Custom parent — use its code or name as key
+            const parent = customCategories.value.find(c => c.tempId === cc.parentTempId)
+            parentCode = parent?.code || parent?.name || null
+          }
+        }
+        return { name: cc.name, code: cc.code, color: cc.color, parentCode }
+      })
+      fd.append('custom_categories_json', JSON.stringify(customJson))
     }
 
     // Pricing rules from flat pricingRows array
@@ -2057,6 +2330,7 @@ const saveToStorage = () => {
     staffAdminIsSelf: staffAdminIsSelf.value,
     locationsList: locationsList.value,
     selectedCategoryIds: Array.from(selectedCategoryIds.value),
+    customCategories: customCategories.value,
     pricingItems: pricingRows.value,
   }))
 }
@@ -2087,6 +2361,7 @@ const loadFromStorage = () => {
     if (typeof d.staffAdminIsSelf === 'boolean') staffAdminIsSelf.value = d.staffAdminIsSelf
     if (d.locationsList) locationsList.value = d.locationsList
     if (Array.isArray(d.selectedCategoryIds)) selectedCategoryIds.value = new Set<number>(d.selectedCategoryIds)
+    if (Array.isArray(d.customCategories)) customCategories.value = d.customCategories
     if (d.pricingItems && typeof d.pricingItems === 'object') pricingRows.value = d.pricingItems
     if (adminSameAsCompany.value) applyAdminFromCompany()
   } catch { /* ignore */ }
