@@ -295,17 +295,43 @@
                 <label class="block text-sm font-medium text-gray-700 mb-1">
                   Geburtsdatum *
                 </label>
-                <input
-                  v-model="form.birthdate"
-                  type="date"
-                  required
-                  @blur="validateBirthdate"
-                  :class="[
-                    'w-full max-w-full min-w-0 border rounded-md px-3 py-2 focus:outline-none focus:ring-2 box-border appearance-none',
-                    fieldErrors.birthdate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-primary'
-                  ]"
-                  style="-webkit-appearance: none; width: 100%; box-sizing: border-box;"
-                >
+                <div class="grid grid-cols-3 gap-2">
+                  <select
+                    v-model="birthdateDay"
+                    @change="updateBirthdate"
+                    :class="['border rounded-md px-2 py-2 focus:outline-none focus:ring-2 bg-white text-sm', fieldErrors.birthdate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-primary']"
+                  >
+                    <option value="">Tag</option>
+                    <option v-for="d in 31" :key="d" :value="String(d).padStart(2,'0')">{{ d }}</option>
+                  </select>
+                  <select
+                    v-model="birthdateMonth"
+                    @change="updateBirthdate"
+                    :class="['border rounded-md px-2 py-2 focus:outline-none focus:ring-2 bg-white text-sm', fieldErrors.birthdate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-primary']"
+                  >
+                    <option value="">Monat</option>
+                    <option value="01">Januar</option>
+                    <option value="02">Februar</option>
+                    <option value="03">März</option>
+                    <option value="04">April</option>
+                    <option value="05">Mai</option>
+                    <option value="06">Juni</option>
+                    <option value="07">Juli</option>
+                    <option value="08">August</option>
+                    <option value="09">September</option>
+                    <option value="10">Oktober</option>
+                    <option value="11">November</option>
+                    <option value="12">Dezember</option>
+                  </select>
+                  <select
+                    v-model="birthdateYear"
+                    @change="updateBirthdate"
+                    :class="['border rounded-md px-2 py-2 focus:outline-none focus:ring-2 bg-white text-sm', fieldErrors.birthdate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-primary']"
+                  >
+                    <option value="">Jahr</option>
+                    <option v-for="y in birthdateYears" :key="y" :value="String(y)">{{ y }}</option>
+                  </select>
+                </div>
                 <p v-if="fieldErrors.birthdate" class="mt-1 text-sm text-red-600">{{ fieldErrors.birthdate }}</p>
               </div>
 
@@ -756,7 +782,7 @@
 
 <script setup lang="ts">
 
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, navigateTo, useFetch } from '#app'
 import { logger } from '~/utils/logger'
 import { generateStrongPassword } from '~/composables/usePasswordStrength'
@@ -832,6 +858,34 @@ const checkPasswordStrength = async (password: string) => {
     }
   }, 500)
 }
+
+// ─── Birthdate dropdowns ─────────────────────────────────────────────────────
+const birthdateDay   = ref('')
+const birthdateMonth = ref('')
+const birthdateYear  = ref('')
+const birthdateYears = computed(() => {
+  const currentYear = new Date().getFullYear()
+  const years = []
+  for (let y = currentYear - 14; y >= currentYear - 100; y--) years.push(y)
+  return years
+})
+function updateBirthdate() {
+  if (birthdateDay.value && birthdateMonth.value && birthdateYear.value) {
+    form.birthdate = `${birthdateYear.value}-${birthdateMonth.value}-${birthdateDay.value}`
+    validateBirthdate()
+  } else {
+    form.birthdate = ''
+  }
+}
+// Pre-fill dropdowns when form.birthdate is set externally (e.g. from DB)
+watch(() => form.birthdate, (val) => {
+  if (val && val.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [y, m, d] = val.split('-')
+    if (!birthdateYear.value)  birthdateYear.value  = y
+    if (!birthdateMonth.value) birthdateMonth.value = m
+    if (!birthdateDay.value)   birthdateDay.value   = d
+  }
+}, { immediate: true })
 
 // Field-specific errors
 const fieldErrors = ref<Record<string, string>>({
