@@ -410,6 +410,53 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       console.warn('⚠️ Default data copy failed:', defaultDataError)
     }
 
+    // 6b. Custom categories defined by the user during registration
+    if (data.custom_categories_json?.trim()) {
+      try {
+        const customs: Array<{ name: string; code: string; color: string; parentCode: string | null }> =
+          JSON.parse(data.custom_categories_json)
+        if (Array.isArray(customs) && customs.length > 0) {
+          const mains = customs.filter(c => !c.parentCode)
+          const subs  = customs.filter(c => !!c.parentCode)
+
+          // Build a code→id map of all tenant categories (after template copy)
+          const { data: existingCats } = await supabase
+            .from('categories').select('id, code').eq('tenant_id', tenantId)
+          const codeToId: Record<string, number> = {}
+          for (const ec of (existingCats || [])) if (ec.code) codeToId[ec.code] = ec.id
+
+          // Insert custom main categories first
+          if (mains.length > 0) {
+            const { data: insertedMains } = await supabase.from('categories')
+              .insert(mains.map(c => ({
+                tenant_id: tenantId,
+                name: c.name.trim(),
+                code: (c.code?.trim().toUpperCase()) || c.name.trim().toUpperCase().replace(/\s+/g, '_').slice(0, 10),
+                color: c.color || '#6366f1',
+                is_active: true,
+              }))).select('id, code')
+            for (const m of (insertedMains || [])) if (m.code) codeToId[m.code] = m.id
+            logger.debug(`✅ Created ${mains.length} custom main categories`)
+          }
+
+          // Insert custom subcategories, resolving parent by code
+          if (subs.length > 0) {
+            await supabase.from('categories').insert(subs.map(c => ({
+              tenant_id: tenantId,
+              name: c.name.trim(),
+              code: (c.code?.trim().toUpperCase()) || c.name.trim().toUpperCase().replace(/\s+/g, '_').slice(0, 10),
+              color: c.color || '#6366f1',
+              parent_category_id: c.parentCode ? (codeToId[c.parentCode] ?? null) : null,
+              is_active: true,
+            })))
+            logger.debug(`✅ Created ${subs.length} custom subcategories`)
+          }
+        }
+      } catch (custErr) {
+        console.warn('⚠️ Custom category creation failed (non-critical):', custErr)
+      }
+    }
+
     // 7. Standorte erstellen (falls vorhanden)
     if (data.locations_json?.trim()) {
       try {
