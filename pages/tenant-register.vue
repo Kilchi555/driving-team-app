@@ -1680,11 +1680,22 @@ const effectiveCategoryCount = computed(() => {
   // Fallback to raw selected count if templateCategories not yet loaded
   if (templateCategories.value.length === 0) return selectedCategoryIds.value.size
   let count = 0
+  // Template categories
   for (const cat of templateCategories.value) {
     const selectedChildren = (cat.children || []).filter(c => selectedCategoryIds.value.has(c.id))
     if (selectedChildren.length > 0) {
       count += selectedChildren.length
     } else if (selectedCategoryIds.value.has(cat.id)) {
+      count += 1
+    }
+  }
+  // Custom categories (negative tempIds, not in templateCategories)
+  for (const cc of customCategories.value) {
+    if (cc.parentTempId !== null) continue // subcats are counted via their parent
+    const subs = customCategories.value.filter(c => c.parentTempId === cc.tempId)
+    if (subs.length > 0) {
+      count += subs.filter(s => selectedCategoryIds.value.has(s.tempId)).length
+    } else if (selectedCategoryIds.value.has(cc.tempId)) {
       count += 1
     }
   }
