@@ -73,24 +73,15 @@ export default defineEventHandler(async (event) => {
       .eq('id', invitation.tenant_id)
       .single()
 
-    // Get categories if driving school (with hierarchy)
+      // Get categories if driving school (with hierarchy)
     let categories = []
     if (tenant?.business_type === 'driving_school') {
-      let catQuery = supabase
+      const { data: cats } = await supabase
         .from('categories')
         .select('code, name, parent_category_id, id, color')
         .eq('tenant_id', invitation.tenant_id)
         .eq('is_active', true)
-
-      // If the tenant has explicitly selected categories during registration, filter by those codes
-      const selectedCodes: string[] = Array.isArray(tenant?.selected_categories)
-        ? (tenant.selected_categories as string[]).filter(Boolean)
-        : []
-      if (selectedCodes.length > 0) {
-        catQuery = catQuery.in('code', selectedCodes)
-      }
-
-      const { data: cats } = await catQuery.order('code')
+        .order('code')
 
       // Filter: show only leaf categories (subcategories, or mains without children)
       const allCats = cats || []
