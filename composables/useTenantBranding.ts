@@ -415,16 +415,11 @@ export const useTenantBranding = () => {
       const supabaseClient = getSupabase()
       const { data: { session } } = await supabaseClient.auth.getSession()
       const authHeader = session?.access_token ? `Bearer ${session.access_token}` : null
-      if (!authHeader) {
-        throw new Error('Authentication required for branding updates')
-      }
 
       try {
         const response: any = await $fetch('/api/tenants/branding', {
           method: 'POST',
-          headers: {
-            Authorization: authHeader
-          },
+          ...(authHeader ? { headers: { Authorization: authHeader } } : {}),
           body: {
             tenantId,
             updateData
