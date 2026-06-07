@@ -165,6 +165,22 @@ function buildUserHtml(
       <p style="color:#9ca3af;font-size:12px;margin:0;text-align:center;">
         Oder öffne: <a href="${loginUrl}" style="color:${primaryColor};">${loginUrl}</a>
       </p>
+
+      <!-- App Store -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;">
+        <tr><td align="center">
+          <p style="margin:0 0 10px;color:#9ca3af;font-size:12px;">Simy auch als iPhone-App verfügbar</p>
+          <a href="https://apps.apple.com/ch/app/simy/id6766244063"
+            style="display:inline-flex;align-items:center;gap:8px;background:#000;color:#fff;
+                   text-decoration:none;padding:10px 18px;border-radius:10px;font-family:-apple-system,sans-serif;">
+            <span style="font-size:22px;line-height:1;">&#63743;</span>
+            <span style="text-align:left;line-height:1.2;">
+              <span style="display:block;font-size:9px;color:#ccc;letter-spacing:0.3px;">Laden im</span>
+              <span style="display:block;font-size:15px;font-weight:600;color:#fff;">App Store</span>
+            </span>
+          </a>
+        </td></tr>
+      </table>
     </td>
   </tr>
 
@@ -245,6 +261,22 @@ function buildAdminHtml(firstName: string, tenantName: string, loginUrl: string)
       <p style="color:#333;font-size:14px;margin:16px 0 0;font-weight:600;">
         Pascal<br><span style="color:#888;font-weight:400;">Simy – Fahrschulsoftware</span>
       </p>
+
+      <!-- App Store -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;">
+        <tr><td align="center">
+          <p style="margin:0 0 10px;color:#9ca3af;font-size:12px;">Simy auch als iPhone-App verfügbar</p>
+          <a href="https://apps.apple.com/ch/app/simy/id6766244063"
+            style="display:inline-flex;align-items:center;gap:8px;background:#000;color:#fff;
+                   text-decoration:none;padding:10px 18px;border-radius:10px;font-family:-apple-system,sans-serif;">
+            <span style="font-size:22px;line-height:1;">&#63743;</span>
+            <span style="text-align:left;line-height:1.2;">
+              <span style="display:block;font-size:9px;color:#ccc;letter-spacing:0.3px;">Laden im</span>
+              <span style="display:block;font-size:15px;font-weight:600;color:#fff;">App Store</span>
+            </span>
+          </a>
+        </td></tr>
+      </table>
     </td>
   </tr>
 
