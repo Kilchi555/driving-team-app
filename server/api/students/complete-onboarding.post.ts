@@ -132,12 +132,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 6: Check if email is already linked to an active account (within same tenant)
+    // ✅ LAYER 6: Check if email is already linked to an active CLIENT account (within same tenant)
+    // Only block if another CLIENT (role='client') has this email — a staff member using the
+    // same email is fine (cross-role sharing the same auth.users account via orphan recovery).
     const { data: existingPublicUser } = await supabaseAdmin
       .from('users')
-      .select('id, auth_user_id, first_name, last_name')
+      .select('id, auth_user_id, first_name, last_name, role')
       .eq('email', email.toLowerCase().trim())
       .eq('tenant_id', user.tenant_id)
+      .eq('role', 'client')
       .not('auth_user_id', 'is', null)
       .maybeSingle()
 
