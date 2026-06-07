@@ -2430,6 +2430,12 @@ onMounted(async () => {
 
   loadFromStorage()
 
+  // After restoring from storage, re-trigger the email availability check so that
+  // emailCheck doesn't remain 'idle' and block the "Weiter" button.
+  if (adminEmailEarly.value && adminEmailEarly.value.includes('@')) {
+    checkAdminEmail(adminEmailEarly.value)
+  }
+
   // Pre-populate logo from sessionStorage — read AFTER loadFromStorage so it takes
   // precedence over any stale null value from a previous registration attempt.
   const savedLogo = sessionStorage.getItem('simy_preview_logo')
