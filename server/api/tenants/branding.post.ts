@@ -312,6 +312,8 @@ export default defineEventHandler(async (event) => {
       // Contact (tenant's own — they can update)
       'contact_email', 'contact_phone', 'address',
       'street', 'street_nr', 'zip', 'city', 'country',
+      // Messaging
+      'twilio_from_sender',
       // Social / web
       'website_url', 'instagram_url', 'facebook_url', 'tiktok_url', 'youtube_url',
       // SEO
