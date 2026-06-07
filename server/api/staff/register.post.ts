@@ -139,19 +139,20 @@ export default defineEventHandler(async (event) => {
     const sanitizedStreetNr = streetNr ? sanitizeString(streetNr, 10) : null
     const sanitizedCity = city ? sanitizeString(city, 100) : null
 
-    // ✅ LAYER 7: Check for duplicate email BEFORE creating auth user
+    // ✅ LAYER 7: Block only if this email is already a staff member in this tenant
     const { data: existingUser } = await serviceSupabase
       .from('users')
       .select('id')
       .eq('email', email.toLowerCase().trim())
       .eq('tenant_id', invitation.tenant_id)
-      .single()
+      .eq('role', 'staff')
+      .maybeSingle()
 
     if (existingUser) {
-      logger.warn('⚠️ Duplicate email detected for staff registration:', email)
+      logger.warn('⚠️ Duplicate staff email detected for tenant:', email)
       throw createError({
         statusCode: 409,
-        statusMessage: 'Diese E-Mail-Adresse ist bereits registriert.'
+        statusMessage: 'Diese E-Mail-Adresse ist bereits als Fahrlehrer in dieser Fahrschule registriert.'
       })
     }
 

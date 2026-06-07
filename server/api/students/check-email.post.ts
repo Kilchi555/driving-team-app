@@ -27,13 +27,13 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // Check if email is already linked to an active account in THIS tenant
-    // (cross-tenant reuse is handled by complete-onboarding via orphan recovery)
+    // Check if email is already linked to an active CLIENT account in this tenant
     const { data: existingUserInTenant, error: dbError } = await supabase
       .from('users')
       .select('id, auth_user_id')
       .eq('email', email.trim().toLowerCase())
       .eq('tenant_id', tenantId)
+      .eq('role', 'client')
       .not('auth_user_id', 'is', null)
       .maybeSingle()
 
