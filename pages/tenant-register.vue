@@ -127,20 +127,15 @@
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">E-Mail (Kontakt)</label>
-                <input v-model="formData.contact_email" type="email" placeholder="info@fahrschule.ch"
-                  class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
-              </div>
-              <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Telefon *</label>
                 <input v-model="formData.contact_phone" type="tel" required placeholder="+41 44 123 45 67"
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
               </div>
-              <!-- Admin Login Email – früh validieren -->
+              <!-- Primäre E-Mail – wird für Login, Kontakt & Versand verwendet -->
               <div class="sm:col-span-2">
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
-                  E-Mail für Admin-Login *
-                  <span class="normal-case font-normal text-gray-400 ml-1">– wird dein persönlicher Login</span>
+                  E-Mail *
+                  <span class="normal-case font-normal text-gray-400 ml-1">– für Login, Kontakt & E-Mail-Versand</span>
                 </label>
                 <input
                   v-model="adminEmailEarly"
@@ -891,23 +886,37 @@
             </button>
 
             <div v-if="showAdvancedBranding" class="mt-4 space-y-5">
-            <!-- E-Mail Absender -->
+            <!-- E-Mails anpassen -->
             <div>
               <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                E-Mail Absender
+                E-Mails anpassen
               </p>
               <p class="text-xs text-gray-400 mb-3">
-                Damit E-Mails von deiner eigenen Domain kommen, z. B.
-                <code class="bg-gray-100 px-1 rounded">info@deine-fahrschule.ch</code>.
-                Die DNS-Verifizierung erledigst du nach der Registrierung unter
-                <strong>Einstellungen → E-Mail Domain</strong>.
+                Standardmässig wird deine Login-E-Mail für alles verwendet. Du kannst hier separate Adressen setzen.
               </p>
-              <input
-                v-model="formData.from_email"
-                type="email"
-                placeholder="info@deine-fahrschule.ch"
-                class="w-full sm:w-80 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm"
-              />
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs text-gray-500 mb-1">Kontakt-E-Mail</label>
+                  <input
+                    v-model="formData.contact_email"
+                    type="email"
+                    placeholder="info@deine-fahrschule.ch"
+                    class="w-full sm:w-80 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-500 mb-1">
+                    E-Mail Absender
+                    <span class="text-gray-400 ml-1">– für eigene Domain, DNS-Verifikation nach Login</span>
+                  </label>
+                  <input
+                    v-model="formData.from_email"
+                    type="email"
+                    placeholder="info@deine-fahrschule.ch"
+                    class="w-full sm:w-80 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm"
+                  />
+                </div>
+              </div>
             </div>
 
             <!-- SMS Absender -->
@@ -1882,8 +1891,15 @@ const showAdvancedBranding = ref(false)
 
 // adminEmailEarly: entered on step 0 for early validation; synced to adminForm.email
 const adminEmailEarly = ref('')
-watch(adminEmailEarly, (val) => {
+watch(adminEmailEarly, (val, oldVal) => {
   adminForm.value.email = val
+  // Auto-sync contact_email and from_email as long as they haven't been manually customized
+  if (!formData.value.contact_email || formData.value.contact_email === oldVal) {
+    formData.value.contact_email = val
+  }
+  if (!formData.value.from_email || formData.value.from_email === oldVal) {
+    formData.value.from_email = val
+  }
 })
 
 // ─── Password Strength ─────────────────────────────────────────────────────
