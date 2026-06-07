@@ -132,11 +132,12 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 6: Check if email is already linked to an active account
+    // ✅ LAYER 6: Check if email is already linked to an active account (within same tenant)
     const { data: existingPublicUser } = await supabaseAdmin
       .from('users')
       .select('id, auth_user_id, first_name, last_name')
       .eq('email', email.toLowerCase().trim())
+      .eq('tenant_id', user.tenant_id)
       .not('auth_user_id', 'is', null)
       .maybeSingle()
 
