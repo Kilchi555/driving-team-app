@@ -932,8 +932,10 @@ const submit = async () => {
           method: 'POST',
           body: {
             action: 'connect',
-            provider: form.externalCalendarProvider,
-            ics_url: form.externalCalendarUrl,
+            data: {
+              provider: form.externalCalendarProvider,
+              ics_url: form.externalCalendarUrl,
+            }
           }
         })
       } catch { /* non-fatal */ }

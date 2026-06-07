@@ -373,7 +373,21 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Invitation marked as accepted')
 
-    // 9. Send welcome email
+    // 9. Auto-generate calendar token so it's immediately available in StaffSettings
+    try {
+      const calendarToken = Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15)
+      await serviceSupabase.from('calendar_tokens').insert({
+        staff_id: newUser.id,
+        token: calendarToken,
+        is_active: true
+      })
+      logger.debug('✅ Calendar token auto-generated for new staff member')
+    } catch (calErr: any) {
+      logger.warn('⚠️ Calendar token generation failed (non-critical):', calErr.message)
+    }
+
+    // 10. Send welcome email
     try {
       await sendWelcomeEmail({
         role: 'staff',
