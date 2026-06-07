@@ -5,7 +5,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 
-const STORAGE_BUCKET = 'tenant-assets'
+const STORAGE_BUCKET = 'tenant-logos'
 const MAX_SIZE_BYTES = 250 * 1024 // 250 KB
 
 export default defineEventHandler(async (event) => {
