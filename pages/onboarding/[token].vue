@@ -278,7 +278,7 @@
                 ]">
                   {{ emailCheckMessage }}
                 </p>
-                <p v-if="fieldErrors.email" class="mt-1 text-sm text-red-600">{{ fieldErrors.email }}</p>
+                <p v-if="fieldErrors.email && !emailCheckMessage" class="mt-1 text-sm text-red-600">{{ fieldErrors.email }}</p>
               </div>
 
               <!-- Phone -->
