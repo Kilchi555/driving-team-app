@@ -41,7 +41,7 @@
             </svg>
           </button>
           <h1 class="text-xl sm:text-2xl font-bold text-gray-900">
-            {{ isNavigating ? 'Lade Kalender...' : `${t.clientsPlural}-Liste` }}
+            {{ isNavigating ? 'Lade Kalender...' : 'Kunden' }}
           </h1>
         </div>
 
