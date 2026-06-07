@@ -2137,8 +2137,10 @@ onMounted(async () => {
     sessionStorage.removeItem('simy_preview_logo')
   }
 
-  // Pre-populate logo from temp storage URL (passed from simy.ch marketing preview)
-  if (!logoPreview.value && q.logo_url && typeof q.logo_url === 'string') {
+  // Pre-populate logo from temp storage URL (passed from simy.ch marketing preview).
+  // This always takes precedence — an explicit logo_url from the URL is fresher than
+  // anything stale in localStorage from a previous registration attempt.
+  if (q.logo_url && typeof q.logo_url === 'string') {
     try {
       logoPreview.value = q.logo_url
       const res = await fetch(q.logo_url)
