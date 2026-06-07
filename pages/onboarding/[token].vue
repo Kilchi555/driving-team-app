@@ -14,7 +14,7 @@
     <div v-if="isLoading" class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
       <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
         <div class="text-center">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" :style="{ borderColor: primaryColor }"></div>
           <p class="mt-4 text-gray-600">Lade Daten...</p>
         </div>
       </div>
@@ -79,12 +79,10 @@
             >
               <div class="flex items-center w-full">
                 <div 
-                  class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full border-2 transition-all duration-300"
-                  :class="{
-                    'bg-green-600 border-green-600 text-white shadow-lg': index < step,
-                    'bg-green-600 border-green-600 text-white shadow-lg ring-4 ring-green-100': index === step,
-                    'bg-white border-gray-300 text-gray-400': index > step
-                  }"
+                  class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full border-2 transition-all duration-300 bg-white border-gray-300 text-gray-400"
+                  :class="{ 'text-white shadow-lg': index <= step }"
+                  :style="index < step ? { backgroundColor: primaryColor, borderColor: primaryColor } :
+                          index === step ? { backgroundColor: primaryColor, borderColor: primaryColor, boxShadow: `0 0 0 4px ${primaryColor}22` } : {}"
                 >
                   <svg v-if="index < step" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
@@ -93,17 +91,12 @@
                 </div>
                 <div 
                   v-if="index < steps.length - 1"
-                  class="flex-1 h-0.5 mx-3 transition-colors duration-300"
-                  :class="{
-                    'bg-green-600': index < step,
-                    'bg-gray-300': index >= step
-                  }"
+                  class="flex-1 h-0.5 mx-3 transition-colors duration-300 bg-gray-300"
+                  :style="index < step ? { backgroundColor: primaryColor } : {}"
                 ></div>
               </div>
-              <p class="mt-3 text-xs text-center font-medium" :class="{
-                'text-green-600': index <= step,
-                'text-gray-500': index > step
-              }">{{ stepItem }}</p>
+              <p class="mt-3 text-xs text-center font-medium text-gray-500"
+                :style="index <= step ? { color: primaryColor } : {}">{{ stepItem }}</p>
             </div>
           </div>
         </div>
@@ -134,11 +127,10 @@
                   minlength="12"
                   autocomplete="new-password"
                   name="new-password-field"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Mindestens 12 Zeichen"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                 <div class="flex items-center justify-between mt-2">
-                  <button type="button" @click="useGeneratedPassword" class="text-xs font-semibold text-green-600 underline">
+                  <button type="button" @click="useGeneratedPassword" class="text-xs font-semibold underline" :style="{ color: primaryColor }">
                     Sicheres Passwort vorschlagen
                   </button>
                   <button type="button" @click="showPw = !showPw" class="text-xs text-gray-500 hover:text-gray-700">
@@ -149,7 +141,8 @@
                 <!-- Password validation feedback -->
                 <div class="mt-3 space-y-2">
                   <div class="flex items-center space-x-2">
-                    <span :class="form.password.length >= 12 ? 'text-green-600' : 'text-gray-400'" class="text-sm">
+                    <span :class="form.password.length >= 12 ? '' : 'text-gray-400'"
+                          :style="form.password.length >= 12 ? { color: primaryColor } : {}" class="text-sm">
                       {{ form.password.length >= 12 ? '✓' : '○' }} Mindestens 12 Zeichen
                     </span>
                   </div>
@@ -161,15 +154,16 @@
                         :class="i <= zxcvbnScore ? [
                           zxcvbnScore <= 1 ? 'bg-red-500' :
                           zxcvbnScore === 2 ? 'bg-yellow-400' :
-                          zxcvbnScore === 3 ? 'bg-blue-400' : 'bg-green-500'
+                          zxcvbnScore === 3 ? 'bg-blue-400' : ''
                         ] : 'bg-gray-200'"
+                        :style="i <= zxcvbnScore && zxcvbnScore === 4 ? { backgroundColor: primaryColor } : {}"
                       />
                     </div>
                     <p class="text-xs mt-2" :class="
                       zxcvbnScore <= 1 ? 'text-red-500' :
                       zxcvbnScore === 2 ? 'text-yellow-600' :
-                      zxcvbnScore === 3 ? 'text-blue-600' : 'text-green-600'
-                    ">
+                      zxcvbnScore === 3 ? 'text-blue-600' : ''"
+                    :style="zxcvbnScore === 4 ? { color: primaryColor } : {}">
                       {{ ['Sehr schwach', 'Schwach', 'Akzeptabel', 'Stark', 'Sehr stark'][zxcvbnScore] }}
                       <span v-if="zxcvbnScore < 2"> – zu leicht erratbar</span>
                     </p>
@@ -181,7 +175,7 @@
                     <span v-else-if="hibpStatus === 'pwned'" class="text-red-600 font-medium">
                       ✗ Passwort {{ hibpCount.toLocaleString('de-CH') }}× in Datenlecks gefunden
                     </span>
-                    <span v-else-if="hibpStatus === 'safe'" class="text-green-600">
+                    <span v-else-if="hibpStatus === 'safe'" :style="{ color: primaryColor }">
                       ✓ Nicht in bekannten Datenlecks gefunden
                     </span>
                   </div>
@@ -198,11 +192,11 @@
                   required
                   autocomplete="new-password"
                   name="confirm-password-field"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Passwort wiederholen"
                 >
                 <p v-if="passwordMismatch" class="mt-1 text-xs text-red-600">❌ Passwörter stimmen nicht überein.</p>
-                <p v-else-if="form.confirmPassword && form.confirmPassword === form.password" class="mt-1 text-xs text-green-600">✅ Passwörter stimmen überein.</p>
+                <p v-else-if="form.confirmPassword && form.confirmPassword === form.password" class="mt-1 text-xs" :style="{ color: primaryColor }">✅ Passwörter stimmen überein.</p>
               </div>
 
               <p v-if="passwordError" class="text-red-600 text-sm">{{ passwordError }}</p>
@@ -227,7 +221,7 @@
                     v-model="form.firstName"
                     type="text"
                     required
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Max"
                   >
                 </div>
@@ -239,7 +233,7 @@
                     v-model="form.lastName"
                     type="text"
                     required
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Mustermann"
                   >
                 </div>
@@ -261,21 +255,18 @@
                   @blur="validateEmail"
                   :class="[
                     'w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2',
-                    emailStatus === 'available' ? 'border-green-500 bg-green-50 focus:ring-green-500' :
+                    emailStatus === 'available' ? 'border-primary bg-primary-light focus:ring-primary' :
                     emailStatus === 'taken' ? 'border-red-500 bg-red-50 focus:ring-red-500' :
                     emailStatus === 'checking' ? 'border-gray-400 bg-gray-50 focus:ring-gray-500' :
                     emailStatus === 'error' ? 'border-red-500 focus:ring-red-500' :
-                    fieldErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'
+                    fieldErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-primary'
                   ]"
                   placeholder="max.mustermann@example.com"
                 >
-                <p v-if="emailCheckMessage" :class="[
-                  'mt-1 text-sm',
-                  emailStatus === 'available' ? 'text-green-600' :
-                  emailStatus === 'taken' ? 'text-red-600' :
-                  emailStatus === 'checking' ? 'text-gray-500' :
-                  'text-red-600'
-                ]">
+                <p v-if="emailCheckMessage"
+                  class="mt-1 text-sm"
+                  :class="emailStatus === 'taken' || emailStatus === 'error' ? 'text-red-600' : emailStatus === 'checking' ? 'text-gray-500' : ''"
+                  :style="emailStatus === 'available' ? { color: primaryColor } : {}">
                   {{ emailCheckMessage }}
                 </p>
                 <p v-if="fieldErrors.email && !emailCheckMessage" class="mt-1 text-sm text-red-600">{{ fieldErrors.email }}</p>
@@ -292,7 +283,7 @@
                   @blur="normalizePhoneNumber"
                   :class="[
                     'w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2',
-                    fieldErrors.phone ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'
+                    fieldErrors.phone ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-primary'
                   ]"
                   placeholder="+41 79 123 45 67"
                 >
@@ -311,7 +302,7 @@
                   @blur="validateBirthdate"
                   :class="[
                     'w-full max-w-full min-w-0 border rounded-md px-3 py-2 focus:outline-none focus:ring-2 box-border appearance-none',
-                    fieldErrors.birthdate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'
+                    fieldErrors.birthdate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-primary'
                   ]"
                   style="-webkit-appearance: none; width: 100%; box-sizing: border-box;"
                 >
@@ -328,7 +319,7 @@
                     v-model="form.street"
                     type="text"
                     required
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Musterstrasse"
                   >
                 </div>
@@ -341,7 +332,7 @@
                     v-model="form.street_nr"
                     type="text"
                     required
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="123"
                   >
                 </div>
@@ -359,7 +350,7 @@
                     @blur="validateZip"
                     :class="[
                       'w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2',
-                      fieldErrors.zip ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500'
+                      fieldErrors.zip ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-primary'
                     ]"
                     placeholder="8000"
                   >
@@ -374,7 +365,7 @@
                     v-model="form.city"
                     type="text"
                     required
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Zürich"
                   >
                 </div>
@@ -386,7 +377,7 @@
                   <input
                     v-model="form.profession"
                     type="text"
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="z.B. Student/in, Software Engineer"
                   >
                 </div>
@@ -418,7 +409,7 @@
                   <div 
                     v-for="cat in filteredCategories" 
                     :key="cat.code || cat.id" 
-                    class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-green-300 transition-colors cursor-pointer"
+                    class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 category-row transition-colors cursor-pointer"
                     @click="toggleCategory(cat.code || cat.id)"
                   >
                     <div class="flex-1 min-w-0">
@@ -436,14 +427,14 @@
                         @click.stop
                         @change="clearCategoryError"
                       />
-                      <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                      <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all toggle-checked"></div>
                     </label>
                   </div>
                 </div>
 
                 <!-- Selected Categories Summary -->
-                <div v-if="form.categories.length > 0" class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <p class="text-sm font-medium text-green-900">
+                <div v-if="form.categories.length > 0" class="mt-4 p-3 rounded-lg border" :style="{ backgroundColor: primaryColor + '12', borderColor: primaryColor + '40' }">
+                  <p class="text-sm font-medium" :style="{ color: primaryColor }">
                     ✅ {{ form.categories.length }} Kategorie{{ form.categories.length !== 1 ? 'n' : '' }} ausgewählt: 
                     <span class="font-bold">{{ form.categories.join(', ') }}</span>
                   </p>
@@ -490,9 +481,9 @@
                   @dragleave="handleDragLeave($event, category)"
                   :class="[
                     'border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200',
-                    dragOver[category] ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-green-400',
-                    fileErrors[category] ? 'border-red-400 bg-red-50' : ''
+                    fileErrors[category] ? 'border-red-400 bg-red-50' : 'border-gray-300'
                   ]"
+                  :style="dragOver[category] ? { borderColor: primaryColor, backgroundColor: primaryColor + '08' } : {}"
                 >
                   <div v-if="!uploadedFiles[category]">
                     <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
@@ -502,7 +493,7 @@
                       <label :for="`file_${category}`" class="cursor-pointer">
                         <span class="mt-2 block text-sm font-medium text-gray-900">
                           Datei hierher ziehen oder
-                          <span class="text-green-600 hover:text-green-500">durchsuchen</span>
+                          <span :style="{ color: primaryColor }">durchsuchen</span>
                         </span>
                         <p class="mt-1 text-xs text-gray-500">
                           PNG, JPG, PDF bis 10MB
@@ -519,21 +510,21 @@
                   </div>
                   
                   <!-- File Preview -->
-                  <div v-else-if="uploadedFiles[category]" class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div v-else-if="uploadedFiles[category]" class="flex items-center justify-between p-4 rounded-lg border" :style="{ backgroundColor: primaryColor + '10', borderColor: primaryColor + '40' }">
                     <div class="flex items-center space-x-3 min-w-0 flex-1">
                       <div class="flex-shrink-0">
-                        <svg v-if="uploadedFiles[category].type.startsWith('image/')" class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg v-if="uploadedFiles[category].type.startsWith('image/')" class="h-8 w-8" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
-                        <svg v-else class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg v-else class="h-8 w-8" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                         </svg>
                       </div>
                       <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-green-900 truncate break-words" :title="uploadedFiles[category].name">
+                        <p class="text-sm font-medium truncate break-words" :style="{ color: primaryColor }" :title="uploadedFiles[category].name">
                           {{ uploadedFiles[category].name }}
                         </p>
-                        <p class="text-xs text-green-600">
+                        <p class="text-xs" :style="{ color: primaryColor }">
                           {{ formatFileSize(uploadedFiles[category].size) }}
                         </p>
                       </div>
@@ -541,7 +532,8 @@
                     <button
                       type="button"
                       @click="removeFile(category)"
-                      class="flex-shrink-0 p-1 text-green-600 hover:text-green-800"
+                      class="flex-shrink-0 p-1 hover:opacity-70"
+                      :style="{ color: primaryColor }"
                     >
                       <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -574,19 +566,19 @@
             </p>
 
             <div class="space-y-4">
-              <div class="flex items-start space-x-3 p-4 bg-green-50 rounded-lg border border-green-200">
+              <div class="flex items-start space-x-3 p-4 rounded-lg border" :style="{ backgroundColor: primaryColor + '0d', borderColor: primaryColor + '33' }">
                 <input
                   v-model="form.acceptedTerms"
                   type="checkbox"
                   required
-                  class="mt-1 h-5 w-5 text-green-600 focus:ring-green-500 border-gray-300 rounded flex-shrink-0"
+                  class="mt-1 h-5 w-5 accent-primary focus:ring-primary border-gray-300 rounded flex-shrink-0"
                 >
                 <label class="text-sm text-gray-700 leading-relaxed">
                   Ich akzeptiere die 
                   <button
                     type="button"
                     @click.prevent="openRegulationModal('nutzungsbedingungen')"
-                    class="text-green-600 hover:text-green-800 underline font-medium"
+                    class="underline font-medium hover:opacity-70" :style="{ color: primaryColor }"
                   >
                     Nutzungsbedingungen
                   </button>,
@@ -594,7 +586,7 @@
                   <button
                     type="button"
                     @click.prevent="openRegulationModal('agb')"
-                    class="text-green-600 hover:text-green-800 underline font-medium"
+                    class="underline font-medium hover:opacity-70" :style="{ color: primaryColor }"
                   >
                     AGB
                   </button>
@@ -602,7 +594,7 @@
                   <button
                     type="button"
                     @click.prevent="openRegulationModal('datenschutz')"
-                    class="text-green-600 hover:text-green-800 underline font-medium"
+                    class="underline font-medium hover:opacity-70" :style="{ color: primaryColor }"
                   >
                     Datenschutzerklärung
                   </button>
@@ -627,7 +619,8 @@
             <button
               type="submit"
               :disabled="isSubmitting || (step === 0 && (passwordTooShort || passwordMismatch))"
-              class="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+              class="w-full sm:w-auto px-6 py-3 text-white rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed transition-all font-medium hover:opacity-90"
+              :style="!(isSubmitting || (step === 0 && (passwordTooShort || passwordMismatch))) ? { backgroundColor: primaryColor } : {}"
             >
               <span v-if="isSubmitting" class="flex items-center justify-center">
                 <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
@@ -671,7 +664,8 @@
           </button>
           <button
             @click="goToLogin"
-            class="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            class="flex-1 px-4 py-2 text-white rounded-md transition-colors hover:opacity-90"
+            :style="{ backgroundColor: primaryColor }"
           >
             Zum Login
           </button>
@@ -684,7 +678,7 @@
       <div class="bg-white rounded-lg max-w-md w-full p-6">
         <div class="flex items-center mb-4">
           <div class="flex-shrink-0">
-            <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="h-8 w-8" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
           </div>
@@ -698,7 +692,8 @@
         <div class="flex justify-end">
           <button
             @click="goToLogin"
-            class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            class="px-6 py-2 text-white rounded-md transition-colors hover:opacity-90"
+            :style="{ backgroundColor: primaryColor }"
           >
             Zum Login
           </button>
@@ -733,7 +728,8 @@
           <button
             type="button"
             @click="showRegulationModal = false"
-            class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+            class="text-white font-semibold py-2 px-6 rounded-lg transition-colors hover:opacity-90"
+            :style="{ backgroundColor: primaryColor }"
           >
             Schließen
           </button>
@@ -1530,4 +1526,29 @@ watch(() => form.password, (newPassword) => {
 })
 </script>
 
+<style scoped>
+/* Tenant primary color via Vue 3 v-bind in <style> */
+.focus\:ring-primary:focus {
+  --tw-ring-color: v-bind(primaryColor);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), 0 0 0 2px v-bind(primaryColor);
+}
+.border-primary {
+  border-color: v-bind(primaryColor);
+}
+.bg-primary-light {
+  background-color: color-mix(in srgb, v-bind(primaryColor) 10%, white);
+}
+/* Toggle: peer-checked colors via CSS :has() */
+input.sr-only:checked ~ .toggle-checked {
+  background-color: v-bind(primaryColor);
+}
+/* Checkbox accent color */
+.accent-primary {
+  accent-color: v-bind(primaryColor);
+}
+/* Hover border for category rows */
+.category-row:hover {
+  border-color: v-bind(primaryColor);
+}
+</style>
 
