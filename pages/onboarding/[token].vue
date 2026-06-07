@@ -748,7 +748,7 @@ import { generateStrongPassword } from '~/composables/usePasswordStrength'
 import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholders'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 
-const { primaryColor } = useTenantBranding()
+const { primaryColor, loadTenantBrandingById } = useTenantBranding()
 
 const route = useRoute()
 const token = route.params.token as string
@@ -1051,6 +1051,11 @@ onMounted(async () => {
 
     userData.value = data.value.user
     tenantName.value = data.value.tenantName || 'Deiner Fahrschule'
+
+    // Load tenant branding so the page uses the tenant's primary color
+    if (userData.value?.tenant_id) {
+      loadTenantBrandingById(userData.value.tenant_id).catch(() => {})
+    }
     
     // ✅ FIX: Pre-fill ALL known data from the database
     if (userData.value.email) form.email = userData.value.email
