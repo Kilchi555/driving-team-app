@@ -116,7 +116,7 @@
               </div>
               <div class="col-span-2">
                 <label class="label">E-Mail *</label>
-                <input v-model="form.email" type="email" class="input" placeholder="max@example.com"
+                <input v-model="form.email" type="email" autocomplete="email" name="username" id="staff-wizard-email" class="input" placeholder="max@example.com"
                   @input="onStaffEmailInput(form.email)"
                   @blur="checkStaffEmail(form.email)"
                   :class="{ '!border-red-300': staffEmailCheck === 'taken', '!border-green-300': staffEmailCheck === 'available' }"

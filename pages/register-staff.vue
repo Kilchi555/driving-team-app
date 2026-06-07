@@ -82,6 +82,9 @@
             <input
               v-model="email"
               type="email"
+              autocomplete="email"
+              name="username"
+              id="staff-email"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               :class="{ '!border-red-300': emailCheck === 'taken', '!border-green-300': emailCheck === 'available' }"
@@ -311,6 +314,9 @@
             <input
               v-model="password"
               type="password"
+              autocomplete="new-password"
+              name="password"
+              id="staff-password"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               placeholder="Mindestens 12 Zeichen"
@@ -340,6 +346,9 @@
             <input
               v-model="confirmPassword"
               type="password"
+              autocomplete="new-password"
+              name="confirm-password"
+              id="staff-confirm-password"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               placeholder="Passwort wiederholen"
