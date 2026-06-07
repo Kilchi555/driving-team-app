@@ -91,7 +91,7 @@
     <!-- 7. FAQ (weiß) -->
     <section class="py-16 bg-white">
       <div class="section-container">
-        <h2 class="heading-md mb-10 text-center">Die häufigsten Fragen & Antworten</h2>
+        <h2 class="heading-md mb-10 text-center">Häufige Fragen zur Fahrschule Dietikon</h2>
         <div class="faq-masonry">
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Wieviele Fahrstunden benötige ich?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>

@@ -159,7 +159,16 @@ const instructors = getInstructorsByLocation('aargau')
 const jsonLdScripts = [
   {
     type: 'application/ld+json',
-    innerHTML: JSON.stringify(buildLocationSchema(LOCATION_SPREITENBACH)),
+    innerHTML: JSON.stringify({
+      ...buildLocationSchema(LOCATION_SPREITENBACH),
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: '4.9',
+        reviewCount: '143',
+        bestRating: '5',
+        worstRating: '1',
+      },
+    }),
   },
   {
     type: 'application/ld+json',

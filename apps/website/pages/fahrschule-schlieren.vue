@@ -35,6 +35,15 @@
       </div>
     </section>
 
+    <!-- Schlieren Location Info -->
+    <section class="py-10 bg-white">
+      <div class="section-container">
+        <div class="max-w-3xl mx-auto">
+          <p class="text-gray-700 leading-relaxed">Schlieren liegt im Bezirk Dietikon und ist direkt an Zürich angebunden – per S-Bahn in wenigen Minuten in der City. Als Teil des Limmattals bietet Schlieren ein vielfältiges Übungsgebiet mit dichtem Stadtverkehr, Kreisel, Lichtsignalanlagen und Strassenbahntrassees. Die Fahrprüfung findet am Strassenverkehrsamt Zürich-Albisgütli oder in Regensdorf statt. Treffpunkt für Fahrstunden in Schlieren ist der Bahnhof Schlieren, Glanzenberg oder Weihermatt – alle bequem über die S-Bahn-Linie S3/S12 erreichbar.</p>
+        </div>
+      </div>
+    </section>
+
     <!-- Features -->
     <FeatureSection
       title="Warum Driving Team Schlieren?"
@@ -170,7 +179,7 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": ["DrivingSchool", "LocalBusiness"], "name": "Driving Team Fahrschule Schlieren", "description": "Professionelle Fahrausbildung in Schlieren und Limmattal. Fahrlehrer Skender – Deutsch, Englisch und Albanisch. Treffpunkt Bahnhof Schlieren, Glanzenberg oder Weihermatt.", "url": "https://drivingteam.ch/fahrschule-schlieren/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Schlieren", "postalCode": "8952", "addressCountry": "CH" }, "areaServed": [{ "@type": "City", "name": "Schlieren" }, { "@type": "City", "name": "Urdorf" }, { "@type": "City", "name": "Birmensdorf" }], "priceRange": "CHF 95–200", "aggregateRating": { "@type": "AggregateRating", "ratingValue": "5.0", "bestRating": "5", "worstRating": "1", "reviewCount": "414" } }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": ["DrivingSchool", "LocalBusiness"], "name": "Driving Team Fahrschule Schlieren", "description": "Professionelle Fahrausbildung in Schlieren und Limmattal. Fahrlehrer Skender – Deutsch, Englisch und Albanisch. Treffpunkt Bahnhof Schlieren, Glanzenberg oder Weihermatt.", "url": "https://drivingteam.ch/fahrschule-schlieren/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Schlieren", "postalCode": "8952", "addressCountry": "CH" }, "areaServed": [{ "@type": "City", "name": "Schlieren" }, { "@type": "City", "name": "Urdorf" }, { "@type": "City", "name": "Birmensdorf" }], "priceRange": "CHF 95–200", "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "reviewCount": "143", "bestRating": "5", "worstRating": "1" } }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Schlieren", "item": "https://drivingteam.ch/fahrschule-schlieren/" }] }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{ "@type": "Question", "name": "Wo ist der Treffpunkt für Fahrstunden in Schlieren?", "acceptedAnswer": { "@type": "Answer", "text": "Treffpunkt ist Bahnhof Schlieren, Glanzenberg oder Weihermatt – je nach Wohnort. Alle drei sind per S-Bahn (S3/S12) gut erreichbar." } }, { "@type": "Question", "name": "Wo findet die Fahrprüfung für Schlieren statt?", "acceptedAnswer": { "@type": "Answer", "text": "Am StVA Zürich-Albisgütli oder StVA Regensdorf, je nach Wohnkanton. Skender kennt beide Prüfungsgebiete auswendig." } }, { "@type": "Question", "name": "Gibt es Unterricht auf Albanisch in Schlieren?", "acceptedAnswer": { "@type": "Answer", "text": "Ja, Skender gibt Fahrstunden auf Deutsch und Albanisch." } }] }) },
 ]

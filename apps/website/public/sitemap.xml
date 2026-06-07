@@ -52,10 +52,28 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://drivingteam.ch/c1-fuehrerschein/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://drivingteam.ch/fahrstunden-zuerich/</loc>
     <lastmod>2026-03-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/fahrstunden-lachen/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/fahrstunden-pfaeffikon/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/fahrschule-lachen/</loc>
@@ -111,6 +129,12 @@
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
+  <url>
+    <loc>https://drivingteam.ch/fahrschule-aargau/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
 
   <!-- Category Pages -->
   <url>
@@ -120,10 +144,22 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://drivingteam.ch/auto-fahrschule-zuerich/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://drivingteam.ch/motorrad-fahrschule/</loc>
     <lastmod>2026-04-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/motorrad-fahrschule-zuerich/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/lastwagen-fahrschule/</loc>
@@ -136,6 +172,18 @@
     <lastmod>2026-04-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/lastwagen-fahrschule-lachen/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/lastwagen-fahrschule-rapperswil/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/taxi-fahrschule/</loc>
@@ -160,6 +208,24 @@
     <lastmod>2026-04-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/anhaenger-fahrschule-zuerich/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/anhaenger-fahrschule-lachen/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/anhaenger-fahrschule-aargau/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/motorboot-fahrschule/</loc>
@@ -194,6 +260,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://drivingteam.ch/vku-kurs-altstetten/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://drivingteam.ch/nothelferkurs/</loc>
     <lastmod>2026-04-12</lastmod>
     <changefreq>weekly</changefreq>
@@ -204,6 +276,18 @@
     <lastmod>2026-04-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/nothelferkurs-zuerich/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/nothelferkurs-altstetten/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/fahrschule-spreitenbach/</loc>
@@ -239,6 +323,12 @@
     <loc>https://drivingteam.ch/motorrad-grundkurs-einsiedeln/</loc>
     <lastmod>2026-03-23</lastmod>
     <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/motorrad-grundkurs-altstetten/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
@@ -282,6 +372,26 @@
     <lastmod>2026-03-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+  </url>
+
+  <!-- Fahrlehrer Pages -->
+  <url>
+    <loc>https://drivingteam.ch/fahrlehrer-zuerich/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/fahrlehrer-lachen/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/fahrlehrer-pfaeffikon/</loc>
+    <lastmod>2026-06-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
 
   <!-- Hub Pages -->

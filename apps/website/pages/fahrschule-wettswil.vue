@@ -35,6 +35,15 @@
       </div>
     </section>
 
+    <!-- Wettswil Location Info -->
+    <section class="py-10 bg-white">
+      <div class="section-container">
+        <div class="max-w-3xl mx-auto">
+          <p class="text-gray-700 leading-relaxed">Wettswil am Albis liegt im Kanton Zürich, südlich von Zürich im Knonaueramt, und grenzt an Bonstetten und Stallikon. Die Gemeinde ist direkt an die A3-Autobahn angebunden. Die Fahrprüfung für Fahrschüler aus Wettswil findet am Strassenverkehrsamt Zürich-Albisgütli statt – alternativ auch in Baar. Treffpunkt ist der Bahnhof Wettswil-Bonstetten (S9/S14). Das Übungsgebiet vereint städtische Autobahnübergänge mit kurvenreichen Landstrassen wie dem Whiskeypass und den Albis-Strecken.</p>
+        </div>
+      </div>
+    </section>
+
     <FeatureSection
       title="Warum Driving Team Wettswil?"
       subtitle="Wettswil liegt direkt an der A3 – wir üben Autobahnein- und -ausfahrten, Whiskeypass und das gesamte Knonaueramt für eine praxisnahe Prüfungsvorbereitung."
@@ -149,7 +158,7 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": ["DrivingSchool", "LocalBusiness"], "name": "Driving Team Fahrschule Wettswil am Albis", "description": "Professionelle Fahrausbildung in Wettswil am Albis. Fahrlehrer Skender – Autobahnauffahrten A3, Whiskeypass, Knonaueramt-Strecken. Prüfung am StVA Albisgütli.", "url": "https://drivingteam.ch/fahrschule-wettswil/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Wettswil am Albis", "postalCode": "8907", "addressCountry": "CH" }, "areaServed": [{ "@type": "City", "name": "Wettswil am Albis" }, { "@type": "City", "name": "Bonstetten" }, { "@type": "City", "name": "Stallikon" }, { "@type": "City", "name": "Uitikon" }], "priceRange": "CHF 95–200", "aggregateRating": { "@type": "AggregateRating", "ratingValue": "5.0", "bestRating": "5", "worstRating": "1", "reviewCount": "414" } }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": ["DrivingSchool", "LocalBusiness"], "name": "Driving Team Fahrschule Wettswil am Albis", "description": "Professionelle Fahrausbildung in Wettswil am Albis. Fahrlehrer Skender – Autobahnauffahrten A3, Whiskeypass, Knonaueramt-Strecken. Prüfung am StVA Albisgütli.", "url": "https://drivingteam.ch/fahrschule-wettswil/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Wettswil am Albis", "postalCode": "8907", "addressCountry": "CH" }, "areaServed": [{ "@type": "City", "name": "Wettswil am Albis" }, { "@type": "City", "name": "Bonstetten" }, { "@type": "City", "name": "Stallikon" }, { "@type": "City", "name": "Uitikon" }], "priceRange": "CHF 95–200", "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "reviewCount": "143", "bestRating": "5", "worstRating": "1" } }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Wettswil", "item": "https://drivingteam.ch/fahrschule-wettswil/" }] }) },
 ]
 useHead({ script: jsonLdScripts })

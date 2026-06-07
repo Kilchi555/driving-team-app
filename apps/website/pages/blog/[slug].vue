@@ -334,7 +334,7 @@ const jsonLd = computed(() => {
       type: 'application/ld+json',
       innerHTML: JSON.stringify({
         '@context': 'https://schema.org',
-        '@type': 'Article',
+        '@type': 'BlogPosting',
         headline: a.title,
         description: a.description,
         url,
@@ -345,7 +345,7 @@ const jsonLd = computed(() => {
           '@type': 'Organization',
           name: 'Driving Team Fahrschule',
           url: 'https://drivingteam.ch',
-          logo: { '@type': 'ImageObject', url: 'https://drivingteam.ch/images/og-image.webp' },
+          logo: { '@type': 'ImageObject', url: 'https://drivingteam.ch/images/driving-team-logo.webp' },
         },
         image: `https://drivingteam.ch${a.ogImage || '/images/og-image.webp'}`,
         inLanguage: a.lang === 'en' ? 'en' : 'de-CH',
