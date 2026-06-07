@@ -132,7 +132,7 @@
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
                 <tr 
-                  v-for="category in categories" 
+                  v-for="category in displayedCategories" 
                   :key="category.id" 
                   @click="openEditModal(category)"
                   class="hover:bg-gray-50 cursor-pointer transition-colors"
@@ -750,7 +750,7 @@
 
 <script setup lang="ts">
 
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { logger } from '~/utils/logger'
 import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
@@ -781,6 +781,7 @@ interface Category {
   updated_at?: string
   tenant_id?: string
   document_requirements?: any
+  parent_category_id?: number | null
 }
 
 
@@ -788,6 +789,16 @@ interface Category {
 const categories = ref<Category[]>([])
 const isLoading = ref(false)
 const error = ref<string | null>(null)
+
+// Show subs instead of parent when a parent has children
+const displayedCategories = computed(() => {
+  const childIds = new Set(
+    categories.value
+      .filter(c => c.parent_category_id != null)
+      .map(c => c.parent_category_id as number)
+  )
+  return categories.value.filter(c => !childIds.has(c.id))
+})
 const showModal = ref(false)
 const editingCategory = ref<Category | null>(null)
 const savingCategoryIds = ref<Set<number>>(new Set())
