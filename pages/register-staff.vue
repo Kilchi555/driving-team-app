@@ -525,11 +525,14 @@ const loadInvitation = async () => {
     if (tenant?.business_type === 'driving_school') {
       const { data: cats } = await supabase
         .from('categories')
-        .select('code, name')
+        .select('code, name, parent_category_id, id')
         .eq('tenant_id', data.tenant_id)
         .eq('is_active', true)
         .order('code')
-      availableCategories.value = cats || []
+      // Show only leaf categories (subcategories, or standalone parents without children)
+      const allCats = cats || []
+      const parentIds = new Set(allCats.map(c => c.parent_category_id).filter(Boolean))
+      availableCategories.value = allCats.filter(c => !parentIds.has(c.id))
     }
 
   } catch (err: any) {
