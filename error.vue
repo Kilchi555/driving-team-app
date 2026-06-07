@@ -28,9 +28,10 @@
           {{ actionButtonText }}
         </button>
 
-        <!-- Secondary Link -->
-        <a 
-          href="https://app.simy.ch/login" 
+        <!-- Secondary Link (only for non-404 errors) -->
+        <a
+          v-if="error?.statusCode !== 404"
+          href="https://app.simy.ch/login"
           class="block text-center text-sm text-blue-600 hover:text-blue-700 font-medium transition"
         >
           → Zur Login-Seite
