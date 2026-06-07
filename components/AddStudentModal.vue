@@ -169,15 +169,44 @@
           <button
             type="submit"
             :disabled="isSubmitting || !isFormValid"
-            class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
-            :style="isFormValid && !isSubmitting ? primaryBg : {}"
-            :class="isFormValid && !isSubmitting ? '' : 'bg-gray-200 text-gray-400'"
+            class="relative overflow-hidden flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 disabled:cursor-not-allowed min-w-[168px]"
+            :style="isFormValid ? primaryBg : {}"
+            :class="[
+              isFormValid && !isSubmitting ? 'text-white shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]' : '',
+              !isFormValid ? 'bg-gray-200 text-gray-400' : '',
+              isSubmitting ? 'text-white opacity-90 pointer-events-none' : ''
+            ]"
           >
-            <svg v-if="isSubmitting" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
-            {{ isSubmitting ? 'Speichert...' : 'Einladen & Speichern' }}
+            <!-- Shimmer sweep while loading -->
+            <div
+              v-if="isSubmitting"
+              class="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full"
+              style="animation: btn-shimmer 1.4s ease-in-out infinite"
+            />
+
+            <!-- Icon: spinner ↔ send arrow -->
+            <transition name="btn-icon" mode="out-in">
+              <svg v-if="isSubmitting" key="spin" class="w-4 h-4 flex-shrink-0" style="animation: spin 0.8s linear infinite" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
+                <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              <svg v-else key="send" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+              </svg>
+            </transition>
+
+            <!-- Text: animated dots ↔ label -->
+            <transition name="btn-text" mode="out-in">
+              <span v-if="isSubmitting" key="loading" class="flex items-center">
+                Speichert
+                <span class="inline-flex ml-0.5">
+                  <span class="opacity-0" style="animation: dot-bounce 1.2s ease-in-out infinite 0ms">.</span>
+                  <span class="opacity-0" style="animation: dot-bounce 1.2s ease-in-out infinite 200ms">.</span>
+                  <span class="opacity-0" style="animation: dot-bounce 1.2s ease-in-out infinite 400ms">.</span>
+                </span>
+              </span>
+              <span v-else key="idle">Einladen &amp; Speichern</span>
+            </transition>
           </button>
         </div>
       </form>
@@ -700,3 +729,29 @@ watch(() => form.value.phone, (newPhone) => {
   }
 })
 </script>
+
+<style scoped>
+@keyframes btn-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes dot-bounce {
+  0%, 60%, 100% { opacity: 0; transform: translateY(0); }
+  30%            { opacity: 1; transform: translateY(-3px); }
+}
+
+/* Icon transition: scale + rotate */
+.btn-icon-enter-active,
+.btn-icon-leave-active { transition: all 0.18s ease; }
+.btn-icon-enter-from   { opacity: 0; transform: scale(0.4) rotate(-90deg); }
+.btn-icon-leave-to     { opacity: 0; transform: scale(0.4) rotate(90deg); }
+
+/* Text transition: fade + slide up */
+.btn-text-enter-active,
+.btn-text-leave-active { transition: all 0.15s ease; }
+.btn-text-enter-from   { opacity: 0; transform: translateY(6px); }
+.btn-text-leave-to     { opacity: 0; transform: translateY(-6px); }
+</style>
