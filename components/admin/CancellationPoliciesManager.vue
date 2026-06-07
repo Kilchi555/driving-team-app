@@ -41,44 +41,42 @@
         class="bg-white border border-gray-200 rounded-lg shadow-sm"
       >
         <!-- Policy Header -->
-        <div class="p-6 border-b border-gray-200">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-              <div>
-                <h3 class="text-lg font-semibold text-gray-900">{{ policy.name }}</h3>
-                <p v-if="policy.description" class="text-sm text-gray-600 mt-1">{{ policy.description }}</p>
-                <p class="text-xs text-gray-500 mt-1">
-                  {{ policy.applies_to === 'appointments' ? '📋 Für Fahrstunden' : '📚 Für Kurse' }}
-                </p>
-              </div>
-              <div class="flex space-x-2">
+        <div class="p-4 sm:p-6 border-b border-gray-200">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="text-base font-semibold text-gray-900">{{ policy.name }}</h3>
                 <span
-                  :class="policy.is_active 
-                    ? 'bg-green-100 text-green-800' 
+                  :class="policy.is_active
+                    ? 'bg-green-100 text-green-800'
                     : 'bg-red-100 text-red-800'"
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                 >
                   {{ policy.is_active ? 'Aktiv' : 'Inaktiv' }}
                 </span>
               </div>
+              <p v-if="policy.description" class="text-sm text-gray-600 mt-1">{{ policy.description }}</p>
+              <p class="text-xs text-gray-500 mt-1">
+                {{ policy.applies_to === 'appointments' ? '📋 Für Fahrstunden' : '📚 Für Kurse' }}
+              </p>
             </div>
-            <div class="flex space-x-2">
+            <div class="flex items-center gap-2 flex-wrap shrink-0">
               <button
                 v-if="!policy.is_default && policy.is_active"
                 @click="setAsDefault(policy.id)"
-                class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                class="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
-                Als Standard setzen
+                Als Standard
               </button>
               <button
                 @click="editPolicy(policy)"
-                class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+                class="px-3 py-1.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
               >
                 Bearbeiten
               </button>
               <button
                 @click="deletePolicy(policy.id)"
-                class="px-3 py-1 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
+                class="px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
               >
                 Löschen
               </button>
@@ -87,63 +85,52 @@
         </div>
 
         <!-- Rules List -->
-        <div class="p-6">
+        <div class="p-4 sm:p-6">
           <div class="flex items-center justify-between mb-4">
-            <h4 class="text-md font-medium text-gray-900">Regeln</h4>
+            <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Regeln</h4>
             <button
               @click="addRule(policy.id)"
-              class="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors"
+              class="px-3 py-1.5 text-xs font-medium bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
             >
               + Regel hinzufügen
             </button>
           </div>
 
-          <div v-if="policy.rules.length === 0" class="text-center py-4 text-gray-500">
+          <div v-if="policy.rules.length === 0" class="text-center py-4 text-sm text-gray-400">
             Keine Regeln definiert
           </div>
 
-          <div v-else class="space-y-3">
+          <div v-else class="space-y-2">
             <div
               v-for="rule in policy.rules"
               :key="rule.id"
-              class="flex items-center justify-between p-3 bg-gray-50 rounded-md"
+              class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg"
             >
-              <div class="flex-1">
-                <div class="flex items-center space-x-4 flex-wrap">
-                  <div class="text-sm font-medium text-gray-900">
-                    {{ formatRuleTime(rule) }}
-                  </div>
-                  <div class="text-sm text-gray-600">
-                    {{ rule.charge_percentage }}% verrechnen
-                  </div>
-                  <!-- Nur bei Fahrstunden-Policies anzeigen -->
-                  <div 
-                    v-if="policy.applies_to === 'appointments'"
-                    :class="[
-                      'text-sm font-medium',
-                      rule.credit_hours_to_instructor ? 'text-green-600' : 'text-gray-500'
-                    ]"
-                  >
-                    {{ rule.credit_hours_to_instructor ? '✓ Fahrlehrer-Stunden gutschreiben' : '✗ Keine Fahrlehrer-Stunden gutschreiben' }}
-                  </div>
-                  <div v-if="(rule as any).exclude_sundays" class="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded">
-                    Sonntage ausgeschlossen
-                  </div>
-                  <div v-if="rule.description" class="text-sm text-gray-500 italic">
-                    {{ rule.description }}
-                  </div>
-                </div>
+              <div class="flex-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                <span class="font-medium text-gray-900">{{ formatRuleTime(rule) }}</span>
+                <span class="text-gray-600">{{ rule.charge_percentage }}% verrechnen</span>
+                <span
+                  v-if="policy.applies_to === 'appointments'"
+                  :class="rule.credit_hours_to_instructor ? 'text-green-600' : 'text-gray-400'"
+                  class="font-medium"
+                >
+                  {{ rule.credit_hours_to_instructor ? '✓ Fahrlehrer-Stunden' : '✗ Keine Stunden' }}
+                </span>
+                <span v-if="(rule as any).exclude_sundays" class="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded-full">
+                  Sonntage ausgeschlossen
+                </span>
+                <span v-if="rule.description" class="text-gray-400 italic text-xs">{{ rule.description }}</span>
               </div>
-              <div class="flex space-x-2">
+              <div class="flex gap-2 shrink-0">
                 <button
                   @click="editRule(rule)"
-                  class="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                  class="px-2.5 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
                 >
                   Bearbeiten
                 </button>
                 <button
                   @click="deleteRule(rule.id)"
-                  class="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                  class="px-2.5 py-1 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
                 >
                   Löschen
                 </button>
