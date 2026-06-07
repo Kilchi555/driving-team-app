@@ -330,7 +330,6 @@
   
     <CtaSection title="Jetzt mit der Auto Fahrschule starten!" />
     <GutscheinSection />
-    <CtaSection title="Jetzt mit der Auto Fahrschule starten!" />
     <StandorteSection />
     
     <!-- Price Calculator Section -->

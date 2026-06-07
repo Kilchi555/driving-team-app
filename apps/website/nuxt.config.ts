@@ -140,7 +140,7 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    compressPublicAssets: false,
+    compressPublicAssets: true,
     minify: true,
     experimental: {
       wasm: true,

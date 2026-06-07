@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Lastwagen Fahrschule Lachen | C1, C & CE | Driving Team</Title>
+      <Title>Lastwagen Fahrschule Lachen | Ab CHF 150.- | Driving Team</Title>
       <Meta name="description" content="LKW Fahrschule Lachen & Zürichsee – Kategorien C1, C & CE mit Peter Thoma. Prüfung StVA Pfäffikon SZ, Kaltbrunn oder Hinwil. Ab CHF 150.-. Jetzt anmelden!" />
       <Meta name="keywords" content="Lastwagen Fahrschule Lachen, LKW Fahrschule Lachen, Lastwagen Fahrschule Altendorf, LKW Fahrschule Pfäffikon, Lastwagen Fahrschule Wangen, LKW Fahrschule Zürichsee, Führerschein C Lachen, Kategorie C Lachen" />
       <Meta property="og:title" content="Lastwagen Fahrschule Lachen | C1, C & CE | Driving Team" />

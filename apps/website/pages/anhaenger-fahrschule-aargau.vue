@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Anhänger Fahrschule Aargau | Keine Theorieprüfung | Kat. BE ab CHF 120.-</Title>
-      <Meta name="description" content="Anhänger-Führerschein (Kat. BE) im Aargau – keine Theorieprüfung, 5–8 Fahrstunden genügen, Prüfung Wettingen. Treffpunkt Spreitenbach oder Wettingen. Jetzt online buchen!" />
+      <Meta name="description" content="Anhänger-Führerschein Aargau (Kat. BE) – keine Theorieprüfung, nur 5–8 Fahrstunden, ab CHF 120.-. Prüfung Wettingen. Jetzt direkt online buchen!" />
       <Meta name="keywords" content="Anhänger Fahrschule Aargau, Kategorie BE Aargau, Anhänger Fahrstunden Aargau, BE Führerschein Aargau, Anhängerprüfung Wettingen, Anhänger Fahrschule Spreitenbach, Anhänger Fahrschule Baden" />
       <Meta property="og:title" content="Anhänger Fahrschule Aargau | Keine Theorieprüfung | Kat. BE | Driving Team" />
       <Meta property="og:description" content="Anhänger Fahrschule Aargau: Kategorie BE ohne Theorieprüfung. Ab CHF 120.-/Lektion. Nur 5–8 Fahrstunden. Prüfung Wettingen. Jetzt online buchen!" />
@@ -133,16 +133,16 @@
     <section class="py-16 bg-white">
       <div class="section-container">
         <div class="text-center mb-12">
-          <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Anhängerprüfung Aargau – Prüfungszentrum Wettingen</h2>
-          <p class="text-gray-600 max-w-2xl mx-auto">Die Anhängerprüfung im Kanton Aargau findet im Prüfungszentrum Wettingen statt. Wir trainieren gezielt in diesem Gebiet.</p>
+          <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Anhängerprüfung Aargau – Strassenverkehrsamt Wettingen</h2>
+          <p class="text-gray-600 max-w-2xl mx-auto">Die Anhängerprüfung im Kanton Aargau findet im Strassenverkehrsamt Wettingen statt. Wir trainieren gezielt in diesem Gebiet.</p>
         </div>
 
         <div class="max-w-3xl mx-auto">
           <div class="bg-white rounded-2xl p-8 shadow-sm border-2 border-orange-100">
             <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-              <span class="text-2xl">📍</span> Prüfungszentrum Wettingen (Aargau)
+              <span class="text-2xl">📍</span> Strassenverkehrsamt Wettingen (Aargau)
             </h3>
-            <p class="text-gray-600 text-sm mb-6 leading-relaxed">Das Prüfungszentrum für Anhänger im Kanton Aargau. Manöverplatz für An-/Abkuppeln, Rückwärtsfahren und Rangieren – anschliessend Strassenfahrt durch Wettingen und Umgebung.</p>
+            <p class="text-gray-600 text-sm mb-6 leading-relaxed">Das Strassenverkehrsamt für Anhänger im Kanton Aargau. Manöverplatz für An-/Abkuppeln, Rückwärtsfahren und Rangieren – anschliessend Strassenfahrt durch Wettingen und Umgebung.</p>
             <div class="grid sm:grid-cols-2 gap-3">
               <ul class="space-y-2 text-sm text-gray-700">
                 <li class="flex items-center gap-2"><span class="text-orange-500 font-bold">✓</span> Parkieren rechtwinklig</li>
@@ -175,7 +175,7 @@
             <div class="flex items-center justify-center w-12 h-12 bg-orange-500 text-white rounded-full font-black text-lg flex-shrink-0">1</div>
             <div>
               <h3 class="font-bold text-gray-900 text-lg mb-2">Lernfahrgesuch Kategorie BE einreichen</h3>
-              <p class="text-sm text-gray-600 leading-relaxed">Beim StVA Aargau online oder persönlich einreichen. Benötigt: gültiger B-Führerschein. Der Lernfahrausweis ist ab 17 Jahren erhältlich und 24 Monate gültig.</p>
+              <p class="text-sm text-gray-600 leading-relaxed">Beim Strassenverkehrsamt Aargau online oder persönlich einreichen. Benötigt: gültiger B-Führerschein. Der Lernfahrausweis ist ab 17 Jahren erhältlich und 24 Monate gültig.</p>
             </div>
           </div>
           <div class="flex items-start gap-5 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -189,7 +189,7 @@
             <div class="flex items-center justify-center w-12 h-12 bg-orange-500 text-white rounded-full font-black text-lg flex-shrink-0">3</div>
             <div>
               <h3 class="font-bold text-gray-900 text-lg mb-2">WarmUp + Anhängerprüfung in Wettingen</h3>
-              <p class="text-sm text-gray-600 leading-relaxed">Wir stellen das Prüfungsfahrzeug (Zugfahrzeug + Anhänger) und begleiten dich zum Prüfungstag. CHF 360.- inkl. WarmUp. Prüfungsdauer: ca. 60 Minuten gesamt.</p>
+              <p class="text-sm text-gray-600 leading-relaxed">Wir stellen das Prüfungsfahrzeug (Zugfahrzeug + Anhänger) und begleiten dich zum Prüfungstag. CHF 360.- inkl. WarmUp. Prüfungsdauer: ca. 60 Minuten / Total 135 Minuten.</p>
             </div>
           </div>
         </div>

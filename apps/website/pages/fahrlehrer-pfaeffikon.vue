@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrlehrer Pfäffikon SZ | Marc, Peter & Rahel | Driving Team</Title>
-      <Meta name="description" content="Marc, Peter und Rahel – deine Fahrlehrer in Pfäffikon SZ. Eidg. Fachausweis, Prüfung direkt am StVA Pfäffikon, über 56'000 Lektionen. Jetzt buchen!" />
+      <Title>Fahrlehrer Pfäffikon SZ | Ab CHF 95.- | Driving Team</Title>
+      <Meta name="description" content="Marc, Peter und Rahel – deine Fahrlehrer in Pfäffikon SZ. Eidg. diplomiert, ab CHF 95.-, 56'000+ Lektionen, Prüfung StVA Pfäffikon. Jetzt buchen!" />
       <Meta name="keywords" content="Fahrlehrer Pfäffikon SZ, Fahrlehrer Pfäffikon, Fahrlehrer Kanton Schwyz, Fahrlehrer Lastwagen Pfäffikon, Fahrlehrer mit eidg. Fachausweis Pfäffikon SZ" />
       <Meta property="og:title" content="Fahrlehrer Pfäffikon SZ – Marc, Peter & Rahel | Driving Team" />
       <Meta property="og:description" content="3 Fahrlehrer mit eidg. Fachausweis in Pfäffikon SZ. Marc (Motorboot, Anhänger), Peter (Lastwagen, Bus), Rahel. 56'000+ Lektionen. Jetzt Termin buchen." />

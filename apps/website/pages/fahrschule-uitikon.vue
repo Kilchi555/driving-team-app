@@ -35,6 +35,15 @@
       </div>
     </section>
 
+    <!-- Uitikon Location Info -->
+    <section class="py-10 bg-white">
+      <div class="section-container">
+        <div class="max-w-3xl mx-auto">
+          <p class="text-gray-700 leading-relaxed">Uitikon Waldegg liegt zwischen Zürich und Schlieren, eingebettet zwischen dem Üetliberg und dem Knonaueramt. Die ruhigen Quartierstrassen und übersichtlichen Ortsdurchfahrten machen Uitikon besonders geeignet für Fahranfänger. Für Fortgeschrittene bieten die kurvenreichen Strecken rund um die Alte Waldegg und den Whiskeypass anspruchsvolle Übungsmöglichkeiten. Die Fahrprüfung findet am Strassenverkehrsamt Zürich-Albisgütli statt, das nur wenige Minuten von Uitikon entfernt liegt.</p>
+        </div>
+      </div>
+    </section>
+
     <FeatureSection
       title="Warum Driving Team Uitikon?"
       subtitle="Wir üben genau dort, wo die Prüfung stattfindet – Alte Waldegg, Whiskeypass, Stallikon → Uitikon. Keine Überraschungen an der Prüfung."
@@ -144,7 +153,7 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": ["DrivingSchool", "LocalBusiness"], "name": "Driving Team Fahrschule Uitikon Waldegg", "description": "Professionelle Fahrausbildung in Uitikon Waldegg. Fahrlehrer Skender kennt Alte Waldegg, Whiskeypass, Rechtsvortritte Uitikon/Ringlikon und alle Prüfungsrouten des StVA Albisgütli.", "url": "https://drivingteam.ch/fahrschule-uitikon/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Uitikon", "postalCode": "8142", "addressCountry": "CH" }, "areaServed": [{ "@type": "City", "name": "Uitikon Waldegg" }, { "@type": "City", "name": "Ringlikon" }, { "@type": "City", "name": "Birmensdorf" }, { "@type": "City", "name": "Stallikon" }], "priceRange": "CHF 95–200", "aggregateRating": { "@type": "AggregateRating", "ratingValue": "5.0", "bestRating": "5", "worstRating": "1", "reviewCount": "414" } }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": ["DrivingSchool", "LocalBusiness"], "name": "Driving Team Fahrschule Uitikon Waldegg", "description": "Professionelle Fahrausbildung in Uitikon Waldegg. Fahrlehrer Skender kennt Alte Waldegg, Whiskeypass, Rechtsvortritte Uitikon/Ringlikon und alle Prüfungsrouten des StVA Albisgütli.", "url": "https://drivingteam.ch/fahrschule-uitikon/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Uitikon", "postalCode": "8142", "addressCountry": "CH" }, "areaServed": [{ "@type": "City", "name": "Uitikon Waldegg" }, { "@type": "City", "name": "Ringlikon" }, { "@type": "City", "name": "Birmensdorf" }, { "@type": "City", "name": "Stallikon" }], "priceRange": "CHF 95–200", "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "reviewCount": "143", "bestRating": "5", "worstRating": "1" } }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Uitikon", "item": "https://drivingteam.ch/fahrschule-uitikon/" }] }) },
 ]
 useHead({ script: jsonLdScripts })

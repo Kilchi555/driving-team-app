@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Lastwagen Fahrschule Rapperswil | C1, C & CE | Driving Team</Title>
-      <Meta name="description" content="LKW Fahrschule Rapperswil-Jona & Zürichsee – Kategorien C1, C & CE mit Fahrlehrer Peter Thoma aus Lachen. Prüfung StVA Kaltbrunn SG oder Pfäffikon SZ. Ab CHF 150.-. Jetzt anmelden!" />
+      <Title>LKW Fahrschule Rapperswil | Ab CHF 150.- | Driving Team</Title>
+      <Meta name="description" content="LKW Fahrschule Rapperswil – C1, C & CE mit Fahrlehrer Peter Thoma. Prüfung StVA Kaltbrunn SG oder Pfäffikon SZ. Ab CHF 150.-/45 Min. Jetzt anmelden!" />
       <Meta name="keywords" content="Lastwagen Fahrschule Rapperswil, LKW Fahrschule Rapperswil, Lastwagen Fahrschule Rapperswil-Jona, LKW Führerschein Rapperswil, Kategorie C Rapperswil, Lastwagen Fahrstunden Rapperswil" />
       <Meta property="og:title" content="Lastwagen Fahrschule Rapperswil | C1, C & CE | Driving Team" />
       <Meta property="og:description" content="LKW Fahrschule in Rapperswil-Jona & Region. Kategorien C1, C & CE. Fahrlehrer Peter Thoma kommt von Lachen. Prüfung StVA Kaltbrunn SG oder Pfäffikon SZ." />

@@ -214,7 +214,7 @@
         <!-- SEO-Intro: Fahrschule Zürich – für Google und Besucher -->
         <div class="max-w-3xl mx-auto text-center mt-8 pb-8 px-4">
           <p class="text-base text-gray-600 leading-relaxed">
-            Die <strong>Fahrschule Zürich</strong> von Driving Team bietet dir alle Führerschein-Kategorien unter einem Dach – von <a href="/auto-fahrschule/" class="text-primary-600 hover:underline">Auto (Kat. B)</a> über <a href="/motorrad-fahrschule/" class="text-primary-600 hover:underline">Motorrad</a> bis <a href="/lastwagen-fahrschule/" class="text-primary-600 hover:underline">Lastwagen und Anhänger</a>. Mit Standorten in <strong>Zürich-Altstetten</strong> und <strong>Lachen (SZ)</strong> sind wir für dich in der ganzen Region Zürich erreichbar. Über <strong>85% unserer Fahrschüler</strong> bestehen die Prüfung beim ersten Versuch. <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="text-primary-600 font-semibold hover:underline">Buche jetzt online deinen ersten Termin</a> – ab CHF 95.– pro Lektion.
+            Die <strong>Fahrschule Zürich</strong> von Driving Team bietet dir alle Führerschein-Kategorien unter einem Dach – von <a href="/auto-fahrschule/" class="text-primary-600 hover:underline">Auto Fahrschule Zürich</a> über <a href="/motorrad-fahrschule/" class="text-primary-600 hover:underline">Motorrad Fahrschule</a> bis <a href="/lastwagen-fahrschule/" class="text-primary-600 hover:underline">Lastwagen und Anhänger</a>. Mit Standorten in <strong>Zürich-Altstetten</strong> und <strong>Lachen (SZ)</strong> sind wir für dich in der ganzen Region Zürich erreichbar. Über <strong>85% unserer Fahrschüler</strong> bestehen die Prüfung beim ersten Versuch. <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="text-primary-600 font-semibold hover:underline">Buche jetzt online deinen ersten Termin</a> – ab CHF 95.– pro Lektion.
           </p>
         </div>
       </div>
@@ -421,7 +421,7 @@
             → Fahrstunden Zürich
           </a>
           <a href="/fahrschule-lachen/" class="inline-flex items-center gap-2 bg-green-700 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-800 transition">
-            → Fahrstunden in Lachen
+            → Fahrschule Lachen
           </a>
         </div>
       </div>

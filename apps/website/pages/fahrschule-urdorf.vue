@@ -35,6 +35,15 @@
       </div>
     </section>
 
+    <!-- Urdorf Location Info -->
+    <section class="py-10 bg-white">
+      <div class="section-container">
+        <div class="max-w-3xl mx-auto">
+          <p class="text-gray-700 leading-relaxed">Urdorf liegt im Bezirk Dietikon im Kanton Zürich, direkt an der A1-Autobahn und grenzt an Schlieren, Birmensdorf und Spreitenbach. Die Fahrprüfung für Fahrschüler aus Urdorf findet am Strassenverkehrsamt Zürich-Albisgütli oder in Regensdorf statt. Treffpunkt für Fahrstunden in Urdorf ist der Bahnhof Glanzenberg oder Weihermatt – beide bequem per S-Bahn (S3/S12) erreichbar. Das vielfältige Übungsgebiet bietet ruhige Quartierstrassen sowie anspruchsvolle Übergänge ins Knonaueramt und an die Autobahn.</p>
+        </div>
+      </div>
+    </section>
+
     <FeatureSection
       title="Warum Driving Team Urdorf?"
       subtitle="Top-bewertete Fahrschule im Limmattal – Skender kennt das Übungsgebiet Urdorf und die Prüfungsrouten in- und auswendig."
@@ -148,7 +157,7 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": ["DrivingSchool", "LocalBusiness"], "name": "Driving Team Fahrschule Urdorf", "description": "Professionelle Fahrausbildung in Urdorf im Limmattal. Fahrlehrer Skender – Deutsch, Albanisch und Englisch. Treffpunkt Bahnhof Glanzenberg oder Weihermatt.", "url": "https://drivingteam.ch/fahrschule-urdorf/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Urdorf", "postalCode": "8902", "addressCountry": "CH" }, "areaServed": [{ "@type": "City", "name": "Urdorf" }, { "@type": "City", "name": "Schlieren" }, { "@type": "City", "name": "Birmensdorf" }], "priceRange": "CHF 95–200", "aggregateRating": { "@type": "AggregateRating", "ratingValue": "5.0", "bestRating": "5", "worstRating": "1", "reviewCount": "414" } }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": ["DrivingSchool", "LocalBusiness"], "name": "Driving Team Fahrschule Urdorf", "description": "Professionelle Fahrausbildung in Urdorf im Limmattal. Fahrlehrer Skender – Deutsch, Albanisch und Englisch. Treffpunkt Bahnhof Glanzenberg oder Weihermatt.", "url": "https://drivingteam.ch/fahrschule-urdorf/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Urdorf", "postalCode": "8902", "addressCountry": "CH" }, "areaServed": [{ "@type": "City", "name": "Urdorf" }, { "@type": "City", "name": "Schlieren" }, { "@type": "City", "name": "Birmensdorf" }], "priceRange": "CHF 95–200", "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "reviewCount": "143", "bestRating": "5", "worstRating": "1" } }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Fahrschule Urdorf", "item": "https://drivingteam.ch/fahrschule-urdorf/" }] }) },
 ]
 useHead({ script: jsonLdScripts })
