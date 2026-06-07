@@ -47,11 +47,12 @@
         <p class="text-sm text-gray-400 mb-10">Monatlich kündbar · 1 Monat Kündigungsfrist · Flexibel anpassbar</p>
 
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <a :href="registerUrl" @click="saveLogoToSession"
+          <a href="#" @click.prevent="goToRegister"
             class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-xl transition-all hover:scale-105"
             :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, boxShadow: `0 8px 30px rgba(var(--brand-rgb), 0.35)` }">
+            <svg v-if="isNavigatingToRegister && logoTokenUploading" class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            <svg v-else class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
             60 Tage gratis testen
-            <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
           </a>
           <a href="#features"
             class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg border-2 transition-all"
@@ -194,10 +195,11 @@
               </div>
             </div>
 
-            <a :href="registerUrl" @click="saveLogoToSession"
+            <a href="#" @click.prevent="goToRegister"
               class="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90 shadow-lg"
               :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, boxShadow: `0 8px 24px rgba(var(--brand-rgb), 0.35)` }">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              <svg v-if="isNavigatingToRegister && logoTokenUploading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
               Kostenlos testen
             </a>
             <button @click="resetColors" class="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors mt-2 py-1">
@@ -499,7 +501,7 @@
                 <p class="text-3xl mb-2">📬</p>
                 <p class="font-bold text-gray-900 text-sm mb-1">Check dein Postfach!</p>
                 <p class="text-xs text-gray-500 mb-4">Die Demo-E-Mail ist unterwegs an <strong>{{ demoEmail }}</strong></p>
-                <a :href="registerUrl" @click="saveLogoToSession"
+                <a href="#" @click.prevent="goToRegister"
                   class="inline-block px-5 py-2.5 rounded-xl text-white text-sm font-bold transition-all hover:opacity-90"
                   :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))` }">
                   Bereit für echte Emails? Jetzt registrieren →
@@ -1329,7 +1331,7 @@
                 {{ f }}
               </li>
             </ul>
-            <a :href="registerUrl" @click="saveLogoToSession"
+            <a href="#" @click.prevent="goToRegister"
               class="block text-center py-3 rounded-xl font-bold text-sm transition-all hover:opacity-90"
               :style="plan.highlighted
                 ? { background: 'rgba(255,255,255,0.92)', color: primaryColor }
@@ -1475,7 +1477,7 @@
         </h2>
         <p class="text-lg mb-10" style="color: rgba(255,255,255,0.7);">Starte heute mit 60 Tagen kostenlos – keine Kreditkarte, keine Bindung.</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <a :href="registerUrl" @click="saveLogoToSession"
+          <a href="#" @click.prevent="goToRegister"
             class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-black text-lg shadow-xl hover:scale-105 transition-all"
             :style="{ background: 'rgba(255,255,255,0.92)', color: primaryColor }">
             Jetzt kostenlos starten →
@@ -1590,7 +1592,7 @@
             <h3 class="text-xs font-bold uppercase tracking-widest text-gray-900 mb-4">Konto</h3>
             <ul class="space-y-2.5 text-sm">
               <li>
-                <a :href="registerUrl" @click="saveLogoToSession" class="font-bold transition-colors hover:opacity-80" :style="{ color: primaryColor }">
+                <a href="#" @click.prevent="goToRegister" class="font-bold transition-colors hover:opacity-80" :style="{ color: primaryColor }">
                   Kostenlos starten
                 </a>
               </li>
@@ -1776,10 +1778,11 @@
           </div>
 
           <!-- CTA -->
-          <a :href="registerUrl" @click="saveLogoToSession"
+          <a href="#" @click.prevent="goToRegister"
             class="flex items-center justify-center gap-2 py-2.5 rounded-xl text-white font-bold text-sm mb-2 transition-all hover:opacity-90"
             :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <svg v-if="isNavigatingToRegister && logoTokenUploading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             Mit diesen Farben starten
           </a>
           <button @click="resetColors" class="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors py-1">
@@ -2092,6 +2095,23 @@ const registerUrl = computed(() => {
   if (logoToken.value) params.set('logo_url', logoToken.value)
   return `https://app.simy.ch/tenant-register?${params.toString()}`
 })
+
+// Navigate to register — wait for logo upload to finish first (max 5s)
+const isNavigatingToRegister = ref(false)
+async function goToRegister() {
+  if (isNavigatingToRegister.value) return
+  isNavigatingToRegister.value = true
+  if (logoTokenUploading.value) {
+    // Wait up to 5 seconds for the background upload to complete
+    const start = Date.now()
+    while (logoTokenUploading.value && Date.now() - start < 5000) {
+      await new Promise(r => setTimeout(r, 100))
+    }
+  }
+  window.location.href = registerUrl.value
+  // Reset after a short delay in case navigation is blocked
+  setTimeout(() => { isNavigatingToRegister.value = false }, 2000)
+}
 
 const colorPresets = [
   { name: 'Blau', primary: '#2563EB', secondary: '#1D4ED8', accent: '#93C5FD' },
