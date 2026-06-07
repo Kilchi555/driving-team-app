@@ -597,28 +597,33 @@
               <!-- price rows with enable/disable toggle -->
               <div class="divide-y divide-gray-50">
                 <div v-for="row in pricingRows.filter(r => r.catId === cat.id)" :key="row.type"
-                  class="flex items-center gap-3 px-4 py-2.5 transition-opacity"
+                  class="px-4 py-3 transition-opacity"
                   :class="row.enabled ? '' : 'opacity-40'">
-                  <!-- toggle -->
-                  <button type="button" @click="row.enabled = !row.enabled"
-                    class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
-                    :style="row.enabled ? { background: formData.primary_color || '#2563EB' } : {}"
-                    :class="!row.enabled ? 'bg-gray-200' : ''"
-                    :title="row.enabled ? `${row.typeLabel} deaktivieren` : `${row.typeLabel} aktivieren`">
-                    <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
-                      :class="row.enabled ? 'translate-x-3' : 'translate-x-0'" />
-                  </button>
-                  <span class="text-xs font-medium text-gray-500 w-20 flex-shrink-0">{{ row.typeLabel }}</span>
-                  <div class="flex items-center gap-1 flex-1">
-                    <span class="text-xs text-gray-400">CHF</span>
-                    <input
-                      v-model.number="row.price_chf"
-                      type="number" min="0" step="5"
-                      :disabled="!row.enabled"
-                      class="w-20 px-2 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                    />
+                  <!-- Row 1: toggle + label -->
+                  <div class="flex items-center gap-2 mb-2.5">
+                    <button type="button" @click="row.enabled = !row.enabled"
+                      class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+                      :style="row.enabled ? { background: formData.primary_color || '#2563EB' } : {}"
+                      :class="!row.enabled ? 'bg-gray-200' : ''"
+                      :title="row.enabled ? `${row.typeLabel} deaktivieren` : `${row.typeLabel} aktivieren`">
+                      <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                        :class="row.enabled ? 'translate-x-3' : 'translate-x-0'" />
+                    </button>
+                    <span class="text-sm font-semibold text-gray-700">{{ row.typeLabel }}</span>
                   </div>
-                  <DurationPicker v-model="row.duration_minutes" :disabled="!row.enabled" />
+                  <!-- Row 2: price + duration inputs (indented to align with label) -->
+                  <div class="flex items-center gap-3 pl-10">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-xs font-medium text-gray-400">CHF</span>
+                      <input
+                        v-model.number="row.price_chf"
+                        type="number" min="0" step="5"
+                        :disabled="!row.enabled"
+                        class="w-24 px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                    <DurationPicker v-model="row.duration_minutes" :disabled="!row.enabled" />
+                  </div>
                 </div>
               </div>
             </div>
