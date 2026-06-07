@@ -1,7 +1,7 @@
 <template>
-  <div class="bg-white rounded-lg shadow-lg p-6">
-    <div class="mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Bewertungssystem verwalten</h2>
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-6">
+    <div class="mb-4 sm:mb-6">
+      <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Bewertungssystem verwalten</h2>
     </div>
 
     <!-- Tabs - Mobile optimized with horizontal scroll -->
@@ -32,13 +32,13 @@
               <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ drivingCat.name }}</h3>
               <p class="text-sm text-gray-600">{{ drivingCat.description || `Bewertungskriterien für ${drivingCat.name}` }}</p>
             </div>
-            <div class="flex flex-col sm:flex-row gap-2">
+            <div class="flex flex-wrap gap-2">
               <!-- Load Standards Button (only show if no tenant-specific categories exist and for driving schools) -->
               <button
                 v-if="filteredEvaluationCategories.length === 0 && evaluationCategories.length === 0 && tenantBusinessType === 'driving_school'"
                 @click="loadStandardEvaluationCategories"
                 :disabled="isLoadingStandards"
-                class="bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm sm:text-base"
+                class="bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
               >
                 <svg v-if="isLoadingStandards" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -46,22 +46,19 @@
                 <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                 </svg>
-                <span class="hidden sm:inline">{{ isLoadingStandards ? 'Lade Standards...' : 'Standard-Templates laden' }}</span>
-                <span class="sm:hidden">{{ isLoadingStandards ? 'Lade...' : 'Standards' }}</span>
+                {{ isLoadingStandards ? 'Lade...' : 'Standards laden' }}
               </button>
               <button
                 @click="showAddCategoryModal = true"
-                class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+                class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
               >
-                <span class="hidden sm:inline">+ {{ tenantBusinessType === 'driving_school' ? 'Bewertungskategorie' : 'Bewertungsbereich' }}</span>
-                <span class="sm:hidden">+ Kategorie</span>
+                + Kategorie
               </button>
               <button
                 @click="showAddCriteriaModal = true"
-                class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
+                class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
               >
-                <span class="hidden sm:inline">+ Kriterium</span>
-                <span class="sm:hidden">+ Kriterium</span>
+                + Kriterium
               </button>
             </div>
           </div>
@@ -1179,14 +1176,21 @@ const tabs = computed(() => {
   const baseTabs = [
     { id: 'scale', name: 'Bewertungsskala' }
   ]
-  
-  // Dynamische Tabs für jede Fahrkategorie (oder allgemeine Kategorie für non-driving schools)
-  const drivingCategoryTabs = drivingCategories.value.map(dc => ({
+
+  // Only show leaf driving categories (hide parents that have children)
+  const childIds = new Set(
+    drivingCategories.value
+      .filter(dc => (dc as any).parent_category_id != null)
+      .map(dc => (dc as any).parent_category_id as number)
+  )
+  const leafCategories = drivingCategories.value.filter(dc => !childIds.has(dc.id as any))
+
+  const drivingCategoryTabs = leafCategories.map(dc => ({
     id: `category-${dc.code}`,
-    name: dc.name || dc.code, // Use name if available, fallback to code (without "Kategorie")
+    name: dc.name || dc.code,
     drivingCategory: dc.code
   }))
-  
+
   return [...baseTabs, ...drivingCategoryTabs]
 })
 
