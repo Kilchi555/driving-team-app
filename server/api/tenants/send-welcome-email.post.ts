@@ -51,11 +51,11 @@ export default defineEventHandler(async (event) => {
           <td style="padding:36px 36px 24px;">
             <p style="color:#111;font-size:16px;margin:0 0 16px;">Hallo <strong>${name}</strong>,</p>
             <p style="color:#444;font-size:15px;line-height:1.65;margin:0 0 16px;">
-              dein Simy-Konto für <strong>${tenantName}</strong> ist bereit. Du hast <strong>30 Tage kostenlos</strong> Zeit, 
+              dein Simy-Konto für <strong>${tenantName}</strong> ist bereit. Du hast <strong>60 Tage kostenlos</strong> Zeit,
               alle Features in Ruhe auszuprobieren — keine Kreditkarte nötig.
             </p>
             <p style="color:#444;font-size:15px;line-height:1.65;margin:0 0 28px;">
-              Logge dich jetzt ein und richte deine Fahrschule ein:
+              Logge dich jetzt ein und kontrolliere alle Einstellungen:
             </p>
 
             <!-- CTA -->
@@ -70,25 +70,22 @@ export default defineEventHandler(async (event) => {
               </tr>
             </table>
 
-            <!-- Quick tips -->
+            <!-- Next steps -->
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f7ff;border-radius:8px;border:1px solid #e9d5ff;">
               <tr>
                 <td style="padding:20px 24px;">
                   <p style="margin:0 0 12px;color:#6000BD;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;">
-                    Erste Schritte
+                    Nächste Schritte
                   </p>
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
-                      <td style="padding:4px 0;color:#333;font-size:14px;">✅ &nbsp;Logo und Profil einrichten</td>
+                      <td style="padding:4px 0;color:#333;font-size:14px;">✅ &nbsp;Fahrlehrer Profil erstellen <span style="color:#888;">(Registrations-SMS wurde bereits versendet)</span></td>
                     </tr>
                     <tr>
-                      <td style="padding:4px 0;color:#333;font-size:14px;">✅ &nbsp;Ersten Fahrlehrer hinzufügen</td>
+                      <td style="padding:4px 0;color:#333;font-size:14px;">✅ &nbsp;Ersten Schüler im Fahrlehrer-Login einladen</td>
                     </tr>
                     <tr>
-                      <td style="padding:4px 0;color:#333;font-size:14px;">✅ &nbsp;Ersten Schüler einladen</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:4px 0;color:#333;font-size:14px;">✅ &nbsp;Zahlungen einrichten (Wallee)</td>
+                      <td style="padding:4px 0;color:#333;font-size:14px;">✅ &nbsp;Online-Zahlungen einrichten (<a href="${loginUrl}/admin/profile#wallee" style="color:#6000BD;text-decoration:none;font-weight:600;">Wallee einrichten →</a>)</td>
                     </tr>
                   </table>
                 </td>
@@ -103,7 +100,7 @@ export default defineEventHandler(async (event) => {
               Viel Erfolg mit deiner Fahrschule! 🚗
             </p>
             <p style="color:#333;font-size:14px;margin:20px 0 0;font-weight:600;">Pascal<br>
-              <span style="color:#888;font-weight:400;">Simy – Fahrschulsoftware</span>
+              <span style="color:#888;font-weight:400;">Simy – die smarte Fahrschul-App</span>
             </p>
           </td>
         </tr>
