@@ -253,7 +253,9 @@
                 <input
                   v-model="form.email"
                   type="email"
-                  autocomplete="username email"
+                  autocomplete="email"
+                  name="username"
+                  id="onboarding-email"
                   required
                   @input="validateEmailRealtime"
                   @blur="validateEmail"
