@@ -2,6 +2,7 @@
  * Redirects WordPress Multilingual Plugin language prefixes (/en/, /it/, /sq/)
  * to their German equivalents by stripping the prefix.
  * Also handles /wp-content/, /wp-admin/, /wp-*.php patterns.
+ * Also strips legacy query parameters (?mobile=1, ?origin=searchch).
  */
 export default defineEventHandler((event) => {
   const url = event.node.req.url
@@ -41,5 +42,22 @@ export default defineEventHandler((event) => {
     path === '/maps/'
   ) {
     return sendRedirect(event, '/', 301)
+  }
+
+  // Strip legacy tracking/mobile query parameters that create duplicate URLs
+  if (query) {
+    const params = new URLSearchParams(query)
+    const stripped = ['mobile', 'origin']
+    let changed = false
+    for (const key of stripped) {
+      if (params.has(key)) {
+        params.delete(key)
+        changed = true
+      }
+    }
+    if (changed) {
+      const newQs = params.toString()
+      return sendRedirect(event, path + (newQs ? `?${newQs}` : ''), 301)
+    }
   }
 })

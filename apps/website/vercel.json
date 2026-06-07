@@ -3046,6 +3046,32 @@
       "source": "/sq/danke-taxi-theorie-lektionen/",
       "destination": "https://drivingteam.ch/",
       "permanent": true
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "query", "key": "page_id" }],
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-z%C3%BCrich",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-z%C3%BCrich/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/anh%C3%A4nger-fahrschule-lachen",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/anh%C3%A4nger-fahrschule-lachen/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
+      "permanent": true
     }
   ],
   "headers": [
