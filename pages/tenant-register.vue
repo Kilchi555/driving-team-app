@@ -2414,21 +2414,23 @@ const pageBackground = computed(() => {
 })
 
 onMounted(async () => {
-  // Pre-populate brand colors from URL query params (set by the index page color picker)
   const q = route.query
+
+  // Restore any previously saved progress first
+  loadFromStorage()
+
+  // Brand colors from URL params / sessionStorage always take precedence over
+  // anything stored in localStorage (they come fresh from the simy.ch color picker)
   if (q.primary_color && typeof q.primary_color === 'string') formData.value.primary_color = q.primary_color
   if (q.secondary_color && typeof q.secondary_color === 'string') formData.value.secondary_color = q.secondary_color
   if (q.accent_color && typeof q.accent_color === 'string') formData.value.accent_color = q.accent_color
 
-  // Pre-populate brand colors from sessionStorage (fallback for same-origin)
   const savedPrimary   = sessionStorage.getItem('simy_preview_primary')
   const savedSecondary = sessionStorage.getItem('simy_preview_secondary')
   const savedAccent    = sessionStorage.getItem('simy_preview_accent')
   if (savedPrimary)   { formData.value.primary_color   = savedPrimary;   sessionStorage.removeItem('simy_preview_primary') }
   if (savedSecondary) { formData.value.secondary_color = savedSecondary; sessionStorage.removeItem('simy_preview_secondary') }
   if (savedAccent)    { formData.value.accent_color    = savedAccent;    sessionStorage.removeItem('simy_preview_accent') }
-
-  loadFromStorage()
 
   // After restoring from storage, re-trigger the email availability check so that
   // emailCheck doesn't remain 'idle' and block the "Weiter" button.
