@@ -82,6 +82,9 @@ export default defineEventHandler(async (event) => {
 
   if (authError || !authData?.user) {
     console.error('❌ Admin auth creation failed:', authError)
+    if (authError?.code === 'email_exists' || (authError as any)?.status === 422) {
+      throw createError({ statusCode: 409, statusMessage: 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwende eine andere Adresse oder logge dich ein.' })
+    }
     throw createError({ statusCode: 500, statusMessage: 'Admin-Konto konnte nicht erstellt werden. Bitte erneut versuchen.' })
   }
 
