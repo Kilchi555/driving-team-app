@@ -91,43 +91,43 @@
     <!-- Content -->
     <div v-else class="space-y-6">
       <!-- Summary Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="text-3xl text-blue-500 mr-4">👥</div>
-            <div>
-              <p class="text-sm font-medium text-gray-600">Aktive Fahrlehrer</p>
-              <p class="text-2xl font-bold text-gray-900">{{ summary.activeStaff }}</p>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div class="flex items-center gap-3">
+            <div class="text-2xl">👥</div>
+            <div class="min-w-0">
+              <p class="text-xs font-medium text-gray-500 truncate">Aktive Fahrlehrer</p>
+              <p class="text-xl font-bold text-gray-900">{{ summary.activeStaff }}</p>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="text-3xl text-green-500 mr-4">⏱️</div>
-            <div>
-              <p class="text-sm font-medium text-gray-600">Gesamtstunden</p>
-              <p class="text-2xl font-bold text-gray-900">{{ formatHours(summary.totalHours) }}</p>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div class="flex items-center gap-3">
+            <div class="text-2xl">⏱️</div>
+            <div class="min-w-0">
+              <p class="text-xs font-medium text-gray-500 truncate">Gesamtstunden</p>
+              <p class="text-xl font-bold text-gray-900">{{ formatHours(summary.totalHours) }}</p>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="text-3xl text-orange-500 mr-4">📚</div>
-            <div>
-              <p class="text-sm font-medium text-gray-600">Durchschnitt pro Fahrlehrer</p>
-              <p class="text-2xl font-bold text-gray-900">{{ formatHours(summary.averageHours) }}</p>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div class="flex items-center gap-3">
+            <div class="text-2xl">📚</div>
+            <div class="min-w-0">
+              <p class="text-xs font-medium text-gray-500 truncate">Ø pro Fahrlehrer</p>
+              <p class="text-xl font-bold text-gray-900">{{ formatHours(summary.averageHours) }}</p>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="text-3xl text-purple-500 mr-4">🎯</div>
-            <div>
-              <p class="text-sm font-medium text-gray-600">Termine gesamt</p>
-              <p class="text-2xl font-bold text-gray-900">{{ summary.totalAppointments }}</p>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div class="flex items-center gap-3">
+            <div class="text-2xl">🎯</div>
+            <div class="min-w-0">
+              <p class="text-xs font-medium text-gray-500 truncate">Termine gesamt</p>
+              <p class="text-xl font-bold text-gray-900">{{ summary.totalAppointments }}</p>
             </div>
           </div>
         </div>
