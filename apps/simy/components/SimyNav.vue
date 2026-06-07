@@ -197,7 +197,8 @@ const ctaStyle = computed(() => ({
 }))
 
 const activePillStyle = computed(() => ({
-  background: props.primaryColor || '#7C3AED'
+  background: props.primaryColor || '#7C3AED',
+  color: 'white'
 }))
 
 const activeDesktopStyle = computed(() => ({
