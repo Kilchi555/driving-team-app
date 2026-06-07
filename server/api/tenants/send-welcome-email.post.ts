@@ -85,7 +85,7 @@ export default defineEventHandler(async (event) => {
                       <td style="padding:4px 0;color:#333;font-size:14px;">✅ &nbsp;Ersten Schüler im Fahrlehrer-Login einladen</td>
                     </tr>
                     <tr>
-                      <td style="padding:4px 0;color:#333;font-size:14px;">✅ &nbsp;Online-Zahlungen einrichten (<a href="${loginUrl}/admin/profile#wallee" style="color:#6000BD;text-decoration:none;font-weight:600;">Wallee einrichten →</a>)</td>
+                      <td style="padding:4px 0;color:#333;font-size:14px;">✅ &nbsp;Online-Zahlungen einrichten (<a href="${baseUrl}/admin/profile" style="color:#6000BD;text-decoration:none;font-weight:600;">Wallee einrichten →</a>)</td>
                     </tr>
                   </table>
                 </td>
