@@ -428,20 +428,23 @@
             'mb-4 rounded-xl border shadow-sm p-4',
             (studentAvailableBalance ?? 0) < 0 
               ? 'bg-gradient-to-r from-red-50 to-rose-50 border-red-200' 
-              : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
-          ]">
+              : 'border-gray-200'
+          ]"
+          :style="(studentAvailableBalance ?? 0) >= 0 ? { background: `linear-gradient(to right, ${primaryColor}10, ${primaryColor}18)`, borderColor: `${primaryColor}40` } : {}">
             <div class="flex items-start justify-between gap-4">
               <div class="flex-1">
                 <p :class="[
                   'text-sm font-medium mb-1',
-                  (studentAvailableBalance ?? 0) < 0 ? 'text-red-700' : 'text-green-700'
-                ]">
+                  (studentAvailableBalance ?? 0) < 0 ? 'text-red-700' : ''
+                ]"
+                :style="(studentAvailableBalance ?? 0) >= 0 ? { color: primaryColor } : {}">
                   {{ (studentAvailableBalance ?? 0) < 0 ? '⚠️ Offener Betrag' : 'Verfügbares Guthaben' }}
                 </p>
                 <p :class="[
                   'text-2xl font-bold',
-                  (studentAvailableBalance ?? 0) < 0 ? 'text-red-900' : 'text-green-900'
-                ]">
+                  (studentAvailableBalance ?? 0) < 0 ? 'text-red-900' : ''
+                ]"
+                :style="(studentAvailableBalance ?? 0) >= 0 ? { color: primaryColor } : {}">
                   CHF {{ (Math.abs(studentAvailableBalance ?? 0) / 100).toFixed(2) }}
                 </p>
                 <p v-if="(studentAvailableBalance ?? 0) < 0" class="text-xs text-red-600 mt-1">
