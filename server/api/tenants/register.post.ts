@@ -853,28 +853,25 @@ async function generateCustomerNumber(supabase: any): Promise<string> {
                       (now.getMonth() + 1).toString().padStart(2, '0') +  // MM
                       now.getDate().toString().padStart(2, '0')  // DD
     
-    const year = now.getFullYear().toString().slice(-2)
-    
-    // Finde die höchste Nummer für dieses Jahr (nicht nur heute!)
+    // Finde die höchste Nummer für heute
     const { data: existingNumbers } = await supabase
       .from('tenants')
       .select('customer_number')
       .not('customer_number', 'is', null)
-      .like('customer_number', `SM-${year}%`)  // Alle Nummern dieses Jahres
+      .like('customer_number', `SM-${datePrefix}-%`)
       .order('customer_number', { ascending: false })
       .limit(1)
-    
-    let nextNumber = 1  // Beginne bei 1 für den ersten Kunden des Jahres
+
+    let nextNumber = 1
     if (existingNumbers && existingNumbers.length > 0) {
       const lastNumber = existingNumbers[0].customer_number
-      // Parse: SM-YYMMDD-XXX und extrahiere XXX
-      const match = lastNumber.match(new RegExp(`^SM-${year}\\d{4}-(\\d+)$`))
+      const match = lastNumber.match(/^SM-\d{6}-(\d+)$/)
       if (match) {
         nextNumber = parseInt(match[1]) + 1
       }
     }
     
-    const customerNumber = `SM-${datePrefix}-${nextNumber}`
+    const customerNumber = `SM-${datePrefix}-${String(nextNumber).padStart(3, '0')}`
     logger.debug(`🔢 Generated customer number: ${customerNumber}`)
     
     return customerNumber
