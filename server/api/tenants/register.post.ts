@@ -235,20 +235,6 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       })
     }
 
-    // 2b. Prüfen ob Admin-Email bereits als User existiert (über alle Tenants)
-    const { data: existingAdmin } = await supabase
-      .from('users')
-      .select('id, tenant_id')
-      .eq('email', data.contact_email.toLowerCase().trim())
-      .maybeSingle()
-
-    if (existingAdmin) {
-      logger.warn('⚠️ Duplicate admin email detected:', data.contact_email)
-      throw createError({
-        statusCode: 409,
-        statusMessage: 'Diese E-Mail-Adresse ist bereits als Benutzer registriert. Bitte verwenden Sie eine andere E-Mail.'
-      })
-    }
     logger.debug('✅ No duplicate email found for admin')
 
     // 3. Logos hochladen (falls vorhanden)

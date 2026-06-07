@@ -47,16 +47,15 @@ export default defineEventHandler(async (event) => {
     if (!validateEmail(normalized).valid) {
       result.email = { available: false }
     } else {
-      // Check both the public users table AND Supabase Auth —
-      // a user can exist in Auth without a users row (e.g. after a failed rollback)
-      const [{ data: publicUser }, { data: authList }] = await Promise.all([
-        supabase.from('users').select('id').eq('email', normalized).maybeSingle(),
-        supabase.auth.admin.listUsers({ page: 1, perPage: 1, filter: normalized }),
-      ])
-      const authUser = (authList?.users || []).find(
-        (u: any) => u.email?.toLowerCase() === normalized,
-      )
-      result.email = { available: !publicUser && !authUser }
+      // Only check if the email is already used as a tenant contact email.
+      // Cross-tenant and cross-role user existence is allowed — the definitive
+      // role+tenant-scoped check happens in each registration backend.
+      const { data: existingTenant } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('contact_email', normalized)
+        .maybeSingle()
+      result.email = { available: !existingTenant }
     }
   }
 
