@@ -1954,7 +1954,8 @@ const submitRegistration = async () => {
       } catch (rollbackErr) {
         console.warn('Rollback failed:', rollbackErr)
       }
-      throw new Error('Admin-Konto konnte nicht erstellt werden: ' + (adminErr.data?.statusMessage || adminErr.message || ''))
+      // Re-throw original error to preserve status code for outer catch handler
+      throw adminErr
     }
 
     if (!adminRes.success) {
@@ -2007,7 +2008,7 @@ const submitRegistration = async () => {
     if (statusCode === 409) {
       // Email already in use — set emailCheck so the field turns red
       emailCheck.value = 'taken'
-      error.value = '⚠️ Diese E-Mail-Adresse ist bereits registriert. Bitte verwende eine andere E-Mail-Adresse oder logge dich ein.'
+      error.value = knownMessage || 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwende eine andere Adresse oder logge dich ein.'
     } else {
       error.value = knownMessage && knownMessage.length < 200 && statusCode < 500
         ? knownMessage
