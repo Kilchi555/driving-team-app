@@ -986,6 +986,7 @@
             <div>
               <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">E-Mail *</label>
               <input v-model="adminForm.email" type="email" required
+                name="username" autocomplete="username"
                 @blur="checkAdminEmail(adminForm.email)"
                 @input="onAdminEmailInput(adminForm.email)"
                 :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
@@ -1020,7 +1021,7 @@
             <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Passwort *</label>
-                <input v-model="adminForm.password" :type="showPw ? 'text' : 'password'" required minlength="12" autocomplete="new-password" name="new-password"
+                <input v-model="adminForm.password" :type="showPw ? 'text' : 'password'" required minlength="12" autocomplete="new-password" name="password" id="admin-password"
                   :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
                     adminForm.password && !passwordValid ? 'border-red-300 focus:ring-red-500' :
                     adminForm.password && passwordValid ? 'border-green-300 focus:ring-green-500' :
@@ -1060,7 +1061,7 @@
               </div>
               <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Passwort bestätigen *</label>
-                <input v-model="adminForm.passwordConfirm" :type="showPw ? 'text' : 'password'" required minlength="12" autocomplete="new-password" name="confirm-password"
+                <input v-model="adminForm.passwordConfirm" :type="showPw ? 'text' : 'password'" required minlength="12" autocomplete="new-password" name="confirm-password" id="admin-password-confirm"
                   :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
                     adminForm.passwordConfirm && passwordMismatch ? 'border-red-300 focus:ring-red-500' :
                     adminForm.passwordConfirm && !passwordMismatch && passwordValid ? 'border-green-300 focus:ring-green-500' :
