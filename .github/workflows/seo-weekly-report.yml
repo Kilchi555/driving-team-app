@@ -1,0 +1,34 @@
+name: Weekly SEO Report
+
+on:
+  schedule:
+    # Every Monday at 07:00 CET (05:00 UTC)
+    - cron: '0 5 * * 1'
+  workflow_dispatch: # allow manual trigger anytime
+
+jobs:
+  seo-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install googleapis@144
+        working-directory: .github/scripts
+
+      - name: Run SEO report
+        env:
+          GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+          GSC_PROPERTY_URL:         ${{ secrets.GSC_PROPERTY_URL }}
+          RESEND_API_KEY:            ${{ secrets.RESEND_API_KEY }}
+          REPORT_EMAIL:              ${{ secrets.REPORT_EMAIL }}
+        run: node seo-report.mjs
+        working-directory: .github/scripts
