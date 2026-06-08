@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
     // Get tenant info (including slug for redirect)
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('business_type, id, name, slug, primary_color, secondary_color, logo_url, selected_categories')
+      .select('business_type, id, name, slug, primary_color, secondary_color, logo_url, selected_categories, working_days_template')
       .eq('id', invitation.tenant_id)
       .single()
 
