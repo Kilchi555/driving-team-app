@@ -7,15 +7,10 @@
       <!-- Logo -->
       <a href="/" class="flex-shrink-0">
         <img
-          v-if="logoSrc"
-          :src="logoSrc"
+          :src="logoSrc || '/simy-logo.png'"
           alt="Simy – Fahrschulsoftware Schweiz"
           class="h-8 max-w-[120px] object-contain transition-all duration-500"
-        />
-        <SimyLogoSvg
-          v-else
-          :primary-color="primaryColor || '#6000BD'"
-          class-name="h-8 transition-all duration-500"
+          :style="{ filter: logoColorFilter }"
         />
       </a>
 
@@ -198,6 +193,37 @@ const props = defineProps<{
   primaryColor?: string
   secondaryColor?: string
 }>()
+
+const DEFAULT_PRIMARY = '#6000BD'
+
+function hexToHsl(hex: string): [number, number, number] {
+  const r = parseInt(hex.slice(1, 3), 16) / 255
+  const g = parseInt(hex.slice(3, 5), 16) / 255
+  const b = parseInt(hex.slice(5, 7), 16) / 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b)
+  let h = 0, s = 0
+  const l = (max + min) / 2
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6
+    else if (max === g) h = ((b - r) / d + 2) / 6
+    else h = ((r - g) / d + 4) / 6
+  }
+  return [h * 360, s * 100, l * 100]
+}
+
+const logoColorFilter = computed(() => {
+  if (props.logoSrc) return 'none'
+  const color = props.primaryColor || DEFAULT_PRIMARY
+  if (color === DEFAULT_PRIMARY) return 'none'
+  const [tH, tS, tL] = hexToHsl(color)
+  const [oH, oS, oL] = hexToHsl(DEFAULT_PRIMARY)
+  const hRot = Math.round(tH - oH)
+  const sat  = Math.round(oS > 0 ? (tS / oS) * 100 : 100)
+  const bri  = Math.round(oL > 0 ? (tL / oL) * 100 : 100)
+  return `hue-rotate(${hRot}deg) saturate(${sat}%) brightness(${bri}%)`
+})
 
 const mobileOpen = ref(false)
 const activeSection = ref('')
