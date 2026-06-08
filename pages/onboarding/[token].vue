@@ -102,6 +102,13 @@
         </div>
 
         <form @submit.prevent="handleNextStep">
+          <!-- iOS/Android credential mirrors: always in DOM so the browser can save them on submit -->
+          <div aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;top:-9999px;left:-9999px">
+            <input type="email" name="username" autocomplete="username" :value="form.email" tabindex="-1">
+            <input type="password" name="password" autocomplete="new-password" :value="form.password" tabindex="-1">
+            <input type="password" name="confirm-password" autocomplete="new-password" :value="form.confirmPassword" tabindex="-1">
+          </div>
+
           <!-- Step 1: Set Password -->
           <div v-if="step === 0">
             <h2 class="text-xl font-bold mb-4">Setze dein Passwort</h2>
@@ -110,11 +117,6 @@
             </p>
 
             <div class="space-y-4">
-              <!-- Hidden dummy fields to prevent password suggestions -->
-              <div style="position: absolute; left: -9999px; opacity: 0;">
-                <input type="text" name="username" autocomplete="username">
-                <input type="password" name="password" autocomplete="current-password">
-              </div>
               
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -788,6 +790,7 @@ import { logger } from '~/utils/logger'
 import { generateStrongPassword } from '~/composables/usePasswordStrength'
 import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholders'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { saveCredentials } from '~/utils/save-credentials'
 
 const { primaryColor, loadTenantBrandingById } = useTenantBranding()
 
@@ -1560,6 +1563,9 @@ const completeOnboarding = async () => {
 
     // Success - show success message and redirect
     showSuccessMessage('Registrierung erfolgreich abgeschlossen! Du wirst zum Login weitergeleitet...')
+
+    // Save credentials for Android/Chrome; iOS relies on mirror inputs + form submit
+    await saveCredentials(form.email, form.password, `${form.firstName || ''} ${form.lastName || ''}`.trim())
     
     // Auto-redirect to login after 2 seconds
     setTimeout(async () => {
