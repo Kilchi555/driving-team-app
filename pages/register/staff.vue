@@ -110,7 +110,7 @@
         </div>
 
         <!-- ── Form steps ── -->
-        <form v-else @submit.prevent class="p-6 space-y-5">
+        <form v-else @submit.prevent="onFormSubmit" class="p-6 space-y-5">
 
           <!-- Error banner -->
           <div v-if="registrationError" class="bg-red-50 border-l-4 border-red-500 rounded-r p-3 text-sm text-red-800">
@@ -585,13 +585,21 @@
               <!-- Next / Submit -->
               <button
                 v-if="currentStep < STEP_LOADING"
-                type="button"
-                @click="nextStep"
+                :type="currentStep === 6 ? 'submit' : 'button'"
+                @click="currentStep < 6 ? nextStep() : undefined"
                 :disabled="!canProceed"
                 class="px-5 py-2 text-sm text-white rounded-lg transition-opacity font-medium disabled:opacity-40 disabled:cursor-not-allowed"
                 :style="{ background: tenantColor }"
               >{{ currentStep === 6 ? 'Registrierung abschliessen' : 'Weiter →' }}</button>
             </div>
+          </div>
+
+          <!-- iOS Password Autofill: mirrors always present in DOM so Safari can detect
+               username + password at form submission, even though they're on different steps -->
+          <div aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;top:-9999px;left:-9999px">
+            <input type="email" name="username" autocomplete="username" :value="form.email" tabindex="-1">
+            <input type="password" name="password" autocomplete="new-password" :value="form.password" tabindex="-1">
+            <input type="password" name="confirm-password" autocomplete="new-password" :value="form.confirmPassword" tabindex="-1">
           </div>
 
         </form>
@@ -607,6 +615,7 @@ import { ref, computed, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { generateStrongPassword } from '~/composables/usePasswordStrength'
+import { saveCredentials } from '~/utils/save-credentials'
 
 const route              = useRoute()
 const router             = useRouter()
@@ -920,6 +929,11 @@ const nextStep = async () => {
   }
 }
 
+// Form submit handler — called by type="submit" button on final step
+const onFormSubmit = () => {
+  if (currentStep.value === 6) nextStep()
+}
+
 // ─── Submit ──────────────────────────────────────────────────────────────────
 const submit = async () => {
   if (!canProceed.value) return
@@ -973,6 +987,11 @@ const submit = async () => {
 
     // Auto-login
     const loginOk = await authStore.login(form.email, form.password).catch(() => false)
+
+    // Save credentials for Android/Chrome; iOS relies on mirror inputs + form submit
+    if (loginOk) {
+      await saveCredentials(form.email, form.password, `${form.firstName} ${form.lastName}`.trim())
+    }
 
     // Generate ICS URL after login
     if (loginOk) {

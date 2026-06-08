@@ -1507,7 +1507,7 @@
 
         <!-- iOS Password Autofill: credential mirrors always present in DOM so Safari
              can offer to save them when the registration form submits on step 7 -->
-        <div aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;height:0;overflow:hidden;top:-9999px;left:-9999px">
+        <div aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;top:-9999px;left:-9999px">
           <input type="email" name="username" autocomplete="username" :value="adminForm.email" tabindex="-1" id="ios-mirror-email">
           <input type="password" name="password" autocomplete="new-password" :value="adminForm.password" tabindex="-1" id="ios-mirror-password">
           <input type="password" name="confirm-password" autocomplete="new-password" :value="adminForm.passwordConfirm" tabindex="-1" id="ios-mirror-confirm">
@@ -1526,6 +1526,7 @@ import { generateStrongPassword } from '~/composables/usePasswordStrength'
 import { compressImage } from '~/utils/imageCompression'
 import DOMPurify from 'isomorphic-dompurify'
 import { getSupabase } from '~/utils/supabase'
+import { saveCredentials } from '~/utils/save-credentials'
 
 definePageMeta({ layout: false })
 
@@ -2332,6 +2333,13 @@ const submitRegistration = async () => {
     } catch (welcomeErr) {
       console.warn('Welcome email failed (non-critical):', welcomeErr)
     }
+
+    // Offer to save credentials on Android/Chrome; iOS relies on mirror inputs + form submit
+    await saveCredentials(
+      adminForm.value.email,
+      adminForm.value.password,
+      `${adminForm.value.first_name} ${adminForm.value.last_name}`.trim()
+    )
 
     currentStep.value = SUCCESS_STEP
     localStorage.removeItem(STORAGE_KEY)
