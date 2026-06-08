@@ -60,8 +60,7 @@
         <form v-else @submit.prevent="submit" class="space-y-5">
 
           <!-- Context hint -->
-          <div class="rounded-xl p-4 text-sm leading-relaxed" style="color: var(--brand-primary); background: rgba(var(--brand-rgb),0.06)"
-            style="background: rgba(var(--brand-rgb),0.06); border: 1px solid rgba(var(--brand-rgb),0.15)">
+          <div class="rounded-xl p-4 text-sm leading-relaxed" style="color: var(--brand-primary); background: rgba(var(--brand-rgb),0.06); border: 1px solid rgba(var(--brand-rgb),0.15)">
             Damit wir dir eine fundierte Analyse schicken können, brauchen wir nur ein paar kurze Angaben zu dir und deiner Fahrschule.
           </div>
 
