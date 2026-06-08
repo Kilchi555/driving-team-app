@@ -205,29 +205,29 @@
               <div class="flex items-center justify-between">
                 <!-- Left: Main Info -->
                 <div class="flex-1 min-w-0"> <!-- min-w-0 für text truncation -->
-                  <!-- Name & Category in one line -->
+                  <!-- Name (always full line) -->
                   <div class="flex items-center gap-2 mb-1">
                     <h3 :class="[
-                      'font-semibold truncate flex-1',
+                      'font-semibold truncate',
                       student.auth_user_id ? 'text-gray-900' : 'text-gray-600'
                     ]">
                       {{ student.first_name }} {{ student.last_name }}
                     </h3>
-                    <!-- Category Badges - compact -->
-                    <div v-if="student.category && student.category.length > 0" class="flex flex-wrap gap-1">
-                      <span 
-                        v-for="cat in student.category" 
-                        :key="cat"
-                        class="text-xs px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5"
-                        :style="isCategoryPassed(student, cat)
-                          ? { background: `${primaryColor}22`, color: primaryColor, outline: `1.5px solid ${primaryColor}55` }
-                          : { background: `${primaryColor}12`, color: primaryColor }"
-                        :title="isCategoryPassed(student, cat) ? `Prüfung ${cat} bestanden` : `Kategorie ${cat}`"
-                      >
-                        <span v-if="isCategoryPassed(student, cat)">✓</span>
-                        {{ cat }}
-                      </span>
-                    </div>
+                  </div>
+                  <!-- Category Badges - own line so name is never pushed away -->
+                  <div v-if="student.category && student.category.length > 0" class="flex flex-wrap gap-1 mb-1">
+                    <span 
+                      v-for="cat in student.category" 
+                      :key="cat"
+                      class="text-xs px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5"
+                      :style="isCategoryPassed(student, cat)
+                        ? { background: `${primaryColor}22`, color: primaryColor, outline: `1.5px solid ${primaryColor}55` }
+                        : { background: `${primaryColor}12`, color: primaryColor }"
+                      :title="isCategoryPassed(student, cat) ? `Prüfung ${cat} bestanden` : `Kategorie ${cat}`"
+                    >
+                      <span v-if="isCategoryPassed(student, cat)">✓</span>
+                      {{ cat }}
+                    </span>
                   </div>
                   
                   <!-- Contact Info - compact -->
