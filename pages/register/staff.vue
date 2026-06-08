@@ -608,10 +608,10 @@
 
           <!-- iOS Password Autofill: mirrors always present in DOM so Safari can detect
                username + password at form submission, even though they're on different steps -->
-          <div aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;top:-9999px;left:-9999px">
-            <input type="email" name="username" autocomplete="username" :value="form.email" tabindex="-1">
-            <input type="password" name="password" autocomplete="new-password" :value="form.password" tabindex="-1">
-            <input type="password" name="confirm-password" autocomplete="new-password" :value="form.confirmPassword" tabindex="-1">
+          <div style="clip:rect(0,0,0,0);position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;white-space:nowrap;border:0">
+            <input type="email" name="username" autocomplete="username" :value="form.email" tabindex="-1" readonly>
+            <input type="password" name="password" autocomplete="new-password" :value="form.password" tabindex="-1" readonly>
+            <input type="password" name="confirm-password" autocomplete="new-password" :value="form.confirmPassword" tabindex="-1" readonly>
           </div>
 
         </form>
