@@ -9,7 +9,8 @@
         :style="{ background: `linear-gradient(135deg, ${formData.primary_color || '#3B82F6'}, ${formData.secondary_color || '#6366F1'})` }">
         <div class="relative z-10 flex items-center gap-4">
           <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
-            <img v-if="logoPreview" :src="logoPreview" alt="Logo" class="w-full h-full object-contain p-1" />
+            <img v-if="logoSquarePreview" :src="logoSquarePreview" alt="Logo" class="w-full h-full object-cover" />
+            <img v-else-if="logoPreview" :src="logoPreview" alt="Logo" class="w-full h-full object-cover" />
             <svg v-else class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
             </svg>
