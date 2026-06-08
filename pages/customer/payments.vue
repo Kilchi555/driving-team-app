@@ -335,6 +335,7 @@
 import { logger } from '~/utils/logger'
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { Capacitor } from '@capacitor/core'
+import { openPdf } from '~/utils/openPdf'
 import { roundToNearest5Rappen as roundToNearestFranken } from '~/utils/rounding'
 import { navigateTo } from '#app'
 import { useAuthStore } from '~/stores/auth'
@@ -777,43 +778,23 @@ const downloadAllReceipts = async () => {
   }
 
   isProcessingReceipt.value = true
-  
+
   try {
     logger.debug('📄 Starting receipt download...')
     const paymentIds = paidPayments.value.map(p => p.id)
-    logger.debug('📄 Payment IDs:', paymentIds.length)
-    
+
     const response = await $fetch('/api/payments/receipt', {
       method: 'POST',
       body: { paymentIds }
     }) as { success: boolean; pdfUrl?: string; filename?: string; error?: string }
-    
-    logger.debug('📄 API Response:', response)
-    
+
     if (!response.success || !response.pdfUrl) {
       throw new Error(response.error || 'PDF konnte nicht generiert werden')
     }
-    
+
     logger.debug('✅ Receipt PDF URL:', response.pdfUrl)
-    logger.debug('📄 Filename:', response.filename)
-    
-    if (Capacitor.isNativePlatform()) {
-      // Native iOS/Android: Open PDF directly in system browser (Safari ViewController)
-      // → iOS gives the user a native PDF viewer with Share/Save options
-      const { Browser } = await import('@capacitor/browser')
-      await Browser.open({ url: response.pdfUrl, presentationStyle: 'fullscreen' })
-      logger.debug('✅ Opened PDF in native browser!')
-    } else {
-      // Web: Fetch as blob and open in new tab
-      const pdfResponse = await fetch(response.pdfUrl)
-      if (!pdfResponse.ok) {
-        throw new Error(`PDF download failed: ${pdfResponse.status} ${pdfResponse.statusText}`)
-      }
-      const blob = await pdfResponse.blob()
-      const blobUrl = URL.createObjectURL(blob)
-      window.open(blobUrl, '_blank')
-      logger.debug('✅ Opened in new tab!')
-    }
+    await openPdf(response.pdfUrl, response.filename || 'quittung.pdf')
+    logger.debug('✅ PDF opened!')
   } catch (err: any) {
     console.error('❌ Error downloading receipts:', err)
     alert(`Fehler beim Erstellen der Quittungen: ${err.message}`)
