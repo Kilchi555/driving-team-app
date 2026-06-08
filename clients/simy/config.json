@@ -4,7 +4,7 @@
   "bundleId": "ch.simy.app",
   "tenantSlug": null,
   "tier": "whitelabel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "primaryColor": "#7C3AED",
   "secondaryColor": "#A855F7",
   "accentColor": "#EC4899",
