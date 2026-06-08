@@ -105,12 +105,12 @@ function buildUserHtml(
     ? [
         'Kalender & Verfügbarkeiten prüfen',
         'Schülerliste ansehen',
-        'Erstes Fahrstunden-Paket buchen',
+        'Erste Fahrstunde buchen',
         'Profil vervollständigen',
       ]
     : [
         'Fahrstunden buchen',
-        'Theoriekurse & Kurse ansehen',
+        'Kurse ansehen',
         'Fortschritt verfolgen',
         'Profil vervollständigen',
       ]
