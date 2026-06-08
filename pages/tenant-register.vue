@@ -1512,8 +1512,9 @@
         </div>
 
         <!-- iOS Password Autofill: credential mirrors always present in DOM so Safari
-             can offer to save them when the registration form submits on step 7 -->
-        <div aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;top:-9999px;left:-9999px">
+             can offer to save them when the registration form submits.
+             Use visually-hidden (clip, NOT aria-hidden) so the password manager still reads them. -->
+        <div style="clip:rect(0,0,0,0);position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;white-space:nowrap;border:0">
           <input type="email" name="username" autocomplete="username" :value="adminForm.email" tabindex="-1" id="ios-mirror-email">
           <input type="password" name="password" autocomplete="new-password" :value="adminForm.password" tabindex="-1" id="ios-mirror-password">
           <input type="password" name="confirm-password" autocomplete="new-password" :value="adminForm.passwordConfirm" tabindex="-1" id="ios-mirror-confirm">
