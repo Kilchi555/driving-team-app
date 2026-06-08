@@ -51,7 +51,7 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <div v-for="feature in features" :key="feature.title"
-            class="p-6 rounded-2xl border border-gray-100 hover:border-purple-200 hover:shadow-md transition-all">
+            class="p-6 rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all">
             <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl mb-4"
               style="background: rgba(var(--brand-rgb),0.08);">
               {{ feature.icon }}
@@ -75,7 +75,7 @@
 
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           <div v-for="use in useCases" :key="use.label"
-            class="flex flex-col items-center gap-2 p-4 rounded-2xl bg-white border border-gray-100 hover:border-purple-200 transition-all">
+            class="flex flex-col items-center gap-2 p-4 rounded-2xl bg-white border border-gray-100 hover:border-gray-200 transition-all">
             <span class="text-2xl">{{ use.icon }}</span>
             <span class="text-xs font-semibold text-gray-700 text-center leading-tight">{{ use.label }}</span>
           </div>

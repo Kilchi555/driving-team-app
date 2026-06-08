@@ -60,7 +60,7 @@
         <form v-else @submit.prevent="submit" class="space-y-5">
 
           <!-- Context hint -->
-          <div class="rounded-xl p-4 text-sm text-purple-800 leading-relaxed"
+          <div class="rounded-xl p-4 text-sm leading-relaxed" style="color: var(--brand-primary); background: rgba(var(--brand-rgb),0.06)"
             style="background: rgba(var(--brand-rgb),0.06); border: 1px solid rgba(var(--brand-rgb),0.15)">
             Damit wir dir eine fundierte Analyse schicken können, brauchen wir nur ein paar kurze Angaben zu dir und deiner Fahrschule.
           </div>
@@ -69,12 +69,12 @@
             <div>
               <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Dein Name <span class="text-red-400">*</span></label>
               <input v-model="form.name" type="text" placeholder="Max Muster" autocomplete="name" required
-                class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-purple-400 transition-colors" />
+                class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors" />
             </div>
             <div>
               <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Name der Fahrschule <span class="text-red-400">*</span></label>
               <input v-model="form.school" type="text" placeholder="Fahrschule Muster" required
-                class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-purple-400 transition-colors" />
+                class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors" />
             </div>
           </div>
 
@@ -82,25 +82,25 @@
             <div>
               <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Stadt / Region <span class="text-red-400">*</span></label>
               <input v-model="form.city" type="text" placeholder="Zürich, Aarau, …" required
-                class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-purple-400 transition-colors" />
+                class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors" />
             </div>
             <div>
               <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Telefon <span class="text-gray-300">(optional)</span></label>
               <input v-model="form.phone" type="tel" placeholder="+41 79 123 45 67" autocomplete="tel"
-                class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-purple-400 transition-colors" />
+                class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors" />
             </div>
           </div>
 
           <div>
             <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">E-Mail <span class="text-red-400">*</span></label>
             <input v-model="form.email" type="email" placeholder="max@fahrschule.ch" autocomplete="email" required
-              class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-purple-400 transition-colors" />
+              class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors" />
           </div>
 
           <div>
             <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Hast du bereits eine Website?</label>
             <select v-model="form.website"
-              class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-purple-400 transition-colors bg-white">
+              class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-gray-400 transition-colors bg-white">
               <option value="">Bitte wählen…</option>
               <option>Ja, eine eigene Website</option>
               <option>Ja, eine Simy-Website</option>
@@ -112,7 +112,7 @@
             <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Was interessiert dich? <span class="text-gray-300">(optional)</span></label>
             <textarea v-model="form.message" rows="3"
               placeholder="z. B. «Ich möchte bei Google in Winterthur besser gefunden werden» oder «Ich weiss nicht wie ich aktuell ranke.»"
-              class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-purple-400 transition-colors resize-none"></textarea>
+              class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors resize-none"></textarea>
           </div>
 
           <div v-if="errorMsg" class="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">

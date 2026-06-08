@@ -152,7 +152,7 @@
         </div>
         <div class="grid md:grid-cols-3 gap-6">
           <div v-for="f in appFeatures" :key="f.title"
-            class="bg-white rounded-3xl p-7 border border-gray-100 hover:border-purple-100 hover:-translate-y-1 transition-all group">
+            class="bg-white rounded-3xl p-7 border border-gray-100 hover:border-gray-200 hover:-translate-y-1 transition-all group">
             <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 transition-all group-hover:scale-110"
               style="background: rgba(var(--brand-rgb),0.08)">
               <span class="text-2xl">{{ f.icon }}</span>
@@ -221,7 +221,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Simy Fahrlehrer-App kostenlos testen</h2>
-        <p class="text-purple-200 mb-8">60 Tage gratis. Keine Kreditkarte.</p>
+        <p class="text-white/70 mb-8">60 Tage gratis. Keine Kreditkarte.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">

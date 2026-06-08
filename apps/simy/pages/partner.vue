@@ -19,7 +19,7 @@
         <h2 class="text-lg font-bold text-gray-900 mb-6">Technologie-Partner</h2>
         <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-5 mb-16">
           <div v-for="p in techPartners" :key="p.name"
-            class="rounded-2xl p-6 border border-gray-100 hover:border-purple-100 transition-all">
+            class="rounded-2xl p-6 border border-gray-100 hover:border-gray-200 transition-all">
             <div class="text-3xl mb-3">{{ p.icon }}</div>
             <h3 class="font-bold text-gray-900 mb-1">{{ p.name }}</h3>
             <p class="text-xs text-gray-400 mb-2">{{ p.category }}</p>
@@ -28,7 +28,7 @@
         </div>
 
         <!-- Become a partner -->
-        <div class="rounded-3xl p-10 border border-purple-100 text-center"
+        <div class="rounded-3xl p-10 border border-gray-100 text-center"
           style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.04), rgba(var(--brand-2-rgb),0.06))">
           <h2 class="text-2xl font-extrabold text-gray-900 mb-3">Partner werden?</h2>
           <p class="text-gray-500 mb-6 max-w-lg mx-auto">Wenn du ein Produkt oder eine Dienstleistung für Fahrschulen anbietest, lass uns sprechen. Wir bauen gemeinsam die beste Lösung für den Schweizer Markt.</p>

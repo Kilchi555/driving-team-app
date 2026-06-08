@@ -84,18 +84,18 @@
               <div>
                 <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Name</label>
                 <input v-model="form.name" type="text" placeholder="Max Muster" autocomplete="name"
-                  class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-purple-400 transition-colors" />
+                  class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors" />
               </div>
               <div>
                 <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">E-Mail <span class="text-red-400">*</span></label>
                 <input v-model="form.email" type="email" placeholder="max@fahrschule.ch" autocomplete="email" required
-                  class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-purple-400 transition-colors" />
+                  class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors" />
               </div>
             </div>
             <div>
               <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Thema</label>
               <select v-model="form.topic"
-                class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-purple-400 transition-colors bg-white">
+                class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-gray-400 transition-colors bg-white">
                 <option>Allgemeine Anfrage</option>
                 <option>Produktfragen & Demo</option>
                 <option>Support</option>
@@ -107,7 +107,7 @@
             <div>
               <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Nachricht <span class="text-red-400">*</span></label>
               <textarea v-model="form.message" rows="5" placeholder="Womit können wir dir helfen?" required
-                class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-purple-400 transition-colors resize-none"></textarea>
+                class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors resize-none"></textarea>
             </div>
             <div v-if="error" class="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">
               {{ error }}
@@ -131,7 +131,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Lieber direkt einsteigen?</h2>
-        <p class="text-purple-200 mb-8 text-sm">60 Tage kostenlos testen — Keine Kreditkarte, keine Kündigung nötig.</p>
+        <p class="text-white/70 mb-8 text-sm">60 Tage kostenlos testen — Keine Kreditkarte, keine Kündigung nötig.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-base transition-all hover:opacity-90"
           style="color: var(--brand-primary)">

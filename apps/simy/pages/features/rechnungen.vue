@@ -75,7 +75,7 @@
         <h2 class="text-xl font-extrabold text-gray-900 mb-6 text-center">Alle Schweizer Zahlungsmittel integriert</h2>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div v-for="pm in paymentMethods" :key="pm.name"
-            class="rounded-2xl p-5 border border-gray-100 text-center hover:border-purple-100 transition-all">
+            class="rounded-2xl p-5 border border-gray-100 text-center hover:border-gray-200 transition-all">
             <div class="text-2xl mb-2">{{ pm.icon }}</div>
             <p class="font-bold text-gray-900 text-sm">{{ pm.name }}</p>
             <p class="text-xs text-gray-400 mt-0.5">{{ pm.desc }}</p>
@@ -90,7 +90,7 @@
         <h2 class="text-3xl font-extrabold text-gray-900 mb-12 text-center">Was das Kassensystem alles kann</h2>
         <div class="grid md:grid-cols-2 gap-6">
           <div v-for="f in invoiceFeatures" :key="f.title"
-            class="flex gap-5 p-6 rounded-2xl border border-gray-100 hover:border-purple-100 transition-all group">
+            class="flex gap-5 p-6 rounded-2xl border border-gray-100 hover:border-gray-200 transition-all group">
             <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-all"
               style="background: rgba(var(--brand-rgb),0.08)">
               <span class="text-xl">{{ f.icon }}</span>
@@ -108,7 +108,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Nie mehr Rechnungen manuell schreiben</h2>
-        <p class="text-purple-200 mb-8">60 Tage kostenlos — Keine Kreditkarte.</p>
+        <p class="text-white/70 mb-8">60 Tage kostenlos — Keine Kreditkarte.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">

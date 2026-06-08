@@ -89,7 +89,7 @@
         </div>
         <div class="grid md:grid-cols-2 gap-6">
           <div v-for="f in calFeatures" :key="f.title"
-            class="flex gap-5 p-6 rounded-2xl border border-gray-100 hover:border-purple-100 transition-all group">
+            class="flex gap-5 p-6 rounded-2xl border border-gray-100 hover:border-gray-200 transition-all group">
             <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-all"
               style="background: rgba(var(--brand-rgb),0.08)">
               <span class="text-xl">{{ f.icon }}</span>
@@ -107,7 +107,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Den Kalender heute noch ausprobieren</h2>
-        <p class="text-purple-200 mb-8">60 Tage kostenlos — Keine Kreditkarte.</p>
+        <p class="text-white/70 mb-8">60 Tage kostenlos — Keine Kreditkarte.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
