@@ -1260,11 +1260,11 @@
             </div>
 
             <!-- Fahrlehrer -->
-            <div v-if="staffList.some(s => s.first_name && s.last_name)"
+            <div v-if="staffList.some(s => s.first_name && s.phone)"
               class="sm:col-span-2 rounded-2xl bg-gray-50 border border-gray-100 p-4">
               <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2.5">Einladungen</p>
               <div class="flex flex-wrap gap-2">
-                <span v-for="(s, i) in staffList.filter(s => s.first_name && s.last_name)" :key="i"
+                <span v-for="(s, i) in staffList.filter(s => s.first_name && s.phone)" :key="i"
                   class="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-full border border-gray-200 text-sm text-gray-700">
                   <span class="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center">
                     <svg class="w-2.5 h-2.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2310,7 +2310,7 @@ const submitRegistration = async () => {
 
     // 3. Invite staff (non-critical)
     const filledStaff = staffList.value.filter(s =>
-      s.first_name.trim() && s.last_name.trim() && s.phone.trim()
+      s.first_name.trim() && s.phone.trim()
     )
     if (filledStaff.length > 0) {
       try {

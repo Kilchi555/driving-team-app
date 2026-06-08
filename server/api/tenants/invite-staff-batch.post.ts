@@ -115,8 +115,8 @@ export default defineEventHandler(async (event) => {
     const phone     = entry.phone?.trim() || null
     const email     = entry.email?.trim().toLowerCase() || null
 
-    if (!firstName || !lastName) {
-      results.push({ name: `${firstName} ${lastName}`, status: 'failed', message: 'Vor- und Nachname erforderlich' })
+    if (!firstName) {
+      results.push({ name: firstName || '?', status: 'failed', message: 'Vorname erforderlich' })
       continue
     }
     if (!phone && !email) {
