@@ -82,7 +82,8 @@
               <div class="sm:col-span-2">
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Rechtlicher Name (für Rechnungen) *</label>
                 <input v-model="formData.legal_company_name" type="text" required placeholder="z.B. Fahrschule Muster GmbH"
-                  class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
+                  class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm"
+                  @input="legalNameManuallyEdited = true">
               </div>
               <div class="sm:col-span-2">
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">URL-Kennung *</label>
@@ -1917,6 +1918,7 @@ const smsSenderSuggestions = computed((): string[] => {
 })
 
 const userEditedSlug = ref(false)
+const legalNameManuallyEdited = ref(false)
 
 // ─── Admin Form ────────────────────────────────────────────────────────────
 const adminForm = ref({
@@ -2385,6 +2387,9 @@ watch(() => formData.value.name, (newName: string) => {
       .replace(/\s+/g, '-')
       .replace(/--+/g, '-')
       .replace(/^-|-$/g, '')
+  }
+  if (newName && !legalNameManuallyEdited.value) {
+    formData.value.legal_company_name = newName
   }
 })
 
