@@ -23,7 +23,7 @@
           <!-- Numbers -->
           <div class="space-y-4">
             <div v-for="fact in facts" :key="fact.label"
-              class="flex items-center gap-5 rounded-2xl p-5 border border-gray-100 hover:border-purple-100 transition-all">
+              class="flex items-center gap-5 rounded-2xl p-5 border border-gray-100 hover:border-gray-200 transition-all">
               <div class="text-3xl font-black flex-shrink-0" style="color: var(--brand-primary)">{{ fact.value }}</div>
               <div>
                 <p class="font-bold text-gray-900 text-sm">{{ fact.label }}</p>
@@ -38,7 +38,7 @@
           <h2 class="text-2xl font-extrabold text-gray-900 mb-8">Das Team</h2>
           <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
             <div v-for="member in team" :key="member.name"
-              class="rounded-2xl p-6 border border-gray-100 hover:border-purple-100 transition-all text-center">
+              class="rounded-2xl p-6 border border-gray-100 hover:border-gray-200 transition-all text-center">
               <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-black mx-auto mb-4"
                 style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">{{ member.name[0] }}</div>
               <h3 class="font-bold text-gray-900 mb-1">{{ member.name }}</h3>
@@ -53,9 +53,9 @@
     <!-- Mission -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">
-        <p class="text-purple-300 text-xs font-bold uppercase tracking-widest mb-4">Unsere Mission</p>
+        <p class="text-xs font-bold uppercase tracking-widest mb-4" style="color: var(--brand-primary)">Unsere Mission</p>
         <h2 class="text-3xl font-black text-white mb-5">"Fahrlehrer sollen unterrichten — nicht verwalten."</h2>
-        <p class="text-purple-200 leading-relaxed mb-8">Wir glauben, dass jeder Fahrlehrer in der Schweiz eine professionelle digitale Präsenz und ein effizientes Verwaltungssystem verdient — zu einem Preis, der sich bereits nach der ersten gesparten Stunde rechnet.</p>
+        <p class="text-white/70 leading-relaxed mb-8">Wir glauben, dass jeder Fahrlehrer in der Schweiz eine professionelle digitale Präsenz und ein effizientes Verwaltungssystem verdient — zu einem Preis, der sich bereits nach der ersten gesparten Stunde rechnet.</p>
         <a href="/demo"
           class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-white font-bold text-sm transition-all hover:opacity-90"
           style="color: var(--brand-primary)">

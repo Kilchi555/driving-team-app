@@ -114,7 +114,7 @@
     <section class="py-20 px-6 bg-gray-950">
       <div class="max-w-4xl mx-auto">
         <div class="text-center mb-12">
-          <p class="text-xs font-bold uppercase tracking-widest mb-3 text-purple-400">Warum Simy</p>
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary)">Warum Simy</p>
           <h2 class="text-3xl font-extrabold text-white mb-4">Marketing + Software = Der Vorteil</h2>
           <p class="text-gray-400 max-w-xl mx-auto">Wer nur Werbeschalten macht, verliert potenzielle Schüler durch eine schlechte Website oder ein fehlendes Buchungssystem. Simy schliesst diese Lücke.</p>
         </div>

@@ -82,7 +82,7 @@
         </div>
         <div class="space-y-5">
           <div v-for="(item, i) in seoActions" :key="i"
-            class="flex gap-4 p-5 rounded-2xl border border-gray-100 hover:border-purple-100 transition-all group">
+            class="flex gap-4 p-5 rounded-2xl border border-gray-100 hover:border-gray-200 transition-all group">
             <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-white text-sm mt-0.5"
               style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">{{ i + 1 }}</div>
             <div class="flex-1 min-w-0">
@@ -126,7 +126,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Wie gut rankt deine Fahrschule aktuell?</h2>
-        <p class="text-purple-200 mb-8">Wir machen eine kostenlose SEO-Analyse für deine Fahrschule und zeigen dir das Potenzial.</p>
+        <p class="text-white/70 mb-8">Wir machen eine kostenlose SEO-Analyse für deine Fahrschule und zeigen dir das Potenzial.</p>
         <a href="/marketing/seo-anfrage"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">

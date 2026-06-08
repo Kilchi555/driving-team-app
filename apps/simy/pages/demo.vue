@@ -61,7 +61,7 @@
         <h2 class="text-3xl font-extrabold text-gray-900 text-center mb-12">Was du im Trial bekommst</h2>
         <div class="grid md:grid-cols-3 gap-5">
           <div v-for="f in trialFeatures" :key="f.title"
-            class="rounded-2xl p-6 border border-gray-100 hover:border-purple-100 transition-all group">
+            class="rounded-2xl p-6 border border-gray-100 hover:border-gray-200 transition-all group">
             <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-all group-hover:scale-110"
               style="background: rgba(var(--brand-rgb),0.08)">
               <span class="text-xl">{{ f.icon }}</span>
@@ -77,7 +77,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Bereit loszulegen?</h2>
-        <p class="text-purple-200 mb-8">Hunderte Benutzer lieben Simy.</p>
+        <p class="text-white/70 mb-8">Hunderte Benutzer lieben Simy.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">

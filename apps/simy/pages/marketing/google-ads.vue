@@ -122,7 +122,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Mehr Schüler ab sofort?</h2>
-        <p class="text-purple-200 mb-8">Jetzt kostenloses Erstgespräch buchen — wir zeigen dir, was in deiner Region möglich ist.</p>
+        <p class="text-white/70 mb-8">Jetzt kostenloses Erstgespräch buchen — wir zeigen dir, was in deiner Region möglich ist.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">

@@ -112,7 +112,7 @@
         <p class="text-gray-600 leading-relaxed mb-8">Simy ist speziell für den Schweizer Markt entwickelt. Mit TWINT-Integration, Schweizer Datenschutz und auf Deutsch verfügbar — Simy ist die einzige All-in-One Lösung, die auch Website und Marketing einschliesst.</p>
         <div class="grid sm:grid-cols-3 gap-5 mb-8">
           <div v-for="usp in usps" :key="usp.title"
-            class="rounded-2xl p-6 text-center border border-gray-100 hover:border-purple-100 transition-all">
+            class="rounded-2xl p-6 text-center border border-gray-100 hover:border-gray-200 transition-all">
             <div class="text-3xl mb-3">{{ usp.icon }}</div>
             <h3 class="font-bold text-gray-900 mb-2 text-sm">{{ usp.title }}</h3>
             <p class="text-xs text-gray-500">{{ usp.desc }}</p>
@@ -141,7 +141,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
-              <tr v-for="row in pricingTable" :key="row.model" :class="row.highlight ? 'bg-purple-50' : ''">
+              <tr v-for="row in pricingTable" :key="row.model" :style="row.highlight ? { background: `rgba(var(--brand-rgb),0.06)` } : {}">
                 <td class="px-5 py-4 font-semibold text-gray-900 flex items-center gap-2">
                   {{ row.model }}
                   <span v-if="row.highlight" class="text-xs font-bold px-2 py-0.5 rounded-full text-white" style="background: var(--brand-primary)">Empfohlen</span>
@@ -161,7 +161,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Simy 60 Tage kostenlos testen</h2>
-        <p class="text-purple-200 mb-8">Überzeuge dich selbst. Keine Kreditkarte, keine Kündigung nötig.</p>
+        <p class="text-white/70 mb-8">Überzeuge dich selbst. Keine Kreditkarte, keine Kündigung nötig.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
