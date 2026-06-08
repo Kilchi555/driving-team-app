@@ -1365,6 +1365,7 @@
 
 import { ref, computed, toRefs, watch } from 'vue'
 import { logger } from '~/utils/logger'
+import { openPdf } from '~/utils/openPdf'
 import { getSupabase } from '~/utils/supabase'
 import { useUserDocuments, type UserDocument } from '~/composables/useUserDocuments'
 import { useTenantBranding } from '~/composables/useTenantBranding'
@@ -3162,11 +3163,7 @@ async function downloadReceipts() {
     if (!response.success || !response.pdfUrl) {
       throw new Error(response.error || 'PDF konnte nicht generiert werden')
     }
-    const pdfResponse = await fetch(response.pdfUrl)
-    if (!pdfResponse.ok) throw new Error(`PDF download failed: ${pdfResponse.status}`)
-    const blob = await pdfResponse.blob()
-    const blobUrl = URL.createObjectURL(blob)
-    window.open(blobUrl, '_blank')
+    await openPdf(response.pdfUrl, response.filename || 'quittung.pdf')
   } catch (err: any) {
     logger.error('❌ Error downloading receipts:', err)
     alert(`Fehler beim Erstellen der Quittungen: ${err.message}`)
