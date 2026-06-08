@@ -6,7 +6,17 @@
 
       <!-- Logo -->
       <a href="/" class="flex-shrink-0">
-        <img :src="logoSrc || '/simy-logo.png'" alt="Simy – Fahrschulsoftware Schweiz" class="h-8 max-w-[120px] object-contain transition-all duration-500" />
+        <img
+          v-if="logoSrc"
+          :src="logoSrc"
+          alt="Simy – Fahrschulsoftware Schweiz"
+          class="h-8 max-w-[120px] object-contain transition-all duration-500"
+        />
+        <SimyLogoSvg
+          v-else
+          :primary-color="primaryColor || '#6000BD'"
+          class-name="h-8 transition-all duration-500"
+        />
       </a>
 
       <!-- Desktop nav -->
