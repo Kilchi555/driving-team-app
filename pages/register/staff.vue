@@ -323,6 +323,7 @@
                   placeholder="Suchen (z.B. Zürich, Bern, SVA...)"
                   class="input pr-8"
                   @focus="examSearchOpen = true"
+                  @click="examSearchOpen = true"
                   @blur="setTimeout(() => examSearchOpen = false, 150)"
                 />
                 <svg class="absolute right-2.5 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
