@@ -1333,7 +1333,7 @@
                 { done: true, label: 'Preise & Dauern konfiguriert' },
                 { done: true, label: 'Termintypen & Bewertungsvorlagen importiert' },
                 { done: true, label: 'Verfügbarkeit Mo–Sa 08:00–18:00 eingerichtet' },
-                { done: (staffInviteResults?.length ?? 0) > 0, label: `Fahrlehrer eingeladen (${staffInviteResults?.length ?? 0})` },
+                { done: (staffInviteResults?.filter(r => ['sms_sent','email_sent','invited'].includes(r.status))?.length ?? 0) > 0, label: `Fahrlehrer eingeladen (${staffInviteResults?.filter(r => ['sms_sent','email_sent','invited'].includes(r.status))?.length ?? 0})` },
               ]" :key="item.label"
               class="flex items-center gap-3 px-4 py-2.5">
                 <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
@@ -1405,9 +1405,12 @@
             <div class="space-y-2">
               <div v-for="r in staffInviteResults" :key="r.name" class="flex items-center gap-3">
                 <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                  :class="['sms_sent', 'email_sent', 'invited'].includes(r.status) ? 'bg-green-100' : 'bg-red-100'">
-                  <svg v-if="['sms_sent', 'email_sent', 'invited'].includes(r.status)" class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  :class="['sms_sent', 'email_sent'].includes(r.status) ? 'bg-green-100' : r.status === 'invited' ? 'bg-amber-100' : 'bg-red-100'">
+                  <svg v-if="['sms_sent', 'email_sent'].includes(r.status)" class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  <svg v-else-if="r.status === 'invited'" class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
                   </svg>
                   <svg v-else class="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
@@ -1415,7 +1418,8 @@
                 </div>
                 <div>
                   <span class="text-sm font-medium text-gray-800">{{ r.name }}</span>
-                  <span class="text-xs text-gray-500 ml-2">{{ r.message }}</span>
+                  <span class="text-xs ml-2" :class="r.status === 'invited' ? 'text-amber-600' : 'text-gray-500'">{{ r.message }}</span>
+                  <span v-if="r.status === 'invited'" class="block text-xs text-amber-600 mt-0.5">SMS fehlgeschlagen – bitte Link manuell senden</span>
                 </div>
               </div>
             </div>
@@ -2319,8 +2323,13 @@ const submitRegistration = async () => {
           body: { tenant_id: response.tenant.id, staff_list: filledStaff }
         }) as any
         staffInviteResults.value = inviteRes.results || []
-      } catch (inviteErr) {
-        console.warn('Staff invite failed (non-critical):', inviteErr)
+      } catch (inviteErr: any) {
+        // Set synthetic failed result so the user sees what happened on the success screen
+        staffInviteResults.value = filledStaff.map(s => ({
+          name: `${s.first_name} ${s.last_name}`.trim(),
+          status: 'failed',
+          message: inviteErr?.data?.statusMessage || inviteErr?.message || 'Einladung konnte nicht gesendet werden'
+        }))
       }
     }
 

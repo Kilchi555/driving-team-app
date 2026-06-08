@@ -1406,13 +1406,13 @@ const sendStaffInvitation = async () => {
     
     // Show appropriate message based on result (UI panel for manual link)
     if (data.sentVia === 'email_failed' || data.sentVia === 'sms_failed') {
-      // Show toast with copy button and keep modal scroll small
-      showInviteManualLink.value = false
-      showInviteFallbackToast(data.inviteLink)
+      // Keep modal open, show inline fallback panel with copy link
+      inviteManualLink.value = data.inviteLink
+      showInviteManualLink.value = true
     } else if (data.inviteLink && !data.sentVia) {
-      // No sending configured: also show toast
-      showInviteManualLink.value = false
-      showInviteFallbackToast(data.inviteLink)
+      // No sending configured: also show inline panel
+      inviteManualLink.value = data.inviteLink
+      showInviteManualLink.value = true
     } else {
       // Success via email or SMS -> show success toast
       showInviteSuccessToast.value = true

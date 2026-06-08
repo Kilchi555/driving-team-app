@@ -67,6 +67,13 @@
             </div>
           </div>
 
+          <!-- Auto-login warning -->
+          <div v-if="autoLoginFailed" class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-left">
+            <p class="text-sm font-semibold text-amber-800">Automatischer Login fehlgeschlagen</p>
+            <p class="text-xs text-amber-700 mt-1">Dein Konto wurde erfolgreich erstellt, aber der automatische Login hat nicht funktioniert. Bitte melde dich manuell mit deiner E-Mail und deinem Passwort an.</p>
+            <NuxtLink to="/login" class="inline-block mt-2 text-xs font-semibold text-amber-700 underline">Zur Login-Seite</NuxtLink>
+          </div>
+
           <button @click="goToDashboard"
             class="w-full text-white font-semibold py-3 rounded-lg transition-opacity hover:opacity-90"
             :style="{ background: tenantColor }">
@@ -147,6 +154,10 @@
                 <p v-else-if="staffEmailCheck === 'taken'" class="text-xs text-red-500 mt-1 flex items-center gap-2">
                   <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
                   <span>Diese E-Mail ist bereits registriert — <a href="/login" class="underline font-medium">Jetzt einloggen</a></span>
+                </p>
+                <p v-else-if="staffEmailCheck === 'error'" class="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                  E-Mail-Prüfung fehlgeschlagen — bitte erneut versuchen
                 </p>
               </div>
               <div class="col-span-2">
@@ -653,6 +664,7 @@ const currentStep        = ref(0)
 const isLoading          = ref(true)
 const loadError          = ref('')
 const registrationError  = ref('')
+const autoLoginFailed    = ref(false)
 const tenantName         = ref('')
 const tenantSlugRef      = ref('')
 const tenantColor        = ref('#7C3AED')
@@ -987,6 +999,7 @@ const submit = async () => {
 
     // Auto-login
     const loginOk = await authStore.login(form.email, form.password).catch(() => false)
+    if (!loginOk) autoLoginFailed.value = true
 
     // Save credentials for Android/Chrome; iOS relies on mirror inputs + form submit
     if (loginOk) {

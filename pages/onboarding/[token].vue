@@ -1392,6 +1392,18 @@ const isFormValid = computed(() => {
 const handleNextStep = async () => {
   // Validate current step
   if (step.value === 0) {
+    // Email must be checked and available before proceeding
+    if (!form.email || emailStatus.value === '') {
+      emailCheckMessage.value = 'Bitte E-Mail-Adresse eingeben und prüfen'
+      return
+    }
+    if (emailStatus.value === 'checking') {
+      emailCheckMessage.value = '⏳ Bitte warten – E-Mail wird noch geprüft...'
+      return
+    }
+    if (emailStatus.value === 'taken' || emailStatus.value === 'error') {
+      return
+    }
     // Password validation using zxcvbn score
     if (form.password.length < 12) {
       passwordError.value = 'Passwort muss mindestens 12 Zeichen lang sein'
