@@ -371,7 +371,7 @@ const tenantName = computed(() => {
          'Admin Dashboard'  // Generischer Fallback
 })
 
-const tenantLogo = computed(() => getLogo('square'))
+const tenantLogo = computed(() => currentTenantBranding.value?.logos?.square || null)
 
 const tenantContact = computed(() => ({
   email: currentTenantBranding.value?.contact?.email || 
