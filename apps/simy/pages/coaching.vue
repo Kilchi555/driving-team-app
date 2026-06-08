@@ -101,7 +101,7 @@
             :class="i % 2 === 1 ? 'md:flex-row-reverse' : ''">
             <!-- Icon panel -->
             <div class="flex-shrink-0 w-full md:w-64 h-48 rounded-2xl flex items-center justify-center text-6xl"
-              style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.06), rgba(139,47,232,0.1));">
+              style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.06), rgba(var(--brand-2-rgb),0.1));">
               {{ highlight.visual }}
             </div>
             <!-- Text -->

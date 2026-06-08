@@ -29,7 +29,7 @@
 
         <!-- Become a partner -->
         <div class="rounded-3xl p-10 border border-purple-100 text-center"
-          style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.04), rgba(139,47,232,0.06))">
+          style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.04), rgba(var(--brand-2-rgb),0.06))">
           <h2 class="text-2xl font-extrabold text-gray-900 mb-3">Partner werden?</h2>
           <p class="text-gray-500 mb-6 max-w-lg mx-auto">Wenn du ein Produkt oder eine Dienstleistung für Fahrschulen anbietest, lass uns sprechen. Wir bauen gemeinsam die beste Lösung für den Schweizer Markt.</p>
           <a href="mailto:partner@simy.ch"

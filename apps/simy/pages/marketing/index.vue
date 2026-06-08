@@ -6,18 +6,18 @@
     <section class="pt-20 pb-24 px-6 relative overflow-hidden">
       <div class="absolute inset-0 pointer-events-none">
         <div class="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full opacity-[0.06]"
-          style="background: radial-gradient(circle, #6000BD, transparent)"></div>
+          style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
         <div class="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full opacity-[0.04]"
-          style="background: radial-gradient(circle, #8B2FE8, transparent)"></div>
+          style="background: radial-gradient(circle, var(--brand-secondary), transparent)"></div>
       </div>
       <div class="relative max-w-5xl mx-auto text-center">
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
-          style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
+          style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
           🚀 Marketing für Fahrschulen
         </div>
         <h1 class="text-5xl md:text-6xl font-black text-gray-900 mb-6 leading-tight">
           Mehr Schüler mit<br />
-          <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Fahrschule Marketing
           </span>
         </h1>
@@ -27,7 +27,7 @@
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="#angebote"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
-            style="background: linear-gradient(135deg, #6000BD, #8B2FE8); box-shadow: 0 8px 24px rgba(96,0,189,0.3)">
+            style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.3)">
             Marketing-Angebote entdecken →
           </a>
           <a href="https://app.simy.ch/tenant-register"
@@ -53,7 +53,7 @@
     <section id="angebote" class="py-24 px-6">
       <div class="max-w-5xl mx-auto">
         <div class="text-center mb-16">
-          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: #6000BD">Marketing-Angebote</p>
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary)">Marketing-Angebote</p>
           <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Zwei Wege zu mehr Schülern</h2>
           <p class="text-gray-500 max-w-xl mx-auto">Ob sofortige Leads durch Werbung oder nachhaltiges Wachstum durch SEO — wir haben die richtige Strategie für deine Fahrschule.</p>
         </div>
@@ -61,17 +61,17 @@
         <div class="grid md:grid-cols-2 gap-8">
           <!-- Google Ads Card -->
           <div class="rounded-3xl border-2 p-8 hover:-translate-y-1 transition-all group"
-            style="border-color: rgba(96,0,189,0.2); background: rgba(96,0,189,0.02)">
+            style="border-color: rgba(var(--brand-rgb),0.2); background: rgba(var(--brand-rgb),0.02)">
             <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-3xl"
-              style="background: rgba(96,0,189,0.08)">📢</div>
+              style="background: rgba(var(--brand-rgb),0.08)">📢</div>
             <div class="flex items-center gap-3 mb-3">
               <h3 class="text-xl font-black text-gray-900">Google Ads</h3>
-              <span class="text-xs font-bold px-3 py-1 rounded-full text-white" style="background: #6000BD">Sofortige Leads</span>
+              <span class="text-xs font-bold px-3 py-1 rounded-full text-white" style="background: var(--brand-primary)">Sofortige Leads</span>
             </div>
             <p class="text-gray-500 leading-relaxed mb-6">Sofort sichtbar bei Google, wenn jemand "Fahrschule [deine Stadt]" sucht. Wir erstellen, optimieren und betreuen deine Kampagnen — du zahlst nur für Klicks.</p>
             <ul class="space-y-3 mb-8">
               <li v-for="item in adsHighlights" :key="item" class="flex items-center gap-3 text-sm text-gray-700">
-                <svg class="w-4 h-4 flex-shrink-0" style="color: #6000BD" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-4 h-4 flex-shrink-0" style="color: var(--brand-primary)" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                 </svg>
                 {{ item }}
@@ -79,7 +79,7 @@
             </ul>
             <a href="/marketing/google-ads"
               class="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90"
-              style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
+              style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
               Mehr über Google Ads →
             </a>
           </div>
@@ -102,7 +102,7 @@
             </ul>
             <a href="/marketing/seo"
               class="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-bold text-sm border-2 transition-all hover:bg-gray-50"
-              style="border-color: #6000BD; color: #6000BD">
+              style="border-color: var(--brand-primary); color: var(--brand-primary)">
               Mehr über SEO →
             </a>
           </div>
@@ -134,13 +134,13 @@
     </section>
 
     <!-- CTA -->
-    <section class="py-24 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
+    <section class="py-24 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-4xl font-black text-white mb-5">Bereit, mehr Schüler zu gewinnen?</h2>
         <p class="text-purple-200 text-lg mb-10">Starte kostenlos mit der Software und frage uns nach unserem Marketing-Paket.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
-          style="color: #6000BD; box-shadow: 0 12px 40px rgba(0,0,0,0.2)">
+          style="color: var(--brand-primary); box-shadow: 0 12px 40px rgba(0,0,0,0.2)">
           Kostenlos starten →
         </a>
       </div>

@@ -14,7 +14,7 @@
           <div class="mt-5">
             <a href="/demo"
               class="inline-block text-sm font-bold px-5 py-2.5 rounded-xl text-white transition-all hover:opacity-90"
-              style="background: linear-gradient(135deg, #6000BD, #8B2FE8);">
+              style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));">
               60 Tage gratis →
             </a>
           </div>
