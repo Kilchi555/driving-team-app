@@ -574,11 +574,19 @@ const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate:
       }
     }
     
-    // Wenn workingHours leer zurückkommt obwohl User eingeloggt → Cache invalidieren (kein leeres Ergebnis cachen)
+    // Wenn workingHours leer zurückkommt obwohl User eingeloggt → Cache invalidieren und sofort retry
     if (response.success && (!response.workingHours || response.workingHours.length === 0)) {
-      logger.warn('⚠️ Working hours returned empty – invalidating cache to avoid stale empty result')
+      logger.warn('⚠️ Working hours returned empty – invalidating cache and retrying once')
       const { invalidate } = useCalendarCache()
       invalidate('/api/staff/get-working-hours')
+      // Retry once after a short delay to allow for any propagation
+      await new Promise(resolve => setTimeout(resolve, 800))
+      try {
+        response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours')
+        // Cache the fresh result
+      } catch {
+        // Retry failed – continue with empty result
+      }
     }
     
     if (!response.success) {
