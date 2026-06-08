@@ -7,7 +7,7 @@
       <!-- Logo -->
       <a href="/" class="flex-shrink-0">
         <img
-          :src="logoSrc || '/simy-logo.png'"
+          :src="effectiveLogo || '/simy-logo.png'"
           alt="Simy – Fahrschulsoftware Schweiz"
           class="h-8 max-w-[120px] object-contain transition-all duration-500"
           :style="{ filter: logoColorFilter }"
@@ -195,6 +195,22 @@ const props = defineProps<{
 }>()
 
 const DEFAULT_PRIMARY = '#6000BD'
+const DEFAULT_SECONDARY = '#8B2FE8'
+const BRAND_STORAGE_KEY = 'simy_brand_preview'
+
+// Effective branding: prop takes priority, then localStorage, then default
+const storedBrand = ref<{ primary?: string; secondary?: string; logo?: string }>({})
+
+onMounted(() => {
+  try {
+    const raw = localStorage.getItem(BRAND_STORAGE_KEY)
+    if (raw) storedBrand.value = JSON.parse(raw) as { primary?: string; secondary?: string; logo?: string }
+  } catch { /* ignore */ }
+})
+
+const effectivePrimary = computed(() => props.primaryColor || storedBrand.value.primary || DEFAULT_PRIMARY)
+const effectiveSecondary = computed(() => props.secondaryColor || storedBrand.value.secondary || DEFAULT_SECONDARY)
+const effectiveLogo = computed(() => props.logoSrc || storedBrand.value.logo || null)
 
 function hexToHsl(hex: string): [number, number, number] {
   const r = parseInt(hex.slice(1, 3), 16) / 255
@@ -214,8 +230,8 @@ function hexToHsl(hex: string): [number, number, number] {
 }
 
 const logoColorFilter = computed(() => {
-  if (props.logoSrc) return 'none'
-  const color = props.primaryColor || DEFAULT_PRIMARY
+  if (effectiveLogo.value) return 'none'
+  const color = effectivePrimary.value
   if (color === DEFAULT_PRIMARY) return 'none'
   const [tH, tS, tL] = hexToHsl(color)
   const [oH, oS, oL] = hexToHsl(DEFAULT_PRIMARY)
@@ -229,17 +245,17 @@ const mobileOpen = ref(false)
 const activeSection = ref('')
 
 const ctaStyle = computed(() => ({
-  background: `linear-gradient(135deg, ${props.primaryColor || '#6000BD'}, ${props.secondaryColor || '#8B2FE8'})`
+  background: `linear-gradient(135deg, ${effectivePrimary.value}, ${effectiveSecondary.value})`
 }))
 
 const activePillStyle = computed(() => ({
-  background: props.primaryColor || '#7C3AED',
+  background: effectivePrimary.value,
   color: 'white'
 }))
 
 const activeDesktopStyle = computed(() => ({
-  color: props.primaryColor || '#6D28D9',
-  background: `${props.primaryColor || '#6D28D9'}12`
+  color: effectivePrimary.value,
+  background: `${effectivePrimary.value}12`
 }))
 
 function scrollTo(href: string) {
