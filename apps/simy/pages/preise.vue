@@ -6,11 +6,11 @@
     <section class="pt-20 pb-14 px-6 text-center relative overflow-hidden">
       <div class="absolute inset-0 pointer-events-none">
         <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[500px] rounded-full opacity-[0.06]"
-          style="background: radial-gradient(circle, #6000BD, transparent)"></div>
+          style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
       </div>
       <div class="relative max-w-3xl mx-auto">
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
-          style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
+          style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
           Preise
         </div>
         <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-4 leading-tight">Fahrschulsoftware Preise — transparent &amp; fair</h1>
@@ -25,10 +25,10 @@
           <div v-for="plan in plans" :key="plan.name"
             class="rounded-3xl p-8 border-2 flex flex-col relative"
             :class="plan.highlighted ? '' : 'border-gray-100 bg-white'"
-            :style="plan.highlighted ? 'background: linear-gradient(145deg, #6000BD, #8B2FE8); border-color: transparent; box-shadow: 0 25px 50px rgba(96,0,189,0.25)' : ''">
+            :style="plan.highlighted ? 'background: linear-gradient(145deg, var(--brand-primary), var(--brand-secondary)); border-color: transparent; box-shadow: 0 25px 50px rgba(var(--brand-rgb),0.25)' : ''">
             <div v-if="plan.highlighted"
               class="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold px-4 py-1.5 rounded-full bg-white whitespace-nowrap"
-              style="color: #6000BD">
+              style="color: var(--brand-primary)">
               ✦ Am beliebtesten
             </div>
             <h3 class="font-extrabold text-xl mb-1" :class="plan.highlighted ? 'text-white' : 'text-gray-900'">{{ plan.name }}</h3>
@@ -44,17 +44,17 @@
                 class="flex items-start gap-2.5 text-sm"
                 :style="plan.highlighted ? 'color: rgba(255,255,255,0.9)' : 'color: #374151'">
                 <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"
-                  :style="plan.highlighted ? 'color: rgba(255,255,255,0.7)' : 'color: #6000BD'">
+                  :style="plan.highlighted ? 'color: rgba(255,255,255,0.7)' : 'color: var(--brand-primary)'">
                   <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                 </svg>
-                <span>{{ f.text }}<span v-if="f.new" class="ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded" :style="plan.highlighted ? 'background: rgba(255,255,255,0.15)' : 'background: rgba(96,0,189,0.1); color: #6000BD'">NEU</span></span>
+                <span>{{ f.text }}<span v-if="f.new" class="ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded" :style="plan.highlighted ? 'background: rgba(255,255,255,0.15)' : 'background: rgba(var(--brand-rgb),0.1); color: var(--brand-primary)'">NEU</span></span>
               </li>
             </ul>
             <a href="https://app.simy.ch/tenant-register"
               class="block text-center py-3.5 rounded-xl font-bold text-sm transition-all hover:opacity-90"
               :style="plan.highlighted
-                ? 'background: rgba(255,255,255,0.92); color: #6000BD'
-                : 'background: linear-gradient(135deg, #6000BD, #8B2FE8); color: white'">
+                ? 'background: rgba(255,255,255,0.92); color: var(--brand-primary)'
+                : 'background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); color: white'">
               60 Tage gratis starten
             </a>
           </div>
@@ -68,7 +68,7 @@
     <!-- Add-ons -->
     <section class="pb-16 px-6">
       <div class="max-w-5xl mx-auto">
-        <p class="text-xs font-bold uppercase tracking-widest text-center mb-8" style="color: #6000BD; opacity: 0.6;">Add-ons (optional)</p>
+        <p class="text-xs font-bold uppercase tracking-widest text-center mb-8" style="color: var(--brand-primary); opacity: 0.6;">Add-ons (optional)</p>
         <div class="grid md:grid-cols-2 gap-4">
 
           <div class="rounded-2xl border-2 border-gray-100 p-6 bg-white">
@@ -77,7 +77,7 @@
                 <p class="font-bold text-gray-900 text-sm">Extra Fahrlehrer Seats</p>
                 <p class="text-xs text-gray-400 mt-0.5">Jeder Plan inkl. feste Anzahl — weitere Seats zubuchbar</p>
               </div>
-              <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(96,0,189,0.08); color: #6000BD;">Pro Seat / Mt.</span>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(var(--brand-rgb),0.08); color: var(--brand-primary);">Pro Seat / Mt.</span>
             </div>
             <p class="text-xs text-gray-500 leading-relaxed">Starter: 1 Seat inkl. · Professional: 5 inkl. · Enterprise: 10 inkl. Mehr nötig? Einfach dazubuchen.</p>
           </div>
@@ -88,7 +88,7 @@
                 <p class="font-bold text-gray-900 text-sm">Kursbuchungsseite</p>
                 <p class="text-xs text-gray-400 mt-0.5">Online-Buchung für Kurse & Lektionen</p>
               </div>
-              <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(96,0,189,0.08); color: #6000BD;">Add-on</span>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(var(--brand-rgb),0.08); color: var(--brand-primary);">Add-on</span>
             </div>
             <p class="text-xs text-gray-500 leading-relaxed">Im <strong>Professional</strong> und <strong>Enterprise</strong>-Plan inklusive. Für Starter als Add-on zubuchbar.</p>
           </div>
@@ -99,7 +99,7 @@
                 <p class="font-bold text-gray-900 text-sm">Affiliate-System</p>
                 <p class="text-xs text-gray-400 mt-0.5">Empfehlungen & Partnerprogramm</p>
               </div>
-              <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(96,0,189,0.08); color: #6000BD;">Add-on</span>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(var(--brand-rgb),0.08); color: var(--brand-primary);">Add-on</span>
             </div>
             <p class="text-xs text-gray-500 leading-relaxed">Im <strong>Enterprise</strong>-Plan inklusive. Für Starter & Professional als Add-on zubuchbar.</p>
           </div>
@@ -145,7 +145,7 @@
               <tr class="border-b border-gray-100">
                 <th class="px-5 py-4 text-left font-bold text-gray-500 w-1/2">Feature</th>
                 <th class="px-4 py-4 text-center font-bold text-gray-700">Starter</th>
-                <th class="px-4 py-4 text-center font-bold text-white rounded-t-xl" style="background: #6000BD">Professional</th>
+                <th class="px-4 py-4 text-center font-bold text-white rounded-t-xl" style="background: var(--brand-primary)">Professional</th>
                 <th class="px-4 py-4 text-center font-bold text-gray-700">Enterprise</th>
               </tr>
             </thead>
@@ -154,20 +154,20 @@
                 class="border-t border-gray-50 hover:bg-gray-50/50 transition-colors">
                 <td class="px-5 py-3.5 text-gray-700 font-medium">{{ row.label }}</td>
                 <td class="px-4 py-3.5 text-center">
-                  <span v-if="row.starter === true" class="inline-flex items-center justify-center w-5 h-5 rounded-full" style="background: rgba(96,0,189,0.08)">
-                    <svg class="w-3 h-3" style="color:#6000BD" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <span v-if="row.starter === true" class="inline-flex items-center justify-center w-5 h-5 rounded-full" style="background: rgba(var(--brand-rgb),0.08)">
+                    <svg class="w-3 h-3" style="color:var(--brand-primary)" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                   </span>
                   <svg v-else-if="row.starter === false" class="w-4 h-4 text-gray-200 mx-auto" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-                  <span v-else-if="row.starter === 'Add-on'" class="text-xs font-medium px-2 py-0.5 rounded-full" style="background: rgba(96,0,189,0.08); color:#6000BD">Add-on</span>
+                  <span v-else-if="row.starter === 'Add-on'" class="text-xs font-medium px-2 py-0.5 rounded-full" style="background: rgba(var(--brand-rgb),0.08); color:var(--brand-primary)">Add-on</span>
                   <span v-else class="text-xs text-gray-600 font-semibold">{{ row.starter }}</span>
                 </td>
-                <td class="px-4 py-3.5 text-center" style="background: rgba(96,0,189,0.03)">
-                  <span v-if="row.pro === true" class="inline-flex items-center justify-center w-5 h-5 rounded-full" style="background: rgba(96,0,189,0.12)">
-                    <svg class="w-3 h-3" style="color:#6000BD" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                <td class="px-4 py-3.5 text-center" style="background: rgba(var(--brand-rgb),0.03)">
+                  <span v-if="row.pro === true" class="inline-flex items-center justify-center w-5 h-5 rounded-full" style="background: rgba(var(--brand-rgb),0.12)">
+                    <svg class="w-3 h-3" style="color:var(--brand-primary)" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                   </span>
                   <svg v-else-if="row.pro === false" class="w-4 h-4 text-gray-200 mx-auto" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-                  <span v-else-if="row.pro === 'Add-on'" class="text-xs font-medium px-2 py-0.5 rounded-full" style="background: rgba(96,0,189,0.08); color:#6000BD">Add-on</span>
-                  <span v-else class="text-xs font-semibold" style="color:#6000BD">{{ row.pro }}</span>
+                  <span v-else-if="row.pro === 'Add-on'" class="text-xs font-medium px-2 py-0.5 rounded-full" style="background: rgba(var(--brand-rgb),0.08); color:var(--brand-primary)">Add-on</span>
+                  <span v-else class="text-xs font-semibold" style="color:var(--brand-primary)">{{ row.pro }}</span>
                 </td>
                 <td class="px-4 py-3.5 text-center">
                   <span v-if="row.enterprise === true" class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-50">
@@ -207,13 +207,13 @@
     </section>
 
     <!-- CTA -->
-    <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
+    <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Kostenlos starten — heute noch</h2>
         <p class="text-purple-200 mb-8">60 Tage gratis. Keine Kreditkarte. In 5 Minuten eingerichtet.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
-          style="color: #6000BD">
+          style="color: var(--brand-primary)">
           Jetzt kostenlos starten →
         </a>
       </div>

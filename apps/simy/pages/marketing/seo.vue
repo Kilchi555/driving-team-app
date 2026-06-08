@@ -6,7 +6,7 @@
     <section class="pt-20 pb-24 px-6 relative overflow-hidden">
       <div class="absolute inset-0 pointer-events-none">
         <div class="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full opacity-[0.06]"
-          style="background: radial-gradient(circle, #6000BD, transparent)"></div>
+          style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
       </div>
       <div class="relative max-w-4xl mx-auto">
         <nav class="flex items-center gap-2 text-xs text-gray-400 mb-8">
@@ -15,12 +15,12 @@
           <span class="text-gray-600">SEO</span>
         </nav>
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
-          style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
+          style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
           🔍 Lokales SEO für Fahrschulen
         </div>
         <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
           SEO für Fahrschulen —<br/>
-          <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Dauerhaft oben bei Google
           </span>
         </h1>
@@ -30,7 +30,7 @@
         <div class="flex flex-col sm:flex-row gap-4">
           <a href="/marketing/seo-anfrage"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
-            style="background: linear-gradient(135deg, #6000BD, #8B2FE8); box-shadow: 0 8px 24px rgba(96,0,189,0.3)">
+            style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.3)">
             SEO-Analyse anfragen →
           </a>
         </div>
@@ -84,11 +84,11 @@
           <div v-for="(item, i) in seoActions" :key="i"
             class="flex gap-4 p-5 rounded-2xl border border-gray-100 hover:border-purple-100 transition-all group">
             <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-white text-sm mt-0.5"
-              style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">{{ i + 1 }}</div>
+              style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">{{ i + 1 }}</div>
             <div class="flex-1 min-w-0">
               <div class="flex flex-wrap items-center gap-2 mb-1">
                 <h3 class="font-bold text-gray-900">{{ item.title }}</h3>
-                <span class="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0" :style="{ background: item.impact === 'Hoch' ? 'rgba(96,0,189,0.08)' : 'rgba(5,150,105,0.08)', color: item.impact === 'Hoch' ? '#6000BD' : '#059669' }">
+                <span class="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0" :style="{ background: item.impact === 'Hoch' ? 'rgba(var(--brand-rgb),0.08)' : 'rgba(5,150,105,0.08)', color: item.impact === 'Hoch' ? 'var(--brand-primary)' : '#059669' }">
                   {{ item.impact }}
                 </span>
               </div>
@@ -107,7 +107,7 @@
           <div v-for="(phase, i) in timeline" :key="i" class="flex gap-5">
             <div class="flex flex-col items-center">
               <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
-                style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">{{ i + 1 }}</div>
+                style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">{{ i + 1 }}</div>
               <div v-if="i < timeline.length - 1" class="w-0.5 bg-gray-200 flex-1 my-1"></div>
             </div>
             <div class="pb-8 flex-1">
@@ -123,13 +123,13 @@
     </section>
 
     <!-- CTA -->
-    <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
+    <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Wie gut rankt deine Fahrschule aktuell?</h2>
         <p class="text-purple-200 mb-8">Wir machen eine kostenlose SEO-Analyse für deine Fahrschule und zeigen dir das Potenzial.</p>
         <a href="/marketing/seo-anfrage"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
-          style="color: #6000BD">
+          style="color: var(--brand-primary)">
           Kostenlose SEO-Analyse →
         </a>
       </div>
