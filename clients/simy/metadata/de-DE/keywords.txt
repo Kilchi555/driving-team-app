@@ -1,1 +1,1 @@
-fahrschule,fahrstunden,führerausweis,fahrlehrer,buchen,lernfortschritt,prüfung,schweiz
+Simy,Simy App,Fahrschule App,Fahrlehrer,Fahrstunden online buchen,Fahrschulverwaltung
