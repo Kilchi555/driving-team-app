@@ -6,11 +6,11 @@
     <section class="pt-20 pb-14 px-6 text-center relative overflow-hidden">
       <div class="absolute inset-0 pointer-events-none">
         <div class="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-[0.06]"
-          style="background: radial-gradient(circle, #6000BD, transparent)"></div>
+          style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
       </div>
       <div class="relative max-w-xl mx-auto">
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
-          style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
+          style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
           Kontakt
         </div>
         <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-4 leading-tight">Wie können wir helfen?</h1>
@@ -29,8 +29,8 @@
             <a href="mailto:info@simy.ch"
               class="flex items-center gap-3 group">
               <span class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform"
-                style="background: rgba(96,0,189,0.08)">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="#6000BD" stroke-width="2">
+                style="background: rgba(var(--brand-rgb),0.08)">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="var(--brand-primary)" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                 </svg>
               </span>
@@ -60,7 +60,7 @@
             <p class="text-sm text-gray-500 mb-4 leading-relaxed">60 Tage kostenlos testen — Keine Kreditkarte, in 5 Minuten bereit.</p>
             <a href="https://app.simy.ch/tenant-register"
               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-bold transition-all hover:opacity-90"
-              style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
+              style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
               Kostenlos starten →
             </a>
           </div>
@@ -70,8 +70,8 @@
         <div class="md:col-span-3">
           <div v-if="submitted" class="rounded-2xl border border-gray-100 p-10 text-center">
             <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-5"
-              style="background: rgba(96,0,189,0.08)">
-              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="#6000BD" stroke-width="2">
+              style="background: rgba(var(--brand-rgb),0.08)">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="var(--brand-primary)" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
               </svg>
             </div>
@@ -114,13 +114,13 @@
             </div>
             <button type="submit" :disabled="loading"
               class="w-full py-3.5 rounded-xl text-white text-sm font-bold transition-all hover:opacity-90 disabled:opacity-50"
-              style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
+              style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
               <span v-if="loading">Wird gesendet…</span>
               <span v-else>Anfrage senden →</span>
             </button>
             <p class="text-xs text-gray-400 text-center">
               Mit dem Absenden akzeptierst du unsere
-              <a href="/datenschutz" class="hover:underline" style="color: #6000BD">Datenschutzerklärung</a>.
+              <a href="/datenschutz" class="hover:underline" style="color: var(--brand-primary)">Datenschutzerklärung</a>.
             </p>
           </form>
         </div>
@@ -128,13 +128,13 @@
     </section>
 
     <!-- CTA -->
-    <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
+    <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Lieber direkt einsteigen?</h2>
         <p class="text-purple-200 mb-8 text-sm">60 Tage kostenlos testen — Keine Kreditkarte, keine Kündigung nötig.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-base transition-all hover:opacity-90"
-          style="color: #6000BD">
+          style="color: var(--brand-primary)">
           Kostenlos starten →
         </a>
       </div>

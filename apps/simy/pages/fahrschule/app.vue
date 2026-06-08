@@ -6,7 +6,7 @@
     <section class="pt-20 pb-24 px-6 relative overflow-hidden">
       <div class="absolute inset-0 pointer-events-none">
         <div class="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full opacity-[0.06]"
-          style="background: radial-gradient(circle, #6000BD, transparent)"></div>
+          style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
       </div>
       <div class="relative max-w-4xl mx-auto">
         <nav class="flex items-center gap-2 text-xs text-gray-400 mb-8">
@@ -15,12 +15,12 @@
           <span class="text-gray-600">Fahrlehrer App</span>
         </nav>
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
-          style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
+          style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
           Fahrlehrer App
         </div>
         <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
           Die Fahrlehrer App, die<br/>
-          <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             wirklich an alles denkt.
           </span>
         </h1>
@@ -30,7 +30,7 @@
         <div class="flex flex-col sm:flex-row gap-4">
           <a href="https://app.simy.ch/tenant-register"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
-            style="background: linear-gradient(135deg, #6000BD, #8B2FE8); box-shadow: 0 8px 24px rgba(96,0,189,0.3)">
+            style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.3)">
             Kostenlos testen →
           </a>
         </div>
@@ -47,7 +47,7 @@
       <div class="max-w-6xl mx-auto">
         <div class="text-center mb-14">
           <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-4 border"
-            style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
+            style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
             Auf jedem Gerät
           </div>
           <h2 class="text-3xl font-extrabold text-gray-900 mb-3">iPhone, iPad & Desktop — immer dabei</h2>
@@ -75,7 +75,7 @@
           <!-- iPad (center, larger) -->
           <div class="flex-shrink-0 w-[240px] md:w-[320px] mb-4">
             <div class="relative rounded-[1.8rem] border-[8px] border-gray-800 bg-gray-800 shadow-2xl"
-              style="box-shadow: 0 40px 80px rgba(96,0,189,0.2), 0 0 0 1px rgba(0,0,0,0.15)">
+              style="box-shadow: 0 40px 80px rgba(var(--brand-rgb),0.2), 0 0 0 1px rgba(0,0,0,0.15)">
               <!-- Camera dot -->
               <div class="absolute top-2 left-1/2 -translate-x-1/2 w-[7px] h-[7px] bg-gray-600 rounded-full z-10"></div>
               <!-- Screen -->
@@ -123,7 +123,7 @@
           <div v-for="f in appFeatures" :key="f.title"
             class="bg-white rounded-3xl p-7 border border-gray-100 hover:border-purple-100 hover:-translate-y-1 transition-all group">
             <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 transition-all group-hover:scale-110"
-              style="background: rgba(96,0,189,0.08)">
+              style="background: rgba(var(--brand-rgb),0.08)">
               <span class="text-2xl">{{ f.icon }}</span>
             </div>
             <h3 class="font-bold text-gray-900 mb-2">{{ f.title }}</h3>
@@ -143,7 +143,7 @@
             <thead>
               <tr class="bg-gray-50 border-b border-gray-100">
                 <th class="px-4 py-4 text-left font-bold text-gray-700 min-w-[180px]">Feature</th>
-                <th class="px-4 py-4 text-center font-bold min-w-[100px]" style="color: #6000BD">Simy</th>
+                <th class="px-4 py-4 text-center font-bold min-w-[100px]" style="color: var(--brand-primary)">Simy</th>
                 <th class="px-4 py-4 text-center font-bold text-gray-500 min-w-[100px]">Carzi</th>
                 <th class="px-4 py-4 text-center font-bold text-gray-500 min-w-[100px]">OrphyDrive</th>
                 <th class="px-4 py-4 text-center font-bold text-gray-500 min-w-[100px]">AdminDrive</th>
@@ -187,13 +187,13 @@
     </section>
 
     <!-- CTA -->
-    <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
+    <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Simy Fahrlehrer-App kostenlos testen</h2>
         <p class="text-purple-200 mb-8">60 Tage gratis. Keine Kreditkarte.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
-          style="color: #6000BD">
+          style="color: var(--brand-primary)">
           Jetzt starten →
         </a>
       </div>

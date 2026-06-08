@@ -6,7 +6,7 @@
     <section class="pt-20 pb-24 px-6 relative overflow-hidden">
       <div class="absolute inset-0 pointer-events-none">
         <div class="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full opacity-[0.06]"
-          style="background: radial-gradient(circle, #6000BD, transparent)"></div>
+          style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
       </div>
       <div class="relative max-w-4xl mx-auto">
         <!-- Breadcrumb -->
@@ -19,12 +19,12 @@
         </nav>
 
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
-          style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
+          style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
           Fahrschulsoftware Schweiz
         </div>
         <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
           Fahrschulsoftware — <br />
-          <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Der komplette Ratgeber 2026
           </span>
         </h1>
@@ -52,7 +52,7 @@
           <a v-for="(item, i) in toc" :key="i" :href="`#${item.id}`"
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-600 hover:bg-white hover:text-gray-900 border border-transparent hover:border-gray-100 transition-all">
             <span class="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black text-white flex-shrink-0"
-              style="background: #6000BD">{{ i + 1 }}</span>
+              style="background: var(--brand-primary)">{{ i + 1 }}</span>
             {{ item.label }}
           </a>
         </div>
@@ -69,13 +69,13 @@
         <p class="text-gray-600 leading-relaxed mb-4">Eine gute Fahrschulsoftware deckt folgende Kernbereiche ab:</p>
         <ul class="space-y-3 mb-6">
           <li v-for="item in whatIs" :key="item" class="flex items-start gap-3 text-gray-700">
-            <svg class="w-5 h-5 mt-0.5 flex-shrink-0" style="color: #6000BD" fill="currentColor" viewBox="0 0 20 20">
+            <svg class="w-5 h-5 mt-0.5 flex-shrink-0" style="color: var(--brand-primary)" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
             </svg>
             {{ item }}
           </li>
         </ul>
-        <div class="rounded-2xl p-6 border" style="background: rgba(96,0,189,0.04); border-color: rgba(96,0,189,0.15)">
+        <div class="rounded-2xl p-6 border" style="background: rgba(var(--brand-rgb),0.04); border-color: rgba(var(--brand-rgb),0.15)">
           <p class="font-semibold text-gray-900 mb-2">💡 Das Wichtigste vorab</p>
           <p class="text-sm text-gray-600">Gute Fahrschulsoftware spart einem durchschnittlichen Fahrlehrer <strong>2–3 Stunden täglich</strong>. Das entspricht 40–60 Fahrstunden pro Monat — oder CHF 3'000–5'000 zusätzlichem Umsatzpotenzial.</p>
         </div>
@@ -120,7 +120,7 @@
         </div>
         <a href="https://app.simy.ch/tenant-register"
           class="flex items-center justify-center gap-2 w-full py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
-          style="background: linear-gradient(135deg, #6000BD, #8B2FE8); box-shadow: 0 8px 24px rgba(96,0,189,0.25)">
+          style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.25)">
           60 Tage kostenlos testen →
         </a>
         <p class="text-center text-xs text-gray-400 mt-2">Keine Kreditkarte erforderlich</p>
@@ -144,7 +144,7 @@
               <tr v-for="row in pricingTable" :key="row.model" :class="row.highlight ? 'bg-purple-50' : ''">
                 <td class="px-5 py-4 font-semibold text-gray-900 flex items-center gap-2">
                   {{ row.model }}
-                  <span v-if="row.highlight" class="text-xs font-bold px-2 py-0.5 rounded-full text-white" style="background: #6000BD">Empfohlen</span>
+                  <span v-if="row.highlight" class="text-xs font-bold px-2 py-0.5 rounded-full text-white" style="background: var(--brand-primary)">Empfohlen</span>
                 </td>
                 <td class="px-5 py-4 text-gray-600">{{ row.price }}</td>
                 <td class="px-5 py-4 text-gray-600">{{ row.pro }}</td>
@@ -158,13 +158,13 @@
     </div>
 
     <!-- Final CTA -->
-    <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
+    <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Simy 60 Tage kostenlos testen</h2>
         <p class="text-purple-200 mb-8">Überzeuge dich selbst. Keine Kreditkarte, keine Kündigung nötig.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
-          style="color: #6000BD">
+          style="color: var(--brand-primary)">
           Jetzt kostenlos starten →
         </a>
       </div>
@@ -227,7 +227,7 @@ const whatIs = [
 
 const featureCats = [
   {
-    title: 'Terminverwaltung & Buchung', icon: '📅', color: '#6000BD', tag: 'Must-Have',
+    title: 'Terminverwaltung & Buchung', icon: '📅', color: 'var(--brand-primary)', tag: 'Must-Have',
     features: ['Online-Buchungslink für Schüler', 'Echtzeit-Kalender pro Fahrlehrer', 'Automatische Terminbestätigung', 'Absage-Verwaltung', 'Mehrtagesansicht', 'iCal-Sync'],
   },
   {

@@ -6,7 +6,7 @@
     <section class="pt-20 pb-14 px-6 relative overflow-hidden">
       <div class="absolute inset-0 pointer-events-none">
         <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full opacity-[0.06]"
-          style="background: radial-gradient(circle, #6000BD, transparent)"></div>
+          style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
       </div>
       <div class="relative max-w-xl mx-auto">
         <nav class="flex items-center gap-2 text-xs text-gray-400 mb-8">
@@ -16,12 +16,12 @@
           <span class="text-gray-600">Anfrage</span>
         </nav>
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
-          style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
+          style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
           Kostenlose SEO-Analyse
         </div>
         <h1 class="text-3xl md:text-4xl font-black text-gray-900 mb-4 leading-tight">
           Wie sichtbar ist deine<br/>
-          <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Fahrschule bei Google?
           </span>
         </h1>
@@ -38,10 +38,10 @@
         <!-- Success -->
         <div v-if="submitted"
           class="rounded-2xl border border-gray-100 p-10 text-center"
-          style="background: rgba(96,0,189,0.03)">
+          style="background: rgba(var(--brand-rgb),0.03)">
           <div class="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"
-            style="background: rgba(96,0,189,0.1)">
-            <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="#6000BD" stroke-width="2.5">
+            style="background: rgba(var(--brand-rgb),0.1)">
+            <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="var(--brand-primary)" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
             </svg>
           </div>
@@ -51,7 +51,7 @@
           </p>
           <a href="/marketing/seo"
             class="inline-flex items-center gap-2 text-sm font-semibold transition-colors"
-            style="color: #6000BD">
+            style="color: var(--brand-primary)">
             ← Zurück zur SEO-Seite
           </a>
         </div>
@@ -61,7 +61,7 @@
 
           <!-- Context hint -->
           <div class="rounded-xl p-4 text-sm text-purple-800 leading-relaxed"
-            style="background: rgba(96,0,189,0.06); border: 1px solid rgba(96,0,189,0.15)">
+            style="background: rgba(var(--brand-rgb),0.06); border: 1px solid rgba(var(--brand-rgb),0.15)">
             Damit wir dir eine fundierte Analyse schicken können, brauchen wir nur ein paar kurze Angaben zu dir und deiner Fahrschule.
           </div>
 
@@ -121,14 +121,14 @@
 
           <button type="submit" :disabled="loading"
             class="w-full py-4 rounded-xl text-white font-bold transition-all hover:opacity-90 disabled:opacity-50"
-            style="background: linear-gradient(135deg, #6000BD, #8B2FE8); box-shadow: 0 8px 24px rgba(96,0,189,0.25)">
+            style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.25)">
             <span v-if="loading">Wird gesendet…</span>
             <span v-else>Kostenlose SEO-Analyse anfragen →</span>
           </button>
 
           <p class="text-xs text-gray-400 text-center">
             Mit dem Absenden akzeptierst du unsere
-            <a href="/datenschutz" class="hover:underline" style="color: #6000BD">Datenschutzerklärung</a>.
+            <a href="/datenschutz" class="hover:underline" style="color: var(--brand-primary)">Datenschutzerklärung</a>.
             Kein Spam, keine Weitergabe an Dritte.
           </p>
         </form>

@@ -6,7 +6,7 @@
     <section class="pt-20 pb-24 px-6 relative overflow-hidden">
       <div class="absolute inset-0 pointer-events-none">
         <div class="absolute -top-32 -right-32 w-[600px] h-[600px] rounded-full opacity-[0.06]"
-          style="background: radial-gradient(circle, #6000BD, transparent)"></div>
+          style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
       </div>
       <div class="relative max-w-4xl mx-auto">
         <nav class="flex items-center gap-2 text-xs text-gray-400 mb-8">
@@ -15,12 +15,12 @@
           <span class="text-gray-600">Kalender & Planung</span>
         </nav>
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
-          style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
+          style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
           Feature — Kalender
         </div>
         <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
           Kalender & Planung —<br/>
-          <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Dein Stundenplan auf Autopilot
           </span>
         </h1>
@@ -30,7 +30,7 @@
         <div class="flex flex-col sm:flex-row gap-4">
           <a href="https://app.simy.ch/tenant-register"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
-            style="background: linear-gradient(135deg, #6000BD, #8B2FE8); box-shadow: 0 8px 24px rgba(96,0,189,0.3)">
+            style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.3)">
             Kostenlos testen →
           </a>
         </div>
@@ -56,9 +56,9 @@
             <div v-for="day in days" :key="day.label"
               class="py-2 text-xs font-bold"
               :class="day.today ? 'text-white' : 'text-gray-400'"
-              :style="day.today ? 'background: rgba(96,0,189,0.08)' : ''">
+              :style="day.today ? 'background: rgba(var(--brand-rgb),0.08)' : ''">
               <div>{{ day.label }}</div>
-              <div class="text-lg font-black" :style="day.today ? 'color: #6000BD' : 'color: #374151'">{{ day.num }}</div>
+              <div class="text-lg font-black" :style="day.today ? 'color: var(--brand-primary)' : 'color: #374151'">{{ day.num }}</div>
             </div>
           </div>
           <!-- Time slots -->
@@ -91,7 +91,7 @@
           <div v-for="f in calFeatures" :key="f.title"
             class="flex gap-5 p-6 rounded-2xl border border-gray-100 hover:border-purple-100 transition-all group">
             <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-all"
-              style="background: rgba(96,0,189,0.08)">
+              style="background: rgba(var(--brand-rgb),0.08)">
               <span class="text-xl">{{ f.icon }}</span>
             </div>
             <div>
@@ -104,13 +104,13 @@
     </section>
 
     <!-- CTA -->
-    <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
+    <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Den Kalender heute noch ausprobieren</h2>
         <p class="text-purple-200 mb-8">60 Tage kostenlos — Keine Kreditkarte.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
-          style="color: #6000BD">
+          style="color: var(--brand-primary)">
           Jetzt starten →
         </a>
       </div>
@@ -143,9 +143,9 @@ const days = [
 
 const calendarSlots = [
   [
-    { time: '08:00', name: 'Marc H.', color: '#6000BD', empty: false },
+    { time: '08:00', name: 'Marc H.', color: 'var(--brand-primary)', empty: false },
     { empty: true },
-    { time: '14:00', name: 'Lena K.', color: '#6000BD', empty: false },
+    { time: '14:00', name: 'Lena K.', color: 'var(--brand-primary)', empty: false },
   ],
   [
     { empty: true },
@@ -158,9 +158,9 @@ const calendarSlots = [
     { empty: true },
   ],
   [
-    { time: '08:00', name: 'Jan F.', color: '#6000BD', empty: false },
+    { time: '08:00', name: 'Jan F.', color: 'var(--brand-primary)', empty: false },
     { empty: true },
-    { time: '16:00', name: 'Anna S.', color: '#6000BD', empty: false },
+    { time: '16:00', name: 'Anna S.', color: 'var(--brand-primary)', empty: false },
   ],
   [
     { empty: true },

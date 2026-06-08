@@ -6,11 +6,11 @@
     <section class="pt-20 pb-20 px-6 text-center relative overflow-hidden">
       <div class="absolute inset-0 pointer-events-none">
         <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[500px] rounded-full opacity-[0.05]"
-          style="background: radial-gradient(circle, #6000BD, transparent)"></div>
+          style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
       </div>
       <div class="relative max-w-3xl mx-auto">
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
-          style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
+          style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
           Kundenstories
         </div>
         <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-5 leading-tight">Was unsere Kunden sagen</h1>
@@ -22,7 +22,7 @@
     <section class="py-12 px-6 border-y border-gray-100 bg-gray-50">
       <div class="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
         <div v-for="s in stats" :key="s.label" class="text-center">
-          <div class="text-4xl font-black mb-1" style="color: #6000BD">{{ s.value }}</div>
+          <div class="text-4xl font-black mb-1" style="color: var(--brand-primary)">{{ s.value }}</div>
           <div class="text-sm text-gray-500">{{ s.label }}</div>
         </div>
       </div>
@@ -32,8 +32,8 @@
     <section class="py-20 px-6">
       <div class="max-w-4xl mx-auto">
         <div class="rounded-3xl p-10 md:p-14 border border-purple-100 relative overflow-hidden"
-          style="background: linear-gradient(135deg, rgba(96,0,189,0.04), rgba(139,47,232,0.06))">
-          <div class="absolute top-0 right-0 text-[180px] font-black opacity-[0.04] leading-none select-none pointer-events-none" style="color: #6000BD">"</div>
+          style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.04), rgba(139,47,232,0.06))">
+          <div class="absolute top-0 right-0 text-[180px] font-black opacity-[0.04] leading-none select-none pointer-events-none" style="color: var(--brand-primary)">"</div>
           <div class="relative">
             <div class="flex gap-1 mb-5">
               <svg v-for="i in 5" :key="i" class="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
@@ -41,17 +41,17 @@
               </svg>
             </div>
             <blockquote class="text-2xl font-bold text-gray-900 leading-relaxed mb-6">
-              "Simy hat unsere gesamte Administration digitalisiert. Wir sparen täglich über 2 Stunden — das sind <span style="color: #6000BD">40+ Fahrstunden pro Monat</span>, die wir früher mit Papierkram verloren haben."
+              "Simy hat unsere gesamte Administration digitalisiert. Wir sparen täglich über 2 Stunden — das sind <span style="color: var(--brand-primary)">40+ Fahrstunden pro Monat</span>, die wir früher mit Papierkram verloren haben."
             </blockquote>
             <div class="grid md:grid-cols-3 gap-4 mb-8">
               <div v-for="m in drivingTeamMetrics" :key="m.label" class="rounded-xl p-4 bg-white border border-gray-100 text-center">
-                <div class="text-2xl font-black" style="color: #6000BD">{{ m.value }}</div>
+                <div class="text-2xl font-black" style="color: var(--brand-primary)">{{ m.value }}</div>
                 <div class="text-xs text-gray-500 mt-1">{{ m.label }}</div>
               </div>
             </div>
             <div class="flex items-center gap-4">
               <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-black text-lg"
-                style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">P</div>
+                style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">P</div>
               <div>
                 <p class="font-bold text-gray-900">Pascal Kilchenmann</p>
                 <p class="text-sm text-gray-400">Driving Team, Zürich — 3 Standorte, 4 Fahrlehrer</p>
@@ -76,7 +76,7 @@
             <p class="text-gray-700 leading-relaxed mb-5 text-sm">"{{ t.quote }}"</p>
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">{{ t.name[0] }}</div>
+                style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">{{ t.name[0] }}</div>
               <div>
                 <p class="font-bold text-gray-900 text-sm">{{ t.name }}</p>
                 <p class="text-xs text-gray-400">{{ t.school }}</p>
@@ -88,13 +88,13 @@
     </section>
 
     <!-- CTA -->
-    <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
+    <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Werde Teil der Simy-Familie</h2>
         <p class="text-purple-200 mb-8">Starte kostenlos und erlebe selbst, was andere schon täglich nutzen.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
-          style="color: #6000BD">
+          style="color: var(--brand-primary)">
           60 Tage kostenlos starten →
         </a>
       </div>

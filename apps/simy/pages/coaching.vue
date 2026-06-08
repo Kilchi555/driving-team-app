@@ -9,14 +9,14 @@
 
         <!-- Coming soon badge -->
         <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-6 border"
-          style="background: rgba(96,0,189,0.06); border-color: rgba(96,0,189,0.15); color: #6000BD;">
+          style="background: rgba(var(--brand-rgb),0.06); border-color: rgba(var(--brand-rgb),0.15); color: var(--brand-primary);">
           <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
           Demnächst verfügbar · Jetzt Frühzugang sichern
         </div>
 
         <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight mb-6">
           Simy für<br>
-          <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Coaches & Trainer & Therapeuten
           </span>
         </h1>
@@ -28,7 +28,7 @@
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
           <NuxtLink to="/kontakt"
             class="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-white font-bold text-base transition-all hover:opacity-90 hover:shadow-lg"
-            style="background: linear-gradient(135deg, #6000BD, #8B2FE8);">
+            style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));">
             Frühzugang anfordern →
           </NuxtLink>
           <NuxtLink to="/preise"
@@ -53,7 +53,7 @@
           <div v-for="feature in features" :key="feature.title"
             class="p-6 rounded-2xl border border-gray-100 hover:border-purple-200 hover:shadow-md transition-all">
             <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl mb-4"
-              style="background: rgba(96,0,189,0.08);">
+              style="background: rgba(var(--brand-rgb),0.08);">
               {{ feature.icon }}
             </div>
             <h3 class="text-base font-bold text-gray-900 mb-2">{{ feature.title }}</h3>
@@ -101,7 +101,7 @@
             :class="i % 2 === 1 ? 'md:flex-row-reverse' : ''">
             <!-- Icon panel -->
             <div class="flex-shrink-0 w-full md:w-64 h-48 rounded-2xl flex items-center justify-center text-6xl"
-              style="background: linear-gradient(135deg, rgba(96,0,189,0.06), rgba(139,47,232,0.1));">
+              style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.06), rgba(139,47,232,0.1));">
               {{ highlight.visual }}
             </div>
             <!-- Text -->
@@ -111,7 +111,7 @@
               <ul class="space-y-2">
                 <li v-for="point in highlight.points" :key="point"
                   class="flex items-start gap-2 text-sm text-gray-600">
-                  <svg class="w-4 h-4 mt-0.5 flex-shrink-0" style="color: #6000BD;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <svg class="w-4 h-4 mt-0.5 flex-shrink-0" style="color: var(--brand-primary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                   </svg>
                   {{ point }}
@@ -144,7 +144,7 @@
     <section class="py-24 px-6">
       <div class="max-w-2xl mx-auto text-center">
         <div class="rounded-3xl p-10 sm:p-14 text-white relative overflow-hidden"
-          style="background: linear-gradient(135deg, #6000BD, #8B2FE8);">
+          style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));">
           <div class="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 -translate-y-1/2 translate-x-1/3"
             style="background: white;"></div>
 
@@ -162,7 +162,7 @@
 
           <NuxtLink to="/kontakt"
             class="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-white font-bold text-base transition-all hover:shadow-xl hover:scale-105"
-            style="color: #6000BD;">
+            style="color: var(--brand-primary);">
             Frühzugang anfordern →
           </NuxtLink>
 

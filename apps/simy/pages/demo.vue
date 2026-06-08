@@ -6,11 +6,11 @@
     <section class="pt-20 pb-24 px-6 text-center relative overflow-hidden">
       <div class="absolute inset-0 pointer-events-none">
         <div class="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-[0.07]"
-          style="background: radial-gradient(circle, #6000BD, transparent)"></div>
+          style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
       </div>
       <div class="relative max-w-2xl mx-auto">
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
-          style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
+          style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
           ⚡ Kostenloser Demo-Zugang
         </div>
         <h1 class="text-5xl font-black text-gray-900 mb-5 leading-tight">In 5 Minuten startklar</h1>
@@ -30,7 +30,7 @@
 
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-3 px-10 py-5 rounded-2xl text-white font-black text-lg transition-all hover:opacity-90 hover:-translate-y-0.5"
-          style="background: linear-gradient(135deg, #6000BD, #8B2FE8); box-shadow: 0 12px 40px rgba(96,0,189,0.35)">
+          style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 12px 40px rgba(var(--brand-rgb),0.35)">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
           </svg>
@@ -47,7 +47,7 @@
         <div class="grid md:grid-cols-4 gap-6">
           <div v-for="(step, i) in steps" :key="i" class="text-center">
             <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-black mx-auto mb-4"
-              style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">{{ i + 1 }}</div>
+              style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">{{ i + 1 }}</div>
             <h3 class="font-bold text-gray-900 mb-2 text-sm">{{ step.title }}</h3>
             <p class="text-xs text-gray-500 leading-relaxed">{{ step.desc }}</p>
           </div>
@@ -63,7 +63,7 @@
           <div v-for="f in trialFeatures" :key="f.title"
             class="rounded-2xl p-6 border border-gray-100 hover:border-purple-100 transition-all group">
             <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-all group-hover:scale-110"
-              style="background: rgba(96,0,189,0.08)">
+              style="background: rgba(var(--brand-rgb),0.08)">
               <span class="text-xl">{{ f.icon }}</span>
             </div>
             <h3 class="font-bold text-gray-900 mb-1 text-sm">{{ f.title }}</h3>
@@ -74,13 +74,13 @@
     </section>
 
     <!-- Final CTA -->
-    <section class="py-20 px-6" style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
+    <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Bereit loszulegen?</h2>
         <p class="text-purple-200 mb-8">Hunderte Benutzer lieben Simy.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
-          style="color: #6000BD">
+          style="color: var(--brand-primary)">
           Kostenlos starten →
         </a>
       </div>

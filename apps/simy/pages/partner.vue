@@ -5,11 +5,11 @@
     <section class="pt-20 pb-16 px-6 relative overflow-hidden">
       <div class="absolute inset-0 pointer-events-none">
         <div class="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full opacity-[0.05]"
-          style="background: radial-gradient(circle, #6000BD, transparent)"></div>
+          style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
       </div>
       <div class="relative max-w-4xl mx-auto">
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
-          style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
+          style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
           Partner
         </div>
         <h1 class="text-4xl font-black text-gray-900 mb-5 leading-tight">Unsere Partner</h1>
@@ -29,12 +29,12 @@
 
         <!-- Become a partner -->
         <div class="rounded-3xl p-10 border border-purple-100 text-center"
-          style="background: linear-gradient(135deg, rgba(96,0,189,0.04), rgba(139,47,232,0.06))">
+          style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.04), rgba(139,47,232,0.06))">
           <h2 class="text-2xl font-extrabold text-gray-900 mb-3">Partner werden?</h2>
           <p class="text-gray-500 mb-6 max-w-lg mx-auto">Wenn du ein Produkt oder eine Dienstleistung für Fahrschulen anbietest, lass uns sprechen. Wir bauen gemeinsam die beste Lösung für den Schweizer Markt.</p>
           <a href="mailto:partner@simy.ch"
             class="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90"
-            style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
+            style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
             partner@simy.ch
           </a>
         </div>

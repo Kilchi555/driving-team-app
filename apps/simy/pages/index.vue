@@ -2026,7 +2026,16 @@ function debouncedSaveBrand() {
   brandSaveTimer = setTimeout(saveBrandToStorage, 400)
 }
 
-watch([primaryColor, secondaryColor, accentColor], debouncedSaveBrand)
+// Also update CSS vars on :root immediately so the whole app reflects the new colors
+watch([primaryColor, secondaryColor, accentColor], ([p, s]) => {
+  if (typeof document === 'undefined') return
+  const r = (hex: string) => { const n = parseInt(hex.slice(1,3),16)+','+parseInt(hex.slice(3,5),16)+','+parseInt(hex.slice(5,7),16); return n }
+  document.documentElement.style.setProperty('--brand-primary', p)
+  document.documentElement.style.setProperty('--brand-secondary', s)
+  document.documentElement.style.setProperty('--brand-rgb', r(p))
+  document.documentElement.style.setProperty('--brand-2-rgb', r(s))
+  debouncedSaveBrand()
+})
 const showColorPicker = ref(false)
 const navSoftware = [
   { to: '/fahrschule/software', icon: '💻', title: 'Fahrschulsoftware', desc: 'Die komplette All-in-One-Lösung' },
