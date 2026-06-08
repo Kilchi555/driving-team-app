@@ -1204,6 +1204,18 @@
             <p class="text-sm text-gray-500">Überprüfe deine Angaben vor der Registrierung.</p>
           </div>
 
+          <!-- iOS/Android credential inputs: visible to password manager at submit time,
+               clipped to 0px so they don't affect the visual layout -->
+          <input type="email" name="username" autocomplete="username" :value="adminForm.email"
+            tabindex="-1" readonly
+            style="clip:rect(0,0,0,0);position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;border:0">
+          <input type="password" name="password" autocomplete="new-password" :value="adminForm.password"
+            tabindex="-1" readonly
+            style="clip:rect(0,0,0,0);position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;border:0">
+          <input type="password" name="confirm-password" autocomplete="new-password" :value="adminForm.passwordConfirm"
+            tabindex="-1" readonly
+            style="clip:rect(0,0,0,0);position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;border:0">
+
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <!-- Firma -->
             <div class="rounded-2xl bg-gray-50 border border-gray-100 p-4">
