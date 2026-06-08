@@ -920,8 +920,22 @@ async function copyDefaultDataToTenant(
               // Top-level: nur einschliessen wenn explizit ausgewählt
               return selectedCategoryIds.includes(String(c.id))
             } else {
-              // Unterkategorie: einschliessen wenn Elternkategorie ausgewählt wurde
-              return selectedCategoryIds.includes(String(c.parent_category_id))
+              const parentSelected = selectedCategoryIds.includes(String(c.parent_category_id))
+              if (!parentSelected) return false
+
+              // Check if any specific children of this parent were individually selected
+              const hasSpecificChildSelected = validTemplates.some(sibling =>
+                sibling.parent_category_id === c.parent_category_id &&
+                selectedCategoryIds.includes(String(sibling.id))
+              )
+
+              if (hasSpecificChildSelected) {
+                // Only include explicitly selected children
+                return selectedCategoryIds.includes(String(c.id))
+              } else {
+                // Parent selected but no specific child → include all children
+                return true
+              }
             }
           })
         : validTemplates
