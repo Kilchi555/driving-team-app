@@ -102,7 +102,7 @@
             class="px-3 py-2 rounded-lg font-semibold transition-all duration-150"
             :style="activeSection === link.href.slice(1) ? activeDesktopStyle : {}"
             @click.prevent="scrollTo(link.href)"
-            @mouseenter="(e) => activeSection !== link.href.slice(1) && Object.assign((e.currentTarget as HTMLElement).style, { color: props.primaryColor || '#6000BD', background: `${props.primaryColor || '#6000BD'}12` })"
+            @mouseenter="(e) => activeSection !== link.href.slice(1) && Object.assign((e.currentTarget as HTMLElement).style, { color: effectivePrimary.value, background: `${effectivePrimary.value}12` })"
             @mouseleave="(e) => activeSection !== link.href.slice(1) && Object.assign((e.currentTarget as HTMLElement).style, { color: '', background: '' })"
           >{{ link.label }}</a>
         </template>
@@ -142,7 +142,7 @@
           :class="activeSection === link.href.slice(1) ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-600'"
           :style="activeSection === link.href.slice(1) ? activePillStyle : {}"
           @click.prevent="scrollTo(link.href); mobileOpen = false"
-          @mouseenter="(e) => activeSection !== link.href.slice(1) && Object.assign((e.currentTarget as HTMLElement).style, { background: `${props.primaryColor || '#6000BD'}20`, color: props.primaryColor || '#6000BD' })"
+          @mouseenter="(e) => activeSection !== link.href.slice(1) && Object.assign((e.currentTarget as HTMLElement).style, { background: `${effectivePrimary.value}20`, color: effectivePrimary.value })"
           @mouseleave="(e) => activeSection !== link.href.slice(1) && Object.assign((e.currentTarget as HTMLElement).style, { background: '', color: '' })"
         >
           <span v-if="link.icon" class="text-sm leading-none">{{ link.icon }}</span>

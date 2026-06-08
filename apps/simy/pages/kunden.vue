@@ -32,7 +32,7 @@
     <section class="py-20 px-6">
       <div class="max-w-4xl mx-auto">
         <div class="rounded-3xl p-10 md:p-14 border border-purple-100 relative overflow-hidden"
-          style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.04), rgba(139,47,232,0.06))">
+          style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.04), rgba(var(--brand-2-rgb),0.06))">
           <div class="absolute top-0 right-0 text-[180px] font-black opacity-[0.04] leading-none select-none pointer-events-none" style="color: var(--brand-primary)">"</div>
           <div class="relative">
             <div class="flex gap-1 mb-5">

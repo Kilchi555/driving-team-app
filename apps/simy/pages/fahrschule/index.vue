@@ -7,14 +7,14 @@
       <!-- Background gradient blob -->
       <div class="absolute inset-0 pointer-events-none">
         <div class="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full opacity-[0.07]"
-          style="background: radial-gradient(circle, #6000BD 0%, transparent 70%)"></div>
+          style="background: radial-gradient(circle, var(--brand-primary) 0%, transparent 70%)"></div>
         <div class="absolute top-1/2 -left-40 w-[500px] h-[500px] rounded-full opacity-[0.05]"
-          style="background: radial-gradient(circle, #8B2FE8 0%, transparent 70%)"></div>
+          style="background: radial-gradient(circle, var(--brand-secondary) 0%, transparent 70%)"></div>
       </div>
 
       <div class="relative max-w-5xl mx-auto text-center">
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
-          style="background: rgba(96,0,189,0.07); color: #6000BD; border-color: rgba(96,0,189,0.25)">
+          style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
           </svg>
@@ -23,7 +23,7 @@
 
         <h1 class="text-5xl md:text-6xl font-black text-gray-900 mb-6 leading-[1.1] tracking-tight">
           Die Software, mit der<br />
-          <span style="background: linear-gradient(135deg, #6000BD, #8B2FE8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Fahrschulen wachsen
           </span>
         </h1>
@@ -34,7 +34,7 @@
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="https://app.simy.ch/tenant-register"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-white font-bold text-base transition-all hover:opacity-90 hover:-translate-y-0.5"
-            style="background: linear-gradient(135deg, #6000BD, #8B2FE8); box-shadow: 0 8px 30px rgba(96,0,189,0.3);">
+            style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 30px rgba(var(--brand-rgb),0.3);">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
             </svg>
@@ -75,7 +75,7 @@
     <section class="py-14 px-6 border-y border-gray-100 bg-gray-50">
       <div class="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
         <div v-for="stat in stats" :key="stat.label" class="text-center">
-          <div class="text-4xl font-black text-gray-900 mb-1" style="color: #6000BD">{{ stat.value }}</div>
+          <div class="text-4xl font-black text-gray-900 mb-1" style="color: var(--brand-primary)">{{ stat.value }}</div>
           <div class="text-sm text-gray-500">{{ stat.label }}</div>
         </div>
       </div>
@@ -85,21 +85,21 @@
     <section class="py-24 px-6">
       <div class="max-w-5xl mx-auto">
         <div class="text-center mb-16">
-          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: #6000BD">Das Problem</p>
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary)">Das Problem</p>
           <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Wie viel Zeit verlierst du täglich?</h2>
           <p class="text-gray-500 text-lg max-w-2xl mx-auto">Fahrlehrer verbringen durchschnittlich <strong>2–3 Stunden täglich</strong> mit Administration — Zeit, die du mit Unterrichten verdienen könntest.</p>
         </div>
         <div class="grid md:grid-cols-3 gap-6">
           <div v-for="pain in pains" :key="pain.title"
             class="rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1"
-            style="background: rgba(96,0,189,0.04); border-color: rgba(96,0,189,0.15)">
+            style="background: rgba(var(--brand-rgb),0.04); border-color: rgba(var(--brand-rgb),0.15)">
             <div class="text-3xl mb-3">{{ pain.icon }}</div>
             <h3 class="font-bold text-gray-900 mb-2">{{ pain.title }}</h3>
             <p class="text-sm text-gray-500 leading-relaxed">{{ pain.text }}</p>
           </div>
         </div>
         <div class="text-center mt-12">
-          <p class="text-2xl font-black" style="color: #6000BD">Simy automatisiert das alles für dich.</p>
+          <p class="text-2xl font-black" style="color: var(--brand-primary)">Simy automatisiert das alles für dich.</p>
         </div>
       </div>
     </section>
@@ -108,7 +108,7 @@
     <section id="features" class="py-24 px-6 bg-gray-50">
       <div class="max-w-6xl mx-auto">
         <div class="text-center mb-16">
-          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: #6000BD">Features</p>
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary)">Features</p>
           <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Alles was deine Fahrschule braucht</h2>
           <p class="text-gray-500 text-lg max-w-xl mx-auto">Vom ersten Schüler-Kontakt bis zur bezahlten Rechnung — Simy deckt den ganzen Workflow ab.</p>
         </div>
@@ -117,12 +117,12 @@
           <div v-for="feature in features" :key="feature.title"
             class="bg-white rounded-3xl p-7 border border-gray-100 hover:border-purple-100 hover:-translate-y-1 transition-all duration-300 group">
             <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 transition-all group-hover:scale-110"
-              style="background: rgba(96,0,189,0.08)">
+              style="background: rgba(var(--brand-rgb),0.08)">
               <span class="text-2xl">{{ feature.icon }}</span>
             </div>
             <h3 class="font-bold text-gray-900 mb-2 text-lg">{{ feature.title }}</h3>
             <p class="text-sm text-gray-500 leading-relaxed mb-4">{{ feature.desc }}</p>
-            <a v-if="feature.link" :href="feature.link" class="text-xs font-semibold transition-colors" style="color: #6000BD">
+            <a v-if="feature.link" :href="feature.link" class="text-xs font-semibold transition-colors" style="color: var(--brand-primary)">
               Mehr erfahren →
             </a>
           </div>
@@ -134,20 +134,20 @@
     <section class="py-24 px-6">
       <div class="max-w-5xl mx-auto">
         <div class="rounded-3xl p-10 md:p-14 relative overflow-hidden border border-purple-100"
-          style="background: linear-gradient(135deg, rgba(96,0,189,0.04) 0%, rgba(139,47,232,0.06) 100%)">
+          style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.04) 0%, rgba(var(--brand-2-rgb),0.06) 100%)">
           <div class="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 pointer-events-none"
-            style="background: radial-gradient(circle, #8B2FE8, transparent); transform: translate(30%, -30%)"></div>
+            style="background: radial-gradient(circle, var(--brand-secondary), transparent); transform: translate(30%, -30%)"></div>
           <div class="relative grid md:grid-cols-2 gap-10 items-center">
             <div>
               <div class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold mb-5 border"
-                style="background: rgba(96,0,189,0.08); color: #6000BD; border-color: rgba(96,0,189,0.2)">
+                style="background: rgba(var(--brand-rgb),0.08); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.2)">
                 NEU — Website-Generator
               </div>
               <h2 class="text-3xl font-extrabold text-gray-900 mb-4">In 24h zu einer professionellen Website</h2>
               <p class="text-gray-500 leading-relaxed mb-6">Simy generiert automatisch eine hochwertige Website aus deinen Daten — mit deinen Preisen, deinen Fahrlehrern und deinen Farben. Kein Designer nötig.</p>
               <ul class="space-y-3 mb-8">
                 <li v-for="item in websiteFeatures" :key="item" class="flex items-center gap-3 text-sm text-gray-700">
-                  <svg class="w-5 h-5 flex-shrink-0" style="color: #6000BD" fill="currentColor" viewBox="0 0 20 20">
+                  <svg class="w-5 h-5 flex-shrink-0" style="color: var(--brand-primary)" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                   </svg>
                   {{ item }}
@@ -155,7 +155,7 @@
               </ul>
               <a href="https://app.simy.ch/tenant-register"
                 class="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90"
-                style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
+                style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
                 Jetzt Website generieren →
               </a>
             </div>
@@ -168,7 +168,7 @@
                   <div class="ml-2 flex-1 h-5 rounded bg-gray-100 text-xs flex items-center justify-center text-gray-400 font-mono">simy.ch/fahrschule-muster</div>
                 </div>
                 <div class="space-y-2">
-                  <div class="h-24 rounded-xl" style="background: linear-gradient(135deg, rgba(96,0,189,0.12), rgba(139,47,232,0.12))"></div>
+                  <div class="h-24 rounded-xl" style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.12), rgba(var(--brand-2-rgb),0.12))"></div>
                   <div class="grid grid-cols-3 gap-2">
                     <div class="h-14 rounded-lg bg-gray-50 border border-gray-100"></div>
                     <div class="h-14 rounded-lg bg-gray-50 border border-gray-100"></div>
@@ -176,7 +176,7 @@
                   </div>
                   <div class="h-3 w-3/4 rounded bg-gray-100"></div>
                   <div class="h-3 w-1/2 rounded bg-gray-100"></div>
-                  <div class="h-8 w-1/3 rounded-lg mt-2" style="background: rgba(96,0,189,0.15)"></div>
+                  <div class="h-8 w-1/3 rounded-lg mt-2" style="background: rgba(var(--brand-rgb),0.15)"></div>
                 </div>
               </div>
             </div>
@@ -194,7 +194,7 @@
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="/marketing/google-ads"
             class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-white font-bold text-sm border border-purple-500/30 hover:border-purple-500/60 transition-all"
-            style="background: rgba(96,0,189,0.2)">
+            style="background: rgba(var(--brand-rgb),0.2)">
             Google Ads für Fahrschulen →
           </a>
           <a href="/marketing/seo"
@@ -209,7 +209,7 @@
     <section class="py-24 px-6">
       <div class="max-w-4xl mx-auto">
         <div class="text-center mb-14">
-          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: #6000BD">Kundenstimmen</p>
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary)">Kundenstimmen</p>
           <h2 class="text-3xl font-extrabold text-gray-900">Was Fahrschulen über Simy sagen</h2>
         </div>
         <div class="grid md:grid-cols-2 gap-6">
@@ -223,7 +223,7 @@
             <p class="text-gray-700 leading-relaxed mb-5 text-sm">"{{ t.quote }}"</p>
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                style="background: linear-gradient(135deg, #6000BD, #8B2FE8)">
+                style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
                 {{ t.name[0] }}
               </div>
               <div>
@@ -265,13 +265,13 @@
     </section>
 
     <!-- ── Final CTA ─────────────────────────────────────────────────────────── -->
-    <section class="py-28 px-6" style="background: linear-gradient(135deg, #6000BD 0%, #8B2FE8 100%)">
+    <section class="py-28 px-6" style="background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-4xl font-black text-white mb-5">Bereit, deine Fahrschule auf Autopilot zu stellen?</h2>
         <p class="text-purple-200 text-lg mb-10">60 Tage kostenlos testen. Keine Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90 hover:-translate-y-1"
-          style="color: #6000BD; box-shadow: 0 12px 40px rgba(0,0,0,0.2)">
+          style="color: var(--brand-primary); box-shadow: 0 12px 40px rgba(0,0,0,0.2)">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
           </svg>
