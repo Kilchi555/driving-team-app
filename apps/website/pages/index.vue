@@ -611,36 +611,17 @@
     </section>
 
     <!-- Quick Links: Preise, Kontakt, Team, Blog -->
-    <section class="bg-gray-50 py-10">
-      <div class="section-container">
-        <div class="max-w-4xl mx-auto">
-          <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-6 text-center">Alles auf einen Blick</p>
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            <a href="/fahrschule-preise/" class="flex items-center justify-center bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
-              <span class="text-sm font-semibold text-gray-800">Alle Preise & Pakete</span>
-            </a>
-            <a href="/kostenrechner/" class="flex items-center justify-center bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
-              <span class="text-sm font-semibold text-gray-800">Führerscheinkosten berechnen</span>
-            </a>
-            <a href="/blog/" class="flex items-center justify-center bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
-              <span class="text-sm font-semibold text-gray-800">Ratgeber & Tipps</span>
-            </a>
-            <a href="/weiterbildungen/" class="flex items-center justify-center bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
-              <span class="text-sm font-semibold text-gray-800">Weiterbildungen</span>
-            </a>
-            <a href="/faq/" class="flex items-center justify-center bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
-              <span class="text-sm font-semibold text-gray-800">Häufige Fragen (FAQ)</span>
-            </a>
-            <a href="/kontakt/" class="flex items-center justify-center bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
-              <span class="text-sm font-semibold text-gray-800">Beratungstermin buchen</span>
-            </a>
-            <a href="/team/" class="flex items-center justify-center bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
-              <span class="text-sm font-semibold text-gray-800">Unsere Fahrlehrer</span>
-            </a>
-            <a href="/fahrschule-standorte/" class="flex items-center justify-center bg-white rounded-xl p-4 border border-gray-200 hover:border-primary-300 hover:shadow-md transition text-center">
-              <span class="text-sm font-semibold text-gray-800">Alle Standorte</span>
-            </a>
-          </div>
+    <section class="bg-gray-50 border-b border-gray-200 sticky top-[72px] z-40 shadow-sm">
+      <div class="overflow-x-auto scrollbar-hide">
+        <div class="flex items-stretch gap-0 min-w-max">
+          <a href="/fahrschule-preise/" class="flex items-center px-5 py-4 border-r border-gray-200 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Alle Preise & Pakete</a>
+          <a href="/kostenrechner/" class="flex items-center px-5 py-4 border-r border-gray-200 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Kosten berechnen</a>
+          <a href="/blog/" class="flex items-center px-5 py-4 border-r border-gray-200 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Ratgeber & Tipps</a>
+          <a href="/weiterbildungen/" class="flex items-center px-5 py-4 border-r border-gray-200 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Weiterbildungen</a>
+          <a href="/faq/" class="flex items-center px-5 py-4 border-r border-gray-200 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Häufige Fragen</a>
+          <a href="/kontakt/" class="flex items-center px-5 py-4 border-r border-gray-200 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Beratungstermin</a>
+          <a href="/team/" class="flex items-center px-5 py-4 border-r border-gray-200 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Unsere Fahrlehrer</a>
+          <a href="/fahrschule-standorte/" class="flex items-center px-5 py-4 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Alle Standorte</a>
         </div>
       </div>
     </section>
