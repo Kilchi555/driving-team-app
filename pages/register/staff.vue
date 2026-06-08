@@ -372,9 +372,19 @@
 
             <!-- Externen Kalender einbinden -->
             <div>
-              <h3 class="text-sm font-semibold text-gray-700 mb-1">Externen Kalender verbinden</h3>
-              <p class="text-xs text-gray-500 mb-3">Wähle deinen Kalender-Anbieter und trage die ICS-URL ein, damit Termine als Sperrzeiten erscheinen.</p>
-              <div class="space-y-3">
+              <h3 class="text-sm font-semibold text-gray-700 mb-1">Externen Kalender verbinden <span class="text-gray-400 font-normal">(optional)</span></h3>
+              <p class="text-xs text-gray-500 mb-3">Verbinde deinen persönlichen Kalender, damit private Termine automatisch als Sperrzeiten in Simy erscheinen. Du kannst das auch später in den Einstellungen machen.</p>
+              <div class="space-y-2">
+                <!-- Deselect / none option -->
+                <label
+                  class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all"
+                  :class="!form.externalCalendarProvider ? 'border-gray-300 bg-gray-50' : 'border-gray-200 hover:border-gray-300'"
+                  @click="form.externalCalendarProvider = ''; form.externalCalendarUrl = ''"
+                >
+                  <input type="radio" value="" v-model="form.externalCalendarProvider">
+                  <span class="text-xl">🚫</span>
+                  <span class="text-sm font-medium text-gray-500">Kein externer Kalender</span>
+                </label>
                 <label v-for="provider in calendarProviders" :key="provider.id"
                   class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all"
                   :class="form.externalCalendarProvider !== provider.id ? 'border-gray-200 hover:border-gray-300' : ''"
@@ -385,23 +395,56 @@
                   <span class="text-sm font-medium">{{ provider.label }}</span>
                 </label>
               </div>
-              <div v-if="form.externalCalendarProvider" class="mt-3">
-                <label class="label">ICS-URL *</label>
-                <input v-model="form.externalCalendarUrl" type="url" class="input"
-                  placeholder="https://calendar.google.com/calendar/ical/....ics">
-                <p class="text-xs text-gray-400 mt-1">
-                  <template v-if="form.externalCalendarProvider === 'apple'">In Apple Kalender: Ablage → Kalender exportieren / oder via iCloud.com &gt; Kalender &gt; Freigabe → Link kopieren</template>
-                  <template v-else-if="form.externalCalendarProvider === 'google'">In Google Calendar: Einstellungen → Kalender → Kalenderintegration → Geheime Adresse im iCal-Format</template>
-                  <template v-else-if="form.externalCalendarProvider === 'outlook'">In Outlook.com: Einstellungen → Kalender → Freigegebene Kalender → Abonnieren</template>
-                  <template v-else>Öffentliche oder private ICS-URL deines Kalenders</template>
-                </p>
+
+              <!-- ICS URL input + provider-specific instructions -->
+              <div v-if="form.externalCalendarProvider" class="mt-4 space-y-3">
+                <!-- Step-by-step instructions -->
+                <div class="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-800 space-y-1">
+                  <template v-if="form.externalCalendarProvider === 'apple'">
+                    <p class="font-semibold mb-1">So findest du deine Apple iCal URL:</p>
+                    <p><strong>iPhone/iPad:</strong> Kalender-App öffnen → «Kalender» unten → Info-Symbol (i) neben dem Kalender antippen → «Öffentlicher Kalender» einschalten → «Link kopieren»</p>
+                    <p><strong>Mac:</strong> Kalender-App → Rechtsklick auf den Kalender → «Kalender freigeben» → «Öffentlicher Kalender» aktivieren → URL kopieren</p>
+                    <p><strong>iCloud.com:</strong> icloud.com/calendar öffnen → Teilen-Symbol neben dem Kalender → «Öffentlicher Kalender» einschalten → «Kopieren»</p>
+                    <p class="mt-1 text-blue-600">⚠️ Die URL beginnt mit <strong>webcal://</strong> – ersetze das durch <strong>https://</strong> bevor du sie einfügst.</p>
+                  </template>
+                  <template v-else-if="form.externalCalendarProvider === 'google'">
+                    <p class="font-semibold mb-1">So findest du deine Google Kalender URL:</p>
+                    <p>1. Google Calendar im Browser öffnen (calendar.google.com)</p>
+                    <p>2. Links neben dem gewünschten Kalender auf die drei Punkte (⋮) klicken → «Einstellungen und Freigabe»</p>
+                    <p>3. Nach unten scrollen zu «Kalenderintegration»</p>
+                    <p>4. «Geheime Adresse im iCal-Format» kopieren</p>
+                    <p class="mt-1 text-blue-600">⚠️ Nur auf dem Computer verfügbar, nicht in der mobilen App. Bei Firmen-Accounts muss der Admin externe Freigabe erlauben.</p>
+                  </template>
+                  <template v-else-if="form.externalCalendarProvider === 'outlook'">
+                    <p class="font-semibold mb-1">So findest du deine Outlook Kalender URL:</p>
+                    <p>1. outlook.com im Browser öffnen und einloggen</p>
+                    <p>2. Kalender öffnen → Einstellungen (Zahnrad oben rechts) → «Alle Outlook-Einstellungen anzeigen»</p>
+                    <p>3. «Kalender» → «Freigegebene Kalender»</p>
+                    <p>4. Unter «Kalender veröffentlichen»: Kalender auswählen, Berechtigung wählen → «Veröffentlichen»</p>
+                    <p>5. Den <strong>ICS-Link</strong> kopieren (nicht den HTML-Link)</p>
+                    <p class="mt-1 text-blue-600">⚠️ Nur bei Microsoft-Konten (Outlook.com, Hotmail, Live) verfügbar. Firmen-Konten benötigen Admin-Freigabe.</p>
+                  </template>
+                  <template v-else>
+                    <p class="font-semibold mb-1">ICS-URL deines Kalenders einfügen:</p>
+                    <p>Öffne die Einstellungen deines Kalenders und suche nach «Kalender abonnieren», «ICS exportieren» oder «Kalender freigeben». Kopiere die URL, die auf <strong>.ics</strong> endet.</p>
+                  </template>
+                </div>
+
+                <div>
+                  <label class="label">ICS-URL einfügen</label>
+                  <input v-model="form.externalCalendarUrl" type="url" class="input"
+                    :placeholder="form.externalCalendarProvider === 'apple' ? 'https://p123-caldav.icloud.com/published/...' : form.externalCalendarProvider === 'google' ? 'https://calendar.google.com/calendar/ical/.../basic.ics' : 'https://...ics'">
+                  <p v-if="form.externalCalendarUrl && !form.externalCalendarUrl.startsWith('http')" class="text-xs text-orange-500 mt-1">
+                    ⚠️ Die URL muss mit https:// beginnen. Ersetze webcal:// durch https:// falls nötig.
+                  </p>
+                </div>
               </div>
             </div>
 
             <!-- Eigener Kalender-Link (Vorschau) -->
             <div class="bg-gray-50 border rounded-lg p-4 mt-2">
-              <p class="text-sm font-semibold text-gray-700 mb-1">📅 Dein persönlicher Kalender-Link</p>
-              <p class="text-xs text-gray-500">Nach der Registrierung erhältst du einen ICS-Link, den du in deinem Handy-Kalender als Abo eintragen kannst. So siehst du alle Fahrstunden in deiner eigenen Kalender-App.</p>
+              <p class="text-sm font-semibold text-gray-700 mb-1">📅 Dein persönlicher Simy-Kalender-Link</p>
+              <p class="text-xs text-gray-500">Nach der Registrierung erhältst du einen ICS-Link, den du in deiner Kalender-App als Abo eintragen kannst. So siehst du alle deine Fahrstunden direkt in deiner eigenen Kalender-App (Apple, Google, Outlook, etc.).</p>
               <p class="text-xs mt-2 font-medium" :style="{ color: tenantColor }">→ Wird auf der Bestätigungsseite angezeigt</p>
             </div>
           </template>
@@ -799,8 +842,8 @@ const canProceed = computed(() => {
       return hasLocation && hasExamLocation
     }
     case 4:
-      // If a provider is selected, the URL must also be filled
-      return !form.externalCalendarProvider || !!form.externalCalendarUrl
+      // Calendar connection is fully optional – always allow proceeding
+      return true
     case 5:
       // Front side of license required
       return !!licenseFrontFile.value
@@ -944,13 +987,15 @@ const submit = async () => {
     // Connect external calendar after login
     if (loginOk && form.externalCalendarProvider && form.externalCalendarUrl) {
       try {
+        // Normalize webcal:// → https:// (Apple iCal URLs)
+        const normalizedUrl = form.externalCalendarUrl.replace(/^webcal:\/\//i, 'https://')
         await $fetch('/api/staff/external-calendars', {
           method: 'POST',
           body: {
             action: 'connect',
             data: {
               provider: form.externalCalendarProvider,
-              ics_url: form.externalCalendarUrl,
+              ics_url: normalizedUrl,
             }
           }
         })
