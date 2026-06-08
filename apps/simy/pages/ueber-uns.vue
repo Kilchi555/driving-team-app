@@ -55,7 +55,7 @@
       <div class="max-w-2xl mx-auto text-center">
         <p class="text-xs font-bold uppercase tracking-widest mb-4" style="color: var(--brand-primary)">Unsere Mission</p>
         <h2 class="text-3xl font-black text-white mb-5">"Fahrlehrer sollen unterrichten — nicht verwalten."</h2>
-        <p class="text-white/70 leading-relaxed mb-8">Wir glauben, dass jeder Fahrlehrer in der Schweiz eine professionelle digitale Präsenz und ein effizientes Verwaltungssystem verdient — zu einem Preis, der sich bereits nach der ersten gesparten Stunde rechnet.</p>
+        <p class="text-white leading-relaxed mb-8">Wir glauben, dass jeder Fahrlehrer in der Schweiz eine professionelle digitale Präsenz und ein effizientes Verwaltungssystem verdient — zu einem Preis, der sich bereits nach der ersten gesparten Stunde rechnet.</p>
         <a href="/demo"
           class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-white font-bold text-sm transition-all hover:opacity-90"
           style="color: var(--brand-primary)">

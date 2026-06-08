@@ -126,7 +126,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Wie gut rankt deine Fahrschule aktuell?</h2>
-        <p class="text-white/70 mb-8">Wir machen eine kostenlose SEO-Analyse für deine Fahrschule und zeigen dir das Potenzial.</p>
+        <p class="text-white mb-8">Wir machen eine kostenlose SEO-Analyse für deine Fahrschule und zeigen dir das Potenzial.</p>
         <a href="/marketing/seo-anfrage"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
