@@ -416,7 +416,7 @@
                     <p><strong>iPhone/iPad:</strong> Kalender-App öffnen → «Kalender» unten → Info-Symbol (i) neben dem Kalender antippen → «Öffentlicher Kalender» einschalten → «Link kopieren»</p>
                     <p><strong>Mac:</strong> Kalender-App → Rechtsklick auf den Kalender → «Kalender freigeben» → «Öffentlicher Kalender» aktivieren → URL kopieren</p>
                     <p><strong>iCloud.com:</strong> icloud.com/calendar öffnen → Teilen-Symbol neben dem Kalender → «Öffentlicher Kalender» einschalten → «Kopieren»</p>
-                    <p class="mt-1 text-blue-600">⚠️ Die URL beginnt mit <strong>webcal://</strong> – ersetze das durch <strong>https://</strong> bevor du sie einfügst.</p>
+                    <p class="mt-1 text-blue-600">💡 Falls die URL mit <strong>webcal://</strong> beginnt – einfach einfügen, sie wird automatisch umgewandelt.</p>
                   </template>
                   <template v-else-if="form.externalCalendarProvider === 'google'">
                     <p class="font-semibold mb-1">So findest du deine Google Kalender URL:</p>
@@ -444,9 +444,10 @@
                 <div>
                   <label class="label">ICS-URL einfügen</label>
                   <input v-model="form.externalCalendarUrl" type="url" class="input"
-                    :placeholder="form.externalCalendarProvider === 'apple' ? 'https://p123-caldav.icloud.com/published/...' : form.externalCalendarProvider === 'google' ? 'https://calendar.google.com/calendar/ical/.../basic.ics' : 'https://...ics'">
-                  <p v-if="form.externalCalendarUrl && !form.externalCalendarUrl.startsWith('http')" class="text-xs text-orange-500 mt-1">
-                    ⚠️ Die URL muss mit https:// beginnen. Ersetze webcal:// durch https:// falls nötig.
+                    :placeholder="form.externalCalendarProvider === 'apple' ? 'https://p123-caldav.icloud.com/published/...' : form.externalCalendarProvider === 'google' ? 'https://calendar.google.com/calendar/ical/.../basic.ics' : 'https://...ics'"
+                    @blur="normalizeCalendarUrl">
+                  <p v-if="form.externalCalendarUrl && form.externalCalendarUrl.startsWith('https://')" class="text-xs text-green-600 mt-1">
+                    ✓ URL wird automatisch verwendet
                   </p>
                 </div>
               </div>
@@ -1013,14 +1014,25 @@ const submit = async () => {
         icsUrl.value = tokenRes?.calendarLink || tokenRes?.url || `${typeof window !== 'undefined' ? window.location.origin : ''}/api/calendar/ics?staff_id=${userId}`
       } catch {
         icsUrl.value = `${typeof window !== 'undefined' ? window.location.origin : ''}/api/calendar/ics?staff_id=${userId}`
-      }
     }
+  }
+
+// Auto-normalize calendar URL: webcal:// and http:// → https://
+const normalizeCalendarUrl = () => {
+  if (!form.externalCalendarUrl) return
+  form.externalCalendarUrl = form.externalCalendarUrl
+    .trim()
+    .replace(/^webcal:\/\//i, 'https://')
+    .replace(/^http:\/\//i, 'https://')
+}
 
     // Connect external calendar after login
     if (loginOk && form.externalCalendarProvider && form.externalCalendarUrl) {
       try {
-        // Normalize webcal:// → https:// (Apple iCal URLs)
-        const normalizedUrl = form.externalCalendarUrl.replace(/^webcal:\/\//i, 'https://')
+        // Normalize webcal:// → https:// and http:// → https:// (already done on input, but kept as safety net)
+        const normalizedUrl = form.externalCalendarUrl
+          .replace(/^webcal:\/\//i, 'https://')
+          .replace(/^http:\/\//i, 'https://')
         await $fetch('/api/staff/external-calendars', {
           method: 'POST',
           body: {
