@@ -1150,6 +1150,24 @@
             </div>
           </div>
 
+          <!-- Canton (auto-filled from Google Places, editable as fallback) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Kanton
+              <span v-if="newLocationForm.canton" class="text-xs text-green-600 font-normal ml-1">✓ automatisch erkannt</span>
+              <span v-else class="text-xs text-gray-400 font-normal ml-1">(wird aus Adresse erkannt)</span>
+            </label>
+            <input
+              v-model="newLocationForm.canton"
+              type="text"
+              maxlength="2"
+              placeholder="z.B. ZH"
+              class="tenant-focus w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 uppercase"
+              @input="newLocationForm.canton = newLocationForm.canton.toUpperCase()"
+            />
+            <p class="text-xs text-gray-400 mt-1">2-Buchstaben Kürzel (z.B. ZH, BE, AG). Ohne Kanton wird der Standort beim Kantonfilter nicht angezeigt.</p>
+          </div>
+
           <!-- Available Categories -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Verfügbare Kategorien:</label>
@@ -1779,6 +1797,7 @@ const showNewLocationModal = ref(false)
 const newLocationForm = ref({
   name: '',
   address: '',
+  canton: '',
   available_categories: [] as string[]
 })
 
@@ -1879,10 +1898,32 @@ const onAddressSearch = async () => {
 }
 
 // Select address suggestion
-const selectAddressSuggestion = (suggestion: any) => {
+const selectAddressSuggestion = async (suggestion: any) => {
   newLocationForm.value.address = suggestion.description
   addressSuggestions.value = []
   showAddressSuggestions.value = false
+
+  // Auto-extract canton from Place Details (short_name of administrative_area_level_1)
+  const placeId = suggestion.place_id
+  if (placeId && !placeId.startsWith('new_')) {
+    try {
+      const details = await $fetch<any>('/api/locations/get-place-details', {
+        method: 'POST',
+        body: { place_id: placeId }
+      })
+      if (details?.success && details.address_components) {
+        const adminArea = details.address_components.find((c: any) =>
+          c.types.includes('administrative_area_level_1')
+        )
+        if (adminArea?.short_name) {
+          // Strip "CH-" prefix if Google returns ISO-3166-2 format
+          newLocationForm.value.canton = adminArea.short_name.replace(/^CH-/i, '').toUpperCase()
+        }
+      }
+    } catch {
+      // Non-fatal: user can fill in canton manually
+    }
+  }
 }
 
 // Select first suggestion on enter
@@ -2387,6 +2428,7 @@ const createNewLocation = async () => {
       data: {
         name: newLocationForm.value.name,
         address: newLocationForm.value.address,
+        canton: newLocationForm.value.canton || null,
         staff_ids: [props.currentUser.id],
         tenant_id: props.currentUser.tenant_id,
         available_categories: newLocationForm.value.available_categories,
@@ -2419,6 +2461,7 @@ const resetLocationForm = () => {
   newLocationForm.value = {
     name: '',
     address: '',
+    canton: '',
     available_categories: []
   }
 }
