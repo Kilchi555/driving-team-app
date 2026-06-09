@@ -4542,6 +4542,15 @@ onMounted(async () => {
             currentStep.value = 2
             logger.debug('✅ Category pre-selected, staff will auto-select after location')
           }
+        } else if (!prefill && route.query.category) {
+          // ?category=<code> — skip service type & main category, land directly on subcategory selection
+          logger.debug('🎯 Direct category deep-link:', route.query.category)
+          const categoryToSelect = categories.value.find(c => c.code === route.query.category)
+          if (categoryToSelect) {
+            selectedServiceType.value = 'fahrstunde'
+            await selectMainCategory(categoryToSelect)
+            logger.debug('✅ Main category pre-selected, showing subcategory selection')
+          }
         } else if (!prefill) {
           // No URL-based prefill → restore last session from localStorage
           await restoreBookingPrefs()
