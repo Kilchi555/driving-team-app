@@ -36,12 +36,19 @@ import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
+import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
 import { calculateAdminFee } from '~/server/utils/admin-fee'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
   gbraid?: string | null
   wbraid?: string | null
+  /** Meta click ID from ?fbclid= URL parameter. */
+  fbclid?: string | null
+  /** Meta _fbc cookie (fb.1.{ts}.{fbclid}) for CAPI deduplication. */
+  fbc?: string | null
+  /** Meta _fbp cookie (fb.1.{ts}.{random}) for CAPI audience matching. */
+  fbp?: string | null
   utm_source?: string | null
   utm_medium?: string | null
   utm_campaign?: string | null
@@ -438,7 +445,7 @@ export default defineEventHandler(async (event: H3Event) => {
     if (!marketingAttr && body.marketing_session_id) {
       const { data: attrRow } = await supabase
         .from('marketing_attributions')
-        .select('gclid, gbraid, wbraid, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
+        .select('gclid, gbraid, wbraid, fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
         .eq('session_id', body.marketing_session_id)
         .maybeSingle()
       if (attrRow) marketingAttr = attrRow as MarketingAttributionPayload
@@ -462,11 +469,14 @@ export default defineEventHandler(async (event: H3Event) => {
         original_price_rappen: totalAmountRappen, // Add default price
         source: 'online',
         created_by: userData.id,
-        // Marketing attribution (denormalized — used by server-side Google Ads upload)
+        // Marketing attribution (denormalized — used by server-side Google Ads + Meta CAPI upload)
         marketing_session_id: body.marketing_session_id ?? null,
         gclid: marketingAttr?.gclid ?? null,
         gbraid: marketingAttr?.gbraid ?? null,
         wbraid: marketingAttr?.wbraid ?? null,
+        fbclid: marketingAttr?.fbclid ?? null,
+        fbc: marketingAttr?.fbc ?? null,
+        fbp: marketingAttr?.fbp ?? null,
         utm_source: marketingAttr?.utm_source ?? null,
         utm_medium: marketingAttr?.utm_medium ?? null,
         utm_campaign: marketingAttr?.utm_campaign ?? null,
@@ -881,6 +891,36 @@ export default defineEventHandler(async (event: H3Event) => {
     } else {
       logger.debug('ℹ️ Skipping Google Ads conversion upload — no click ID for this booking')
     }
+
+    // ============ LAYER 11b: META CONVERSIONS API (CAPI) UPLOAD ============
+    // Fire-and-forget. Sends a Purchase event to Meta's CAPI even when the browser
+    // Pixel fires too — Meta deduplicates via event_id. Requires at least one user
+    // signal (fbclid, fbc, fbp, email, or phone) to be meaningful.
+    ;(async () => {
+      try {
+        const normalizedEmail = (userData.email ?? '').trim().toLowerCase()
+        const normalizedPhone = (userData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+        const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
+        const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+
+        const conversionValueChf = (netAmountRappen > 0 ? netAmountRappen : totalAmountRappen) / 100
+
+        await recordAndSendCapiEvent({
+          appointment_id: newAppointment.id,
+          tenant_id: tenantId ?? null,
+          event_name: 'Purchase',
+          conversion_value_chf: conversionValueChf,
+          conversion_date_time: new Date(),
+          fbclid: marketingAttr?.fbclid ?? null,
+          fbc: marketingAttr?.fbc ?? null,
+          fbp: marketingAttr?.fbp ?? null,
+          hashed_email: hashedEmail,
+          hashed_phone: hashedPhone,
+        })
+      } catch (err: any) {
+        logger.warn('⚠️ Meta CAPI upload failed (non-critical):', err?.message ?? err)
+      }
+    })()
 
     // ============ LAYER 12: LINK booking_events.completed TO APPOINTMENT ============
     // Closes the first-party funnel so we can answer "which marketing session
