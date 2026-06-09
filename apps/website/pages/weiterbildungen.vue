@@ -19,7 +19,7 @@
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">Weiterbildungen – CZV, WAB & Motorrad</h1>
         <p class="text-xl text-white mb-8">Professionelle Schulung für erfahrene Fahrer in Zürich und Lachen</p>
-        <a href="https://app.simy.ch/booking/availability/driving-team?category=WAB" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+        <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           📅 Termin buchen
         </a>
       </div>
