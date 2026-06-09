@@ -28,7 +28,7 @@
           <p class="text-xl text-white/90 mb-3">Motorbootprüfung Kategorie A am oberen Zürichsee – ohne Vorkenntnisse, ganzjährig, auch abends und samstags.</p>
           <p class="text-sm text-white/75 mb-8">Fahrlehrer Marc · Treffpunkt in Lachen, Rapperswil-Jona, Altendorf oder Pfäffikon SZ · Ab CHF 190.-/90 Min</p>
           <div class="flex flex-col sm:flex-row gap-3">
-            <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+            <a href="https://app.simy.ch/booking/availability/driving-team?category=Motorboot" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
               Jetzt anmelden
             </a>
             <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
@@ -131,7 +131,7 @@
         <h2 class="text-2xl md:text-3xl font-bold mb-4 text-white">Bootsfahrschule Lachen – jetzt anmelden</h2>
         <p class="text-white/90 mb-8 max-w-xl mx-auto">Wähle deinen Wunschtermin direkt online. Treffpunkt und Seite des Zürichsees kannst du bei der Anmeldung angeben.</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=Motorboot" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             Jetzt Termin buchen
           </a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
@@ -186,7 +186,7 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt mit der Bootsfahrschule starten</h2>
-        <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+        <a href="https://app.simy.ch/booking/availability/driving-team?category=Motorboot" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           Jetzt Termin buchen
         </a>
       </div>

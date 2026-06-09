@@ -33,7 +33,7 @@
           <p class="text-base xs:text-xl text-white/90 mb-3">Kategorien C1, C & CE – professionelle LKW Ausbildung im Raum Lachen, Altendorf, Pfäffikon SZ, Wangen, Siebnen und Uznach.</p>
           <p class="text-sm text-white/75 mb-8">Fahrlehrer: Peter Thoma · Prüfung am StVA Pfäffikon SZ, Kaltbrunn SG oder Hinwil ZH</p>
           <div class="flex flex-col sm:flex-row gap-3">
-            <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+            <a href="https://app.simy.ch/booking/availability/driving-team?category=C" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
               Jetzt anmelden
             </a>
             <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
@@ -87,7 +87,7 @@
             <a href="tel:+41444310033" class="text-sm bg-primary-100 text-primary-700 px-4 py-2 rounded-lg hover:bg-primary-200 transition font-semibold">
               044 431 00 33
             </a>
-            <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition font-semibold">
+            <a href="https://app.simy.ch/booking/availability/driving-team?category=C" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition font-semibold">
               Fahrstunde buchen
             </a>
           </div>
@@ -294,7 +294,7 @@
         </div>
 
         <div class="text-center mt-10">
-          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=C" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
             Jetzt erste Fahrstunde buchen
           </a>
         </div>
@@ -365,7 +365,7 @@
         <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 text-white">Bereit für deinen LKW Führerschein in Lachen?</h2>
         <p class="text-base xs:text-xl text-white/90 mb-8 max-w-2xl mx-auto">Peter Thoma freut sich auf dich. Melde dich jetzt an oder ruf direkt an – wir finden einen Termin in deiner Region.</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=C" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             Jetzt anmelden
           </a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">

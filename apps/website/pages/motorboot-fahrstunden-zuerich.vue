@@ -27,7 +27,7 @@
           <h1 class="heading-lg text-white mb-4">Bootsfahrschule Zürich</h1>
           <p class="text-xl text-white/90 mb-3">Motorboot Fahrstunden am unteren Zürichsee – flexible Treffpunkte, auch abends und samstags. Motorbootprüfung Kategorie A mit Fahrlehrer Marc.</p>
           <p class="text-sm text-white/75 mb-6">Ab CHF 190.-/90 Min · Zürich, Thalwil, Wädenswil, Richterswil</p>
-          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=Motorboot" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Termin anfragen
           </a>
         </div>
@@ -155,7 +155,7 @@
         <h2 class="heading-md mb-6 text-white">Sicher auf dem Zürichsee!</h2>
         <p class="text-xl text-white mb-8">Professionelle Bootsfahrstunden mit flexiblen Zeiten und Treffpunkten</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=Motorboot" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Termin anfragen
           </a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
