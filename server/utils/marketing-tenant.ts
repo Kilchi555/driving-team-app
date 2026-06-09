@@ -105,3 +105,42 @@ export async function getTenantIdByGscSite(siteUrl?: string): Promise<string | n
     return fallbackTenantId()
   }
 }
+
+/**
+ * Look up tenant_id by Meta Ad Account ID.
+ * Reads META_AD_ACCOUNT_ID from env if not passed explicitly.
+ * Queries marketing_meta_accounts table (Sprint 3). Falls back to MARKETING_TENANT_ID.
+ *
+ * To register a mapping, insert into marketing_meta_accounts:
+ *   INSERT INTO marketing_meta_accounts (tenant_id, ad_account_id, pixel_id, label)
+ *   VALUES ('<uuid>', 'act_123456789', '1523803071276836', 'Driving Team');
+ */
+export async function getTenantIdByMetaAdAccount(adAccountId?: string): Promise<string | null> {
+  const rawId = adAccountId ?? process.env.META_AD_ACCOUNT_ID
+  if (!rawId) return fallbackTenantId()
+
+  // Normalize: accept both "act_123" and "123" formats.
+  const withPrefix = rawId.startsWith('act_') ? rawId : `act_${rawId}`
+  const withoutPrefix = rawId.replace(/^act_/, '')
+
+  const cacheKey = `meta:${withoutPrefix}`
+  if (cache.has(cacheKey)) return cache.get(cacheKey)!
+
+  try {
+    const supabase = getSupabaseAdmin()
+    const { data } = await supabase
+      .from('marketing_meta_accounts')
+      .select('tenant_id')
+      .in('ad_account_id', [withPrefix, withoutPrefix])
+      .eq('is_active', true)
+      .maybeSingle()
+
+    const id = data?.tenant_id ?? fallbackTenantId()
+    cache.set(cacheKey, id)
+    if (!id) logger.warn(`marketing-tenant: no tenant found for Meta ad account ${rawId}`)
+    return id
+  } catch (err: any) {
+    logger.error('marketing-tenant: meta lookup failed', err?.message)
+    return fallbackTenantId()
+  }
+}

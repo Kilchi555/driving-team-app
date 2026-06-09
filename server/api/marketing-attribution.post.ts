@@ -22,6 +22,9 @@ interface AttributionPayload {
     gclid?: string | null
     gbraid?: string | null
     wbraid?: string | null
+    fbclid?: string | null
+    fbc?: string | null
+    fbp?: string | null
     utm_source?: string | null
     utm_medium?: string | null
     utm_campaign?: string | null
@@ -60,7 +63,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const attr = body.attribution
-  const hasAny = !!(attr.gclid || attr.gbraid || attr.wbraid || attr.utm_source || attr.utm_medium || attr.utm_campaign)
+  const hasAny = !!(attr.gclid || attr.gbraid || attr.wbraid || attr.fbclid || attr.utm_source || attr.utm_medium || attr.utm_campaign)
   if (!hasAny) {
     return { ok: true, reason: 'no_attribution_data' }
   }
@@ -78,6 +81,9 @@ export default defineEventHandler(async (event) => {
         gclid: nullable(attr.gclid),
         gbraid: nullable(attr.gbraid),
         wbraid: nullable(attr.wbraid),
+        fbclid: nullable(attr.fbclid),
+        fbc: nullable(attr.fbc),
+        fbp: nullable(attr.fbp),
         utm_source: nullable(attr.utm_source),
         utm_medium: nullable(attr.utm_medium),
         utm_campaign: nullable(attr.utm_campaign),

@@ -8,6 +8,7 @@ import { logger } from '~/utils/logger'
 import { logAudit } from '~/server/utils/audit'
 import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-manager'
 import { uploadConversionAdjustment } from '~/server/utils/google-ads-conversion'
+import { sendCapiRefundEvent, sha256Hex } from '~/server/utils/meta-capi'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -50,7 +51,7 @@ export default defineEventHandler(async (event) => {
     // 1. Fetch the appointment and its payment
     const { data: appointment, error: aptError } = await supabase
       .from('appointments')
-      .select('user_id, duration_minutes, type, tenant_id, status, staff_id, start_time, end_time')
+      .select('user_id, duration_minutes, type, tenant_id, status, staff_id, start_time, end_time, fbc, fbp')
       .eq('id', appointmentId)
       .single()
 
@@ -118,6 +119,57 @@ export default defineEventHandler(async (event) => {
           }
         } catch (err: any) {
           logger.warn('⚠️ Google Ads adjustment failed (non-critical):', err?.message ?? err)
+        }
+      })()
+    }
+
+    // ====== META CAPI REFUND EVENT (fire-and-forget) ======
+    // Sends a RefundOrder event to Meta so the algorithm learns from actual
+    // revenue — especially useful when chargePercentage = 0 (full refund).
+    // Only fires if there was a previous successful CAPI upload for this appointment.
+    if ((chargePercentage ?? 0) < 100) {
+      ;(async () => {
+        try {
+          const { data: prevCapi } = await supabase
+            .from('meta_capi_uploads')
+            .select('id, conversion_value_chf')
+            .eq('appointment_id', appointmentId)
+            .eq('event_name', 'Purchase')
+            .eq('upload_status', 'success')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          if (!prevCapi) return
+
+          // Fetch user email/phone for better CAPI matching
+          const { data: user } = await supabase
+            .from('users')
+            .select('email, phone')
+            .eq('id', appointment.user_id)
+            .maybeSingle()
+
+          const normalizedEmail = (user?.email ?? '').trim().toLowerCase()
+          const normalizedPhone = (user?.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+          const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
+          const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+
+          const originalValue = Number(prevCapi.conversion_value_chf ?? 0)
+          const refundValue = (chargePercentage ?? 0) === 0
+            ? originalValue
+            : Number((originalValue * (1 - (chargePercentage ?? 0) / 100)).toFixed(2))
+
+          await sendCapiRefundEvent({
+            appointment_id: appointmentId,
+            tenant_id: appointment.tenant_id,
+            fbc: appointment.fbc ?? null,
+            fbp: appointment.fbp ?? null,
+            hashed_email: hashedEmail,
+            hashed_phone: hashedPhone,
+            refund_value_chf: refundValue,
+          })
+        } catch (err: any) {
+          logger.warn('⚠️ Meta CAPI RefundOrder failed (non-critical):', err?.message ?? err)
         }
       })()
     }

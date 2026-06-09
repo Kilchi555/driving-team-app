@@ -45,7 +45,7 @@ async function generateReview(supabase: any, tenantId: string, since: string) {
   const year = now.getFullYear()
 
   // ── Fetch data in parallel ──────────────────────────────────────────────
-  const [ga4Res, gscOppRes, gscCtrRes, adsRes] = await Promise.all([
+  const [ga4Res, gscOppRes, gscCtrRes, adsRes, metaRes] = await Promise.all([
     // GA4: sessions + conversions by channel last 7 days
     supabase
       .from('marketing_ga4_daily')
@@ -76,12 +76,20 @@ async function generateReview(supabase: any, tenantId: string, since: string) {
       .select('campaign_name, cost_micros, clicks, impressions, conversions')
       .eq('tenant_id', tenantId)
       .gte('date', since),
+
+    // Meta Ads
+    supabase
+      .from('marketing_meta_ads_daily')
+      .select('campaign_name, spend, clicks, impressions, reach, actions')
+      .eq('tenant_id', tenantId)
+      .gte('date', since),
   ])
 
   const ga4 = ga4Res.data ?? []
   const gscOpp = gscOppRes.data ?? []
   const gscCtr = gscCtrRes.data ?? []
   const ads = adsRes.data ?? []
+  const metaAds = metaRes.data ?? []
 
   // ── Compute metrics ──────────────────────────────────────────────────────
   // Only count known marketing channels — exclude "Unassigned" (existing students via app)
@@ -107,6 +115,22 @@ async function generateReview(supabase: any, tenantId: string, since: string) {
   const totalSpendCHF = ads.reduce((s: number, r: any) => s + (r.cost_micros ?? 0) / 1_000_000, 0)
   const totalAdClicks = ads.reduce((s: number, r: any) => s + (r.clicks ?? 0), 0)
   const cpc = totalAdClicks > 0 ? (totalSpendCHF / totalAdClicks).toFixed(2) : null
+
+  // Meta Ads metrics
+  const metaSpendCHF = metaAds.reduce((s: number, r: any) => s + Number(r.spend ?? 0), 0)
+  const metaClicks = metaAds.reduce((s: number, r: any) => s + (r.clicks ?? 0), 0)
+  const metaImpressions = metaAds.reduce((s: number, r: any) => s + (r.impressions ?? 0), 0)
+  // Extract purchase conversions from the actions JSONB array
+  const metaConversions = metaAds.reduce((s: number, r: any) => {
+    const acts: any[] = r.actions ?? []
+    const purchases = acts.find((a: any) => a.action_type === 'purchase' || a.action_type === 'omni_purchase')
+    return s + (purchases ? Number(purchases.value ?? 0) : 0)
+  }, 0)
+  const metaCpc = metaClicks > 0 ? (metaSpendCHF / metaClicks).toFixed(2) : null
+  const metaCpa = metaConversions > 0 ? (metaSpendCHF / metaConversions).toFixed(0) : null
+  const googleCpa = ads.reduce((s: number, r: any) => s + (r.conversions ?? 0), 0) > 0
+    ? (totalSpendCHF / ads.reduce((s: number, r: any) => s + (r.conversions ?? 0), 0)).toFixed(0)
+    : null
 
   // SEO opportunities (aggregate by query, position 4-15)
   const oppMap = new Map<string, { impressions: number; clicks: number; positions: number[] }>()
@@ -168,6 +192,27 @@ async function generateReview(supabase: any, tenantId: string, since: string) {
     fruits.push(`CPC diese Woche: CHF ${cpc} – negative Keywords hinzufügen um Budget effizienter einzusetzen.`)
   }
 
+  // Meta Ads recommendations
+  if (metaSpendCHF > 0) {
+    if (metaCpa && googleCpa) {
+      const metaCpaNum = parseFloat(metaCpa)
+      const googleCpaNum = parseFloat(googleCpa)
+      if (metaCpaNum < googleCpaNum * 0.8) {
+        actions.push(`Meta Ads effizienter als Google: CPA CHF ${metaCpa} vs. Google CHF ${googleCpa} – Budget von Google zu Meta verschieben (CHF ${Math.round(totalSpendCHF * 0.2)}/Woche).`)
+      } else if (metaCpaNum > googleCpaNum * 1.5) {
+        fruits.push(`Meta CPA (CHF ${metaCpa}) deutlich höher als Google (CHF ${googleCpa}) – Meta Zielgruppen verfeinern oder Budget zu Google verschieben.`)
+      }
+    }
+    if (metaClicks > 0 && metaConversions === 0) {
+      actions.push(`Meta Ads: ${metaClicks} Klicks diese Woche aber 0 CAPI-Conversions – CAPI-Integration prüfen und Test-Event im Meta Events Manager triggern.`)
+    }
+    if (metaCpc && parseFloat(metaCpc) > 1.5) {
+      fruits.push(`Meta CPC: CHF ${metaCpc} – Audience-Targeting einengen oder ähnliche Zielgruppen (Lookalike) auf Basis der bestehenden Kundenliste testen.`)
+    }
+  } else if (metaSpendCHF === 0 && totalSpendCHF > 0) {
+    fruits.push(`Meta Ads sind inaktiv (CHF 0 Spend) – Kampagnen in Meta Ads Manager prüfen oder Budget aufstocken.`)
+  }
+
   if (topCtrBugs.length > 1) {
     const [q2, v2] = topCtrBugs[1]
     fruits.push(`"${q2}" auf Pos. <5 aber 0 von ${v2.impressions} Klicks – Quick-Win: Title mit USP ("ab CHF 95") ergänzen.`)
@@ -180,7 +225,10 @@ async function generateReview(supabase: any, tenantId: string, since: string) {
   }
 
   // Summary
-  const summary = `Diese Woche: ${totalSessions} Marketing-Sessions (ohne Unassigned/Direct), ${totalConversions} Conversions (CVR ${cvr}%), CHF ${totalSpendCHF.toFixed(0)} Ads-Spend. ${topOpps.length} SEO-Chancen in Position 4–15 identifiziert.`
+  const metaSummaryPart = metaSpendCHF > 0
+    ? ` Meta: CHF ${metaSpendCHF.toFixed(0)} Spend, ${metaClicks} Klicks, ${metaConversions} Conversions${metaCpa ? ` (CPA CHF ${metaCpa})` : ''}.`
+    : ''
+  const summary = `Diese Woche: ${totalSessions} Marketing-Sessions (ohne Unassigned/Direct), ${totalConversions} Conversions (CVR ${cvr}%), CHF ${totalSpendCHF.toFixed(0)} Google Ads Spend.${metaSummaryPart} ${topOpps.length} SEO-Chancen in Position 4–15 identifiziert.`
 
   // ── Save to DB ────────────────────────────────────────────────────────────
   const { error } = await supabase
@@ -193,7 +241,14 @@ async function generateReview(supabase: any, tenantId: string, since: string) {
       summary,
       top_actions: actions.slice(0, 5),
       low_hanging_fruits: fruits.slice(0, 5),
-      metrics: { totalSessions, totalConversions, cvr, totalSpendCHF: Math.round(totalSpendCHF * 100) / 100 },
+      metrics: {
+          totalSessions, totalConversions, cvr,
+          googleSpendCHF: Math.round(totalSpendCHF * 100) / 100,
+          metaSpendCHF: Math.round(metaSpendCHF * 100) / 100,
+          metaClicks, metaConversions,
+          metaCpa: metaCpa ? parseFloat(metaCpa) : null,
+          googleCpa: googleCpa ? parseFloat(googleCpa) : null,
+        },
     }, { onConflict: 'tenant_id,year,week_number' })
 
   if (error) throw new Error(error.message)

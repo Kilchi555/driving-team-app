@@ -10,7 +10,7 @@ import type { MarketingAttribution } from '~/plugins/marketing-attribution.clien
 
 export type AttributionBlob = Pick<
   MarketingAttribution,
-  'gclid' | 'gbraid' | 'wbraid' | 'utm_source' | 'utm_medium' | 'utm_campaign' | 'utm_content' | 'utm_term' | 'landing_page'
+  'gclid' | 'gbraid' | 'wbraid' | 'fbclid' | 'fbc' | 'fbp' | 'utm_source' | 'utm_medium' | 'utm_campaign' | 'utm_content' | 'utm_term' | 'landing_page'
 >
 
 function base64UrlEncode(input: string): string {
@@ -26,6 +26,9 @@ export function encodeAttribution(attribution: MarketingAttribution | null | und
     gclid: attribution.gclid || null,
     gbraid: attribution.gbraid || null,
     wbraid: attribution.wbraid || null,
+    fbclid: attribution.fbclid || null,
+    fbc: attribution.fbc || null,
+    fbp: attribution.fbp || null,
     utm_source: attribution.utm_source || null,
     utm_medium: attribution.utm_medium || null,
     utm_campaign: attribution.utm_campaign || null,

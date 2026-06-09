@@ -11,6 +11,12 @@ export interface DecodedAttribution {
   gclid?: string | null
   gbraid?: string | null
   wbraid?: string | null
+  /** Meta click ID captured on drivingteam.ch. */
+  fbclid?: string | null
+  /** Meta browser click cookie (_fbc) for CAPI deduplication. */
+  fbc?: string | null
+  /** Meta browser ID cookie (_fbp) for CAPI audience matching. */
+  fbp?: string | null
   utm_source?: string | null
   utm_medium?: string | null
   utm_campaign?: string | null
