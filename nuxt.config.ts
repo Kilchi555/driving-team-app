@@ -198,6 +198,7 @@ export default defineNuxtConfig({
     walleeSecretKey: process.env.WALLEE_SECRET_KEY,
     accountoApiKey: process.env.ACCOUNTO_API_KEY,
     accountoBaseUrl: process.env.ACCOUNTO_BASE_URL,
+    billScanApiKey: process.env.BILLSCAN_API_KEY,
     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
     googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY, // Server-side Google Maps API Key
     

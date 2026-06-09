@@ -131,6 +131,8 @@
 
             <NuxtLink to="/admin/student-credits" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
+            <NuxtLink to="/admin/accounting" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/accounting') ? 'drawer-active' : ''">Buchhaltung</NuxtLink>
 
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Verwaltung</p>
             <NuxtLink v-if="shouldShowNavLink('courses_enabled')" to="/admin/courses" @click="showMobileMenu = false"
@@ -216,6 +218,8 @@
               class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">{{ t.clientsPlural }}</NuxtLink>
             <NuxtLink to="/admin/student-credits"
               class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
+            <NuxtLink to="/admin/accounting"
+              class="drawer-link" :class="isActive('/admin/accounting') ? 'drawer-active' : ''">Buchhaltung</NuxtLink>
 
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Verwaltung</p>
             <NuxtLink v-if="shouldShowNavLink('courses_enabled')" to="/admin/courses"
@@ -251,25 +255,6 @@
             <NuxtLink to="/admin/pricing"
               class="drawer-link" :class="isActive('/admin/pricing') ? 'drawer-active' : ''">Preise</NuxtLink>
 
-            <template v-if="shouldShowNavLink('website_enabled')">
-              <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Website</p>
-              <NuxtLink to="/admin/website"
-                class="drawer-link" :class="isActive('/admin/website') && !isActive('/admin/website/setup') && !isActive('/admin/website-analytics') ? 'drawer-active' : ''">Leads & Übersicht</NuxtLink>
-              <NuxtLink to="/admin/website/setup"
-                class="drawer-link" :class="isActive('/admin/website/setup') ? 'drawer-active' : ''">Inhalte & CMS</NuxtLink>
-              <NuxtLink to="/admin/website-analytics"
-                class="drawer-link" :class="isActive('/admin/website-analytics') ? 'drawer-active' : ''">Analytics</NuxtLink>
-            </template>
-
-            <template v-if="shouldShowNavLink('website_enabled')">
-              <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Website</p>
-              <NuxtLink to="/admin/website" @click="showMobileMenu = false"
-                class="drawer-link" :class="isActive('/admin/website') && !isActive('/admin/website/setup') && !isActive('/admin/website-analytics') ? 'drawer-active' : ''">Leads & Übersicht</NuxtLink>
-              <NuxtLink to="/admin/website/setup" @click="showMobileMenu = false"
-                class="drawer-link" :class="isActive('/admin/website/setup') ? 'drawer-active' : ''">Inhalte & CMS</NuxtLink>
-              <NuxtLink to="/admin/website-analytics" @click="showMobileMenu = false"
-                class="drawer-link" :class="isActive('/admin/website-analytics') ? 'drawer-active' : ''">Analytics</NuxtLink>
-            </template>
           </template>
           <div v-else class="flex items-center justify-center py-8 text-white/50 text-sm gap-2">
             <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
