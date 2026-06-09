@@ -24,7 +24,7 @@
           <p class="text-xl text-white mb-2">Fahrschule Driving Team</p>
           <p class="text-primary-200 text-sm mb-6">Preisänderungen und Irrtümer vorbehalten. Eine Lektion dauert 45 Minuten. Preise in CHF, ohne externe Kosten wie Sehtest, Lernfahrgesuch, Prüfungsgebühr etc.</p>
           <div class="flex flex-col sm:flex-row gap-3">
-            <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+            <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
               📅 Online Termin buchen – ab CHF 95.–
             </a>
             <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
@@ -40,7 +40,7 @@
       <div class="max-w-5xl mx-auto flex flex-col items-center gap-6">
         <PriceCalculator />
         <a
-          href="https://app.simy.ch/booking/availability/driving-team?category=B"
+          href="https://app.simy.ch/booking/availability/driving-team"
           target="_blank"
           rel="noopener noreferrer"
           class="inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-primary-700 active:scale-95 transition shadow-lg text-base"
@@ -682,7 +682,7 @@
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Jetzt Fahrstunden buchen</h2>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Online buchen</a>
+          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Online buchen</a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">📞 +41 44 431 00 33</a>
         </div>
       </div>
