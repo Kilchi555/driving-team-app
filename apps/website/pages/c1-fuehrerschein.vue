@@ -33,7 +33,7 @@
           <p class="text-base xs:text-xl text-white/90 mb-3">Kategorie C1 für Lastwagen bis 7,5 Tonnen und Wohnmobile – professionelle Ausbildung mit Driving Team in Zürich und Lachen.</p>
           <p class="text-sm text-white/75 mb-8">Ab CHF 150.- / 45 Min · Prüfung StVA Regensdorf, Pfäffikon SZ, Kaltbrunn SG oder Hinwil ZH</p>
           <div class="flex flex-col sm:flex-row gap-3">
-            <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+            <a href="https://app.simy.ch/booking/availability/driving-team?category=C1" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
               Jetzt anmelden
             </a>
             <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
@@ -439,7 +439,7 @@
         <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 text-white">Bereit für den C1 Führerschein?</h2>
         <p class="text-base xs:text-xl text-white/90 mb-8 max-w-2xl mx-auto">Egal ob LKW oder Wohnmobil – wir begleiten dich von der ersten Fahrstunde bis zur bestandenen Prüfung.</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=C1" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             Jetzt Fahrstunde buchen
           </a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">

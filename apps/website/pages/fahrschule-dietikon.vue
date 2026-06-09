@@ -25,7 +25,7 @@
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
           <h1 class="heading-lg text-white mb-6">Fahrschule Dietikon</h1>
           <p class="text-base xs:text-xl text-white mb-8">Skender gibt Fahrstunden in Dietikon und dem Limmattal – ab Bahnhof Dietikon oder flexibel nach Absprache. Auf Deutsch, Englisch und Albanisch.</p>
-          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
         </div>

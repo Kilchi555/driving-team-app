@@ -37,7 +37,7 @@
               D1 & D Ausbildung ab Zürich-Altstetten. Prüfung am Strassenverkehrsamt Regensdorf. Wir üben im Prüfungsgebiet Zürich – inklusive Stadtzentrum, Tram-Prioritäten und städtischem Linienverkehr.
             </p>
             <div class="flex flex-col sm:flex-row gap-4">
-              <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-yellow-400 text-gray-900 hover:bg-yellow-300 text-lg font-bold">
+              <a href="https://app.simy.ch/booking/availability/driving-team?category=D" target="_blank" rel="noopener noreferrer" class="btn-primary bg-yellow-400 text-gray-900 hover:bg-yellow-300 text-lg font-bold">
                 ✨ Jetzt anmelden
               </a>
               <a href="/bus-fahrschule/" class="btn-primary bg-white/10 border border-white/30 text-white hover:bg-white/20 text-lg">

@@ -31,8 +31,8 @@
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">📅 Online buchbar</span>
           </div>
           <p class="text-base xs:text-xl text-white mb-8">Professionelle Auto-Fahrschule in Zürich & Lachen. Flexible Zeiten, erfahrene Fahrlehrer und hohe Erfolgsquote – vom Lernfahrausweis bis zur Prüfung.</p>
-          <a href="https://app.simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-            ✨ Erste Fahrstunde buchen (Kat. B)
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+            Fahrstunde buchen (Kat. B)
           </a>
         </div>
       </div>
@@ -225,7 +225,7 @@
         </div>
 
         <div class="text-center mt-12">
-          <a href="https://app.simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
         </div>

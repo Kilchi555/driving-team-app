@@ -21,7 +21,7 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Anhänger Fahrschule – Kategorie BE</h1>
           <p class="text-base xs:text-xl text-white mb-8">Die <strong>schnellste Zusatzkategorie</strong> der Schweiz: Keine Theorieprüfung, kein Nothelferkurs – einfach Lernfahrausweis beantragen und direkt mit den Fahrstunden starten. Durchschnittlich 5–8 Lektionen bis zur Prüfung.</p>
-          <a href="https://app.simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=BE" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
         </div>

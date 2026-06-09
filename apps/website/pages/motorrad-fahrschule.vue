@@ -22,7 +22,7 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Motorrad Fahrschule Kategorie A1 | A35kW | A</h1>
           <p class="text-base xs:text-xl text-white mb-8">Bist du bereit, die Strasse mit deinem Motorrad zu erobern? Unsere Motorrad Fahrschule bietet dir professionelle Ausbildung für alle Kategorien (A1, A35kW, A) mit erfahrenen Fahrlehrern in Zürich und Lachen/SZ.</p>
-          <a href="https://app.simy.ch/booking/availability/driving-team?service=A" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=A" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
         </div>
@@ -222,7 +222,7 @@
       </div>
 
       <div class="text-center mt-12">
-          <a href="https://app.simy.ch/booking/availability/driving-team?service=A" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=A" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
       </div>

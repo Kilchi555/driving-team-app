@@ -71,7 +71,7 @@
 
             <div class="flex flex-col sm:flex-row gap-4">
               <a
-                href="https://app.simy.ch/booking/availability/driving-team?service=BE"
+                href="https://app.simy.ch/booking/availability/driving-team?category=BE"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="inline-flex items-center justify-center gap-2 bg-white text-orange-600 hover:bg-yellow-50 font-bold py-4 px-8 rounded-xl transition transform hover:scale-105 hover:shadow-2xl shadow-lg text-lg"
@@ -318,7 +318,7 @@
         <p class="text-orange-100 mb-8 text-lg">Kat. BE ab CHF 120.- · Fahrzeug gestellt · Keine Theorieprüfung · Lachen am Zürichsee</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a
-            href="https://app.simy.ch/booking/availability/driving-team?service=BE"
+            href="https://app.simy.ch/booking/availability/driving-team?category=BE"
             target="_blank"
             rel="noopener noreferrer"
             class="inline-flex items-center justify-center gap-2 bg-white text-orange-600 hover:bg-orange-50 font-bold py-4 px-8 rounded-xl transition text-lg transform hover:scale-105 shadow-2xl"

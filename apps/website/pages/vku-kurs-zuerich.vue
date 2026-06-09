@@ -35,7 +35,7 @@
             <a href="https://app.simy.ch/customer/courses/driving-team/?category=VKU&location=Z%C3%BCrich" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
               ✨ Jetzt VKU Platz sichern
             </a>
-            <a href="https://app.simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
+            <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
               🚗 Gleich Fahrstunde buchen
             </a>
           </div>

@@ -46,17 +46,28 @@
           </p>
         </div>
         <!-- Trust Bar + Booking CTA -->
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6 px-4">
-          
+        <div class="flex flex-row items-center justify-center gap-3 mb-6 px-4">
           <a
             href="https://app.simy.ch/booking/availability/driving-team"
             target="_blank"
             rel="noopener noreferrer"
             class="flex-shrink-0 inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-2.5 px-5 rounded-xl hover:bg-primary-700 active:scale-95 transition shadow-md text-sm"
           >
-            Online Termin buchen
+            Termin buchen
+          </a>
+          <a
+            href="tel:+41444310033"
+            class="flex-shrink-0 inline-flex items-center gap-2 bg-white border-2 border-primary-600 text-primary-600 font-bold py-2.5 px-5 rounded-xl hover:bg-primary-50 active:scale-95 transition shadow-md text-sm"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.47 11.47 0 003.58.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.47 11.47 0 00.57 3.58 1 1 0 01-.24 1.01l-2.21 2.2z"/>
+            </svg>
+            Anrufen
           </a>
         </div>
+        <p class="text-sm font-semibold text-gray-500 -mt-3 mb-4">
+          „Bestehe deine Fahrprüfung<br>mit uns beim <span class="text-primary-600">1. Versuch!"</span>
+        </p>
         <div class="w-full max-w-7xl">
           <h2 class="sr-only">Fahrschule in Zürich für alle Kategorien</h2>
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 lg:gap-8 px-2 md:px-4">
@@ -211,11 +222,55 @@
           </a>
         </div>
 
-        <!-- SEO-Intro: Fahrschule Zürich – für Google und Besucher -->
-        <div class="max-w-3xl mx-auto text-center mt-8 pb-8 px-4">
-          <p class="text-base text-gray-600 leading-relaxed">
-            Die <strong>Fahrschule Zürich</strong> von Driving Team bietet dir alle Führerschein-Kategorien unter einem Dach – von <a href="/auto-fahrschule/" class="text-primary-600 hover:underline">Auto Fahrschule Zürich</a> über <a href="/motorrad-fahrschule/" class="text-primary-600 hover:underline">Motorrad Fahrschule</a> bis <a href="/lastwagen-fahrschule/" class="text-primary-600 hover:underline">Lastwagen und Anhänger</a>. Mit Standorten in <strong>Zürich-Altstetten</strong> und <strong>Lachen (SZ)</strong> sind wir für dich in der ganzen Region Zürich erreichbar. Über <strong>85% unserer Fahrschüler</strong> bestehen die Prüfung beim ersten Versuch. <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="text-primary-600 font-semibold hover:underline">Buche jetzt online deinen ersten Termin</a> – ab CHF 95.– pro Lektion.
-          </p>
+        <!-- Trust & Category Section -->
+        <div class="w-full max-w-xl mx-auto mt-8 pb-10 px-4">
+
+          <!-- Stat Cards -->
+          <div class="grid grid-cols-3 gap-2 mb-5">
+            <div class="flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-md py-4 px-2">
+              <span class="text-2xl font-black text-white leading-none">85%</span>
+              <span class="text-white/80 text-[10px] font-medium mt-1.5 text-center leading-tight">Prüfungs&shy;erfolg 1. Versuch</span>
+            </div>
+            <div class="flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-md py-4 px-2">
+              <span class="text-2xl font-black text-white leading-none">2</span>
+              <span class="text-white/80 text-[10px] font-medium mt-1.5 text-center leading-tight">Standorte Zürich & Lachen</span>
+            </div>
+            <div class="flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-md py-4 px-2">
+              <span class="text-2xl font-black text-white leading-none">95.–</span>
+              <span class="text-white/80 text-[10px] font-medium mt-1.5 text-center leading-tight">ab CHF pro Lektion</span>
+            </div>
+          </div>
+
+          <!-- Category Chips -->
+          <div class="flex flex-wrap justify-center gap-2">
+            <a href="/auto-fahrschule/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
+              <span class="text-sm">🚗</span>
+              <span class="text-xs font-semibold text-gray-600 group-hover:text-primary-700">Auto</span>
+            </a>
+            <a href="/motorrad-fahrschule/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
+              <span class="text-sm">🏍️</span>
+              <span class="text-xs font-semibold text-gray-600 group-hover:text-primary-700">Motorrad</span>
+            </a>
+            <a href="/lastwagen-fahrschule/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
+              <span class="text-sm">🚛</span>
+              <span class="text-xs font-semibold text-gray-600 group-hover:text-primary-700">Lastwagen</span>
+            </a>
+            <a href="/anhaenger-fahrschule/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
+              <span class="text-sm">🚐</span>
+              <span class="text-xs font-semibold text-gray-600 group-hover:text-primary-700">Anhänger</span>
+            </a>
+            <a href="/vku-kurse/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
+              <span class="text-sm">📋</span>
+              <span class="text-xs font-semibold text-gray-600 group-hover:text-primary-700">VKU</span>
+            </a>
+            <a href="/nothelferkurs-buchen/driving-team" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
+              <span class="text-sm">🚑</span>
+              <span class="text-xs font-semibold text-gray-600 group-hover:text-primary-700">Nothelfer</span>
+            </a>
+          </div>
+
+          <!-- Hidden SEO text -->
+          <p class="sr-only">Die Fahrschule Zürich von Driving Team – Auto, Motorrad, Lastwagen, Anhänger, VKU. Standorte Zürich-Altstetten und Lachen SZ. 85% Prüfungserfolg, ab CHF 95.– pro Lektion.</p>
         </div>
       </div>
     </section>
@@ -230,14 +285,14 @@
     <section class="py-20 bg-white scroll-mt-20">
       <div class="max-w-7xl mx-auto px-4">
         <div class="mb-16">
-          <h2 class="text-2xl md:text-3xl font-bold text-gray-900 max-w-3xl mx-auto mb-6">
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-900 max-w-3xl mx-auto mb-6 text-center">
             Fahrschule in Zürich & Lachen
           </h2>
-          <div class="max-w-3xl mx-auto space-y-3 text-gray-600">
+          <div class="max-w-3xl mx-auto space-y-3 text-gray-600 text-center">
             <p class="text-base md:text-lg leading-relaxed">
-              Der Hauptstandort ist in <strong>Zürich</strong> . Die Nothelfer, Verkehrskunde und Theorie-Kurse finden jedoch an beiden Standorten statt.
+              Der Hauptstandort ist in <strong>Zürich</strong>. Die Nothelfer, Verkehrskunde und Theorie-Kurse finden jedoch an beiden Standorten statt.
             </p>
-            <ul class="space-y-3">
+            <ul class="space-y-3 inline-block text-left mx-auto mt-2">
               <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
                 <span class="text-primary-600 font-bold">✓</span>
                 <span>Professionelle & motivierte Instruktor:innen</span>
@@ -252,9 +307,7 @@
               </li>
               <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
                 <span class="text-primary-600 font-bold">✓</span>
-                <span>
-                  Online Buchung und Bezahlung
-                </span>
+                <span>Online Buchung und Bezahlung</span>
               </li>
             </ul>
             <div class="mt-6">

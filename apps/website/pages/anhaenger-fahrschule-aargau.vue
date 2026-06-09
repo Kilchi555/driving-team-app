@@ -71,7 +71,7 @@
 
             <div class="flex flex-col sm:flex-row gap-4">
               <a
-                href="https://app.simy.ch/booking/availability/driving-team?service=BE"
+                href="https://app.simy.ch/booking/availability/driving-team?category=BE"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="inline-flex items-center justify-center gap-2 bg-white text-orange-600 hover:bg-yellow-50 font-bold py-4 px-8 rounded-xl transition transform hover:scale-105 hover:shadow-2xl shadow-lg text-lg"
@@ -290,7 +290,7 @@
         <h2 class="text-4xl font-black mb-4">Anhänger Führerschein Aargau – schnell & günstig</h2>
         <p class="text-orange-100 mb-8 text-lg max-w-2xl mx-auto">Keine Theorie, kein Nothelferkurs. Nur Fahrstunden und Prüfung. In 2–3 Wochen zum Anhänger-Führerschein.</p>
         <a
-          href="https://app.simy.ch/booking/availability/driving-team?service=BE"
+          href="https://app.simy.ch/booking/availability/driving-team?category=BE"
           target="_blank"
           rel="noopener noreferrer"
           class="inline-block bg-white text-orange-600 hover:bg-orange-50 font-bold py-4 px-12 rounded-xl transition text-lg transform hover:scale-105 shadow-2xl"

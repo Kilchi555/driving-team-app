@@ -39,7 +39,7 @@
           <p class="text-base xs:text-xl text-white mb-2">Mëso të drejtosh me <strong>Skender Ismajlin</strong> – instruktor i certifikuar me përvojë që nga viti 2011.</p>
           <p class="text-base xs:text-xl text-white mb-8">Mësimet zhvillohen në Spreitenbach, Limmattal, Zürich-Altstetten dhe Wettingen/AG. Kategoria B Automatik, Rimorkio BE dhe Taksi BPT.</p>
           <div class="flex flex-wrap gap-4">
-            <a href="https://app.simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+            <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
               ✨ Rezervo tani
             </a>
             <a href="tel:+41763746791" class="flex items-center gap-2 bg-green-500 hover:bg-green-400 text-white font-bold py-3 px-6 rounded-xl transition text-lg">
@@ -160,7 +160,7 @@
               <li class="flex gap-2"><span class="text-primary-600 font-bold">✓</span> Mësim plotësisht në shqip</li>
               <li class="flex gap-2"><span class="text-primary-600 font-bold">✓</span> Spreitenbach, Limmattal, Zürich</li>
             </ul>
-            <a href="https://app.simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="btn-primary w-full text-center text-sm">Rezervo Kat. B</a>
+            <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary w-full text-center text-sm">Rezervo Kat. B</a>
           </div>
 
           <!-- BE -->
@@ -175,7 +175,7 @@
               <li class="flex gap-2"><span class="text-orange-500 font-bold">✓</span> Nuk nevojitet provim teorik</li>
               <li class="flex gap-2"><span class="text-orange-500 font-bold">✓</span> Mësim në shqip me Skenderin</li>
             </ul>
-            <a href="https://app.simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="inline-block w-full text-center bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-xl transition text-sm">Rezervo Kat. BE</a>
+            <a href="https://app.simy.ch/booking/availability/driving-team?category=BE" target="_blank" rel="noopener noreferrer" class="inline-block w-full text-center bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-xl transition text-sm">Rezervo Kat. BE</a>
           </div>
 
           <!-- Taksi -->
@@ -310,7 +310,7 @@
           </details>
 
           <div class="text-center mt-10">
-            <a href="https://app.simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">✨ Rezervo Kat. B tani</a>
+            <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">✨ Rezervo Kat. B tani</a>
           </div>
         </div>
 
@@ -364,7 +364,7 @@
           </details>
 
           <div class="text-center mt-10">
-            <a href="https://app.simy.ch/booking/availability/driving-team?service=BE" target="_blank" rel="noopener noreferrer" class="inline-block bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-8 rounded-xl transition text-lg">✨ Rezervo Rimorkio BE tani</a>
+            <a href="https://app.simy.ch/booking/availability/driving-team?category=BE" target="_blank" rel="noopener noreferrer" class="inline-block bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-8 rounded-xl transition text-lg">✨ Rezervo Rimorkio BE tani</a>
           </div>
         </div>
 
@@ -492,7 +492,7 @@
           </summary>
           <p class="text-gray-600 mt-4">Rezervimi bëhet lehtë online: klikoni butonin "Rezervo tani" dhe zgjidhni orarin që ju konvenon. Mund edhe të na kontaktoni direkt nëpërmjet faqes sonë të kontaktit. Skenderi do t'ju përgjigjet shpejt.</p>
           <div class="mt-4">
-            <a href="https://app.simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="btn-primary text-sm">Rezervo tani</a>
+            <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary text-sm">Rezervo tani</a>
           </div>
         </details>
 
@@ -512,7 +512,7 @@
         <h2 class="text-3xl md:text-4xl font-black mb-4">Gati të fillosh?</h2>
         <p class="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">Rezervo orën tënde të parë me Skenderin sot. Mësim shqip, çmime transparente, 85% sukses.</p>
         <div class="flex flex-wrap justify-center gap-4">
-          <a href="https://app.simy.ch/booking/availability/driving-team?service=B" target="_blank" rel="noopener noreferrer" class="bg-white text-primary-700 hover:bg-primary-50 font-bold py-4 px-8 rounded-xl transition text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="bg-white text-primary-700 hover:bg-primary-50 font-bold py-4 px-8 rounded-xl transition text-lg">
             ✨ Rezervo tani – Kat. B
           </a>
           <a href="/kontakt/" class="border-2 border-white text-white hover:bg-white/10 font-bold py-4 px-8 rounded-xl transition text-lg">

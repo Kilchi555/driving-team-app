@@ -27,7 +27,7 @@
           <p class="text-xl text-white/90 mb-3">Ohne Vorkenntnisse direkt loslegen! Professionelle Bootsausbildung auf dem Zürichsee – ganzjährig, flexibel auch abends und samstags.</p>
           <p class="text-sm text-white/75 mb-8">Bootsfahrlehrer Marc · Kategorie A · Ab CHF 190.-/90 Min · Prüfung am Zürichsee</p>
           <div class="flex flex-col sm:flex-row gap-3">
-            <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+            <a href="https://app.simy.ch/booking/availability/driving-team?category=Motorboot" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
               Jetzt anmelden
             </a>
             <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
@@ -216,7 +216,7 @@
           </details>
         </div>
         <div class="text-center mt-12">
-          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=Motorboot" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
             🚀 Jetzt anmelden!
           </a>
         </div>

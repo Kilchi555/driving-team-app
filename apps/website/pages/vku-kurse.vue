@@ -231,7 +231,7 @@
         <h2 class="heading-md mb-4 text-white">Jetzt VKU Kurs buchen</h2>
         <p class="text-primary-100 text-lg mb-8 max-w-xl mx-auto">Flexible Termine in Zürich-Altstetten und Lachen SZ – inklusive Kursdokumentation.</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Jetzt anmelden</a>
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=VKU" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Jetzt anmelden</a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">📞 +41 44 431 00 33</a>
         </div>
       </div>
