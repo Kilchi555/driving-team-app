@@ -230,8 +230,7 @@ export default defineNuxtConfig({
     // HINWEIS: /kontrollfahrt hat eine eigene .vue Seite → kein Redirect
 
     // Fahrschule Zürich → Homepage (Cannibalization-Fix: Homepage ist jetzt die Zürich-Seite)
-    '/fahrschule-zuerich': { redirect: { to: '/', statusCode: 301 } },
-    '/fahrschule-zuerich/': { redirect: { to: '/', statusCode: 301 } },
+    // '/fahrschule-zuerich' und '/fahrschule-zuerich/' → vercel.json (EEXIST symlink conflict)
 
     // HINWEIS: /team, /blog, /kontakt, /agb, /datenschutz, /faq wurden entfernt,
     // da eigene .vue Seiten existieren und die Redirects Endlosloops verursachen.
