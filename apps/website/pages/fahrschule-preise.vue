@@ -17,17 +17,17 @@
     <!-- Hero Section -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 relative overflow-hidden">
       <img src="/images/categories/auto-fahrschule-hero.webp" alt="Fahrschule Preise – Auto, Motorrad, Anhänger, Lastwagen, Bus und Motorboot Fahrstunden" class="absolute inset-0 w-full h-full object-cover opacity-100" />
-      <div class="absolute inset-0 bg-black/40"></div>
+      <div class="absolute inset-0 bg-black/60"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-3">Unsere Preise</h1>
           <p class="text-xl text-white mb-2">Fahrschule Driving Team</p>
-          <p class="text-primary-200 text-sm mb-6">Preisänderungen und Irrtümer vorbehalten. Eine Lektion dauert 45 Minuten. Preise in CHF, ohne externe Kosten wie Sehtest, Lernfahrgesuch, Prüfungsgebühr etc.</p>
+          <p class="text-white/80 text-base font-medium mb-6">Preisänderungen und Irrtümer vorbehalten. Eine Lektion dauert 45 Minuten. Preise in CHF, ohne externe Kosten wie Sehtest, Lernfahrgesuch, Prüfungsgebühr etc.</p>
           <div class="flex flex-col sm:flex-row gap-3">
-            <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-              📅 Online Termin buchen – ab CHF 95.–
+            <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" aria-label="Online Termin buchen – ab CHF 95.–" class="btn-primary bg-white text-primary-600 hover:bg-primary-50">
+              📅 Termin buchen
             </a>
-            <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">
+            <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600">
               📞 +41 44 431 00 33
             </a>
           </div>
@@ -43,11 +43,12 @@
           href="https://app.simy.ch/booking/availability/driving-team"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-primary-700 active:scale-95 transition shadow-lg text-base"
+          aria-label="Jetzt online Termin wählen (ohne Anruf)"
+          class="inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-2.5 px-7 rounded-xl hover:bg-primary-700 active:scale-95 transition shadow-lg text-sm"
         >
-          📅 Jetzt online Termin wählen (ohne Anruf)
+          📅 Termin buchen
         </a>
-        <p class="text-xs text-gray-400 -mt-2">Dauer ca. 2 Min. · Sofortige Bestätigung</p>
+        <p class="text-xs text-gray-400 -mt-2">Online · Ohne Anruf · Sofortige Bestätigung</p>
       </div>
     </section>
 

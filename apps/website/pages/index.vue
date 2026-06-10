@@ -653,31 +653,60 @@
     <!-- Blog-Artikel Lesetipps -->
     <section class="section-container py-10">
       <div class="max-w-4xl mx-auto text-center">
-        <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Ratgeber & Tipps</p>
-        <div class="flex flex-wrap gap-4 justify-center">
-          <a href="/blog/fuehrerschein-kategorien-schweiz/" class="text-sm text-primary-600 hover:underline">🚗 Alle Führerschein-Kategorien Schweiz erklärt</a>
-          <a href="/blog/fuehrerschein-kosten-schweiz/" class="text-sm text-primary-600 hover:underline">💰 Führerschein Kosten Schweiz 2026</a>
-          <a href="/blog/bf17-begleitetes-fahren-schweiz/" class="text-sm text-primary-600 hover:underline">🚗 BF17 Begleitetes Fahren</a>
-          <a href="/blog/theorieprufung-tipps-zuerich/" class="text-sm text-primary-600 hover:underline">📚 Theorieprüfung vorbereiten</a>
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-5">Ratgeber & Tipps</p>
+        <div class="flex flex-wrap gap-3 justify-center">
+          <a href="/blog/fuehrerschein-kategorien-schweiz" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gray-50 border border-gray-200 text-sm text-gray-700 hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 transition-all duration-200">🚗 Führerschein-Kategorien Schweiz</a>
+          <a href="/blog/fuehrerschein-kosten-schweiz" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gray-50 border border-gray-200 text-sm text-gray-700 hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 transition-all duration-200">💰 Kosten Schweiz 2026</a>
+          <a href="/blog/bf17-begleitetes-fahren-schweiz" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gray-50 border border-gray-200 text-sm text-gray-700 hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 transition-all duration-200">🚗 BF17 Begleitetes Fahren</a>
+          <a href="/blog/theorieprufung-tipps-zuerich" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gray-50 border border-gray-200 text-sm text-gray-700 hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 transition-all duration-200">📚 Theorieprüfung vorbereiten</a>
         </div>
       </div>
     </section>
 
-    <!-- Quick Links: Preise, Kontakt, Team, Blog -->
-    <section class="bg-gray-50 border-b border-gray-200 sticky top-[72px] z-40 shadow-sm">
-      <div class="overflow-x-auto scrollbar-hide">
-        <div class="flex items-stretch gap-0 min-w-max">
-          <a href="/fahrschule-preise/" class="flex items-center px-5 py-4 border-r border-gray-200 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Alle Preise & Pakete</a>
-          <a href="/kostenrechner/" class="flex items-center px-5 py-4 border-r border-gray-200 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Kosten berechnen</a>
-          <a href="/blog/" class="flex items-center px-5 py-4 border-r border-gray-200 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Ratgeber & Tipps</a>
-          <a href="/weiterbildungen/" class="flex items-center px-5 py-4 border-r border-gray-200 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Weiterbildungen</a>
-          <a href="/faq/" class="flex items-center px-5 py-4 border-r border-gray-200 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Häufige Fragen</a>
-          <a href="/kontakt/" class="flex items-center px-5 py-4 border-r border-gray-200 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Beratungstermin</a>
-          <a href="/team/" class="flex items-center px-5 py-4 border-r border-gray-200 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Unsere Fahrlehrer</a>
-          <a href="/fahrschule-standorte/" class="flex items-center px-5 py-4 hover:bg-white transition text-sm font-semibold text-gray-700 hover:text-primary-600 whitespace-nowrap">Alle Standorte</a>
+    <!-- Quick Links Bar -->
+    <div class="sticky top-[72px] z-40 bg-white border-b border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+      <div class="relative">
+        <!-- Fade-out gradients for scroll indication -->
+        <div class="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent z-10" />
+        <div class="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent z-10" />
+        <div class="overflow-x-auto scrollbar-hide px-4">
+          <div class="flex items-center gap-1 py-2.5 min-w-max mx-auto">
+            <a href="/fahrschule-preise/" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-gray-600 hover:bg-primary-50 hover:text-primary-700 transition-all duration-200 whitespace-nowrap">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a2 2 0 012-2z" /></svg>
+              Preise & Pakete
+            </a>
+            <a href="/kostenrechner/" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-gray-600 hover:bg-primary-50 hover:text-primary-700 transition-all duration-200 whitespace-nowrap">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+              Kosten berechnen
+            </a>
+            <a href="/blog/" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-gray-600 hover:bg-primary-50 hover:text-primary-700 transition-all duration-200 whitespace-nowrap">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+              Ratgeber
+            </a>
+            <a href="/weiterbildungen/" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-gray-600 hover:bg-primary-50 hover:text-primary-700 transition-all duration-200 whitespace-nowrap">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
+              Weiterbildungen
+            </a>
+            <a href="/faq/" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-gray-600 hover:bg-primary-50 hover:text-primary-700 transition-all duration-200 whitespace-nowrap">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              FAQ
+            </a>
+            <a href="/kontakt/" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-gray-600 hover:bg-primary-50 hover:text-primary-700 transition-all duration-200 whitespace-nowrap">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+              Beratung
+            </a>
+            <a href="/team/" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-gray-600 hover:bg-primary-50 hover:text-primary-700 transition-all duration-200 whitespace-nowrap">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Fahrlehrer
+            </a>
+            <a href="/fahrschule-standorte/" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-gray-600 hover:bg-primary-50 hover:text-primary-700 transition-all duration-200 whitespace-nowrap">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Standorte
+            </a>
+          </div>
         </div>
       </div>
-    </section>
+    </div>
   </div>
 </template>
 
