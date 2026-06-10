@@ -64,6 +64,8 @@ export default defineEventHandler(async (event) => {
         status,
         duration_minutes,
         location_id,
+        custom_location_name,
+        custom_location_address,
         user_id,
         staff_id,
         created_by,

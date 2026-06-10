@@ -2871,8 +2871,12 @@ const testManualTimeChange = () => {
 
 const handleExamLocationSelected = (location: any) => {
   selectedExamLocation.value = location
+  // Persist into formData so it's included in the appointments save payload
+  formData.value.custom_location_name = location?.name || null
+  formData.value.custom_location_address = typeof location?.address === 'string'
+    ? location.address
+    : (location?.address ? JSON.stringify(location.address) : null)
   logger.debug('🏛️ Exam location selected in modal:', location)
-  // Hier können Sie zusätzliche Logik hinzufügen, z.B. in formData speichern
 }
 
 const handleStudentSelected = async (student: Student | null) => {
@@ -5182,6 +5186,19 @@ const initializeFormData = async () => {
   if (props.mode === 'edit' && props.eventData) {
     await populateFormFromAppointment(props.eventData)
     logger.debug('🔍 AFTER populate - eventType:', formData.value.eventType)
+
+    // ✅ Pre-fill exam location selector when editing an exam appointment
+    if (
+      formData.value.appointment_type === 'exam' &&
+      formData.value.custom_location_name &&
+      !selectedExamLocation.value
+    ) {
+      selectedExamLocation.value = {
+        name: formData.value.custom_location_name,
+        address: formData.value.custom_location_address || undefined,
+      }
+      logger.debug('🏛️ Exam location pre-filled from appointment data:', selectedExamLocation.value)
+    }
     
     // ✅ SCHRITT 1.5: Ursprüngliche Duration zu availableDurations hinzufügen
     if (formData.value.duration_minutes && !availableDurations.value.includes(formData.value.duration_minutes)) {
