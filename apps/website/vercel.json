@@ -3054,6 +3054,16 @@
       "permanent": true
     },
     {
+      "source": "/fahrschule-zuerich",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
       "source": "/auto-fahrschule-z%C3%BCrich",
       "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
