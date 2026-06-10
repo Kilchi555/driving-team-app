@@ -26,6 +26,8 @@
           </p>
 
           <!-- New Password -->
+          <form autocomplete="on" @submit.prevent>
+          <input type="text" autocomplete="username" style="display:none" tabindex="-1" aria-hidden="true">
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">
               Neues Passwort *
@@ -33,6 +35,8 @@
             <input
               v-model="newPassword"
               :type="showPw ? 'text' : 'password'"
+              name="new-password"
+              autocomplete="new-password"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               placeholder="Mindestens 12 Zeichen"
@@ -83,6 +87,8 @@
             <input
               v-model="confirmPassword"
               type="password"
+              name="confirm-new-password"
+              autocomplete="new-password"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               placeholder="Passwort wiederholen"
@@ -96,6 +102,7 @@
           <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
             <p class="text-sm text-red-700">{{ error }}</p>
           </div>
+          </form>
         </div>
       </div>
 
