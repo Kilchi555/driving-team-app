@@ -10,7 +10,7 @@
         <div ref="mapContainer" class="lg:col-span-2 h-72 lg:h-[380px]">
           <iframe
             v-if="mapLoaded"
-            :src="`https://maps.google.com/maps?q=${location.lat},${location.lng}&output=embed&hl=de&z=15`"
+            :src="`https://maps.google.com/maps?q=${encodeURIComponent(location.name + ', ' + location.street + ', ' + location.zip + ' ' + location.city + ', Schweiz')}&output=embed&hl=de&z=16`"
             class="w-full h-full border-0"
             referrerpolicy="no-referrer-when-downgrade"
             :title="`Fahrschule Driving Team ${location.city} – Karte`"
@@ -44,7 +44,7 @@
             <p class="text-gray-600 text-sm leading-relaxed">{{ location.region }}</p>
           </div>
           <a
-            :href="`https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`"
+            :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.name + ', ' + location.street + ', ' + location.zip + ' ' + location.city + ', Schweiz')}`"
             target="_blank"
             rel="noopener noreferrer"
             class="inline-flex items-center gap-2 bg-primary-600 text-white font-bold px-5 py-2.5 rounded-lg hover:bg-primary-700 transition text-sm w-fit"
@@ -109,10 +109,10 @@ const locations: Record<string, {
     city: 'Zürich-Altstetten',
     area: 'Zürich-Altstetten & Umgebung',
     name: 'Bahnhof Altstetten',
-    street: 'Altstetterplatz 1',
+    street: 'Altstetterplatz 12',
     zip: '8048',
     canton: 'ZH',
-    address: 'Altstetterplatz 1, 8048 Zürich-Altstetten',
+    address: 'Altstetterplatz 12, 8048 Zürich-Altstetten',
     region: 'Zürich-Altstetten, Schlieren, Albisrieden, Höngg, Urdorf, Uitikon etc.',
     lat: '47.39113',
     lng: '8.48947',
@@ -162,8 +162,8 @@ const locations: Record<string, {
     canton: 'ZH',
     address: 'Bahnhofstrasse 2, 8903 Birmensdorf',
     region: 'Birmensdorf, Uitikon, Urdorf, Stallikon, Ringlikon, Wettswil',
-    lat: '47.36021',
-    lng: '8.43100',
+    lat: '47.36011',
+    lng: '8.43268',
   },
   spreitenbach: {
     city: 'Spreitenbach',
@@ -247,8 +247,8 @@ const locations: Record<string, {
     addressLocality: 'Steinhausen',
     address: 'Sennweidstrasse 30, 6312 Steinhausen',
     region: 'Zug, Steinhausen, Cham, Hünenberg',
-    lat: '47.1697',
-    lng: '8.5111',
+    lat: '47.1918',
+    lng: '8.4807',
   },
   einsiedeln: {
     city: 'Einsiedeln',
@@ -259,8 +259,8 @@ const locations: Record<string, {
     canton: 'SZ',
     address: 'Klosterstr. 10, 8840 Einsiedeln',
     region: 'Einsiedeln, Schwyz, Steinen, Gersau',
-    lat: '47.1344',
-    lng: '8.7621',
+    lat: '47.1267',
+    lng: '8.7516',
   },
 }
 

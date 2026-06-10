@@ -352,6 +352,21 @@
               Für diese Kategorie sind noch keine Lektion-Dauern hinterlegt. Bitte kontaktieren Sie die Fahrschule.
             </p>
           </div>
+
+          <!-- Admin fee info note (shown only when a fee exists for this category) -->
+          <div
+            v-if="categoryAdminFeeRappen > 0"
+            class="mt-4 flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800"
+          >
+            <svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>
+              Einmalige Administrationsgebühr: <strong>CHF {{ (categoryAdminFeeRappen / 100).toFixed(2) }}</strong>
+              — wird ab der {{ categoryAdminFeeAppliesFrom }}. Lektion dieser Kategorie verrechnet (einmalig für die gesamte Ausbildung).
+            </span>
+          </div>
+
           </div>
         </div>
 
@@ -931,7 +946,7 @@
                     Administrationsgebühr
                     <span
                       class="text-xs text-gray-400 cursor-help"
-                      title="Einmalige Gebühr ab der 2. Lektion pro Kategorie"
+                      :title="`Lektion ${previewAdminFeeReason === 'applied' ? (previewAppointmentNumber ?? '') + ' – einmalig für die gesamte Ausbildung in dieser Kategorie' : 'Einmalige Gebühr ab der 2. Lektion pro Kategorie'}`"
                     >ⓘ</span>
                   </span>
                   <span class="font-medium text-gray-900 text-right">
@@ -1542,6 +1557,8 @@ const availableTimeSlots = ref<any[]>([])
 const durationOptions = ref<number[]>([])
 const selectedDuration = ref<number | null>(null)
 const durationPrices = ref<Map<number, { price_rappen: number; price_chf: string }>>(new Map()) // Price per duration
+const categoryAdminFeeRappen = ref(0)
+const categoryAdminFeeAppliesFrom = ref(2)
 const currentWeek = ref(1)
 const maxWeek = ref(4)
 
@@ -2023,6 +2040,8 @@ const loadLocationsForAllStaff = async (generateTimeSlots: boolean = false) => {
     
     // Reset prices map for new category
     durationPrices.value.clear()
+    categoryAdminFeeRappen.value = 0
+    categoryAdminFeeAppliesFrom.value = 2
     
     // Load prices for all available durations in parallel
     logger.debug('💰 Loading prices for all durations...')
@@ -2384,6 +2403,14 @@ const loadPricingForDuration = async (duration: number) => {
         price_rappen: (response as any).price_rappen,
         price_chf: (response as any).price_chf
       })
+      // Store admin fee info (same for all durations within a category)
+      const pricing = (response as any).pricing
+      if (pricing?.admin_fee_rappen !== undefined) {
+        categoryAdminFeeRappen.value = Number(pricing.admin_fee_rappen) || 0
+      }
+      if (pricing?.admin_fee_applies_from !== undefined) {
+        categoryAdminFeeAppliesFrom.value = Number(pricing.admin_fee_applies_from) || 2
+      }
       logger.debug('✅ Pricing loaded:', {
         duration,
         price_chf: (response as any).price_chf
@@ -2559,6 +2586,8 @@ const selectMainCategory = async (category: any) => {
     
     // Reset prices map for new category
     durationPrices.value.clear()
+    categoryAdminFeeRappen.value = 0
+    categoryAdminFeeAppliesFrom.value = 2
     
     // Load prices for all available durations in parallel
     logger.debug('💰 Loading prices for all durations...')
@@ -2617,6 +2646,8 @@ const selectSubcategory = async (category: any) => {
   
   // Reset prices map for new category
   durationPrices.value.clear()
+  categoryAdminFeeRappen.value = 0
+  categoryAdminFeeAppliesFrom.value = 2
   
   // Reset pickup state
   pickupPLZ.value = ''
@@ -3309,6 +3340,7 @@ const successMessage = ref({
 const previewPriceRappen = ref(0)
 const previewAdminFeeRappen = ref(0)
 const previewAdminFeeReason = ref<string | null>(null)
+const previewAppointmentNumber = ref<number | null>(null)
 const bookingDiscount = ref<{ code: string; discountAmountRappen: number; discountData: any } | null>(null)
 const bookingCreditRappen = ref(0)
 
@@ -3352,6 +3384,7 @@ watch(currentStep, async (step) => {
         previewPriceRappen.value = res.price_rappen
         previewAdminFeeRappen.value = res.admin_fee_rappen ?? 0
         previewAdminFeeReason.value = res.admin_fee_reason ?? null
+        previewAppointmentNumber.value = res.appointment_number ?? null
       }
     } catch (err) {
       logger.warn('⚠️ Could not load price preview:', err)
