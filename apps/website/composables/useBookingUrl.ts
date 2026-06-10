@@ -107,6 +107,11 @@ export const useBookingUrl = () => {
       if (encoded) queryParams.append('dt_attr', encoded)
     }
 
+    // Referrer — current page URL so the booking page can navigate back
+    if (typeof window !== 'undefined' && window.location.href) {
+      queryParams.append('referrer', window.location.href)
+    }
+
     const queryString = queryParams.toString()
     return queryString ? `${url}?${queryString}` : url
   }

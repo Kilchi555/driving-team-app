@@ -11,9 +11,8 @@ import { encodeAttribution } from '~/utils/attribution-encode'
 export default defineNuxtPlugin((nuxtApp) => {
   const enrichBookingLinks = () => {
     const sessionId = (window as any).__analyticsSessionId || ''
-    if (!sessionId) return
-
     const attributionBlob = encodeAttribution((window as any).__dtMarketingAttribution)
+    const currentUrl = window.location.href
 
     // Enrich all simy.ch outbound links (booking AND customer/course links)
     const bookingLinks = document.querySelectorAll('a[href*="simy.ch"]')
@@ -25,11 +24,14 @@ export default defineNuxtPlugin((nuxtApp) => {
       let newHref = href
       const params: string[] = []
 
-      if (!newHref.includes('session_id=')) {
+      if (sessionId && !newHref.includes('session_id=')) {
         params.push(`session_id=${sessionId}`)
       }
       if (attributionBlob && !newHref.includes('dt_attr=')) {
         params.push(`dt_attr=${attributionBlob}`)
+      }
+      if (currentUrl && !newHref.includes('referrer=') && newHref.includes('/booking/')) {
+        params.push(`referrer=${encodeURIComponent(currentUrl)}`)
       }
       if (params.length === 0) return
 
