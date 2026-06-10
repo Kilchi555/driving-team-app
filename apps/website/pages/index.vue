@@ -276,7 +276,7 @@
     <!-- Facts Section -->
     <StatsSection />
 
-    <ReviewsSection />
+    <ReviewsSection category="zuerich" />
 
 
     <!-- Courses Section -->
@@ -632,6 +632,39 @@
           </summary>
           <p class="text-gray-600 mt-4">Wir sind Freunde des Online-Payments. Das heisst du kannst alle unsere Fahrlektionen und Kurse direkt online bezahlen. Möchtest du lieber bar bezahlen, ist das natürlich auch möglich. Für Firmen erstellen wir natürlich auch Rechnungen.</p>
         </details>
+
+        <!-- Zürich-spezifische FAQs -->
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Welches sind die häufigsten Prüfungsrouten ab Zürich-Albisgütli?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Die praktische Fahrprüfung in Zürich findet am Strassenverkehrsamt Albisgütli statt. Häufige Prüfungsrouten führen nach: Enge/Wollishofen/Kilchberg, Leimbach/Adliswil/Thalwil, Sihlcity/Wettswil/Ringlikon, Uitikon Waldegg/Birmensdorf sowie Wiedikon/Albisrieden/Altstetten. Wir üben alle Routen mit euch – damit es bei der Prüfung keine bösen Überraschungen gibt.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Sind Fahrstunden in englischer oder albanischer Sprache möglich?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Ja, absolut! Wir bieten Fahrstunden auch auf Englisch und Albanisch an. Gerade in Zürich, wo viele internationale Einwohner leben, ist das ein echter Vorteil. Einfach beim Buchen oder per E-Mail angeben, in welcher Sprache du den Unterricht möchtest.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Wie lange ist der Lernfahrausweis gültig?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Der Lernfahrausweis ist 24 Monate ab Ausstellungsdatum gültig. Du kannst ihn kostenlos beim Strassenverkehrsamt einmalig um weitere 24 Monate verlängern, sofern du noch keine Fahrprüfung abgelegt hast. Wir empfehlen, die Ausbildung innerhalb von 12 Monaten zu absolvieren, damit das Gelernte frisch bleibt.</p>
+        </details>
+
+        <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
+          <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
+            Welche Kategorien bietet die Fahrschule Zürich Driving Team an?
+            <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
+          </summary>
+          <p class="text-gray-600 mt-4">Am Hauptstandort Zürich-Altstetten bieten wir Fahrstunden für: Kategorie B (Auto), A1/A35kW/A (Motorrad), BE (Anhänger), C1/C/CE (Lastwagen), BPT 121/122 (Taxi), D1/D (Bus) und Motorboot (ab Lachen/SZ). Dazu Kurse wie Nothelfer, VKU, CZV, WAB und Motorrad-Grundkurs.</p>
+        </details>
       </div>
 
       <div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-8 text-center mt-12">
@@ -643,6 +676,7 @@
     </section>
 
     <PriceSection />
+    <InstructorProfileSection :instructors="instructors" />
     <AusbildungsthemenSection />
     <GutscheinSection />
     <StandorteSection />
@@ -709,10 +743,15 @@
 </template>
 
 <script setup lang="ts">
-import { BUSINESS, buildHomepageSchema } from '~/business.config'
+import InstructorProfileSection from '~/components/InstructorProfileSection.vue'
+import { getInstructorsByLocation } from '~/instructor-data'
+import { BUSINESS, buildHomepageSchema, buildLocationSchema, LOCATION_ZUERICH } from '~/business.config'
+
+const instructors = getInstructorsByLocation('zuerich')
 
 const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML: JSON.stringify(buildHomepageSchema()) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify(buildLocationSchema(LOCATION_ZUERICH)) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -728,13 +767,15 @@ const jsonLdScripts = [
       {"@type": "Question", "name": "Was sind die Voraussetzungen, um private Lernfahrten durchführen zu dürfen?", "acceptedAnswer": {"@type": "Answer", "text": "Begleitperson: gültiger Führerschein, nüchtern (0,0 Promille), beim Auto mind. 23 Jahre alt und Prüfung vor mind. 3 Jahren bestanden. Handbremse muss erreichbar sein."}},
       {"@type": "Question", "name": "Was ist die Admin- und Versicherungspauschale?", "acceptedAnswer": {"@type": "Answer", "text": "Einmalige Pauschale für die ganze Fahrausbildung. Beinhaltet Verwaltungsaufwände und die Vollkaskoversicherung des Fahrschulfahrzeugs."}},
       {"@type": "Question", "name": "Was haben eure Fahrlehrer:innen für eine Ausbildung?", "acceptedAnswer": {"@type": "Answer", "text": "Alle haben einen eidgenössischen Fachausweis und absolvieren jährlich mindestens einen Weiterbildungstag. Kontinuierliches Lernen ist uns wichtig."}},
-      {"@type": "Question", "name": "Warum sind eure Verkehrskundekurse so teuer?", "acceptedAnswer": {"@type": "Answer", "text": "Wir bieten hochwertige Inhalte und praxisnahe Themen, die direkt in den Fahrstunden umgesetzt werden können. Das reduziert letztlich die benötigten Fahrstunden."}}
+      {"@type": "Question", "name": "Warum sind eure Verkehrskundekurse so teuer?", "acceptedAnswer": {"@type": "Answer", "text": "Wir bieten hochwertige Inhalte und praxisnahe Themen, die direkt in den Fahrstunden umgesetzt werden können. Das reduziert letztlich die benötigten Fahrstunden."}},
+      {"@type": "Question", "name": "Welches sind die häufigsten Prüfungsrouten ab Zürich-Albisgütli?", "acceptedAnswer": {"@type": "Answer", "text": "Häufige Prüfungsrouten ab dem Strassenverkehrsamt Albisgütli: Enge/Wollishofen/Kilchberg, Leimbach/Adliswil/Thalwil, Sihlcity/Wettswil/Ringlikon, Uitikon Waldegg/Birmensdorf sowie Wiedikon/Albisrieden/Altstetten."}},
+      {"@type": "Question", "name": "Sind Fahrstunden in englischer oder albanischer Sprache möglich?", "acceptedAnswer": {"@type": "Answer", "text": "Ja, wir bieten Fahrstunden auch auf Englisch und Albanisch an. Einfach beim Buchen oder per E-Mail angeben."}},
+      {"@type": "Question", "name": "Wie lange ist der Lernfahrausweis gültig?", "acceptedAnswer": {"@type": "Answer", "text": "Der Lernfahrausweis ist 24 Monate gültig und kann einmalig kostenlos verlängert werden. Wir empfehlen, die Ausbildung innerhalb von 12 Monaten abzuschliessen."}},
+      {"@type": "Question", "name": "Welche Kategorien bietet die Fahrschule Zürich Driving Team an?", "acceptedAnswer": {"@type": "Answer", "text": "Am Hauptstandort Zürich-Altstetten: Kategorie B (Auto), A1/A35kW/A (Motorrad), BE (Anhänger), C1/C/CE (Lastwagen), BPT 121/122 (Taxi), D1/D (Bus) und Motorboot (ab Lachen/SZ)."}}
     ]
-  }) },
+  }) }
 ]
 useHead({ script: jsonLdScripts })
-
-// Homepage - exactly matching old drivingteam.ch structure
 </script>
 
 <style scoped>
