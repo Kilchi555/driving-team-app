@@ -4584,6 +4584,11 @@ onMounted(async () => {
             await selectMainCategory(categoryToSelect)
             logger.debug('✅ Main category pre-selected, showing subcategory selection')
           }
+        } else if (!prefill && route.query.service === 'fahrstunde') {
+          // ?service=fahrstunde — skip service type selection, show category list
+          logger.debug('🎯 Service deep-link: fahrstunde → go to category selection')
+          selectedServiceType.value = 'fahrstunde'
+          currentStep.value = 1
         } else if (!prefill) {
           // No URL-based prefill → restore last session from localStorage
           await restoreBookingPrefs()
