@@ -1,15 +1,15 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Zürich & Lachen | Auto, Anhänger & Lastwagen</Title>
-      <Meta name="description" content="Fahrschule Zürich & Lachen – ab CHF 95.–, 85% Prüfungserfolg, diplom. Fahrlehrer. Auto, Motorrad, Anhänger, Lastwagen. Jetzt online Termin buchen!" />
-      <Meta name="keywords" content="Fahrschule Zürich, Auto Fahrschule Zürich, Fahrschule Lachen, Motorrad Fahrschule Zürich, Anhänger Fahrschule Zürich, Lastwagen Fahrschule Zürich, Taxi Fahrschule Zürich, Bus Fahrschule Zürich, Motorboot Fahrschule Lachen" />
+      <Title>Fahrschule Zürich | Auto, Motorrad, Anhänger & Lastwagen | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Zürich – Driving Team. Ab CHF 95.–, 85% Prüfungserfolg, diplom. Fahrlehrer. Auto, Motorrad, Anhänger, Lastwagen, Taxi. Standort Zürich-Altstetten. Jetzt online Termin buchen!" />
+      <Meta name="keywords" content="Fahrschule Zürich, Auto Fahrschule Zürich, Fahrstunden Zürich, Fahrlehrer Zürich, Motorrad Fahrschule Zürich, Anhänger Fahrschule Zürich, Lastwagen Fahrschule Zürich, Taxi Fahrschule Zürich, Fahrschule Zürich-Altstetten" />
       <Meta name="author" content="Driving Team" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
       
       <!-- Open Graph -->
-      <Meta property="og:title" content="Fahrschule Zürich & Lachen | Driving Team - Wir sind Profis für allen Kategorien" />
-      <Meta property="og:description" content="Professionelle Fahrschule in Zürich & Lachen. Auto, Motorrad, Anhänger, Lastwagen, Motorboot, etc. 85% Erfolgsquote, flexible Zeiten." />
+      <Meta property="og:title" content="Fahrschule Zürich | Driving Team – Auto, Motorrad, Anhänger & mehr" />
+      <Meta property="og:description" content="Professionelle Fahrschule in Zürich-Altstetten. Auto, Motorrad, Anhänger, Lastwagen, Taxi, Motorboot. 85% Erfolgsquote, flexible Zeiten, ab CHF 95.–." />
       <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
@@ -20,8 +20,8 @@
       
       <!-- Twitter Card -->
       <Meta name="twitter:card" content="summary_large_image" />
-      <Meta name="twitter:title" content="Fahrschule Zürich & Lachen | Driving Team" />
-      <Meta name="twitter:description" content="Auto, Motorrad, Taxi & Lastwagen Fahrschule in Zürich - professionelle Fahrausbildung mit hoher Prüfungserfolgsquote" />
+      <Meta name="twitter:title" content="Fahrschule Zürich | Driving Team – alle Kategorien" />
+      <Meta name="twitter:description" content="Auto, Motorrad, Taxi & Lastwagen Fahrschule in Zürich-Altstetten – professionelle Fahrausbildung, 85% Prüfungserfolg, ab CHF 95.–" />
       
       <!-- Canonical & Language -->
       <Link rel="canonical" href="https://drivingteam.ch/" />
@@ -34,15 +34,13 @@
       <div class="absolute inset-0 bg-white"></div>
 
       <div class="relative z-10 w-full flex flex-col items-center justify-center text-center text-gray-900 px-2 md:px-6">
-        <!-- Hero Headline (optimiert für SEO, dezent gestylt) -->
-        <div>
-          <h1 class="text-sm md:text-base font-semibold text-gray-600 tracking-widest uppercase m-4">
-            <span>Fahrschule Zürich & Lachen</span>
-            <span class="hidden md:inline"> – </span>
-            <span class="block md:inline">Alle Kategorien</span>
+        <!-- Hero Headline -->
+        <div class="mb-3">
+          <h1 class="text-3xl md:text-5xl font-black text-gray-900 leading-tight mb-3">
+            Fahrschule <span class="text-primary-600">Zürich</span>
           </h1>
-          <p class="sr-only">
-            Professionelle Fahrschule in Zürich & Lachen. Ab CHF 95.-/Lektion mit 85% Erfolgsquote.
+          <p class="text-sm md:text-base text-gray-500 font-medium mb-4">
+            Zürich-Altstetten · alle Kategorien · ab CHF 95.–
           </p>
         </div>
         <!-- Trust Bar + Booking CTA -->
@@ -69,7 +67,7 @@
           „Bestehe deine Fahrprüfung<br>mit uns beim <span class="text-primary-600">1. Versuch!"</span>
         </p>
         <div class="w-full max-w-7xl">
-          <h2 class="sr-only">Fahrschule in Zürich für alle Kategorien</h2>
+          <h2 class="sr-only">Fahrschule Zürich – alle Führerschein-Kategorien</h2>
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 lg:gap-8 px-2 md:px-4">
             <!-- Auto -->
             <a href="/auto-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
@@ -284,13 +282,13 @@
     <!-- Courses Section -->
     <section class="py-20 bg-white scroll-mt-20">
       <div class="max-w-7xl mx-auto px-4">
-        <div class="mb-16">
+          <div class="mb-16">
           <h2 class="text-2xl md:text-3xl font-bold text-gray-900 max-w-3xl mx-auto mb-6 text-center">
-            Fahrschule in Zürich & Lachen
+            Fahrschule Zürich – alle Kategorien
           </h2>
           <div class="max-w-3xl mx-auto space-y-3 text-gray-600 text-center">
             <p class="text-base md:text-lg leading-relaxed">
-              Der Hauptstandort ist in <strong>Zürich</strong>. Die Nothelfer, Verkehrskunde und Theorie-Kurse finden jedoch an beiden Standorten statt.
+              Die Driving Team Fahrschule hat ihren <strong>Hauptstandort in Zürich-Altstetten</strong> – direkt beim Bahnhof Altstetten, gut erreichbar aus dem ganzen Stadtgebiet. Wir bilden in allen Führerschein-Kategorien aus: Auto, Motorrad, Anhänger, Lastwagen, Taxi und Motorboot. Nothelfer, Verkehrskunde und Theorie-Kurse finden auch am zweiten Standort in <a href="/fahrschule-lachen/" class="text-primary-600 hover:underline font-medium">Lachen SZ</a> statt.
             </p>
             <ul class="space-y-3 inline-block text-left mx-auto mt-2">
               <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
@@ -468,12 +466,12 @@
     <!-- Link zu Lachen Section -->
     <section class="py-12 bg-gray-50 border-t border-gray-200">
       <div class="max-w-5xl mx-auto px-4 text-center">
-        <p class="text-lg text-gray-700 mb-6">Fahrstunden in <b>Zürich & Lachen/SZ</b> verfügbar</p>
+        <p class="text-lg text-gray-700 mb-6">Unsere Standorte: <b>Zürich-Altstetten</b> und <b>Lachen/SZ</b></p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="/fahrstunden-zuerich/" class="inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-primary-700 transition">
-            → Fahrstunden Zürich
+            🚗 Fahrstunden Zürich
           </a>
-          <a href="/fahrschule-lachen/" class="inline-flex items-center gap-2 bg-green-700 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-800 transition">
+          <a href="/fahrschule-lachen/" class="inline-flex items-center gap-2 bg-white border-2 border-green-700 text-green-700 font-bold py-3 px-8 rounded-lg hover:bg-green-50 transition">
             → Fahrschule Lachen
           </a>
         </div>
