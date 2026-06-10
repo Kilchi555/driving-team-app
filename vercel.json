@@ -129,10 +129,14 @@
       "path": "/api/cron/sync-marketing-meta-ads",
       "schedule": "20 4 * * *"
     },
-    {
-      "path": "/api/cron/weekly-marketing-review",
-      "schedule": "0 7 * * 1"
-    },
+      {
+        "path": "/api/cron/weekly-marketing-review",
+        "schedule": "0 7 * * 1"
+      },
+      {
+        "path": "/api/cron/send-marketing-report",
+        "schedule": "30 7 * * 1"
+      },
     {
       "path": "/api/cron/check-credentials",
       "schedule": "0 8 * * 1"
