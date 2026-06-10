@@ -10,19 +10,11 @@
           v-for="(topic, i) in topics"
           :key="i"
           ref="cardRefs"
-          class="group rounded-xl p-6 border border-gray-100 transition-all duration-400"
-          :class="activeIndex === i
-            ? 'bg-[#017cb3] border-transparent shadow-[0_8px_24px_rgba(1,124,179,0.35)]'
-            : 'bg-gray-50 hover:bg-[#017cb3] hover:border-transparent hover:shadow-[0_8px_24px_rgba(1,124,179,0.35)] hover:-translate-y-0.5 lg:hover:bg-[#017cb3]'"
+          class="ausbildung-card rounded-xl p-6 border"
+          :class="activeIndex === i ? 'is-active' : ''"
         >
-          <h3
-            class="font-bold mb-2 transition-colors duration-400"
-            :class="activeIndex === i ? 'text-white' : 'text-gray-900 group-hover:text-white'"
-          >{{ topic.icon }} {{ topic.title }}</h3>
-          <p
-            class="text-sm transition-colors duration-400"
-            :class="activeIndex === i ? 'text-white' : 'text-gray-500 group-hover:text-white'"
-          >{{ topic.text }}</p>
+          <h3 class="font-bold mb-2 card-title">{{ topic.icon }} {{ topic.title }}</h3>
+          <p class="text-sm card-text">{{ topic.text }}</p>
         </div>
       </div>
     </div>
@@ -48,65 +40,117 @@ const topics = [
 
 const cardRefs = ref<HTMLElement[]>([])
 const activeIndex = ref<number | null>(null)
-let observer: IntersectionObserver | null = null
+let rafId: number | null = null
+let isMobile = false
 
-function getColumns(): number {
-  if (window.innerWidth >= 1024) return 3
-  if (window.innerWidth >= 768) return 2
-  return 1
+function isSingleColumn(): boolean {
+  return window.innerWidth < 768
 }
 
-function setupObserver() {
-  if (observer) observer.disconnect()
+// Find the card whose center is closest to the viewport center
+function updateActiveCard() {
+  if (!isMobile) return
+  const viewportCenter = window.innerHeight / 2
+  let closestIndex = 0
+  let closestDistance = Infinity
 
-  if (getColumns() >= 2) {
-    activeIndex.value = null
-    return
+  cardRefs.value.forEach((card, i) => {
+    if (!card) return
+    const rect = card.getBoundingClientRect()
+    const cardCenter = rect.top + rect.height / 2
+    const distance = Math.abs(cardCenter - viewportCenter)
+    if (distance < closestDistance) {
+      closestDistance = distance
+      closestIndex = i
+    }
+  })
+
+  if (activeIndex.value !== closestIndex) {
+    activeIndex.value = closestIndex
   }
-
-  // Use IntersectionObserver to find the most visible card — no getBoundingClientRect needed
-  observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        const index = cardRefs.value.indexOf(entry.target as HTMLElement)
-        if (index === -1) return
-        if (entry.intersectionRatio > 0.5) {
-          activeIndex.value = index
-        }
-      })
-    },
-    { threshold: [0.5] }
-  )
-
-  cardRefs.value.forEach((el) => observer!.observe(el))
 }
 
 function onScroll() {
-  if (getColumns() >= 2) {
-    activeIndex.value = null
-  }
+  if (!isMobile) return
+  if (rafId !== null) return
+  rafId = requestAnimationFrame(() => {
+    rafId = null
+    updateActiveCard()
+  })
 }
 
 function onResize() {
-  if (getColumns() >= 2) {
+  isMobile = isSingleColumn()
+  if (!isMobile) {
     activeIndex.value = null
-    observer?.disconnect()
   } else {
-    setupObserver()
+    updateActiveCard()
   }
 }
 
 onMounted(() => {
+  isMobile = isSingleColumn()
+  if (isMobile) updateActiveCard()
+
   window.addEventListener('scroll', onScroll, { passive: true })
   window.addEventListener('resize', onResize, { passive: true })
-  onScroll()
 })
 
 onUnmounted(() => {
   window.removeEventListener('scroll', onScroll)
   window.removeEventListener('resize', onResize)
-  if (observer) observer.disconnect()
+  if (rafId !== null) cancelAnimationFrame(rafId)
 })
 </script>
 
+<style scoped>
+.ausbildung-card {
+  border-color: #f3f4f6;
+  background-color: #f9fafb;
+  transform: scale(1);
+  transition:
+    background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, background-color, box-shadow;
+}
+
+/* Desktop hover (non-mobile only) */
+@media (hover: hover) {
+  .ausbildung-card:hover {
+    background-color: #017cb3;
+    border-color: transparent;
+    box-shadow: 0 8px 24px rgba(1, 124, 179, 0.35);
+    transform: translateY(-2px);
+  }
+  .ausbildung-card:hover .card-title,
+  .ausbildung-card:hover .card-text {
+    color: #ffffff;
+  }
+}
+
+/* Mobile scroll-activated state */
+.ausbildung-card.is-active {
+  background-color: #017cb3;
+  border-color: transparent;
+  box-shadow: 0 8px 32px rgba(1, 124, 179, 0.4);
+  transform: scale(1.02);
+}
+
+.card-title {
+  color: #111827;
+  transition: color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-text {
+  color: #6b7280;
+  transition: color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ausbildung-card.is-active .card-title,
+.ausbildung-card.is-active .card-text {
+  color: #ffffff;
+}
+</style>
 
