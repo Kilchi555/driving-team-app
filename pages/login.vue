@@ -1200,6 +1200,8 @@ const handlePasswordReset = async () => {
       }
     } else if (response?.code === 'NOT_FOUND') {
       resetNotFound.value = resetContactMethod.value
+    } else if (response?.code === 'NO_EMAIL') {
+      resetError.value = 'Ihr Account hat keine E-Mail-Adresse hinterlegt. Bitte kontaktieren Sie Ihre Fahrschule.'
     } else {
       resetError.value = response?.message || 'Fehler beim Senden des Magic Links. Bitte versuchen Sie es später erneut.'
     }

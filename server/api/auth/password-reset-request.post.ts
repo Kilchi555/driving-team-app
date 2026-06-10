@@ -114,7 +114,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // If phone number not found, try with different formatting
-    if ((userError || !user) && method === 'sms') {
+    if ((userError || !user) && normalizedMethod === 'sms') {
       console.log('[PasswordReset] Phone not found with exact format, trying normalized format...')
       
       const normalizedPhone = contact.replace(/[^\d+]/g, '')

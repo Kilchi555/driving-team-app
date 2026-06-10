@@ -64,7 +64,9 @@
         </div>
 
         <!-- Password Reset Form -->
-        <form v-else @submit.prevent="handleReset" class="space-y-4">
+        <form v-else @submit.prevent="handleReset" class="space-y-4" autocomplete="on">
+          <!-- Hidden username hint so password managers associate the new password with the account -->
+          <input type="text" autocomplete="username" style="display:none" tabindex="-1" aria-hidden="true">
           <!-- New Password Input -->
           <div>
             <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
@@ -75,6 +77,8 @@
                 id="password"
                 v-model="form.password"
                 :type="showPassword ? 'text' : 'password'"
+                name="new-password"
+                autocomplete="new-password"
                 required
                 class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                 :style="{ '--tw-ring-color': primaryColor || '#2563eb' }"
@@ -151,6 +155,8 @@
                 id="confirmPassword"
                 v-model="form.confirmPassword"
                 :type="showConfirmPassword ? 'text' : 'password'"
+                name="confirm-new-password"
+                autocomplete="new-password"
                 required
                 class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                 :style="{ '--tw-ring-color': primaryColor || '#2563eb' }"
