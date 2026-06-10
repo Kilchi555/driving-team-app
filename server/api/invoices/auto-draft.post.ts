@@ -146,12 +146,14 @@ export default defineEventHandler(async (event) => {
   dueDate.setDate(dueDate.getDate() + 30)
 
   // Draft-Objekt zusammenstellen
-  // BRUTTO-Subtotal: Zahlung-Nettobeträge + alle Abzüge zurückgerechnet (für korrekten Rechnungsaufbau)
+  // BRUTTO-Subtotal: total_amount_rappen enthält bereits (Preis - Rabatt), aber NICHT Guthaben.
+  // Deshalb werden nur Rabatte zurückaddiert, um den echten Bruttopreis zu erhalten.
+  // Guthaben (credit_used_rappen) ist eine separate Zahlungsart und darf hier NICHT addiert werden –
+  // es würde den Brutto aufblasen und die Credits hätten keinen Effekt auf die Rechnungssumme.
   const getGrossAmount = (p: any) =>
     (p.total_amount_rappen || 0) +
     (p.discount_amount_rappen || 0) +
-    ((p as any).voucher_discount_rappen || 0) +
-    (p.credit_used_rappen || 0)
+    ((p as any).voucher_discount_rappen || 0)
 
   const subtotal = openPayments.reduce((sum, p) => sum + getGrossAmount(p), 0)  // Brutto
   const totalDiscounts = openPayments.reduce((sum, p) => sum + (p.discount_amount_rappen || 0) + ((p as any).voucher_discount_rappen || 0), 0)
