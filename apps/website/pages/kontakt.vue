@@ -82,7 +82,7 @@
           <div>
             <p class="text-xs uppercase tracking-widest text-gray-400 mb-3">Termin buchen</p>
             <a
-              href="https://app.simy.ch/booking/availability/driving-team"
+              href="https://app.simy.ch/booking/availability/driving-team?service=fahrstunde"
               target="_blank"
               rel="noopener noreferrer"
               class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition"
@@ -125,7 +125,7 @@
               Kann ich direkt online einen Termin buchen?
               <span class="text-primary-500 group-open:rotate-180 transition text-sm ml-4 shrink-0">▼</span>
             </summary>
-            <p class="text-gray-600 mt-3 text-sm">Ja! Unter <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" class="text-primary-600 hover:underline">simy.ch/booking</a> kannst du rund um die Uhr verfügbare Fahrstunden direkt buchen – ohne Wartezeit und ohne Anruf.</p>
+            <p class="text-gray-600 mt-3 text-sm">Ja! Unter <a href="https://app.simy.ch/booking/availability/driving-team?service=fahrstunde" target="_blank" class="text-primary-600 hover:underline">simy.ch/booking</a> kannst du rund um die Uhr verfügbare Fahrstunden direkt buchen – ohne Wartezeit und ohne Anruf.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
@@ -133,7 +133,7 @@
               Gibt es Fahrstunden am Abend oder am Wochenende?
               <span class="text-primary-500 group-open:rotate-180 transition text-sm ml-4 shrink-0">▼</span>
             </summary>
-            <p class="text-gray-600 mt-3 text-sm">Ja, wir bieten flexible Zeiten – auch abends und begrenzt samstags. Die aktuell verfügbaren Termine siehst du direkt in unserem <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" class="text-primary-600 hover:underline">Online-Buchungssystem</a>.</p>
+            <p class="text-gray-600 mt-3 text-sm">Ja, wir bieten flexible Zeiten – auch abends und begrenzt samstags. Die aktuell verfügbaren Termine siehst du direkt in unserem <a href="https://app.simy.ch/booking/availability/driving-team?service=fahrstunde" target="_blank" class="text-primary-600 hover:underline">Online-Buchungssystem</a>.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-5 cursor-pointer hover:shadow-sm transition group">
@@ -274,7 +274,7 @@
       <div class="section-container text-center">
         <h2 class="heading-md mb-4 text-white">Bereit loszulegen?</h2>
         <p class="text-white mb-6">Buch direkt online oder schreib uns – wir begleiten dich auf dem Weg zum Führerausweis.</p>
-        <a href="https://app.simy.ch/booking/availability/driving-team" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+        <a href="https://app.simy.ch/booking/availability/driving-team?service=fahrstunde" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           📅 Jetzt Termin buchen
         </a>
       </div>
