@@ -37,7 +37,7 @@
               Fahrschule
             </button>
             <div class="absolute left-0 mt-0 w-72 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition hidden group-hover:block z-50 py-2">
-              <a href="/fahrschule-zuerich/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Zürich</a>
+              <a href="/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Zürich</a>
               <a href="/fahrschule-lachen/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Lachen</a>
               <a href="/fahrschule-pfaeffikon-sz/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Pfäffikon SZ</a>
               <a href="/fahrschule-uster/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2 whitespace-nowrap">📍 Fahrschule Uster</a>
@@ -229,7 +229,7 @@
             <svg class="w-4 h-4 transition-transform duration-200" :class="openSection === 'fahrschule' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </button>
           <div v-show="openSection === 'fahrschule'" class="pl-2 py-2 space-y-1">
-            <a href="/fahrschule-zuerich/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Zürich</a>
+            <a href="/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Zürich</a>
             <a href="/fahrschule-lachen/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Lachen</a>
             <a href="/fahrschule-pfaeffikon-sz/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Pfäffikon SZ</a>
             <a href="/fahrschule-uster/" class="block text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">📍 Uster</a>
@@ -439,7 +439,7 @@
           <div>
             <h3 class="font-bold text-lg mb-5">Unsere Gebiete</h3>
             <ul class="space-y-2 text-sm text-gray-300">
-              <li><a href="/fahrschule-zuerich/" class="hover:text-white transition">Fahrschule Zürich</a></li>
+              <li><a href="/" class="hover:text-white transition">Fahrschule Zürich</a></li>
               <li><a href="/fahrschule-lachen/" class="hover:text-white transition">Fahrschule Lachen</a></li>
               <li><a href="/fahrschule-pfaeffikon-sz/" class="hover:text-white transition">Fahrschule Pfäffikon SZ</a></li>
               <li><a href="/fahrschule-uster/" class="hover:text-white transition">Fahrschule Uster</a></li>

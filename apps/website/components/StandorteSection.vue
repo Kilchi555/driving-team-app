@@ -5,7 +5,7 @@
       <p class="text-center text-gray-600 text-lg mb-12">Fahrschule Driving Team - Fahrstunden in deiner Region</p>
 
       <div class="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <a v-if="exclude !== 'zuerich'" href="/fahrschule-zuerich/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
+        <a v-if="exclude !== 'zuerich'" href="/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
           <div class="h-32 bg-gradient-to-br from-primary-50 to-primary-100 overflow-hidden">
             <img src="/images/locations/zuerich-hero.webp" alt="Fahrschule Zürich" loading="lazy" class="w-full h-full object-cover" />
           </div>

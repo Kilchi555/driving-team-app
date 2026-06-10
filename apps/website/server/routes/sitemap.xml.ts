@@ -62,12 +62,6 @@ export default defineEventHandler((event) => {
 
   <!-- ===== STANDORTSEITEN ===== -->
   <url>
-    <loc>https://drivingteam.ch/fahrschule-zuerich/</loc>
-    <lastmod>2026-04-03</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
     <loc>https://drivingteam.ch/fahrstunden-zuerich/</loc>
     <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>
