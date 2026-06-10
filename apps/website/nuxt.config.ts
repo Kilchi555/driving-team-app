@@ -16,6 +16,10 @@ export default defineNuxtConfig({
         ad_storage: 'denied',
         wait_for_update: 500,
       }],
+      // Register Google Ads account so conversion events can be fired
+      ...(process.env.NUXT_PUBLIC_GOOGLE_ADS_ID
+        ? [['config', process.env.NUXT_PUBLIC_GOOGLE_ADS_ID] as [string, string]]
+        : []),
     ],
     config: {
       anonymize_ip: true,
@@ -44,9 +48,10 @@ export default defineNuxtConfig({
       placesIdLachen: process.env.GOOGLE_PLACE_ID_LACHEN ?? '',
       // Meta Pixel – set NUXT_PUBLIC_META_PIXEL_ID in Vercel environment variables
       metaPixelId: process.env.NUXT_PUBLIC_META_PIXEL_ID ?? '',
-      // Google Ads – set NUXT_PUBLIC_GOOGLE_ADS_ID (AW-XXXXXXXXX) and conversion label
+      // Google Ads – set NUXT_PUBLIC_GOOGLE_ADS_ID (AW-XXXXXXXXX) and conversion labels
       googleAdsId: process.env.NUXT_PUBLIC_GOOGLE_ADS_ID ?? '',
       googleAdsConversionLabel: process.env.NUXT_PUBLIC_GOOGLE_ADS_CONVERSION_LABEL ?? '',
+      googleAdsPhoneConversionLabel: process.env.NUXT_PUBLIC_GOOGLE_ADS_PHONE_CONVERSION_LABEL ?? '',
     },
   },
 
@@ -223,6 +228,10 @@ export default defineNuxtConfig({
 
     // ===== FEHLENDE REDIRECTS FÜR GSC COVERAGE VALIDATION =====
     // HINWEIS: /kontrollfahrt hat eine eigene .vue Seite → kein Redirect
+
+    // Fahrschule Zürich → Homepage (Cannibalization-Fix: Homepage ist jetzt die Zürich-Seite)
+    '/fahrschule-zuerich': { redirect: { to: '/', statusCode: 301 } },
+    '/fahrschule-zuerich/': { redirect: { to: '/', statusCode: 301 } },
 
     // HINWEIS: /team, /blog, /kontakt, /agb, /datenschutz, /faq wurden entfernt,
     // da eigene .vue Seiten existieren und die Redirects Endlosloops verursachen.
