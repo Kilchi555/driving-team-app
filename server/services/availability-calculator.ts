@@ -1005,38 +1005,12 @@ export class AvailabilityCalculator {
     }
 
     try {
-      // CLEAN SLATE: Delete ALL availability slots for this tenant/staff and recalculate from scratch
-      // This is much simpler and more reliable than trying to delete specific ranges
-      logger.debug('🗑️ Deleting ALL existing slots for recalculation (clean slate approach)...')
-      
-      let deleteAllQuery = this.supabase.from('availability_slots').delete()
-
-      if (tenantId) {
-        deleteAllQuery = deleteAllQuery.eq('tenant_id', tenantId)
-      }
-      if (staffId) {
-        deleteAllQuery = deleteAllQuery.eq('staff_id', staffId)
-      }
-
-      // Never delete slots that are actively reserved by a user mid-booking.
-      // A slot is "actively reserved" when reserved_by_session is set AND reserved_until is in the future.
-      const nowIso = new Date().toISOString()
-      deleteAllQuery = deleteAllQuery.or(
-        `reserved_by_session.is.null,reserved_until.is.null,reserved_until.lt.${nowIso}`
-      )
-
-      const { error: deleteAllError, count: deletedCount } = await deleteAllQuery
-
-      if (deleteAllError) {
-        logger.error('❌ Error deleting all slots:', deleteAllError)
-        throw deleteAllError
-      }
-      
-      logger.debug(`✅ Deleted ${deletedCount || 0} existing slots - recalculating from scratch`)
-
-      // Insert new slots in batches (Supabase limit: 1000 rows per insert)
-      // ✅ upsert instead of insert: prevents duplicates if two calculator processes run simultaneously
       const batchSize = 1000
+
+      // Step 1: Upsert new slots.
+      // onConflict on the natural key preserves the existing UUID for unchanged slots,
+      // so any slot_id a user loaded before recalculation remains valid after it.
+      logger.debug(`⬆️ Upserting ${slots.length} slots...`)
       let insertedCount = 0
 
       for (let i = 0; i < slots.length; i += batchSize) {
@@ -1050,14 +1024,69 @@ export class AvailabilityCalculator {
           })
 
         if (insertError) {
-          logger.error('❌ Error inserting batch:', insertError)
+          logger.error('❌ Error upserting batch:', insertError)
           throw insertError
         }
 
         insertedCount += batch.length
       }
 
-      logger.debug('✅ Slots written to database:', insertedCount)
+      logger.debug(`✅ Upserted ${insertedCount} slots`)
+
+      // Step 2: Delete stale slots whose natural key is no longer in the new set.
+      // Actively reserved slots (reserved_by_session set + reserved_until in the future)
+      // are always preserved even if they became stale, to avoid breaking ongoing bookings.
+      const newKeySet = new Set(
+        slots.map(s => `${s.staff_id}|${s.location_id}|${s.start_time}|${s.end_time}|${s.category_code}`)
+      )
+
+      let existingQuery = this.supabase
+        .from('availability_slots')
+        .select('id, staff_id, location_id, start_time, end_time, category_code, reserved_by_session, reserved_until')
+
+      if (tenantId) existingQuery = existingQuery.eq('tenant_id', tenantId)
+      if (staffId) existingQuery = existingQuery.eq('staff_id', staffId)
+
+      const { data: existingSlots, error: fetchError } = await existingQuery
+
+      if (fetchError) {
+        // Non-fatal: upsert already succeeded, skip stale cleanup rather than failing the whole job
+        logger.warn('⚠️ Could not fetch existing slots for stale-slot cleanup – skipping cleanup:', fetchError)
+        return insertedCount
+      }
+
+      const now = new Date()
+      const staleIds = (existingSlots ?? [])
+        .filter(s => {
+          const key = `${s.staff_id}|${s.location_id}|${s.start_time}|${s.end_time}|${s.category_code}`
+          if (newKeySet.has(key)) return false
+          // Keep actively reserved slots to avoid breaking an in-progress booking
+          const isActivelyReserved =
+            s.reserved_by_session && s.reserved_until && new Date(s.reserved_until) > now
+          return !isActivelyReserved
+        })
+        .map(s => s.id)
+
+      if (staleIds.length > 0) {
+        logger.debug(`🗑️ Deleting ${staleIds.length} stale slots...`)
+
+        for (let i = 0; i < staleIds.length; i += batchSize) {
+          const batchIds = staleIds.slice(i, i + batchSize)
+          const { error: deleteError } = await this.supabase
+            .from('availability_slots')
+            .delete()
+            .in('id', batchIds)
+
+          if (deleteError) {
+            logger.warn('⚠️ Error deleting stale slots batch (non-fatal):', deleteError)
+          }
+        }
+
+        logger.debug(`✅ Deleted ${staleIds.length} stale slots`)
+      } else {
+        logger.debug('✅ No stale slots to delete')
+      }
+
       return insertedCount
 
     } catch (error: any) {
