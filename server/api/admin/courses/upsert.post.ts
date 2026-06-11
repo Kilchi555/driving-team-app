@@ -6,6 +6,8 @@ import { logger } from '~/utils/logger'
 /**
  * POST /api/admin/courses/upsert
  * Creates or updates a course together with its sessions in one atomic sequence.
+ * If the course requires a room, room_bookings are created for each session
+ * after a conflict check.
  *
  * Body:
  *   courseData   – object with all course columns
@@ -104,6 +106,86 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug(`✅ ${sessions.length} sessions saved for course ${savedCourseId}`)
+  }
+
+  // Handle room bookings
+  const roomId: string | null = courseData.room_id || null
+  const requiresRoom: boolean = !!courseData.requires_room
+
+  if (requiresRoom && roomId && sessions && sessions.length > 0) {
+    // Build time slots for all sessions
+    const timeSlots = sessions.map((session: any) => ({
+      start_time: `${session.date}T${session.start_time}:00`,
+      end_time: `${session.date}T${session.end_time}:00`,
+    }))
+
+    // Cancel existing room bookings for this course (on update)
+    if (courseId) {
+      await supabase
+        .from('room_bookings')
+        .update({ status: 'cancelled' })
+        .eq('course_id', savedCourseId)
+        .neq('status', 'cancelled')
+    }
+
+    // Conflict check: are any of the slots already booked for this room?
+    const conflicts: string[] = []
+    for (const slot of timeSlots) {
+      const { data: existing } = await supabase
+        .from('room_bookings')
+        .select('id, start_time, end_time, course_id')
+        .eq('room_id', roomId)
+        .neq('status', 'cancelled')
+        .neq('course_id', savedCourseId) // exclude own bookings
+        .lt('start_time', slot.end_time)
+        .gt('end_time', slot.start_time)
+
+      if (existing && existing.length > 0) {
+        conflicts.push(slot.start_time)
+      }
+    }
+
+    if (conflicts.length > 0) {
+      const conflictDates = conflicts
+        .map(dt => new Date(dt).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }))
+        .join(', ')
+      logger.warn(`⚠️ Room conflict detected for room ${roomId}:`, conflicts)
+      throw createError({
+        statusCode: 409,
+        statusMessage: `Raumkonflikt: Der Raum ist bereits zu folgenden Zeiten gebucht: ${conflictDates}`
+      })
+    }
+
+    // Create room_bookings for each session
+    const bookingRows = timeSlots.map((slot) => ({
+      room_id: roomId,
+      tenant_id: profile.tenant_id,
+      course_id: savedCourseId,
+      start_time: slot.start_time,
+      end_time: slot.end_time,
+      purpose: 'course',
+      booked_by: profile.id,
+      status: 'confirmed',
+    }))
+
+    const { error: bookingError } = await supabase
+      .from('room_bookings')
+      .insert(bookingRows)
+
+    if (bookingError) {
+      logger.error('❌ Error creating room_bookings:', bookingError)
+      // Non-fatal: course is saved, just log the issue
+      logger.warn('⚠️ Course saved but room bookings could not be created')
+    } else {
+      logger.debug(`✅ ${bookingRows.length} room bookings created for course ${savedCourseId}`)
+    }
+  } else if (courseId && (!requiresRoom || !roomId)) {
+    // Room was removed from an existing course — cancel its bookings
+    await supabase
+      .from('room_bookings')
+      .update({ status: 'cancelled' })
+      .eq('course_id', savedCourseId)
+      .neq('status', 'cancelled')
   }
 
   return { id: savedCourseId }
