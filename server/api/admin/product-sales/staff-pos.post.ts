@@ -45,6 +45,11 @@ export default defineEventHandler(async (event) => {
   const initialStatus = payment_method === 'cash' ? 'completed' : 'pending'
 
   // 1. Create product_sale record
+  const notesText = [
+    customer_name ? `Kunde: ${customer_name}` : null,
+    notes || null
+  ].filter(Boolean).join(' | ') || null
+
   const { data: sale, error: saleError } = await supabase
     .from('product_sales')
     .insert({
@@ -54,13 +59,7 @@ export default defineEventHandler(async (event) => {
       total_amount_rappen,
       status: initialStatus,
       payment_method,
-      metadata: {
-        sale_type: 'direct',
-        customer_name: customer_name || null,
-        notes: notes || null,
-        created_via: 'staff_pos',
-        requires_payment: payment_method === 'online'
-      }
+      notes: notesText
     })
     .select()
     .single()
@@ -137,12 +136,6 @@ export default defineEventHandler(async (event) => {
     if (transactionId) {
       const urlResponse = await paymentPageService.paymentPageUrl(spaceId, transactionId)
       paymentUrl = (urlResponse as any)?.body || urlResponse as any
-
-      // Store Wallee transaction ID on the sale
-      await supabase
-        .from('product_sales')
-        .update({ metadata: { ...sale.metadata, wallee_transaction_id: String(transactionId) } })
-        .eq('id', sale.id)
     }
   } catch (walleeErr: any) {
     logger.error('❌ Wallee transaction failed for staff POS:', walleeErr?.message)
