@@ -260,7 +260,7 @@ export const useEventModalApi = () => {
   const deleteAppointment = async (appointmentId: string, reason?: string) => {
     return apiCall<any>('/api/staff/delete-appointment', {
       method: 'POST',
-      body: { appointment_id: appointmentId, reason }
+      body: { appointment_id: appointmentId, deletion_reason: reason }
     })
   }
 

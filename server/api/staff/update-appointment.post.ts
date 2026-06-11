@@ -192,7 +192,8 @@ export default defineEventHandler(async (event) => {
       'start_time', 'end_time', 'duration_minutes',
       'location_id', 'custom_location_address', 'custom_location_name', 'google_place_id',
       'type', 'status', 'event_type_code',
-      'is_paid', 'price_per_minute_rappen'
+      'is_paid', 'price_per_minute_rappen',
+      'deleted_at', 'deleted_by', 'deletion_reason'
     ])
 
     const sanitizedUpdate: Record<string, any> = {}

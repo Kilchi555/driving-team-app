@@ -4427,9 +4427,25 @@ const confirmDelete = async () => {
     ? `Other Event Type gelöscht durch ${props.currentUser?.first_name || 'Benutzer'} (${props.currentUser?.email || 'unbekannt'})`
     : `Termin gelöscht durch ${props.currentUser?.first_name || 'Benutzer'} (${props.currentUser?.email || 'unbekannt'}) - ursprünglicher Status: ${props.eventData.status}`
   
-  const status = isOtherEventType ? 'deleted' : 'cancelled'
+  if (isOtherEventType) {
+    // Other event types: einfach soft-löschen ohne Payment-Flow oder cancel-staff
+    isLoading.value = true
+    try {
+      const deleteResult = await eventModalApi.deleteAppointment(props.eventData.id, deletionReason)
+      if (!deleteResult) throw new Error('Failed to delete appointment')
+      emit('appointment-deleted', props.eventData.id)
+      emit('save-event', { type: 'deleted', id: props.eventData.id })
+      handleClose()
+    } catch (err: any) {
+      error.value = err?.data?.message || err.message || 'Fehler beim Löschen des Termins'
+    } finally {
+      isLoading.value = false
+      showDeleteConfirmation.value = false
+    }
+    return
+  }
   
-  await performSoftDelete(deletionReason, status)
+  await performSoftDelete(deletionReason, 'cancelled')
 }
 
 // 4. Handler für Cancel
