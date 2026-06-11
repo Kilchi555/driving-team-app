@@ -3064,6 +3064,46 @@
       "permanent": true
     },
     {
+      "source": "/lastwagen",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": false
+    },
+    {
+      "source": "/lastwagen/",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": false
+    },
+    {
+      "source": "/lkw",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": false
+    },
+    {
+      "source": "/lkw/",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": false
+    },
+    {
+      "source": "/wohnmobil",
+      "destination": "https://drivingteam.ch/c1-fuehrerschein/",
+      "permanent": false
+    },
+    {
+      "source": "/wohnmobil/",
+      "destination": "https://drivingteam.ch/c1-fuehrerschein/",
+      "permanent": false
+    },
+    {
+      "source": "/c1",
+      "destination": "https://drivingteam.ch/c1-fuehrerschein/",
+      "permanent": false
+    },
+    {
+      "source": "/c1/",
+      "destination": "https://drivingteam.ch/c1-fuehrerschein/",
+      "permanent": false
+    },
+    {
       "source": "/auto-fahrschule-z%C3%BCrich",
       "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
