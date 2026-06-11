@@ -36,7 +36,7 @@
       <div class="relative z-10 w-full flex flex-col items-center justify-center text-center text-gray-900 px-2 md:px-6">
         <!-- Hero Headline -->
         <div class="mb-3">
-          <h1 class="text-3xl md:text-5xl font-black text-gray-900 leading-tight mb-3">
+          <h1 class="text-3xl md:text-5xl font-black text-gray-900 leading-tight mb-3 mt-6">
             Fahrschule <span class="text-primary-600">Zürich</span>
           </h1>
           <p class="text-sm md:text-base text-gray-500 font-medium mb-4">
