@@ -560,7 +560,7 @@
         leave-from-class="opacity-100"
         leave-to-class="opacity-0"
       >
-        <div v-if="showEditProfile" class="fixed inset-0 z-[400] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="showEditProfile = false">
+        <div v-if="showEditProfile" class="fixed inset-0 z-[400] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="onBackdropClick">
           <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl">
             <!-- Header -->
             <div class="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
@@ -680,13 +680,13 @@
                     <input ref="licUploadBack" type="file" accept="image/*,.pdf" class="hidden" @change="uploadLicense($event, 'back')" />
                     <button
                       type="button"
-                      @click="(licUploadFront as any)?.click()"
+                      @click="openLicenseUpload('front')"
                       :disabled="isUploadingLicense"
                       class="text-[11px] font-medium px-2 py-1 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
                     >+ Vorderseite</button>
                     <button
                       type="button"
-                      @click="(licUploadBack as any)?.click()"
+                      @click="openLicenseUpload('back')"
                       :disabled="isUploadingLicense"
                       class="text-[11px] font-medium px-2 py-1 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
                     >+ Rückseite</button>
@@ -1493,6 +1493,21 @@ const allCategories = ref<{ id: string; code: string; name: string }[]>([])
 const licUploadFront = ref<HTMLInputElement | null>(null)
 const licUploadBack = ref<HTMLInputElement | null>(null)
 const isUploadingLicense = ref(false)
+// Guard against iOS spurious backdrop-click after returning from camera/file picker
+const filePickerOpenedAt = ref(0)
+
+function onBackdropClick() {
+  // iOS fires a phantom click on the backdrop when returning from the native camera.
+  // Ignore backdrop clicks for 2 seconds after the file picker was triggered.
+  if (Date.now() - filePickerOpenedAt.value < 2000) return
+  showEditProfile.value = false
+}
+
+function openLicenseUpload(side: 'front' | 'back') {
+  filePickerOpenedAt.value = Date.now()
+  if (side === 'front') licUploadFront.value?.click()
+  else licUploadBack.value?.click()
+}
 
 const uploadLicense = async (event: Event, side: 'front' | 'back') => {
   const file = (event.target as HTMLInputElement).files?.[0]
