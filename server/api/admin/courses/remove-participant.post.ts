@@ -18,7 +18,7 @@ import { logger } from '~/utils/logger'
  */
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
-  const { enrollmentId, reason } = await readBody(event) as { enrollmentId: string; reason?: string }
+  const { enrollmentId, reason, notify } = await readBody(event) as { enrollmentId: string; reason?: string; notify?: boolean }
 
   if (!enrollmentId) throw createError({ statusCode: 400, statusMessage: 'Missing enrollmentId' })
 
@@ -136,7 +136,8 @@ export default defineEventHandler(async (event) => {
 
   // ── 3. Cancellation email ──────────────────────────────────────────────────
   const recipientEmail = reg.email
-  if (recipientEmail) {
+  const shouldNotify = notify !== false // default true if not specified
+  if (recipientEmail && shouldNotify) {
     try {
       const sessions: any[] = course?.course_sessions || []
       const firstSession = sessions

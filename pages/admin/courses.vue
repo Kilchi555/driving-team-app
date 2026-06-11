@@ -1634,8 +1634,9 @@
     </div>
 
     <!-- Remove Participant Reason Modal -->
-    <div v-if="showRemoveParticipantModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click.self="showRemoveParticipantModal = false">
-      <div class="bg-white rounded-lg border border-gray-200 shadow-sm max-w-md w-full" @click.stop>
+    <Teleport to="body">
+    <div v-if="showRemoveParticipantModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-[9998] p-4" @click.self="showRemoveParticipantModal = false">
+      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full" @click.stop>
         <div class="px-6 py-4 border-b border-gray-200">
           <h2 class="text-lg font-bold text-gray-900">Teilnehmer entfernen</h2>
           <p class="text-sm text-gray-500 mt-1">{{ removingParticipant?.first_name }} {{ removingParticipant?.last_name }}</p>
@@ -1657,13 +1658,24 @@
               class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
             />
           </div>
+          <!-- Notify checkbox -->
+          <label class="flex items-center gap-3 cursor-pointer select-none p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+            <input type="checkbox" v-model="removalNotify" class="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-400" />
+            <div>
+              <span class="text-sm font-medium text-gray-900">Teilnehmer per E-Mail benachrichtigen</span>
+              <p class="text-xs text-gray-400 mt-0.5">Storno-Bestätigung wird an {{ removingParticipant?.email || 'keine E-Mail bekannt' }} gesendet</p>
+            </div>
+          </label>
         </div>
         <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
           <button @click="showRemoveParticipantModal = false" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition-colors">Abbrechen</button>
-          <button @click="confirmRemoveParticipant" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors">Entfernen & E-Mail senden</button>
+          <button @click="confirmRemoveParticipant" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors">
+            {{ removalNotify ? 'Entfernen & E-Mail senden' : 'Entfernen (ohne Benachrichtigung)' }}
+          </button>
         </div>
       </div>
     </div>
+    </Teleport>
 
     <!-- Status Change Modal - Using Teleport for reliable rendering -->
     <Teleport to="body">
@@ -2821,26 +2833,26 @@
         <div class="mt-4">
           <div class="flex items-center justify-between text-xs text-gray-500 mb-1.5">
             <span>Belegung</span>
-            <span class="font-semibold" :class="currentEnrollments.length >= (selectedCourse?.max_participants || 0) ? 'text-red-600' : 'text-gray-700'">
-              {{ currentEnrollments.length }} / {{ selectedCourse?.max_participants || 0 }} Plätze
+            <span class="font-semibold" :class="activeEnrollmentCount >= (selectedCourse?.max_participants || 0) ? 'text-red-600' : 'text-gray-700'">
+              {{ activeEnrollmentCount }} / {{ selectedCourse?.max_participants || 0 }} Plätze
             </span>
           </div>
           <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
             <div
               class="h-full rounded-full transition-all duration-500"
-              :class="currentEnrollments.length >= (selectedCourse?.max_participants || 0) ? 'bg-red-500' : currentEnrollments.length / (selectedCourse?.max_participants || 1) > 0.8 ? 'bg-amber-500' : 'bg-emerald-500'"
-              :style="{ width: Math.min(100, Math.round(currentEnrollments.length / (selectedCourse?.max_participants || 1) * 100)) + '%' }"
+              :class="activeEnrollmentCount >= (selectedCourse?.max_participants || 0) ? 'bg-red-500' : activeEnrollmentCount / (selectedCourse?.max_participants || 1) > 0.8 ? 'bg-amber-500' : 'bg-emerald-500'"
+              :style="{ width: Math.min(100, Math.round(activeEnrollmentCount / (selectedCourse?.max_participants || 1) * 100)) + '%' }"
             ></div>
           </div>
           <div class="flex gap-4 mt-2">
             <div class="text-center">
-              <div class="text-lg font-bold text-gray-900">{{ currentEnrollments.length }}</div>
+              <div class="text-lg font-bold text-gray-900">{{ activeEnrollmentCount }}</div>
               <div class="text-xs text-gray-400">Angemeldet</div>
             </div>
             <div class="w-px bg-gray-100 self-stretch"></div>
             <div class="text-center">
-              <div class="text-lg font-bold" :class="(selectedCourse?.max_participants || 0) - currentEnrollments.length <= 0 ? 'text-red-600' : 'text-emerald-600'">
-                {{ Math.max(0, (selectedCourse?.max_participants || 0) - currentEnrollments.length) }}
+              <div class="text-lg font-bold" :class="(selectedCourse?.max_participants || 0) - activeEnrollmentCount <= 0 ? 'text-red-600' : 'text-emerald-600'">
+                {{ Math.max(0, (selectedCourse?.max_participants || 0) - activeEnrollmentCount) }}
               </div>
               <div class="text-xs text-gray-400">Frei</div>
             </div>
@@ -4039,6 +4051,7 @@ const removingParticipant = ref<any>(null)
 const removalReasons = ['Krankheit', 'Persönliche Gründe', 'Umplanung', 'Keine Zahlung']
 const removalReason = ref('')
 const removalReasonCustom = ref('')
+const removalNotify = ref(true)
 
 // Status Change Modal
 const showStatusChangeModal = ref(false)
@@ -4137,6 +4150,9 @@ const courseDetailTab = ref<'participants' | 'edit'>('participants')
 const currentEnrollments = ref<any[]>([])
 const deletedEnrollments = ref<any[]>([])
 const showDeletedParticipants = ref(false)
+
+// Only count non-cancelled registrations for capacity (cancelled don't occupy a spot)
+const activeEnrollmentCount = computed(() => currentEnrollments.value.filter(e => e.status !== 'cancelled').length)
 
 // Course Transfer (Umplanung)
 const transferringEnrollmentId = ref<string | null>(null)
@@ -5986,7 +6002,8 @@ const closeEnrollmentModal = () => {
     
     // Use nextTick to ensure state updates are processed
     // Use the already-loaded enrollment count (avoids RLS-broken client query)
-    const participantCount = currentEnrollments.value.length
+    // Cancelled registrations don't occupy a spot
+    const participantCount = activeEnrollmentCount.value
     
     // Update course in local array immediately
     const courseIndex = courses.value.findIndex(c => c.id === courseIdToReload)
@@ -6080,8 +6097,8 @@ const selectExistingUser = async (user: any) => {
       return
     }
 
-    // Check if course is full
-    if (currentEnrollments.value.length >= (selectedCourse.value?.max_participants || 0)) {
+    // Check if course is full (cancelled registrations don't count against capacity)
+    if (activeEnrollmentCount.value >= (selectedCourse.value?.max_participants || 0)) {
       alert('Kurs ist bereits ausgebucht.')
       return
     }
@@ -6208,8 +6225,8 @@ const addParticipant = async () => {
     logger.debug('addParticipant called with:', newParticipant.value)
     isAddingParticipant.value = true
     
-    // Check if course is full
-    if (currentEnrollments.value.length >= (selectedCourse.value?.max_participants || 0)) {
+    // Check if course is full (cancelled registrations don't count against capacity)
+    if (activeEnrollmentCount.value >= (selectedCourse.value?.max_participants || 0)) {
       alert('Kurs ist bereits ausgebucht.')
       return
     }
@@ -6257,6 +6274,7 @@ const removeParticipant = (enrollment: any) => {
   removingParticipant.value = enrollment
   removalReason.value = ''
   removalReasonCustom.value = ''
+  removalNotify.value = true
   showRemoveParticipantModal.value = true
 }
 
@@ -6272,7 +6290,7 @@ const confirmRemoveParticipant = async () => {
   try {
     await $fetch('/api/admin/courses/remove-participant', {
       method: 'POST',
-      body: { enrollmentId: enrollment.id, reason: reasonText || undefined },
+      body: { enrollmentId: enrollment.id, reason: reasonText || undefined, notify: removalNotify.value },
     })
 
     // Reload enrollments
