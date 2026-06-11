@@ -227,6 +227,28 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    if (action === 'get-cancelled-appointments') {
+      if (tenant_id && tenant_id !== userProfile.tenant_id) {
+        throw createError({ statusCode: 403, statusMessage: 'Access denied to this tenant' })
+      }
+
+      let query = supabase
+        .from('appointments')
+        .select('id, start_time, duration_minutes, type, cancellation_type, cancellation_charge_percentage, cancellation_policy_applied')
+        .eq('staff_id', staff_id)
+        .eq('tenant_id', userProfile.tenant_id)
+        .eq('status', 'cancelled')
+        .is('deleted_at', null)
+
+      if (start_date) query = query.gte('start_time', start_date)
+      if (end_date)   query = query.lte('start_time', end_date)
+
+      const { data: cancelled, error: cancelledError } = await query
+      if (cancelledError) throw cancelledError
+
+      return { success: true, data: cancelled || [] }
+    }
+
     if (action === 'get-pricing-rules') {
       // ✅ Verify tenant access
       if (tenant_id !== userProfile.tenant_id) {

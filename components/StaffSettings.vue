@@ -178,6 +178,17 @@
                     </div>
                   </div>
                 </div>
+                <div v-if="monthlyStats.currentMonth.cancellations.total > 0" class="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500 space-y-0.5">
+                  <div class="flex items-center gap-1">
+                    <span class="text-red-400">✕</span>
+                    <span>{{ monthlyStats.currentMonth.cancellations.total }} Absagen</span>
+                  </div>
+                  <div v-if="monthlyStats.currentMonth.cancellations.charged > 0" class="flex items-center gap-1 text-green-600 font-medium">
+                    <span>✓</span>
+                    <span>{{ monthlyStats.currentMonth.cancellations.charged }} verrechnet (+{{ monthlyStats.currentMonth.cancellations.chargedHours.toFixed(2) }}h)</span>
+                  </div>
+                  <div v-else class="text-gray-400 italic">Keine verrechnet</div>
+                </div>
               </div>
               
               <!-- Vormonat -->
@@ -185,6 +196,17 @@
                 <h4 class="font-semibold text-gray-700 mb-3">{{ previousMonthName }}</h4>
                 <div class="text-2xl font-bold text-gray-800">
                   {{ monthlyStats.previousMonth.worked.toFixed(2) }}h
+                </div>
+                <div v-if="monthlyStats.previousMonth.cancellations.total > 0" class="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500 space-y-0.5">
+                  <div class="flex items-center gap-1">
+                    <span class="text-red-400">✕</span>
+                    <span>{{ monthlyStats.previousMonth.cancellations.total }} Absagen</span>
+                  </div>
+                  <div v-if="monthlyStats.previousMonth.cancellations.charged > 0" class="flex items-center gap-1 text-green-600 font-medium">
+                    <span>✓</span>
+                    <span>{{ monthlyStats.previousMonth.cancellations.charged }} verrechnet (+{{ monthlyStats.previousMonth.cancellations.chargedHours.toFixed(2) }}h)</span>
+                  </div>
+                  <div v-else class="text-gray-400 italic">Keine verrechnet</div>
                 </div>
               </div>
               
@@ -194,6 +216,17 @@
                 <div class="text-2xl font-bold text-gray-800">
                   {{ monthlyStats.twoMonthsAgo.worked.toFixed(2) }}h
                 </div>
+                <div v-if="monthlyStats.twoMonthsAgo.cancellations.total > 0" class="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500 space-y-0.5">
+                  <div class="flex items-center gap-1">
+                    <span class="text-red-400">✕</span>
+                    <span>{{ monthlyStats.twoMonthsAgo.cancellations.total }} Absagen</span>
+                  </div>
+                  <div v-if="monthlyStats.twoMonthsAgo.cancellations.charged > 0" class="flex items-center gap-1 text-green-600 font-medium">
+                    <span>✓</span>
+                    <span>{{ monthlyStats.twoMonthsAgo.cancellations.charged }} verrechnet (+{{ monthlyStats.twoMonthsAgo.cancellations.chargedHours.toFixed(2) }}h)</span>
+                  </div>
+                  <div v-else class="text-gray-400 italic">Keine verrechnet</div>
+                </div>
               </div>
               
               <!-- 3 Monate zurück -->
@@ -201,6 +234,17 @@
                 <h4 class="font-semibold text-gray-700 mb-3">{{ threeMonthsAgoName }}</h4>
                 <div class="text-2xl font-bold text-gray-800">
                   {{ monthlyStats.threeMonthsAgo.worked.toFixed(2) }}h
+                </div>
+                <div v-if="monthlyStats.threeMonthsAgo.cancellations.total > 0" class="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500 space-y-0.5">
+                  <div class="flex items-center gap-1">
+                    <span class="text-red-400">✕</span>
+                    <span>{{ monthlyStats.threeMonthsAgo.cancellations.total }} Absagen</span>
+                  </div>
+                  <div v-if="monthlyStats.threeMonthsAgo.cancellations.charged > 0" class="flex items-center gap-1 text-green-600 font-medium">
+                    <span>✓</span>
+                    <span>{{ monthlyStats.threeMonthsAgo.cancellations.charged }} verrechnet (+{{ monthlyStats.threeMonthsAgo.cancellations.chargedHours.toFixed(2) }}h)</span>
+                  </div>
+                  <div v-else class="text-gray-400 italic">Keine verrechnet</div>
                 </div>
               </div>
               
@@ -610,7 +654,7 @@
                 </label>
                 <div class="grid grid-cols-2 gap-2 bg-gray-50 rounded-xl border border-gray-200 p-3">
                   <label
-                    v-for="cat in availableCategories"
+                    v-for="cat in (allCategories.length ? allCategories : availableCategories)"
                     :key="cat.id"
                     class="flex items-center gap-2 cursor-pointer text-sm text-gray-700 select-none"
                   >
@@ -623,7 +667,7 @@
                     />
                     {{ cat.name || cat.code }}
                   </label>
-                  <p v-if="availableCategories.length === 0" class="col-span-2 text-sm text-gray-400 italic">Keine Kategorien verfügbar</p>
+                  <p v-if="allCategories.length === 0 && availableCategories.length === 0" class="col-span-2 text-sm text-gray-400 italic">Keine Kategorien verfügbar</p>
                 </div>
               </div>
 
@@ -1445,6 +1489,7 @@ const editForm = ref({
 
 const isLoadingProfile = ref(false)
 const availableCategories = ref<{ id: string; code: string; name: string }[]>([])
+const allCategories = ref<{ id: string; code: string; name: string }[]>([])
 const licUploadFront = ref<HTMLInputElement | null>(null)
 const licUploadBack = ref<HTMLInputElement | null>(null)
 const isUploadingLicense = ref(false)
@@ -1550,11 +1595,16 @@ const openEditProfile = async () => {
 
     if (catRes?.data) {
       const all = catRes.data
+      // Store full list for profile editing
+      allCategories.value = all.sort((a: any, b: any) =>
+        String(a.name || a.code || '').localeCompare(String(b.name || b.code || ''), 'de', { sensitivity: 'base' })
+      )
+      // Filtered list for location creation (subcategories + parents without subs)
       const subs = all.filter((c: any) => c.parent_category_id != null)
       const parents = all.filter((c: any) => c.parent_category_id == null)
       const parentIdsWithSubs = new Set(subs.map((c: any) => c.parent_category_id).filter(Boolean))
       const parentsWithoutSubs = parents.filter((p: any) => !parentIdsWithSubs.has(p.id))
-      const merged = [...subs, ...parentsWithoutSubs].sort((a, b) =>
+      const merged = [...subs, ...parentsWithoutSubs].sort((a: any, b: any) =>
         String(a.name || a.code || '').localeCompare(String(b.name || b.code || ''), 'de', { sensitivity: 'base' })
       )
       availableCategories.value = merged
@@ -1680,12 +1730,20 @@ const newExamLocation = ref({
 })
 
 // NEUE STATE für Arbeitszeit
+interface MonthCancellations {
+  total: number        // Alle Absagen dieses Monats
+  charged: number      // Davon verrechnet (charge % > 0) → Staff bekommt Stunden gutgeschrieben
+  chargedHours: number // Gutgeschriebene Stunden aus verrechneten Absagen
+}
+
+const emptyCancellations = (): MonthCancellations => ({ total: 0, charged: 0, chargedHours: 0 })
+
 const monthlyStats = ref({
-  currentMonth: { worked: 0, planned: 0 },
+  currentMonth: { worked: 0, planned: 0, cancellations: emptyCancellations() },
   nextMonth: { planned: 0 },
-  previousMonth: { worked: 0 },
-  twoMonthsAgo: { worked: 0 },
-  threeMonthsAgo: { worked: 0 }
+  previousMonth: { worked: 0, cancellations: emptyCancellations() },
+  twoMonthsAgo: { worked: 0, cancellations: emptyCancellations() },
+  threeMonthsAgo: { worked: 0, cancellations: emptyCancellations() }
 })
 
 // ── Monatliche Stundenübersicht (Monatslohn) ──────────────────────────────────
@@ -1767,7 +1825,7 @@ const getOvertimeColor = (hours: number): string => {
 
 
 // Data
-const selectedCategories = ref<number[]>([])
+const selectedCategories = ref<string[]>([])
 const myLocations = ref<any[]>([])
 const allTenantLocations = ref<any[]>([]) // Alle Standard-Standorte des Tenants
 const categoryDurations = ref<Record<string, number[]>>({})
@@ -2347,7 +2405,7 @@ const toggleDurationForCategory = (categoryCode: string, duration: number) => {
   }
 }
 
-const toggleCategory = (categoryId: number) => {
+const toggleCategory = (categoryId: string) => {
   const index = selectedCategories.value.indexOf(categoryId)
   if (index > -1) {
     selectedCategories.value.splice(index, 1)
@@ -2421,7 +2479,8 @@ const createNewLocation = async () => {
   try {
     const { query } = useDatabaseQuery()
     
-    // Insert via secure API
+    // Insert via secure API — new locations default to not bookable so no slots
+    // are generated until the instructor explicitly enables online booking
     const data = await query({
       action: 'insert',
       table: 'locations',
@@ -2433,7 +2492,8 @@ const createNewLocation = async () => {
         tenant_id: props.currentUser.tenant_id,
         available_categories: newLocationForm.value.available_categories,
         location_type: 'standard',
-        is_active: true
+        is_active: true,
+        is_online_bookable: false
       }
     })
 
@@ -2693,28 +2753,31 @@ const loadData = async () => {
     const categoriesResponse = await $fetch<any>('/api/staff/get-categories').catch(() => ({ data: [] }))
     const categories = categoriesResponse?.data || categoriesResponse?.categories || []
     
-    // Filter categories: 
+    // Filter categories for location creation:
     // - Show all subcategories (parent_category_id != null)
     // - Show only main categories that DON'T have subcategories
-    const allCategories = categories || []
+    const rawCategories = categories || []
     
+    // Store the full unfiltered list for profile editing
+    allCategories.value = rawCategories
+
     // Get IDs of all main categories that have subcategories
     const mainCatsWithSubs = new Set(
-      allCategories
+      rawCategories
         .filter((cat: any) => cat.parent_category_id)
         .map((cat: any) => cat.parent_category_id)
     )
     
-    // Show subcategories + main categories without subcategories
-    availableCategories.value = allCategories.filter((cat: any) => 
+    // Show subcategories + main categories without subcategories (for location creation)
+    availableCategories.value = rawCategories.filter((cat: any) => 
       cat.parent_category_id || // All subcategories
       !mainCatsWithSubs.has(cat.id) // Main categories without subcategories
     )
     
     logger.debug('📋 Available categories for location creation:', {
-      total: allCategories.length,
-      subcategoriesCount: allCategories.filter((c: any) => c.parent_category_id).length,
-      mainWithoutSubCount: allCategories.filter((c: any) => !c.parent_category_id && !mainCatsWithSubs.has(c.id)).length,
+      total: rawCategories.length,
+      subcategoriesCount: rawCategories.filter((c: any) => c.parent_category_id).length,
+      mainWithoutSubCount: rawCategories.filter((c: any) => !c.parent_category_id && !mainCatsWithSubs.has(c.id)).length,
       displayCount: availableCategories.value.length
     })
 
@@ -2909,6 +2972,38 @@ const loadWorkingHoursData = async () => {
     monthlyStats.value.previousMonth.worked = previousMonthWorked
     monthlyStats.value.twoMonthsAgo.worked = twoMonthsAgoWorked
     monthlyStats.value.threeMonthsAgo.worked = threeMonthsAgoWorked
+
+    // ── Abgesagte Lektionen laden ──────────────────────────────────────────
+    const cancelledResponse = await $fetch<any>('/api/calendar/manage', {
+      method: 'POST',
+      body: {
+        action: 'get-cancelled-appointments',
+        staff_id: props.currentUser.id,
+        start_date: threeMonthsAgoForQuery.toISOString(),
+        end_date: nextMonthEndForQuery.toISOString()
+      }
+    })
+
+    const cancelledApts: any[] = cancelledResponse?.data || []
+
+    const computeCancellations = (start: Date, end: Date): MonthCancellations => {
+      const inPeriod = cancelledApts.filter(apt => {
+        const d = parseLocalDateTime(apt.start_time)
+        return d >= start && d <= end && d < now
+      })
+      const charged = inPeriod.filter(apt => (apt.cancellation_charge_percentage || 0) > 0)
+      const chargedMinutes = charged.reduce((s: number, apt: any) => s + (apt.duration_minutes || 45), 0)
+      return {
+        total: inPeriod.length,
+        charged: charged.length,
+        chargedHours: Math.round((chargedMinutes / 60) * 20) / 20
+      }
+    }
+
+    monthlyStats.value.currentMonth.cancellations   = computeCancellations(currentMonthStart, currentMonthEnd)
+    monthlyStats.value.previousMonth.cancellations  = computeCancellations(previousMonthStart, previousMonthEnd)
+    monthlyStats.value.twoMonthsAgo.cancellations   = computeCancellations(twoMonthsAgoStart, twoMonthsAgoEnd)
+    monthlyStats.value.threeMonthsAgo.cancellations = computeCancellations(threeMonthsAgoStart, threeMonthsAgoEnd)
     
   } catch (error) {
     console.error('❌ DEBUG: Unexpected error:', error)
