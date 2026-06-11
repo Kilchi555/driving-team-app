@@ -43,6 +43,8 @@ export interface MetaCapiInput {
   client_ip?: string | null
   /** User-Agent string for server-side user matching. */
   user_agent?: string | null
+  /** URL of the page where the conversion happened (recommended by Meta for web events). */
+  event_source_url?: string | null
 }
 
 export interface MetaCapiResult {
@@ -120,17 +122,20 @@ export async function sendCapiEvent(input: MetaCapiInput): Promise<MetaCapiResul
     value: Number(input.conversion_value_chf.toFixed(2)),
   }
 
+  const eventPayload: Record<string, any> = {
+    event_name: input.event_name,
+    event_time: eventTime,
+    event_id: eventId,
+    action_source: 'website',
+    user_data: userData,
+    custom_data: customData,
+  }
+  if (input.event_source_url) {
+    eventPayload.event_source_url = input.event_source_url
+  }
+
   const payload: Record<string, any> = {
-    data: [
-      {
-        event_name: input.event_name,
-        event_time: eventTime,
-        event_id: eventId,
-        action_source: 'website',
-        user_data: userData,
-        custom_data: customData,
-      },
-    ],
+    data: [eventPayload],
     access_token: creds.accessToken,
   }
 
