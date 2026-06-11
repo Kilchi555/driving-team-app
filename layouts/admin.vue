@@ -141,6 +141,8 @@
               class="drawer-link" :class="isActive('/admin/cash-management') ? 'drawer-active' : ''">Kassen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('cancellation_management_enabled')" to="/admin/cancellation-management" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/cancellation-management') ? 'drawer-active' : ''">Absagen</NuxtLink>
+            <NuxtLink to="/admin/medical-certificate-reviews" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/medical-certificate-reviews') ? 'drawer-active' : ''">Arztzeugnisse</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('staff_hours_enabled')" to="/admin/staff-hours" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/staff-hours') ? 'drawer-active' : ''">Stunden</NuxtLink>
             <NuxtLink to="/admin/payment-reminders" @click="showMobileMenu = false"
@@ -228,6 +230,8 @@
               class="drawer-link" :class="isActive('/admin/cash-management') ? 'drawer-active' : ''">Kassen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('cancellation_management_enabled')" to="/admin/cancellation-management"
               class="drawer-link" :class="isActive('/admin/cancellation-management') ? 'drawer-active' : ''">Absagen</NuxtLink>
+            <NuxtLink to="/admin/medical-certificate-reviews"
+              class="drawer-link" :class="isActive('/admin/medical-certificate-reviews') ? 'drawer-active' : ''">Arztzeugnisse</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('staff_hours_enabled')" to="/admin/staff-hours"
               class="drawer-link" :class="isActive('/admin/staff-hours') ? 'drawer-active' : ''">Stunden</NuxtLink>
             <NuxtLink to="/admin/payment-reminders"
