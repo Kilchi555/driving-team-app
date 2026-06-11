@@ -16,11 +16,9 @@
  */
 
 import { logger } from '~/utils/logger'
+import { metaPost as _metaPost, getMetaCredentials } from '~/server/utils/meta-ads-api'
 
-const GRAPH = 'https://graph.facebook.com/v19.0'
-const AD_ACCOUNT = process.env.META_AD_ACCOUNT_ID!
-const PIXEL_ID = process.env.META_PIXEL_ID!
-const TOKEN = process.env.META_SYSTEM_USER_TOKEN ?? process.env.META_ACCESS_TOKEN!
+const { adAccount: AD_ACCOUNT, pixelId: PIXEL_ID, token: TOKEN } = getMetaCredentials()
 
 // Driving Team booking URL — all ads point here
 const BOOKING_URL = 'https://drivingteam.ch?utm_source=facebook&utm_medium=paid_social&utm_campaign='
@@ -79,18 +77,9 @@ const CREATIVES: Record<string, { headlines: string[]; descriptions: string[] }>
 const HEADLINES = CREATIVES.auto.headlines
 const DESCRIPTIONS = CREATIVES.auto.descriptions
 
-// ─── API helpers ──────────────────────────────────────────────────────────────
-async function metaPost(path: string, body: Record<string, any>): Promise<any> {
-  const res = await fetch(`${GRAPH}/${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...body, access_token: TOKEN }),
-  })
-  const data = await res.json() as any
-  if (!res.ok || data.error) {
-    throw new Error(`Meta API error on ${path}: ${data.error?.message ?? JSON.stringify(data)}`)
-  }
-  return data
+// ─── Local alias so existing call-sites (metaPost(path, body)) keep working ──
+function metaPost(path: string, body: Record<string, any>) {
+  return _metaPost(path, body, TOKEN)
 }
 
 // ─── Campaign creation ────────────────────────────────────────────────────────
