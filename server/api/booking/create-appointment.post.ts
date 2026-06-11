@@ -916,6 +916,9 @@ export default defineEventHandler(async (event: H3Event) => {
           fbp: marketingAttr?.fbp ?? null,
           hashed_email: hashedEmail,
           hashed_phone: hashedPhone,
+          client_ip: ipAddress ?? null,
+          user_agent: getHeader(event, 'user-agent') ?? null,
+          event_source_url: getHeader(event, 'referer') ?? null,
         })
       } catch (err: any) {
         logger.warn('⚠️ Meta CAPI upload failed (non-critical):', err?.message ?? err)

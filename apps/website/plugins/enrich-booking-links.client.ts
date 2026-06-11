@@ -13,6 +13,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     const sessionId = (window as any).__analyticsSessionId || ''
     const attributionBlob = encodeAttribution((window as any).__dtMarketingAttribution)
     const currentUrl = window.location.href
+    const metaConsentGiven = localStorage.getItem('dt_cookie_consent') === 'accepted'
 
     // Enrich all simy.ch outbound links (booking AND customer/course links)
     const bookingLinks = document.querySelectorAll('a[href*="simy.ch"]')
@@ -29,6 +30,9 @@ export default defineNuxtPlugin((nuxtApp) => {
       }
       if (attributionBlob && !newHref.includes('dt_attr=')) {
         params.push(`dt_attr=${attributionBlob}`)
+      }
+      if (metaConsentGiven && !newHref.includes('mc=1')) {
+        params.push('mc=1')
       }
       if (currentUrl && !newHref.includes('referrer=') && newHref.includes('/booking/')) {
         params.push(`referrer=${encodeURIComponent(currentUrl)}`)

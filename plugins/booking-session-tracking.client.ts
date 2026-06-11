@@ -7,7 +7,7 @@
  * Funnel: Views (drivingteam.ch) → Buchungs-Klick → Booking Page → Booking Confirmed
  */
 
-import { defineNuxtPlugin } from '#app'
+import { defineNuxtPlugin, useRuntimeConfig } from '#app'
 import { decodeAttribution, type DecodedAttribution } from '~/utils/attribution-decode'
 
 declare global {
@@ -17,11 +17,41 @@ declare global {
     __tenantId?: string | null
     __setTenantId: (id: string) => void
     __trackBookingEvent: (eventType: 'viewed' | 'started' | 'completed' | 'abandoned' | 'inquiry_submitted', data: Record<string, any>) => Promise<void>
+    fbq?: (...args: any[]) => void
+    _fbq?: any
   }
+}
+
+/**
+ * Initialize Meta Pixel on app.simy.ch when the user has already given consent
+ * on drivingteam.ch (forwarded via `mc=1` URL param in booking links).
+ * Required for browser-side Purchase deduplication against server-side CAPI.
+ */
+function initMetaPixelIfConsented(pixelId: string, metaConsentParam: string | null): void {
+  if (!pixelId || metaConsentParam !== '1' || window.fbq) return
+
+  const n: any = window.fbq = function () {
+    n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+  }
+  if (!window._fbq) window._fbq = n
+  n.push = n
+  n.loaded = true
+  n.version = '2.0'
+  n.queue = []
+  const t = document.createElement('script')
+  t.async = true
+  t.src = 'https://connect.facebook.net/en_US/fbevents.js'
+  const s = document.getElementsByTagName('script')[0]
+  s.parentNode?.insertBefore(t, s)
+
+  window.fbq('init', pixelId)
+  window.fbq('track', 'PageView')
 }
 
 export default defineNuxtPlugin(() => {
   if (process.server) return
+
+  const config = useRuntimeConfig()
 
   // Get or create session ID — runs on ALL simy.ch pages, not just /booking/
   const getSessionId = (): string => {
@@ -49,9 +79,16 @@ export default defineNuxtPlugin(() => {
 
   const sessionId = getSessionId()
 
+  // ─── Meta Pixel: initialize on simy.ch if consent was given on drivingteam.ch ─
+  const urlParams = new URLSearchParams(window.location.search)
+  const metaConsentParam = urlParams.get('mc')
+  const pixelId = (config.public as any).metaPixelId as string | undefined
+  if (pixelId) {
+    initMetaPixelIfConsented(pixelId, metaConsentParam)
+  }
+
   // ─── Marketing attribution: read from URL blob OR localStorage ──────────────
   const ATTR_KEY = 'sm_marketing_attribution'
-  const urlParams = new URLSearchParams(window.location.search)
   let attribution: DecodedAttribution | null = null
   let isNewSession = false
 
@@ -146,6 +183,16 @@ export default defineNuxtPlugin(() => {
   window.__trackBookingEvent = async (eventType, data) => {
     if (eventType === 'completed' || eventType === 'inquiry_submitted') bookingCompleted = true
     return originalTrack(eventType, data)
+  }
+
+  // Fire Meta Pixel Purchase when booking is completed.
+  // eventID must match CAPI event_id (`capi_{appointment_id}`) for deduplication.
+  const originalTrackWithPixel = window.__trackBookingEvent
+  window.__trackBookingEvent = async (eventType, data) => {
+    if (eventType === 'completed' && data.appointment_id && window.fbq) {
+      window.fbq('track', 'Purchase', { currency: 'CHF' }, { eventID: `capi_${data.appointment_id}` })
+    }
+    return originalTrackWithPixel(eventType, data)
   }
 
   window.addEventListener('beforeunload', () => {

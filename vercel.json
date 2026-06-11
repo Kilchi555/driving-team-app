@@ -129,6 +129,10 @@
       "path": "/api/cron/sync-marketing-meta-ads",
       "schedule": "20 4 * * *"
     },
+    {
+      "path": "/api/cron/retry-meta-capi-uploads",
+      "schedule": "0 * * * *"
+    },
       {
         "path": "/api/cron/weekly-marketing-review",
         "schedule": "0 7 * * 1"

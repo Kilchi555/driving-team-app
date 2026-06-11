@@ -89,10 +89,10 @@ export default defineNuxtConfig({
       'X-XSS-Protection': '1; mode=block',
       'Content-Security-Policy': [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://app-wallee.com",
+        "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://app-wallee.com https://connect.facebook.net",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "img-src 'self' data: https: blob:",
-        "connect-src 'self' https://unyjaetebnaexaflpyoc.supabase.co https://maps.googleapis.com https://api.resend.com https://app-wallee.com wss://unyjaetebnaexaflpyoc.supabase.co",
+        "connect-src 'self' https://unyjaetebnaexaflpyoc.supabase.co https://maps.googleapis.com https://api.resend.com https://app-wallee.com wss://unyjaetebnaexaflpyoc.supabase.co https://www.facebook.com https://connect.facebook.net",
         "font-src 'self' data: https://fonts.gstatic.com",
         "frame-src 'self' https://app-wallee.com",
         "media-src 'self' blob:",
@@ -210,7 +210,8 @@ export default defineNuxtConfig({
       supabaseUrl: process.env.SUPABASE_URL,
       supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
       hcaptchaSiteKey: process.env.VITE_HCAPTCHA_SITE_KEY,
-      appEnv: process.env.APP_ENV || 'preview'
+      appEnv: process.env.APP_ENV || 'preview',
+      metaPixelId: process.env.NUXT_PUBLIC_META_PIXEL_ID ?? '',
     }
   },
   
