@@ -155,5 +155,17 @@
       "source": "/",
       "destination": "https://simy.ch/"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/__nitro",
+      "destination": "/api/health",
+      "permanent": false
+    },
+    {
+      "source": "/__nitro/:path*",
+      "destination": "/api/health",
+      "permanent": false
+    }
   ]
 }
