@@ -4,6 +4,8 @@
 // We use a middleware (instead of server/routes/.well-known/*) because Nuxt's
 // file-based router skips directories whose name starts with a dot.
 //
+// Also blocks /__nitro/* internal endpoints in production to prevent 5xx bot-scan errors.
+//
 // IMPORTANT: This middleware must run BEFORE other middlewares (hence the 00. prefix).
 
 const APPLE_APP_SITE_ASSOCIATION = {
@@ -32,6 +34,12 @@ const ANDROID_ASSETLINKS = [
 
 export default defineEventHandler((event) => {
   const url = event.node.req.url || ''
+
+  // Block /__nitro internal endpoints — bots scanning these cause 5xx errors in production.
+  // Allow /__nitro/ping through (legitimate Vercel health check).
+  if (url.startsWith('/__nitro') && url !== '/__nitro/ping') {
+    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+  }
 
   if (url === '/.well-known/apple-app-site-association' || url.startsWith('/.well-known/apple-app-site-association?')) {
     setHeader(event, 'Content-Type', 'application/json')
