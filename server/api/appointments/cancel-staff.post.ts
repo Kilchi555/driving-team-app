@@ -129,7 +129,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    if (!cancellationReasonId || !validateUUID(cancellationReasonId)) {
+    if (!cancellationReasonId || !validateUUID(cancellationReasonId).valid) {
       throw createError({
         statusCode: 400,
         message: 'Valid cancellationReasonId required'
