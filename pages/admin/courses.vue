@@ -3822,21 +3822,12 @@
           
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-500 mb-2">Gesamtdauer (Stunden)</label>
-              <input
-                v-model.number="categoryForm.total_duration_hours"
-                type="number"
-                step="0.5"
-                min="0.5"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
-              />
-            </div>
-            <div>
               <label class="block text-sm font-medium text-gray-500 mb-2">Anzahl Sessions</label>
               <input
                 v-model.number="categoryForm.session_count"
                 type="number"
                 min="1"
+                @input="updateDurationCalculation"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
               />
             </div>
@@ -3847,7 +3838,19 @@
                 type="number"
                 step="0.5"
                 min="0.5"
+                @input="updateDurationCalculation"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-500 mb-2">Gesamtdauer (Stunden)</label>
+              <input
+                v-model.number="categoryForm.total_duration_hours"
+                type="number"
+                step="0.5"
+                min="0.5"
+                readonly
+                class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600 cursor-not-allowed"
               />
             </div>
           </div>
@@ -5091,6 +5094,9 @@ const saveCategory = async () => {
     // Update prices in rappen
     categoryForm.value.default_price_rappen = Math.round(defaultCategoryPrice.value * 100)
     categoryForm.value.partial_price_rappen = Math.round(partialCategoryPrice.value * 100)
+
+    // Always recompute total to ensure constraint total = session_count * hours_per_session
+    categoryForm.value.total_duration_hours = (categoryForm.value.session_count || 1) * (categoryForm.value.hours_per_session || 8)
 
     // Prepare session structure JSON
     const sessionStructure = {
