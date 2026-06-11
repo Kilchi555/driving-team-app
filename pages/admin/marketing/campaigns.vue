@@ -72,7 +72,28 @@
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <h3 class="font-semibold text-gray-900 truncate">{{ c.name }}</h3>
+                  <template v-if="renamingId === c.id">
+                    <input
+                      :ref="el => { if (el) (el as HTMLInputElement).focus() }"
+                      v-model="renameValue"
+                      @keydown.enter="saveRename(c)"
+                      @keydown.esc="renamingId = null"
+                      @blur="saveRename(c)"
+                      class="font-semibold text-gray-900 border border-blue-400 rounded px-2 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 min-w-0 w-56"
+                    />
+                  </template>
+                  <template v-else>
+                    <h3
+                      class="font-semibold text-gray-900 truncate cursor-pointer hover:text-blue-600 group flex items-center gap-1"
+                      @click="startRename(c)"
+                      title="Klicken zum Umbenennen"
+                    >
+                      {{ c.name }}
+                      <svg class="w-3 h-3 text-gray-300 group-hover:text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </h3>
+                  </template>
                   <span :class="statusBadge(c.status)" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0">
                     {{ statusLabel(c.status) }}
                   </span>
@@ -128,8 +149,29 @@
                         <div class="font-normal text-gray-500 truncate mt-0.5">{{ v.email_template?.name ?? '—' }}</div>
                         <div v-if="v.subject_override" class="font-normal text-gray-400 truncate italic">"{{ v.subject_override }}"</div>
                       </div>
-                      <div class="text-blue-600">↗ <strong>{{ v.open_count ?? 0 }}</strong> ({{ v.sent_count ? Math.round((v.open_count ?? 0) / v.sent_count * 100) : 0 }}%)</div>
-                      <div class="text-green-600">🖱 <strong>{{ v.click_count ?? 0 }}</strong> ({{ v.sent_count ? Math.round((v.click_count ?? 0) / v.sent_count * 100) : 0 }}%)</div>
+                      <!-- Current stats (since last subject change) -->
+                      <template v-if="v.subject_snapshots?.length">
+                        <div class="text-xs text-gray-400 font-medium mb-0.5">Aktuell:</div>
+                      </template>
+                      <div class="text-blue-600">↗ <strong>{{ currentOpens(v) }}</strong> ({{ v.sent_count ? Math.round(currentOpens(v) / v.sent_count * 100) : 0 }}%)</div>
+                      <div class="text-green-600">🖱 <strong>{{ currentClicks(v) }}</strong> ({{ v.sent_count ? Math.round(currentClicks(v) / v.sent_count * 100) : 0 }}%)</div>
+                      <!-- Subject history snapshots -->
+                      <template v-if="v.subject_snapshots?.length">
+                        <div class="mt-1.5 pt-1.5 border-t border-black/10 space-y-1">
+                          <div class="text-xs text-gray-400 font-medium">Frühere Betreffs:</div>
+                          <div
+                            v-for="(snap, si) in v.subject_snapshots.slice().reverse()"
+                            :key="si"
+                            class="text-xs text-gray-400 space-y-0.5"
+                          >
+                            <div class="italic truncate">"{{ snap.subject ?? '(kein Betreff)' }}"</div>
+                            <div class="flex gap-2">
+                              <span class="text-blue-400">↗ {{ snap.open_count }} ({{ snap.sent_count ? Math.round(snap.open_count / snap.sent_count * 100) : 0 }}%)</span>
+                              <span class="text-green-400">🖱 {{ snap.click_count }} ({{ snap.sent_count ? Math.round(snap.click_count / snap.sent_count * 100) : 0 }}%)</span>
+                            </div>
+                          </div>
+                        </div>
+                      </template>
                     </div>
                   </div>
                 </template>
@@ -180,16 +222,28 @@
                   </svg>
                   Senden
                 </button>
-                <button
-                  v-if="c.status === 'pilot'"
-                  @click="openSendConfirm(c)"
-                  class="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors flex items-center gap-1.5"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                  </svg>
-                  Weitere senden
-                </button>
+                <template v-if="c.status === 'pilot'">
+                  <button
+                    v-if="c.variants?.length > 1"
+                    @click="openEditVariants(c)"
+                    class="px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+                    title="Betreffs der Varianten anpassen"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span class="hidden sm:inline">Betreffs</span>
+                  </button>
+                  <button
+                    @click="openSendConfirm(c)"
+                    class="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors flex items-center gap-1.5"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                    </svg>
+                    Weitere senden
+                  </button>
+                </template>
               </div>
             </div>
           </div>
@@ -694,9 +748,66 @@
             <svg v-if="sending" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            {{ sending ? 'Sendet...' : pilotMode ? `Pilot: ${pilotLimit} Emails senden` : `Ja, an ${recipients.length} Leads senden` }}
+            {{ sending ? 'Sendet...' : pilotMode ? `Pilot: ${pilotLimit} Emails senden` : `Ja, an ${effectiveSendCount.toLocaleString('de-CH')} Leads senden` }}
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Variant Subjects Modal -->
+  <div v-if="editVariantsCampaign" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+      <div class="flex items-center justify-between p-6 border-b">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Betreffs anpassen</h3>
+          <p class="text-sm text-gray-500 mt-0.5">{{ editVariantsCampaign.name }}</p>
+        </div>
+        <button @click="editVariantsCampaign = null" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="p-6 space-y-4">
+        <p class="text-sm text-gray-600">Ändere die Betreffs der schlechter performenden Varianten bevor du die nächsten Empfänger sendest. Die bereits gesendeten Emails sind davon nicht betroffen.</p>
+        <div
+          v-for="v in editVariantsForm"
+          :key="v.label"
+          class="rounded-lg border px-4 py-3 space-y-2"
+          :class="variantCardClass(v.label)"
+        >
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold px-2 py-0.5 rounded-full" :class="variantBadgeClass(v.label)">
+              {{ v.label.toUpperCase() }}
+            </span>
+            <span class="text-xs text-gray-500">{{ editVariantsCampaign.variants?.find((x: any) => x.label === v.label)?.email_template?.name }}</span>
+            <span class="text-xs ml-auto" :class="variantLabelClass(v.label)">
+              ↗ {{ editVariantsCampaign.variants?.find((x: any) => x.label === v.label)?.open_count ?? 0 }} Opens
+            </span>
+          </div>
+          <input
+            v-model="v.subjectOverride"
+            type="text"
+            :placeholder="`Betreff Variante ${v.label.toUpperCase()} (leer = aus Template)`"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 bg-white"
+          />
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 p-6 border-t">
+        <button @click="editVariantsCampaign = null" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+          Abbrechen
+        </button>
+        <button
+          @click="saveVariantSubjects"
+          :disabled="savingVariants"
+          class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+        >
+          <svg v-if="savingVariants" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {{ savingVariants ? 'Speichert...' : 'Speichern' }}
+        </button>
       </div>
     </div>
   </div>
@@ -740,6 +851,13 @@ function variantLabelClass(label: string) { return VARIANT_COLORS[label]?.label 
 function variantBadgeClass(label: string) { return VARIANT_COLORS[label]?.badge ?? 'bg-gray-100 text-gray-700' }
 function variantAccentColor(label: string) { return VARIANT_COLORS[label]?.accent ?? '#1e293b' }
 
+function snapshotTotals(v: any) {
+  const snaps: any[] = Array.isArray(v.subject_snapshots) ? v.subject_snapshots : []
+  return snaps.reduce((acc, s) => ({ opens: acc.opens + (s.open_count ?? 0), clicks: acc.clicks + (s.click_count ?? 0) }), { opens: 0, clicks: 0 })
+}
+function currentOpens(v: any) { return Math.max(0, (v.open_count ?? 0) - snapshotTotals(v).opens) }
+function currentClicks(v: any) { return Math.max(0, (v.click_count ?? 0) - snapshotTotals(v).clicks) }
+
 const createForm = reactive({
   name: '',
   subject_override: '',
@@ -765,12 +883,43 @@ const recipientsTotal = ref(0)
 const recipientsLoading = ref(false)
 const duplicatingId = ref<string | null>(null)
 const dailyLimit = ref(500)
+const renamingId = ref<string | null>(null)
+const renameValue = ref('')
 const pilotMode = ref(false)
 const pilotLimit = ref(500)
 const testEmailAddress = ref('')
 const testEmailSending = ref(false)
 const testEmailResult = ref<'ok' | 'error' | null>(null)
 const testEmailSentCount = ref(1)
+
+const editVariantsCampaign = ref<any>(null)
+const editVariantsForm = ref<{ label: string; subjectOverride: string }[]>([])
+const savingVariants = ref(false)
+
+function openEditVariants(campaign: any) {
+  editVariantsCampaign.value = campaign
+  editVariantsForm.value = (campaign.variants ?? [])
+    .slice()
+    .sort((a: any, b: any) => a.label.localeCompare(b.label))
+    .map((v: any) => ({ label: v.label, subjectOverride: v.subject_override ?? '' }))
+}
+
+async function saveVariantSubjects() {
+  if (!editVariantsCampaign.value) return
+  savingVariants.value = true
+  try {
+    await $fetch(`/api/marketing/campaigns/${editVariantsCampaign.value.id}/variants`, {
+      method: 'PATCH',
+      body: { variants: editVariantsForm.value.map(v => ({ label: v.label, subjectOverride: v.subjectOverride || null })) },
+    })
+    await loadData()
+    editVariantsCampaign.value = null
+  } catch (err: any) {
+    alert(`Fehler: ${err.message || 'Unbekannter Fehler'}`)
+  } finally {
+    savingVariants.value = false
+  }
+}
 
 const estimatedCount = ref<number | null>(null)
 
@@ -990,7 +1139,7 @@ async function openSendConfirm(campaign: any) {
   sendResult.value = null
   testEmailResult.value = null
   testEmailAddress.value = ''
-  pilotMode.value = campaign.status !== 'pilot' // default to pilot for fresh drafts, off for continuations
+  pilotMode.value = campaign.status === 'draft' || campaign.status === 'pilot' // default pilot ON for new drafts and ongoing pilots
   recipients.value = []
   recipientsTotal.value = 0
   recipientsLoading.value = true
@@ -1042,6 +1191,31 @@ async function sendCampaign() {
     alert(`Fehler beim Senden: ${err.message || 'Unbekannter Fehler'}`)
   } finally {
     sending.value = false
+  }
+}
+
+function startRename(campaign: any) {
+  renamingId.value = campaign.id
+  renameValue.value = campaign.name
+}
+
+async function saveRename(campaign: any) {
+  if (renamingId.value !== campaign.id) return
+  renamingId.value = null
+  const trimmed = renameValue.value.trim()
+  if (!trimmed || trimmed === campaign.name) return
+  const tenantId = authStore.userProfile?.tenant_id
+  if (!tenantId) return
+  campaign.name = trimmed
+  try {
+    await $fetch(`/api/marketing/campaigns/${campaign.id}/rename`, {
+      method: 'PATCH',
+      body: { name: trimmed, tenantId },
+    })
+  } catch (err: any) {
+    campaign.name = campaign.name
+    alert(`Umbenennen fehlgeschlagen: ${err.message || 'Unbekannter Fehler'}`)
+    await loadData()
   }
 }
 
