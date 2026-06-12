@@ -2,7 +2,20 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-01-01',
   ssr: true,
 
-  modules: ['@nuxtjs/tailwindcss'],
+  modules: ['@nuxtjs/tailwindcss', 'nuxt-gtag'],
+
+  gtag: {
+    // Tag always loads (for GSC/GA4 verification) — data only sent after cookie consent
+    enabled: true,
+    id: process.env.NUXT_PUBLIC_GA_ID ?? '',
+    initCommands: [
+      ['consent', 'default', {
+        analytics_storage: 'denied',
+        ad_storage: 'denied',
+      }],
+    ],
+    config: { anonymize_ip: true },
+  },
 
   tailwindcss: {
     cssPath: '~/assets/css/main.css',
@@ -18,6 +31,9 @@ export default defineNuxtConfig({
     stripePriceStarter: process.env.STRIPE_PRICE_STARTER ?? '',
     stripePriceProfessional: process.env.STRIPE_PRICE_PROFESSIONAL ?? '',
     stripePriceEnterprise: process.env.STRIPE_PRICE_ENTERPRISE ?? '',
+    public: {
+      gaId: process.env.NUXT_PUBLIC_GA_ID ?? '',
+    },
   },
 
   app: {
@@ -29,6 +45,7 @@ export default defineNuxtConfig({
       meta: [
         { name: 'robots', content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' },
         { name: 'author', content: 'simy GmbH' },
+        ...(process.env.NUXT_PUBLIC_GSC_VERIFICATION ? [{ name: 'google-site-verification', content: process.env.NUXT_PUBLIC_GSC_VERIFICATION }] : []),
         { property: 'og:type', content: 'website' },
         { property: 'og:locale', content: 'de_CH' },
         { property: 'og:site_name', content: 'simy' },

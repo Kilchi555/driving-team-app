@@ -141,6 +141,8 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 
+const { gtag } = useGtag()
+
 useHead({
   title: 'Kostenlose SEO-Analyse für Fahrschulen – Simy',
   meta: [
@@ -178,6 +180,11 @@ async function submit() {
     }
     await $fetch('/api/contact', { method: 'POST', body })
     submitted.value = true
+    gtag('event', 'seo_anfrage_submit', {
+      event_category: 'conversion',
+      event_label: 'SEO-Analyse Anfrage',
+      page_path: typeof window !== 'undefined' ? window.location.pathname : '/marketing/seo-anfrage',
+    })
   } catch (e: any) {
     errorMsg.value = e?.data?.statusMessage || 'Etwas ist schiefgelaufen. Bitte versuche es nochmals.'
   } finally {
