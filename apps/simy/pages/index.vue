@@ -1821,6 +1821,8 @@ import { getDemoReminderHtml, getDemoInvoiceHtml, getDemoWelcomeHtml } from '../
 
 declare function definePageMeta(meta: Record<string, unknown>): void
 
+const { gtag } = useGtag()
+
 definePageMeta({ layout: false })
 
 const currentYear = new Date().getFullYear()
@@ -2110,6 +2112,11 @@ const isNavigatingToRegister = ref(false)
 async function goToRegister() {
   if (isNavigatingToRegister.value) return
   isNavigatingToRegister.value = true
+  gtag('event', 'register_click', {
+    event_category: 'conversion',
+    had_logo: !!logoPreview.value,
+    page_path: typeof window !== 'undefined' ? window.location.pathname : '/',
+  })
   if (logoTokenUploading.value) {
     // Wait up to 5 seconds for the background upload to complete
     const start = Date.now()
@@ -2298,6 +2305,11 @@ async function handleLogoUpload(event: Event) {
       colorsExtracted.value = true
       setTimeout(() => { colorsExtracted.value = false }, 3500)
     }
+    gtag('event', 'logo_upload', {
+      event_category: 'engagement',
+      colors_extracted: !!colors,
+      page_path: typeof window !== 'undefined' ? window.location.pathname : '/',
+    })
     // Upload logo to backend in background so URL is ready when user clicks register
     logoTokenUploading.value = true
     $fetch<{ token: string; publicUrl: string }>('/api/brand/temp-logo', {
@@ -2771,6 +2783,11 @@ async function sendDemoEmail() {
       },
     })
     demoSentTemplates.value = new Set([...demoSentTemplates.value, activeTemplate.value])
+    gtag('event', 'demo_email_sent', {
+      event_category: 'conversion',
+      template_type: activeTemplate.value,
+      page_path: typeof window !== 'undefined' ? window.location.pathname : '/',
+    })
   } catch (err: any) {
     demoError.value = err?.data?.statusMessage || 'Fehler beim Senden. Bitte nochmals versuchen.'
   } finally {

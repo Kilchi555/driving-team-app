@@ -147,6 +147,8 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 
+const { gtag } = useGtag()
+
 useHead({
   title: 'Kontakt – Simy | Fahrschulsoftware Schweiz',
   meta: [
@@ -198,6 +200,11 @@ async function submit() {
       body: { name: form.name, email: form.email, topic: form.topic, message: form.message },
     })
     submitted.value = true
+    gtag('event', 'contact_form_submit', {
+      event_category: 'conversion',
+      event_label: form.topic,
+      page_path: typeof window !== 'undefined' ? window.location.pathname : '/kontakt',
+    })
   } catch (e: any) {
     error.value = e?.data?.statusMessage || 'Etwas ist schiefgelaufen. Bitte versuche es nochmals.'
   } finally {
