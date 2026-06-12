@@ -4,7 +4,7 @@
 // and set the Price IDs via env vars.
 
 export type SubscriptionPlan = 'trial' | 'starter' | 'professional' | 'enterprise'
-export type AddonKey = 'seats' | 'courses' | 'affiliate'
+export type AddonKey = 'seats' | 'courses' | 'affiliate' | 'gbp'
 
 export interface PlanDefinition {
   id: SubscriptionPlan
@@ -141,6 +141,7 @@ export const TRIAL_FEATURES: string[] = [
   'cash_management_enabled',
   'discounts_enabled',
   'product_sales_enabled',
+  'gbp_enabled',
 ]
 
 // ─── Add-ons ─────────────────────────────────────────────────────────────────
@@ -170,6 +171,14 @@ export const ADDONS: AddonDefinition[] = [
     perUnit: false,
     featureFlag: 'affiliate_enabled',
   },
+  {
+    key: 'gbp',
+    name: 'Google Business Profile',
+    description: 'GBP direkt aus Simy verwalten: Bewertungen, Insights & Posts',
+    priceEnvKey: 'STRIPE_PRICE_ADDON_GBP',
+    perUnit: false,
+    featureFlag: 'gbp_enabled',
+  },
 ]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -197,7 +206,7 @@ export function getPriceIdForAddon(key: AddonKey): string | undefined {
 // Build the complete list of active feature flags for a plan + active add-ons
 export function resolveFeatureFlags(
   plan: SubscriptionPlan,
-  addons: { courses?: boolean; affiliate?: boolean } = {}
+  addons: { courses?: boolean; affiliate?: boolean; gbp?: boolean } = {}
 ): string[] {
   if (plan === 'trial') return [...TRIAL_FEATURES]
 
@@ -206,6 +215,7 @@ export function resolveFeatureFlags(
 
   if (addons.courses) flags.add('courses_enabled')
   if (addons.affiliate) flags.add('affiliate_enabled')
+  if (addons.gbp) flags.add('gbp_enabled')
 
   return Array.from(flags)
 }
@@ -227,4 +237,5 @@ export const ALL_FEATURE_FLAGS = [
   'discounts_enabled',
   'product_sales_enabled',
   'website_enabled',
+  'gbp_enabled',
 ]

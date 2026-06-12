@@ -1,6 +1,7 @@
 import { defineEventHandler, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireFeature } from '~/server/utils/require-feature'
 
 /**
  * GET /api/gbp/status
@@ -9,6 +10,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
   if (!authUser?.tenant_id) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  await requireFeature(authUser.tenant_id, 'gbp_enabled')
 
   const { data, error } = await getSupabaseAdmin()
     .from('tenant_google_connections')

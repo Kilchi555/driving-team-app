@@ -18,6 +18,31 @@
       <!-- Connection status -->
       <div v-if="statusLoading" class="bg-white rounded-2xl p-6 border border-gray-100 animate-pulse h-24" />
 
+      <!-- Feature not enabled — upgrade CTA -->
+      <div v-else-if="featureBlocked" class="bg-white rounded-2xl p-8 border border-gray-100 text-center max-w-md mx-auto">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mx-auto mb-5">
+          <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/>
+          </svg>
+        </div>
+        <h2 class="text-lg font-bold text-gray-900 mb-2">Google Business Profile Add-on</h2>
+        <p class="text-sm text-gray-500 mb-6 leading-relaxed">
+          Verwalte dein Google Business Profile direkt aus Simy. Beantworte Bewertungen,
+          erstelle Posts und sieh Insights — alles an einem Ort.
+        </p>
+        <ul class="text-left space-y-2 mb-6 max-w-xs mx-auto">
+          <li v-for="f in gbpFeatures" :key="f" class="flex items-center gap-2 text-sm text-gray-600">
+            <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            </svg>
+            {{ f }}
+          </li>
+        </ul>
+        <a href="/admin/billing" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+          Add-on aktivieren
+        </a>
+      </div>
+
       <!-- Not connected -->
       <div v-else-if="!status?.connected" class="bg-white rounded-2xl p-6 border border-gray-100">
         <div class="flex items-start gap-4">
@@ -167,15 +192,25 @@ const tabs = [
 ]
 const activeTab = ref('insights')
 
+const gbpFeatures = [
+  'Bewertungen direkt beantworten',
+  'GBP Insights (Aufrufe, Anrufe, Klicks)',
+  'Verbindung für alle Fahrschul-Accounts',
+  'Automatische Token-Verwaltung',
+]
+
 // Status
 const statusLoading = ref(true)
 const status = ref<any>(null)
+const featureBlocked = ref(false)
 const disconnecting = ref(false)
 
 async function loadStatus() {
   statusLoading.value = true
   try {
     status.value = await $fetch('/api/gbp/status')
+  } catch (e: any) {
+    if (e?.status === 403) featureBlocked.value = true
   } finally {
     statusLoading.value = false
   }
