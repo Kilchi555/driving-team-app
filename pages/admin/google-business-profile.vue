@@ -101,6 +101,7 @@
           >{{ tab.label }}</button>
         </div>
 
+
         <!-- Insights tab -->
         <div v-if="activeTab === 'insights'">
           <div v-if="insightsLoading" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -115,6 +116,84 @@
               <p class="text-xs text-gray-400 mt-1 font-medium">{{ metric.label }}</p>
               <p class="text-xs text-gray-300 mt-0.5">letzte 28 Tage</p>
             </div>
+          </div>
+        </div>
+
+        <!-- Posts tab -->
+        <div v-if="activeTab === 'posts'" class="space-y-4">
+          <!-- New post form -->
+          <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
+            <p class="text-sm font-semibold text-gray-900">Neuer Post</p>
+            <textarea
+              v-model="newPost.summary"
+              rows="4"
+              placeholder="Was möchtest du teilen? Neues Feature, Angebot, Tipp…"
+              class="w-full text-sm rounded-xl border border-gray-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              maxlength="1500"
+            />
+            <div class="flex flex-wrap gap-3">
+              <select v-model="newPost.topicType" class="text-sm rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="STANDARD">Standard</option>
+                <option value="OFFER">Angebot</option>
+                <option value="EVENT">Event</option>
+              </select>
+              <select v-model="newPost.callToActionType" class="text-sm rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Kein Button</option>
+                <option value="LEARN_MORE">Mehr erfahren</option>
+                <option value="SIGN_UP">Registrieren</option>
+                <option value="BOOK">Buchen</option>
+                <option value="CALL">Anrufen</option>
+              </select>
+              <input v-if="newPost.callToActionType" v-model="newPost.callToActionUrl" placeholder="https://…" class="flex-1 min-w-40 text-sm rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-gray-400">{{ newPost.summary.length }}/1500 Zeichen</span>
+              <button @click="publishPost" :disabled="!newPost.summary.trim() || postPublishing" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50">
+                {{ postPublishing ? 'Veröffentlichen…' : 'Jetzt veröffentlichen' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Existing posts -->
+          <div v-if="postsLoading" class="space-y-3">
+            <div v-for="i in 2" :key="i" class="bg-white rounded-2xl p-5 border border-gray-100 animate-pulse h-24" />
+          </div>
+          <div v-else-if="posts.length === 0" class="bg-white rounded-2xl p-6 border border-gray-100 text-center">
+            <p class="text-sm text-gray-400">Noch keine Posts veröffentlicht</p>
+          </div>
+          <div v-else class="space-y-3">
+            <div v-for="post in posts" :key="post.name" class="bg-white rounded-2xl p-5 border border-gray-100">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex-1">
+                  <span class="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 mb-2">{{ post.topicType || 'Standard' }}</span>
+                  <p class="text-sm text-gray-700 leading-relaxed">{{ post.summary }}</p>
+                </div>
+                <button @click="deletePost(post.name)" class="text-xs text-red-400 hover:text-red-600 flex-shrink-0 px-2 py-1 hover:bg-red-50 rounded-lg transition-colors">Löschen</button>
+              </div>
+              <p class="text-xs text-gray-400 mt-2">{{ formatDate(post.createTime) }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Photos tab -->
+        <div v-if="activeTab === 'photos'" class="space-y-4">
+          <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
+            <p class="text-sm font-semibold text-gray-900">Foto hochladen</p>
+            <p class="text-xs text-gray-400">Das Foto muss öffentlich zugänglich sein (z.B. via Supabase Storage oder Cloudinary).</p>
+            <div class="flex gap-3">
+              <input v-model="photoUrl" placeholder="https://example.com/foto.jpg" class="flex-1 text-sm rounded-xl border border-gray-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <select v-model="photoCategory" class="text-sm rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="INTERIOR">Innen</option>
+                <option value="EXTERIOR">Aussen</option>
+                <option value="LOGO">Logo</option>
+                <option value="COVER">Titelbild</option>
+                <option value="PRODUCT">Produkt</option>
+              </select>
+            </div>
+            <button @click="uploadPhoto" :disabled="!photoUrl || photoUploading" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50">
+              {{ photoUploading ? 'Hochladen…' : 'Foto hochladen' }}
+            </button>
+            <p v-if="photoResult" class="text-xs text-green-600">{{ photoResult }}</p>
           </div>
         </div>
 
@@ -164,14 +243,20 @@
                     placeholder="Antwort schreiben…"
                     class="w-full text-sm rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   />
-                  <div class="flex gap-2">
+                  <div class="flex gap-2 flex-wrap">
                     <button @click="submitReply(review.reviewId)" :disabled="replying" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50">
                       {{ replying ? 'Senden…' : 'Antworten' }}
+                    </button>
+                    <button @click="generateAiReply(review)" :disabled="aiReplying === review.reviewId" class="px-3 py-1.5 rounded-lg border border-blue-200 text-blue-600 text-xs font-semibold hover:bg-blue-50 transition-colors disabled:opacity-50">
+                      {{ aiReplying === review.reviewId ? 'KI schreibt…' : '✦ KI-Vorschlag' }}
                     </button>
                     <button @click="replyingTo = null" class="px-3 py-1.5 rounded-lg text-gray-500 text-xs hover:bg-gray-100 transition-colors">Abbrechen</button>
                   </div>
                 </div>
-                <button v-else @click="replyingTo = review.reviewId; replyText = ''" class="text-xs text-blue-600 hover:text-blue-700 font-medium">Antworten</button>
+                <div v-else class="flex gap-3">
+                  <button @click="replyingTo = review.reviewId; replyText = ''" class="text-xs text-blue-600 hover:text-blue-700 font-medium">Antworten</button>
+                  <button @click="replyingTo = review.reviewId; generateAiReply(review)" class="text-xs text-purple-500 hover:text-purple-700 font-medium">✦ KI-Antwort</button>
+                </div>
               </div>
             </div>
           </div>
@@ -189,6 +274,8 @@ useHead({ title: 'Google Business Profile' })
 const tabs = [
   { id: 'insights', label: 'Insights' },
   { id: 'reviews', label: 'Bewertungen' },
+  { id: 'posts', label: 'Posts' },
+  { id: 'photos', label: 'Fotos' },
 ]
 const activeTab = ref('insights')
 
@@ -265,6 +352,19 @@ const averageRating = ref(0)
 const replyingTo = ref<string | null>(null)
 const replyText = ref('')
 const replying = ref(false)
+const aiReplying = ref<string | null>(null)
+
+// Posts
+const posts = ref<any[]>([])
+const postsLoading = ref(false)
+const newPost = ref({ summary: '', topicType: 'STANDARD', callToActionType: '', callToActionUrl: '' })
+const postPublishing = ref(false)
+
+// Photos
+const photoUrl = ref('')
+const photoCategory = ref<'EXTERIOR' | 'INTERIOR' | 'PRODUCT' | 'LOGO' | 'COVER'>('INTERIOR')
+const photoUploading = ref(false)
+const photoResult = ref('')
 
 async function loadReviews() {
   if (!status.value?.connected) return
@@ -279,6 +379,80 @@ async function loadReviews() {
     reviewsError.value = e?.data?.statusMessage || 'Bewertungen konnten nicht geladen werden'
   } finally {
     reviewsLoading.value = false
+  }
+}
+
+async function generateAiReply(review: any) {
+  aiReplying.value = review.reviewId
+  try {
+    const data = await $fetch<any>(`/api/gbp/reviews/${review.reviewId}/ai-reply`, {
+      method: 'POST',
+      body: {
+        reviewText: review.comment ?? '',
+        reviewerName: review.reviewer?.displayName ?? '',
+        starRating: starRating(review.starRating),
+      },
+    })
+    replyText.value = data.suggestedReply
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'KI-Vorschlag fehlgeschlagen')
+  } finally {
+    aiReplying.value = null
+  }
+}
+
+async function loadPosts() {
+  postsLoading.value = true
+  try {
+    const data = await $fetch<any>('/api/gbp/posts')
+    posts.value = data.posts ?? []
+  } catch { /* ignore */ } finally {
+    postsLoading.value = false
+  }
+}
+
+async function publishPost() {
+  if (!newPost.value.summary.trim()) return
+  postPublishing.value = true
+  try {
+    await $fetch('/api/gbp/posts', {
+      method: 'POST',
+      body: {
+        summary: newPost.value.summary,
+        topicType: newPost.value.topicType,
+        ...(newPost.value.callToActionType && {
+          callToActionType: newPost.value.callToActionType,
+          callToActionUrl: newPost.value.callToActionUrl,
+        }),
+      },
+    })
+    newPost.value = { summary: '', topicType: 'STANDARD', callToActionType: '', callToActionUrl: '' }
+    await loadPosts()
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Post fehlgeschlagen')
+  } finally {
+    postPublishing.value = false
+  }
+}
+
+async function deletePost(name: string) {
+  if (!confirm('Post löschen?')) return
+  await $fetch(`/api/gbp/posts/${encodeURIComponent(name)}`, { method: 'DELETE' })
+  await loadPosts()
+}
+
+async function uploadPhoto() {
+  if (!photoUrl.value) return
+  photoUploading.value = true
+  photoResult.value = ''
+  try {
+    await $fetch('/api/gbp/photos', { method: 'POST', body: { photoUrl: photoUrl.value, category: photoCategory.value } })
+    photoResult.value = 'Foto erfolgreich hochgeladen!'
+    photoUrl.value = ''
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Upload fehlgeschlagen')
+  } finally {
+    photoUploading.value = false
   }
 }
 
@@ -325,5 +499,6 @@ onMounted(async () => {
 watch(activeTab, (tab) => {
   if (tab === 'insights' && insightMetrics.value.length === 0) loadInsights()
   if (tab === 'reviews' && reviews.value.length === 0) loadReviews()
+  if (tab === 'posts' && posts.value.length === 0) loadPosts()
 })
 </script>

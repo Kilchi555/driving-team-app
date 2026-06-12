@@ -145,6 +145,109 @@ export async function getGbpReviews(tenantId: string) {
 }
 
 /**
+ * List GBP local posts.
+ */
+export async function listGbpPosts(tenantId: string) {
+  const accessToken = await getValidAccessToken(tenantId)
+  const supabase = getSupabaseAdmin()
+  const { data: conn } = await supabase
+    .from('tenant_google_connections')
+    .select('gbp_location_id, gbp_account_name')
+    .eq('tenant_id', tenantId)
+    .single()
+
+  if (!conn?.gbp_location_id) throw new Error('No GBP location linked')
+
+  const res = await fetch(
+    `${GBP_REVIEWS_BASE}/${conn.gbp_account_name}/${conn.gbp_location_id}/localPosts?pageSize=20`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  )
+  return res.json()
+}
+
+/**
+ * Create a GBP local post.
+ */
+export async function createGbpPost(tenantId: string, post: {
+  summary: string
+  callToActionType?: 'LEARN_MORE' | 'SIGN_UP' | 'BOOK' | 'ORDER' | 'SHOP' | 'CALL'
+  callToActionUrl?: string
+  topicType?: 'STANDARD' | 'EVENT' | 'OFFER'
+}) {
+  const accessToken = await getValidAccessToken(tenantId)
+  const supabase = getSupabaseAdmin()
+  const { data: conn } = await supabase
+    .from('tenant_google_connections')
+    .select('gbp_location_id, gbp_account_name')
+    .eq('tenant_id', tenantId)
+    .single()
+
+  if (!conn?.gbp_location_id) throw new Error('No GBP location linked')
+
+  const body: Record<string, unknown> = {
+    languageCode: 'de',
+    summary: post.summary,
+    topicType: post.topicType ?? 'STANDARD',
+  }
+
+  if (post.callToActionType && post.callToActionUrl) {
+    body.callToAction = { actionType: post.callToActionType, url: post.callToActionUrl }
+  }
+
+  const res = await fetch(
+    `${GBP_REVIEWS_BASE}/${conn.gbp_account_name}/${conn.gbp_location_id}/localPosts`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }
+  )
+  return res.json()
+}
+
+/**
+ * Delete a GBP local post.
+ */
+export async function deleteGbpPost(tenantId: string, postName: string) {
+  const accessToken = await getValidAccessToken(tenantId)
+  const res = await fetch(
+    `${GBP_REVIEWS_BASE}/${postName}`,
+    { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` } }
+  )
+  return res.ok ? { success: true } : res.json()
+}
+
+/**
+ * Upload a photo to GBP (media).
+ * photoUrl must be a publicly accessible URL.
+ */
+export async function uploadGbpPhoto(tenantId: string, photoUrl: string, category: 'EXTERIOR' | 'INTERIOR' | 'PRODUCT' | 'LOGO' | 'COVER' = 'INTERIOR') {
+  const accessToken = await getValidAccessToken(tenantId)
+  const supabase = getSupabaseAdmin()
+  const { data: conn } = await supabase
+    .from('tenant_google_connections')
+    .select('gbp_location_id, gbp_account_name')
+    .eq('tenant_id', tenantId)
+    .single()
+
+  if (!conn?.gbp_location_id) throw new Error('No GBP location linked')
+
+  const res = await fetch(
+    `${GBP_REVIEWS_BASE}/${conn.gbp_account_name}/${conn.gbp_location_id}/media`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mediaFormat: 'PHOTO',
+        locationAssociation: { category },
+        sourceUrl: photoUrl,
+      }),
+    }
+  )
+  return res.json()
+}
+
+/**
  * Reply to a GBP review.
  */
 export async function replyToGbpReview(tenantId: string, reviewId: string, comment: string) {
