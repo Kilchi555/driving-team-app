@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
   if (!tokenData.access_token) return { success: false, reason: 'token_error', detail: tokenData }
   const at = tokenData.access_token
 
-  const BASE = `https://googleads.googleapis.com/v20/customers/${customerId}`
+  const BASE = `https://googleads.googleapis.com/v23/customers/${customerId}`
   const h = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${at}`,
@@ -42,21 +42,12 @@ export default defineEventHandler(async (event) => {
     'login-customer-id': managerCustomerId,
   }
 
-  // ── Debug: list accessible customers ────────────────────────────────────────
-  const accessibleRes = await fetch('https://googleads.googleapis.com/v20/customers:listAccessibleCustomers', {
-    headers: { 'Authorization': `Bearer ${at}`, 'developer-token': developerToken },
-  })
-  const accessible = await accessibleRes.json() as any
-
   async function post(path: string, body: any) {
     const res = await fetch(`${BASE}${path}`, { method: 'POST', headers: h, body: JSON.stringify(body) })
     return res.json() as Promise<any>
   }
 
   const results: any = {}
-
-  // ── Debug: return accessible customers ──────────────────────────────────────
-  return { debug: true, customerId, managerCustomerId, accessible }
 
   // ── Lachen: Budget → Kampagne → Ad Group → Keywords + Ad ──────────────────
 
