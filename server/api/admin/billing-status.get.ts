@@ -32,6 +32,7 @@ export default defineEventHandler(async (event) => {
       addon_seats,
       addon_courses_enabled,
       addon_affiliate_enabled,
+      addon_gbp_enabled,
       stripe_subscription_id,
       stripe_customer_id
     `)
@@ -51,6 +52,7 @@ export default defineEventHandler(async (event) => {
     addon_seats: tenant.addon_seats ?? 0,
     addon_courses_enabled: tenant.addon_courses_enabled ?? false,
     addon_affiliate_enabled: tenant.addon_affiliate_enabled ?? false,
+    addon_gbp_enabled: (tenant as any).addon_gbp_enabled ?? false,
     has_stripe_subscription: !!tenant.stripe_subscription_id,
     has_stripe_customer: !!tenant.stripe_customer_id,
   }

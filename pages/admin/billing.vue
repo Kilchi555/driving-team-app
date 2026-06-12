@@ -246,6 +246,7 @@ interface BillingStatus {
   addon_seats: number
   addon_courses_enabled: boolean
   addon_affiliate_enabled: boolean
+  addon_gbp_enabled: boolean
   has_stripe_subscription: boolean
   has_stripe_customer: boolean
 }
@@ -340,6 +341,7 @@ const activeAddons = computed(() => {
   if (billing.value.addon_seats > 0) addons.push(`${billing.value.addon_seats} Extra-Seat${billing.value.addon_seats !== 1 ? 's' : ''}`)
   if (billing.value.addon_courses_enabled) addons.push('Kursbuchungsseite')
   if (billing.value.addon_affiliate_enabled) addons.push('Affiliate-System')
+  if (billing.value.addon_gbp_enabled) addons.push('Google Business Profile')
   return addons
 })
 

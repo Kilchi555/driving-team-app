@@ -9,6 +9,7 @@ interface CheckoutBody {
     seats?: number
     courses?: boolean
     affiliate?: boolean
+    gbp?: boolean
   }
   withWallee?: boolean
   staffToDeactivate?: string[] // user IDs to deactivate after payment
@@ -202,6 +203,13 @@ export default defineEventHandler(async (event) => {
     lineItems.push({ price: affiliatePriceId, quantity: 1 })
   }
 
+  // Add-on: Google Business Profile
+  if (addons.gbp) {
+    const gbpPriceId = process.env[ADDONS.find(a => a.key === 'gbp')!.priceEnvKey]?.trim()
+    if (!gbpPriceId) throw createError({ statusCode: 500, statusMessage: 'Missing STRIPE_PRICE_ADDON_GBP' })
+    lineItems.push({ price: gbpPriceId, quantity: 1 })
+  }
+
   // ── Create Checkout Session ───────────────────────────────────────────────
   // If tenant wants Wallee AND it's not yet active → 30-day billing pause:
   // ~20 days for Handelsregister (HR) registration + ~5 days for Wallee onboarding + buffer.
@@ -223,6 +231,7 @@ export default defineEventHandler(async (event) => {
           addon_seats: String(addons.seats || 0),
           addon_courses: String(!!addons.courses),
           addon_affiliate: String(!!addons.affiliate),
+          addon_gbp: String(!!addons.gbp),
           with_wallee: String(withWallee),
           ...(staffToDeactivate.length > 0 ? { staff_to_deactivate: staffToDeactivate.join(',') } : {}),
           ...(tenantId ? { tenant_id: tenantId } : {}),

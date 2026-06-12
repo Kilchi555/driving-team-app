@@ -266,6 +266,36 @@
           </div>
         </div>
 
+        <!-- Google Business Profile Add-on -->
+        <div @click="toggleGbp"
+          :class="['rounded-2xl border-2 p-5 transition-all bg-white cursor-pointer',
+            addonGbp ? 'shadow-lg' : 'border-gray-100 shadow-sm']"
+          :style="addonGbp ? { borderColor: primaryColor, boxShadow: `0 10px 25px rgba(var(--brand-rgb), 0.12)` } : {}">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <p class="font-bold text-gray-900 text-sm">Google Business Profile</p>
+              <p class="text-xs text-gray-400 mt-0.5">Bewertungen, Posts & Fotos verwalten</p>
+            </div>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-lg"
+              style="background: rgba(var(--brand-rgb), 0.08); color: var(--brand-primary);">
+              {{ pricesLoading ? '…' : pricesAvailable ? formatChf(addonPriceAmount('gbp')) : '–' }}/Mt.
+            </span>
+          </div>
+          <div class="flex items-center justify-center">
+            <div class="flex items-center gap-2.5 text-sm font-medium"
+              :class="addonGbp ? '' : 'text-gray-400'"
+              :style="addonGbp ? { color: primaryColor } : {}">
+              <div class="w-5 h-5 rounded border-2 flex items-center justify-center transition-all"
+                :style="addonGbp ? `background: var(--brand-primary); border-color: var(--brand-primary)` : 'border-color:#D1D5DB'">
+                <svg v-if="addonGbp" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              {{ addonGbp ? 'Ausgewählt' : 'Hinzufügen' }}
+            </div>
+          </div>
+        </div>
+
         <!-- Online-Zahlungen (Wallee) -->
         <div @click="withWallee = !withWallee"
           :class="['rounded-2xl border-2 p-5 transition-all bg-white cursor-pointer col-span-full mt-4',
@@ -368,7 +398,7 @@
             </div>
 
             <!-- Divider between base and addons (only if addons exist) -->
-            <div v-if="addonSeats > 0 || (addonCourses && !planIncludesCourses) || (addonAffiliate && !planIncludesAffiliate)"
+            <div v-if="addonSeats > 0 || (addonCourses && !planIncludesCourses) || (addonAffiliate && !planIncludesAffiliate) || addonGbp"
               class="border-t border-dashed border-gray-100 pt-2 mt-1">
             </div>
 
@@ -391,6 +421,13 @@
               class="flex justify-between items-center text-gray-600">
               <span>Add-on: Affiliate-System</span>
               <span class="font-medium">{{ formatChf(addonPriceAmount('affiliate')) }}</span>
+            </div>
+
+            <!-- GBP -->
+            <div v-if="addonGbp"
+              class="flex justify-between items-center text-gray-600">
+              <span>Add-on: Google Business Profile</span>
+              <span class="font-medium">{{ formatChf(addonPriceAmount('gbp')) }}</span>
             </div>
 
             <!-- Wallee -->
@@ -782,6 +819,7 @@ const selectedPlan = ref<string>('starter')
 const addonSeats = ref(0)
 const addonCourses = ref(false)
 const addonAffiliate = ref(false)
+const addonGbp = ref(false)
 const withWallee = ref(true)
 const tenantHasUid = ref(true)
 const loading = ref(false)
@@ -945,6 +983,7 @@ const totalPrice = computed(() => {
   total += addonSeats.value * addonPriceAmount('seats')
   if (addonCourses.value && !planIncludesCourses.value) total += addonPriceAmount('courses')
   if (addonAffiliate.value && !planIncludesAffiliate.value) total += addonPriceAmount('affiliate')
+  if (addonGbp.value) total += addonPriceAmount('gbp')
   return formatChf(total)
 })
 
@@ -961,6 +1000,7 @@ watch(selectedPlan, () => {
 
 const toggleCourses = () => { if (!planIncludesCourses.value) addonCourses.value = !addonCourses.value }
 const toggleAffiliate = () => { if (!planIncludesAffiliate.value) addonAffiliate.value = !addonAffiliate.value }
+const toggleGbp = () => { addonGbp.value = !addonGbp.value }
 
 /** Resolve a fresh access token.
  *  1. Try the @nuxtjs/supabase client session (in-memory / module cookie).
@@ -1007,6 +1047,7 @@ const buildCheckoutBody = () => ({
     seats: addonSeats.value,
     courses: addonCourses.value && !planIncludesCourses.value,
     affiliate: addonAffiliate.value && !planIncludesAffiliate.value,
+    gbp: addonGbp.value,
   },
   withWallee: withWallee.value,
   staffToDeactivate: staffToDeactivate.value.map(s => s.id),
