@@ -17,7 +17,11 @@ export default defineEventHandler(async (event) => {
   const managerCustomerId = '9509957201'
 
   if (!developerToken || !clientId || !clientSecret || !refreshToken || !customerId) {
-    return { success: false, reason: 'missing_credentials' }
+    return {
+      success: false,
+      reason: 'missing_credentials',
+      present: { developerToken: !!developerToken, clientId: !!clientId, clientSecret: !!clientSecret, refreshToken: !!refreshToken, customerId: !!customerId, customerIdValue: customerId?.slice(0, 4) + '...' },
+    }
   }
 
   // ── Access Token ─────────────────────────────────────────────────────────────
@@ -38,12 +42,21 @@ export default defineEventHandler(async (event) => {
     'login-customer-id': managerCustomerId,
   }
 
+  // ── Debug: list accessible customers ────────────────────────────────────────
+  const accessibleRes = await fetch('https://googleads.googleapis.com/v20/customers:listAccessibleCustomers', {
+    headers: { 'Authorization': `Bearer ${at}`, 'developer-token': developerToken },
+  })
+  const accessible = await accessibleRes.json() as any
+
   async function post(path: string, body: any) {
     const res = await fetch(`${BASE}${path}`, { method: 'POST', headers: h, body: JSON.stringify(body) })
     return res.json() as Promise<any>
   }
 
   const results: any = {}
+
+  // ── Debug: return accessible customers to diagnose ──────────────────────────
+  return { debug: true, customerId, managerCustomerId, accessible }
 
   // ── Lachen: Budget → Kampagne → Ad Group → Keywords + Ad ──────────────────
 
@@ -218,4 +231,3 @@ export default defineEventHandler(async (event) => {
   })
 
   return { success: true, customerId, results }
-})
