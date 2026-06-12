@@ -5,15 +5,10 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss', 'nuxt-gtag'],
 
   gtag: {
-    enabled: true,
+    // Script is injected directly in app.head.script above (SSR-safe).
+    // nuxt-gtag is kept for the useGtag() composable only.
+    enabled: false,
     id: 'G-VZPENJ6FNP',
-    initCommands: [
-      ['consent', 'default', {
-        analytics_storage: 'denied',
-        ad_storage: 'denied',
-      }],
-    ],
-    config: { anonymize_ip: true },
   },
 
   tailwindcss: {
@@ -58,6 +53,15 @@ export default defineNuxtConfig({
       link: [
         { rel: 'icon', type: 'image/png', href: '/simy-favicon.png' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+      ],
+      script: [
+        {
+          src: 'https://www.googletagmanager.com/gtag/js?id=G-VZPENJ6FNP',
+          async: true,
+        },
+        {
+          innerHTML: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('consent','default',{analytics_storage:'denied',ad_storage:'denied'});gtag('config','G-VZPENJ6FNP');`,
+        },
       ],
     },
   },
