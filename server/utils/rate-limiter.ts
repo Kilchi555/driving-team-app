@@ -29,6 +29,8 @@ const LIMITS = {
   cancel_staff: { maxRequests: 100, windowMs: 60 * 60 * 1000 }, // 100 per hour (staff cancellations)
   cancel_customer: { maxRequests: 50, windowMs: 60 * 60 * 1000 }, // 50 per hour (customer cancellations)
   use_credit_for_appointment: { maxRequests: 50, windowMs: 60 * 60 * 1000 }, // ✅ NEW: 50 per hour
+  booking_proposal: { maxRequests: 5, windowMs: 60 * 60 * 1000 }, // 5 per hour per IP
+  booking_inquiry: { maxRequests: 5, windowMs: 60 * 60 * 1000 }, // 5 per hour per IP
 }
 
 // Exponential Backoff multipliers (in minutes)

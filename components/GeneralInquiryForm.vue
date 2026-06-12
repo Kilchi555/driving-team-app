@@ -147,6 +147,12 @@
         <p class="text-sm text-red-700">{{ error }}</p>
       </div>
 
+      <!-- Honeypot: hidden from humans, bots fill it in -->
+      <div aria-hidden="true" style="position:absolute;left:-9999px;height:0;width:0;overflow:hidden;">
+        <label for="_hp_inquiry">Website</label>
+        <input id="_hp_inquiry" v-model="honeypot" type="text" name="website" tabindex="-1" autocomplete="off" />
+      </div>
+
       <!-- Submit Button -->
       <button
         @click="submitInquiry"
@@ -254,6 +260,7 @@ const lastName = ref('')
 const email = ref('')
 const phone = ref('')
 const message = ref('')
+const honeypot = ref('')
 const selectedCategory = ref(props.initial_category || '')
 const selectedLocation = ref(props.initial_location || '')
 const selectedDuration = ref(props.initial_duration || null)
@@ -429,7 +436,8 @@ const submitInquiry = async () => {
       last_name: lastName.value.trim(),
       email: email.value.trim(),
       phone: phone.value.trim(),
-      notes: message.value.trim()
+      notes: message.value.trim(),
+      _hp: honeypot.value || undefined,
     }
 
     if (isSpecificRequest.value) {

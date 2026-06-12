@@ -121,7 +121,7 @@ export default defineEventHandler(async (event) => {
           body: {
             staff_id,
             tenant_id,
-            trigger: 'external_busy_time_created'
+            trigger: 'external_event'
           }
         })
         logger.debug('✅ Queued recalculation after external busy time creation')
@@ -209,7 +209,7 @@ export default defineEventHandler(async (event) => {
           body: {
             staff_id,
             tenant_id,
-            trigger: 'external_busy_time_updated'
+            trigger: 'external_event'
           }
         })
         logger.debug('✅ Queued recalculation after external busy time update')
@@ -272,7 +272,7 @@ export default defineEventHandler(async (event) => {
           body: {
             staff_id,
             tenant_id,
-            trigger: 'external_busy_time_deleted'
+            trigger: 'external_event'
           }
         })
         logger.debug('✅ Queued recalculation after external busy time deletion')

@@ -64,7 +64,7 @@ export async function sendWelcomeEmail(params: SendWelcomeEmailParams): Promise<
       to,
       subject: `Willkommen bei Simy, ${tenantName}! 🎉`,
       senderName: 'Pascal von Simy',
-      html: buildAdminHtml(firstName, tenantName, loginUrl),
+      html: buildAdminHtml(firstName, tenantName ?? 'Fahrschule', loginUrl),
     })
   } else {
     const subject = role === 'staff'
@@ -77,7 +77,7 @@ export async function sendWelcomeEmail(params: SendWelcomeEmailParams): Promise<
       fromName: tenantName,
       fromEmail,
       domainVerified,
-      html: buildUserHtml(role, firstName, tenantName, primaryColor, loginUrl),
+      html: buildUserHtml(role, firstName, tenantName ?? 'Fahrschule', primaryColor, loginUrl),
     })
   }
 }

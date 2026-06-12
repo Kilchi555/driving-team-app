@@ -1,0 +1,149 @@
+<h1 id="simy-google-ads-api-tool-design-document">Simy — Google Ads API
+Tool Design Document</h1>
+<p><strong>Company:</strong> Simy GmbH<br />
+<strong>Website:</strong> https://simy.ch<br />
+<strong>Platform:</strong> https://app.simy.ch<br />
+<strong>Date:</strong> June 2026</p>
+<hr />
+<h2 id="overview">1. Overview</h2>
+<p>Simy is a SaaS platform built for driving schools in Switzerland. It
+provides automated marketing campaign management, booking systems, and
+performance reporting. The Google Ads API integration is used to manage
+Search campaigns on behalf of multiple driving school clients (tenants),
+each with their own Google Ads accounts linked under the Simy MCC.</p>
+<hr />
+<h2 id="system-architecture">2. System Architecture</h2>
+<pre><code>Simy Admin Panel (app.simy.ch)
+        │
+        ▼
+Simy Backend API (Nuxt.js / Node.js, hosted on Vercel)
+        │
+        ├──► Google Ads REST API v23
+        │         │
+        │         ├── MCC Account (950-995-7201)
+        │         │       ├── Client Account: Driving Team Zürich (191-669-8119)
+        │         │       ├── Client Account: Driving Team Lachen
+        │         │       └── [future client accounts]
+        │         │
+        │         └── API Operations:
+        │               ├── Campaign Creation (Search)
+        │               ├── Ad Group + Keyword Management
+        │               ├── Bid Management (Max CPC)
+        │               ├── Performance Data Sync (daily)
+        │               └── Server-side Conversion Upload
+        │
+        └──► Supabase (PostgreSQL)
+                  └── marketing_google_ads_daily (performance data)</code></pre>
+<hr />
+<h2 id="user-access">3. User Access</h2>
+<p><strong>Who uses the tool:</strong> - Internal Simy staff (platform
+administrators) - Driving school operators (clients) via the Simy admin
+dashboard</p>
+<p><strong>Authentication:</strong> - Simy uses OAuth2 with a service
+account and refresh token - All API calls are made server-side (never
+from the browser) - API keys are stored as encrypted environment
+variables in Vercel</p>
+<hr />
+<h2 id="api-capabilities-used">4. API Capabilities Used</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Campaign Creation</td>
+<td>Create Search campaigns per location and course type (e.g. Motorrad
+Grundkurs Zürich)</td>
+</tr>
+<tr>
+<td>Campaign Management</td>
+<td>Update campaign status, budgets, and geo-targeting</td>
+</tr>
+<tr>
+<td>Ad Group Management</td>
+<td>Create ad groups with Responsive Search Ads</td>
+</tr>
+<tr>
+<td>Keyword Management</td>
+<td>Add/update keywords with match types and Max CPC bids</td>
+</tr>
+<tr>
+<td>Bid Management</td>
+<td>Bulk-update Max CPC across all keywords via the Simy admin tool</td>
+</tr>
+<tr>
+<td>Performance Reporting</td>
+<td>Daily sync of impressions, clicks, cost, conversions into
+Supabase</td>
+</tr>
+<tr>
+<td>Conversion Upload</td>
+<td>Server-side upload of booking conversions with gclid/gbraid</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="campaign-types-supported">5. Campaign Types Supported</h2>
+<ul>
+<li><strong>Search</strong> (primary): Keyword-targeted search campaigns
+for driving course bookings</li>
+</ul>
+<hr />
+<h2 id="data-flow-campaign-creation">6. Data Flow — Campaign
+Creation</h2>
+<ol type="1">
+<li>Simy admin selects a client account and course type in the
+dashboard</li>
+<li>Backend generates campaign settings (name, budget, geo-target,
+keywords)</li>
+<li>API calls: <code>campaignBudgets:mutate</code> →
+<code>campaigns:mutate</code> → <code>adGroups:mutate</code> →
+<code>adGroupCriteria:mutate</code> → <code>ads:mutate</code></li>
+<li>Campaign is created in PAUSED status for review before
+activation</li>
+</ol>
+<hr />
+<h2 id="data-flow-performance-sync">7. Data Flow — Performance Sync</h2>
+<ol type="1">
+<li>Vercel Cron job runs daily at 04:10 UTC</li>
+<li>Queries <code>campaign</code> resource for last 7 days via
+<code>googleAds:search</code></li>
+<li>Upserts results into <code>marketing_google_ads_daily</code> table
+in Supabase</li>
+<li>Data displayed in Simy marketing dashboard per client</li>
+</ol>
+<hr />
+<h2 id="data-flow-conversion-upload">8. Data Flow — Conversion
+Upload</h2>
+<ol type="1">
+<li>Customer completes booking on client’s website</li>
+<li>Simy backend extracts <code>gclid</code>/<code>gbraid</code> stored
+at session start</li>
+<li>Uploads click conversion via
+<code>customers/{id}:uploadClickConversions</code></li>
+<li>Supports Enhanced Conversions (hashed email + phone)</li>
+</ol>
+<hr />
+<h2 id="security-compliance">9. Security &amp; Compliance</h2>
+<ul>
+<li>OAuth2 refresh token stored as encrypted Vercel environment
+variable</li>
+<li>Developer token never exposed to end users or client browsers</li>
+<li>All mutations require admin authentication (CRON_SECRET or admin
+session)</li>
+<li>No automated bidding without human review — campaigns start
+PAUSED</li>
+<li>Data access limited to accounts under the Simy MCC</li>
+</ul>
+<hr />
+<h2 id="contact">10. Contact</h2>
+<p><strong>API Contact Email:</strong> info@simy.ch<br />
+<strong>Technical Lead:</strong> Pascal Kilchenmann<br />
+<strong>MCC Account:</strong> 950-995-7201</p>

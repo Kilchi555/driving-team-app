@@ -117,12 +117,24 @@ export default defineEventHandler(async (event) => {
         if (insertError) throw insertError
 
         logger.debug('✅ Working hours saved')
+
+        await $fetch('/api/availability/queue-recalc', {
+          method: 'POST',
+          body: { staff_id: body.staffId, tenant_id: userData.tenant_id, trigger: 'working_hours' }
+        }).catch((e: any) => logger.warn('⚠️ Failed to queue recalc after working hours save:', e.message))
+
         return {
           success: true,
           data: insertedData?.[0] || {}
         }
       } else {
         logger.debug('✅ Working hours cleared for day')
+
+        await $fetch('/api/availability/queue-recalc', {
+          method: 'POST',
+          body: { staff_id: body.staffId, tenant_id: userData.tenant_id, trigger: 'working_hours' }
+        }).catch((e: any) => logger.warn('⚠️ Failed to queue recalc after working hours clear:', e.message))
+
         return {
           success: true,
           data: {}
@@ -132,6 +144,19 @@ export default defineEventHandler(async (event) => {
 
     // DELETE - Clear all working hours
     if (body.action === 'delete') {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', body.staffId)
+        .single()
+
+      if (userError || !userData?.tenant_id) {
+        throw createError({
+          statusCode: 404,
+          statusMessage: 'Staff member not found'
+        })
+      }
+
       const { error } = await supabase
         .from('staff_working_hours')
         .delete()
@@ -140,6 +165,12 @@ export default defineEventHandler(async (event) => {
       if (error) throw error
 
       logger.debug('✅ All working hours cleared')
+
+      await $fetch('/api/availability/queue-recalc', {
+        method: 'POST',
+        body: { staff_id: body.staffId, tenant_id: userData.tenant_id, trigger: 'working_hours' }
+      }).catch((e: any) => logger.warn('⚠️ Failed to queue recalc after working hours delete:', e.message))
+
       return {
         success: true
       }
@@ -206,12 +237,24 @@ export default defineEventHandler(async (event) => {
         if (insertError) throw insertError
 
         logger.debug('✅ Working day blocks saved:', blocksToInsert.length)
+
+        await $fetch('/api/availability/queue-recalc', {
+          method: 'POST',
+          body: { staff_id: body.staffId, tenant_id: userData.tenant_id, trigger: 'working_hours' }
+        }).catch((e: any) => logger.warn('⚠️ Failed to queue recalc after save_day:', e.message))
+
         return {
           success: true,
           data: insertedData || []
         }
       } else {
         logger.debug('✅ Working day cleared for all blocks')
+
+        await $fetch('/api/availability/queue-recalc', {
+          method: 'POST',
+          body: { staff_id: body.staffId, tenant_id: userData.tenant_id, trigger: 'working_hours' }
+        }).catch((e: any) => logger.warn('⚠️ Failed to queue recalc after save_day clear:', e.message))
+
         return {
           success: true,
           data: []

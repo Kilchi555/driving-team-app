@@ -317,6 +317,18 @@ export default defineEventHandler(async (event) => {
           console.warn('⚠️ Location assignment failed (non-fatal):', locErr)
         }
       }
+      // Create staff_locations entries so locations are marked as online bookable
+      try {
+        const staffLocationRows = selectedLocationIds.map((locId: string) => ({
+          staff_id: newUser.id,
+          location_id: locId,
+          tenant_id: invitation.tenant_id,
+          is_online_bookable: true,
+        }))
+        await serviceSupabase.from('staff_locations').upsert(staffLocationRows, { onConflict: 'staff_id,location_id' })
+      } catch (err) {
+        console.warn('⚠️ staff_locations upsert failed (non-fatal):', err)
+      }
       logger.debug('✅ Standard locations assigned:', selectedLocationIds.length)
     }
 
@@ -328,14 +340,26 @@ export default defineEventHandler(async (event) => {
           .map((l: any) => ({
             name:          l.name.trim(),
             address:       l.address.trim(),
+            canton:        l.canton?.trim().toUpperCase() || null,
             tenant_id:     invitation.tenant_id,
             staff_ids:     [newUser.id],
             location_type: 'standard',
             is_active:     true,
           }))
         if (locationRows.length > 0) {
-          await serviceSupabase.from('locations').insert(locationRows)
+          const { data: insertedLocs } = await serviceSupabase
+            .from('locations').insert(locationRows).select('id')
           logger.debug('✅ New meetup locations created:', locationRows.length)
+          // Create staff_locations entries for newly created locations
+          if (insertedLocs && insertedLocs.length > 0) {
+            const staffLocationRows = insertedLocs.map((loc: any) => ({
+              staff_id: newUser.id,
+              location_id: loc.id,
+              tenant_id: invitation.tenant_id,
+              is_online_bookable: true,
+            }))
+            await serviceSupabase.from('staff_locations').upsert(staffLocationRows, { onConflict: 'staff_id,location_id' })
+          }
         }
       } catch (err) {
         console.warn('⚠️ Creating new locations failed (non-fatal):', err)

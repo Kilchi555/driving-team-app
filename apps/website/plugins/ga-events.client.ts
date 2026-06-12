@@ -33,9 +33,9 @@ export default defineNuxtPlugin(() => {
     }
   }
 
-  function fireGoogleAdsConversion() {
+  function fireGoogleAdsConversion(labelOverride?: string) {
     const adsId = config.public.googleAdsId
-    const adsLabel = config.public.googleAdsConversionLabel
+    const adsLabel = labelOverride || config.public.googleAdsConversionLabel
     if (adsId && adsLabel) {
       gtag('event', 'conversion', { send_to: `${adsId}/${adsLabel}` })
     }
@@ -97,6 +97,8 @@ export default defineNuxtPlugin(() => {
         page_path: window.location.pathname,
       })
       fireMetaEvent('Contact')
+      // Use phone-specific label if set, otherwise fall back to the general conversion label
+      fireGoogleAdsConversion((config.public as any).googleAdsPhoneConversionLabel || undefined)
 
       // First-party DB log for phone clicks
       const sessionId = (window as any).__analyticsSessionId || 'unknown'

@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   const { data, error } = await supabase
     .from('email_campaigns')
     // Explicit FK hint to avoid PostgREST 300 "ambiguous relationship"
-    .select('*, email_template:email_templates!template_id(name, subject), variants:email_campaign_variants(id, label, split_pct, subject_override, sent_count, open_count, click_count, template_id, email_template:email_templates(name, subject))')
+    .select('*, email_template:email_templates!template_id(name, subject), variants:email_campaign_variants(id, label, split_pct, subject_override, sent_count, open_count, click_count, template_id, subject_snapshots, email_template:email_templates(name, subject))')
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
