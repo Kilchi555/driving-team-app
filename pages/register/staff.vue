@@ -1014,22 +1014,12 @@ const submit = async () => {
         icsUrl.value = tokenRes?.calendarLink || tokenRes?.url || `${typeof window !== 'undefined' ? window.location.origin : ''}/api/calendar/ics?staff_id=${userId}`
       } catch {
         icsUrl.value = `${typeof window !== 'undefined' ? window.location.origin : ''}/api/calendar/ics?staff_id=${userId}`
+      }
     }
-  }
-
-// Auto-normalize calendar URL: webcal:// and http:// → https://
-const normalizeCalendarUrl = () => {
-  if (!form.externalCalendarUrl) return
-  form.externalCalendarUrl = form.externalCalendarUrl
-    .trim()
-    .replace(/^webcal:\/\//i, 'https://')
-    .replace(/^http:\/\//i, 'https://')
-}
 
     // Connect external calendar after login
     if (loginOk && form.externalCalendarProvider && form.externalCalendarUrl) {
       try {
-        // Normalize webcal:// → https:// and http:// → https:// (already done on input, but kept as safety net)
         const normalizedUrl = form.externalCalendarUrl
           .replace(/^webcal:\/\//i, 'https://')
           .replace(/^http:\/\//i, 'https://')
@@ -1053,6 +1043,15 @@ const normalizeCalendarUrl = () => {
     registrationError.value = err.data?.statusMessage || err.statusMessage || err.message || 'Ein Fehler ist aufgetreten'
     currentStep.value = 6
   }
+}
+
+// Auto-normalize calendar URL: webcal:// and http:// → https://
+const normalizeCalendarUrl = () => {
+  if (!form.externalCalendarUrl) return
+  form.externalCalendarUrl = form.externalCalendarUrl
+    .trim()
+    .replace(/^webcal:\/\//i, 'https://')
+    .replace(/^http:\/\//i, 'https://')
 }
 
 // ─── Dashboard redirect ───────────────────────────────────────────────────────

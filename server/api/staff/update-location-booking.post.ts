@@ -153,6 +153,18 @@ export default defineEventHandler(async (event) => {
       is_online_bookable
     })
 
+    // Queue availability recalculation so slots reflect the new bookable state immediately
+    await $fetch('/api/availability/queue-recalc', {
+      method: 'POST',
+      body: {
+        staff_id: userProfile.id,
+        tenant_id: userProfile.tenant_id,
+        trigger: 'working_hours'
+      }
+    }).catch((e: any) => {
+      logger.warn('⚠️ Failed to queue recalc after location bookable toggle (non-critical):', e.message)
+    })
+
     return {
       success: true,
       message: `Standort ist ${is_online_bookable ? 'jetzt' : 'nicht mehr'} online buchbar`,

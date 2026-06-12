@@ -6,6 +6,7 @@
 import { defineEventHandler, readBody, createError, getRequestHeader, getRequestIP } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { recordAndUploadInquiryConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -13,40 +14,16 @@ interface MarketingAttributionPayload {
   wbraid?: string | null
 }
 
-// Simple in-memory rate limiter: max 3 submissions per IP per 10 minutes
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-const RATE_LIMIT_MAX = 3
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000 // 10 minutes
-
-function checkRateLimit(ip: string): void {
-  const now = Date.now()
-  const entry = rateLimitMap.get(ip)
-
-  if (entry && now < entry.resetAt) {
-    if (entry.count >= RATE_LIMIT_MAX) {
-      throw createError({
-        statusCode: 429,
-        statusMessage: 'Too many requests. Please try again in a few minutes.'
-      })
-    }
-    entry.count++
-  } else {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
-  }
-
-  // Clean up old entries periodically
-  if (rateLimitMap.size > 10000) {
-    for (const [key, val] of rateLimitMap.entries()) {
-      if (now >= val.resetAt) rateLimitMap.delete(key)
-    }
-  }
-}
-
 export default defineEventHandler(async (event) => {
   try {
-    // Rate limiting by IP
     const ip = getRequestIP(event, { xForwardedFor: true }) || 'unknown'
-    checkRateLimit(ip)
+    const { allowed } = await checkRateLimit(ip, 'booking_inquiry')
+    if (!allowed) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Too many requests. Please try again later.'
+      })
+    }
 
     const body = await readBody(event)
     const {
@@ -63,7 +40,13 @@ export default defineEventHandler(async (event) => {
       created_by_user_id,
       preferred_time_slots = [], // Empty for general inquiries
       marketing_attribution,
+      _hp, // Honeypot field — must be empty
     } = body
+
+    // Honeypot: bots fill hidden fields, humans don't
+    if (_hp) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid request' })
+    }
 
     // Validate required fields
     if (!tenant_id) {

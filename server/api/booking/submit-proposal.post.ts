@@ -1,9 +1,10 @@
 // server/api/booking/submit-proposal.post.ts
 // Submit a booking proposal when no slots are available
 
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, createError, getRequestIP } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { recordAndUploadInquiryConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -18,6 +19,15 @@ interface MarketingAttributionPayload {
 
 export default defineEventHandler(async (event) => {
   try {
+    const ip = getRequestIP(event, { xForwardedFor: true }) || 'unknown'
+    const { allowed, remaining } = await checkRateLimit(ip, 'booking_proposal')
+    if (!allowed) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Too many requests. Please try again later.'
+      })
+    }
+
     const body = await readBody(event)
     const {
       tenant_id,
@@ -38,7 +48,13 @@ export default defineEventHandler(async (event) => {
       created_by_user_id,
       marketing_session_id,
       marketing_attribution,
+      _hp, // Honeypot field — must be empty
     } = body
+
+    // Honeypot: bots fill hidden fields, humans don't
+    if (_hp) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid request' })
+    }
 
     // Validate required fields
     if (!tenant_id || !category_code || !duration_minutes || !location_id || !staff_id) {
@@ -96,6 +112,13 @@ export default defineEventHandler(async (event) => {
         })
       }
 
+      // String length limits to prevent abuse
+      if (first_name.trim().length > 100) throw createError({ statusCode: 400, statusMessage: 'First name too long (max 100 chars)' })
+      if (last_name.trim().length > 100) throw createError({ statusCode: 400, statusMessage: 'Last name too long (max 100 chars)' })
+      if (email.trim().length > 254) throw createError({ statusCode: 400, statusMessage: 'Email too long (max 254 chars)' })
+      if (phone.trim().length > 30) throw createError({ statusCode: 400, statusMessage: 'Phone too long (max 30 chars)' })
+      if (notes && notes.trim().length > 1000) throw createError({ statusCode: 400, statusMessage: 'Notes too long (max 1000 chars)' })
+
       // Validate email format
       const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/
       if (!emailRegex.test(email)) {
@@ -116,9 +139,6 @@ export default defineEventHandler(async (event) => {
     }
 
     const supabase = getSupabaseAdmin()
-
-    // ⚠️ TODO: Implement robust rate limiting here to prevent spamming
-    // (e.g., based on IP address, email, or a captcha)
 
     // 1. Validate tenant_id
     const { data: tenant, error: tenantError } = await supabase

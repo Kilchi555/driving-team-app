@@ -718,7 +718,19 @@
           </div>
 
           <!-- Color preview hint (shown when colors were pre-selected) -->
-          <div v-if="formData.primary_color !== '#3B82F6' || formData.secondary_color !== '#10B981'"
+          <div v-if="colorsExtracted"
+            class="flex items-center gap-3 rounded-xl px-4 py-3 border transition-all"
+            :style="{ background: (formData.primary_color || '#3B82F6') + '0D', borderColor: (formData.primary_color || '#3B82F6') + '35' }">
+            <div class="flex gap-1.5 flex-shrink-0">
+              <span class="w-4 h-4 rounded-full shadow-sm" :style="{ background: formData.primary_color }"></span>
+              <span class="w-4 h-4 rounded-full shadow-sm" :style="{ background: formData.secondary_color }"></span>
+              <span class="w-4 h-4 rounded-full shadow-sm" :style="{ background: formData.accent_color }"></span>
+            </div>
+            <p class="text-xs font-medium" :style="{ color: formData.primary_color }">
+              ✓ Farben automatisch aus deinem Logo erkannt – passe sie hier bei Bedarf an.
+            </p>
+          </div>
+          <div v-else-if="formData.primary_color !== '#3B82F6' || formData.secondary_color !== '#10B981'"
             class="flex items-center gap-3 rounded-xl px-4 py-3 border"
             :style="{ background: (formData.primary_color || '#3B82F6') + '0D', borderColor: (formData.primary_color || '#3B82F6') + '35' }">
             <div class="flex gap-1.5 flex-shrink-0">
@@ -1367,7 +1379,6 @@
                   <div v-if="formData.from_email" class="flex items-center gap-2 text-sm text-amber-800">
                     <div class="w-4 h-4 rounded-full border-2 border-amber-400 flex-shrink-0"></div>
                     E-Mail Domain verifizieren
-                    <span class="font-mono text-xs bg-amber-100 px-1.5 py-0.5 rounded text-amber-700">{{ formData.from_email }}</span>
                   </div>
                 </div>
               </div>
@@ -1542,6 +1553,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { generateStrongPassword } from '~/composables/usePasswordStrength'
 import { compressImage } from '~/utils/imageCompression'
+import { extractColorsFromLogo } from '~/utils/logoUtils'
 import DOMPurify from 'isomorphic-dompurify'
 import { getSupabase } from '~/utils/supabase'
 import { saveCredentials } from '~/utils/save-credentials'
@@ -1882,10 +1894,11 @@ const currentStep = ref(0)
 const acceptTerms = ref(false)
 const logoFile    = ref<File | null>(null)
 const logoPreview = ref<string | null>(null)
+const logoError   = ref<string | null>(null)
 const logoSquareFile    = ref<File | null>(null)
 const logoSquarePreview = ref<string | null>(null)
-const logoError       = ref<string | null>(null)
 const logoSquareError = ref<string | null>(null)
+const colorsExtracted = ref(false)
 const error       = ref<string | null>(null)
 const createdTenantSlug    = ref('')
 const createdTenantId      = ref('')
@@ -2149,6 +2162,15 @@ const handleLogoSelect = async (event: Event) => {
   try {
     logoPreview.value = await compressImage(file, 'wide')
     logoFile.value = base64ToFile(logoPreview.value, `logo-${Date.now()}.webp`)
+    // Extract colors from logo
+    const colors = await extractColorsFromLogo(logoPreview.value)
+    if (colors) {
+      formData.value.primary_color = colors[0]
+      formData.value.secondary_color = colors[1]
+      formData.value.accent_color = colors[2]
+      colorsExtracted.value = true
+      setTimeout(() => { colorsExtracted.value = false }, 3500)
+    }
   } catch {
     logoError.value = 'Bildformat wird nicht unterstützt — bitte PNG, JPG oder WebP verwenden'
   }
@@ -2163,6 +2185,17 @@ const handleLogoSquareSelect = async (event: Event) => {
   try {
     logoSquarePreview.value = await compressImage(file, 'square')
     logoSquareFile.value = base64ToFile(logoSquarePreview.value, `logo-square-${Date.now()}.webp`)
+    // Extract colors from square logo only if wide logo hasn't already set them
+    if (!logoPreview.value) {
+      const colors = await extractColorsFromLogo(logoSquarePreview.value)
+      if (colors) {
+        formData.value.primary_color = colors[0]
+        formData.value.secondary_color = colors[1]
+        formData.value.accent_color = colors[2]
+        colorsExtracted.value = true
+        setTimeout(() => { colorsExtracted.value = false }, 3500)
+      }
+    }
   } catch {
     logoSquareError.value = 'Bildformat wird nicht unterstützt — bitte PNG, JPG oder WebP verwenden'
   }

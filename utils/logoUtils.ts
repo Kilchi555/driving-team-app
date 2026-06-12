@@ -208,6 +208,90 @@ export const logoContexts = {
 export type LogoContext = keyof typeof logoContexts
 
 
+/**
+ * Extracts the 3 most vibrant colors from a logo image using K-means clustering.
+ * Returns [primary, secondary, accent] as hex strings, or null if not enough color data.
+ */
+export async function extractColorsFromLogo(dataUrl: string): Promise<[string, string, string] | null> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = 120
+        canvas.height = 120
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, 120, 120)
+        const data = ctx.getImageData(0, 0, 120, 120).data
+
+        const pixels: [number, number, number][] = []
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3]
+          if (a < 128) continue
+          const lum = (r * 299 + g * 587 + b * 114) / 1000
+          if (lum > 218 || lum < 22) continue
+          if (_getSaturation(r, g, b) < 0.08) continue
+          pixels.push([r, g, b])
+        }
+
+        if (pixels.length < 10) { resolve(null); return }
+
+        const k = 3
+        let centroids: [number, number, number][] = [
+          pixels[0],
+          pixels[Math.floor(pixels.length / 2)],
+          pixels[pixels.length - 1],
+        ]
+
+        for (let iter = 0; iter < 12; iter++) {
+          const clusters: [number, number, number][][] = Array.from({ length: k }, () => [])
+          for (const px of pixels) {
+            let minD = Infinity, best = 0
+            centroids.forEach((c, i) => {
+              const d = _colorDistance(px[0], px[1], px[2], c[0], c[1], c[2])
+              if (d < minD) { minD = d; best = i }
+            })
+            clusters[best].push(px)
+          }
+          centroids = clusters.map((cluster, i) => {
+            if (cluster.length === 0) return centroids[i]
+            const s = cluster.reduce((a, p) => [a[0] + p[0], a[1] + p[1], a[2] + p[2]], [0, 0, 0])
+            return [Math.round(s[0] / cluster.length), Math.round(s[1] / cluster.length), Math.round(s[2] / cluster.length)] as [number, number, number]
+          })
+        }
+
+        centroids.sort((a, b) => _getSaturation(b[0], b[1], b[2]) - _getSaturation(a[0], a[1], a[2]))
+
+        resolve([
+          _rgbToHex(centroids[0][0], centroids[0][1], centroids[0][2]),
+          _rgbToHex(centroids[1][0], centroids[1][1], centroids[1][2]),
+          _rgbToHex(centroids[2][0], centroids[2][1], centroids[2][2]),
+        ])
+      } catch {
+        resolve(null)
+      }
+    }
+    img.onerror = () => resolve(null)
+    img.src = dataUrl
+  })
+}
+
+function _rgbToHex(r: number, g: number, b: number): string {
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+}
+function _colorDistance(r1: number, g1: number, b1: number, r2: number, g2: number, b2: number): number {
+  return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2)
+}
+function _getSaturation(r: number, g: number, b: number): number {
+  const rn = r / 255, gn = g / 255, bn = b / 255
+  const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn)
+  const l = (max + min) / 2
+  if (max === min) return 0
+  const d = max - min
+  return d / (l > 0.5 ? 2 - max - min : max + min)
+}
+
+
 
 
 

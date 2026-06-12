@@ -262,6 +262,12 @@
         <p class="text-sm text-red-700">{{ error }}</p>
       </div>
 
+      <!-- Honeypot: hidden from humans, bots fill it in -->
+      <div aria-hidden="true" style="position:absolute;left:-9999px;height:0;width:0;overflow:hidden;">
+        <label for="_hp_proposal">Website</label>
+        <input id="_hp_proposal" v-model="honeypot" type="text" name="website" tabindex="-1" autocomplete="off" />
+      </div>
+
       <!-- Submit Button -->
       <button
         @click="submitProposal"
@@ -336,6 +342,7 @@ const postalCode = ref('')
 const city = ref('')
 const error = ref('')
 const isSubmitting = ref(false)
+const honeypot = ref('')
 
 // Use Auth Store to check if user is logged in
 const authStore = useAuthStore()
@@ -559,6 +566,7 @@ const submitProposal = async () => {
         city: city.value?.trim() || null,
         notes: notes.value.trim() || null,
         created_by_user_id: authStore.userProfile?.id || null,
+        _hp: honeypot.value || undefined,
         marketing_session_id: (typeof window !== 'undefined' && (window as any).__analyticsSessionId) || undefined,
         marketing_attribution: (typeof window !== 'undefined' && (window as any).__marketingAttribution) || undefined,
       }

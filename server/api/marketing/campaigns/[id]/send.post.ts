@@ -221,10 +221,10 @@ export default defineEventHandler(async (event) => {
   }
 
   for (let i = 0; i < campaignLeadRows.length; i += dbBatch) {
-    await supabase
+    const { error: leadsInsertErr } = await supabase
       .from('email_campaign_leads')
       .insert(campaignLeadRows.slice(i, i + dbBatch))
-      .select('id')
+    if (leadsInsertErr) console.error('[CampaignSend] email_campaign_leads insert error:', leadsInsertErr)
   }
 
   // Update per-variant sent counts
