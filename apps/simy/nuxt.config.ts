@@ -5,9 +5,8 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss', 'nuxt-gtag'],
 
   gtag: {
-    // Tag always loads (for GSC/GA4 verification) — data only sent after cookie consent
     enabled: true,
-    id: process.env.NUXT_PUBLIC_GTAG_ID ?? process.env.NUXT_PUBLIC_GA_ID ?? '',
+    id: 'G-VZPENJ6FNP',
     initCommands: [
       ['consent', 'default', {
         analytics_storage: 'denied',
@@ -60,18 +59,6 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/png', href: '/simy-favicon.png' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       ],
-      // GA4 script injected directly so it's always in the SSR HTML (required for GA4 tag verification)
-      ...(process.env.NUXT_PUBLIC_GTAG_ID || process.env.NUXT_PUBLIC_GA_ID ? {
-        script: [
-          {
-            src: `https://www.googletagmanager.com/gtag/js?id=${process.env.NUXT_PUBLIC_GTAG_ID || process.env.NUXT_PUBLIC_GA_ID}`,
-            async: true,
-          },
-          {
-            innerHTML: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('consent','default',{analytics_storage:'denied',ad_storage:'denied'});gtag('config','${process.env.NUXT_PUBLIC_GTAG_ID || process.env.NUXT_PUBLIC_GA_ID}');`,
-          },
-        ],
-      } : {}),
     },
   },
 
