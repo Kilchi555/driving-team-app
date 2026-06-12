@@ -324,8 +324,12 @@ export default defineEventHandler(async (event) => {
           location_id: locId,
           tenant_id: invitation.tenant_id,
           is_online_bookable: true,
+          is_active: true,
         }))
-        await serviceSupabase.from('staff_locations').upsert(staffLocationRows, { onConflict: 'staff_id,location_id' })
+        const { error: slErr } = await serviceSupabase
+          .from('staff_locations')
+          .upsert(staffLocationRows, { onConflict: 'staff_id,location_id,tenant_id' })
+        if (slErr) console.warn('⚠️ staff_locations upsert failed:', slErr.message, slErr.details)
       } catch (err) {
         console.warn('⚠️ staff_locations upsert failed (non-fatal):', err)
       }
@@ -357,8 +361,12 @@ export default defineEventHandler(async (event) => {
               location_id: loc.id,
               tenant_id: invitation.tenant_id,
               is_online_bookable: true,
+              is_active: true,
             }))
-            await serviceSupabase.from('staff_locations').upsert(staffLocationRows, { onConflict: 'staff_id,location_id' })
+            const { error: slErr2 } = await serviceSupabase
+              .from('staff_locations')
+              .upsert(staffLocationRows, { onConflict: 'staff_id,location_id,tenant_id' })
+            if (slErr2) console.warn('⚠️ staff_locations upsert (new locs) failed:', slErr2.message, slErr2.details)
           }
         }
       } catch (err) {
