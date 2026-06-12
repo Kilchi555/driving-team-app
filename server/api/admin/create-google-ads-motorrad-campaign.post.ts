@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
 
   const results: any = {}
 
-  // ── Debug: return accessible customers to diagnose ──────────────────────────
+  // ── Debug: return accessible customers ──────────────────────────────────────
   return { debug: true, customerId, managerCustomerId, accessible }
 
   // ── Lachen: Budget → Kampagne → Ad Group → Keywords + Ad ──────────────────
