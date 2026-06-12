@@ -269,6 +269,8 @@ async function handleSubscriptionUpsert(
     sub.metadata?.addon_courses === 'true'
   const addonAffiliate = hasAddonByEnvKey(sub, 'STRIPE_PRICE_ADDON_AFFILIATE') ||
     sub.metadata?.addon_affiliate === 'true'
+  const addonGbp = hasAddonByEnvKey(sub, 'STRIPE_PRICE_ADDON_GBP') ||
+    sub.metadata?.addon_gbp === 'true'
 
   // cancel_at from Stripe (if scheduled)
   const cancelAtTs = (sub as any).cancel_at ?? null
@@ -286,6 +288,7 @@ async function handleSubscriptionUpsert(
     addon_seats: addonSeats,
     addon_courses_enabled: addonCourses,
     addon_affiliate_enabled: addonAffiliate,
+    addon_gbp_enabled: addonGbp,
     subscription_cancel_at: cancelAt,
     ...(isWalleeTrialing ? { wallee_trial_started_at: new Date().toISOString() } : {}),
   }
@@ -311,7 +314,7 @@ async function handleSubscriptionUpsert(
   console.log(`✅ Tenant ${tenantId} DB update successful (${count} row(s) updated)`)
 
   // ── Sync feature flags ──────────────────────────────────────────────────
-  await syncFeatureFlags(supabase, tenantId, plan, { courses: addonCourses, affiliate: addonAffiliate })
+  await syncFeatureFlags(supabase, tenantId, plan, { courses: addonCourses, affiliate: addonAffiliate, gbp: addonGbp })
 
   // ── Deactivate staff chosen by tenant during upgrade ────────────────────
   const staffToDeactivate = sub.metadata?.staff_to_deactivate
@@ -348,6 +351,7 @@ async function handleSubscriptionDeleted(
       addon_seats: 0,
       addon_courses_enabled: false,
       addon_affiliate_enabled: false,
+      addon_gbp_enabled: false,
       subscription_cancel_at: null,
     })
     .eq('id', tenantId)

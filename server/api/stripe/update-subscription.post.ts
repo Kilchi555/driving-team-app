@@ -10,6 +10,7 @@ interface UpdateBody {
     seats?: number    // total extra seats desired (on top of plan's included)
     courses?: boolean
     affiliate?: boolean
+    gbp?: boolean
   }
 }
 
@@ -33,7 +34,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('stripe_subscription_id, stripe_customer_id, subscription_plan, addon_seats, addon_courses_enabled, addon_affiliate_enabled, name, contact_email')
+    .select('stripe_subscription_id, stripe_customer_id, subscription_plan, addon_seats, addon_courses_enabled, addon_affiliate_enabled, addon_gbp_enabled, name, contact_email')
     .eq('id', tenantId)
     .single()
 
@@ -59,6 +60,7 @@ export default defineEventHandler(async (event) => {
   const desiredSeats = Math.min(MAX_ADDON_SEATS, body.addons?.seats ?? tenant.addon_seats ?? 0)
   const desiredCourses = body.addons?.courses ?? tenant.addon_courses_enabled ?? false
   const desiredAffiliate = body.addons?.affiliate ?? tenant.addon_affiliate_enabled ?? false
+  const desiredGbp = body.addons?.gbp ?? (tenant as any).addon_gbp_enabled ?? false
 
   const planDef = PLANS.find(p => p.id === desiredPlan)
   if (!planDef?.priceEnvKey) {
@@ -70,6 +72,7 @@ export default defineEventHandler(async (event) => {
   const seatPriceId = process.env[ADDONS.find(a => a.key === 'seats')!.priceEnvKey]?.trim()
   const coursesPriceId = process.env[ADDONS.find(a => a.key === 'courses')!.priceEnvKey]?.trim()
   const affiliatePriceId = process.env[ADDONS.find(a => a.key === 'affiliate')!.priceEnvKey]?.trim()
+  const gbpPriceId = process.env[ADDONS.find(a => a.key === 'gbp')!.priceEnvKey]?.trim()
 
   if (!planPriceId) {
     throw createError({ statusCode: 500, statusMessage: `Missing env var ${planDef.priceEnvKey}` })
@@ -86,6 +89,7 @@ export default defineEventHandler(async (event) => {
   const currentSeatItem = findItem(seatPriceId)
   const currentCoursesItem = findItem(coursesPriceId)
   const currentAffiliateItem = findItem(affiliatePriceId)
+  const currentGbpItem = findItem(gbpPriceId)
 
   // ── Build update params ──────────────────────────────────────────────────────
   const itemUpdates: Stripe.SubscriptionUpdateParams.Item[] = []
@@ -136,6 +140,15 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Google Business Profile add-on
+  if (gbpPriceId) {
+    if (desiredGbp && !currentGbpItem) {
+      itemUpdates.push({ price: gbpPriceId, quantity: 1 })
+    } else if (!desiredGbp && currentGbpItem) {
+      itemUpdates.push({ id: currentGbpItem.id, deleted: true })
+    }
+  }
+
   if (itemUpdates.length === 0) {
     return { success: true, message: 'No changes detected', unchanged: true }
   }
@@ -149,6 +162,7 @@ export default defineEventHandler(async (event) => {
       addon_seats: String(desiredSeats),
       addon_courses: String(desiredCourses),
       addon_affiliate: String(desiredAffiliate),
+      addon_gbp: String(desiredGbp),
       tenant_id: tenantId,
     },
   })
@@ -164,6 +178,7 @@ export default defineEventHandler(async (event) => {
       addon_seats: desiredSeats,
       addon_courses_enabled: desiredCourses,
       addon_affiliate_enabled: desiredAffiliate,
+      addon_gbp_enabled: desiredGbp,
       is_trial: false,
     })
     .eq('id', tenantId)
@@ -184,6 +199,7 @@ export default defineEventHandler(async (event) => {
       desiredSeats > 0 ? `${desiredSeats} Extra-Seat${desiredSeats !== 1 ? 's' : ''}` : '',
       desiredCourses ? 'Kursbuchungsseite' : '',
       desiredAffiliate ? 'Affiliate-System' : '',
+      desiredGbp ? 'Google Business Profile' : '',
     ].filter(Boolean).join(', ')
 
     sendEmail({
