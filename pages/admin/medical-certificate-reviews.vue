@@ -1,350 +1,254 @@
-<!-- pages/admin/medical-certificate-reviews.vue -->
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <div class="bg-white shadow">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <h1 class="text-2xl font-bold text-gray-900">Arztzeugnis-Prüfungen</h1>
-        <p class="mt-1 text-sm text-gray-600">Hochgeladene Arztzeugnisse prüfen und genehmigen</p>
-      </div>
-    </div>
+  <div class="min-h-screen bg-gray-50/60 p-4 sm:p-6">
+    <div class="max-w-3xl mx-auto space-y-5">
 
-    <!-- Filters -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-      <div class="flex space-x-2">
-        <button
-          @click="statusFilter = 'uploaded'"
-          :class="statusFilter === 'uploaded' ? 'text-white' : 'bg-white text-gray-700 border border-gray-300'"
-          :style="statusFilter === 'uploaded' ? { background: primaryColor } : {}"
-          class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
-          Hochgeladen ({{ uploadedCount }})
-        </button>
-        <button
-          @click="statusFilter = 'pending'"
-          :class="statusFilter === 'pending' ? 'bg-yellow-600 text-white' : 'bg-white text-gray-700 border border-gray-300'"
-          class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
-          Ausstehend ({{ pendingCount }})
-        </button>
-        <button
-          @click="statusFilter = 'all'"
-          :class="statusFilter === 'all' ? 'bg-gray-600 text-white' : 'bg-white text-gray-700 border border-gray-300'"
-          class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
-          Alle ({{ totalCount }})
+      <!-- Header -->
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">Arztzeugnisse</h1>
+        <p class="text-sm text-gray-500 mt-0.5">Hochgeladene Dokumente prüfen und genehmigen</p>
+      </div>
+
+      <!-- Filter tabs -->
+      <div class="flex gap-1.5 bg-gray-100 rounded-xl p-1 w-fit">
+        <button v-for="tab in tabs" :key="tab.id" @click="statusFilter = tab.id"
+          :class="['px-4 py-1.5 rounded-lg text-sm font-medium transition-colors',
+            statusFilter === tab.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700']">
+          {{ tab.label }}
+          <span v-if="tab.count > 0" class="ml-1 text-xs font-bold px-1.5 py-0.5 rounded-full"
+            :class="statusFilter === tab.id ? 'bg-gray-100 text-gray-600' : 'bg-gray-200 text-gray-500'">
+            {{ tab.count }}
+          </span>
         </button>
       </div>
-    </div>
 
-    <!-- Loading State -->
-    <div v-if="isLoading" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div class="text-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent mx-auto"
-          :style="{ borderColor: primaryColor, borderTopColor: 'transparent' }"></div>
-        <p class="mt-4 text-gray-600">Lade Prüfungen...</p>
+      <!-- Loading -->
+      <div v-if="isLoading" class="space-y-3">
+        <div v-for="i in 2" :key="i" class="bg-white rounded-2xl p-5 border border-gray-100 animate-pulse h-40" />
       </div>
-    </div>
 
-    <!-- Empty State -->
-    <div v-else-if="filteredReviews.length === 0" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div class="text-center">
-        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      <!-- Empty -->
+      <div v-else-if="filteredReviews.length === 0" class="bg-white rounded-2xl p-8 border border-gray-100 text-center">
+        <svg class="w-10 h-10 text-gray-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
         </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900">Keine Prüfungen</h3>
-        <p class="mt-1 text-sm text-gray-500">
-          {{ statusFilter === 'uploaded' ? 'Keine hochgeladenen Arztzeugnisse' : statusFilter === 'pending' ? 'Keine ausstehenden Uploads' : 'Keine Arztzeugnisse zur Prüfung' }}
-        </p>
+        <p class="text-sm font-medium text-gray-500">Keine Einträge</p>
       </div>
-    </div>
 
-    <!-- Reviews List -->
-    <div v-else class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-      <div class="space-y-4">
-        <div 
-          v-for="review in filteredReviews" 
-          :key="review.appointment_id"
-          class="bg-white border rounded-lg p-6 hover:shadow-lg transition-shadow"
-        >
-          <!-- Header -->
-          <div class="flex justify-between items-start mb-4">
+      <!-- Cards -->
+      <div v-else class="space-y-4">
+        <div v-for="r in filteredReviews" :key="r.appointment_id"
+          class="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+
+          <!-- Card header -->
+          <div class="flex items-start justify-between p-5 pb-4">
             <div>
-              <h3 class="text-lg font-semibold text-gray-900">
-                {{ review.customer_first_name }} {{ review.customer_last_name }}
-              </h3>
-              <p class="text-sm text-gray-600">{{ review.customer_email }}</p>
-              <p v-if="review.customer_phone" class="text-sm text-gray-500">{{ review.customer_phone }}</p>
+              <p class="font-semibold text-gray-900">{{ r.customer_first_name }} {{ r.customer_last_name }}</p>
+              <p v-if="r.customer_email" class="text-xs text-gray-400 mt-0.5">{{ r.customer_email }}</p>
+              <p v-if="r.customer_phone" class="text-xs text-gray-400">{{ r.customer_phone }}</p>
+              <p v-if="!r.customer_email && !r.customer_phone" class="text-xs text-amber-500 mt-0.5">⚠ Keine Kontaktdaten</p>
             </div>
-            <div class="text-right">
-              <span 
-                :class="review.medical_certificate_status === 'uploaded' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'"
-                class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium"
-              >
-                {{ review.medical_certificate_status === 'uploaded' ? 'Hochgeladen' : 'Ausstehend' }}
-              </span>
-            </div>
+            <span :class="statusBadge(r.medical_certificate_status).class"
+              class="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0">
+              {{ statusBadge(r.medical_certificate_status).label }}
+            </span>
           </div>
 
-          <!-- Appointment Details -->
-          <div class="bg-gray-50 rounded-lg p-4 mb-4">
-            <div class="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span class="text-gray-600">Termin:</span>
-                <span class="ml-2 font-medium">{{ formatDate(review.start_time) }}</span>
-              </div>
-              <div>
-                <span class="text-gray-600">Fahrlehrer:</span>
-                <span class="ml-2 font-medium">{{ review.staff_first_name }} {{ review.staff_last_name }}</span>
-              </div>
-              <div>
-                <span class="text-gray-600">Betrag:</span>
-                <span class="ml-2 font-medium">CHF {{ (review.total_amount_rappen / 100).toFixed(2) }}</span>
-              </div>
-              <div>
-                <span class="text-gray-600">Zahlungsstatus:</span>
-                <span class="ml-2 font-medium">{{ getPaymentStatusLabel(review.payment_status) }}</span>
-              </div>
+          <!-- Details grid -->
+          <div class="grid grid-cols-2 gap-3 px-5 pb-4 text-sm">
+            <div v-if="r.start_time" class="bg-gray-50 rounded-xl px-3 py-2">
+              <p class="text-xs text-gray-400 font-medium">Termin</p>
+              <p class="text-gray-800 font-semibold text-xs mt-0.5">{{ formatDate(r.start_time) }}</p>
             </div>
-          </div>
-
-          <!-- Cancellation Info -->
-          <div class="border-l-4 border-yellow-400 bg-yellow-50 p-3 mb-4">
-            <p class="text-sm text-yellow-800">
-              <span class="font-medium">Absage-Grund:</span> {{ review.cancellation_reason }}
-            </p>
-            <p v-if="review.proof_description" class="text-xs text-yellow-700 mt-1">
-              {{ review.proof_description }}
-            </p>
-          </div>
-
-          <!-- Medical Certificate -->
-          <div v-if="review.medical_certificate_url" class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Hochgeladenes Arztzeugnis:</label>
-            <div class="flex items-center space-x-3">
-              <a 
-                :href="review.medical_certificate_url" 
-                target="_blank"
-                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                <svg class="mr-2 h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
-                </svg>
-                Arztzeugnis öffnen
-              </a>
-              <span v-if="review.days_since_upload !== null" class="text-xs text-gray-500">
-                Hochgeladen vor {{ review.days_since_upload }} Tag(en)
-              </span>
+            <div class="bg-gray-50 rounded-xl px-3 py-2">
+              <p class="text-xs text-gray-400 font-medium">Zahlung</p>
+              <p class="font-semibold text-xs mt-0.5" :class="paymentColor(r.payment_status)">
+                {{ paymentLabel(r.payment_status) }}
+                <span v-if="r.total_amount_rappen" class="text-gray-500 font-normal"> · CHF {{ (r.total_amount_rappen / 100).toFixed(2) }}</span>
+              </p>
             </div>
-          </div>
-          <div v-else class="mb-4">
-            <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
-              <p class="text-sm text-gray-600">
-                Noch kein Arztzeugnis hochgeladen
-                <span v-if="review.deadline_exceeded" class="text-red-600 font-medium ml-1">(Deadline überschritten!)</span>
+            <div v-if="r.staff_first_name" class="bg-gray-50 rounded-xl px-3 py-2">
+              <p class="text-xs text-gray-400 font-medium">Fahrlehrer</p>
+              <p class="text-gray-800 font-semibold text-xs mt-0.5">{{ r.staff_first_name }} {{ r.staff_last_name }}</p>
+            </div>
+            <div v-if="r.days_since_upload !== null" class="bg-gray-50 rounded-xl px-3 py-2">
+              <p class="text-xs text-gray-400 font-medium">Hochgeladen</p>
+              <p class="text-gray-800 font-semibold text-xs mt-0.5">
+                {{ r.days_since_upload === 0 ? 'Heute' : `vor ${r.days_since_upload} Tag(en)` }}
               </p>
             </div>
           </div>
 
-          <!-- Admin Notes -->
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Admin-Notizen:</label>
-            <textarea
-              v-model="review.notes"
-              rows="3"
-              placeholder="Notizen zur Prüfung (z.B. warum abgelehnt)..."
-              class="tenant-focus w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2"
-            />
+          <!-- Certificate preview link -->
+          <div v-if="r.medical_certificate_url" class="px-5 pb-4">
+            <a :href="r.medical_certificate_url" target="_blank"
+              class="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+              Arztzeugnis öffnen
+            </a>
+          </div>
+          <div v-else class="px-5 pb-4">
+            <p class="text-xs text-gray-400 italic">Noch kein Arztzeugnis hochgeladen</p>
           </div>
 
-          <!-- Actions -->
-          <div v-if="review.medical_certificate_url" class="flex space-x-3">
-            <button
-              @click="approve(review)"
-              :disabled="processing === review.appointment_id"
-              class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-            >
-              <span v-if="processing === review.appointment_id">Verarbeite...</span>
-              <span v-else>✅ Genehmigen & Erstatten</span>
+          <!-- Notes textarea -->
+          <div class="px-5 pb-4">
+            <textarea v-model="r.notes" rows="2" placeholder="Notizen (optional)…"
+              class="w-full text-sm rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 resize-none"
+              :style="{ '--tw-ring-color': primaryColor }" />
+          </div>
+
+          <!-- Action buttons -->
+          <div v-if="r.medical_certificate_status === 'uploaded'" class="px-5 pb-5 flex gap-2 flex-wrap">
+
+            <!-- PRIMARY: Approve + Cancel without cost + Notify -->
+            <button @click="approveAndCancel(r)" :disabled="processing === r.appointment_id"
+              class="flex-1 min-w-[200px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-all disabled:opacity-50"
+              :style="{ background: `linear-gradient(135deg, #16a34a, #15803d)` }">
+              <svg v-if="processing !== r.appointment_id" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <svg v-else class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              {{ processing === r.appointment_id ? 'Verarbeite…' : 'Genehmigen + Stornieren & Benachrichtigen' }}
             </button>
-            <button
-              @click="reject(review)"
-              :disabled="processing === review.appointment_id"
-              class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-            >
-              <span v-if="processing === review.appointment_id">Verarbeite...</span>
-              <span v-else>❌ Ablehnen</span>
+
+            <!-- SECONDARY: Approve only (with credit/refund) -->
+            <button @click="approve(r)" :disabled="processing === r.appointment_id"
+              class="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50">
+              Nur genehmigen
             </button>
+
+            <!-- Reject -->
+            <button @click="reject(r)" :disabled="processing === r.appointment_id"
+              class="px-4 py-2.5 rounded-xl border border-red-100 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50">
+              Ablehnen
+            </button>
+          </div>
+
+          <!-- Already processed -->
+          <div v-else class="px-5 pb-5">
+            <p class="text-xs text-gray-400">
+              {{ r.medical_certificate_status === 'approved' ? '✅ Genehmigt' : '❌ Abgelehnt' }}
+              <span v-if="r.medical_certificate_reviewed_at"> · {{ formatDate(r.medical_certificate_reviewed_at) }}</span>
+            </p>
+          </div>
+
+          <!-- Success toast per card -->
+          <div v-if="successMsg[r.appointment_id]"
+            class="mx-5 mb-5 bg-green-50 border border-green-200 rounded-xl px-4 py-2.5 text-sm text-green-700 font-medium">
+            {{ successMsg[r.appointment_id] }}
           </div>
         </div>
       </div>
+
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-
-import { ref, computed, onMounted } from 'vue'
-import { useTenantBranding } from '~/composables/useTenantBranding'
-
-definePageMeta({
-  middleware: 'admin',
-  layout: 'admin'
-})
+definePageMeta({ middleware: 'admin', layout: 'admin' })
+useHead({ title: 'Arztzeugnisse' })
 
 const { primaryColor } = useTenantBranding()
 
-// State
 const reviews = ref<any[]>([])
 const isLoading = ref(true)
 const statusFilter = ref('uploaded')
 const processing = ref<string | null>(null)
+const successMsg = ref<Record<string, string>>({})
 
-// Computed
-const filteredReviews = computed(() => {
-  if (statusFilter.value === 'all') return reviews.value
-  return reviews.value.filter(r => r.medical_certificate_status === statusFilter.value)
-})
+const tabs = computed(() => [
+  { id: 'uploaded', label: 'Ausstehend', count: reviews.value.filter(r => r.medical_certificate_status === 'uploaded').length },
+  { id: 'pending',  label: 'Noch nicht hochgeladen', count: reviews.value.filter(r => r.medical_certificate_status === 'pending').length },
+  { id: 'approved', label: 'Genehmigt', count: reviews.value.filter(r => r.medical_certificate_status === 'approved').length },
+  { id: 'all',      label: 'Alle', count: reviews.value.length },
+])
 
-const uploadedCount = computed(() => 
-  reviews.value.filter(r => r.medical_certificate_status === 'uploaded').length
+const filteredReviews = computed(() =>
+  statusFilter.value === 'all' ? reviews.value : reviews.value.filter(r => r.medical_certificate_status === statusFilter.value)
 )
 
-const pendingCount = computed(() => 
-  reviews.value.filter(r => r.medical_certificate_status === 'pending').length
-)
-
-const totalCount = computed(() => reviews.value.length)
-
-// Methods
-const loadReviews = async () => {
+async function loadReviews() {
+  isLoading.value = true
   try {
-    isLoading.value = true
-    
-    const data = await $fetch('/api/admin/medical-certificate-reviews') as any[]
-    reviews.value = (data || []).map((r: any) => ({ ...r, notes: r.medical_certificate_notes || '' }))
-    
-  } catch (err: any) {
-    console.error('❌ Error loading reviews:', err)
-    alert('Fehler beim Laden der Prüfungen')
-  } finally {
-    isLoading.value = false
-  }
+    const data = await $fetch<any[]>('/api/admin/medical-certificate-reviews')
+    reviews.value = (data || []).map(r => ({ ...r, notes: r.medical_certificate_notes || '' }))
+  } catch { /* ignore */ } finally { isLoading.value = false }
 }
 
-const approve = async (review: any) => {
-  if (!review.medical_certificate_url) {
-    alert('Kein Arztzeugnis hochgeladen')
-    return
-  }
-
-  if (!confirm(`Arztzeugnis für ${review.customer_first_name} ${review.customer_last_name} genehmigen?\n\nDies wird die Kosten erstatten oder als Guthaben gutschreiben.`)) {
-    return
-  }
-
+async function approveAndCancel(r: any) {
+  if (!r.medical_certificate_url) return alert('Kein Arztzeugnis hochgeladen')
+  if (!confirm(`Arztzeugnis von ${r.customer_first_name} ${r.customer_last_name} genehmigen und Termin ohne Kostenfolge stornieren?\n\nBenachrichtigung wird ${r.customer_email ? 'per E-Mail' : r.customer_phone ? 'per SMS' : 'NICHT (keine Kontaktdaten)'} gesendet.`)) return
+  processing.value = r.appointment_id
   try {
-    processing.value = review.appointment_id
-    
-    const response = await $fetch('/api/medical-certificate/approve', {
-      method: 'POST',
-      body: {
-        appointmentId: review.appointment_id,
-        notes: review.notes
-      }
+    const res = await $fetch<any>('/api/medical-certificate/approve-and-cancel', {
+      method: 'POST', body: { appointmentId: r.appointment_id, notes: r.notes }
     })
-
-    logger.debug('✅ Approved:', response)
-    alert(`Arztzeugnis genehmigt!\n\n${response.message}`)
-    
-    // Reload reviews
+    successMsg.value[r.appointment_id] = res.message
+    setTimeout(() => { delete successMsg.value[r.appointment_id] }, 5000)
     await loadReviews()
-    
-  } catch (err: any) {
-    console.error('❌ Error approving:', err)
-    alert(`Fehler beim Genehmigen: ${err.data?.message || err.message}`)
-  } finally {
-    processing.value = null
-  }
+  } catch (e: any) {
+    alert(`Fehler: ${e?.data?.statusMessage || e?.message}`)
+  } finally { processing.value = null }
 }
 
-const reject = async (review: any) => {
-  if (!review.notes || review.notes.trim().length === 0) {
-    alert('Bitte geben Sie einen Ablehnungsgrund in den Notizen an')
-    return
-  }
-
-  if (!confirm(`Arztzeugnis für ${review.customer_first_name} ${review.customer_last_name} ablehnen?\n\nGrund: ${review.notes}`)) {
-    return
-  }
-
+async function approve(r: any) {
+  if (!r.medical_certificate_url) return alert('Kein Arztzeugnis hochgeladen')
+  if (!confirm(`Nur Arztzeugnis genehmigen (Termin bleibt bestehen, Betrag wird erstattet/gutgeschrieben)?`)) return
+  processing.value = r.appointment_id
   try {
-    processing.value = review.appointment_id
-    
-    const response = await $fetch('/api/medical-certificate/reject', {
-      method: 'POST',
-      body: {
-        appointmentId: review.appointment_id,
-        notes: review.notes
-      }
+    const res = await $fetch<any>('/api/medical-certificate/approve', {
+      method: 'POST', body: { appointmentId: r.appointment_id, notes: r.notes }
     })
-
-    logger.debug('✅ Rejected:', response)
-    alert('Arztzeugnis abgelehnt')
-    
-    // Reload reviews
+    successMsg.value[r.appointment_id] = res.message || 'Genehmigt'
+    setTimeout(() => { delete successMsg.value[r.appointment_id] }, 5000)
     await loadReviews()
-    
-  } catch (err: any) {
-    console.error('❌ Error rejecting:', err)
-    alert(`Fehler beim Ablehnen: ${err.data?.message || err.message}`)
-  } finally {
-    processing.value = null
+  } catch (e: any) {
+    alert(`Fehler: ${e?.data?.statusMessage || e?.message}`)
+  } finally { processing.value = null }
+}
+
+async function reject(r: any) {
+  if (!r.notes?.trim()) return alert('Bitte Ablehnungsgrund in den Notizen angeben.')
+  if (!confirm(`Arztzeugnis ablehnen?\n\nGrund: ${r.notes}`)) return
+  processing.value = r.appointment_id
+  try {
+    await $fetch('/api/medical-certificate/reject', {
+      method: 'POST', body: { appointmentId: r.appointment_id, notes: r.notes }
+    })
+    await loadReviews()
+  } catch (e: any) {
+    alert(`Fehler: ${e?.data?.statusMessage || e?.message}`)
+  } finally { processing.value = null }
+}
+
+function statusBadge(status: string) {
+  const map: Record<string, { label: string; class: string }> = {
+    uploaded: { label: 'Warte auf Prüfung', class: 'bg-blue-100 text-blue-700' },
+    pending:  { label: 'Noch nicht hochgeladen', class: 'bg-amber-100 text-amber-700' },
+    approved: { label: 'Genehmigt', class: 'bg-green-100 text-green-700' },
+    rejected: { label: 'Abgelehnt', class: 'bg-red-100 text-red-700' },
   }
+  return map[status] ?? { label: status, class: 'bg-gray-100 text-gray-600' }
 }
 
-const formatDate = (dateString: string) => {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  return date.toLocaleDateString('de-CH', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+function paymentLabel(s: string) {
+  return ({ pending: 'Ausstehend', authorized: 'Reserviert', completed: 'Bezahlt', cancelled: 'Storniert', failed: 'Fehler' } as any)[s] ?? s
 }
 
-const getPaymentStatusLabel = (status: string) => {
-  const labels: Record<string, string> = {
-    'pending': 'Ausstehend',
-    'authorized': 'Reserviert',
-    'completed': 'Bezahlt',
-    'cancelled': 'Storniert',
-    'failed': 'Fehlgeschlagen'
-  }
-  return labels[status] || status
+function paymentColor(s: string) {
+  return ({ completed: 'text-green-600', cancelled: 'text-gray-400', failed: 'text-red-600', pending: 'text-amber-600' } as any)[s] ?? 'text-gray-700'
 }
 
-// Lifecycle
-onMounted(() => {
-  loadReviews()
-})
+function formatDate(iso: string) {
+  if (!iso) return '–'
+  return new Date(iso).toLocaleDateString('de-CH', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+onMounted(loadReviews)
 </script>
-
-<style scoped>
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.tenant-focus:focus {
-  --tw-ring-color: var(--color-primary, #1E40AF);
-  border-color: var(--color-primary, #1E40AF);
-}
-</style>
-
