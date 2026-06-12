@@ -522,6 +522,28 @@ const KNOWN_AD_SETS = [
       linkUrl: 'https://drivingteam.ch?utm_source=facebook&utm_medium=paid_social&utm_campaign=retargeting_all',
     },
   },
+  {
+    id: '52581133990071',
+    label: 'Motorrad — Grundkurs Lachen 18–35',
+    description: 'Kat. A/A1/A2 · Alter 18–35 · Lachen +25km · CHF 10/Tag',
+    color: 'bg-red-500',
+    defaults: {
+      primaryText: 'Motorrad-Führerschein in Lachen. Schnell zum Kat. A — flexible Kursdaten.',
+      headline: 'Motorrad Grundkurs Lachen — Kat. A',
+      linkUrl: 'https://drivingteam.ch/motorrad-grundkurs-lachen?utm_source=facebook&utm_medium=paid_social&utm_campaign=motorrad_grundkurs_lachen',
+    },
+  },
+  {
+    id: '52581133995871',
+    label: 'Motorrad — Grundkurs Zürich 18–35',
+    description: 'Kat. A/A1/A2 · Alter 18–35 · Zürich +15km · CHF 10/Tag',
+    color: 'bg-red-400',
+    defaults: {
+      primaryText: 'Motorrad-Führerschein in Zürich Altstetten. Theorie & Praxis — direkt buchen.',
+      headline: 'Motorrad Grundkurs Zürich — Kat. A',
+      linkUrl: 'https://drivingteam.ch/motorrad-grundkurs-zuerich?utm_source=facebook&utm_medium=paid_social&utm_campaign=motorrad_grundkurs_zuerich',
+    },
+  },
 ]
 
 // ── Form State ────────────────────────────────────────────────────────────────
@@ -563,6 +585,8 @@ const PRODUCT_BY_ADSET: Record<string, string> = {
   ADSET_ID_ANHAENGER: 'anhaenger',
   ADSET_ID_LKW: 'lkw',
   ADSET_ID_RETARGETING: 'retargeting',
+  '52581133990071': 'motorrad',
+  '52581133995871': 'motorrad',
 }
 
 const selectedAdSetProduct = computed(() => PRODUCT_BY_ADSET[form.value.adSetId] ?? null)

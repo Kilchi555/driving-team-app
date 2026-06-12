@@ -5,7 +5,7 @@
  * basierend auf Produkt, Zielgruppe und bestehenden Top-Performern.
  *
  * POST /api/admin/meta-ads-copy
- * Body: { product: 'auto' | 'anhaenger' | 'lkw' | 'retargeting', context?: string }
+ * Body: { product: 'auto' | 'anhaenger' | 'lkw' | 'retargeting' | 'motorrad', context?: string }
  */
 
 import Anthropic from '@anthropic-ai/sdk'
@@ -37,6 +37,12 @@ Zielgruppe: Website-Besucher der letzten 30 Tage, 17–55 Jahre
 Kontext: Person war bereits interessiert, hat aber noch nicht gebucht
 USPs: Einfaches Online-Booking, flexible Termine, top Bewertungen, lokale Fahrschule
 Conversion-Ziel: Zurückgewinnung → Booking auf drivingteam.ch`,
+
+  motorrad: `Produkt: Motorrad-Führerschein Kat. A, A1, A2 (Grundkurs)
+Standorte: Lachen SZ & Zürich Altstetten
+Zielgruppe: 18–35 Jahre, junge Erwachsene, Abenteuerlustige, Pendler
+USPs: Grundkurs in kleinen Gruppen, erfahrene Fahrlehrer, flexible Kursdaten, online buchbar, zertifizierte Ausbildung nach VZV
+Conversion-Ziel: Kursanmeldung auf drivingteam.ch`,
 }
 
 export default defineEventHandler(async (event) => {
