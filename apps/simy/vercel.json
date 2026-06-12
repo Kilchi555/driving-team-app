@@ -1,7 +1,7 @@
 {
   "redirects": [
     {
-      "source": "/((?!_nuxt/|api/|fahrschule|marketing|coaches|therapeuten|preise|demo|kunden|blog|kontakt|impressum|agb|datenschutz|features|ueber-uns|partner).+)",
+      "source": "/((?!_nuxt/|_payload|api/|fahrschule|marketing|coaches|therapeuten|preise|demo|kunden|blog|kontakt|impressum|agb|datenschutz|features|ueber-uns|partner|coaching|sitemap).+)",
       "destination": "https://app.simy.ch/$1",
       "permanent": false
     }
