@@ -51,3 +51,6 @@ fastlane/README.md
 # Generated PCI documents (regenerable from templates; .md sources are tracked)
 docs/pci/**/*.pdf
 docs/pci/**/*.html
+.env.local.main
+.env.vercel.local
+.env.vercel.production
