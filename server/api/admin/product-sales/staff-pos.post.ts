@@ -118,6 +118,8 @@ export default defineEventHandler(async (event) => {
       taxRate: 0
     }))
 
+    const baseUrl = (process.env.NUXT_PUBLIC_APP_URL || 'https://app.simy.ch').replace(/\/$/, '')
+
     const transactionCreate: Wallee.model.TransactionCreate = {
       lineItems,
       currency: 'CHF',
@@ -126,19 +128,30 @@ export default defineEventHandler(async (event) => {
       customersEmailAddress: customer_email!,
       customerId: `pos-${profile.tenant_id}-${customer_email!.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`.substring(0, 100),
       merchantReference: `pos-${sale.id} | ${toAscii(resolvedCustomerName)}`.substring(0, 100),
-      successUrl: `${process.env.NUXT_PUBLIC_APP_URL ? `https://${process.env.NUXT_PUBLIC_APP_URL}` : 'https://app.simy.ch'}/payment/success?transaction_id=${sale.id}`,
-      failedUrl: `${process.env.NUXT_PUBLIC_APP_URL ? `https://${process.env.NUXT_PUBLIC_APP_URL}` : 'https://app.simy.ch'}/payment/failed?transaction_id=${sale.id}`
+      successUrl: `${baseUrl}/payment/success?transaction_id=${sale.id}`,
+      failedUrl: `${baseUrl}/payment/failed?transaction_id=${sale.id}`
     }
 
-    const createdTransaction = await transactionService.create(spaceId, transactionCreate)
-    const transactionId = createdTransaction?.body?.id ?? (createdTransaction as any)?.id
+    let createdTransaction: any
+    try {
+      createdTransaction = await transactionService.create(spaceId, transactionCreate)
+    } catch (walleeErr: any) {
+      logger.error('❌ Wallee API error (staff POS):', { message: walleeErr?.message, body: walleeErr?.body })
+      return { success: true, sale_id: sale.id, payment_url: null, warning: `Wallee-Fehler: ${walleeErr?.body?.message || walleeErr?.message || 'Unbekannt'}` }
+    }
 
+    const transactionId = createdTransaction?.body?.id ?? createdTransaction?.id
     if (transactionId) {
-      const urlResponse = await paymentPageService.paymentPageUrl(spaceId, transactionId)
-      paymentUrl = (urlResponse as any)?.body || urlResponse as any
+      try {
+        const urlResponse = await paymentPageService.paymentPageUrl(spaceId, transactionId)
+        paymentUrl = (urlResponse as any)?.body || (urlResponse as any) ||
+          `https://app-wallee.com/payment/transaction/pay?spaceId=${spaceId}&transactionId=${transactionId}`
+      } catch {
+        paymentUrl = `https://app-wallee.com/payment/transaction/pay?spaceId=${spaceId}&transactionId=${transactionId}`
+      }
     }
   } catch (walleeErr: any) {
-    logger.error('❌ Wallee transaction failed for staff POS:', walleeErr?.message)
+    logger.error('❌ Wallee transaction failed for staff POS:', { message: walleeErr?.message, body: walleeErr?.body })
     // Don't throw — sale is created, staff can handle payment another way
     return {
       success: true,
