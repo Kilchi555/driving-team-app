@@ -35,11 +35,10 @@ export default defineEventHandler(async (event) => {
   const at = tokenData.access_token
 
   const BASE = `https://googleads.googleapis.com/v23/customers/${customerId}`
-  const h = {
+  const h: Record<string, string> = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${at}`,
     'developer-token': developerToken,
-    'login-customer-id': customerId,
   }
 
   async function post(path: string, body: any) {
