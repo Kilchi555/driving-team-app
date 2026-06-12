@@ -9,7 +9,7 @@ export async function syncFeatureFlags(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   tenantId: string,
   plan: SubscriptionPlan,
-  addons: { courses?: boolean; affiliate?: boolean }
+  addons: { courses?: boolean; affiliate?: boolean; gbp?: boolean }
 ) {
   const enabledFlags = new Set(resolveFeatureFlags(plan, addons))
 

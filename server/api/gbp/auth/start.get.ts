@@ -1,5 +1,6 @@
 import { defineEventHandler, sendRedirect, createError, getQuery } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { requireFeature } from '~/server/utils/require-feature'
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 const SCOPES = [
@@ -15,9 +16,8 @@ const SCOPES = [
  */
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
-  if (!authUser?.tenant_id) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  if (!authUser?.tenant_id) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  await requireFeature(authUser.tenant_id, 'gbp_enabled')
 
   const clientId = process.env.GOOGLE_GBP_CLIENT_ID
   if (!clientId) throw createError({ statusCode: 500, statusMessage: 'GBP client ID not configured' })
