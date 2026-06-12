@@ -32,9 +32,9 @@
 </template>
 
 <script setup lang="ts">
-const STORAGE_KEY = 'simy_cookie_consent'
+declare const window: Window & { gtag?: (...args: unknown[]) => void }
 
-const { initialize: initGtag, gtag } = useGtag()
+const STORAGE_KEY = 'simy_cookie_consent'
 
 const visible = ref(false)
 
@@ -60,11 +60,14 @@ function decline() {
 }
 
 function enableAnalytics() {
-  gtag('consent', 'update', {
-    analytics_storage: 'granted',
-    ad_storage: 'granted',
-  })
-  initGtag()
+  // GA4 script is always loaded (injected in nuxt.config.ts head).
+  // We only need to update consent so GA4 starts sending data.
+  if (typeof window.gtag === 'function') {
+    window.gtag('consent', 'update', {
+      analytics_storage: 'granted',
+      ad_storage: 'granted',
+    })
+  }
 }
 </script>
 
