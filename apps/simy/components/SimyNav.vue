@@ -145,7 +145,6 @@
           @mouseenter="(e) => activeSection !== link.href.slice(1) && Object.assign((e.currentTarget as HTMLElement).style, { background: `${effectivePrimary.value}20`, color: effectivePrimary.value })"
           @mouseleave="(e) => activeSection !== link.href.slice(1) && Object.assign((e.currentTarget as HTMLElement).style, { background: '', color: '' })"
         >
-          <span v-if="link.icon" class="text-sm leading-none">{{ link.icon }}</span>
           {{ link.label }}
         </a>
       </div>
