@@ -7,7 +7,7 @@ export default defineNuxtConfig({
   gtag: {
     // Tag always loads (for GSC/GA4 verification) — data only sent after cookie consent
     enabled: true,
-    id: process.env.NUXT_PUBLIC_GA_ID ?? '',
+    id: process.env.NUXT_PUBLIC_GTAG_ID ?? process.env.NUXT_PUBLIC_GA_ID ?? '',
     initCommands: [
       ['consent', 'default', {
         analytics_storage: 'denied',
