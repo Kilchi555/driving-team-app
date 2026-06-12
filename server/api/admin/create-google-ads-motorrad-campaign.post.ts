@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${at}`,
     'developer-token': developerToken,
-    'login-customer-id': managerCustomerId,
+    'login-customer-id': customerId,
   }
 
   async function post(path: string, body: any) {
