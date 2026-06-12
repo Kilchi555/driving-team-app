@@ -68,6 +68,7 @@ export default defineNuxtConfig({
     prerender: {
       routes: [
         '/',
+        '/sitemap.xml',
         '/preise',
         '/demo',
         '/kunden',
