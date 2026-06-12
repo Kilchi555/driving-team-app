@@ -646,9 +646,9 @@
 
             <button
               type="submit"
-              :disabled="isSubmitting || (step === 0 && (passwordTooShort || passwordMismatch))"
+              :disabled="isSubmitting || (step === 0 && (passwordTooShort || passwordMismatch || hibpStatus === 'checking'))"
               class="w-full sm:w-auto px-6 py-3 text-white rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed transition-all font-medium hover:opacity-90"
-              :style="!(isSubmitting || (step === 0 && (passwordTooShort || passwordMismatch))) ? { backgroundColor: primaryColor } : {}"
+              :style="!(isSubmitting || (step === 0 && (passwordTooShort || passwordMismatch || hibpStatus === 'checking'))) ? { backgroundColor: primaryColor } : {}"
             >
               <span v-if="isSubmitting" class="flex items-center justify-center">
                 <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
@@ -1392,18 +1392,6 @@ const isFormValid = computed(() => {
 const handleNextStep = async () => {
   // Validate current step
   if (step.value === 0) {
-    // Email must be checked and available before proceeding
-    if (!form.email || emailStatus.value === '') {
-      emailCheckMessage.value = 'Bitte E-Mail-Adresse eingeben und prüfen'
-      return
-    }
-    if (emailStatus.value === 'checking') {
-      emailCheckMessage.value = '⏳ Bitte warten – E-Mail wird noch geprüft...'
-      return
-    }
-    if (emailStatus.value === 'taken' || emailStatus.value === 'error') {
-      return
-    }
     // Password validation using zxcvbn score
     if (form.password.length < 12) {
       passwordError.value = 'Passwort muss mindestens 12 Zeichen lang sein'
@@ -1428,7 +1416,23 @@ const handleNextStep = async () => {
     passwordError.value = ''
     step.value++
   } else if (step.value === 1) {
-    // Step 2 validation: Check that at least one category is selected
+    // Email must be checked and available before proceeding to documents
+    if (!form.email || emailStatus.value === '') {
+      // Trigger email check if not yet done
+      await validateEmailRealtime()
+      if (!form.email || emailStatus.value === '' || emailStatus.value === 'checking') {
+        emailCheckMessage.value = 'Bitte E-Mail-Adresse eingeben und prüfen'
+        return
+      }
+    }
+    if (emailStatus.value === 'checking') {
+      emailCheckMessage.value = '⏳ Bitte warten – E-Mail wird noch geprüft...'
+      return
+    }
+    if (emailStatus.value === 'taken' || emailStatus.value === 'error') {
+      return
+    }
+    // Check that at least one category is selected
     if (form.categories.length === 0) {
       categoryError.value = 'Bitte wähle mindestens eine Kategorie aus'
       return
