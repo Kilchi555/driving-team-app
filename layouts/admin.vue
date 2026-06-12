@@ -169,6 +169,13 @@
               class="drawer-link" :class="isActive('/admin/affiliate') ? 'drawer-active' : ''">Affiliate</NuxtLink>
             <NuxtLink to="/admin/pricing" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/pricing') ? 'drawer-active' : ''">Preise</NuxtLink>
+
+            <!-- Super Admin only -->
+            <template v-if="currentUser?.role === 'super_admin'">
+              <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Super Admin</p>
+              <NuxtLink to="/admin/simy-gbp" @click="showMobileMenu = false"
+                class="drawer-link" :class="isActive('/admin/simy-gbp') ? 'drawer-active' : ''">simy.ch GBP</NuxtLink>
+            </template>
           </template>
           <div v-else class="flex items-center justify-center py-8 text-white/50 text-sm gap-2">
             <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
@@ -259,6 +266,12 @@
             <NuxtLink to="/admin/pricing"
               class="drawer-link" :class="isActive('/admin/pricing') ? 'drawer-active' : ''">Preise</NuxtLink>
 
+            <!-- Super Admin only -->
+            <template v-if="currentUser?.role === 'super_admin'">
+              <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Super Admin</p>
+              <NuxtLink to="/admin/simy-gbp"
+                class="drawer-link" :class="isActive('/admin/simy-gbp') ? 'drawer-active' : ''">simy.ch GBP</NuxtLink>
+            </template>
           </template>
           <div v-else class="flex items-center justify-center py-8 text-white/50 text-sm gap-2">
             <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
