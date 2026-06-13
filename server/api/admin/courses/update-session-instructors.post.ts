@@ -27,6 +27,7 @@ import {
   createStaffCourseAppointments,
   notifyStaffAssigned,
   notifyStaffRemoved,
+  sendExternalInstructorInvite,
 } from '~/server/utils/course-staff-notifications'
 
 export default defineEventHandler(async (event) => {
@@ -50,6 +51,8 @@ export default defineEventHandler(async (event) => {
 
   // Track external sessions missing emails so we can warn the admin
   const missingEmailWarnings: string[] = []
+  // Accumulate external instructor sessions to send ICS after the loop
+  const extInviteMap = new Map<string, any[]>()
 
   let updated = 0
 
@@ -69,12 +72,16 @@ export default defineEventHandler(async (event) => {
     const newType   = session.instructor_type || null
     const newStaff  = newType === 'internal' ? (session.staff_id || null) : null
     const oldStaff  = existing.instructor_type === 'internal' ? existing.staff_id : null
+    const oldExtEmail = existing.instructor_type === 'external' ? existing.external_instructor_email : null
+    const newExtEmail = newType === 'external' ? (session.external_instructor_email || null) : null
 
     const staffChanged   = oldStaff !== newStaff
     const typeChanged    = existing.instructor_type !== newType
+    // External email added or changed → resend invite
+    const extEmailChanged = newType === 'external' && newExtEmail && newExtEmail !== oldExtEmail
 
     // ── External staff: warn if email missing ─────────────────────────
-    if (newType === 'external' && !session.external_instructor_email) {
+    if (newType === 'external' && !newExtEmail) {
       const name = session.external_instructor_name || 'Externer Instruktor'
       missingEmailWarnings.push(name)
     }
@@ -110,6 +117,25 @@ export default defineEventHandler(async (event) => {
       description: existing.description,
       instructor_type: newType as any,
       staff_id: newStaff,
+      external_instructor_name:  session.external_instructor_name || null,
+      external_instructor_email: newExtEmail,
+    }
+
+    // ── External instructor: send ICS when email is set/changed ───────
+    if (extEmailChanged && course) {
+      // Collect all sessions for this external instructor (current + others already saved)
+      // We send after the loop; accumulate here per email
+      if (!extInviteMap.has(newExtEmail!)) extInviteMap.set(newExtEmail!, [])
+      extInviteMap.get(newExtEmail!)!.push({
+        ...sessionData,
+        external_instructor_name: session.external_instructor_name || '',
+      })
+
+      // Mark notified
+      await supabase
+        .from('course_sessions')
+        .update({ external_instructor_notified_at: new Date().toISOString() })
+        .eq('id', existing.id)
     }
 
     if (staffChanged) {
@@ -144,6 +170,25 @@ export default defineEventHandler(async (event) => {
   }
 
   logger.debug(`✅ Updated instructor fields for ${updated} sessions`)
+
+  // ── Send ICS invites to external instructors with newly set emails ──
+  if (course && extInviteMap.size > 0) {
+    for (const [email, sessions] of extInviteMap) {
+      const instructorName = sessions[0]?.external_instructor_name || email
+      try {
+        await sendExternalInstructorInvite(
+          supabase,
+          profile.tenant_id,
+          course as any,
+          instructorName,
+          email,
+          sessions,
+        )
+      } catch (e: any) {
+        logger.warn(`⚠️ Could not send ICS to external instructor ${email}:`, e.message)
+      }
+    }
+  }
 
   return {
     success: true,
