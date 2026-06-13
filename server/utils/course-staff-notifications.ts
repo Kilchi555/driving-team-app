@@ -285,3 +285,250 @@ export async function matchSariInstructorToStaff(
   logger.debug(`ℹ️ No staff match for SARI instructor "${instructorName}"`)
   return null
 }
+
+// ── Historical email lookup for external instructors ──────────────────────────
+/**
+ * Search previous course_sessions for the same external instructor name
+ * to find a previously stored email address.
+ */
+export async function lookupExternalInstructorEmail(
+  supabase: SupabaseClient,
+  tenantId: string,
+  instructorName: string,
+): Promise<string | null> {
+  if (!instructorName) return null
+
+  const needle = normalizeNameForMatch(instructorName)
+
+  const { data: sessions } = await supabase
+    .from('course_sessions')
+    .select('external_instructor_name, external_instructor_email')
+    .eq('tenant_id', tenantId)
+    .eq('instructor_type', 'external')
+    .not('external_instructor_email', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  for (const s of sessions || []) {
+    if (!s.external_instructor_name || !s.external_instructor_email) continue
+    const candidate = normalizeNameForMatch(s.external_instructor_name)
+    const parts = needle.split(' ')
+    if (candidate === needle || parts.every((p) => candidate.includes(p))) {
+      logger.debug(`✅ Found historical email for external instructor "${instructorName}"`)
+      return s.external_instructor_email as string
+    }
+  }
+
+  logger.debug(`ℹ️ No historical email found for external instructor "${instructorName}"`)
+  return null
+}
+
+// ── ICS builder (shared) ──────────────────────────────────────────────────────
+
+function toIcsDate(dateStr: string, timeStr: string): string {
+  return `${dateStr.replace(/-/g, '')}T${timeStr.replace(':', '')}00`
+}
+
+export function buildIcs(events: Array<{
+  uid: string
+  date: string
+  startTime: string
+  endTime: string
+  summary: string
+  description: string
+  organizerName: string
+  organizerEmail: string
+  attendeeName: string
+  attendeeEmail: string
+}>): Buffer {
+  const vtimezone = [
+    'BEGIN:VTIMEZONE',
+    'TZID:Europe/Zurich',
+    'BEGIN:STANDARD',
+    'DTSTART:19701025T030000',
+    'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10',
+    'TZOFFSETFROM:+0200',
+    'TZOFFSETTO:+0100',
+    'TZNAME:CET',
+    'END:STANDARD',
+    'BEGIN:DAYLIGHT',
+    'DTSTART:19700329T020000',
+    'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3',
+    'TZOFFSETFROM:+0100',
+    'TZOFFSETTO:+0200',
+    'TZNAME:CEST',
+    'END:DAYLIGHT',
+    'END:VTIMEZONE',
+  ].join('\r\n')
+
+  const vevents = events.map((e) => [
+    'BEGIN:VEVENT',
+    `UID:${e.uid}`,
+    `DTSTART;TZID=Europe/Zurich:${toIcsDate(e.date, e.startTime)}`,
+    `DTEND;TZID=Europe/Zurich:${toIcsDate(e.date, e.endTime)}`,
+    `SUMMARY:${e.summary}`,
+    `DESCRIPTION:${e.description.replace(/\n/g, '\\n')}`,
+    `ORGANIZER;CN=${e.organizerName}:mailto:${e.organizerEmail}`,
+    `ATTENDEE;CN=${e.attendeeName};RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:${e.attendeeEmail}`,
+    'STATUS:CONFIRMED',
+    'SEQUENCE:0',
+    'END:VEVENT',
+  ].join('\r\n')).join('\r\n')
+
+  return Buffer.from(
+    ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Simy//Simy Fahrschule//DE', 'METHOD:REQUEST', vtimezone, vevents, 'END:VCALENDAR'].join('\r\n'),
+    'utf-8',
+  )
+}
+
+// ── Admin notification: missing external instructor email ─────────────────────
+/**
+ * Sends an email to the tenant admin when an external instructor has no email
+ * and no historical record could be found.
+ */
+export async function notifyAdminMissingExternalEmail(
+  supabase: SupabaseClient,
+  tenantId: string,
+  courseName: string,
+  instructorName: string,
+  sessions: CourseSessionForNotification[],
+) {
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('name, from_email, resend_domain_verified')
+    .eq('id', tenantId)
+    .single()
+
+  // Find admin email (tenant owner / admin role)
+  const { data: admins } = await supabase
+    .from('users')
+    .select('email')
+    .eq('tenant_id', tenantId)
+    .eq('role', 'admin')
+    .not('email', 'is', null)
+    .limit(3)
+
+  const adminEmails = (admins || []).map((a) => a.email).filter(Boolean) as string[]
+  if (adminEmails.length === 0) return
+
+  const tenantName = tenant?.name || 'Simy'
+  const sessionRows = sessions
+    .slice()
+    .sort((a, b) => a.start_time.localeCompare(b.start_time))
+    .map((s) => `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtDate(s.start_time)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtTime(s.start_time)} – ${fmtTime(s.end_time)} Uhr</td>
+    </tr>`)
+    .join('')
+
+  const html = emailWrapper(
+    '⚠️ E-Mail für externen Instruktor fehlt',
+    `<p>Beim SARI-Sync wurde ein externer Instruktor erkannt, für den noch keine E-Mail-Adresse hinterlegt ist:</p>
+    <p style="font-size:16px;font-weight:700;color:#1e293b;margin:16px 0">
+      ${instructorName}
+    </p>
+    <p>Kurs: <strong>${courseName}</strong></p>
+    <p>Betroffene Sessions:</p>
+    <table><thead><tr><th>Datum</th><th>Zeit</th></tr></thead><tbody>${sessionRows}</tbody></table>
+    <p style="margin-top:24px;color:#6b7280;font-size:14px">
+      Bitte E-Mail-Adresse im Kurs-Detail hinterlegen, damit der Instruktor eine Kalendereinladung erhält.
+    </p>`,
+    tenantName,
+  )
+
+  try {
+    await sendEmail({
+      to: adminEmails,
+      subject: `Aktion erforderlich: E-Mail für externen Instruktor "${instructorName}" fehlt`,
+      html,
+      fromName: tenantName,
+      fromEmail: tenant?.from_email ?? null,
+      domainVerified: tenant?.resend_domain_verified ?? false,
+    })
+    logger.debug(`✅ Admin notified about missing external instructor email: ${instructorName}`)
+  } catch (e: any) {
+    logger.warn('⚠️ Could not send admin missing-email notification:', e.message)
+  }
+}
+
+// ── Send ICS invite to external instructor ────────────────────────────────────
+export async function sendExternalInstructorInvite(
+  supabase: SupabaseClient,
+  tenantId: string,
+  course: CourseForNotification,
+  instructorName: string,
+  instructorEmail: string,
+  sessions: CourseSessionForNotification[],
+) {
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('name, from_email, resend_domain_verified')
+    .eq('id', tenantId)
+    .single()
+
+  const organizerName  = tenant?.name || 'Fahrschule'
+  const organizerEmail = (tenant?.resend_domain_verified && tenant?.from_email)
+    ? tenant.from_email
+    : 'noreply@simy.ch'
+
+  const courseLabel = course.course_category?.name || course.name || 'Kurs'
+  const sorted = sessions.slice().sort((a, b) => a.start_time.localeCompare(b.start_time))
+  const firstStart = sorted[0]?.start_time
+  const startTimeLabel = firstStart ? fmtTime(firstStart) : ''
+  const dateLabel = firstStart ? fmtDate(firstStart) : ''
+  const summary = `${courseLabel} – ab ${startTimeLabel}`
+
+  const icsEvents = sorted.map((s, i) => {
+    const d = s.start_time.slice(0, 10)
+    const st = fmtTime(s.start_time)
+    const et = fmtTime(s.end_time)
+    return {
+      uid:            `${course.id}-ext-${i}@simy.ch`,
+      date:           d,
+      startTime:      st,
+      endTime:        et,
+      summary,
+      description:    s.description || `Session ${i + 1}`,
+      organizerName,
+      organizerEmail,
+      attendeeName:   instructorName,
+      attendeeEmail:  instructorEmail,
+    }
+  })
+
+  const icsBuffer = buildIcs(icsEvents)
+
+  const sessionRows = sorted.map((s) => `<tr>
+    <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtDate(s.start_time)}</td>
+    <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtTime(s.start_time)} – ${fmtTime(s.end_time)} Uhr</td>
+    <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280">${s.description || ''}</td>
+  </tr>`).join('')
+
+  const html = emailWrapper(
+    '📅 Kurseinladung',
+    `<p>Hallo ${instructorName},</p>
+    <p>Sie wurden als externer Instruktor/in für den folgenden Kurs eingeplant:</p>
+    <p style="font-size:18px;font-weight:700;color:#1e293b;margin:16px 0">${courseLabel}</p>
+    <p style="color:#6b7280;margin-bottom:24px">Kursbeginn: ${dateLabel}</p>
+    <table><thead><tr><th>Datum</th><th>Zeit</th><th>Beschreibung</th></tr></thead><tbody>${sessionRows}</tbody></table>
+    <p style="margin-top:24px;color:#6b7280;font-size:14px">
+      Im Anhang finden Sie eine Kalender-Einladung (.ics). Öffnen Sie diese, um alle Termine direkt in Ihren Kalender zu übernehmen.
+    </p>`,
+    organizerName,
+  )
+
+  try {
+    await sendEmail({
+      to: instructorEmail,
+      subject: `Kurseinladung: ${courseLabel} ab ${dateLabel}`,
+      html,
+      fromName: organizerName,
+      fromEmail: tenant?.from_email ?? null,
+      domainVerified: tenant?.resend_domain_verified ?? false,
+      attachments: [{ filename: `kurs-${course.id.slice(0, 8)}.ics`, content: icsBuffer }],
+    })
+    logger.debug(`✅ ICS invite sent to external instructor ${instructorEmail}`)
+  } catch (e: any) {
+    logger.warn(`⚠️ Could not send ICS invite to ${instructorEmail}:`, e.message)
+  }
+}
