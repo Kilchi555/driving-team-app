@@ -9,8 +9,11 @@ import { SARIClient, SARICourse, SARICourseGroup } from '~/utils/sariClient'
 import { logger } from '~/utils/logger'
 import {
   matchSariInstructorToStaff,
+  lookupExternalInstructorEmail,
   createStaffCourseAppointments,
   notifyStaffAssigned,
+  sendExternalInstructorInvite,
+  notifyAdminMissingExternalEmail,
 } from '~/server/utils/course-staff-notifications'
 
 export interface SyncResult {
@@ -509,59 +512,99 @@ export class SARISyncEngine {
       const sariInstructorName = firstSession.instructor || firstSession.teacher || null
 
       if (sariInstructorName) {
+        // 1. Try to match to an internal staff member
         const matchedStaffId = await matchSariInstructorToStaff(
           this.supabase,
           this.tenantId,
           sariInstructorName,
         )
 
-        if (matchedStaffId) {
-          // Load all sessions in this course without staff assignment that haven't been notified
-          const { data: unassignedSessions } = await this.supabase
-            .from('course_sessions')
-            .select('id, start_time, end_time, description, staff_id, staff_notified_at')
-            .eq('course_id', courseId)
-            .is('staff_notified_at', null)
+        // Load new (unnotified, unassigned) sessions for this course
+        const { data: unnotifiedSessions } = await this.supabase
+          .from('course_sessions')
+          .select('id, start_time, end_time, description, staff_id, instructor_type, staff_notified_at, external_instructor_notified_at')
+          .eq('course_id', courseId)
+          .is('staff_notified_at', null)
+          .is('external_instructor_notified_at', null)
 
-          const newSessions = (unassignedSessions || []).filter(
-            (s) => !s.staff_id, // only sessions without existing assignment
-          )
+        const newSessions = (unnotifiedSessions || []).filter((s) => !s.staff_id)
 
-          if (newSessions.length > 0) {
-            // Assign staff to new sessions
-            await this.supabase
-              .from('course_sessions')
-              .update({ instructor_type: 'internal', staff_id: matchedStaffId })
-              .in('id', newSessions.map((s) => s.id))
+        if (newSessions.length > 0) {
+          // Load full course for notification context
+          const { data: courseRecord } = await this.supabase
+            .from('courses')
+            .select('id, name, tenant_id, category, course_category:course_categories(name, icon)')
+            .eq('id', courseId)
+            .single()
 
-            // Load full course for notification context
-            const { data: courseRecord } = await this.supabase
-              .from('courses')
-              .select('id, name, tenant_id, category, course_category:course_categories(name, icon)')
-              .eq('id', courseId)
-              .single()
+          if (courseRecord) {
+            if (matchedStaffId) {
+              // ── Internal staff matched ───────────────────────────────────
+              await this.supabase
+                .from('course_sessions')
+                .update({ instructor_type: 'internal', staff_id: matchedStaffId })
+                .in('id', newSessions.map((s) => s.id))
 
-            if (courseRecord) {
-              await createStaffCourseAppointments(
-                this.supabase,
-                matchedStaffId,
-                courseRecord as any,
-                newSessions,
-              )
-              await notifyStaffAssigned(
-                this.supabase,
-                matchedStaffId,
-                courseRecord as any,
-                newSessions,
-              )
+              await createStaffCourseAppointments(this.supabase, matchedStaffId, courseRecord as any, newSessions)
+              await notifyStaffAssigned(this.supabase, matchedStaffId, courseRecord as any, newSessions)
 
-              // Mark as notified
               await this.supabase
                 .from('course_sessions')
                 .update({ staff_notified_at: new Date().toISOString() })
                 .in('id', newSessions.map((s) => s.id))
 
-              logger.debug(`✅ SARI post-sync: staff ${matchedStaffId} assigned + notified for ${newSessions.length} sessions`)
+              logger.debug(`✅ SARI post-sync: internal staff ${matchedStaffId} assigned + notified`)
+            } else {
+              // ── No internal match → treat as external ────────────────────
+              // Check if we already have an email from a previous course
+              const historicalEmail = await lookupExternalInstructorEmail(
+                this.supabase,
+                this.tenantId,
+                sariInstructorName,
+              )
+
+              if (historicalEmail) {
+                // Known external instructor — store email and send invite
+                await this.supabase
+                  .from('course_sessions')
+                  .update({
+                    instructor_type: 'external',
+                    external_instructor_name: sariInstructorName,
+                    external_instructor_email: historicalEmail,
+                    external_instructor_notified_at: new Date().toISOString(),
+                  })
+                  .in('id', newSessions.map((s) => s.id))
+
+                await sendExternalInstructorInvite(
+                  this.supabase,
+                  this.tenantId,
+                  courseRecord as any,
+                  sariInstructorName,
+                  historicalEmail,
+                  newSessions,
+                )
+
+                logger.debug(`✅ SARI post-sync: external instructor "${sariInstructorName}" found via history → ICS sent`)
+              } else {
+                // Unknown external instructor — set name only, notify admin
+                await this.supabase
+                  .from('course_sessions')
+                  .update({
+                    instructor_type: 'external',
+                    external_instructor_name: sariInstructorName,
+                  })
+                  .in('id', newSessions.map((s) => s.id))
+
+                await notifyAdminMissingExternalEmail(
+                  this.supabase,
+                  this.tenantId,
+                  courseRecord.name,
+                  sariInstructorName,
+                  newSessions,
+                )
+
+                logger.debug(`⚠️ SARI post-sync: external instructor "${sariInstructorName}" has no email — admin notified`)
+              }
             }
           }
         }
