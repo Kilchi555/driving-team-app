@@ -360,10 +360,13 @@
                   </td>
                   
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <span :class="getCategoryBadgeClass(course.course_category?.name || course.category)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                    <span
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
+                      :style="{ background: course.course_category?.color || getCategoryFallbackColor(course.category) }"
+                    >
                       {{ course.course_category?.icon || (course.category === 'VKU' ? '📚' : course.category === 'PGS' ? '🏍️' : '📋') }} 
                       {{ course.course_category?.name || course.category || 'Unbekannt' }}
-                      <span v-if="course.sari_managed" class="ml-1 text-orange-500" title="SARI verwaltet">⚡</span>
+                      <span v-if="course.sari_managed" class="ml-1 opacity-80" title="SARI verwaltet">⚡</span>
                     </span>
                   </td>
                   
@@ -943,7 +946,20 @@
               <div v-else class="text-xs text-green-600 mt-1">
                 ✅ {{ activeCategories.length }} Kategorien verfügbar
               </div>
-              <div v-if="selectedCategoryInfo" class="mt-2 p-3 rounded-lg" :style="{ background: `${primaryColor}10` }">
+              <!-- SARI warning: manual creation not recommended -->
+              <div v-if="selectedCategoryInfo?.requires_sari_sync" class="mt-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                <div class="flex items-start gap-2">
+                  <svg class="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                  </svg>
+                  <div class="text-sm text-amber-800">
+                    <strong>SARI-verwalteter Kurstyp</strong> — Dieser Kurs wird automatisch via SARI synchronisiert.
+                    Erstelle ihn direkt in SARI; er erscheint nach dem nächsten Sync hier automatisch.
+                    Eine manuelle Erstellung führt zu Duplikaten und wird <strong>nicht</strong> zu SARI übertragen.
+                  </div>
+                </div>
+              </div>
+              <div v-else-if="selectedCategoryInfo" class="mt-2 p-3 rounded-lg" :style="{ background: `${primaryColor}10` }">
                 <p v-if="selectedCategoryInfo.description" class="text-sm text-gray-600 mb-2">
                   {{ selectedCategoryInfo.description }}
                 </p>
@@ -954,9 +970,6 @@
                     ({{ selectedCategoryInfo.total_duration_hours }}h total)
                   </span>
                   <span v-else>Standard (8h)</span>
-                </div>
-                <div v-if="selectedCategoryInfo.session_structure?.description" class="text-xs mt-1" :style="{ color: primaryColor }">
-                  {{ selectedCategoryInfo.session_structure.description }}
                 </div>
               </div>
             </div>
@@ -1153,6 +1166,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Startzeit *</label>
                     <input
                       v-model="session.start_time"
+                      @change="session.description = sessionDefaultDescription(index, session.start_time)"
                       type="time"
                       required
                       :readonly="editingCourse && editingCourse.sari_managed"
@@ -1226,7 +1240,17 @@
                         placeholder="info@example.ch"
                         class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input tenant-focus focus:outline-none focus:ring-2"
                       />
-                      <p class="text-xs text-gray-500 mt-1">Erhält die Teilnehmerliste 1 Tag vor dem Kurs</p>
+                      <!-- Warning: no email = no calendar invite -->
+                      <p
+                        v-if="session.external_instructor_name && !session.external_instructor_email"
+                        class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1 flex items-center gap-1"
+                      >
+                        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                        </svg>
+                        Bitte E-Mail hinterlegen — sonst erhält der externe Instruktor keine Kalendereinladung.
+                      </p>
+                      <p v-else class="text-xs text-gray-500 mt-1">Erhält eine Kalendereinladung (.ics) per E-Mail</p>
                     </div>
                   </template>
                 </div>
@@ -1235,7 +1259,7 @@
                     <input
                       v-model="session.description"
                       type="text"
-                      :placeholder="`Session ${index + 1} Beschreibung`"
+                      :placeholder="sessionDefaultDescription(index, session.start_time)"
                       class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input tenant-focus focus:outline-none focus:ring-2"
                     />
                   </div>
@@ -4373,7 +4397,7 @@ const newCourse = ref({
   sari_managed: false,
   sari_course_id: null as string | null,
   registration_deadline: null as string | null,
-  status: 'draft',
+  status: 'scheduled',
   payment_method: null as 'WALLEE' | 'CASH_ON_SITE' | null
 })
 
@@ -4626,18 +4650,26 @@ const createCourse = async () => {
       })
 
       if (courseSessions.value.length > 0) {
-        await $fetch('/api/admin/courses/update-session-instructors', {
+        const instructorResult = await $fetch<{ success: boolean; warnings?: string[] }>('/api/admin/courses/update-session-instructors', {
           method: 'POST',
           body: {
+            courseId: editingCourse.value.id,
             sessions: courseSessions.value.map((s: any) => ({
               id: s.id,
               instructor_type: s.instructor_type || null,
               staff_id: s.staff_id || null,
               external_instructor_name: s.external_instructor_name || null,
               external_instructor_email: s.external_instructor_email || null,
+              external_instructor_phone: s.external_instructor_phone || null,
             })),
           },
         })
+        // Show admin warnings for missing external instructor emails
+        if (instructorResult?.warnings?.length) {
+          instructorResult.warnings.forEach((w: string) => {
+            error.value = w
+          })
+        }
       }
     } else {
       await $fetch('/api/admin/courses/upsert', {
@@ -4732,7 +4764,7 @@ const resetNewCourse = () => {
     sari_managed: false,
     sari_course_id: null,
     registration_deadline: null,
-    status: 'draft',
+    status: 'scheduled',
     payment_method: null
   }
   coursePrice.value = 0
@@ -4742,23 +4774,53 @@ const resetNewCourse = () => {
 }
 
 // Session Management Functions
+const sessionDefaultDescription = (index: number, startTime: string) => {
+  const cat = selectedCategoryInfo.value?.name || newCourse.value.name || 'Session'
+  return `${cat} – Session ${index + 1} – ${startTime}`
+}
+
 const addSession = () => {
-  const today = new Date()
-  const tomorrow = new Date(today)
-  tomorrow.setDate(today.getDate() + courseSessions.value.length + 1)
-  
+  const index = courseSessions.value.length
+  const prev = courseSessions.value[index - 1]
+
+  let date: string
+  let startTime: string
+  let endTime: string
+
+  if (prev) {
+    // One week after previous session, same times
+    const prevDate = new Date(prev.date + 'T12:00:00')
+    prevDate.setDate(prevDate.getDate() + 7)
+    date = prevDate.toISOString().split('T')[0]
+    startTime = prev.start_time
+    endTime = prev.end_time
+  } else {
+    const today = new Date()
+    today.setDate(today.getDate() + 1)
+    date = today.toISOString().split('T')[0]
+    startTime = '09:00'
+    endTime = '17:00'
+  }
+
   courseSessions.value.push({
-    date: tomorrow.toISOString().split('T')[0],
-    start_time: '09:00',
-    end_time: '17:00',
-    description: '',
-    instructor_type: null,
-    staff_id: null,
-    external_instructor_name: null,
-    external_instructor_email: null,
-    external_instructor_phone: null
+    date,
+    start_time: startTime,
+    end_time: endTime,
+    description: sessionDefaultDescription(index, startTime),
+    instructor_type: prev?.instructor_type ?? null,
+    staff_id: prev?.staff_id ?? null,
+    external_instructor_name: prev?.external_instructor_name ?? null,
+    external_instructor_email: prev?.external_instructor_email ?? null,
+    external_instructor_phone: prev?.external_instructor_phone ?? null,
   })
 }
+
+// Refresh descriptions when category changes (only if description matches the auto-pattern)
+watch(() => newCourse.value.course_category_id, () => {
+  courseSessions.value.forEach((s, i) => {
+    s.description = sessionDefaultDescription(i, s.start_time)
+  })
+})
 
 const removeSession = (index: number) => {
   courseSessions.value.splice(index, 1)
@@ -4858,11 +4920,12 @@ const generateSessionsFromCategory = () => {
     const endTime = new Date(startTime)
     endTime.setHours(startTime.getHours() + hoursPerSession)
     
+      const st = startTime.toTimeString().slice(0, 5)
       courseSessions.value.push({
         date: sessionDate.toISOString().split('T')[0],
-        start_time: startTime.toTimeString().slice(0, 5),
+        start_time: st,
         end_time: endTime.toTimeString().slice(0, 5),
-        description: `Session ${i + 1}`,
+        description: sessionDefaultDescription(i, st),
         instructor_type: null,
         staff_id: null,
         external_instructor_name: null,
@@ -5020,6 +5083,16 @@ const getCategoryBadgeClass = (category: string) => {
     case 'Fahrlehrer': return 'bg-indigo-600 text-white'
     case 'Privat': return 'bg-gray-600 text-white'
     default: return 'bg-gray-600 text-white'
+  }
+}
+
+const getCategoryFallbackColor = (category: string) => {
+  switch (category) {
+    case 'VKU': return '#2563eb'
+    case 'PGS': return '#9333ea'
+    case 'CZV': return '#ea580c'
+    case 'Fahrlehrer': return '#4f46e5'
+    default: return '#4b5563'
   }
 }
 

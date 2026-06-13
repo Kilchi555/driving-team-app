@@ -7,6 +7,11 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { SARIClient, SARICourse, SARICourseGroup } from '~/utils/sariClient'
 import { logger } from '~/utils/logger'
+import {
+  matchSariInstructorToStaff,
+  createStaffCourseAppointments,
+  notifyStaffAssigned,
+} from '~/server/utils/course-staff-notifications'
 
 export interface SyncResult {
   success: boolean
@@ -497,6 +502,73 @@ export class SARISyncEngine {
     }
 
     logger.debug(`✅ Course group synced: "${group.name}" → ${courseId} with ${sessionsCreated} sessions and ${participantsSynced} new participants`)
+
+    // ── Post-sync: fuzzy match SARI instructor → internal staff ──────────────
+    // Only runs for sessions that have no staff_id yet AND have not been notified.
+    try {
+      const sariInstructorName = firstSession.instructor || firstSession.teacher || null
+
+      if (sariInstructorName) {
+        const matchedStaffId = await matchSariInstructorToStaff(
+          this.supabase,
+          this.tenantId,
+          sariInstructorName,
+        )
+
+        if (matchedStaffId) {
+          // Load all sessions in this course without staff assignment that haven't been notified
+          const { data: unassignedSessions } = await this.supabase
+            .from('course_sessions')
+            .select('id, start_time, end_time, description, staff_id, staff_notified_at')
+            .eq('course_id', courseId)
+            .is('staff_notified_at', null)
+
+          const newSessions = (unassignedSessions || []).filter(
+            (s) => !s.staff_id, // only sessions without existing assignment
+          )
+
+          if (newSessions.length > 0) {
+            // Assign staff to new sessions
+            await this.supabase
+              .from('course_sessions')
+              .update({ instructor_type: 'internal', staff_id: matchedStaffId })
+              .in('id', newSessions.map((s) => s.id))
+
+            // Load full course for notification context
+            const { data: courseRecord } = await this.supabase
+              .from('courses')
+              .select('id, name, tenant_id, category, course_category:course_categories(name, icon)')
+              .eq('id', courseId)
+              .single()
+
+            if (courseRecord) {
+              await createStaffCourseAppointments(
+                this.supabase,
+                matchedStaffId,
+                courseRecord as any,
+                newSessions,
+              )
+              await notifyStaffAssigned(
+                this.supabase,
+                matchedStaffId,
+                courseRecord as any,
+                newSessions,
+              )
+
+              // Mark as notified
+              await this.supabase
+                .from('course_sessions')
+                .update({ staff_notified_at: new Date().toISOString() })
+                .in('id', newSessions.map((s) => s.id))
+
+              logger.debug(`✅ SARI post-sync: staff ${matchedStaffId} assigned + notified for ${newSessions.length} sessions`)
+            }
+          }
+        }
+      }
+    } catch (postSyncErr: any) {
+      logger.warn('⚠️ Post-sync staff match/notification failed (non-fatal):', postSyncErr.message)
+    }
 
     return { courseId, sessionsCreated, participantsSynced }
   }
