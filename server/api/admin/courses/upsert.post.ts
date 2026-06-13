@@ -1,7 +1,73 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { sendTenantEmail, sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
+
+// ── ICS calendar invite generator ────────────────────────────────────────────
+function toIcsDate(dateStr: string, timeStr: string): string {
+  // Format: YYYYMMDDTHHMMSS (local time with TZID=Europe/Zurich)
+  return `${dateStr.replace(/-/g, '')}T${timeStr.replace(':', '')}00`
+}
+
+function buildIcs(events: Array<{
+  uid: string
+  date: string
+  startTime: string
+  endTime: string
+  summary: string
+  description: string
+  organizerName: string
+  organizerEmail: string
+  attendeeName: string
+  attendeeEmail: string
+}>): Buffer {
+  const vtimezone = [
+    'BEGIN:VTIMEZONE',
+    'TZID:Europe/Zurich',
+    'BEGIN:STANDARD',
+    'DTSTART:19701025T030000',
+    'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10',
+    'TZOFFSETFROM:+0200',
+    'TZOFFSETTO:+0100',
+    'TZNAME:CET',
+    'END:STANDARD',
+    'BEGIN:DAYLIGHT',
+    'DTSTART:19700329T020000',
+    'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3',
+    'TZOFFSETFROM:+0100',
+    'TZOFFSETTO:+0200',
+    'TZNAME:CEST',
+    'END:DAYLIGHT',
+    'END:VTIMEZONE',
+  ].join('\r\n')
+
+  const vevents = events.map((e) => [
+    'BEGIN:VEVENT',
+    `UID:${e.uid}`,
+    `DTSTART;TZID=Europe/Zurich:${toIcsDate(e.date, e.startTime)}`,
+    `DTEND;TZID=Europe/Zurich:${toIcsDate(e.date, e.endTime)}`,
+    `SUMMARY:${e.summary}`,
+    `DESCRIPTION:${e.description.replace(/\n/g, '\\n')}`,
+    `ORGANIZER;CN=${e.organizerName}:mailto:${e.organizerEmail}`,
+    `ATTENDEE;CN=${e.attendeeName};RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:${e.attendeeEmail}`,
+    'STATUS:CONFIRMED',
+    'SEQUENCE:0',
+    'END:VEVENT',
+  ].join('\r\n')).join('\r\n')
+
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Simy//Simy Fahrschule//DE',
+    'METHOD:REQUEST',
+    vtimezone,
+    vevents,
+    'END:VCALENDAR',
+  ].join('\r\n')
+
+  return Buffer.from(ics, 'utf-8')
+}
 
 /**
  * POST /api/admin/courses/upsert
@@ -186,6 +252,251 @@ export default defineEventHandler(async (event) => {
       .update({ status: 'cancelled' })
       .eq('course_id', savedCourseId)
       .neq('status', 'cancelled')
+  }
+
+  // ── Staff appointments + email ────────────────────────────────────────────
+  const internalSessions = (sessions || []).filter(
+    (s: any) => s.instructor_type === 'internal' && s.staff_id,
+  )
+
+  if (internalSessions.length > 0) {
+    // Determine the earliest session date for the title suffix
+    const earliestDate = internalSessions
+      .map((s: any) => s.date as string)
+      .sort()[0]
+    const dateLabel = new Date(earliestDate + 'T12:00:00').toLocaleDateString('de-CH', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+    })
+    const courseLabel = courseData.course_name || courseData.category || 'Kurs'
+    // Use start time of the earliest session for the title (e.g. "07:30")
+    const earliestSession = internalSessions
+      .slice()
+      .sort((a: any, b: any) => (a.date + a.start_time).localeCompare(b.date + b.start_time))[0]
+    const startTimeLabel = earliestSession?.start_time || ''
+    const apptTitle = `${courseLabel} – ab ${startTimeLabel}`
+
+    // On update: remove old course appointments for this course before recreating
+    if (courseId) {
+      await supabase
+        .from('appointments')
+        .delete()
+        .eq('notes', `course:${savedCourseId}`) // tag we set below
+    }
+
+    // Build appointment rows: start 30 min before, end 30 min after session
+    const apptRows = internalSessions.map((s: any) => {
+      const startMs = new Date(`${s.date}T${s.start_time}:00`).getTime() - 30 * 60 * 1000
+      const endMs   = new Date(`${s.date}T${s.end_time}:00`).getTime()   + 30 * 60 * 1000
+      return {
+        tenant_id:       profile.tenant_id,
+        staff_id:        s.staff_id,
+        user_id:         null,
+        start_time:      new Date(startMs).toISOString(),
+        end_time:        new Date(endMs).toISOString(),
+        duration_minutes: Math.round((endMs - startMs) / 60000),
+        event_type_code: 'course',
+        title:           apptTitle,
+        description:     s.description || '',
+        status:          'confirmed',
+        notes:           `course:${savedCourseId}`,
+      }
+    })
+
+    const { error: apptErr } = await supabase.from('appointments').insert(apptRows)
+    if (apptErr) {
+      logger.warn('⚠️ Could not create staff course appointments:', apptErr.message)
+    } else {
+      logger.debug(`✅ ${apptRows.length} course appointments created for staff`)
+    }
+
+    // ── Send email to each internal staff member ────────────────────────────
+    // Group sessions by staff_id
+    const byStaff = new Map<string, any[]>()
+    for (const s of internalSessions) {
+      if (!byStaff.has(s.staff_id)) byStaff.set(s.staff_id, [])
+      byStaff.get(s.staff_id)!.push(s)
+    }
+
+    // Load staff users once
+    const staffIds = [...byStaff.keys()]
+    const { data: staffUsers } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email')
+      .in('id', staffIds)
+      .eq('tenant_id', profile.tenant_id)
+
+    for (const staffUser of staffUsers || []) {
+      if (!staffUser.email) continue
+      const staffSessions = byStaff.get(staffUser.id) || []
+      const sessionRows = staffSessions
+        .sort((a: any, b: any) => (a.date + a.start_time).localeCompare(b.date + b.start_time))
+        .map((s: any) => {
+          const dt = new Date(`${s.date}T${s.start_time}:00`)
+          const dayLabel = dt.toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })
+          return `<tr>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${dayLabel}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${s.start_time} – ${s.end_time} Uhr</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280">${s.description || ''}</td>
+          </tr>`
+        })
+        .join('')
+
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>body{margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.wrap{max-width:600px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.07)}
+.header{background:linear-gradient(135deg,#1e293b,#334155);padding:28px 32px}
+.header h1{margin:0;color:#fff;font-size:20px;font-weight:700}
+.body{padding:32px}table{width:100%;border-collapse:collapse}th{text-align:left;padding:8px 12px;background:#f9fafb;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280}
+.footer{border-top:1px solid #f3f4f6;padding:20px 32px;font-size:12px;color:#9ca3af;text-align:center}</style></head>
+<body><div class="wrap">
+<div class="header"><h1>📅 Kurs-Zuteilung</h1></div>
+<div class="body">
+<p>Hallo ${staffUser.first_name},</p>
+<p>Du wurdest als Instruktor/in für den folgenden Kurs eingetragen:</p>
+<p style="font-size:18px;font-weight:700;color:#1e293b;margin:16px 0">${courseLabel}</p>
+<p style="color:#6b7280;margin-bottom:24px">Kursbeginn: ${dateLabel}</p>
+<table>
+  <thead><tr>
+    <th>Datum</th><th>Zeit</th><th>Beschreibung</th>
+  </tr></thead>
+  <tbody>${sessionRows}</tbody>
+</table>
+<p style="margin-top:24px;color:#6b7280;font-size:14px">Die Termine sind bereits in deinem Kalender eingetragen.</p>
+</div>
+<div class="footer">Simy Fahrschul-Software · simy.ch</div>
+</div></body></html>`
+
+      try {
+        await sendTenantEmail(profile.tenant_id, {
+          to: staffUser.email,
+          subject: `Kurs-Zuteilung: ${courseLabel} ab ${dateLabel}`,
+          html,
+        })
+        logger.debug(`✅ Course assignment email sent to ${staffUser.email}`)
+      } catch (emailErr: any) {
+        logger.warn(`⚠️ Could not send course email to ${staffUser.email}:`, emailErr.message)
+      }
+    }
+  }
+
+  // ── External instructor calendar invites ─────────────────────────────────
+  const externalSessions = (sessions || []).filter(
+    (s: any) => s.instructor_type === 'external' && s.external_instructor_email,
+  )
+
+  if (externalSessions.length > 0) {
+    // Load tenant info for organizer field
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('name, from_email, resend_domain_verified')
+      .eq('id', profile.tenant_id)
+      .single()
+
+    const organizerName  = tenant?.name || 'Fahrschule'
+    const organizerEmail = (tenant?.resend_domain_verified && tenant?.from_email)
+      ? tenant.from_email
+      : 'noreply@simy.ch'
+
+    // Determine shared course label + start date for subject/title
+    const extEarliestSession = externalSessions
+      .slice()
+      .sort((a: any, b: any) => (a.date + a.start_time).localeCompare(b.date + b.start_time))[0]
+    const extCourseLabel = courseData.course_name || courseData.category || 'Kurs'
+    const extDateLabel = new Date(extEarliestSession.date + 'T12:00:00').toLocaleDateString('de-CH', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+    })
+    const extStartTimeLabel = extEarliestSession?.start_time || ''
+
+    // Group by email
+    const byEmail = new Map<string, any[]>()
+    for (const s of externalSessions) {
+      const email = s.external_instructor_email as string
+      if (!byEmail.has(email)) byEmail.set(email, [])
+      byEmail.get(email)!.push(s)
+    }
+
+    for (const [email, extSessions] of byEmail) {
+      const instructorName = extSessions[0].external_instructor_name || email
+
+      // Sort sessions chronologically
+      const sorted = extSessions.sort(
+        (a: any, b: any) => (a.date + a.start_time).localeCompare(b.date + b.start_time),
+      )
+
+      // Build ICS events
+      const icsEvents = sorted.map((s: any, i: number) => ({
+        uid:            `${savedCourseId}-ext-${i}@simy.ch`,
+        date:           s.date,
+        startTime:      s.start_time,
+        endTime:        s.end_time,
+        summary:        `${extCourseLabel} – ab ${extStartTimeLabel}`,
+        description:    s.description || `Session ${i + 1}`,
+        organizerName,
+        organizerEmail,
+        attendeeName:   instructorName,
+        attendeeEmail:  email,
+      }))
+
+      const icsBuffer = buildIcs(icsEvents)
+
+      // Build session table for email body
+      const sessionRows = sorted.map((s: any) => {
+        const dt = new Date(`${s.date}T${s.start_time}:00`)
+        const dayLabel = dt.toLocaleDateString('de-CH', {
+          weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
+        })
+        return `<tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${dayLabel}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${s.start_time} – ${s.end_time} Uhr</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280">${s.description || ''}</td>
+        </tr>`
+      }).join('')
+
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>body{margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.wrap{max-width:600px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.07)}
+.header{background:linear-gradient(135deg,#1e293b,#334155);padding:28px 32px}
+.header h1{margin:0;color:#fff;font-size:20px;font-weight:700}
+.body{padding:32px}table{width:100%;border-collapse:collapse}th{text-align:left;padding:8px 12px;background:#f9fafb;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280}
+.footer{border-top:1px solid #f3f4f6;padding:20px 32px;font-size:12px;color:#9ca3af;text-align:center}</style></head>
+<body><div class="wrap">
+<div class="header"><h1>📅 Kurseinladung</h1></div>
+<div class="body">
+<p>Hallo ${instructorName},</p>
+<p>Sie wurden als externer Instruktor/in für den folgenden Kurs eingeplant:</p>
+<p style="font-size:18px;font-weight:700;color:#1e293b;margin:16px 0">${extCourseLabel}</p>
+<p style="color:#6b7280;margin-bottom:24px">Kursbeginn: ${extDateLabel}</p>
+<table>
+  <thead><tr>
+    <th>Datum</th><th>Zeit</th><th>Beschreibung</th>
+  </tr></thead>
+  <tbody>${sessionRows}</tbody>
+</table>
+<p style="margin-top:24px;color:#6b7280;font-size:14px">
+  Im Anhang finden Sie eine Kalender-Einladung (.ics). Öffnen Sie diese, um alle Termine direkt in Ihren Kalender zu übernehmen.
+</p>
+</div>
+<div class="footer">${organizerName} · Powered by Simy.ch</div>
+</div></body></html>`
+
+      try {
+        await sendEmail({
+          to:          email,
+          subject:     `Kurseinladung: ${extCourseLabel} ab ${extDateLabel}`,
+          html,
+          fromName:    organizerName,
+          fromEmail:   tenant?.from_email ?? null,
+          domainVerified: tenant?.resend_domain_verified ?? false,
+          attachments: [{
+            filename: `kurs-${savedCourseId.slice(0, 8)}.ics`,
+            content:  icsBuffer,
+          }],
+        })
+        logger.debug(`✅ ICS calendar invite sent to external instructor ${email}`)
+      } catch (emailErr: any) {
+        logger.warn(`⚠️ Could not send ICS invite to ${email}:`, emailErr.message)
+      }
+    }
   }
 
   return { id: savedCourseId }
