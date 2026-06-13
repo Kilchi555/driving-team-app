@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
       instructor:users!courses_instructor_id_fkey(first_name, last_name),
       room:rooms(name, location, capacity),
       vehicle:vehicles(name, location),
-      course_category:course_categories(name, icon),
+      course_category:course_categories(name, icon, color),
       sessions:course_sessions(
         id,
         session_number,
