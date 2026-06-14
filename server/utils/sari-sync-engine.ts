@@ -425,7 +425,7 @@ export class SARISyncEngine {
       const sariFields = {
         session_number: i + 1,
         title: sariSession.name,
-        description: `SARI ID: ${sariSession.id} | Freie Plätze: ${sariSession.freeplaces}`,
+        description: `SARI ID: ${sariSession.id}`,
         start_time: startDate.toISOString(),
         end_time: endDate.toISOString(),
         custom_location: buildLocation(sariSession.address),
