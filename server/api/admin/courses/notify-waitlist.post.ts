@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, contact_email, primary_color, slug')
+    .select('name, contact_email, primary_color, slug, logo_wide_url, logo_url, logo_square_url')
     .eq('id', profile.tenant_id)
     .single()
 
@@ -51,6 +51,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const tenantName = tenant?.name || 'Simy'
+  const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
   const sessions = buildSessions(course.course_sessions || [])
   const bookingUrl = buildBookingUrl(tenant?.slug, body.courseId)
   const now = new Date().toISOString()
@@ -68,6 +69,7 @@ export default defineEventHandler(async (event) => {
         tenantName,
         tenantEmail: tenant?.contact_email,
         primaryColor: tenant?.primary_color || undefined,
+        logoUrl,
       })
 
       return {

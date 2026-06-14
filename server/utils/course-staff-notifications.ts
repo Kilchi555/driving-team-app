@@ -109,31 +109,65 @@ export async function createStaffCourseAppointments(
 
 // ── Email builders ─────────────────────────────────────────────────────────────
 
+/** Groups sessions that fall on the same day into a single row (start–end of that day). */
+function groupSessionsByDay(sessions: CourseSessionForNotification[]) {
+  const sorted = [...sessions].sort((a, b) => a.start_time.localeCompare(b.start_time))
+  const byDate = new Map<string, CourseSessionForNotification[]>()
+  for (const s of sorted) {
+    const date = s.start_time.split('T')[0]
+    if (!byDate.has(date)) byDate.set(date, [])
+    byDate.get(date)!.push(s)
+  }
+  return Array.from(byDate.entries()).map(([, daySessions]) => ({
+    startTime: daySessions[0].start_time,
+    endTime:   daySessions[daySessions.length - 1].end_time,
+    count:     daySessions.length,
+  }))
+}
+
 function sessionTable(sessions: CourseSessionForNotification[]) {
-  return sessions
-    .slice()
-    .sort((a, b) => a.start_time.localeCompare(b.start_time))
-    .map((s) => `<tr>
-      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtDate(s.start_time)}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtTime(s.start_time)} – ${fmtTime(s.end_time)} Uhr</td>
+  return groupSessionsByDay(sessions)
+    .map((g) => `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtDate(g.startTime)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtTime(g.startTime)} – ${fmtTime(g.endTime)} Uhr</td>
     </tr>`)
     .join('')
 }
 
-function emailWrapper(headerTitle: string, body: string, footerName: string) {
+interface TenantBranding {
+  name: string
+  primaryColor: string
+  logoUrl: string | null
+}
+
+function emailWrapper(headerTitle: string, body: string, footerName: string, branding?: TenantBranding) {
+  const color   = branding?.primaryColor || '#1e293b'
+  const logoUrl = branding?.logoUrl || null
+  const logoHtml = logoUrl
+    ? `<div style="text-align:center;margin-bottom:20px"><img src="${logoUrl}" alt="${branding?.name || ''}" style="height:44px;max-width:220px;object-fit:contain;display:block;margin:0 auto"></div>`
+    : ''
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>body{margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 .wrap{max-width:600px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.07)}
-.header{background:linear-gradient(135deg,#1e293b,#334155);padding:28px 32px}
+.header{background:${color};padding:28px 32px}
 .header h1{margin:0;color:#fff;font-size:20px;font-weight:700}
 .body{padding:32px}table{width:100%;border-collapse:collapse}
 th{text-align:left;padding:8px 12px;background:#f9fafb;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280}
 .footer{border-top:1px solid #f3f4f6;padding:20px 32px;font-size:12px;color:#9ca3af;text-align:center}</style></head>
 <body><div class="wrap">
+${logoHtml ? `<div style="background:#fff;padding:20px 32px 0">${logoHtml}</div>` : ''}
 <div class="header"><h1>${headerTitle}</h1></div>
 <div class="body">${body}</div>
-<div class="footer">${footerName} · Powered by Simy.ch</div>
+<div class="footer">${footerName} · Powered by <a href="https://simy.ch" style="color:#9ca3af;text-decoration:underline">Simy.ch</a></div>
 </div></body></html>`
+}
+
+function extractBranding(tenant: any): TenantBranding {
+  return {
+    name: tenant?.name || 'Simy',
+    primaryColor: tenant?.primary_color || '#1e293b',
+    logoUrl: tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null,
+  }
 }
 
 // ── Notification: new assignment ───────────────────────────────────────────────
@@ -157,10 +191,11 @@ export async function notifyStaffAssigned(
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, from_email, resend_domain_verified')
+    .select('name, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_url, logo_square_url')
     .eq('id', course.tenant_id)
     .single()
 
+  const branding = extractBranding(tenant)
   const courseLabel = course.course_category?.name || course.name || 'Kurs'
   const rows = sessionTable(sessions)
 
@@ -173,7 +208,8 @@ export async function notifyStaffAssigned(
       <th>Datum</th><th>Zeit</th>
     </tr></thead><tbody>${rows}</tbody></table>
     <p style="margin-top:24px;color:#6b7280;font-size:14px">Die Termine sind bereits in deinem Kalender eingetragen.</p>`,
-    tenant?.name || 'Simy',
+    branding.name,
+    branding,
   )
 
   try {
@@ -209,10 +245,11 @@ export async function notifyStaffRemoved(
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, from_email, resend_domain_verified')
+    .select('name, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_url, logo_square_url')
     .eq('id', course.tenant_id)
     .single()
 
+  const branding = extractBranding(tenant)
   const courseLabel = course.course_category?.name || course.name || 'Kurs'
   const rows = sessionTable(sessions)
 
@@ -225,7 +262,8 @@ export async function notifyStaffRemoved(
       <th>Datum</th><th>Zeit</th>
     </tr></thead><tbody>${rows}</tbody></table>
     <p style="margin-top:24px;color:#6b7280;font-size:14px">Die Kalendertermine wurden automatisch entfernt.</p>`,
-    tenant?.name || 'Simy',
+    branding.name,
+    branding,
   )
 
   try {
@@ -398,7 +436,7 @@ export async function notifyAdminMissingExternalEmail(
 ) {
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, from_email, resend_domain_verified')
+    .select('name, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_url, logo_square_url')
     .eq('id', tenantId)
     .single()
 
@@ -414,13 +452,11 @@ export async function notifyAdminMissingExternalEmail(
   const adminEmails = (admins || []).map((a) => a.email).filter(Boolean) as string[]
   if (adminEmails.length === 0) return
 
-  const tenantName = tenant?.name || 'Simy'
-  const sessionRows = sessions
-    .slice()
-    .sort((a, b) => a.start_time.localeCompare(b.start_time))
-    .map((s) => `<tr>
-      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtDate(s.start_time)}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtTime(s.start_time)} – ${fmtTime(s.end_time)} Uhr</td>
+  const branding = extractBranding(tenant)
+  const sessionRows = groupSessionsByDay(sessions)
+    .map((g) => `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtDate(g.startTime)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtTime(g.startTime)} – ${fmtTime(g.endTime)} Uhr</td>
     </tr>`)
     .join('')
 
@@ -436,7 +472,8 @@ export async function notifyAdminMissingExternalEmail(
     <p style="margin-top:24px;color:#6b7280;font-size:14px">
       Bitte E-Mail-Adresse im Kurs-Detail hinterlegen, damit der Instruktor eine Kalendereinladung erhält.
     </p>`,
-    tenantName,
+    branding.name,
+    branding,
   )
 
   try {
@@ -444,7 +481,7 @@ export async function notifyAdminMissingExternalEmail(
       to: adminEmails,
       subject: `Aktion erforderlich: E-Mail für externen Instruktor "${instructorName}" fehlt`,
       html,
-      fromName: tenantName,
+      fromName: branding.name,
       fromEmail: tenant?.from_email ?? null,
       domainVerified: tenant?.resend_domain_verified ?? false,
     })
@@ -465,11 +502,11 @@ export async function sendExternalInstructorInvite(
 ) {
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, from_email, resend_domain_verified')
+    .select('name, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_url, logo_square_url')
     .eq('id', tenantId)
     .single()
 
-  const organizerName  = tenant?.name || 'Fahrschule'
+  const branding = extractBranding(tenant)
   const organizerEmail = (tenant?.resend_domain_verified && tenant?.from_email)
     ? tenant.from_email
     : 'noreply@simy.ch'
@@ -492,7 +529,7 @@ export async function sendExternalInstructorInvite(
       endTime:        et,
       summary,
       description:    s.description || `Session ${i + 1}`,
-      organizerName,
+      organizerName:  branding.name,
       organizerEmail,
       attendeeName:   instructorName,
       attendeeEmail:  instructorEmail,
@@ -501,10 +538,12 @@ export async function sendExternalInstructorInvite(
 
   const icsBuffer = buildIcs(icsEvents)
 
-  const sessionRows = sorted.map((s) => `<tr>
-    <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtDate(s.start_time)}</td>
-    <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtTime(s.start_time)} – ${fmtTime(s.end_time)} Uhr</td>
-  </tr>`).join('')
+  const sessionRows = groupSessionsByDay(sorted)
+    .map((g) => `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtDate(g.startTime)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtTime(g.startTime)} – ${fmtTime(g.endTime)} Uhr</td>
+    </tr>`)
+    .join('')
 
   const html = emailWrapper(
     '📅 Kurseinladung',
@@ -516,7 +555,8 @@ export async function sendExternalInstructorInvite(
     <p style="margin-top:24px;color:#6b7280;font-size:14px">
       Im Anhang finden Sie eine Kalender-Einladung (.ics). Öffnen Sie diese, um alle Termine direkt in Ihren Kalender zu übernehmen.
     </p>`,
-    organizerName,
+    branding.name,
+    branding,
   )
 
   try {
@@ -606,7 +646,7 @@ export async function notifyAdminMissingInstructors(
   // Load tenant + admins
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, from_email, resend_domain_verified')
+    .select('name, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_url, logo_square_url')
     .eq('id', tenantId)
     .single()
 
@@ -621,7 +661,7 @@ export async function notifyAdminMissingInstructors(
   const adminEmails = (admins || []).map((a) => a.email).filter(Boolean) as string[]
   if (adminEmails.length === 0) return
 
-  const tenantName = tenant?.name || 'Simy'
+  const branding = extractBranding(tenant)
 
   const tableRows = affected.map((c) => `<tr>
     <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${c.courseName}</td>
@@ -645,7 +685,8 @@ export async function notifyAdminMissingInstructors(
     <p style="margin-top:24px;color:#6b7280;font-size:14px">
       Bitte weise in der Kursübersicht für jeden Kurs einen Instruktor zu, damit die Mitarbeitenden benachrichtigt werden und die Termine in ihrem Kalender erscheinen.
     </p>`,
-    tenantName,
+    branding.name,
+    branding,
   )
 
   try {
@@ -653,7 +694,7 @@ export async function notifyAdminMissingInstructors(
       to: adminEmails,
       subject: `Aktion erforderlich: ${affected.length} SARI-Kurs${affected.length === 1 ? '' : 'e'} ohne Instruktor`,
       html,
-      fromName: tenantName,
+      fromName: branding.name,
       fromEmail: tenant?.from_email ?? null,
       domainVerified: tenant?.resend_domain_verified ?? false,
     })

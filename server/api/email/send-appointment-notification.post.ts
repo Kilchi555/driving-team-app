@@ -66,10 +66,15 @@ function buildDetailBox(data: AppointmentNotificationBody, primaryColor: string)
   </div>`
 }
 
+function logoRow(logoUrl: string | null, tenantName: string): string {
+  if (!logoUrl) return ''
+  return `<tr><td style="background:#fff;text-align:center;padding:20px 30px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></td></tr>`
+}
+
 const TEMPLATES = {
   appointment_confirmation: {
     subject: 'Terminbestätigung',
-    getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
+    getHtml: (data: AppointmentNotificationBody, primaryColor: string, logoUrl: string | null = null) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
       const showPrice = data.showPrice !== false
       const confirmUrl = data.customerDashboard || (data.tenantSlug
@@ -82,6 +87,7 @@ const TEMPLATES = {
     <tr>
       <td>
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
+          ${logoRow(logoUrl, data.tenantName || 'Simy')}
           <tr>
             <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
               <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Terminbestätigung</h1>
@@ -122,7 +128,7 @@ const TEMPLATES = {
   
   pending_payment: {
     subject: 'Terminbestätigung',
-    getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
+    getHtml: (data: AppointmentNotificationBody, primaryColor: string, logoUrl: string | null = null) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
       const dashboardUrl = data.tenantSlug
         ? `https://app.simy.ch/${data.tenantSlug}`
@@ -134,6 +140,7 @@ const TEMPLATES = {
     <tr>
       <td>
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
+          ${logoRow(logoUrl, data.tenantName || 'Simy')}
           <tr>
             <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
               <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Terminbestätigung</h1>
@@ -168,7 +175,7 @@ const TEMPLATES = {
   
   cancelled: {
     subject: 'Termin storniert',
-    getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
+    getHtml: (data: AppointmentNotificationBody, primaryColor: string, logoUrl: string | null = null) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
       const dashboardUrl = data.tenantSlug 
         ? `https://app.simy.ch/${data.tenantSlug}` 
@@ -186,6 +193,7 @@ const TEMPLATES = {
     <tr>
       <td>
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
+          ${logoRow(logoUrl, data.tenantName || 'Simy')}
           <tr>
             <td style="background-color: #dc2626; padding: 40px 30px; text-align: center;">
               <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Termin storniert</h1>
@@ -243,7 +251,7 @@ const TEMPLATES = {
   
   rescheduled: {
     subject: 'Termin verschoben - Neue Zeit',
-    getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
+    getHtml: (data: AppointmentNotificationBody, primaryColor: string, logoUrl: string | null = null) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
       const dashboardUrl = data.tenantSlug 
         ? `https://app.simy.ch/${data.tenantSlug}` 
@@ -255,8 +263,9 @@ const TEMPLATES = {
     <tr>
       <td>
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
+          ${logoRow(logoUrl, data.tenantName || 'Simy')}
           <tr>
-            <td style="background-color: #16a34a; padding: 40px 30px; text-align: center;">
+            <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
               <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Termin verschoben</h1>
             </td>
           </tr>
@@ -317,13 +326,14 @@ const TEMPLATES = {
 
   staff_new_booking: {
     subject: 'Neue Online-Buchung',
-    getHtml: (data: AppointmentNotificationBody, primaryColor: string) => {
+    getHtml: (data: AppointmentNotificationBody, primaryColor: string, logoUrl: string | null = null) => {
       const durationStr = data.durationMinutes ? ` (${data.durationMinutes} Min.)` : ''
       return `
 <body style="margin:0;padding:0;font-family:Arial,sans-serif;background-color:#f3f4f6;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:40px 20px;">
     <tr><td>
       <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);margin:0 auto;">
+        ${logoRow(logoUrl, data.tenantName || 'Simy')}
         <tr>
           <td style="background-color:${primaryColor};padding:30px;text-align:center;">
             <h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:bold;">📅 Neue Online-Buchung</h1>
@@ -382,16 +392,17 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    // Load tenant primary color and slug if tenantId is provided
+    // Load tenant branding if tenantId is provided
     let primaryColor = '#2563eb' // Default blue
     let tenantSlug: string | null = null
+    let logoUrl: string | null = null
     
     if (tenantId) {
       try {
         const supabase = getSupabaseAdmin()
         const { data: tenant, error: tenantError } = await supabase
           .from('tenants')
-          .select('primary_color, slug')
+          .select('primary_color, slug, logo_wide_url, logo_url, logo_square_url')
           .eq('id', tenantId)
           .single()
         
@@ -404,6 +415,7 @@ export default defineEventHandler(async (event) => {
             tenantSlug = tenant.slug
             logger.debug(`✅ Loaded tenant slug: ${tenantSlug}`)
           }
+          logoUrl = tenant.logo_wide_url || tenant.logo_url || tenant.logo_square_url || null
         } else if (tenantError) {
           console.warn(`⚠️ Could not load tenant data:`, tenantError.message)
         }
@@ -419,6 +431,7 @@ export default defineEventHandler(async (event) => {
     const html = template.getHtml(
       { ...body, tenantSlug: tenantSlug ?? body.tenantSlug ?? undefined },
       primaryColor,
+      logoUrl,
     )
     
     await sendEmail({

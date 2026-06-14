@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
   // Load tenant info for the email
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, contact_email, primary_color')
+    .select('name, contact_email, primary_color, logo_wide_url, logo_url, logo_square_url')
     .eq('id', profile.tenant_id)
     .single()
 
@@ -151,6 +151,7 @@ export default defineEventHandler(async (event) => {
           })
         : undefined
 
+      const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
       const { subject, html } = generateCourseRegistrationCancellationEmail({
         firstName:  reg.first_name || '',
         lastName:   reg.last_name  || '',
@@ -160,6 +161,8 @@ export default defineEventHandler(async (event) => {
         tenantName: tenant?.name        || 'Driving Team',
         tenantEmail: tenant?.contact_email || undefined,
         reason:     reason || undefined,
+        primaryColor: tenant?.primary_color || undefined,
+        logoUrl,
       })
 
       const { Resend } = await import('resend')
