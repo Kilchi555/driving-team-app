@@ -127,9 +127,11 @@ export default defineEventHandler(async (event) => {
     const defaultsByType: Record<string, { eventTypes: any[]; categories: any[]; pricingRules: any[]; uiLabels: Record<string, string>; featureFlags: Record<string, string> }> = {
       driving_school: {
         eventTypes: [
-          { code: 'lesson', name: 'Fahrstunde', require_payment: true, public_bookable: true, default_duration_minutes: 45 },
-          { code: 'exam', name: 'Prüfung', require_payment: true, public_bookable: false, default_duration_minutes: 45 },
-          { code: 'theory', name: 'Theorie', require_payment: true, public_bookable: true, default_duration_minutes: 45 },
+          { code: 'lesson',   name: 'Fahrstunde', require_payment: true,  public_bookable: true,  default_duration_minutes: 45 },
+          { code: 'exam',     name: 'Prüfung',    require_payment: true,  public_bookable: false, default_duration_minutes: 45 },
+          { code: 'theory',   name: 'Theorie',    require_payment: true,  public_bookable: true,  default_duration_minutes: 45 },
+          { code: 'vacation', name: 'Ferien',      require_payment: false, public_bookable: false, default_duration_minutes: 480, emoji: '🏖️',  default_color: '#94a3b8', display_order: 98 },
+          { code: 'course',   name: 'Kurs',        require_payment: false, public_bookable: false, default_duration_minutes: 480, emoji: '📚', default_color: '#6366f1', display_order: 99 },
         ],
         categories: [
           { code: 'B', name: 'Kategorie B', color: '#90EE90', is_active: true },
