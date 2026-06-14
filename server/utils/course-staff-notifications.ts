@@ -622,11 +622,9 @@ export async function notifyAdminMissingInstructors(
     .gte('start_time', new Date().toISOString())
     .order('start_time', { ascending: true })
 
-  if (!rows || rows.length === 0) return
-
-  // Aggregate by course
+  // Aggregate missing-instructor rows by course
   const byCoursemap = new Map<string, MissingInstructorEntry>()
-  for (const row of rows) {
+  for (const row of (rows || [])) {
     const course = row.courses as any
     if (!byCoursemap.has(row.course_id)) {
       byCoursemap.set(row.course_id, {
@@ -642,6 +640,20 @@ export async function notifyAdminMissingInstructors(
   const affected = Array.from(byCoursemap.values()).sort((a, b) =>
     a.firstSession.localeCompare(b.firstSession),
   )
+
+  // Query draft courses for this tenant
+  const { data: draftRows } = await supabase
+    .from('courses')
+    .select('id, name, course_category:course_categories(name)')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'draft')
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  const draftCourses = (draftRows || []) as Array<{ id: string; name: string; course_category?: { name?: string } | null }>
+
+  // If neither list has entries, nothing to send
+  if (affected.length === 0 && draftCourses.length === 0) return
 
   // Load tenant + admins
   const { data: tenant } = await supabase
@@ -663,28 +675,60 @@ export async function notifyAdminMissingInstructors(
 
   const branding = extractBranding(tenant)
 
-  const tableRows = affected.map((c) => `<tr>
-    <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${c.courseName}</td>
-    <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtDate(c.firstSession)}</td>
-    <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:center">${c.sessionCount}</td>
-  </tr>`).join('')
+  let bodyHtml = ''
 
-  const html = emailWrapper(
-    '⚠️ Pendenzen: SARI-Kurse ohne Instruktor',
-    `<p>Nach dem letzten SARI-Sync gibt es noch <strong>${affected.length} Kurs${affected.length === 1 ? '' : 'e'}</strong> ohne zugewiesenen Instruktor:</p>
-    <table>
+  if (affected.length > 0) {
+    const tableRows = affected.map((c) => `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${c.courseName}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtDate(c.firstSession)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:center">${c.sessionCount}</td>
+    </tr>`).join('')
+    bodyHtml += `
+    <h2 style="font-size:16px;font-weight:600;color:#92400e;margin:0 0 8px">⚠️ ${affected.length} Kurs${affected.length === 1 ? '' : 'e'} ohne Instruktor</h2>
+    <p style="margin:0 0 12px;color:#374151">Nach dem letzten SARI-Sync sind noch keine Instruktoren zugewiesen:</p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
       <thead>
-        <tr>
-          <th style="text-align:left;padding:8px 12px">Kurs</th>
-          <th style="text-align:left;padding:8px 12px">Erster Termin</th>
-          <th style="text-align:center;padding:8px 12px">Sessions</th>
+        <tr style="background:#fef3c7">
+          <th style="text-align:left;padding:8px 12px;font-weight:600;color:#92400e">Kurs</th>
+          <th style="text-align:left;padding:8px 12px;font-weight:600;color:#92400e">Erster Termin</th>
+          <th style="text-align:center;padding:8px 12px;font-weight:600;color:#92400e">Sessions</th>
         </tr>
       </thead>
       <tbody>${tableRows}</tbody>
-    </table>
-    <p style="margin-top:24px;color:#6b7280;font-size:14px">
-      Bitte weise in der Kursübersicht für jeden Kurs einen Instruktor zu, damit die Mitarbeitenden benachrichtigt werden und die Termine in ihrem Kalender erscheinen.
-    </p>`,
+    </table>`
+  }
+
+  if (draftCourses.length > 0) {
+    const draftRows2 = draftCourses.map((c) => `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${c.name}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280">${c.course_category?.name ?? '–'}</td>
+    </tr>`).join('')
+    bodyHtml += `
+    <h2 style="font-size:16px;font-weight:600;color:#374151;margin:0 0 8px">📋 ${draftCourses.length} Kurs${draftCourses.length === 1 ? '' : 'e'} im Entwurf-Status</h2>
+    <p style="margin:0 0 12px;color:#374151">Diese Kurse sind noch nicht veröffentlicht und für Teilnehmende nicht buchbar:</p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+      <thead>
+        <tr style="background:#f3f4f6">
+          <th style="text-align:left;padding:8px 12px;font-weight:600;color:#374151">Kurs</th>
+          <th style="text-align:left;padding:8px 12px;font-weight:600;color:#374151">Kategorie</th>
+        </tr>
+      </thead>
+      <tbody>${draftRows2}</tbody>
+    </table>`
+  }
+
+  bodyHtml += `<p style="margin-top:8px;color:#6b7280;font-size:14px">
+    Bitte prüfe die Kursübersicht und bearbeite die offenen Pendenzen.
+  </p>`
+
+  const subjectParts = []
+  if (affected.length > 0) subjectParts.push(`${affected.length} Kurs${affected.length === 1 ? '' : 'e'} ohne Instruktor`)
+  if (draftCourses.length > 0) subjectParts.push(`${draftCourses.length} im Entwurf`)
+  const subject = `Pendenzen: ${subjectParts.join(', ')}`
+
+  const html = emailWrapper(
+    '⚠️ Pendenzen: Kursübersicht',
+    bodyHtml,
     branding.name,
     branding,
   )
@@ -692,13 +736,13 @@ export async function notifyAdminMissingInstructors(
   try {
     await sendEmail({
       to: adminEmails,
-      subject: `Aktion erforderlich: ${affected.length} SARI-Kurs${affected.length === 1 ? '' : 'e'} ohne Instruktor`,
+      subject,
       html,
       fromName: branding.name,
       fromEmail: tenant?.from_email ?? null,
       domainVerified: tenant?.resend_domain_verified ?? false,
     })
-    logger.debug(`✅ Admin reminded about ${affected.length} SARI courses missing instructors`)
+    logger.debug(`✅ Admin reminded: ${affected.length} missing-instructor courses, ${draftCourses.length} draft courses`)
 
     // Record dedup entry so we don't send again within 24h
     await (supabase as any)
@@ -707,13 +751,14 @@ export async function notifyAdminMissingInstructors(
         tenant_id:       tenantId,
         channel:         'email',
         recipient_email: adminEmails[0],
-        subject:         `Aktion erforderlich: ${affected.length} SARI-Kurse ohne Instruktor`,
+        subject,
         body:            '<!-- dedup sentinel -->',
         status:          'sent',
         send_at:         new Date().toISOString(),
         context_data: {
-          stage:           'sari_missing_instructor_alert',
-          affected_count:  affected.length,
+          stage:              'sari_missing_instructor_alert',
+          affected_count:     affected.length,
+          draft_count:        draftCourses.length,
         },
       })
   } catch (e: any) {

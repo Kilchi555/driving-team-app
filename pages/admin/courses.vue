@@ -177,20 +177,28 @@
         <!-- Pendenzen: SARI-Kurse ohne Instruktor -->
         <div
           v-if="missingInstructorCourses.length > 0"
-          class="mb-6 rounded-lg border border-amber-300 bg-amber-50 overflow-hidden"
+          class="mb-4 rounded-lg border border-amber-300 bg-amber-50 overflow-hidden"
         >
-          <div class="flex items-center justify-between px-4 py-3 border-b border-amber-200 bg-amber-100">
+          <button
+            class="w-full flex items-center justify-between px-4 py-3 bg-amber-100 hover:bg-amber-200 transition-colors"
+            @click="pendingInstructorExpanded = !pendingInstructorExpanded"
+          >
             <div class="flex items-center gap-2">
               <span class="text-lg">⚠️</span>
               <span class="font-semibold text-amber-900">
                 Pendenzen: {{ missingInstructorCourses.length }} Kurs{{ missingInstructorCourses.length === 1 ? '' : 'e' }} ohne Instruktor
               </span>
             </div>
-            <span class="text-xs text-amber-700 bg-amber-200 px-2 py-1 rounded-full font-medium">
-              Aktion erforderlich
-            </span>
-          </div>
-          <ul class="divide-y divide-amber-200">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-amber-700 bg-amber-200 px-2 py-1 rounded-full font-medium">
+                Aktion erforderlich
+              </span>
+              <svg class="w-4 h-4 text-amber-700 transition-transform" :class="pendingInstructorExpanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </button>
+          <ul v-if="pendingInstructorExpanded" class="divide-y divide-amber-200">
             <li
               v-for="item in missingInstructorCourses"
               :key="item.courseId"
@@ -217,6 +225,61 @@
                   class="text-xs px-3 py-1.5 rounded-md font-medium bg-amber-600 hover:bg-amber-700 text-white transition-colors shrink-0"
                 >
                   Instruktor zuweisen
+                </button>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Pendenzen: Kurse im Entwurf-Status -->
+        <div
+          v-if="draftCourses.length > 0"
+          class="mb-6 rounded-lg border border-gray-300 bg-gray-50 overflow-hidden"
+        >
+          <button
+            class="w-full flex items-center justify-between px-4 py-3 bg-gray-100 hover:bg-gray-200 transition-colors"
+            @click="pendingDraftExpanded = !pendingDraftExpanded"
+          >
+            <div class="flex items-center gap-2">
+              <span class="text-lg">📋</span>
+              <span class="font-semibold text-gray-700">
+                {{ draftCourses.length }} Kurs{{ draftCourses.length === 1 ? '' : 'e' }} im Entwurf
+              </span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-600 bg-gray-200 px-2 py-1 rounded-full font-medium">
+                Nicht veröffentlicht
+              </span>
+              <svg class="w-4 h-4 text-gray-500 transition-transform" :class="pendingDraftExpanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </button>
+          <ul v-if="pendingDraftExpanded" class="divide-y divide-gray-200">
+            <li
+              v-for="course in draftCourses"
+              :key="course.id"
+              class="flex items-center justify-between px-4 py-3 hover:bg-gray-100 transition-colors"
+            >
+              <div class="flex items-center gap-3 min-w-0">
+                <span
+                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0 bg-gray-200 text-gray-600"
+                >
+                  {{ course.sari_managed ? 'SARI' : (course.category || 'Kurs') }}
+                </span>
+                <span class="text-sm font-medium text-gray-900 truncate">{{ course.name }}</span>
+              </div>
+              <div class="flex items-center gap-4 shrink-0 ml-4">
+                <span class="text-xs text-gray-500">
+                  {{ course.sessions?.[0]?.start_time
+                    ? new Date(course.sessions[0].start_time).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    : 'Kein Termin' }}
+                </span>
+                <button
+                  @click="editCourse(course)"
+                  class="text-xs px-3 py-1.5 rounded-md font-medium bg-gray-600 hover:bg-gray-700 text-white transition-colors shrink-0"
+                >
+                  Bearbeiten
                 </button>
               </div>
             </li>
@@ -4093,6 +4156,13 @@ const missingInstructorCourses = ref<Array<{
   firstSession: string
   sessionCount: number
 }>>([])
+
+const pendingInstructorExpanded = ref(false)
+const pendingDraftExpanded = ref(false)
+
+const draftCourses = computed(() =>
+  courses.value.filter(c => getCourseStatus(c) === 'draft')
+)
 
 const courseStats = ref({
   active: 0,
