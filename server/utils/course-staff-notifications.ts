@@ -112,7 +112,6 @@ function sessionTable(sessions: CourseSessionForNotification[]) {
     .map((s) => `<tr>
       <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtDate(s.start_time)}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtTime(s.start_time)} – ${fmtTime(s.end_time)} Uhr</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280">${s.description || ''}</td>
     </tr>`)
     .join('')
 }
@@ -167,7 +166,7 @@ export async function notifyStaffAssigned(
     <p>Du wurdest als Instruktor/in für den folgenden Kurs eingeplant:</p>
     <p style="font-size:18px;font-weight:700;color:#1e293b;margin:16px 0">${courseLabel}</p>
     <table><thead><tr>
-      <th>Datum</th><th>Zeit</th><th>Beschreibung</th>
+      <th>Datum</th><th>Zeit</th>
     </tr></thead><tbody>${rows}</tbody></table>
     <p style="margin-top:24px;color:#6b7280;font-size:14px">Die Termine sind bereits in deinem Kalender eingetragen.</p>`,
     tenant?.name || 'Simy',
@@ -219,7 +218,7 @@ export async function notifyStaffRemoved(
     <p>Deine Zuteilung als Instruktor/in für den folgenden Kurs wurde aufgehoben:</p>
     <p style="font-size:18px;font-weight:700;color:#dc2626;margin:16px 0">${courseLabel}</p>
     <table><thead><tr>
-      <th>Datum</th><th>Zeit</th><th>Beschreibung</th>
+      <th>Datum</th><th>Zeit</th>
     </tr></thead><tbody>${rows}</tbody></table>
     <p style="margin-top:24px;color:#6b7280;font-size:14px">Die Kalendertermine wurden automatisch entfernt.</p>`,
     tenant?.name || 'Simy',
@@ -501,7 +500,6 @@ export async function sendExternalInstructorInvite(
   const sessionRows = sorted.map((s) => `<tr>
     <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtDate(s.start_time)}</td>
     <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtTime(s.start_time)} – ${fmtTime(s.end_time)} Uhr</td>
-    <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280">${s.description || ''}</td>
   </tr>`).join('')
 
   const html = emailWrapper(
@@ -510,7 +508,7 @@ export async function sendExternalInstructorInvite(
     <p>Sie wurden als externer Instruktor/in für den folgenden Kurs eingeplant:</p>
     <p style="font-size:18px;font-weight:700;color:#1e293b;margin:16px 0">${courseLabel}</p>
     <p style="color:#6b7280;margin-bottom:24px">Kursbeginn: ${dateLabel}</p>
-    <table><thead><tr><th>Datum</th><th>Zeit</th><th>Beschreibung</th></tr></thead><tbody>${sessionRows}</tbody></table>
+    <table><thead><tr><th>Datum</th><th>Zeit</th></tr></thead><tbody>${sessionRows}</tbody></table>
     <p style="margin-top:24px;color:#6b7280;font-size:14px">
       Im Anhang finden Sie eine Kalender-Einladung (.ics). Öffnen Sie diese, um alle Termine direkt in Ihren Kalender zu übernehmen.
     </p>`,
