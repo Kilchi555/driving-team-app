@@ -143,7 +143,9 @@ export default defineEventHandler(async (event) => {
           start_time,
           end_time,
           session_number,
-          sari_session_id
+          sari_session_id,
+          allow_individual_booking,
+          individual_price_rappen
         )
       `)
       .eq('tenant_id', tenant.id)

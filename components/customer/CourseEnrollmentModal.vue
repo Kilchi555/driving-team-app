@@ -65,11 +65,30 @@
               </div>
               <button
                 type="button"
-                @click="isPartialMode = !isPartialMode; partialConfirmed = false"
+                @click="isPartialMode = !isPartialMode; isIndividualSessionMode = false; partialConfirmed = false"
                 class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none"
                 :class="isPartialMode ? 'bg-amber-500' : 'bg-gray-300'"
               >
                 <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200" :class="isPartialMode ? 'translate-x-5' : 'translate-x-0'" />
+              </button>
+            </div>
+
+            <!-- Session-level individual booking toggle -->
+            <div
+              v-if="individualBookableSessions.length > 0 && !isForcedPartial"
+              class="mt-3 flex items-center justify-between bg-white/60 rounded-lg px-3 py-2 border border-blue-200"
+            >
+              <div>
+                <p class="text-sm font-medium text-blue-900">Nur Session {{ individualSessionNumber }} buchen</p>
+                <p class="text-xs text-blue-700">CHF {{ (individualSessionPriceRappen / 100).toFixed(2) }} · Einzelbuchung für diese Session</p>
+              </div>
+              <button
+                type="button"
+                @click="isIndividualSessionMode = !isIndividualSessionMode; isPartialMode = false; partialConfirmed = false"
+                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none"
+                :class="isIndividualSessionMode ? 'bg-blue-500' : 'bg-gray-300'"
+              >
+                <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200" :class="isIndividualSessionMode ? 'translate-x-5' : 'translate-x-0'" />
               </button>
             </div>
 
@@ -417,7 +436,7 @@
             </div>
 
             <!-- A1-confirmation checkbox (only for partial enrollments) -->
-            <div v-if="isForcedPartial || isPartialMode" class="mt-4 flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <div v-if="isForcedPartial || isPartialMode || isIndividualSessionMode" class="mt-4 flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <input
                 id="partial-confirm-checkbox"
                 v-model="partialConfirmed"
@@ -426,7 +445,12 @@
                 style="accent-color: #d97706"
               />
               <label for="partial-confirm-checkbox" class="text-sm text-amber-900">
-                Ich bestätige, dass ich die Kategorie A1 durch einen <strong>Kursbesuch</strong> erworben habe (nicht als Schenkung). Nur dann ist die Teilbuchung zulässig.
+                <template v-if="isIndividualSessionMode">
+                  Ich bestätige, dass ich die Voraussetzungen für die Buchung dieser einzelnen Session erfülle.
+                </template>
+                <template v-else>
+                  Ich bestätige, dass ich die Kategorie A1 durch einen <strong>Kursbesuch</strong> erworben habe (nicht als Schenkung). Nur dann ist die Teilbuchung zulässig.
+                </template>
               </label>
             </div>
 
@@ -582,6 +606,7 @@ const appliedDiscount = ref<{ code: string; discountAmountRappen: number; discou
 
 const activeBasePrice = computed(() => {
   if (!props.course) return 0
+  if (isIndividualSessionMode.value) return individualSessionPriceRappen.value
   if (isForcedPartial.value || isPartialMode.value) return partialPriceRappen.value
   return props.course.price_per_participant_rappen ?? 0
 })
@@ -625,6 +650,28 @@ const isLoadingSwapOptions = ref(false)
 const isPartialMode = ref(false)
 const partialConfirmed = ref(false)
 
+// Session-level individual booking (per-session override of category config)
+const isIndividualSessionMode = ref(false)
+
+// Sessions that have allow_individual_booking = true, sorted by session_number
+const individualBookableSessions = computed(() =>
+  (props.course?.course_sessions ?? [])
+    .filter((s: any) => s.allow_individual_booking)
+    .sort((a: any, b: any) => (a.session_number ?? 0) - (b.session_number ?? 0)),
+)
+
+// Price for currently selected individual session
+const individualSessionPriceRappen = computed(() => {
+  const s = individualBookableSessions.value[0]
+  return s?.individual_price_rappen ?? 0
+})
+
+// Session number to display ("Nur Teil 3")
+const individualSessionNumber = computed(() => {
+  const s = individualBookableSessions.value[0]
+  return s?.session_number ?? null
+})
+
 const categoryAllowsPartial = computed(() =>
   !!(props.course?.course_category?.allow_partial_enrollment)
 )
@@ -654,7 +701,7 @@ const hasCustomSessions = computed(() => {
 
 const canSubmit = computed(() => {
   const baseOk = isValidEmail.value && isValidPhone.value && sariData.value && agbAccepted.value
-  if (isForcedPartial.value || isPartialMode.value) return baseOk && partialConfirmed.value
+  if (isForcedPartial.value || isPartialMode.value || isIndividualSessionMode.value) return baseOk && partialConfirmed.value
   return baseOk
 })
 
@@ -748,7 +795,11 @@ const sessionGroups = computed(() => {
     })
   }
   
-  // In partial mode, filter to sessions at or after partial_start_position
+  // Individual session mode: show ONLY the selected session
+  if (isIndividualSessionMode.value && individualSessionNumber.value !== null) {
+    return groups.filter(g => g.position === individualSessionNumber.value)
+  }
+  // Category-level partial mode: filter to sessions at or after partial_start_position
   if (isForcedPartial.value || isPartialMode.value) {
     return groups.filter(g => g.position >= partialStartPosition.value)
   }
@@ -1134,6 +1185,7 @@ const submitEnrollment = async () => {
     const hasCustomSessions = Object.keys(customSessions.value).length > 0
     
     const isPartial = isForcedPartial.value || isPartialMode.value
+    const isIndividual = isIndividualSessionMode.value && individualSessionNumber.value !== null
 
     const response = await $fetch(endpoint, {
       method: 'POST',
@@ -1148,7 +1200,8 @@ const submitEnrollment = async () => {
         referralCode: getStoredRefCode() ?? undefined,
         discountCode: appliedDiscount.value?.code ?? undefined,
         discountAmountRappen: appliedDiscount.value?.discountAmountRappen ?? 0,
-        isPartialEnrollment: isPartial || undefined
+        isPartialEnrollment: (isPartial || isIndividual) || undefined,
+        individualSessionNumber: isIndividual ? individualSessionNumber.value : undefined,
       }
     }) as any
     
