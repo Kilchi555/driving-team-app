@@ -38,11 +38,15 @@ export interface CourseForNotification {
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('de-CH', {
     weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
+    timeZone: 'Europe/Zurich',
   })
 }
 
 function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleTimeString('de-CH', {
+    hour: '2-digit', minute: '2-digit',
+    timeZone: 'Europe/Zurich',
+  })
 }
 
 function apptTitle(course: CourseForNotification, sessions: CourseSessionForNotification[]) {
