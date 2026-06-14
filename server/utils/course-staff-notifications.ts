@@ -552,6 +552,21 @@ export async function notifyAdminMissingInstructors(
   supabase: SupabaseClient,
   tenantId: string,
 ): Promise<void> {
+  // Dedup: only send once per day per tenant
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const { data: recentAlert } = await (supabase as any)
+    .from('outbound_messages_queue')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('context_data->>stage' as any, 'sari_missing_instructor_alert')
+    .gte('created_at', oneDayAgo)
+    .limit(1)
+
+  if (recentAlert && recentAlert.length > 0) {
+    logger.debug('⏭️ Missing-instructor admin alert already sent in the last 24h — skipping')
+    return
+  }
+
   // Find sessions of SARI courses that have no instructor assigned yet,
   // for future dates only (don't nag about past courses).
   const { data: rows } = await supabase
@@ -641,6 +656,23 @@ export async function notifyAdminMissingInstructors(
       domainVerified: tenant?.resend_domain_verified ?? false,
     })
     logger.debug(`✅ Admin reminded about ${affected.length} SARI courses missing instructors`)
+
+    // Record dedup entry so we don't send again within 24h
+    await (supabase as any)
+      .from('outbound_messages_queue')
+      .insert({
+        tenant_id:       tenantId,
+        channel:         'email',
+        recipient_email: adminEmails[0],
+        subject:         `Aktion erforderlich: ${affected.length} SARI-Kurse ohne Instruktor`,
+        body:            '<!-- dedup sentinel -->',
+        status:          'sent',
+        send_at:         new Date().toISOString(),
+        context_data: {
+          stage:           'sari_missing_instructor_alert',
+          affected_count:  affected.length,
+        },
+      })
   } catch (e: any) {
     logger.warn('⚠️ Could not send missing-instructor reminder email:', e.message)
   }
