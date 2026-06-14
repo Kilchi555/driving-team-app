@@ -88,7 +88,7 @@ async function notifyWaitlistEntries(
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, contact_email, primary_color, slug')
+    .select('name, contact_email, primary_color, slug, logo_wide_url, logo_url, logo_square_url')
     .eq('id', tenantId)
     .single()
 
@@ -115,6 +115,7 @@ async function notifyWaitlistEntries(
   const toQueue = entries
     .filter((entry) => !!entry.email)
     .map((entry) => {
+      const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || (tenant as any)?.logo_square_url || null
       const { subject, html } = generateWaitlistAvailableEmail({
         firstName: entry.first_name,
         lastName: entry.last_name,
@@ -125,6 +126,7 @@ async function notifyWaitlistEntries(
         tenantName,
         tenantEmail: tenant?.contact_email,
         primaryColor: tenant?.primary_color || undefined,
+        logoUrl,
       })
 
       return {

@@ -201,7 +201,7 @@ async function sendConfirmationEmail(
 
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, slug, contact_email')
+      .select('name, slug, contact_email, primary_color, logo_wide_url, logo_url, logo_square_url')
       .eq('id', tenantId)
       .single()
 
@@ -212,6 +212,8 @@ async function sendConfirmationEmail(
     }
 
     const tenantName = tenant?.name || 'Simy'
+    const primaryColor = tenant?.primary_color || '#667eea'
+    const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
     const participantName = `${participantData.first_name || 'Teilnehmer'} ${participantData.last_name || ''}`.trim()
 
     const { data: sessions } = await supabase
@@ -236,6 +238,8 @@ async function sendConfirmationEmail(
           location: course.external_instructor_name,
           paymentAmount: enrollmentDetails.paymentAmount,
           tenantName,
+          primaryColor,
+          logoUrl,
         })
       : generateNonSARIEnrollmentConfirmationEmail({
           participantName,
@@ -244,6 +248,8 @@ async function sendConfirmationEmail(
           location: course.external_instructor_name,
           instructorName: course.external_instructor_name,
           tenantName,
+          primaryColor,
+          logoUrl,
         })
 
     const now = new Date().toISOString()
@@ -279,6 +285,8 @@ async function sendConfirmationEmail(
           ? String((enrollmentDetails.paymentAmount / 100).toFixed(2))
           : undefined,
         tenantName,
+        primaryColor,
+        logoUrl,
       })
 
       toQueue.push({

@@ -40,12 +40,13 @@ export async function sendWelcomeEmail(params: SendWelcomeEmailParams): Promise<
   let primaryColor = params.tenantPrimaryColor ?? '#3B82F6'
   let fromEmail = params.tenantFromEmail ?? null
   let domainVerified = params.tenantDomainVerified ?? false
+  let logoUrl: string | null = null
 
   if (!tenantName || !tenantSlug) {
     const supabase = getSupabaseAdmin()
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, slug, primary_color, from_email, resend_domain_verified')
+      .select('name, slug, primary_color, from_email, resend_domain_verified, logo_wide_url, logo_url, logo_square_url')
       .eq('id', tenantId)
       .single()
 
@@ -54,6 +55,7 @@ export async function sendWelcomeEmail(params: SendWelcomeEmailParams): Promise<
     primaryColor   = params.tenantPrimaryColor ?? tenant?.primary_color ?? '#3B82F6'
     fromEmail      = params.tenantFromEmail    ?? tenant?.from_email     ?? null
     domainVerified = params.tenantDomainVerified ?? tenant?.resend_domain_verified ?? false
+    logoUrl        = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
   }
 
   const baseUrl  = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
@@ -77,7 +79,7 @@ export async function sendWelcomeEmail(params: SendWelcomeEmailParams): Promise<
       fromName: tenantName,
       fromEmail,
       domainVerified,
-      html: buildUserHtml(role, firstName, tenantName ?? 'Fahrschule', primaryColor, loginUrl),
+      html: buildUserHtml(role, firstName, tenantName ?? 'Fahrschule', primaryColor, loginUrl, logoUrl),
     })
   }
 }
@@ -90,6 +92,7 @@ function buildUserHtml(
   tenantName: string,
   primaryColor: string,
   loginUrl: string,
+  logoUrl: string | null = null,
 ): string {
   const isStaff = role === 'staff'
 
@@ -117,6 +120,10 @@ function buildUserHtml(
 
   const ctaLabel = isStaff ? 'Zum Fahrlehrer-Dashboard' : 'Jetzt einloggen'
 
+  const logoHtml = logoUrl
+    ? `<tr><td style="background:#fff;text-align:center;padding:24px 36px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></td></tr>`
+    : ''
+
   return `<!DOCTYPE html>
 <html lang="de">
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:#f3f4f6;">
@@ -124,6 +131,7 @@ function buildUserHtml(
 <tr><td align="center">
 <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;">
 
+  ${logoHtml}
   <!-- Header -->
   <tr>
     <td style="background:${primaryColor};padding:36px 36px 28px;text-align:center;">

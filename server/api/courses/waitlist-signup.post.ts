@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
   // 5. Get tenant info for emails
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, contact_email, primary_color')
+    .select('name, contact_email, primary_color, logo_wide_url, logo_url, logo_square_url')
     .eq('id', course.tenant_id)
     .single()
 
@@ -113,6 +113,7 @@ export default defineEventHandler(async (event) => {
   const tenantName = tenant?.name || 'Simy'
   const toQueue: any[] = []
 
+  const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
   const { subject: confirmSubject, html: confirmHtml } = generateWaitlistConfirmationEmail({
     firstName: first_name.trim(),
     lastName: last_name.trim(),
@@ -124,6 +125,7 @@ export default defineEventHandler(async (event) => {
     tenantName,
     tenantEmail: tenant?.contact_email,
     primaryColor: tenant?.primary_color || undefined,
+    logoUrl,
   })
 
   toQueue.push({
@@ -152,6 +154,8 @@ export default defineEventHandler(async (event) => {
       courseName: course.name,
       position,
       tenantName,
+      primaryColor: tenant?.primary_color || undefined,
+      logoUrl,
     })
 
     toQueue.push({

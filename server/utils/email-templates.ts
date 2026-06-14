@@ -8,6 +8,8 @@ export function generateSARIEnrollmentConfirmationEmail(data: {
   location?: string
   paymentAmount?: number
   tenantName?: string
+  primaryColor?: string
+  logoUrl?: string | null
 }): { subject: string; html: string } {
   const {
     participantName,
@@ -15,10 +17,16 @@ export function generateSARIEnrollmentConfirmationEmail(data: {
     courseDate,
     location,
     paymentAmount,
-    tenantName = 'Simy'
+    tenantName = 'Simy',
+    primaryColor = '#667eea',
+    logoUrl = null,
   } = data
 
   const subject = `Bestätigung: Kursanmeldung für ${courseName}`
+
+  const logoHtml = logoUrl
+    ? `<div style="text-align:center;padding:20px 30px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></div>`
+    : ''
 
   const html = `
 <!DOCTYPE html>
@@ -38,7 +46,7 @@ export function generateSARIEnrollmentConfirmationEmail(data: {
       background: #f9fafb;
     }
     .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: ${primaryColor};
       color: white;
       padding: 30px;
       border-radius: 8px 8px 0 0;
@@ -61,7 +69,7 @@ export function generateSARIEnrollmentConfirmationEmail(data: {
     .section-title {
       font-size: 14px;
       font-weight: 700;
-      color: #667eea;
+      color: ${primaryColor};
       text-transform: uppercase;
       margin-bottom: 10px;
     }
@@ -84,7 +92,7 @@ export function generateSARIEnrollmentConfirmationEmail(data: {
     }
     .alert {
       background: #f3f4f6;
-      border-left: 4px solid #667eea;
+      border-left: 4px solid ${primaryColor};
       padding: 12px 15px;
       margin: 15px 0;
       border-radius: 4px;
@@ -92,7 +100,7 @@ export function generateSARIEnrollmentConfirmationEmail(data: {
     }
     .cta-button {
       display: inline-block;
-      background: #667eea;
+      background: ${primaryColor};
       color: white;
       padding: 12px 30px;
       text-decoration: none;
@@ -112,6 +120,7 @@ export function generateSARIEnrollmentConfirmationEmail(data: {
 </head>
 <body>
   <div class="container">
+    ${logoHtml}
     <div class="header">
       <h1>Kursanmeldung bestätigt</h1>
     </div>
@@ -176,6 +185,8 @@ export function generateNonSARIEnrollmentConfirmationEmail(data: {
   location?: string
   instructorName?: string
   tenantName?: string
+  primaryColor?: string
+  logoUrl?: string | null
 }): { subject: string; html: string } {
   const {
     participantName,
@@ -183,10 +194,16 @@ export function generateNonSARIEnrollmentConfirmationEmail(data: {
     courseDate,
     location,
     instructorName,
-    tenantName = 'Simy'
+    tenantName = 'Simy',
+    primaryColor = '#667eea',
+    logoUrl = null,
   } = data
 
   const subject = `Bestätigung: Kursanmeldung für ${courseName}`
+
+  const logoHtml = logoUrl
+    ? `<div style="text-align:center;padding:20px 30px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></div>`
+    : ''
 
   const html = `
 <!DOCTYPE html>
@@ -206,7 +223,7 @@ export function generateNonSARIEnrollmentConfirmationEmail(data: {
       background: #f9fafb;
     }
     .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: ${primaryColor};
       color: white;
       padding: 30px;
       border-radius: 8px 8px 0 0;
@@ -229,7 +246,7 @@ export function generateNonSARIEnrollmentConfirmationEmail(data: {
     .section-title {
       font-size: 14px;
       font-weight: 700;
-      color: #667eea;
+      color: ${primaryColor};
       text-transform: uppercase;
       margin-bottom: 10px;
     }
@@ -262,6 +279,7 @@ export function generateNonSARIEnrollmentConfirmationEmail(data: {
 </head>
 <body>
   <div class="container">
+    ${logoHtml}
     <div class="header">
       <h1>Kursanmeldung bestätigt</h1>
     </div>
@@ -323,6 +341,7 @@ export function generateWaitlistConfirmationEmail(data: {
   tenantName?: string
   tenantEmail?: string
   primaryColor?: string
+  logoUrl?: string | null
 }): { subject: string; html: string } {
   const {
     firstName,
@@ -333,9 +352,14 @@ export function generateWaitlistConfirmationEmail(data: {
     tenantName = 'Simy',
     tenantEmail,
     primaryColor = '#1d4ed8',
+    logoUrl = null,
   } = data
 
   const subject = `Warteliste bestätigt: ${courseName}`
+
+  const logoHtml = logoUrl
+    ? `<tr><td style="background:#fff;text-align:center;padding:20px 40px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain"></td></tr>`
+    : ''
 
   const html = `
 <!DOCTYPE html>
@@ -350,6 +374,7 @@ export function generateWaitlistConfirmationEmail(data: {
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          ${logoHtml}
           <tr>
             <td style="background-color:${primaryColor};padding:32px 40px;text-align:center;">
               <h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:700;">Warteliste bestätigt</h1>
@@ -416,6 +441,8 @@ export function generateAdminEnrollmentNotificationEmail(data: {
   paymentMethod: string
   paymentAmount?: string
   tenantName?: string
+  primaryColor?: string
+  logoUrl?: string | null
 }): { subject: string; html: string } {
   const {
     participantFirstName,
@@ -427,10 +454,16 @@ export function generateAdminEnrollmentNotificationEmail(data: {
     courseLocation,
     paymentMethod,
     paymentAmount,
-    tenantName = 'Simy'
+    tenantName = 'Simy',
+    primaryColor = '#1d4ed8',
+    logoUrl = null,
   } = data
 
   const subject = `Neue Anmeldung: ${participantFirstName} ${participantLastName} → ${courseName}`
+
+  const logoHtml = logoUrl
+    ? `<tr><td style="background:#fff;text-align:center;padding:20px 40px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain"></td></tr>`
+    : ''
 
   const html = `
 <!DOCTYPE html>
@@ -445,10 +478,11 @@ export function generateAdminEnrollmentNotificationEmail(data: {
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          ${logoHtml}
           <tr>
-            <td style="background-color:#1d4ed8;padding:28px 40px;text-align:center;">
+            <td style="background-color:${primaryColor};padding:28px 40px;text-align:center;">
               <h1 style="color:#ffffff;margin:0;font-size:22px;font-weight:700;">Neue Kursanmeldung</h1>
-              <p style="color:#bfdbfe;margin:6px 0 0;font-size:13px;">${tenantName}</p>
+              <p style="color:rgba(255,255,255,0.75);margin:6px 0 0;font-size:13px;">${tenantName}</p>
             </td>
           </tr>
           <tr>
@@ -501,6 +535,8 @@ export function generateAdminWaitlistNotificationEmail(data: {
   courseName: string
   position: number
   tenantName?: string
+  primaryColor?: string
+  logoUrl?: string | null
 }): { subject: string; html: string } {
   const {
     participantFirstName,
@@ -509,10 +545,16 @@ export function generateAdminWaitlistNotificationEmail(data: {
     participantPhone,
     courseName,
     position,
-    tenantName = 'Simy'
+    tenantName = 'Simy',
+    primaryColor = '#7c3aed',
+    logoUrl = null,
   } = data
 
   const subject = `Neue Wartelisten-Anmeldung: ${participantFirstName} ${participantLastName} → ${courseName}`
+
+  const logoHtml = logoUrl
+    ? `<tr><td style="background:#fff;text-align:center;padding:20px 40px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain"></td></tr>`
+    : ''
 
   const html = `
 <!DOCTYPE html>
@@ -527,10 +569,11 @@ export function generateAdminWaitlistNotificationEmail(data: {
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          ${logoHtml}
           <tr>
-            <td style="background-color:#7c3aed;padding:28px 40px;text-align:center;">
+            <td style="background-color:${primaryColor};padding:28px 40px;text-align:center;">
               <h1 style="color:#ffffff;margin:0;font-size:22px;font-weight:700;">Neuer Wartelisten-Eintrag</h1>
-              <p style="color:#ddd6fe;margin:6px 0 0;font-size:13px;">${tenantName}</p>
+              <p style="color:rgba(255,255,255,0.75);margin:6px 0 0;font-size:13px;">${tenantName}</p>
             </td>
           </tr>
           <tr>
@@ -582,6 +625,8 @@ export function generateCourseRegistrationCancellationEmail(data: {
   tenantName?: string
   tenantEmail?: string
   reason?: string
+  primaryColor?: string
+  logoUrl?: string | null
 }): { subject: string; html: string } {
   const {
     firstName,
@@ -591,10 +636,16 @@ export function generateCourseRegistrationCancellationEmail(data: {
     location,
     tenantName = 'Simy',
     tenantEmail,
-    reason
+    reason,
+    primaryColor = '#dc2626',
+    logoUrl = null,
   } = data
 
   const subject = `Ihre Kursanmeldung wurde storniert: ${courseName}`
+
+  const logoHtml = logoUrl
+    ? `<tr><td style="background:#fff;text-align:center;padding:20px 40px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain"></td></tr>`
+    : ''
 
   const html = `
 <!DOCTYPE html>
@@ -605,10 +656,11 @@ export function generateCourseRegistrationCancellationEmail(data: {
     <tr>
       <td align="center" style="padding:32px 16px;">
         <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          ${logoHtml}
           <tr>
-            <td style="background:#dc2626;padding:32px 40px;">
+            <td style="background:${primaryColor};padding:32px 40px;">
               <p style="margin:0;font-size:22px;font-weight:700;color:#ffffff;">${tenantName}</p>
-              <p style="margin:6px 0 0;font-size:14px;color:#fca5a5;">Stornierungsbestätigung</p>
+              <p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.75);">Stornierungsbestätigung</p>
             </td>
           </tr>
           <tr>
@@ -651,6 +703,7 @@ export function generateWaitlistAvailableEmail(data: {
   tenantName?: string
   tenantEmail?: string
   primaryColor?: string
+  logoUrl?: string | null
 }): { subject: string; html: string } {
   const {
     firstName,
@@ -662,6 +715,7 @@ export function generateWaitlistAvailableEmail(data: {
     tenantName = 'Simy',
     tenantEmail,
     primaryColor = '#1d4ed8',
+    logoUrl = null,
   } = data
 
   const subject = `Jetzt buchbar: ${courseName}`
@@ -673,6 +727,10 @@ export function generateWaitlistAvailableEmail(data: {
           ${sessions.map(s => `<p style="margin:0 0 4px;font-size:14px;color:#166534;">📅 ${s.date} · ${s.time}</p>`).join('')}
         </td></tr>
       </table>`
+    : ''
+
+  const logoHtml = logoUrl
+    ? `<tr><td style="background:#fff;text-align:center;padding:20px 40px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain"></td></tr>`
     : ''
 
   const html = `
@@ -688,6 +746,7 @@ export function generateWaitlistAvailableEmail(data: {
     <tr>
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          ${logoHtml}
           <tr>
             <td style="background-color:${primaryColor};padding:32px 40px;text-align:center;">
               <p style="color:rgba(255,255,255,0.8);margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:0.1em;">Gute Neuigkeit</p>

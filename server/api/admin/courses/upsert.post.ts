@@ -319,26 +319,49 @@ export default defineEventHandler(async (event) => {
       byStaff.get(s.staff_id)!.push(s)
     }
 
-    // Load staff users once
+    // Load staff users + tenant branding at once
     const staffIds = [...byStaff.keys()]
-    const { data: staffUsers } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, email')
-      .in('id', staffIds)
-      .eq('tenant_id', profile.tenant_id)
+    const [staffResult, tenantResult] = await Promise.all([
+      supabase
+        .from('users')
+        .select('id, first_name, last_name, email')
+        .in('id', staffIds)
+        .eq('tenant_id', profile.tenant_id),
+      supabase
+        .from('tenants')
+        .select('name, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_url, logo_square_url')
+        .eq('id', profile.tenant_id)
+        .single(),
+    ])
+
+    const staffUsers = staffResult.data
+    const tenant = tenantResult.data
+    const primaryColor = tenant?.primary_color || '#1e293b'
+    const tenantName   = tenant?.name || 'Simy'
+    const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || (tenant as any)?.logo_square_url || null
+    const logoHtml     = logoUrl
+      ? `<div style="background:#fff;text-align:center;padding:20px 32px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></div>`
+      : ''
 
     for (const staffUser of staffUsers || []) {
       if (!staffUser.email) continue
       const staffSessions = byStaff.get(staffUser.id) || []
-      const sessionRows = staffSessions
-        .sort((a: any, b: any) => (a.date + a.start_time).localeCompare(b.date + b.start_time))
-        .map((s: any) => {
-          const dt = new Date(`${s.date}T${s.start_time}:00`)
-          const dayLabel = dt.toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })
+
+      // Group sessions on the same date into one row (start of first – end of last)
+      const sortedSessions = staffSessions.sort((a: any, b: any) => (a.date + a.start_time).localeCompare(b.date + b.start_time))
+      const byDateMap = new Map<string, any[]>()
+      for (const s of sortedSessions) {
+        if (!byDateMap.has(s.date)) byDateMap.set(s.date, [])
+        byDateMap.get(s.date)!.push(s)
+      }
+      const sessionRows = Array.from(byDateMap.entries())
+        .map(([date, daySessions]) => {
+          const dt = new Date(`${date}T${daySessions[0].start_time}:00`)
+          const dayLabel = dt.toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Zurich' })
+          const endTime = daySessions[daySessions.length - 1].end_time
           return `<tr>
             <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${dayLabel}</td>
-            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${s.start_time} – ${s.end_time} Uhr</td>
-            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280">${s.description || ''}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${daySessions[0].start_time} – ${endTime} Uhr</td>
           </tr>`
         })
         .join('')
@@ -346,11 +369,12 @@ export default defineEventHandler(async (event) => {
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>body{margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 .wrap{max-width:600px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.07)}
-.header{background:linear-gradient(135deg,#1e293b,#334155);padding:28px 32px}
+.header{background:${primaryColor};padding:28px 32px}
 .header h1{margin:0;color:#fff;font-size:20px;font-weight:700}
 .body{padding:32px}table{width:100%;border-collapse:collapse}th{text-align:left;padding:8px 12px;background:#f9fafb;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280}
 .footer{border-top:1px solid #f3f4f6;padding:20px 32px;font-size:12px;color:#9ca3af;text-align:center}</style></head>
 <body><div class="wrap">
+${logoHtml}
 <div class="header"><h1>📅 Kurs-Zuteilung</h1></div>
 <div class="body">
 <p>Hallo ${staffUser.first_name},</p>
@@ -359,13 +383,13 @@ export default defineEventHandler(async (event) => {
 <p style="color:#6b7280;margin-bottom:24px">Kursbeginn: ${dateLabel}</p>
 <table>
   <thead><tr>
-    <th>Datum</th><th>Zeit</th><th>Beschreibung</th>
+    <th>Datum</th><th>Zeit</th>
   </tr></thead>
   <tbody>${sessionRows}</tbody>
 </table>
 <p style="margin-top:24px;color:#6b7280;font-size:14px">Die Termine sind bereits in deinem Kalender eingetragen.</p>
 </div>
-<div class="footer">Simy Fahrschul-Software · simy.ch</div>
+<div class="footer">${tenantName} · Powered by <a href="https://simy.ch" style="color:#9ca3af;text-decoration:underline">Simy.ch</a></div>
 </div></body></html>`
 
       try {
@@ -387,10 +411,10 @@ export default defineEventHandler(async (event) => {
   )
 
   if (externalSessions.length > 0) {
-    // Load tenant info for organizer field
+    // Load tenant info for organizer field (reuse if already fetched above)
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, from_email, resend_domain_verified')
+      .select('name, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_url, logo_square_url')
       .eq('id', profile.tenant_id)
       .single()
 
@@ -441,27 +465,41 @@ export default defineEventHandler(async (event) => {
 
       const icsBuffer = buildIcs(icsEvents)
 
-      // Build session table for email body
-      const sessionRows = sorted.map((s: any) => {
-        const dt = new Date(`${s.date}T${s.start_time}:00`)
-        const dayLabel = dt.toLocaleDateString('de-CH', {
-          weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
+      const extPrimaryColor = tenant?.primary_color || '#1e293b'
+      const extLogoUrl = tenant?.logo_wide_url || tenant?.logo_url || (tenant as any)?.logo_square_url || null
+      const extLogoHtml = extLogoUrl
+        ? `<div style="background:#fff;text-align:center;padding:20px 32px 0"><img src="${extLogoUrl}" alt="${organizerName}" style="height:44px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></div>`
+        : ''
+
+      // Build session table — group same-day sessions into one row
+      const extByDateMap = new Map<string, any[]>()
+      for (const s of sorted) {
+        if (!extByDateMap.has(s.date)) extByDateMap.set(s.date, [])
+        extByDateMap.get(s.date)!.push(s)
+      }
+      const sessionRows = Array.from(extByDateMap.entries())
+        .map(([date, daySessions]) => {
+          const dt = new Date(`${date}T${daySessions[0].start_time}:00`)
+          const dayLabel = dt.toLocaleDateString('de-CH', {
+            weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Zurich',
+          })
+          const endTime = daySessions[daySessions.length - 1].end_time
+          return `<tr>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${dayLabel}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${daySessions[0].start_time} – ${endTime} Uhr</td>
+          </tr>`
         })
-        return `<tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${dayLabel}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${s.start_time} – ${s.end_time} Uhr</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280">${s.description || ''}</td>
-        </tr>`
-      }).join('')
+        .join('')
 
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>body{margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 .wrap{max-width:600px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.07)}
-.header{background:linear-gradient(135deg,#1e293b,#334155);padding:28px 32px}
+.header{background:${extPrimaryColor};padding:28px 32px}
 .header h1{margin:0;color:#fff;font-size:20px;font-weight:700}
 .body{padding:32px}table{width:100%;border-collapse:collapse}th{text-align:left;padding:8px 12px;background:#f9fafb;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280}
 .footer{border-top:1px solid #f3f4f6;padding:20px 32px;font-size:12px;color:#9ca3af;text-align:center}</style></head>
 <body><div class="wrap">
+${extLogoHtml}
 <div class="header"><h1>📅 Kurseinladung</h1></div>
 <div class="body">
 <p>Hallo ${instructorName},</p>
@@ -470,7 +508,7 @@ export default defineEventHandler(async (event) => {
 <p style="color:#6b7280;margin-bottom:24px">Kursbeginn: ${extDateLabel}</p>
 <table>
   <thead><tr>
-    <th>Datum</th><th>Zeit</th><th>Beschreibung</th>
+    <th>Datum</th><th>Zeit</th>
   </tr></thead>
   <tbody>${sessionRows}</tbody>
 </table>
@@ -478,7 +516,7 @@ export default defineEventHandler(async (event) => {
   Im Anhang finden Sie eine Kalender-Einladung (.ics). Öffnen Sie diese, um alle Termine direkt in Ihren Kalender zu übernehmen.
 </p>
 </div>
-<div class="footer">${organizerName} · Powered by Simy.ch</div>
+<div class="footer">${organizerName} · Powered by <a href="https://simy.ch" style="color:#9ca3af;text-decoration:underline">Simy.ch</a></div>
 </div></body></html>`
 
       try {

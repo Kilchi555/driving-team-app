@@ -53,6 +53,9 @@ export default defineEventHandler(async (event) => {
   const missingEmailWarnings: string[] = []
   // Accumulate external instructor sessions to send ICS after the loop
   const extInviteMap = new Map<string, any[]>()
+  // Accumulate staff changes to notify ONCE after all DB updates are done
+  const removedStaff = new Map<string, any[]>() // staffId → sessions removed from
+  const addedStaff   = new Set<string>()         // staffId → to notify/appoint after loop
 
   let updated = 0
 
@@ -108,8 +111,8 @@ export default defineEventHandler(async (event) => {
 
     updated++
 
-    // ── Appointment + notification management ─────────────────────────
     if (!course) continue
+
     const sessionData = {
       id: existing.id,
       start_time:  existing.start_time,
@@ -121,55 +124,67 @@ export default defineEventHandler(async (event) => {
       external_instructor_email: newExtEmail,
     }
 
-    // ── External instructor: send ICS when email is set/changed ───────
-    if (extEmailChanged && course) {
-      // Collect all sessions for this external instructor (current + others already saved)
-      // We send after the loop; accumulate here per email
+    // ── External instructor: accumulate ICS sessions after loop ───────
+    if (extEmailChanged) {
       if (!extInviteMap.has(newExtEmail!)) extInviteMap.set(newExtEmail!, [])
       extInviteMap.get(newExtEmail!)!.push({
         ...sessionData,
         external_instructor_name: session.external_instructor_name || '',
       })
-
-      // Mark notified
-      await supabase
-        .from('course_sessions')
-        .update({ external_instructor_notified_at: new Date().toISOString() })
-        .eq('id', existing.id)
     }
 
+    // ── Track staff changes — notify/appoint after all updates ────────
     if (staffChanged) {
-      // Remove old staff appointments & notify removal
       if (oldStaff) {
-        await deleteStaffCourseAppointments(supabase, oldStaff, course.id)
-        // Load all remaining sessions for this staff to determine correct removal context
-        await notifyStaffRemoved(supabase, oldStaff, course as any, [sessionData])
+        // Accumulate sessions removed from old staff (for removal email)
+        if (!removedStaff.has(oldStaff)) removedStaff.set(oldStaff, [])
+        removedStaff.get(oldStaff)!.push(sessionData)
       }
-
-      // Create new staff appointments & notify new assignment
       if (newStaff) {
-        // Load ALL sessions in this course assigned to the new staff (after update)
-        const { data: allStaffSessions } = await supabase
-          .from('course_sessions')
-          .select('id, start_time, end_time, description')
-          .eq('course_id', course.id)
-          .eq('staff_id', newStaff)
-
-        if (allStaffSessions?.length) {
-          await createStaffCourseAppointments(supabase, newStaff, course as any, allStaffSessions)
-          await notifyStaffAssigned(supabase, newStaff, course as any, allStaffSessions)
-
-          // Mark sessions as notified
-          await supabase
-            .from('course_sessions')
-            .update({ staff_notified_at: new Date().toISOString() })
-            .in('id', allStaffSessions.map((s) => s.id))
-        }
+        addedStaff.add(newStaff)
       }
     }
   }
 
   logger.debug(`✅ Updated instructor fields for ${updated} sessions`)
+
+  // ── Post-loop: handle removed staff (one notification per staff) ───
+  if (course) {
+    for (const [staffId, removedSessions] of removedStaff) {
+      await deleteStaffCourseAppointments(supabase, staffId, course.id)
+      await notifyStaffRemoved(supabase, staffId, course as any, removedSessions)
+    }
+
+    // ── Post-loop: handle added/changed staff (one notification per staff) ──
+    for (const staffId of addedStaff) {
+      // Now ALL sessions are updated in DB — fetch the complete list for this staff
+      const { data: allStaffSessions } = await supabase
+        .from('course_sessions')
+        .select('id, start_time, end_time, description')
+        .eq('course_id', course.id)
+        .eq('staff_id', staffId)
+
+      if (allStaffSessions?.length) {
+        await createStaffCourseAppointments(supabase, staffId, course as any, allStaffSessions)
+        await notifyStaffAssigned(supabase, staffId, course as any, allStaffSessions)
+
+        await supabase
+          .from('course_sessions')
+          .update({ staff_notified_at: new Date().toISOString() })
+          .in('id', allStaffSessions.map((s) => s.id))
+      }
+    }
+
+    // ── Mark external ICS sessions as notified ─────────────────────
+    for (const [email, sessions] of extInviteMap) {
+      for (const s of sessions) {
+        await supabase
+          .from('course_sessions')
+          .update({ external_instructor_notified_at: new Date().toISOString() })
+          .eq('id', s.id)
+      }
+    }
+  }
 
   // ── Send ICS invites to external instructors with newly set emails ──
   if (course && extInviteMap.size > 0) {
