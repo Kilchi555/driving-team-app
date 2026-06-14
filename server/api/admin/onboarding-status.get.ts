@@ -2,7 +2,9 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
-  const { user, tenant_id } = await getAuthenticatedUser(event)
+  const auth = await getAuthenticatedUser(event)
+  if (!auth) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  const { tenant_id } = auth
   if (!tenant_id) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
   const supabase = getSupabaseAdmin()
