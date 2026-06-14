@@ -1072,10 +1072,18 @@ export class AvailabilityCalculator {
 
         for (let i = 0; i < staleIds.length; i += batchSize) {
           const batchIds = staleIds.slice(i, i + batchSize)
-          const { error: deleteError } = await this.supabase
+
+          let deleteQuery = this.supabase
             .from('availability_slots')
             .delete()
             .in('id', batchIds)
+
+          // Mirror the same scope filters used when fetching — helps PostgREST
+          // accept the DELETE and avoids "Bad Request" rejections on unconstrained deletes
+          if (tenantId) deleteQuery = deleteQuery.eq('tenant_id', tenantId)
+          if (staffId)  deleteQuery = deleteQuery.eq('staff_id', staffId)
+
+          const { error: deleteError } = await deleteQuery
 
           if (deleteError) {
             logger.warn('⚠️ Error deleting stale slots batch (non-fatal):', deleteError)
