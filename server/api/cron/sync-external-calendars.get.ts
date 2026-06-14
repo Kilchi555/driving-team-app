@@ -3,6 +3,83 @@
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { sendEmail } from '~/server/utils/email'
+
+const FAILURE_NOTIFY_THRESHOLD = 3 // notify admin after this many consecutive failures
+
+async function notifyAdminBrokenCalendar(
+  supabase: any,
+  calendar: any,
+  errorMsg: string,
+) {
+  const now = new Date()
+
+  // Only notify once per 24h per calendar to avoid spam
+  if (
+    calendar.failure_notified_at &&
+    now.getTime() - new Date(calendar.failure_notified_at).getTime() < 24 * 60 * 60 * 1000
+  ) return
+
+  // Load tenant + admin emails + branding
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('name, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_url, logo_square_url')
+    .eq('id', calendar.tenant_id)
+    .single()
+
+  const { data: admins } = await supabase
+    .from('users')
+    .select('email')
+    .eq('tenant_id', calendar.tenant_id)
+    .eq('role', 'admin')
+    .not('email', 'is', null)
+    .limit(3)
+
+  const adminEmails = (admins || []).map((a: any) => a.email).filter(Boolean)
+  if (adminEmails.length === 0) return
+
+  const tenantName  = tenant?.name || 'Simy'
+  const primaryColor = tenant?.primary_color || '#1e293b'
+  const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+  const logoHtml = logoUrl
+    ? `<div style="background:#fff;text-align:center;padding:20px 32px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:40px;max-width:180px;object-fit:contain;display:block;margin:0 auto"></div>`
+    : ''
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+<div style="max-width:600px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.07)">
+${logoHtml}
+<div style="background:${primaryColor};padding:24px 32px">
+  <h1 style="margin:0;color:#fff;font-size:18px;font-weight:700">⚠️ Kalender-Synchronisation fehlgeschlagen</h1>
+</div>
+<div style="padding:32px">
+  <p>Der externe Kalender <strong>${calendar.calendar_name || 'Unbekannt'}</strong> konnte ${calendar.consecutive_failures + 1} Mal in Folge nicht synchronisiert werden.</p>
+  <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:16px;border-radius:4px;margin:16px 0">
+    <strong>Fehler:</strong> ${errorMsg}
+  </div>
+  <p>Bitte überprüfe die Kalender-URL des Mitarbeitenden unter <strong>Admin → Mitarbeitende → Kalender</strong> und erneuere den Link.</p>
+</div>
+<div style="border-top:1px solid #f3f4f6;padding:16px 32px;font-size:12px;color:#9ca3af;text-align:center">${tenantName} · Powered by Simy.ch</div>
+</div></body></html>`
+
+  try {
+    await sendEmail({
+      to: adminEmails,
+      subject: `Kalender-Sync fehlgeschlagen: ${calendar.calendar_name || 'Unbekannt'}`,
+      html,
+      fromName: tenantName,
+      fromEmail: tenant?.from_email ?? null,
+      domainVerified: tenant?.resend_domain_verified ?? false,
+    })
+    await supabase
+      .from('external_calendars')
+      .update({ failure_notified_at: now.toISOString() })
+      .eq('id', calendar.id)
+    logger.debug(`✅ Admin notified about broken calendar: ${calendar.calendar_name}`)
+  } catch (e: any) {
+    logger.warn('⚠️ Could not send broken calendar notification:', e.message)
+  }
+}
 
 export default defineEventHandler(async (event) => {
   try {
@@ -84,19 +161,49 @@ export default defineEventHandler(async (event) => {
           })
 
           if (!icsResponse.ok) {
-            logger.warn(`⚠️ Failed to fetch ICS for ${calendar.calendar_name}: ${icsResponse.status}`)
+            const errMsg = `HTTP ${icsResponse.status}`
+            logger.warn(`⚠️ Failed to fetch ICS for ${calendar.calendar_name}: ${errMsg}`)
+            const newFailures = (calendar.consecutive_failures ?? 0) + 1
+            await supabase.from('external_calendars').update({
+              consecutive_failures: newFailures,
+              last_fetch_error: errMsg,
+              last_failure_at: new Date().toISOString(),
+            }).eq('id', calendar.id)
+            if (newFailures >= FAILURE_NOTIFY_THRESHOLD) {
+              await notifyAdminBrokenCalendar(supabase, { ...calendar, consecutive_failures: newFailures - 1 }, errMsg)
+            }
             failedCount++
             continue
           }
 
           icsData = await icsResponse.text()
           if (!icsData || icsData.length < 50) {
+            const errMsg = 'Invalid/empty ICS response'
             logger.warn(`⚠️ Invalid ICS data for ${calendar.calendar_name}`)
+            const newFailures = (calendar.consecutive_failures ?? 0) + 1
+            await supabase.from('external_calendars').update({
+              consecutive_failures: newFailures,
+              last_fetch_error: errMsg,
+              last_failure_at: new Date().toISOString(),
+            }).eq('id', calendar.id)
+            if (newFailures >= FAILURE_NOTIFY_THRESHOLD) {
+              await notifyAdminBrokenCalendar(supabase, { ...calendar, consecutive_failures: newFailures - 1 }, errMsg)
+            }
             failedCount++
             continue
           }
         } catch (fetchErr: any) {
-          logger.warn(`⚠️ Error fetching ICS for ${calendar.calendar_name}:`, fetchErr.message)
+          const errMsg = fetchErr.message || 'Fetch error'
+          logger.warn(`⚠️ Error fetching ICS for ${calendar.calendar_name}:`, errMsg)
+          const newFailures = (calendar.consecutive_failures ?? 0) + 1
+          await supabase.from('external_calendars').update({
+            consecutive_failures: newFailures,
+            last_fetch_error: errMsg,
+            last_failure_at: new Date().toISOString(),
+          }).eq('id', calendar.id)
+          if (newFailures >= FAILURE_NOTIFY_THRESHOLD) {
+            await notifyAdminBrokenCalendar(supabase, { ...calendar, consecutive_failures: newFailures - 1 }, errMsg)
+          }
           failedCount++
           continue
         }
@@ -203,12 +310,14 @@ export default defineEventHandler(async (event) => {
           logger.warn(`⚠️ Failed to queue staff for recalc:`, queueErr.message)
         }
 
-        // Update last sync time
+        // Update last sync time + reset failure counter on success
         await supabase
           .from('external_calendars')
-          .update({ 
+          .update({
             last_sync_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            consecutive_failures: 0,
+            last_fetch_error: null,
           })
           .eq('id', calendar.id)
 

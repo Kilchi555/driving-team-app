@@ -1000,7 +1000,7 @@ export class AvailabilityCalculator {
     endDate?: Date
   ): Promise<number> {
     if (slots.length === 0) {
-      logger.warn('⚠️ No slots to write')
+      logger.debug('ℹ️ No slots to write (staff may have no working hours configured)')
       return 0
     }
 
