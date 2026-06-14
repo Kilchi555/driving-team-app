@@ -14,6 +14,7 @@ import {
   notifyStaffAssigned,
   sendExternalInstructorInvite,
   notifyAdminMissingExternalEmail,
+  notifyAdminMissingInstructors,
 } from '~/server/utils/course-staff-notifications'
 
 export interface SyncResult {
@@ -106,6 +107,13 @@ export class SARISyncEngine {
 
       // 3. Clean up deleted courses (deactivate courses that no longer exist in SARI)
       const deletedCount = await this.cleanupDeletedCourses(courseType, courseGroups)
+
+      // 3b. Remind admin about any SARI courses that still have no instructor
+      try {
+        await notifyAdminMissingInstructors(this.supabase, this.tenantId)
+      } catch (e: any) {
+        logger.warn('⚠️ Missing-instructor reminder failed (non-fatal):', e.message)
+      }
 
       // 4. Log success
       logEntry.status = errors.length === 0 ? 'success' : 'partial'

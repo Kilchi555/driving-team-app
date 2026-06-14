@@ -532,3 +532,116 @@ export async function sendExternalInstructorInvite(
     logger.warn(`⚠️ Could not send ICS invite to ${instructorEmail}:`, e.message)
   }
 }
+
+// ── Admin reminder: SARI courses without instructor ───────────────────────────
+
+export interface MissingInstructorEntry {
+  courseId: string
+  courseName: string
+  firstSession: string  // ISO start_time of earliest session
+  sessionCount: number
+}
+
+/**
+ * After a SARI sync, queries all active SARI-managed courses for this tenant
+ * that have at least one session without an instructor, then sends a single
+ * summary reminder email to all tenant admins.
+ * The email is only sent if there are actually affected courses.
+ */
+export async function notifyAdminMissingInstructors(
+  supabase: SupabaseClient,
+  tenantId: string,
+): Promise<void> {
+  // Find sessions of SARI courses that have no instructor assigned yet,
+  // for future dates only (don't nag about past courses).
+  const { data: rows } = await supabase
+    .from('course_sessions')
+    .select('id, course_id, start_time, courses!inner(id, name, sari_managed, status, tenant_id)')
+    .eq('courses.tenant_id', tenantId)
+    .eq('courses.sari_managed', true)
+    .neq('courses.status', 'cancelled')
+    .is('staff_id', null)
+    .is('external_instructor_name', null)
+    .gte('start_time', new Date().toISOString())
+    .order('start_time', { ascending: true })
+
+  if (!rows || rows.length === 0) return
+
+  // Aggregate by course
+  const byCoursemap = new Map<string, MissingInstructorEntry>()
+  for (const row of rows) {
+    const course = row.courses as any
+    if (!byCoursemap.has(row.course_id)) {
+      byCoursemap.set(row.course_id, {
+        courseId: row.course_id,
+        courseName: course.name,
+        firstSession: row.start_time,
+        sessionCount: 1,
+      })
+    } else {
+      byCoursemap.get(row.course_id)!.sessionCount++
+    }
+  }
+  const affected = Array.from(byCoursemap.values()).sort((a, b) =>
+    a.firstSession.localeCompare(b.firstSession),
+  )
+
+  // Load tenant + admins
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('name, from_email, resend_domain_verified')
+    .eq('id', tenantId)
+    .single()
+
+  const { data: admins } = await supabase
+    .from('users')
+    .select('email')
+    .eq('tenant_id', tenantId)
+    .eq('role', 'admin')
+    .not('email', 'is', null)
+    .limit(5)
+
+  const adminEmails = (admins || []).map((a) => a.email).filter(Boolean) as string[]
+  if (adminEmails.length === 0) return
+
+  const tenantName = tenant?.name || 'Simy'
+
+  const tableRows = affected.map((c) => `<tr>
+    <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${c.courseName}</td>
+    <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${fmtDate(c.firstSession)}</td>
+    <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:center">${c.sessionCount}</td>
+  </tr>`).join('')
+
+  const html = emailWrapper(
+    '⚠️ Pendenzen: SARI-Kurse ohne Instruktor',
+    `<p>Nach dem letzten SARI-Sync gibt es noch <strong>${affected.length} Kurs${affected.length === 1 ? '' : 'e'}</strong> ohne zugewiesenen Instruktor:</p>
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:8px 12px">Kurs</th>
+          <th style="text-align:left;padding:8px 12px">Erster Termin</th>
+          <th style="text-align:center;padding:8px 12px">Sessions</th>
+        </tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+    <p style="margin-top:24px;color:#6b7280;font-size:14px">
+      Bitte weise in der Kursübersicht für jeden Kurs einen Instruktor zu, damit die Mitarbeitenden benachrichtigt werden und die Termine in ihrem Kalender erscheinen.
+    </p>`,
+    tenantName,
+  )
+
+  try {
+    await sendEmail({
+      to: adminEmails,
+      subject: `Aktion erforderlich: ${affected.length} SARI-Kurs${affected.length === 1 ? '' : 'e'} ohne Instruktor`,
+      html,
+      fromName: tenantName,
+      fromEmail: tenant?.from_email ?? null,
+      domainVerified: tenant?.resend_domain_verified ?? false,
+    })
+    logger.debug(`✅ Admin reminded about ${affected.length} SARI courses missing instructors`)
+  } catch (e: any) {
+    logger.warn('⚠️ Could not send missing-instructor reminder email:', e.message)
+  }
+}

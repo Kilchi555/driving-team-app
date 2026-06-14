@@ -174,6 +174,55 @@
           </div>
         </div>
 
+        <!-- Pendenzen: SARI-Kurse ohne Instruktor -->
+        <div
+          v-if="missingInstructorCourses.length > 0"
+          class="mb-6 rounded-lg border border-amber-300 bg-amber-50 overflow-hidden"
+        >
+          <div class="flex items-center justify-between px-4 py-3 border-b border-amber-200 bg-amber-100">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">⚠️</span>
+              <span class="font-semibold text-amber-900">
+                Pendenzen: {{ missingInstructorCourses.length }} Kurs{{ missingInstructorCourses.length === 1 ? '' : 'e' }} ohne Instruktor
+              </span>
+            </div>
+            <span class="text-xs text-amber-700 bg-amber-200 px-2 py-1 rounded-full font-medium">
+              Aktion erforderlich
+            </span>
+          </div>
+          <ul class="divide-y divide-amber-200">
+            <li
+              v-for="item in missingInstructorCourses"
+              :key="item.courseId"
+              class="flex items-center justify-between px-4 py-3 hover:bg-amber-100 transition-colors"
+            >
+              <div class="flex items-center gap-3 min-w-0">
+                <span
+                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0"
+                  :style="item.categoryColor
+                    ? { backgroundColor: item.categoryColor + '22', color: item.categoryColor }
+                    : { backgroundColor: '#f59e0b22', color: '#b45309' }"
+                >
+                  {{ item.categoryName ?? 'SARI' }}
+                </span>
+                <span class="text-sm font-medium text-gray-900 truncate">{{ item.courseName }}</span>
+              </div>
+              <div class="flex items-center gap-4 shrink-0 ml-4">
+                <span class="text-xs text-gray-500">
+                  {{ new Date(item.firstSession).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' }) }}
+                  · {{ item.sessionCount }} Session{{ item.sessionCount === 1 ? '' : 's' }}
+                </span>
+                <button
+                  @click="() => { const c = courses.find(c => c.id === item.courseId); if (c) editCourse(c) }"
+                  class="text-xs px-3 py-1.5 rounded-md font-medium bg-amber-600 hover:bg-amber-700 text-white transition-colors shrink-0"
+                >
+                  Instruktor zuweisen
+                </button>
+              </div>
+            </li>
+          </ul>
+        </div>
+
         <!-- Filters -->
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-6">
           <div class="flex flex-wrap gap-4 items-end">
@@ -4003,6 +4052,15 @@ const generalResourceForm = ref({
 
 // State
 const courses = ref<any[]>([])
+const missingInstructorCourses = ref<Array<{
+  courseId: string
+  courseName: string
+  categoryName: string | null
+  categoryColor: string | null
+  firstSession: string
+  sessionCount: number
+}>>([])
+
 const courseStats = ref({
   active: 0,
   registrations: 0,
@@ -4594,6 +4652,15 @@ const loadCourses = async () => {
   }
 }
 
+const fetchMissingInstructors = async () => {
+  try {
+    const data = await $fetch<{ courses: any[] }>('/api/admin/courses/missing-instructors')
+    missingInstructorCourses.value = data?.courses ?? []
+  } catch {
+    missingInstructorCourses.value = []
+  }
+}
+
 const loadStaff = async () => {
   try {
     const result = await $fetch<{ success: boolean; data: any[] }>('/api/admin/staff/list', { method: 'POST' })
@@ -4687,7 +4754,7 @@ const createCourse = async () => {
 
     showCreateCourseModal.value = false
     resetNewCourse()
-    await loadCourses()
+    await Promise.all([loadCourses(), fetchMissingInstructors()])
 
   } catch (err: any) {
     console.error('Error creating course:', err)
@@ -5951,7 +6018,8 @@ onMounted(async () => {
     loadStaff(),
     loadRooms(),
     currentUser.value?.tenant_id ? loadVehicles(currentUser.value.tenant_id) : Promise.resolve(),
-    loadGeneralResources()
+    loadGeneralResources(),
+    fetchMissingInstructors(),
   ])
   
   // Close dropdown when clicking outside
@@ -6503,7 +6571,7 @@ const triggerSariSync = async () => {
     }
 
     success.value = `✅ SARI Sync abgeschlossen: ${data.total_synced} Kurse synchronisiert (VKU: ${data.vku?.synced ?? 0}, PGS: ${data.pgs?.synced ?? 0})`
-    await loadCourses()
+    await Promise.all([loadCourses(), fetchMissingInstructors()])
   } catch (err: any) {
     error.value = err?.message || 'SARI Sync fehlgeschlagen'
   } finally {
