@@ -1313,6 +1313,39 @@
                     />
                   </div>
                 </div>
+
+                <!-- Individual Booking -->
+                <div class="mt-4 pt-4 border-t border-gray-100">
+                  <div class="flex items-center gap-3">
+                    <input
+                      :id="`allow-individual-${index}`"
+                      v-model="session.allow_individual_booking"
+                      type="checkbox"
+                      class="w-4 h-4 rounded border-gray-300 tenant-focus"
+                      :style="session.allow_individual_booking ? { accentColor: primaryColor } : {}"
+                    />
+                    <label :for="`allow-individual-${index}`" class="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                      Nur diese Session einzeln buchbar machen
+                    </label>
+                  </div>
+                  <div v-if="session.allow_individual_booking" class="mt-3 flex items-center gap-3">
+                    <div class="flex items-center gap-2 max-w-xs">
+                      <label class="block text-sm font-medium text-gray-700 whitespace-nowrap">Preis (CHF)</label>
+                      <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">CHF</span>
+                        <input
+                          v-model.number="session.individual_price"
+                          type="number"
+                          min="0"
+                          step="0.05"
+                          placeholder="0.00"
+                          class="w-36 pl-12 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input tenant-focus focus:outline-none focus:ring-2"
+                        />
+                      </div>
+                    </div>
+                    <p class="text-xs text-gray-500">Kunden können sich nur für diese Session anmelden (z.B. A1-Inhaber)</p>
+                  </div>
+                </div>
               </div>
               
               <!-- Add Session Button -->
@@ -4879,6 +4912,8 @@ const addSession = () => {
     external_instructor_name: prev?.external_instructor_name ?? null,
     external_instructor_email: prev?.external_instructor_email ?? null,
     external_instructor_phone: prev?.external_instructor_phone ?? null,
+    allow_individual_booking: false,
+    individual_price: 0,
   })
 }
 
@@ -4997,7 +5032,9 @@ const generateSessionsFromCategory = () => {
         staff_id: null,
         external_instructor_name: null,
         external_instructor_email: null,
-        external_instructor_phone: null
+        external_instructor_phone: null,
+        allow_individual_booking: false,
+        individual_price: 0,
       })
   }
   
@@ -5042,7 +5079,9 @@ const loadCourseSessions = async (courseId: string) => {
           staff_id: session.staff_id || null,
           external_instructor_name: session.external_instructor_name || null,
           external_instructor_email: session.external_instructor_email || null,
-          external_instructor_phone: null
+          external_instructor_phone: null,
+          allow_individual_booking: session.allow_individual_booking ?? false,
+          individual_price: session.individual_price_rappen ? session.individual_price_rappen / 100 : 0,
         }
       })
 
