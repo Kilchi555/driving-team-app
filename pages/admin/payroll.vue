@@ -680,7 +680,7 @@
                   </div>
                   <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
                     <span class="text-gray-500">Koordinationsabzug <span class="text-gray-400 font-normal">(Brutto − BVG-Lohn)</span></span>
-                    <span class="font-mono font-bold text-gray-800">CHF {{ ((empForm as any).bvg_coordination_chf ?? 2205).toLocaleString('de-CH') }}<span class="text-gray-400 font-normal">/Mt.</span></span>
+                    <span class="font-mono font-bold text-gray-800">CHF {{ ((empForm as any).bvg_coordination_yearly_chf ?? 26460).toLocaleString('de-CH') }}<span class="text-gray-400 font-normal">/J.</span></span>
                   </div>
                   <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs mt-2">
                     <span class="text-gray-500">Eintrittsschwelle <span class="text-gray-400 font-normal">(Pflicht-BVG ab)</span></span>
@@ -821,9 +821,10 @@
                     <div>
                       <label class="block text-[11px] text-gray-500 mb-1">Koordinationsabzug</label>
                       <div class="relative">
-                        <input v-model.number="(empForm as any).bvg_coordination_chf" type="number" step="10" min="0" placeholder="2205"
-                          class="w-full border border-gray-200 bg-gray-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pl-3 pr-10"/>
-                        <span class="absolute right-2.5 top-2 text-xs text-gray-400">CHF</span>
+                        <input v-model.number="(empForm as any).bvg_coordination_yearly_chf" type="number" step="100" min="0" placeholder="26460"
+                          class="w-full border border-gray-200 bg-gray-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pl-10 pr-8"/>
+                        <span class="absolute left-3 top-2 text-xs text-gray-400">CHF</span>
+                        <span class="absolute right-3 top-2 text-xs text-gray-400">/J.</span>
                       </div>
                     </div>
                   </div>
@@ -928,7 +929,7 @@
                   <span>- NBU Mitarbeiter ({{ (empForm as any).nbu_rate_pct }}%)</span><span>-{{ chf(preview.nbu_an) }}</span>
                 </div>
                 <div class="flex justify-between text-red-600">
-                  <span>- BVG Mitarbeiter ({{ (empForm as any).bvg_employee_rate_pct }}% auf CHF {{ (empForm as any).bvg_coordination_chf ? ((preview.gross - Math.round((empForm as any).bvg_coordination_chf * 100)) / 100).toFixed(0) : 0 }} kord.)</span>
+                  <span>- BVG Mitarbeiter ({{ (empForm as any).bvg_employee_rate_pct }}% auf CHF {{ (empForm as any).bvg_coordination_yearly_chf ? ((preview.gross - Math.round((empForm as any).bvg_coordination_yearly_chf / 12 * 100)) / 100).toFixed(0) : 0 }} kord.)</span>
                   <span>-{{ chf(preview.bvg_an) }}</span>
                 </div>
                 <div class="flex justify-between font-bold text-emerald-700 border-t border-gray-200 pt-1.5">
@@ -1094,7 +1095,7 @@ const preview = computed(() => {
   const buRate    = (f.bu_rate_pct           ?? 0.39) / 100
   const bvgAnRate = (f.bvg_employee_rate_pct ?? 5.0)  / 100
   const bvgAgRate = (f.bvg_employer_rate_pct ?? 5.0)  / 100
-  const coordRappen = Math.round((f.bvg_coordination_chf ?? 2205) * 100)
+  const coordRappen = Math.round((f.bvg_coordination_yearly_chf ?? 26460) / 12 * 100)
 
   const r = Math.round
   const ahv_an  = r(gross * ahvAnRate)
@@ -1229,7 +1230,7 @@ async function openEmployeeModal(emp: PayrollEmployee | null) {
     bu_rate_pct:              parseFloat(((e.bu_rate               ?? 0.0039) * 100).toFixed(3)),
     bvg_employee_rate_pct:    parseFloat(((e.bvg_employee_rate     ?? 0.05)   * 100).toFixed(3)),
     bvg_employer_rate_pct:    parseFloat(((e.bvg_employer_rate     ?? 0.05)   * 100).toFixed(3)),
-    bvg_coordination_chf:        parseFloat(((e.bvg_coordination_rappen     ?? 220500)  / 100).toFixed(2)),
+    bvg_coordination_yearly_chf: parseFloat(((e.bvg_coordination_rappen ?? 220500) / 100 * 12).toFixed(0)),
     bvg_entry_threshold_chf:    parseFloat(((e.bvg_entry_threshold_rappen  ?? 2268000) / 100).toFixed(2)),
     child_allowance_chf:         parseFloat(((e.child_allowance_rappen      ?? 0)       / 100).toFixed(2)),
   })
@@ -1304,7 +1305,7 @@ async function saveEmployee() {
       bu_rate:                   (empForm.value as any).bu_rate_pct           / 100,
       bvg_employee_rate:         (empForm.value as any).bvg_employee_rate_pct / 100,
       bvg_employer_rate:         (empForm.value as any).bvg_employer_rate_pct / 100,
-      bvg_coordination_rappen:     Math.round((empForm.value as any).bvg_coordination_chf     * 100),
+      bvg_coordination_rappen:     Math.round((empForm.value as any).bvg_coordination_yearly_chf / 12 * 100),
       bvg_entry_threshold_rappen:  Math.round((empForm.value as any).bvg_entry_threshold_chf  * 100),
       monthly_spesen_rappen:   spesenItems.value.reduce((s, i) => s + Math.round((i.amount_chf || 0) * 100), 0),
       child_allowance_rappen:  Math.round((empForm.value as any).child_allowance_chf  * 100),
