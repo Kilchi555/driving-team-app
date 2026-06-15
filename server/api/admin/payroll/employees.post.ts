@@ -44,6 +44,7 @@ export default defineEventHandler(async (event) => {
       monthly_spesen_rappen: monthly_spesen_rappen ?? 0,
       child_allowance_rappen: child_allowance_rappen ?? 0,
       spesen_items: spesen_items ?? [],
+      bvg_entry_threshold_rappen: body.bvg_entry_threshold_rappen ?? 2268000,
     })
     .select()
     .single()
