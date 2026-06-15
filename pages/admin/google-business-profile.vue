@@ -111,8 +111,45 @@
           <p class="text-xs text-amber-700 mb-4">Wähle deinen Standort aus, um Bewertungen, Posts und Insights zu sehen.</p>
           <div v-if="accountsLoading" class="text-xs text-amber-600">Lade Business Profile Accounts…</div>
           <div v-else-if="accountsError" class="text-xs text-red-600">{{ accountsError }}</div>
-          <div v-else-if="gbpAccounts.length === 0" class="text-xs text-amber-700">
-            Keine Google Business Profile Accounts gefunden. Stelle sicher, dass du mit dem richtigen Google-Account verbunden bist.
+          <div v-else-if="gbpAccounts.length === 0" class="space-y-4">
+            <p class="text-xs text-amber-700">
+              Die automatische Erkennung erfordert eine freigeschaltete Google API. Trage deine GBP-Daten manuell ein:
+            </p>
+            <div class="space-y-2">
+              <div>
+                <label class="text-xs font-medium text-amber-900 block mb-1">Account Name</label>
+                <input
+                  v-model="manualAccountName"
+                  placeholder="accounts/123456789"
+                  class="w-full text-sm border border-amber-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+                <p class="text-xs text-amber-600 mt-1">Zu finden unter: business.google.com → URL enthält die Account-ID</p>
+              </div>
+              <div>
+                <label class="text-xs font-medium text-amber-900 block mb-1">Location ID</label>
+                <input
+                  v-model="manualLocationId"
+                  placeholder="locations/123456789012345"
+                  class="w-full text-sm border border-amber-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+                <p class="text-xs text-amber-600 mt-1">Zu finden unter: Google Business Profile Manager → URL der Standort-Seite</p>
+              </div>
+              <div>
+                <label class="text-xs font-medium text-amber-900 block mb-1">Name (optional)</label>
+                <input
+                  v-model="manualLocationName"
+                  placeholder="Driving Team Fahrschule"
+                  class="w-full text-sm border border-amber-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+              <button
+                @click="linkManualLocation"
+                :disabled="!manualAccountName || !manualLocationId || linkingLocation"
+                class="text-sm font-semibold px-4 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors disabled:opacity-40"
+              >
+                Manuell verknüpfen
+              </button>
+            </div>
           </div>
           <div v-else class="space-y-2">
             <div
@@ -532,6 +569,9 @@ const gbpAccounts = ref<any[]>([])
 const accountsLoading = ref(false)
 const accountsError = ref('')
 const linkingLocation = ref(false)
+const manualAccountName = ref('')
+const manualLocationId = ref('')
+const manualLocationName = ref('')
 
 const allLocations = computed(() => {
   const locs: { locationId: string; title: string; accountName: string; gbpAccountName: string }[] = []
@@ -559,6 +599,14 @@ async function loadAccounts() {
   } finally {
     accountsLoading.value = false
   }
+}
+
+async function linkManualLocation() {
+  await linkLocation({
+    locationId: manualLocationId.value.trim(),
+    title: manualLocationName.value.trim() || manualLocationId.value.trim(),
+    gbpAccountName: manualAccountName.value.trim(),
+  })
 }
 
 async function linkLocation(location: { locationId: string; title: string; gbpAccountName: string }) {
