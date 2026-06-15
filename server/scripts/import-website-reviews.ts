@@ -96,20 +96,16 @@ const CATEGORY_KEYWORDS: Record<string, RegExp> = {
  * allen Kategorien zugeordnet, in denen dieser Fahrlehrer unterrichtet.
  */
 const INSTRUCTOR_CATEGORIES: Record<string, string[]> = {
-  pascal:   ['zuerich', 'motorrad', 'motorrad-grundkurs', 'uster'],
-  vito:     ['zuerich', 'motorrad', 'motorrad-grundkurs'],
-  keni:     ['zuerich', 'spreitenbach', 'anhaenger'],
-  skender:  ['zuerich', 'spreitenbach', 'anhaenger'],
-  kenny:    ['zuerich', 'spreitenbach', 'anhaenger'],
-  rijad:    ['zuerich'],
-  samuel:   ['zuerich', 'dietikon'],
-  samir:    ['zuerich', 'birmensdorf'],
-  marc:     ['lachen', 'pfaeffikon', 'reichenburg', 'motorboot'],
-  sybille:  ['lachen', 'pfaeffikon', 'reichenburg'],
-  andré:    ['lachen', 'pfaeffikon', 'reichenburg'],
-  peter:    ['lachen', 'lastwagen', 'taxi'],
-  rahel:    ['taxi', 'lastwagen'],
-  tayfun:   ['spreitenbach'],
+  pascal:    ['zuerich', 'motorrad', 'motorrad-grundkurs', 'uster'],
+  keni:      ['zuerich', 'spreitenbach', 'anhaenger'],
+  skender:   ['zuerich', 'spreitenbach', 'anhaenger'],
+  kenny:     ['zuerich', 'spreitenbach', 'anhaenger'],
+  rijad:     ['zuerich'],
+  samuel:    ['zuerich', 'dietikon'],
+  samir:     ['zuerich', 'birmensdorf'],
+  marc:      ['lachen', 'pfaeffikon', 'reichenburg', 'motorboot'],
+  peter:     ['lachen', 'lastwagen', 'taxi'],
+  rahel:     ['taxi', 'lastwagen'],
   alexandra: ['auto-theorie'],
 }
 
