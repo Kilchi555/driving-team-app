@@ -19,7 +19,7 @@
  */
 
 import 'dotenv/config'
-import { writeFileSync, mkdirSync } from 'fs'
+import { writeFileSync, mkdirSync, readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -72,24 +72,67 @@ const LOCATIONS: Location[] = [
 // ── Keyword-Mapping ───────────────────────────────────────────────────────────
 
 const CATEGORY_KEYWORDS: Record<string, RegExp> = {
-  lastwagen: /lastwagen|lkw|c[\s-]?führerschein|c1|sattelzug|kategorie c/i,
+  lastwagen:          /lastwagen|lkw|c[\s-]?führerschein|c1|sattelzug|kategorie c/i,
   'motorrad-grundkurs': /grundkurs|motorrad grundkurs|töff kurs/i,
-  motorrad: /motorrad|töff|a[\s-]?führerschein|a1|a2/i,
-  anhaenger: /anhänger|hänger|be[\s-]?prüfung/i,
-  motorboot: /boot|motorboot|bootsführerschein|zürichsee.*boot/i,
-  'auto-theorie': /theorie|vku|nothilfe|nothelfer/i,
-  lachen: /lachen|pfäffikon|altendorf|wangen|siebnen|march/i,
-  zuerich: /zürich|altstetten|züri\b/i,
-  taxi: /taxi|taxiprüfung/i,
-  bus: /bus|car|reisecar/i,
+  motorrad:           /motorrad|töff|a[\s-]?führerschein|a1|a2/i,
+  anhaenger:          /anhänger|hänger|be[\s-]?prüfung/i,
+  motorboot:          /boot|motorboot|bootsführerschein|zürichsee.*boot/i,
+  'auto-theorie':     /theorie|vku|nothilfe|nothelfer/i,
+  lachen:             /lachen|altendorf|wangen|siebnen|march/i,
+  pfaeffikon:         /pfäffikon|freienbach/i,
+  reichenburg:        /reichenburg|benken/i,
+  spreitenbach:       /spreitenbach|haldenstrasse/i,
+  uster:              /uster|weiherweg/i,
+  birmensdorf:        /birmensdorf|panoramastrasse/i,
+  dietikon:           /dietikon/i,
+  zuerich:            /zürich|altstetten|züri\b|vulkanstrasse/i,
+  taxi:               /taxi|taxiprüfung/i,
+  bus:                /bus\b|reisecar/i,
+}
+
+/**
+ * Fahrlehrer → Kategorien Mapping.
+ * Ein Review das den Namen eines Fahrlehrers erwähnt, wird automatisch
+ * allen Kategorien zugeordnet, in denen dieser Fahrlehrer unterrichtet.
+ */
+const INSTRUCTOR_CATEGORIES: Record<string, string[]> = {
+  pascal:   ['zuerich', 'motorrad', 'motorrad-grundkurs', 'uster'],
+  vito:     ['zuerich', 'motorrad', 'motorrad-grundkurs'],
+  keni:     ['zuerich', 'spreitenbach', 'anhaenger'],
+  skender:  ['zuerich', 'spreitenbach', 'anhaenger'],
+  kenny:    ['zuerich', 'spreitenbach', 'anhaenger'],
+  rijad:    ['zuerich'],
+  samuel:   ['zuerich', 'dietikon'],
+  samir:    ['zuerich', 'birmensdorf'],
+  marc:     ['lachen', 'pfaeffikon', 'reichenburg', 'motorboot'],
+  sybille:  ['lachen', 'pfaeffikon', 'reichenburg'],
+  andré:    ['lachen', 'pfaeffikon', 'reichenburg'],
+  peter:    ['lachen', 'lastwagen', 'taxi'],
+  rahel:    ['taxi', 'lastwagen'],
+  tayfun:   ['spreitenbach'],
+  alexandra: ['auto-theorie'],
 }
 
 function getCategories(text: string): string[] {
-  const matched: string[] = []
+  const matched = new Set<string>()
+
+  // 1. Keyword-Matching (Kategorien, Fahrzeugtypen, Orte)
   for (const [category, pattern] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (pattern.test(text)) matched.push(category)
+    if (pattern.test(text)) matched.add(category)
   }
-  return matched.length > 0 ? matched : ['default']
+
+  // 2. Fahrlehrer-Matching: Wenn ein Fahrlehrer-Name im Review steht,
+  //    werden alle Kategorien dieses Fahrlehrers hinzugefügt.
+  const textLower = text.toLowerCase()
+  for (const [instructor, categories] of Object.entries(INSTRUCTOR_CATEGORIES)) {
+    // Ganzes Wort abgleichen um false positives zu vermeiden (z.B. "Pascal" != "pascals")
+    const regex = new RegExp(`\\b${instructor}\\b`, 'i')
+    if (regex.test(textLower)) {
+      for (const cat of categories) matched.add(cat)
+    }
+  }
+
+  return matched.size > 0 ? Array.from(matched) : ['default']
 }
 
 // ── Places API ────────────────────────────────────────────────────────────────
@@ -148,67 +191,88 @@ function epochToYearMonth(epoch: number): string {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log('📥  Driving Team Reviews Import (Places API)')
-  console.log('============================================')
+  console.log('📥  Driving Team Reviews Import (Places API + Smart Merge)')
+  console.log('============================================================')
 
   if (!PLACES_API_KEY) {
     console.error('❌  VITE_GOOGLE_MAPS_API_KEY not set')
     process.exit(1)
   }
 
-  const allCategorised: Record<string, CuratedReview[]> = { default: [] }
+  // Load existing curated reviews — these are preserved and only supplemented
+  let existing: Record<string, CuratedReview[]> = {}
+  try {
+    const raw = readFileSync(OUTPUT_PATH, 'utf-8')
+    existing = JSON.parse(raw)
+    const existingTotal = Object.values(existing).reduce((s, a) => s + a.length, 0)
+    console.log(`\n📂  Bestehende Reviews geladen: ${existingTotal} in ${Object.keys(existing).length} Kategorien`)
+  } catch {
+    console.log('\n📂  Keine bestehende Datei — wird neu erstellt')
+  }
+
+  const fresh: Record<string, CuratedReview[]> = {}
 
   for (const location of LOCATIONS) {
     console.log(`\n📍  ${location.label} (${location.placeId})`)
 
     const reviews = await fetchPlaceReviews(location.placeId)
-    console.log(`  ${reviews.length} Reviews geladen`)
+    console.log(`  ${reviews.length} Reviews von Places API`)
 
     const filtered = reviews.filter(r => r.rating >= 4 && r.text?.trim())
     console.log(`  Nach Filter (≥4 Sterne, mit Text): ${filtered.length}`)
 
     for (const r of filtered) {
-      const text = r.text
-      const categories = getCategories(text)
-
-      // Standort-Kategorie immer hinzufügen
-      if (!categories.includes(location.label)) {
-        categories.push(location.label)
-      }
+      const categories = getCategories(r.text)
+      if (!categories.includes(location.label)) categories.push(location.label)
 
       const curated: CuratedReview = {
-        text: toQuotedText(text),
+        text: toQuotedText(r.text),
         author: r.author_name,
         link: r.author_url || location.mapsUrl,
         datePublished: epochToYearMonth(r.time),
       }
 
       for (const cat of categories) {
-        if (!allCategorised[cat]) allCategorised[cat] = []
-        if (!allCategorised[cat].some(e => e.author === curated.author && e.text === curated.text)) {
-          allCategorised[cat].push(curated)
+        if (!fresh[cat]) fresh[cat] = []
+        if (!fresh[cat].some(e => e.author === curated.author)) {
+          fresh[cat].push(curated)
         }
       }
     }
-
-    console.log(`  ✅  ${location.label} importiert`)
+    console.log(`  ✅  importiert`)
   }
 
-  // Max 8 Reviews pro Kategorie, neueste zuerst
-  for (const cat of Object.keys(allCategorised)) {
-    allCategorised[cat] = allCategorised[cat]
+  // Smart Merge: fresh reviews + existing curated reviews, deduplicated
+  const merged: Record<string, CuratedReview[]> = { ...existing }
+
+  let newCount = 0
+  for (const [cat, freshReviews] of Object.entries(fresh)) {
+    if (!merged[cat]) merged[cat] = []
+    for (const r of freshReviews) {
+      const isDuplicate = merged[cat].some(e => e.author === r.author)
+      if (!isDuplicate) {
+        merged[cat].unshift(r) // neue Reviews vorne
+        newCount++
+        console.log(`  ➕  Neu in [${cat}]: ${r.author} (${r.datePublished})`)
+      }
+    }
+  }
+
+  // Sort by date desc, max 8 per category
+  for (const cat of Object.keys(merged)) {
+    merged[cat] = merged[cat]
       .sort((a, b) => b.datePublished.localeCompare(a.datePublished))
       .slice(0, 8)
   }
 
   mkdirSync(join(__dirname, '../../apps/website/data'), { recursive: true })
-  writeFileSync(OUTPUT_PATH, JSON.stringify(allCategorised, null, 2), 'utf-8')
+  writeFileSync(OUTPUT_PATH, JSON.stringify(merged, null, 2), 'utf-8')
 
-  const totalReviews = Object.values(allCategorised).reduce((sum, arr) => sum + arr.length, 0)
-  const categories = Object.keys(allCategorised).filter(k => allCategorised[k].length > 0)
+  const totalReviews = Object.values(merged).reduce((sum, arr) => sum + arr.length, 0)
+  const categories = Object.keys(merged).filter(k => merged[k].length > 0)
 
-  console.log('\n============================================')
-  console.log(`✅  Fertig: ${totalReviews} Reviews in ${categories.length} Kategorien`)
+  console.log('\n============================================================')
+  console.log(`✅  Fertig: ${totalReviews} Reviews in ${categories.length} Kategorien (${newCount} neu)`)
   console.log(`📁  Ausgabe: ${OUTPUT_PATH}`)
   console.log(`🏷️  Kategorien: ${categories.join(', ')}`)
 }
