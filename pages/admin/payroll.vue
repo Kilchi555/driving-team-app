@@ -691,6 +691,26 @@
                   </div>
                 </div>
 
+                <!-- Weitere Lohnbestandteile (bruttopflichtig) -->
+                <div v-if="salaryItems.length > 0" class="px-4 py-3">
+                  <div class="flex items-center justify-between mb-2">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Weitere Lohnbestandteile</p>
+                    <span class="text-xs font-bold text-amber-600">
+                      +CHF {{ salaryItems.reduce((s, i) => s + (i.amount_chf || 0), 0).toLocaleString('de-CH') }}/Mt. <span class="font-normal text-gray-400">(brutto)</span>
+                    </span>
+                  </div>
+                  <div class="space-y-1.5">
+                    <div v-for="item in salaryItems" :key="item.id"
+                      class="flex items-center justify-between rounded-xl border border-amber-100 bg-amber-50/50 px-3 py-2 text-xs">
+                      <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"></span>
+                        <span class="text-gray-700 font-medium">{{ item.description || 'Lohnzulage' }}</span>
+                      </div>
+                      <span class="font-mono font-bold text-amber-700">CHF {{ item.amount_chf.toLocaleString('de-CH') }}/Mt.</span>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Spesen & Kinderzulage -->
                 <div class="px-4 py-3">
                   <div class="flex items-center justify-between mb-2">
@@ -840,6 +860,48 @@
                   <p class="text-[11px] text-gray-400 mt-1.5">Altersgestaffelt: 25–34J: 7% · 35–44J: 10% · 45–54J: 15% · 55–65J: 18%</p>
                 </div>
 
+                <!-- Weitere Lohnbestandteile (bruttopflichtig) -->
+                <div>
+                  <div class="flex items-center justify-between mb-2.5">
+                    <p class="text-xs font-semibold text-gray-600">
+                      Weitere Lohnbestandteile
+                      <span class="text-gray-400 font-normal">(monatlich, bruttopflichtig)</span>
+                    </p>
+                    <button type="button" @click="addSalaryItem"
+                      class="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg px-2.5 py-1 transition-colors">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+                      </svg>
+                      Position hinzufügen
+                    </button>
+                  </div>
+                  <div v-if="salaryItems.length === 0"
+                    class="text-xs text-gray-400 italic text-center py-3 rounded-xl border border-dashed border-gray-200 bg-gray-50">
+                    Noch keine Lohnbestandteile — z.B. 13. Monatslohn, Bonus, Zulagen
+                  </div>
+                  <div class="space-y-2">
+                    <div v-for="(item, idx) in salaryItems" :key="item.id" class="flex items-center gap-2">
+                      <span class="text-xs text-gray-400 w-4 text-right flex-shrink-0 font-mono">{{ idx + 1 }}.</span>
+                      <input v-model="item.description" type="text" placeholder="z.B. 13. Monatslohn, Bonus"
+                        class="flex-1 min-w-0 border border-gray-200 bg-gray-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"/>
+                      <div class="relative w-28 flex-shrink-0">
+                        <span class="absolute left-2.5 top-2 text-xs text-gray-400">CHF</span>
+                        <input v-model.number="item.amount_chf" type="number" step="10" min="0" placeholder="0"
+                          class="w-full border border-gray-200 bg-gray-50 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"/>
+                      </div>
+                      <button type="button" @click="removeSalaryItem(item.id)"
+                        class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <p v-if="salaryItems.length > 0" class="text-[11px] text-amber-700 mt-1.5 bg-amber-50 rounded-lg px-2.5 py-1.5">
+                    Alle Sozialabzüge (AHV, ALV, BVG etc.) werden auf den Gesamtbetrag inkl. dieser Positionen berechnet.
+                  </p>
+                </div>
+
                 <!-- Spesen (mehrere mit Beschreibung) -->
                 <div>
                   <div class="flex items-center justify-between mb-2.5">
@@ -917,8 +979,17 @@
               {{ '' /* computed preview values */ }}
               <template v-if="preview">
                 <div class="flex justify-between text-gray-700 font-medium">
-                  <span>Bruttolohn</span><span>{{ chf(preview.gross) }}</span>
+                  <span>Grundlohn</span><span>{{ chf(preview.baseGross) }}</span>
                 </div>
+                <template v-if="salaryItems.length > 0">
+                  <div v-for="item in salaryItems" :key="item.id" class="flex justify-between text-amber-700">
+                    <span>+ {{ item.description || 'Lohnzulage' }} (brutto)</span>
+                    <span>+{{ chf(Math.round((item.amount_chf || 0) * 100)) }}</span>
+                  </div>
+                  <div class="flex justify-between text-gray-700 font-medium border-t border-gray-200 pt-1">
+                    <span>= Bruttolohn total</span><span>{{ chf(preview.gross) }}</span>
+                  </div>
+                </template>
                 <div class="flex justify-between text-red-600">
                   <span>- AHV/IV/EO Mitarbeiter ({{ (empForm as any).ahv_employee_rate_pct }}%)</span><span>-{{ chf(preview.ahv_an) }}</span>
                 </div>
@@ -948,7 +1019,7 @@
                   <span>= Auszahlung</span><span>{{ chf(preview.payout) }}</span>
                 </div>
                 <div class="border-t border-dashed border-gray-200 pt-1.5 mt-1">
-                  <p class="font-semibold text-gray-500 mb-1">Beiträge Firma (Arbeitgeberanteil)</p>
+                  <p class="font-semibold text-gray-500 mb-1">Beiträge Firma (Arbeitgeberanteil auf CHF {{ (preview.gross / 100).toLocaleString('de-CH') }})</p>
                   <div class="flex justify-between text-orange-600">
                     <span>+ AHV/IV/EO Firma ({{ (empForm as any).ahv_employer_rate_pct }}%)</span><span>+{{ chf(preview.ahv_ag) }}</span>
                   </div>
@@ -1071,6 +1142,7 @@ const empForm = ref({
 const empFormSalaryChf = ref<number | ''>('')
 const editingInsurance = ref(false)
 const spesenItems = ref<Array<{ id: string; description: string; amount_chf: number }>>([])
+const salaryItems = ref<Array<{ id: string; description: string; amount_chf: number }>>([])
 
 function r2(n: number | undefined | null): string {
   return parseFloat((Math.round((n ?? 0) * 100) / 100).toFixed(2)).toString().replace('.', ',')
@@ -1081,11 +1153,21 @@ function addSpesenItem() {
 function removeSpesenItem(id: string) {
   spesenItems.value = spesenItems.value.filter(i => i.id !== id)
 }
+function addSalaryItem() {
+  salaryItems.value.push({ id: `sl_${Date.now()}_${Math.random().toString(36).slice(2)}`, description: '', amount_chf: 0 })
+}
+function removeSalaryItem(id: string) {
+  salaryItems.value = salaryItems.value.filter(i => i.id !== id)
+}
 
 const preview = computed(() => {
-  const gross = Math.round(Number(empFormSalaryChf.value || 0) * 100)
-  if (!gross) return null
+  const baseGross = Math.round(Number(empFormSalaryChf.value || 0) * 100)
+  if (!baseGross) return null
   const f = empForm.value as any
+
+  // Additional taxable salary components (bruttopflichtig — all deductions apply)
+  const additionalSalaryRappen = salaryItems.value.reduce((s, i) => s + Math.round((i.amount_chf || 0) * 100), 0)
+  const gross = baseGross + additionalSalaryRappen
 
   const ahvAnRate = (f.ahv_employee_rate_pct ?? 5.3)  / 100
   const ahvAgRate = (f.ahv_employer_rate_pct ?? 5.3)  / 100
@@ -1114,8 +1196,8 @@ const preview = computed(() => {
   const bvg_ag  = r(coordinated * bvgAgRate)
   const total_employer = gross + ahv_ag + alv_ag + bu_ag + bvg_ag
 
-  return { gross, ahv_an, alv_an, nbu_an, bvg_an, net, spesen, kinderzulage: kizul, payout,
-    ahv_ag, alv_ag, bu_ag, bvg_ag, total_employer }
+  return { baseGross, additionalSalaryRappen, gross, ahv_an, alv_an, nbu_an, bvg_an, net,
+    spesen, kinderzulage: kizul, payout, ahv_ag, alv_ag, bu_ag, bvg_ag, total_employer }
 })
 
 // ─── Computed ─────────────────────────────────────────────────────────────────
@@ -1249,10 +1331,18 @@ async function openEmployeeModal(emp: PayrollEmployee | null) {
       : emp.monthly_spesen_rappen > 0
         ? [{ id: `sp_legacy_${Date.now()}`, description: 'Spesen', amount_chf: emp.monthly_spesen_rappen / 100 }]
         : []
+    // Init additional salary items (bruttopflichtig)
+    const rawSalaryItems = Array.isArray((emp as any).salary_items) ? (emp as any).salary_items : []
+    salaryItems.value = rawSalaryItems.map((s: any, i: number) => ({
+      id: s.id ?? `sl_${Date.now()}_${i}`,
+      description: s.description ?? '',
+      amount_chf: typeof s.amount_chf === 'number' ? s.amount_chf : 0,
+    }))
   } else {
     empForm.value = toForm({})
     empFormSalaryChf.value = ''
     spesenItems.value = []
+    salaryItems.value = []
     await loadStaffUsers()
   }
   editingInsurance.value = false
@@ -1310,6 +1400,7 @@ async function saveEmployee() {
       monthly_spesen_rappen:   spesenItems.value.reduce((s, i) => s + Math.round((i.amount_chf || 0) * 100), 0),
       child_allowance_rappen:  Math.round((empForm.value as any).child_allowance_chf  * 100),
       spesen_items:            spesenItems.value.map(i => ({ id: i.id, description: i.description, amount_chf: i.amount_chf })),
+      salary_items:            salaryItems.value.map(i => ({ id: i.id, description: i.description, amount_chf: i.amount_chf })),
     }
     if (editingEmployee.value) {
       await $fetch(`/api/admin/payroll/employees/${editingEmployee.value.id}`, { method: 'PATCH', body: payload })
