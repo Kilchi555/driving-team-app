@@ -143,24 +143,68 @@
 
     <!-- ═══ MONATSBALKEN (mini chart) ═══ -->
     <div v-if="monthly.length" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-      <p class="text-sm font-semibold text-gray-700 mb-4">Monatliche Übersicht {{ selectedYear }}</p>
+      <div class="flex items-center justify-between mb-4">
+        <p class="text-sm font-semibold text-gray-700">Monatliche Übersicht {{ selectedYear }}</p>
+        <button v-if="selectedMonth" @click="selectedMonth = ''"
+          class="text-xs text-gray-400 hover:text-gray-700 flex items-center gap-1 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+          Filter zurücksetzen
+        </button>
+      </div>
       <div class="flex items-end gap-1.5 h-28 overflow-x-auto pb-1">
-        <div v-for="m in monthly" :key="m.month" class="flex-1 min-w-[36px] flex flex-col items-center gap-1">
-          <div class="w-full flex flex-col items-center gap-0.5">
-            <div class="w-full rounded-t"
+        <div v-for="m in monthly" :key="m.month"
+          class="flex-1 min-w-[36px] flex flex-col items-center gap-1 cursor-pointer group"
+          @click="selectedMonth = selectedMonth === String(m.month) ? '' : String(m.month)">
+          <div class="w-full flex flex-col items-center gap-0.5 transition-opacity"
+            :class="selectedMonth && selectedMonth !== String(m.month) ? 'opacity-30' : ''">
+            <div class="w-full rounded-t transition-all group-hover:brightness-90"
               :style="{ height: barHeight(m.income_rappen) + 'px', background: '#10b981', minHeight: m.income_rappen > 0 ? '3px' : '0' }"
               :title="`Einnahmen: ${chf(m.income_rappen)}`"></div>
-            <div class="w-full rounded-t"
+            <div class="w-full rounded-t transition-all group-hover:brightness-90"
               :style="{ height: barHeight(m.expense_rappen) + 'px', background: '#ef4444', minHeight: m.expense_rappen > 0 ? '3px' : '0' }"
               :title="`Ausgaben: ${chf(m.expense_rappen)}`"></div>
           </div>
-          <span class="text-[10px] text-gray-400 leading-none">{{ m.label }}</span>
+          <span class="text-[10px] leading-none transition-colors"
+            :class="selectedMonth === String(m.month) ? 'text-emerald-600 font-bold' : 'text-gray-400 group-hover:text-gray-600'">
+            {{ m.label }}
+          </span>
         </div>
       </div>
       <div class="flex items-center gap-4 mt-3">
         <span class="flex items-center gap-1.5 text-xs text-gray-500"><span class="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span>Einnahmen</span>
         <span class="flex items-center gap-1.5 text-xs text-gray-500"><span class="w-3 h-3 rounded-sm bg-red-500 inline-block"></span>Ausgaben</span>
+        <span v-if="!selectedMonth" class="text-xs text-gray-400 ml-auto">Monat anklicken für Details</span>
       </div>
+
+      <!-- Monats-Zusammenfassung (erscheint beim Klick) -->
+      <transition name="fade">
+        <div v-if="selectedMonthData" class="mt-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+          <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
+            {{ selectedMonthData.label }} {{ selectedYear }} — Zusammenfassung
+          </p>
+          <div class="grid grid-cols-3 gap-3">
+            <div class="bg-white rounded-xl border border-emerald-100 px-3 py-2.5">
+              <p class="text-[10px] font-semibold text-emerald-600 uppercase tracking-wide mb-1">Einnahmen</p>
+              <p class="text-base font-bold text-emerald-700">{{ chf(selectedMonthData.income_rappen) }}</p>
+            </div>
+            <div class="bg-white rounded-xl border border-red-100 px-3 py-2.5">
+              <p class="text-[10px] font-semibold text-red-500 uppercase tracking-wide mb-1">Ausgaben</p>
+              <p class="text-base font-bold text-red-600">{{ chf(selectedMonthData.expense_rappen) }}</p>
+            </div>
+            <div class="bg-white rounded-xl px-3 py-2.5"
+              :class="selectedMonthData.result_rappen >= 0 ? 'border border-emerald-100' : 'border border-red-100'">
+              <p class="text-[10px] font-semibold uppercase tracking-wide mb-1"
+                :class="selectedMonthData.result_rappen >= 0 ? 'text-emerald-600' : 'text-red-500'">Ergebnis</p>
+              <p class="text-base font-bold"
+                :class="selectedMonthData.result_rappen >= 0 ? 'text-emerald-700' : 'text-red-600'">
+                {{ selectedMonthData.result_rappen >= 0 ? '+' : '' }}{{ chf(selectedMonthData.result_rappen) }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </transition>
     </div>
 
     <!-- ═══ FILTER + TABELLE ═══ -->
@@ -646,6 +690,12 @@ const selectedYear = ref(now.getFullYear())
 const selectedMonth = ref('')
 const availableYears = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i)
 
+const selectedMonthData = computed(() =>
+  selectedMonth.value
+    ? monthly.value.find(m => String(m.month) === selectedMonth.value) ?? null
+    : null
+)
+
 // ─── Pending staff expenses ───────────────────────────────────────────────────
 interface PendingExpense {
   id: string
@@ -1072,3 +1122,8 @@ async function downloadPain001() {
   }
 }
 </script>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-4px); }
+</style>
