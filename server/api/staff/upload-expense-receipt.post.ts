@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
     .from('receipts')
     .upload(storagePath, file.data, { contentType: file.type ?? 'image/jpeg', upsert: false })
 
-  if (uploadError) throw createError({ statusCode: 500, statusMessage: uploadError.message })
+  if (uploadError) throw createError({ statusCode: 500, statusMessage: `Upload fehlgeschlagen (receipts/${storagePath}): ${uploadError.message}` })
 
   const { data: publicUrl } = supabase.storage
     .from('receipts')
