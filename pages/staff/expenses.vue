@@ -67,7 +67,7 @@
           <div class="relative">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">CHF</span>
             <input v-model="form.amount_chf" type="number" step="0.05" min="0.05" placeholder="0.00"
-              class="w-full pl-14 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-right font-semibold"/>
+              class="w-full pl-14 pr-4 py-2.5 border border-gray-200 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-emerald-500 text-right font-semibold"/>
           </div>
         </div>
 
@@ -75,21 +75,21 @@
         <div>
           <label class="block text-xs font-medium text-gray-500 mb-1">Beschreibung <span class="text-red-500">*</span></label>
           <input v-model="form.description" type="text" placeholder="z.B. Parkgebühr Kundentermin, Druckerpapier…"
-            class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+            class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[16px] focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
         </div>
 
         <!-- Date -->
         <div>
           <label class="block text-xs font-medium text-gray-500 mb-1">Datum</label>
           <input v-model="form.entry_date" type="date"
-            class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+            class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[16px] focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
         </div>
 
         <!-- Notes (optional) -->
         <div>
           <label class="block text-xs font-medium text-gray-500 mb-1">Bemerkung <span class="text-gray-400">(optional)</span></label>
           <textarea v-model="form.notes" rows="2" placeholder="Weitere Infos für die Administration…"
-            class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"/>
+            class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[16px] focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"/>
         </div>
 
         <p v-if="submitError" class="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{{ submitError }}</p>
