@@ -88,6 +88,13 @@
             <span class="text-xs" :class="parseHint.includes('erkannt') && !parseHint.includes('prüfen') ? 'text-emerald-600' : 'text-amber-600'">{{ parseHint }}</span>
           </div>
 
+          <!-- QR-Rechnung Infos -->
+          <div v-if="ocrExtras.iban || ocrExtras.reference" class="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5 space-y-1">
+            <p class="text-[11px] font-semibold text-blue-600 uppercase tracking-wide">QR-Rechnung erkannt</p>
+            <p v-if="ocrExtras.iban" class="text-xs text-blue-800 font-mono">{{ ocrExtras.iban }}</p>
+            <p v-if="ocrExtras.reference" class="text-xs text-blue-700">Ref: {{ ocrExtras.reference }}</p>
+          </div>
+
           <!-- Amount -->
           <div>
             <label class="block text-xs font-medium text-gray-500 mb-1">Betrag <span class="text-red-500">*</span></label>
@@ -210,6 +217,8 @@ const form = ref({
   receipt_filename: '',
 })
 
+const ocrExtras = ref<{ iban: string | null; reference: string | null }>({ iban: null, reference: null })
+
 const fileInput    = ref<HTMLInputElement | null>(null)
 const uploading    = ref(false)
 const uploadError  = ref('')
@@ -227,6 +236,7 @@ function resetReceipt() {
   form.value.receipt_url = ''
   form.value.receipt_filename = ''
   parseHint.value = ''
+  ocrExtras.value = { iban: null, reference: null }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -262,15 +272,10 @@ async function uploadReceipt(e: Event) {
           '/api/staff/parse-receipt', { method: 'POST', body: { receipt_url: form.value.receipt_url } }
         )
         const d = ocr.data
-        if (d.amount_chf && !form.value.amount_chf) {
-          form.value.amount_chf = d.amount_chf
-        }
-        if (d.date && form.value.entry_date === new Date().toISOString().split('T')[0]) {
-          form.value.entry_date = d.date
-        }
-        if (d.merchant && !form.value.description) {
-          form.value.description = d.merchant
-        }
+        if (d.amount_chf && !form.value.amount_chf) form.value.amount_chf = d.amount_chf
+        if (d.date && form.value.entry_date === new Date().toISOString().split('T')[0]) form.value.entry_date = d.date
+        if (d.merchant && !form.value.description) form.value.description = d.merchant
+        ocrExtras.value = { iban: d.iban ?? null, reference: d.reference ?? null }
         const filled = [d.amount_chf, d.date, d.merchant].filter(Boolean).length
         parseHint.value = filled > 0
           ? `Automatisch erkannt${d.confidence === 'low' ? ' (bitte prüfen)' : ''}`

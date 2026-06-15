@@ -22,26 +22,13 @@ export default defineEventHandler(async (event) => {
   const storagePath = `${profile.tenant_id}/accounting/staff/${fileName}`
 
   const { data: uploadData, error: uploadError } = await supabase.storage
-    .from('tenant-documents')
+    .from('receipts')
     .upload(storagePath, file.data, { contentType: file.type ?? 'image/jpeg', upsert: false })
 
-  if (uploadError) {
-    const { data: fallback, error: fallbackError } = await supabase.storage
-      .from('user-documents')
-      .upload(`accounting/staff/${profile.tenant_id}/${fileName}`, file.data, {
-        contentType: file.type ?? 'image/jpeg', upsert: false,
-      })
-    if (fallbackError) throw createError({ statusCode: 500, statusMessage: fallbackError.message })
-
-    const { data: signed } = await supabase.storage
-      .from('user-documents')
-      .createSignedUrl(`accounting/staff/${profile.tenant_id}/${fileName}`, 60 * 60 * 24 * 365)
-
-    return { success: true, url: signed?.signedUrl, filename: file.filename ?? fileName }
-  }
+  if (uploadError) throw createError({ statusCode: 500, statusMessage: uploadError.message })
 
   const { data: publicUrl } = supabase.storage
-    .from('tenant-documents')
+    .from('receipts')
     .getPublicUrl(uploadData.path)
 
   return { success: true, url: publicUrl.publicUrl, filename: file.filename ?? fileName }
