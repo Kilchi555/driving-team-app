@@ -100,8 +100,6 @@ const INSTRUCTOR_CATEGORIES: Record<string, string[]> = {
   keni:      ['zuerich', 'spreitenbach', 'anhaenger'],
   skender:   ['zuerich', 'spreitenbach', 'anhaenger'],
   kenny:     ['zuerich', 'spreitenbach', 'anhaenger'],
-  rijad:     ['zuerich'],
-  samuel:    ['zuerich', 'dietikon'],
   samir:     ['zuerich', 'birmensdorf'],
   marc:      ['lachen', 'pfaeffikon', 'reichenburg', 'motorboot'],
   peter:     ['lachen', 'lastwagen', 'taxi'],
