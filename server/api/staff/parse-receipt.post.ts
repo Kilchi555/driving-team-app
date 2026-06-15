@@ -25,6 +25,25 @@ export default defineEventHandler(async (event) => {
 
   const client = new OpenAI({ apiKey })
 
+  // Download the image server-side and send as base64 so OpenAI can always access it
+  // regardless of whether the Supabase bucket is publicly readable.
+  let imageContent: { type: 'image_url'; image_url: { url: string; detail: 'low' } }
+  try {
+    const imgRes = await fetch(receipt_url)
+    if (!imgRes.ok) throw new Error(`HTTP ${imgRes.status}`)
+    const contentType = imgRes.headers.get('content-type') || 'image/jpeg'
+    const buffer = await imgRes.arrayBuffer()
+    const base64 = Buffer.from(buffer).toString('base64')
+    const mimeType = contentType.split(';')[0].trim()
+    // For PDFs, OpenAI Vision doesn't support them — skip and return empty result
+    if (mimeType === 'application/pdf') {
+      return { success: true, data: { amount_chf: null, date: null, merchant: null, confidence: 'low' } }
+    }
+    imageContent = { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}`, detail: 'low' } }
+  } catch (fetchErr: any) {
+    throw createError({ statusCode: 502, statusMessage: `Could not fetch receipt image: ${fetchErr.message}` })
+  }
+
   const response = await client.chat.completions.create({
     model: 'gpt-4o-mini',
     max_tokens: 300,
@@ -44,10 +63,7 @@ Only return the JSON, no explanation.`,
       {
         role: 'user',
         content: [
-          {
-            type: 'image_url',
-            image_url: { url: receipt_url, detail: 'low' },
-          },
+          imageContent,
           {
             type: 'text',
             text: 'Extract the total amount, date, and merchant from this receipt.',
