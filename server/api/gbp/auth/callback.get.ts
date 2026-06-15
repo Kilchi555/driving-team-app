@@ -30,8 +30,8 @@ export default defineEventHandler(async (event) => {
     return sendRedirect(event, `${appUrl}/admin/google-business-profile?gbp=error&reason=invalid_state`)
   }
 
-  const clientId = process.env.GOOGLE_GBP_CLIENT_ID
-  const clientSecret = process.env.GOOGLE_GBP_CLIENT_SECRET
+  const clientId = process.env.GOOGLE_GBP_CLIENT_ID?.trim()
+  const clientSecret = process.env.GOOGLE_GBP_CLIENT_SECRET?.trim()
   if (!clientId || !clientSecret) {
     console.error('[GBP callback] Missing env vars: GOOGLE_GBP_CLIENT_ID or GOOGLE_GBP_CLIENT_SECRET')
     return sendRedirect(event, `${appUrl}/admin/google-business-profile?gbp=error&reason=server_config`)

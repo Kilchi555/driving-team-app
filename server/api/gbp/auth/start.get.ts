@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
   if (!authUser?.tenant_id) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   await requireFeature(authUser.tenant_id, 'gbp_enabled')
 
-  const clientId = process.env.GOOGLE_GBP_CLIENT_ID
+  const clientId = process.env.GOOGLE_GBP_CLIENT_ID?.trim()
   if (!clientId) throw createError({ statusCode: 500, statusMessage: 'GBP client ID not configured' })
 
   const appUrl = getAppUrl()
