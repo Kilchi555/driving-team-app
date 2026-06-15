@@ -80,7 +80,7 @@
     <AusbildungsthemenSection location="Spreitenbach" />
 
     <!-- 7. Reviews -->
-    <ReviewsSection category="aargau" />
+    <ReviewsSection category="spreitenbach" />
 
     <!-- 8. CTA -->
     <CtaSection title="Jetzt in Spreitenbach starten!" />
