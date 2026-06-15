@@ -668,19 +668,19 @@
                 <!-- BVG -->
                 <div class="px-4 py-3">
                   <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">2. Säule BVG</p>
-                  <div class="grid grid-cols-3 gap-2">
+                  <div class="grid grid-cols-2 gap-2 mb-2">
                     <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
-                      <span class="text-gray-500"><span class="text-blue-600 font-semibold">AN</span></span>
+                      <span class="text-gray-500">Beitrag <span class="text-blue-600 font-semibold">Mitarb.</span></span>
                       <span class="font-mono font-bold text-gray-800">{{ r2((empForm as any).bvg_employee_rate_pct) }}%</span>
                     </div>
                     <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
-                      <span class="text-gray-500"><span class="text-orange-500 font-semibold">AG</span></span>
+                      <span class="text-gray-500">Beitrag <span class="text-orange-500 font-semibold">Firma</span></span>
                       <span class="font-mono font-bold text-gray-800">{{ r2((empForm as any).bvg_employer_rate_pct) }}%</span>
                     </div>
-                    <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
-                      <span class="text-gray-500 truncate">Koord.</span>
-                      <span class="font-mono font-bold text-gray-800">{{ ((empForm as any).bvg_coordination_chf ?? 2205).toLocaleString('de-CH') }}</span>
-                    </div>
+                  </div>
+                  <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
+                    <span class="text-gray-500">Koordinationsabzug <span class="text-gray-400 font-normal">(Brutto − BVG-Lohn)</span></span>
+                    <span class="font-mono font-bold text-gray-800">CHF {{ ((empForm as any).bvg_coordination_chf ?? 2205).toLocaleString('de-CH') }}<span class="text-gray-400 font-normal">/Mt.</span></span>
                   </div>
                 </div>
 
