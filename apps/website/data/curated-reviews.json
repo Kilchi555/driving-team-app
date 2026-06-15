@@ -1,122 +1,656 @@
 {
   "default": [
-    { "text": "„Einfach super! Ich bin vor allem Skender/Kenny für immer dankbar, dass er mir das Fahren geduldig, sicher und super beigebracht hat. Die Fahrschule ist wärmstens zu empfehlen.”", "author": "A. K", "link": "https://www.google.com/maps/contrib/112355944016219902917/reviews", "datePublished": "2026-06" },
-    { "text": "„Lieber Pascal – heute hab ich die Prüfung bestanden. Du hast mich perfekt vorbereitet… vielen Dank und dir allzeit gute Fahrt!”", "author": "moritz wittlinger", "link": "https://www.google.com/maps/contrib/113678248630053211999/reviews", "datePublished": "2026-05" },
-    { "text": "„Sehr professionell und Keny einer der ruhigsten, besten Fahrlehrer – einfach zum Weiterempfehlen.”", "author": "Kevin Meinen", "link": "https://www.google.com/maps/contrib/116832201590602675372/reviews", "datePublished": "2026-05" },
-    { "text": "„Ich habe dank Keni meine Anhängerprüfung erfolgreich bestanden. Er hat sich viel Zeit für mich genommen und mir die Manöver anschaulich erklärt.”", "author": "Marco S.", "link": "https://maps.app.goo.gl/pQeWXsGGTuSZW45d8", "datePublished": "2025-03" },
-    { "text": "„Sehr gute Fahrschule! Mein Fahrlehrer war Rijad, und ich hatte stets eine ausgezeichnete Zeit während meiner Fahrstunden. Rijad gab mir immer präzise und hilfreiche Tipps.”", "author": "Noel S.", "link": "https://maps.app.goo.gl/Xb18G3mEymJjCoweA", "datePublished": "2025-01" },
-    { "text": "„Das Driving Team Zürich ist eine moderne, tolle, sehr kompetente Fahrschule. Die Fahrlehrer sind sehr nett und geduldig.”", "author": "Anna B.", "link": "https://maps.app.goo.gl/ARqgauxXaNGpXg6k8", "datePublished": "2024-11" },
-    { "text": "„Super Fahrschule! Ich hatte mit Keni Fahrstunden, welcher diese lustig und spannend gestaltete. Konnte immer positiv denken.”", "author": "Anita D.", "link": "https://maps.app.goo.gl/utGTjstBEJJHsTCs5", "datePublished": "2024-09" },
-    { "text": "„Die Fahrschule war ausgezeichnet, und mein Fahrlehrer Vito war äusserst hilfreich bei meiner Vorbereitung auf die Fahrprüfung.”", "author": "Kiran J.", "link": "https://maps.app.goo.gl/FLY2pkfazDEW3iwu8", "datePublished": "2024-07" }
+    {
+      "text": "„Einfach super! Ich bin vor allem Skender/Kenny für immer dankbar, dass er mir das Fahren geduldig, sicher und super beigebracht hat. Die Fahrschule ist wärmstens zu empfehlen.”",
+      "author": "A. K",
+      "link": "https://www.google.com/maps/contrib/112355944016219902917/reviews",
+      "datePublished": "2026-06"
+    },
+    {
+      "text": "„Von Anfang an habe ich mich gut aufgehoben gefühlt. Was mich besonders beeindruckt hat, war die ruhige und geduldige Art des Fahrlehrers.\n\nEs war strukturiert, verständlich und hat wirklich Spass gemacht. Ich kann diese Fahrschule jedem empfehlen, der entspannt und effektiv das Fahren lernen möchte!\"",
+      "author": "Gioacchino Romualdi",
+      "link": "https://www.google.com/maps/contrib/115108608537504295185/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Top gsi\"",
+      "author": "Mohammed Alobeid",
+      "link": "https://www.google.com/maps/contrib/111286841440004755789/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Lieber Pascal – heute hab ich die Prüfung bestanden. Du hast mich perfekt vorbereitet… vielen Dank und dir allzeit gute Fahrt!”",
+      "author": "moritz wittlinger",
+      "link": "https://www.google.com/maps/contrib/113678248630053211999/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Sehr professionell und Keny einer der ruhigsten, besten Fahrlehrer – einfach zum Weiterempfehlen.”",
+      "author": "Kevin Meinen",
+      "link": "https://www.google.com/maps/contrib/116832201590602675372/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Ich habe dank Keni meine Anhängerprüfung erfolgreich bestanden. Er hat sich viel Zeit für mich genommen und mir die Manöver anschaulich erklärt.”",
+      "author": "Marco S.",
+      "link": "https://maps.app.goo.gl/pQeWXsGGTuSZW45d8",
+      "datePublished": "2025-03"
+    },
+    {
+      "text": "„Sehr gute Fahrschule! Mein Fahrlehrer war Rijad, und ich hatte stets eine ausgezeichnete Zeit während meiner Fahrstunden. Rijad gab mir immer präzise und hilfreiche Tipps.”",
+      "author": "Noel S.",
+      "link": "https://maps.app.goo.gl/Xb18G3mEymJjCoweA",
+      "datePublished": "2025-01"
+    },
+    {
+      "text": "„Das Driving Team Zürich ist eine moderne, tolle, sehr kompetente Fahrschule. Die Fahrlehrer sind sehr nett und geduldig.”",
+      "author": "Anna B.",
+      "link": "https://maps.app.goo.gl/ARqgauxXaNGpXg6k8",
+      "datePublished": "2024-11"
+    }
   ],
   "motorrad": [
-    { "text": "„Die Motorrad-Fahrstunden bei Pascal waren extrem lehrreich und massgeblich für meine erfolgreiche Motorrad-Führerprüfung. Pascal als Fahrlehrer kann ich nur wärmstens empfehlen. Sehr kompetent, sympathisch und freundlich.”", "author": "Filip B.", "link": "https://maps.app.goo.gl/pQeWXsGGTuSZW45d8", "datePublished": "2025-02" },
-    { "text": "„Motorrad-Prüfung bestanden! Danke Pascal! Der Grundkurs und die Fahrstunden waren sehr lehrreich und haben vor allem auch Spass gemacht. Pascals ruhige und gelassene Art vermittelt Sicherheit.”", "author": "Irena D.", "link": "https://maps.app.goo.gl/utGTjstBEJJHsTCs5", "datePublished": "2025-01" },
-    { "text": "„Habe die Motorrad und die Anhänger Prüfung gemacht. Das Fachwissen der Fahrlehrer ist sehr gross, keine Frage blieb unbeantwortet. Habe beides beim 1. Mal bestanden!”", "author": "Tim S.", "link": "https://maps.app.goo.gl/JySCg2PnpDnQzZnu8", "datePublished": "2024-10" },
-    { "text": "„Eine sehr gute Fahrschule und ein cooles Team. Pascal ist ein sehr kompetenter und humorvoller Fahrlehrer. Er hat mich gut auf die Motorrad-Prüfung vorbereitet.”", "author": "Terry T.", "link": "https://maps.app.goo.gl/2BPHzr6DBZg74RSQ6", "datePublished": "2024-08" },
-    { "text": "„Ich kann die Fahrschule nur weiter empfehlen, habe bei der Fahrschule Kategorie B und A erfolgreich abgeschlossen. Vito und Pascal sind wirklich tolle Fahrlehrer.”", "author": "Cristian A.", "link": "https://maps.app.goo.gl/Xb18G3mEymJjCoweA", "datePublished": "2024-06" }
+    {
+      "text": "„Super Kursleiter (Pascal Germann)!\nWar sehr Informativ, machte Spass & war toll!\"",
+      "author": "Lyan Knöpfli",
+      "link": "https://www.google.com/maps/contrib/112524906871664952116/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Lieber Pascal - heute hab ich die Prüfung bestanden. Du hast mich perfekt vorbereitet… vielen Dank und dir allzeit gute Fahrt! Moritz\"",
+      "author": "moritz wittlinger",
+      "link": "https://www.google.com/maps/contrib/113678248630053211999/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Die Motorrad-Fahrstunden bei Pascal waren extrem lehrreich und massgeblich für meine erfolgreiche Motorrad-Führerprüfung. Pascal als Fahrlehrer kann ich nur wärmstens empfehlen. Sehr kompetent, sympathisch und freundlich.”",
+      "author": "Filip B.",
+      "link": "https://maps.app.goo.gl/pQeWXsGGTuSZW45d8",
+      "datePublished": "2025-02"
+    },
+    {
+      "text": "„Motorrad-Prüfung bestanden! Danke Pascal! Der Grundkurs und die Fahrstunden waren sehr lehrreich und haben vor allem auch Spass gemacht. Pascals ruhige und gelassene Art vermittelt Sicherheit.”",
+      "author": "Irena D.",
+      "link": "https://maps.app.goo.gl/utGTjstBEJJHsTCs5",
+      "datePublished": "2025-01"
+    },
+    {
+      "text": "„Habe die Motorrad und die Anhänger Prüfung gemacht. Das Fachwissen der Fahrlehrer ist sehr gross, keine Frage blieb unbeantwortet. Habe beides beim 1. Mal bestanden!”",
+      "author": "Tim S.",
+      "link": "https://maps.app.goo.gl/JySCg2PnpDnQzZnu8",
+      "datePublished": "2024-10"
+    },
+    {
+      "text": "„Eine sehr gute Fahrschule und ein cooles Team. Pascal ist ein sehr kompetenter und humorvoller Fahrlehrer. Er hat mich gut auf die Motorrad-Prüfung vorbereitet.”",
+      "author": "Terry T.",
+      "link": "https://maps.app.goo.gl/2BPHzr6DBZg74RSQ6",
+      "datePublished": "2024-08"
+    },
+    {
+      "text": "„Ich kann die Fahrschule nur weiter empfehlen, habe bei der Fahrschule Kategorie B und A erfolgreich abgeschlossen. Vito und Pascal sind wirklich tolle Fahrlehrer.”",
+      "author": "Cristian A.",
+      "link": "https://maps.app.goo.gl/Xb18G3mEymJjCoweA",
+      "datePublished": "2024-06"
+    },
+    {
+      "text": "„Absolut empfehlenswert. Ich habe meinen Grundkurs und einen Teil der Prüfungsvorbereitung bei Pascal absolviert. Er war geduldig, konstruktiv und kompetent – ​​ein hervorragender Unterrichtsstil.\"",
+      "author": "J",
+      "link": "https://www.google.com/maps/contrib/114213324153976840085/reviews",
+      "datePublished": "2024-04"
+    }
   ],
   "motorrad-grundkurs": [
-    { "text": "„Die Motorrad-Fahrstunden bei Pascal waren extrem lehrreich und massgeblich für meine erfolgreiche Motorrad-Führerprüfung. Sehr kompetent, sympathisch und freundlich.”", "author": "Filip B.", "link": "https://maps.app.goo.gl/pQeWXsGGTuSZW45d8", "datePublished": "2025-02" },
-    { "text": "„Wir können die Fahrschule Driving Team Zürich wärmstens empfehlen. Vito ist ein super toller Fahrlehrer. Der Grundkurs hat sehr viel Spass gemacht!”", "author": "Kpsc", "link": "https://maps.app.goo.gl/2BPHzr6DBZg74RSQ6", "datePublished": "2024-12" },
-    { "text": "„Ich habe den Grundkurs fürs Motorrad bei Driving Team Zürich absolviert. Es hat sehr Spass gemacht und ich habe vieles dazu gelernt. Vito ist wie eine Nadel im Heuhaufen.”", "author": "Marco C.", "link": "https://maps.app.goo.gl/ARqgauxXaNGpXg6k8", "datePublished": "2024-09" },
-    { "text": "„Motorrad-Prüfung bestanden! Danke Pascal! Der Grundkurs und die Fahrstunden waren sehr lehrreich. Pascals ruhige und gelassene Art vermittelt Sicherheit.”", "author": "Irena D.", "link": "https://maps.app.goo.gl/utGTjstBEJJHsTCs5", "datePublished": "2025-01" },
-    { "text": "„Absolut empfehlenswert. Ich habe meinen Grundkurs und einen Teil der Prüfungsvorbereitung bei Pascal absolviert. Er war geduldig, konstruktiv und kompetent.”", "author": "J", "link": "https://www.google.com/maps/contrib/114213324153976840085/reviews", "datePublished": "2024-04" }
+    {
+      "text": "„Super Kursleiter (Pascal Germann)!\nWar sehr Informativ, machte Spass & war toll!\"",
+      "author": "Lyan Knöpfli",
+      "link": "https://www.google.com/maps/contrib/112524906871664952116/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Lieber Pascal - heute hab ich die Prüfung bestanden. Du hast mich perfekt vorbereitet… vielen Dank und dir allzeit gute Fahrt! Moritz\"",
+      "author": "moritz wittlinger",
+      "link": "https://www.google.com/maps/contrib/113678248630053211999/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Die Motorrad-Fahrstunden bei Pascal waren extrem lehrreich und massgeblich für meine erfolgreiche Motorrad-Führerprüfung. Sehr kompetent, sympathisch und freundlich.”",
+      "author": "Filip B.",
+      "link": "https://maps.app.goo.gl/pQeWXsGGTuSZW45d8",
+      "datePublished": "2025-02"
+    },
+    {
+      "text": "„Motorrad-Prüfung bestanden! Danke Pascal! Der Grundkurs und die Fahrstunden waren sehr lehrreich. Pascals ruhige und gelassene Art vermittelt Sicherheit.”",
+      "author": "Irena D.",
+      "link": "https://maps.app.goo.gl/utGTjstBEJJHsTCs5",
+      "datePublished": "2025-01"
+    },
+    {
+      "text": "„Wir können die Fahrschule Driving Team Zürich wärmstens empfehlen. Vito ist ein super toller Fahrlehrer. Der Grundkurs hat sehr viel Spass gemacht!”",
+      "author": "Kpsc",
+      "link": "https://maps.app.goo.gl/2BPHzr6DBZg74RSQ6",
+      "datePublished": "2024-12"
+    },
+    {
+      "text": "„Ich habe den Grundkurs fürs Motorrad bei Driving Team Zürich absolviert. Es hat sehr Spass gemacht und ich habe vieles dazu gelernt. Vito ist wie eine Nadel im Heuhaufen.”",
+      "author": "Marco C.",
+      "link": "https://maps.app.goo.gl/ARqgauxXaNGpXg6k8",
+      "datePublished": "2024-09"
+    },
+    {
+      "text": "„Absolut empfehlenswert. Ich habe meinen Grundkurs und einen Teil der Prüfungsvorbereitung bei Pascal absolviert. Er war geduldig, konstruktiv und kompetent.”",
+      "author": "J",
+      "link": "https://www.google.com/maps/contrib/114213324153976840085/reviews",
+      "datePublished": "2024-04"
+    },
+    {
+      "text": "„Die beste Fahrschule überhaupt! Das Team ist super freundlich und sehr engagiert! Dank Pascal habe ich heute die Fahrprüfung bestanden und bin so glücklich, dass ich bei diesem tollen Team lernen durfte. Vielen Dank! 🙏❤️\"",
+      "author": "Chihab Moumni",
+      "link": "https://www.google.com/maps/contrib/117502880664725104673/reviews",
+      "datePublished": "2023-11"
+    }
   ],
   "motorboot": [
-    { "text": "„Top Bootsfahrschule am Zürichsee! Marc ist sehr geduldig und kann die Inhalte sehr verständlich vermitteln. Flexibel in den Fahrstundenzeiten (auch abends und Samstag).”", "author": "Fipos L.", "link": "https://maps.app.goo.gl/GZRZ9bTeb5CBuXYeA", "datePublished": "2024-08" },
-    { "text": "„Diesen Sommer habe ich dank Marc die Bootsprüfung beim ersten Mal bestanden. Super Ausbildung, Fahrstunden waren auch an Randzeiten möglich. Top modernes Motorboot.”", "author": "Gustav G.", "link": "https://maps.app.goo.gl/twt4ArVToBoSuD8Z8", "datePublished": "2024-07" },
-    { "text": "„Sehr angenehme und professionelle Bootsfahrschule. Dankeschön.”", "author": "Fabian K.", "link": "https://maps.app.goo.gl/29QBxJaRnLKF2jdd9", "datePublished": "2024-05" },
-    { "text": "„Sensationelle Bootsfahrlehrer!”", "author": "Fabian Z.", "link": "https://maps.app.goo.gl/U3u2aUhA8TZtzxoQ7", "datePublished": "2024-03" }
+    {
+      "text": "„Top Bootsfahrschule am Zürichsee! Marc ist sehr geduldig und kann die Inhalte sehr verständlich vermitteln. Flexibel in den Fahrstundenzeiten (auch abends und Samstag).”",
+      "author": "Fipos L.",
+      "link": "https://maps.app.goo.gl/GZRZ9bTeb5CBuXYeA",
+      "datePublished": "2024-08"
+    },
+    {
+      "text": "„Diesen Sommer habe ich dank Marc die Bootsprüfung beim ersten Mal bestanden. Super Ausbildung, Fahrstunden waren auch an Randzeiten möglich. Top modernes Motorboot.”",
+      "author": "Gustav G.",
+      "link": "https://maps.app.goo.gl/twt4ArVToBoSuD8Z8",
+      "datePublished": "2024-07"
+    },
+    {
+      "text": "„Sehr angenehme und professionelle Bootsfahrschule. Dankeschön.”",
+      "author": "Fabian K.",
+      "link": "https://maps.app.goo.gl/29QBxJaRnLKF2jdd9",
+      "datePublished": "2024-05"
+    },
+    {
+      "text": "„Sensationelle Bootsfahrlehrer!”",
+      "author": "Fabian Z.",
+      "link": "https://maps.app.goo.gl/U3u2aUhA8TZtzxoQ7",
+      "datePublished": "2024-03"
+    }
   ],
   "lastwagen": [
-    { "text": "„Ich kann diese Fahrschule sehr empfehlen. Ich hatte als Fahrlehrer Peter Thoma und bin sehr zufrieden. Er hat eine ruhige Ader und gutes Einfühlungsvermögen. Mit ihm habe ich meine Aufregung verloren.”", "author": "Catharina R.", "link": "https://maps.app.goo.gl/v3gAR4H3jG5KmSgf6", "datePublished": "2025-01" },
-    { "text": "„Die Fahrlehrer und Fahrlehrerinnen waren sehr geduldig, respektvoll und nett. Sie sagen ganz direkt, was man falsch gemacht hat. Bis zum Schluss super begleitet.”", "author": "Delina G.", "link": "https://maps.app.goo.gl/kcyCQixHs8sR6WkT7", "datePublished": "2024-11" },
-    { "text": "„Die Fahrschule Drivingteam kann ich auf jeden Fall weiterempfehlen! Die Fahrlehrer sind freundlich und geduldig. Vielen Dank André für die tolle Ausbildung!”", "author": "Eliana Frisco", "link": "https://maps.app.goo.gl/nxfQ3eUVXSVAsRru6", "datePublished": "2024-09" },
-    { "text": "„Kompetente Fahrlehrer, harmonische Art – man fühlt sich gleich willkommen.”", "author": "Joana M.", "link": "https://maps.app.goo.gl/wk6UjCjWySYjMeFC8", "datePublished": "2024-06" },
-    { "text": "„Ich habe meine Taxi-Prüfung beim Driving Team erfolgreich bestanden – sogar beim ersten Versuch. Ein grosses Dankeschön an Rahel und Peter für die tolle Unterstützung.”", "author": "Mohamed Salad", "link": "https://www.google.com/maps/contrib/105181564544743670403/reviews", "datePublished": "2026-06" }
+    {
+      "text": "„Ich habe meine Taxi-Prüfung beim Driving Team erfolgreich bestanden – sogar beim ersten Versuch. Ein grosses Dankeschön an Rahel und Peter für die tolle Unterstützung.”",
+      "author": "Mohamed Salad",
+      "link": "https://www.google.com/maps/contrib/105181564544743670403/reviews",
+      "datePublished": "2026-06"
+    },
+    {
+      "text": "„Ich kann diese Fahrschule sehr empfehlen. Ich hatte als Fahrlehrer Peter Thoma und bin sehr zufrieden. Er hat eine ruhige Ader und gutes Einfühlungsvermögen. Mit ihm habe ich meine Aufregung verloren.”",
+      "author": "Catharina R.",
+      "link": "https://maps.app.goo.gl/v3gAR4H3jG5KmSgf6",
+      "datePublished": "2025-01"
+    },
+    {
+      "text": "„Die Fahrlehrer und Fahrlehrerinnen waren sehr geduldig, respektvoll und nett. Sie sagen ganz direkt, was man falsch gemacht hat. Bis zum Schluss super begleitet.”",
+      "author": "Delina G.",
+      "link": "https://maps.app.goo.gl/kcyCQixHs8sR6WkT7",
+      "datePublished": "2024-11"
+    },
+    {
+      "text": "„Die Fahrschule Drivingteam kann ich auf jeden Fall weiterempfehlen! Die Fahrlehrer sind freundlich und geduldig. Vielen Dank André für die tolle Ausbildung!”",
+      "author": "Eliana Frisco",
+      "link": "https://maps.app.goo.gl/nxfQ3eUVXSVAsRru6",
+      "datePublished": "2024-09"
+    },
+    {
+      "text": "„Kompetente Fahrlehrer, harmonische Art – man fühlt sich gleich willkommen.”",
+      "author": "Joana M.",
+      "link": "https://maps.app.goo.gl/wk6UjCjWySYjMeFC8",
+      "datePublished": "2024-06"
+    }
   ],
   "anhaenger": [
-    { "text": "„Für meine Anhängerprüfung habe ich mich ans Driving Team gewandt. Die Vorbereitung mit Skender war angenehm und effizient: ruhig, verständlich erklärt und immer auf den Punkt. Prüfung bestanden!”", "author": "Michael", "link": "https://www.google.com/maps/contrib/114978231375696520292/reviews", "datePublished": "2026-06" },
-    { "text": "„Habe Anhänger Fahrstunden bei Keni genommen, und kann ihn als sehr geduldig, motiviert, souveräner und sehr freundlicher Coach nur weiterempfehlen.”", "author": "Géraldine V.", "link": "https://maps.app.goo.gl/maoCaHyQhEikGKA79", "datePublished": "2025-02" },
-    { "text": "„Keni ist ein super Fahrlehrer, habe die Anhänger Prüfung bestanden. Vielen Dank.”", "author": "Pascal F.", "link": "https://maps.app.goo.gl/i5M9d6ntZCty92T89", "datePublished": "2024-11" },
-    { "text": "„Habe die Motorrad und die Anhänger Prüfung gemacht. Das Fachwissen der Fahrlehrer ist sehr gross. Habe beides beim 1. Mal bestanden!”", "author": "Tim S.", "link": "https://maps.app.goo.gl/JySCg2PnpDnQzZnu8", "datePublished": "2024-10" },
-    { "text": "„Anhänger Prüfung bestanden! Eine tolle Fahrschule! Die Fahrstunden waren super und sehr lehrreich.”", "author": "Salome M.", "link": "https://maps.app.goo.gl/PetkWkbtgxfyTdMp6", "datePublished": "2024-08" }
+    {
+      "text": "„Einfach super! Ich bin vor allem Skender/Kenny für immer dankbar, dass er mir das Fahren geduldig, sicher und super beigebracht hat. Ich würde sagen, ich wahr eher ein hoffnungsloser Fall🙈 und hatte etliche Fahrschulen hinter mir und zwei gescheiterte praktische Prüfungen😳\nAber Kenny hat es geschafft, mir ein sehr gutes Selbstsicherheitsgefühl zu geben und was soll ich sagen… ich habe es 2018 geschafft und fahre heute sehr gerne und täglich und gut/unfallfrei.\nDie Fahrschule ist wärmstens zu empfehlen🙏🏻🙏🏻🙏🏻\"",
+      "author": "A. K",
+      "link": "https://www.google.com/maps/contrib/112355944016219902917/reviews",
+      "datePublished": "2026-06"
+    },
+    {
+      "text": "„Für meine Anhängerprüfung habe ich mich ans Driving Team gewandt. Die Vorbereitung mit Skender war angenehm und effizient: ruhig, verständlich erklärt und immer auf den Punkt. Prüfung bestanden!”",
+      "author": "Michael",
+      "link": "https://www.google.com/maps/contrib/114978231375696520292/reviews",
+      "datePublished": "2026-06"
+    },
+    {
+      "text": "„Habe Anhänger Fahrstunden bei Keni genommen, und kann ihn als sehr geduldig, motiviert, souveräner und sehr freundlicher Coach nur weiterempfehlen.”",
+      "author": "Géraldine V.",
+      "link": "https://maps.app.goo.gl/maoCaHyQhEikGKA79",
+      "datePublished": "2025-02"
+    },
+    {
+      "text": "„Keni ist ein super Fahrlehrer, habe die Anhänger Prüfung bestanden. Vielen Dank.”",
+      "author": "Pascal F.",
+      "link": "https://maps.app.goo.gl/i5M9d6ntZCty92T89",
+      "datePublished": "2024-11"
+    },
+    {
+      "text": "„Habe die Motorrad und die Anhänger Prüfung gemacht. Das Fachwissen der Fahrlehrer ist sehr gross. Habe beides beim 1. Mal bestanden!”",
+      "author": "Tim S.",
+      "link": "https://maps.app.goo.gl/JySCg2PnpDnQzZnu8",
+      "datePublished": "2024-10"
+    },
+    {
+      "text": "„Anhänger Prüfung bestanden! Eine tolle Fahrschule! Die Fahrstunden waren super und sehr lehrreich.”",
+      "author": "Salome M.",
+      "link": "https://maps.app.goo.gl/PetkWkbtgxfyTdMp6",
+      "datePublished": "2024-08"
+    },
+    {
+      "text": "„Fahrteam.Hallo\nMein hallo ist spezieller für Keni,meinen besten Fahrlehrer,du verdienst 5Sterne,danke für alles\nLG ANGELINE\"",
+      "author": "Angeline Ndjanseb",
+      "link": "https://www.google.com/maps/contrib/115679390434792321665/reviews",
+      "datePublished": "2023-01"
+    },
+    {
+      "text": "„Ich war sehr zufrieden mit meinem Fahrlehrer Keni, er konnte mir sehr viel lernen und was mich am meisten gefreut hat und Motiviert hat, war, dass er niemals aufgegeben hat... er glaubte immer an mich bis zum Schluss. Ich danke Ihm sehr herzlich und Wünsche Ihm noch alles gute weiterhin.\"",
+      "author": "Mohamed Osman",
+      "link": "https://www.google.com/maps/contrib/106148334976531004297/reviews",
+      "datePublished": "2023-01"
+    }
   ],
   "taxi": [
-    { "text": "„Ich habe meine Taxi-Prüfung beim Driving Team erfolgreich bestanden – sogar beim ersten Versuch. Ein grosses Dankeschön an Rahel und Peter für die tolle Unterstützung, Geduld und professionelle Ausbildung.”", "author": "Mohamed Salad", "link": "https://www.google.com/maps/contrib/105181564544743670403/reviews", "datePublished": "2026-06" },
-    { "text": "„Ich kann diese Fahrschule sehr empfehlen. Ich hatte als Fahrlehrer Peter Thoma und bin sehr zufrieden. Er hat eine ruhige Ader und gutes Einfühlungsvermögen.”", "author": "Catharina R.", "link": "https://maps.app.goo.gl/v3gAR4H3jG5KmSgf6", "datePublished": "2025-01" },
-    { "text": "„Kompetente Fahrlehrer, harmonische Art – man fühlt sich gleich willkommen.”", "author": "Joana M.", "link": "https://maps.app.goo.gl/wk6UjCjWySYjMeFC8", "datePublished": "2024-06" }
+    {
+      "text": "„Ich habe meine Taxi-Prüfung beim Driving Team erfolgreich bestanden – sogar beim ersten Versuch. Ein grosses Dankeschön an Rahel und Peter für die tolle Unterstützung, Geduld und professionelle Ausbildung.”",
+      "author": "Mohamed Salad",
+      "link": "https://www.google.com/maps/contrib/105181564544743670403/reviews",
+      "datePublished": "2026-06"
+    },
+    {
+      "text": "„Ich kann diese Fahrschule sehr empfehlen. Ich hatte als Fahrlehrer Peter Thoma und bin sehr zufrieden. Er hat eine ruhige Ader und gutes Einfühlungsvermögen.”",
+      "author": "Catharina R.",
+      "link": "https://maps.app.goo.gl/v3gAR4H3jG5KmSgf6",
+      "datePublished": "2025-01"
+    },
+    {
+      "text": "„Kompetente Fahrlehrer, harmonische Art – man fühlt sich gleich willkommen.”",
+      "author": "Joana M.",
+      "link": "https://maps.app.goo.gl/wk6UjCjWySYjMeFC8",
+      "datePublished": "2024-06"
+    }
   ],
   "auto-theorie": [
-    { "text": "„Sehr gute und aufschlussreiche Theorie Lektion per Google Teams. Alles sehr verständlich und sehr benutzerfreundlich. Hat Spass gemacht. Danke, Alexandra.”", "author": "Karabo S.", "link": "https://maps.app.goo.gl/MdZV3tZVeuLqunAE9", "datePublished": "2025-03" },
-    { "text": "„Ich hatte heute einen Onlinekurs bei Pascal zur Vorbereitung auf die Theorieprüfung: richtig gut! Pascal hat mir verschiedene Verkehrssituationen verständlich erklärt.”", "author": "Karabo S.", "link": "https://maps.app.goo.gl/qYsSUAVEGCnATm3y9", "datePublished": "2025-02" },
-    { "text": "„Habe hier meinen VKU absolviert und Fahrstunden mit Vito und Keni genommen. Die beiden sind echt top Fahrlehrer.”", "author": "Klodiana X.", "link": "https://maps.app.goo.gl/1jNpNWZ9AePe6g34A", "datePublished": "2024-11" },
-    { "text": "„Hier der Beweis, dass man die Fahrprüfung mit 50 noch schaffen kann. Ich habe Nothelfer und VKU im Driving Team absolviert. Die Kursleiter immer freundlich, professionell und zuvorkommend.”", "author": "Candrau S.", "link": "https://maps.app.goo.gl/LKecVs4Rz8BvjWBD9", "datePublished": "2024-09" }
+    {
+      "text": "„Sehr gute und aufschlussreiche Theorie Lektion per Google Teams. Alles sehr verständlich und sehr benutzerfreundlich. Hat Spass gemacht. Danke, Alexandra.”",
+      "author": "Karabo S.",
+      "link": "https://maps.app.goo.gl/MdZV3tZVeuLqunAE9",
+      "datePublished": "2025-03"
+    },
+    {
+      "text": "„Ich hatte heute einen Onlinekurs bei Pascal zur Vorbereitung auf die Theorieprüfung: richtig gut! Pascal hat mir verschiedene Verkehrssituationen verständlich erklärt.”",
+      "author": "Karabo S.",
+      "link": "https://maps.app.goo.gl/qYsSUAVEGCnATm3y9",
+      "datePublished": "2025-02"
+    },
+    {
+      "text": "„Habe hier meinen VKU absolviert und Fahrstunden mit Vito und Keni genommen. Die beiden sind echt top Fahrlehrer.”",
+      "author": "Klodiana X.",
+      "link": "https://maps.app.goo.gl/1jNpNWZ9AePe6g34A",
+      "datePublished": "2024-11"
+    },
+    {
+      "text": "„Hier der Beweis, dass man die Fahrprüfung mit 50 noch schaffen kann. Ich habe Nothelfer und VKU im Driving Team absolviert. Die Kursleiter immer freundlich, professionell und zuvorkommend.”",
+      "author": "Candrau S.",
+      "link": "https://maps.app.goo.gl/LKecVs4Rz8BvjWBD9",
+      "datePublished": "2024-09"
+    }
   ],
   "zuerich": [
-    { "text": "„Für meine Anhängerprüfung habe ich mich ans Driving Team gewandt. Die Vorbereitung mit Skender war angenehm und effizient. Prüfung beim ersten Mal bestanden!”", "author": "Michael", "link": "https://www.google.com/maps/contrib/114978231375696520292/reviews", "datePublished": "2026-06" },
-    { "text": "„Einfach super! Kenny hat es geschafft, mir ein sehr gutes Selbstsicherheitsgefühl zu geben. Die Fahrschule ist wärmstens zu empfehlen.”", "author": "A. K", "link": "https://www.google.com/maps/contrib/112355944016219902917/reviews", "datePublished": "2026-06" },
-    { "text": "„Lieber Pascal – heute hab ich die Prüfung bestanden. Du hast mich perfekt vorbereitet… vielen Dank!”", "author": "moritz wittlinger", "link": "https://www.google.com/maps/contrib/113678248630053211999/reviews", "datePublished": "2026-05" },
-    { "text": "„Skander ist ein sehr kompetenter und humorvoller Fahrlehrer. Er hat mich gut auf die Auto Prüfung vorbereitet. Ich habe heute Prüfung bestanden!”", "author": "Safar Q.", "link": "https://maps.app.goo.gl/1DzmZwQxihN1pPHt7", "datePublished": "2025-04" },
-    { "text": "„Das Driving Team ist Weltklasse. Professionell und unglaublich sympathisch. Hier kann man alle Kategorien – Motorrad, Auto, Motorboot – lernen.”", "author": "Stefan A.", "link": "https://maps.app.goo.gl/nswkQxexj1UxH3QA8", "datePublished": "2025-02" },
-    { "text": "„Toller Team-Spirit! Die Fahrstunden mit Vito waren immer sehr angenehm. Mit Humor, Empathie, Geduld und Fachwissen hat er mich super unterstützt.”", "author": "Nadine T.", "link": "https://maps.app.goo.gl/gXaCYEBhuBojYEc48", "datePublished": "2024-12" }
+    {
+      "text": "„Für meine Anhängerprüfung habe ich mich ans Driving Team gewandt. Die Vorbereitung mit Skender war angenehm und effizient. Prüfung beim ersten Mal bestanden!”",
+      "author": "Michael",
+      "link": "https://www.google.com/maps/contrib/114978231375696520292/reviews",
+      "datePublished": "2026-06"
+    },
+    {
+      "text": "„Einfach super! Kenny hat es geschafft, mir ein sehr gutes Selbstsicherheitsgefühl zu geben. Die Fahrschule ist wärmstens zu empfehlen.”",
+      "author": "A. K",
+      "link": "https://www.google.com/maps/contrib/112355944016219902917/reviews",
+      "datePublished": "2026-06"
+    },
+    {
+      "text": "„⭐⭐⭐⭐⭐\n\nFahrstunden mit Samir:\n\nVom ersten Tag an habe ich mich bei dir wohlgefühlt. Du bist nicht einfach ein Fahrlehrer, der nur seinen Stoff durchzieht, sondern jemand, der wirklich schaut, wie die Person vor ihm lernt und was sie gerade braucht. Du hast unglaublich viel Geduld, bleibst ruhig und schaffst eine Atmosphäre, in der man keine Angst haben muss, Fehler zu machen.\n\nWas ich extrem geschätzt habe, war deine Art zu erklären. Du hast immer konkrete Beispiele gebracht, ehrliches Feedback gegeben und gleichzeitig motiviert. Man hat gemerkt, dass du Erfahrung hast und genau weisst, wann man jemanden pushen muss und wann man eher Sicherheit geben sollte.\n\nDie Fahrstunden waren nie unangenehm oder trocken, sondern entspannt, lustig und trotzdem lehrreich. Ich habe mich jedes Mal sicherer gefühlt und wirklich Vertrauen ins Fahren aufgebaut.\n\nDanke für deine Geduld, deine ruhige Art und dafür, dass du so menschlich geblieben bist. Absolute Herzensempfehlung für Samir 💯♥️\"",
+      "author": "Aïcha Khedhri",
+      "link": "https://www.google.com/maps/contrib/111726838777508936725/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Super Kursleiter (Pascal Germann)!\nWar sehr Informativ, machte Spass & war toll!\"",
+      "author": "Lyan Knöpfli",
+      "link": "https://www.google.com/maps/contrib/112524906871664952116/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Sehr professionell und keny einer der ruhigste besten fahrlehrer einfach zum weiter empfehlen .\"",
+      "author": "Kevin Meinen",
+      "link": "https://www.google.com/maps/contrib/116832201590602675372/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Lieber Pascal – heute hab ich die Prüfung bestanden. Du hast mich perfekt vorbereitet… vielen Dank!”",
+      "author": "moritz wittlinger",
+      "link": "https://www.google.com/maps/contrib/113678248630053211999/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Skander ist ein sehr kompetenter und humorvoller Fahrlehrer. Er hat mich gut auf die Auto Prüfung vorbereitet. Ich habe heute Prüfung bestanden!”",
+      "author": "Safar Q.",
+      "link": "https://maps.app.goo.gl/1DzmZwQxihN1pPHt7",
+      "datePublished": "2025-04"
+    },
+    {
+      "text": "„Das Driving Team ist Weltklasse. Professionell und unglaublich sympathisch. Hier kann man alle Kategorien – Motorrad, Auto, Motorboot – lernen.”",
+      "author": "Stefan A.",
+      "link": "https://maps.app.goo.gl/nswkQxexj1UxH3QA8",
+      "datePublished": "2025-02"
+    }
   ],
   "lachen": [
-    { "text": "„Dank Driving Team Lachen habe ich die Autoprüfung beim ersten Mal bestanden. Mein Fahrlehrer Marc hat mich auf die Prüfung sehr gut vorbereitet.”", "author": "Manaf B.", "link": "https://maps.app.goo.gl/sukR1Qii5qqiTKkm6", "datePublished": "2025-05" },
-    { "text": "„Top Fahrschule mit kompetenten und hilfreichen Fahrlehrern. Alle waren pünktlich, verständnisvoll und haben mich auf meinem Weg zum Führerschein top begleitet.”", "author": "Nicolas S.", "link": "https://maps.app.goo.gl/tUe3j3BaHc2LDUm6A", "datePublished": "2025-03" },
-    { "text": "„André war immer pünktlich, sehr geduldig und hatte immer gute Ratschläge für das Fahren. Dadurch konnte man sich bestens auf die Prüfung vorbereiten.”", "author": "Benjamin H.", "link": "https://maps.app.goo.gl/i91qeND8kHSnGyx86", "datePublished": "2025-01" },
-    { "text": "„Das Driving Team gibt dir die nötigen Werkzeuge, um die Autoprüfung zu bestehen. Danke dem ganzen Driving Team und speziell meinem Fahrlehrer Marc.”", "author": "Cyrill P.", "link": "https://maps.app.goo.gl/ciGZXzCh3Jx4nPSs5", "datePublished": "2024-11" },
-    { "text": "„Kann das Driving Team wirklich weiterempfehlen. Durch Marc, Sybille, Peter und André habe ich meine Autoprüfung beim ersten Mal bestanden!”", "author": "Fabian", "link": "https://maps.app.goo.gl/MQaLcV7MVnVXR1C38", "datePublished": "2024-09" }
+    {
+      "text": "„Ich habe meine Taxi-Prüfung beim Team Driving erfolgreich bestanden – sogar beim ersten Versuch. 🚖\nEin grosses Dankeschön an Rahel und Peter für die tolle Unterstützung, Geduld und professionelle Ausbildung. Ich habe mich sehr gut vorbereitet gefühlt und kann die Fahrschule nur weiterempfehlen.\"",
+      "author": "Mohamed Salad",
+      "link": "https://www.google.com/maps/contrib/105181564544743670403/reviews",
+      "datePublished": "2026-06"
+    },
+    {
+      "text": "„Top gsi\"",
+      "author": "Mohammed Alobeid",
+      "link": "https://www.google.com/maps/contrib/111286841440004755789/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Super Kursleiter (Pascal Germann)!\nWar sehr Informativ, machte Spass & war toll!\"",
+      "author": "Lyan Knöpfli",
+      "link": "https://www.google.com/maps/contrib/112524906871664952116/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Dank Driving Team Lachen habe ich die Autoprüfung beim ersten Mal bestanden. Mein Fahrlehrer Marc hat mich auf die Prüfung sehr gut vorbereitet.”",
+      "author": "Manaf B.",
+      "link": "https://maps.app.goo.gl/sukR1Qii5qqiTKkm6",
+      "datePublished": "2025-05"
+    },
+    {
+      "text": "„Top Fahrschule mit kompetenten und hilfreichen Fahrlehrern. Alle waren pünktlich, verständnisvoll und haben mich auf meinem Weg zum Führerschein top begleitet.”",
+      "author": "Nicolas S.",
+      "link": "https://maps.app.goo.gl/tUe3j3BaHc2LDUm6A",
+      "datePublished": "2025-03"
+    },
+    {
+      "text": "„André war immer pünktlich, sehr geduldig und hatte immer gute Ratschläge für das Fahren. Dadurch konnte man sich bestens auf die Prüfung vorbereiten.”",
+      "author": "Benjamin H.",
+      "link": "https://maps.app.goo.gl/i91qeND8kHSnGyx86",
+      "datePublished": "2025-01"
+    },
+    {
+      "text": "„Das Driving Team gibt dir die nötigen Werkzeuge, um die Autoprüfung zu bestehen. Danke dem ganzen Driving Team und speziell meinem Fahrlehrer Marc.”",
+      "author": "Cyrill P.",
+      "link": "https://maps.app.goo.gl/ciGZXzCh3Jx4nPSs5",
+      "datePublished": "2024-11"
+    },
+    {
+      "text": "„Kann das Driving Team wirklich weiterempfehlen. Durch Marc, Sybille, Peter und André habe ich meine Autoprüfung beim ersten Mal bestanden!”",
+      "author": "Fabian",
+      "link": "https://maps.app.goo.gl/MQaLcV7MVnVXR1C38",
+      "datePublished": "2024-09"
+    }
   ],
   "pfaeffikon": [
-    { "text": "„Dank Driving Team Lachen habe ich die Autoprüfung beim ersten Mal bestanden. Mein Fahrlehrer Marc hat mich auf die Prüfung sehr gut vorbereitet.”", "author": "Manaf B.", "link": "https://maps.app.goo.gl/sukR1Qii5qqiTKkm6", "datePublished": "2025-05" },
-    { "text": "„Top Fahrschule mit kompetenten und hilfreichen Fahrlehrern. Alle waren pünktlich, verständnisvoll und haben mich auf meinem Weg zum Führerschein top begleitet.”", "author": "Nicolas S.", "link": "https://maps.app.goo.gl/tUe3j3BaHc2LDUm6A", "datePublished": "2025-03" },
-    { "text": "„André war immer pünktlich, sehr geduldig und hatte immer gute Ratschläge für das Fahren.”", "author": "Benjamin H.", "link": "https://maps.app.goo.gl/i91qeND8kHSnGyx86", "datePublished": "2025-01" },
-    { "text": "„Das Driving Team gibt dir die nötigen Werkzeuge, um die Autoprüfung zu bestehen. Danke dem ganzen Driving Team und speziell Marc – you are the BEST!”", "author": "Cyrill P.", "link": "https://maps.app.goo.gl/ciGZXzCh3Jx4nPSs5", "datePublished": "2024-11" }
+    {
+      "text": "„Dank Driving Team Lachen habe ich die Autoprüfung beim ersten Mal bestanden. Mein Fahrlehrer Marc hat mich auf die Prüfung sehr gut vorbereitet.”",
+      "author": "Manaf B.",
+      "link": "https://maps.app.goo.gl/sukR1Qii5qqiTKkm6",
+      "datePublished": "2025-05"
+    },
+    {
+      "text": "„Top Fahrschule mit kompetenten und hilfreichen Fahrlehrern. Alle waren pünktlich, verständnisvoll und haben mich auf meinem Weg zum Führerschein top begleitet.”",
+      "author": "Nicolas S.",
+      "link": "https://maps.app.goo.gl/tUe3j3BaHc2LDUm6A",
+      "datePublished": "2025-03"
+    },
+    {
+      "text": "„André war immer pünktlich, sehr geduldig und hatte immer gute Ratschläge für das Fahren.”",
+      "author": "Benjamin H.",
+      "link": "https://maps.app.goo.gl/i91qeND8kHSnGyx86",
+      "datePublished": "2025-01"
+    },
+    {
+      "text": "„Das Driving Team gibt dir die nötigen Werkzeuge, um die Autoprüfung zu bestehen. Danke dem ganzen Driving Team und speziell Marc – you are the BEST!”",
+      "author": "Cyrill P.",
+      "link": "https://maps.app.goo.gl/ciGZXzCh3Jx4nPSs5",
+      "datePublished": "2024-11"
+    }
   ],
   "reichenburg": [
-    { "text": "„Dank Driving Team Lachen habe ich die Autoprüfung beim ersten Mal bestanden. Mein Fahrlehrer Marc hat mich auf die Prüfung sehr gut vorbereitet.”", "author": "Manaf B.", "link": "https://maps.app.goo.gl/sukR1Qii5qqiTKkm6", "datePublished": "2025-05" },
-    { "text": "„Kann das Driving Team wirklich weiterempfehlen. Durch Marc, Sybille, Peter und André habe ich meine Autoprüfung beim ersten Mal bestanden!”", "author": "Fabian", "link": "https://maps.app.goo.gl/MQaLcV7MVnVXR1C38", "datePublished": "2024-09" },
-    { "text": "„André war immer pünktlich, sehr geduldig und hatte immer gute Ratschläge für das Fahren.”", "author": "Benjamin H.", "link": "https://maps.app.goo.gl/i91qeND8kHSnGyx86", "datePublished": "2025-01" },
-    { "text": "„Das Driving Team Lachen gibt dir die nötigen Werkzeuge, um die Autoprüfung zu bestehen. Danke dem ganzen Driving Team und speziell Marc.”", "author": "Cyrill P.", "link": "https://maps.app.goo.gl/ciGZXzCh3Jx4nPSs5", "datePublished": "2024-11" }
+    {
+      "text": "„Dank Driving Team Lachen habe ich die Autoprüfung beim ersten Mal bestanden. Mein Fahrlehrer Marc hat mich auf die Prüfung sehr gut vorbereitet.”",
+      "author": "Manaf B.",
+      "link": "https://maps.app.goo.gl/sukR1Qii5qqiTKkm6",
+      "datePublished": "2025-05"
+    },
+    {
+      "text": "„André war immer pünktlich, sehr geduldig und hatte immer gute Ratschläge für das Fahren.”",
+      "author": "Benjamin H.",
+      "link": "https://maps.app.goo.gl/i91qeND8kHSnGyx86",
+      "datePublished": "2025-01"
+    },
+    {
+      "text": "„Das Driving Team Lachen gibt dir die nötigen Werkzeuge, um die Autoprüfung zu bestehen. Danke dem ganzen Driving Team und speziell Marc.”",
+      "author": "Cyrill P.",
+      "link": "https://maps.app.goo.gl/ciGZXzCh3Jx4nPSs5",
+      "datePublished": "2024-11"
+    },
+    {
+      "text": "„Kann das Driving Team wirklich weiterempfehlen. Durch Marc, Sybille, Peter und André habe ich meine Autoprüfung beim ersten Mal bestanden!”",
+      "author": "Fabian",
+      "link": "https://maps.app.goo.gl/MQaLcV7MVnVXR1C38",
+      "datePublished": "2024-09"
+    }
   ],
   "dietikon": [
-    { "text": "„Habe hier meinen VKU absolviert und Fahrstunden mit Vito und Keni genommen. Die beiden sind echt top Fahrlehrer. Man kann sehr entspannt mit denen fahren.”", "author": "Klodiana X.", "link": "https://maps.app.goo.gl/1jNpNWZ9AePe6g34A", "datePublished": "2024-11" },
-    { "text": "„Das Driving Team ist Weltklasse. Dieses Team kann ich jedem empfehlen. Professionell und unglaublich sympathisch.”", "author": "Stefan A.", "link": "https://maps.app.goo.gl/nswkQxexj1UxH3QA8", "datePublished": "2025-02" },
-    { "text": "„Ich empfehle diese Fahrschule und insbesondere Samuel als Fahrlehrer von Herzen allen weiter.”", "author": "Jeannine A.", "link": "https://maps.app.goo.gl/2Punm2pcb4GK7Xwr6", "datePublished": "2024-08" },
-    { "text": "„Toller Team-Spirit! Die Fahrstunden mit Vito waren immer sehr angenehm. Mit viel Humor, Empathie, Geduld und Fachwissen.”", "author": "Nadine T.", "link": "https://maps.app.goo.gl/gXaCYEBhuBojYEc48", "datePublished": "2024-12" }
+    {
+      "text": "„Das Driving Team ist Weltklasse. Dieses Team kann ich jedem empfehlen. Professionell und unglaublich sympathisch.”",
+      "author": "Stefan A.",
+      "link": "https://maps.app.goo.gl/nswkQxexj1UxH3QA8",
+      "datePublished": "2025-02"
+    },
+    {
+      "text": "„Toller Team-Spirit! Die Fahrstunden mit Vito waren immer sehr angenehm. Mit viel Humor, Empathie, Geduld und Fachwissen.”",
+      "author": "Nadine T.",
+      "link": "https://maps.app.goo.gl/gXaCYEBhuBojYEc48",
+      "datePublished": "2024-12"
+    },
+    {
+      "text": "„Habe hier meinen VKU absolviert und Fahrstunden mit Vito und Keni genommen. Die beiden sind echt top Fahrlehrer. Man kann sehr entspannt mit denen fahren.”",
+      "author": "Klodiana X.",
+      "link": "https://maps.app.goo.gl/1jNpNWZ9AePe6g34A",
+      "datePublished": "2024-11"
+    },
+    {
+      "text": "„Ich empfehle diese Fahrschule und insbesondere Samuel als Fahrlehrer von Herzen allen weiter.”",
+      "author": "Jeannine A.",
+      "link": "https://maps.app.goo.gl/2Punm2pcb4GK7Xwr6",
+      "datePublished": "2024-08"
+    }
   ],
   "spreitenbach": [
-    { "text": "„Meine Erfahrung mit ihnen war super. Ich habe innerhalb weniger Stunden eine hervorragende Schulung erhalten. Die Trainer sind sehr nett und freundlich.”", "author": "Karim (ALHASAN)", "link": "https://www.google.com/maps/contrib/106346405767618675485/reviews", "datePublished": "2024-02" },
-    { "text": "„Ich war sehr zufrieden mit meinem Fahrlehrer Keni, er konnte mir sehr viel lernen. Was mich am meisten gefreut hat: er glaubte immer an mich bis zum Schluss.”", "author": "Mohamed Osman", "link": "https://www.google.com/maps/contrib/106148334976531004297/reviews", "datePublished": "2023-01" },
-    { "text": "„Mein spezieller Dank gilt Keni, meinem besten Fahrlehrer – du verdienst 5 Sterne, danke für alles!”", "author": "Angeline Ndjanseb", "link": "https://www.google.com/maps/contrib/115679390434792321665/reviews", "datePublished": "2023-01" },
-    { "text": "„Hilfsbereite Fahrlehrer. War topp!! Nur zu empfehlen.”", "author": "Laura Shillova", "link": "https://www.google.com/maps/contrib/107578160391033857722/reviews", "datePublished": "2022-11" },
-    { "text": "„Ich finde sehr gut, freundlich und hilfsbereit.”", "author": "OKbaghebriel Tekie", "link": "https://www.google.com/maps/contrib/112386438239734515481/reviews", "datePublished": "2022-10" }
+    {
+      "text": "„Einfach super! Ich bin vor allem Skender/Kenny für immer dankbar, dass er mir das Fahren geduldig, sicher und super beigebracht hat. Ich würde sagen, ich wahr eher ein hoffnungsloser Fall🙈 und hatte etliche Fahrschulen hinter mir und zwei gescheiterte praktische Prüfungen😳\nAber Kenny hat es geschafft, mir ein sehr gutes Selbstsicherheitsgefühl zu geben und was soll ich sagen… ich habe es 2018 geschafft und fahre heute sehr gerne und täglich und gut/unfallfrei.\nDie Fahrschule ist wärmstens zu empfehlen🙏🏻🙏🏻🙏🏻\"",
+      "author": "A. K",
+      "link": "https://www.google.com/maps/contrib/112355944016219902917/reviews",
+      "datePublished": "2026-06"
+    },
+    {
+      "text": "„Für meine Anhängerprüfung habe ich mich ans Driving Team gewandt – eine sehr gute Entscheidung. Die Vorbereitung mit Skender war angenehm und effizient: ruhig, verständlich erklärt und immer auf den Punkt. Dadurch bin ich mit einem guten Gefühl an die Prüfung gegangen und habe sie auch bestanden. Kann ich nur empfehlen!\"",
+      "author": "Michael",
+      "link": "https://www.google.com/maps/contrib/114978231375696520292/reviews",
+      "datePublished": "2026-06"
+    },
+    {
+      "text": "„Meine Erfahrung mit ihnen war super. Ich habe innerhalb weniger Stunden eine hervorragende Schulung erhalten. Die Trainer sind sehr nett und freundlich.”",
+      "author": "Karim (ALHASAN)",
+      "link": "https://www.google.com/maps/contrib/106346405767618675485/reviews",
+      "datePublished": "2024-02"
+    },
+    {
+      "text": "„Ich war sehr zufrieden mit meinem Fahrlehrer Keni, er konnte mir sehr viel lernen. Was mich am meisten gefreut hat: er glaubte immer an mich bis zum Schluss.”",
+      "author": "Mohamed Osman",
+      "link": "https://www.google.com/maps/contrib/106148334976531004297/reviews",
+      "datePublished": "2023-01"
+    },
+    {
+      "text": "„Mein spezieller Dank gilt Keni, meinem besten Fahrlehrer – du verdienst 5 Sterne, danke für alles!”",
+      "author": "Angeline Ndjanseb",
+      "link": "https://www.google.com/maps/contrib/115679390434792321665/reviews",
+      "datePublished": "2023-01"
+    },
+    {
+      "text": "„Hilfsbereite Fahrlehrer. War topp!! Nur zu empfehlen.”",
+      "author": "Laura Shillova",
+      "link": "https://www.google.com/maps/contrib/107578160391033857722/reviews",
+      "datePublished": "2022-11"
+    },
+    {
+      "text": "„Ich finde sehr gut, freundlich und hilfsbereit.”",
+      "author": "OKbaghebriel Tekie",
+      "link": "https://www.google.com/maps/contrib/112386438239734515481/reviews",
+      "datePublished": "2022-10"
+    }
   ],
   "uster": [
-    { "text": "„Die beste Fahrschule! Alle super freundlich und seriös! Durch Pascal habe ich die Fahrprüfung mit Bravour bestanden, vielen Dank!”", "author": "Chanelle S.", "link": "https://maps.app.goo.gl/6HXzZunwx6mvgaNy7", "datePublished": "2025-01" },
-    { "text": "„Kompetent, geduldig und sehr erfahren. Bei allen Fahrlehrer/innen beim Driving Team wird man super zum Ziel kommen. Einfach eine Fahrschule mit Herz.”", "author": "Jasmin N.", "link": "https://maps.app.goo.gl/jRcaSSX97TVACftn7", "datePublished": "2024-11" },
-    { "text": "„Junges, dynamisches, sympathisches und sehr geduldiges Team. Es lohnt sich, beim Driving Team das Fahren zu lernen!”", "author": "Valentina R.", "link": "https://maps.app.goo.gl/THUZ4DUz235JwtKH9", "datePublished": "2024-09" },
-    { "text": "„Absolut empfehlenswert. Ich habe meinen Grundkurs und einige Prüfungsvorbereitungen bei Pascal gemacht. Er war geduldig, konstruktiv und sachkundig.”", "author": "Jenny", "link": "https://maps.app.goo.gl/b1rGtT11bwXp1gCp6", "datePublished": "2024-07" },
-    { "text": "„Die beste Fahrschule überhaupt! Dank Pascal habe ich heute die Fahrprüfung bestanden. So glücklich, dass ich bei diesem tollen Team lernen durfte.”", "author": "Chihab Moumni", "link": "https://www.google.com/maps/contrib/117502880664725104673/reviews", "datePublished": "2023-11" }
+    {
+      "text": "„Super Kursleiter (Pascal Germann)!\nWar sehr Informativ, machte Spass & war toll!\"",
+      "author": "Lyan Knöpfli",
+      "link": "https://www.google.com/maps/contrib/112524906871664952116/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Lieber Pascal - heute hab ich die Prüfung bestanden. Du hast mich perfekt vorbereitet… vielen Dank und dir allzeit gute Fahrt! Moritz\"",
+      "author": "moritz wittlinger",
+      "link": "https://www.google.com/maps/contrib/113678248630053211999/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Die beste Fahrschule! Alle super freundlich und seriös! Durch Pascal habe ich die Fahrprüfung mit Bravour bestanden, vielen Dank!”",
+      "author": "Chanelle S.",
+      "link": "https://maps.app.goo.gl/6HXzZunwx6mvgaNy7",
+      "datePublished": "2025-01"
+    },
+    {
+      "text": "„Kompetent, geduldig und sehr erfahren. Bei allen Fahrlehrer/innen beim Driving Team wird man super zum Ziel kommen. Einfach eine Fahrschule mit Herz.”",
+      "author": "Jasmin N.",
+      "link": "https://maps.app.goo.gl/jRcaSSX97TVACftn7",
+      "datePublished": "2024-11"
+    },
+    {
+      "text": "„Die Kursleiter sind sehr kompetent und sympathisch. Ausserdem ist die Anlage sehr gut für die 2-Phasenausbildung geeignet.\"",
+      "author": "Dave Tube",
+      "link": "https://www.google.com/maps/contrib/117817674374772653712/reviews",
+      "datePublished": "2024-10"
+    },
+    {
+      "text": "„Junges, dynamisches, sympathisches und sehr geduldiges Team. Es lohnt sich, beim Driving Team das Fahren zu lernen!”",
+      "author": "Valentina R.",
+      "link": "https://maps.app.goo.gl/THUZ4DUz235JwtKH9",
+      "datePublished": "2024-09"
+    },
+    {
+      "text": "„Absolut empfehlenswert. Ich habe meinen Grundkurs und einige Prüfungsvorbereitungen bei Pascal gemacht. Er war geduldig, konstruktiv und sachkundig.”",
+      "author": "Jenny",
+      "link": "https://maps.app.goo.gl/b1rGtT11bwXp1gCp6",
+      "datePublished": "2024-07"
+    },
+    {
+      "text": "„Super tolle Fahrschule. Zuverlässig, freundlich und die richtige Expertise. Merci vielmal!\"",
+      "author": "tX",
+      "link": "https://www.google.com/maps/contrib/102291925013206139871/reviews",
+      "datePublished": "2024-04"
+    }
   ],
   "birmensdorf": [
-    { "text": "„Vom ersten Tag an habe ich mich bei Samir wohlgefühlt. Er hat unglaublich viel Geduld, bleibt ruhig und schafft eine Atmosphäre, in der man keine Angst haben muss, Fehler zu machen. Absolute Herzensempfehlung!”", "author": "Aïcha Khedhri", "link": "https://www.google.com/maps/contrib/111726838777508936725/reviews", "datePublished": "2026-05" },
-    { "text": "„Von Anfang an habe ich mich gut aufgehoben gefühlt. Es war strukturiert, verständlich und hat wirklich Spass gemacht. Ich kann diese Fahrschule jedem empfehlen!”", "author": "Gioacchino Romualdi", "link": "https://www.google.com/maps/contrib/115108608537504295185/reviews", "datePublished": "2026-05" }
+    {
+      "text": "„Vom ersten Tag an habe ich mich bei Samir wohlgefühlt. Er hat unglaublich viel Geduld, bleibt ruhig und schafft eine Atmosphäre, in der man keine Angst haben muss, Fehler zu machen. Absolute Herzensempfehlung!”",
+      "author": "Aïcha Khedhri",
+      "link": "https://www.google.com/maps/contrib/111726838777508936725/reviews",
+      "datePublished": "2026-05"
+    },
+    {
+      "text": "„Von Anfang an habe ich mich gut aufgehoben gefühlt. Es war strukturiert, verständlich und hat wirklich Spass gemacht. Ich kann diese Fahrschule jedem empfehlen!”",
+      "author": "Gioacchino Romualdi",
+      "link": "https://www.google.com/maps/contrib/115108608537504295185/reviews",
+      "datePublished": "2026-05"
+    }
   ],
   "en-zurich": [
-    { "text": "\"Thanks to Driving Team Zurich I passed my driving test on the first attempt. My instructor was always punctual, patient and gave excellent advice. Highly recommended!\"", "author": "Safar Q.", "link": "https://maps.app.goo.gl/1DzmZwQxihN1pPHt7", "datePublished": "2025-04" },
-    { "text": "\"Driving Team is world class. Professional and incredibly friendly. You can learn every category here – motorcycle, car, motorboat. All instructors are top quality.\"", "author": "Stefan A.", "link": "https://maps.app.goo.gl/nswkQxexj1UxH3QA8", "datePublished": "2025-02" },
-    { "text": "\"Great team spirit! My lessons with Vito were always very enjoyable. With humour, empathy, patience and expertise, he supported me brilliantly throughout my training.\"", "author": "Nadine T.", "link": "https://maps.app.goo.gl/gXaCYEBhuBojYEc48", "datePublished": "2024-12" },
-    { "text": "\"Excellent driving school and a cool team. Very highly recommended! Pascal is a very competent and entertaining instructor. He prepared me perfectly for my motorcycle test.\"", "author": "Terry T.", "link": "https://maps.app.goo.gl/2BPHzr6DBZg74RSQ6", "datePublished": "2024-08" },
-    { "text": "\"The driving school was outstanding, and my instructor Vito was extremely helpful in preparing me for my driving test. I am very grateful for his support.\"", "author": "Kiran J.", "link": "https://maps.app.goo.gl/FLY2pkfazDEW3iwu8", "datePublished": "2024-07" }
+    {
+      "text": "\"Thanks to Driving Team Zurich I passed my driving test on the first attempt. My instructor was always punctual, patient and gave excellent advice. Highly recommended!\"",
+      "author": "Safar Q.",
+      "link": "https://maps.app.goo.gl/1DzmZwQxihN1pPHt7",
+      "datePublished": "2025-04"
+    },
+    {
+      "text": "\"Driving Team is world class. Professional and incredibly friendly. You can learn every category here – motorcycle, car, motorboat. All instructors are top quality.\"",
+      "author": "Stefan A.",
+      "link": "https://maps.app.goo.gl/nswkQxexj1UxH3QA8",
+      "datePublished": "2025-02"
+    },
+    {
+      "text": "\"Great team spirit! My lessons with Vito were always very enjoyable. With humour, empathy, patience and expertise, he supported me brilliantly throughout my training.\"",
+      "author": "Nadine T.",
+      "link": "https://maps.app.goo.gl/gXaCYEBhuBojYEc48",
+      "datePublished": "2024-12"
+    },
+    {
+      "text": "\"Excellent driving school and a cool team. Very highly recommended! Pascal is a very competent and entertaining instructor. He prepared me perfectly for my motorcycle test.\"",
+      "author": "Terry T.",
+      "link": "https://maps.app.goo.gl/2BPHzr6DBZg74RSQ6",
+      "datePublished": "2024-08"
+    },
+    {
+      "text": "\"The driving school was outstanding, and my instructor Vito was extremely helpful in preparing me for my driving test. I am very grateful for his support.\"",
+      "author": "Kiran J.",
+      "link": "https://maps.app.goo.gl/FLY2pkfazDEW3iwu8",
+      "datePublished": "2024-07"
+    }
   ],
   "en-lachen": [
-    { "text": "\"Thanks to Driving Team Lachen I passed my driving test on the first attempt. My instructor Marc prepared me brilliantly. I had a great experience from start to finish.\"", "author": "Manaf B.", "link": "https://maps.app.goo.gl/sukR1Qii5qqiTKkm6", "datePublished": "2025-05" },
-    { "text": "\"I can really recommend Driving Team. Thanks to Marc, Sybille, Peter and André, I passed my driving test first time!\"", "author": "Fabian", "link": "https://maps.app.goo.gl/MQaLcV7MVnVXR1C38", "datePublished": "2024-09" },
-    { "text": "\"Top driving school with competent and helpful instructors. Everyone was punctual, understanding and guided me perfectly on my way to getting my licence.\"", "author": "Nicolas S.", "link": "https://maps.app.goo.gl/tUe3j3BaHc2LDUm6A", "datePublished": "2025-03" },
-    { "text": "\"André was always on time, very patient and always gave good advice for my driving. This helped me prepare perfectly for the exam.\"", "author": "Benjamin H.", "link": "https://maps.app.goo.gl/i91qeND8kHSnGyx86", "datePublished": "2025-01" },
-    { "text": "\"Driving Team gives you the tools you need to pass your driving test. Thank you to the whole team and especially my instructor Marc – you are the BEST!\"", "author": "Cyrill P.", "link": "https://maps.app.goo.gl/ciGZXzCh3Jx4nPSs5", "datePublished": "2024-11" }
+    {
+      "text": "\"Thanks to Driving Team Lachen I passed my driving test on the first attempt. My instructor Marc prepared me brilliantly. I had a great experience from start to finish.\"",
+      "author": "Manaf B.",
+      "link": "https://maps.app.goo.gl/sukR1Qii5qqiTKkm6",
+      "datePublished": "2025-05"
+    },
+    {
+      "text": "\"Top driving school with competent and helpful instructors. Everyone was punctual, understanding and guided me perfectly on my way to getting my licence.\"",
+      "author": "Nicolas S.",
+      "link": "https://maps.app.goo.gl/tUe3j3BaHc2LDUm6A",
+      "datePublished": "2025-03"
+    },
+    {
+      "text": "\"André was always on time, very patient and always gave good advice for my driving. This helped me prepare perfectly for the exam.\"",
+      "author": "Benjamin H.",
+      "link": "https://maps.app.goo.gl/i91qeND8kHSnGyx86",
+      "datePublished": "2025-01"
+    },
+    {
+      "text": "\"Driving Team gives you the tools you need to pass your driving test. Thank you to the whole team and especially my instructor Marc – you are the BEST!\"",
+      "author": "Cyrill P.",
+      "link": "https://maps.app.goo.gl/ciGZXzCh3Jx4nPSs5",
+      "datePublished": "2024-11"
+    },
+    {
+      "text": "\"I can really recommend Driving Team. Thanks to Marc, Sybille, Peter and André, I passed my driving test first time!\"",
+      "author": "Fabian",
+      "link": "https://maps.app.goo.gl/MQaLcV7MVnVXR1C38",
+      "datePublished": "2024-09"
+    }
   ]
 }
