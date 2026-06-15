@@ -533,7 +533,7 @@
             </svg>
           </button>
 
-          <!-- Spesen einreichen (beta) -->
+          <!-- Beleg einreichen (beta) -->
           <NuxtLink
             v-if="props.currentUser?.email === 'kilchi@drivingteam.ch'"
             to="/staff/expenses"
@@ -545,7 +545,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
               </svg>
             </div>
-            <span class="text-sm font-medium text-gray-700 flex-1 text-left">Spesen einreichen</span>
+            <span class="text-sm font-medium text-gray-700 flex-1 text-left">Beleg einreichen</span>
             <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
             </svg>
