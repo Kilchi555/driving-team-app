@@ -13,6 +13,8 @@ const SCOPES = [
  * GET /api/gbp/auth/start
  * Initiates the Google OAuth flow for GBP access.
  * Redirects to Google's consent screen.
+ *
+ * Add ?debug=true to return the generated OAuth URL without redirecting.
  */
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -38,5 +40,18 @@ export default defineEventHandler(async (event) => {
     state,
   })
 
-  return sendRedirect(event, `${GOOGLE_AUTH_URL}?${params.toString()}`)
+  const fullUrl = `${GOOGLE_AUTH_URL}?${params.toString()}`
+
+  // Debug mode: return URL info instead of redirecting
+  const { debug } = getQuery(event)
+  if (debug === 'true') {
+    return {
+      redirect_uri: redirectUri,
+      client_id: clientId,
+      appUrl,
+      full_url: fullUrl,
+    }
+  }
+
+  return sendRedirect(event, fullUrl)
 })
