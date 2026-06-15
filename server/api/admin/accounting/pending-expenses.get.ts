@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
 
   const { data, error } = await supabase
     .from('accounting_entries')
-    .select('id, type, amount_rappen, description, entry_date, receipt_url, receipt_filename, approval_status, created_at, notes, submitted_by_user_id')
+    .select('id, type, amount_rappen, description, entry_date, receipt_url, receipt_filename, approval_status, created_at, submitted_by_user_id')
     .eq('tenant_id', profile.tenant_id)
     .eq('approval_status', 'pending')
     .is('deleted_at', null)
