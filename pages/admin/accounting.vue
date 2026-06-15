@@ -1,29 +1,6 @@
 <template>
   <div class="p-4 sm:p-6 space-y-5 max-w-[1600px] mx-auto">
 
-    <!-- ═══ RECHTSFORM-HINWEIS ═══ -->
-    <div v-if="legalInfo" class="rounded-2xl border px-4 py-3 text-xs"
-      :class="legalInfo.legal_form === 'einzelfirma'
-        ? 'bg-amber-50 border-amber-200 text-amber-800'
-        : 'bg-blue-50 border-blue-100 text-blue-800'">
-      <template v-if="legalInfo.legal_form === 'einzelfirma'">
-        <span class="font-semibold">Einzelfirma: </span>
-        Vereinfachte Buchhaltung (Einnahmen/Ausgaben) erlaubt bis CHF 500\'000 Umsatz (OR Art. 957 Abs. 2).
-        Kein Trennungsgebot Privat/Geschäft in der Steuererklärung — Gewinn = persönliches Einkommen.
-        <span v-if="!legalInfo.mwst_obligated"> MWST nicht aktiviert.</span>
-        <span v-else class="font-medium"> MWST-pflichtig.</span>
-        <NuxtLink to="/admin/profile?tab=legal" class="underline ml-1">Rechtsform ändern →</NuxtLink>
-      </template>
-      <template v-else>
-        <span class="font-semibold">{{ legalInfo.legal_form === 'gmbh' ? 'GmbH' : 'AG' }}: </span>
-        Doppelte Buchhaltung mit Bilanz & Erfolgsrechnung zwingend (OR Art. 957 Abs. 1).
-        Unterliegt der Gewinnsteuer und Kapitalsteuer.
-        <span v-if="!legalInfo.mwst_obligated"> MWST nicht aktiviert.</span>
-        <span v-else class="font-medium"> MWST-pflichtig.</span>
-        <NuxtLink to="/admin/profile?tab=legal" class="underline ml-1">Einstellungen →</NuxtLink>
-      </template>
-    </div>
-
     <!-- ═══ PENDING STAFF EXPENSES ═══ -->
     <div v-if="pendingExpenses.length > 0" class="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
       <div class="px-5 py-3 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
@@ -664,12 +641,6 @@ interface AccountingEntry {
   storno_of_id?: string | null
 }
 
-// ─── Legal form ───────────────────────────────────────────────────────────────
-const legalInfo = ref<{ legal_form: string; mwst_obligated: boolean } | null>(null)
-async function loadLegalInfo() {
-  try { legalInfo.value = await $fetch<any>('/api/admin/legal-info') } catch {}
-}
-
 const now = new Date()
 const selectedYear = ref(now.getFullYear())
 const selectedMonth = ref('')
@@ -826,7 +797,7 @@ async function loadCategories() {
   }
 }
 
-onMounted(() => { loadAll(); loadLegalInfo(); loadPendingExpenses() })
+onMounted(() => { loadAll(); loadPendingExpenses() })
 
 // ─── Format helpers ───────────────────────────────────────────────────────────
 function chf(rappen: number): string {
