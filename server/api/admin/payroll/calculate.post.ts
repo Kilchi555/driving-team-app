@@ -93,7 +93,7 @@ export default defineEventHandler(async (event) => {
       ahv_employee_rate, ahv_employer_rate, alv_employee_rate, alv_employer_rate,
       nbu_rate, bu_rate,
       bvg_employee_rate, bvg_employer_rate, bvg_coordination_rappen,
-      monthly_spesen_rappen, child_allowance_rappen`)
+      monthly_spesen_rappen, child_allowance_rappen, salary_items`)
     .eq('tenant_id', profile.tenant_id)
     .in('id', employeeIds)
 
@@ -106,9 +106,14 @@ export default defineEventHandler(async (event) => {
     const emp = empMap.get(run.employee_id)
     if (!emp) continue
 
-    let grossRappen = emp.gross_salary_rappen
+    // Additional taxable salary components (bruttopflichtig)
+    const salaryItemsRappen = Array.isArray((emp as any).salary_items)
+      ? (emp as any).salary_items.reduce((sum: number, item: any) => sum + Math.round((item.amount_chf || 0) * 100), 0)
+      : 0
+
+    let grossRappen = emp.gross_salary_rappen + salaryItemsRappen
     if (emp.employment_type === 'hourly' && run.hours_worked != null) {
-      grossRappen = Math.round(emp.gross_salary_rappen * run.hours_worked)
+      grossRappen = Math.round(emp.gross_salary_rappen * run.hours_worked) + salaryItemsRappen
     }
 
     const rates: EmployeeRates = {

@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     hours_per_month, ahv_number, iban, start_date, notes, user_id,
     ahv_employee_rate, ahv_employer_rate, alv_employee_rate, alv_employer_rate,
     nbu_rate, bu_rate, bvg_employee_rate, bvg_employer_rate, bvg_coordination_rappen,
-    monthly_spesen_rappen, child_allowance_rappen, spesen_items } = body
+    monthly_spesen_rappen, child_allowance_rappen, spesen_items, salary_items } = body
 
   if (!first_name || !last_name || !employment_type || gross_salary_rappen == null) {
     throw createError({ statusCode: 400, statusMessage: 'Pflichtfelder fehlen' })
@@ -44,6 +44,7 @@ export default defineEventHandler(async (event) => {
       monthly_spesen_rappen: monthly_spesen_rappen ?? 0,
       child_allowance_rappen: child_allowance_rappen ?? 0,
       spesen_items: spesen_items ?? [],
+      salary_items: salary_items ?? [],
       bvg_entry_threshold_rappen: body.bvg_entry_threshold_rappen ?? 2268000,
     })
     .select()
