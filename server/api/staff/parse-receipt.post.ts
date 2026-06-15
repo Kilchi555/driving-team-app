@@ -6,6 +6,8 @@ export interface ReceiptParseResult {
   amount_chf: number | null
   date: string | null        // ISO YYYY-MM-DD
   merchant: string | null
+  iban: string | null        // Swiss IBAN from QR bill if present
+  reference: string | null   // QR reference number if present
   confidence: 'high' | 'medium' | 'low'
 }
 
@@ -52,12 +54,14 @@ export default defineEventHandler(async (event) => {
     messages: [
       {
         role: 'system',
-        content: `You extract structured data from receipt/invoice images. 
+        content: `You extract structured data from receipt and invoice images, including Swiss QR-bills.
 Return a JSON object with exactly these fields:
-- amount_chf: the total amount paid as a number (e.g. 12.50). Use null if not found.
-- date: the receipt date as YYYY-MM-DD string. Use null if not found.
-- merchant: the store/merchant name as a short string. Use null if not found.
-- confidence: "high" if you found both amount and date clearly, "medium" if one is uncertain, "low" if little data found.
+- amount_chf: the total amount as a number (e.g. 12.50). Use null if not found.
+- date: the document date as YYYY-MM-DD string. Use null if not found.
+- merchant: the creditor/store name as a short string. Use null if not found.
+- iban: the IBAN from a Swiss QR-bill or invoice (format CH.. or LI..). Use null if not present.
+- reference: the QR reference or ESR reference number if visible. Use null if not present.
+- confidence: "high" if amount and date are clearly found, "medium" if one is uncertain, "low" if little found.
 Only return the JSON, no explanation.`,
       },
       {
@@ -87,6 +91,8 @@ Only return the JSON, no explanation.`,
       amount_chf: typeof parsed.amount_chf === 'number' ? parsed.amount_chf : null,
       date: typeof parsed.date === 'string' ? parsed.date : null,
       merchant: typeof parsed.merchant === 'string' ? parsed.merchant : null,
+      iban: typeof parsed.iban === 'string' ? parsed.iban : null,
+      reference: typeof parsed.reference === 'string' ? parsed.reference : null,
       confidence: parsed.confidence ?? 'low',
     } satisfies ReceiptParseResult,
   }
