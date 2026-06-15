@@ -178,33 +178,38 @@
         <span v-if="!selectedMonth" class="text-xs text-gray-400 ml-auto">Monat anklicken für Details</span>
       </div>
 
-      <!-- Monats-Zusammenfassung (erscheint beim Klick) -->
-      <transition name="fade">
-        <div v-if="selectedMonthData" class="mt-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-          <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
-            {{ selectedMonthData.label }} {{ selectedYear }} — Zusammenfassung
-          </p>
-          <div class="grid grid-cols-3 gap-3">
-            <div class="bg-white rounded-xl border border-emerald-100 px-3 py-2.5">
-              <p class="text-[10px] font-semibold text-emerald-600 uppercase tracking-wide mb-1">Einnahmen</p>
-              <p class="text-base font-bold text-emerald-700">{{ chf(selectedMonthData.income_rappen) }}</p>
-            </div>
-            <div class="bg-white rounded-xl border border-red-100 px-3 py-2.5">
-              <p class="text-[10px] font-semibold text-red-500 uppercase tracking-wide mb-1">Ausgaben</p>
-              <p class="text-base font-bold text-red-600">{{ chf(selectedMonthData.expense_rappen) }}</p>
-            </div>
-            <div class="bg-white rounded-xl px-3 py-2.5"
-              :class="selectedMonthData.result_rappen >= 0 ? 'border border-emerald-100' : 'border border-red-100'">
-              <p class="text-[10px] font-semibold uppercase tracking-wide mb-1"
-                :class="selectedMonthData.result_rappen >= 0 ? 'text-emerald-600' : 'text-red-500'">Ergebnis</p>
-              <p class="text-base font-bold"
-                :class="selectedMonthData.result_rappen >= 0 ? 'text-emerald-700' : 'text-red-600'">
-                {{ selectedMonthData.result_rappen >= 0 ? '+' : '' }}{{ chf(selectedMonthData.result_rappen) }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </transition>
+      <!-- Monats-Tabelle immer sichtbar -->
+      <div class="mt-4 overflow-x-auto">
+        <table class="w-full text-xs">
+          <thead>
+            <tr class="border-b border-gray-100">
+              <th class="pb-2 text-left font-semibold text-gray-400 uppercase tracking-widest">Monat</th>
+              <th class="pb-2 text-right font-semibold text-emerald-600 uppercase tracking-widest">Einnahmen</th>
+              <th class="pb-2 text-right font-semibold text-red-500 uppercase tracking-widest">Ausgaben</th>
+              <th class="pb-2 text-right font-semibold text-gray-500 uppercase tracking-widest">Ergebnis</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            <tr v-for="m in monthly.filter(m => m.income_rappen > 0 || m.expense_rappen > 0)" :key="m.month"
+              class="cursor-pointer hover:bg-gray-50 transition-colors"
+              :class="selectedMonth === String(m.month) ? 'bg-emerald-50/60' : ''"
+              @click="selectedMonth = selectedMonth === String(m.month) ? '' : String(m.month)">
+              <td class="py-2 font-medium text-gray-700">
+                <span class="flex items-center gap-1.5">
+                  <span v-if="selectedMonth === String(m.month)" class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+                  {{ m.label }} {{ selectedYear }}
+                </span>
+              </td>
+              <td class="py-2 text-right font-mono text-emerald-700 font-semibold">{{ chf(m.income_rappen) }}</td>
+              <td class="py-2 text-right font-mono text-red-600">{{ m.expense_rappen > 0 ? chf(m.expense_rappen) : '–' }}</td>
+              <td class="py-2 text-right font-mono font-bold"
+                :class="m.result_rappen >= 0 ? 'text-emerald-700' : 'text-red-600'">
+                {{ m.result_rappen >= 0 ? '+' : '' }}{{ chf(m.result_rappen) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- ═══ FILTER + TABELLE ═══ -->
