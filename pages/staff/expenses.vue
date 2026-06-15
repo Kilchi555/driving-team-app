@@ -254,8 +254,14 @@ async function uploadReceipt(e: Event) {
         parseHint.value = filled > 0
           ? `Automatisch erkannt${d.confidence === 'low' ? ' (bitte prüfen)' : ''}`
           : 'Keine Daten erkannt — bitte manuell ausfüllen'
-      } catch {
-        parseHint.value = 'Automatische Erkennung nicht verfügbar'
+      } catch (ocrErr: any) {
+        const msg = ocrErr?.data?.statusMessage || ocrErr?.message || ''
+        if (msg.includes('pdf') || msg.toLowerCase().includes('pdf')) {
+          parseHint.value = 'PDF erkannt — bitte Felder manuell ausfüllen'
+        } else {
+          parseHint.value = 'Automatische Erkennung nicht verfügbar'
+        }
+        console.error('[parse-receipt]', msg)
       } finally {
         parsing.value = false
       }
