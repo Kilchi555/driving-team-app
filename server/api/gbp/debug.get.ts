@@ -9,13 +9,15 @@ import { getAppUrl } from '~/server/utils/app-url'
 export default defineEventHandler(() => {
   const appUrl = getAppUrl()
   const rawAppUrl = process.env.NUXT_PUBLIC_APP_URL || '(not set)'
-  const clientId = process.env.GOOGLE_GBP_CLIENT_ID || '(not set)'
+  const clientIdRaw = process.env.GOOGLE_GBP_CLIENT_ID || '(not set)'
+  const clientId = clientIdRaw.trim()
 
   return {
     appUrl,
     redirect_uri: `${appUrl}/api/gbp/auth/callback`,
     raw_env_value: JSON.stringify(rawAppUrl),
-    client_id_prefix: clientId.substring(0, 20) + '...',
+    client_id_prefix: clientId.substring(0, 30) + '...',
+    client_id_has_newline: clientIdRaw !== clientId,
     nuxt_public_app_url_set: !!process.env.NUXT_PUBLIC_APP_URL,
   }
 })
