@@ -183,30 +183,71 @@
         <table class="w-full text-xs">
           <thead>
             <tr class="border-b border-gray-100">
-              <th class="pb-2 text-left font-semibold text-gray-400 uppercase tracking-widest">Monat</th>
+              <th class="pb-2 text-left font-semibold text-gray-400 uppercase tracking-widest pl-1">Monat</th>
               <th class="pb-2 text-right font-semibold text-emerald-600 uppercase tracking-widest">Einnahmen</th>
               <th class="pb-2 text-right font-semibold text-red-500 uppercase tracking-widest">Ausgaben</th>
               <th class="pb-2 text-right font-semibold text-gray-500 uppercase tracking-widest">Ergebnis</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-50">
-            <tr v-for="m in monthly.filter(m => m.income_rappen > 0 || m.expense_rappen > 0)" :key="m.month"
-              class="cursor-pointer hover:bg-gray-50 transition-colors"
-              :class="selectedMonth === String(m.month) ? 'bg-emerald-50/60' : ''"
-              @click="selectedMonth = selectedMonth === String(m.month) ? '' : String(m.month)">
-              <td class="py-2 font-medium text-gray-700">
-                <span class="flex items-center gap-1.5">
-                  <span v-if="selectedMonth === String(m.month)" class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
-                  {{ m.label }} {{ selectedYear }}
-                </span>
-              </td>
-              <td class="py-2 text-right font-mono text-emerald-700 font-semibold">{{ chf(m.income_rappen) }}</td>
-              <td class="py-2 text-right font-mono text-red-600">{{ m.expense_rappen > 0 ? chf(m.expense_rappen) : '–' }}</td>
-              <td class="py-2 text-right font-mono font-bold"
-                :class="m.result_rappen >= 0 ? 'text-emerald-700' : 'text-red-600'">
-                {{ m.result_rappen >= 0 ? '+' : '' }}{{ chf(m.result_rappen) }}
-              </td>
-            </tr>
+          <tbody>
+            <template v-for="m in monthly.filter(m => m.income_rappen > 0 || m.expense_rappen > 0)" :key="m.month">
+              <!-- Summary row -->
+              <tr class="cursor-pointer hover:bg-gray-50 transition-colors border-t border-gray-50"
+                :class="selectedMonth === String(m.month) ? 'bg-emerald-50/50' : ''"
+                @click="selectedMonth = selectedMonth === String(m.month) ? '' : String(m.month)">
+                <td class="py-2.5 pl-1 font-medium text-gray-700">
+                  <span class="flex items-center gap-2">
+                    <svg class="w-3 h-3 text-gray-400 transition-transform flex-shrink-0"
+                      :class="selectedMonth === String(m.month) ? 'rotate-90' : ''"
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    {{ m.label }} {{ selectedYear }}
+                  </span>
+                </td>
+                <td class="py-2.5 text-right font-mono text-emerald-700 font-semibold">{{ chf(m.income_rappen) }}</td>
+                <td class="py-2.5 text-right font-mono text-red-600">{{ m.expense_rappen > 0 ? chf(m.expense_rappen) : '–' }}</td>
+                <td class="py-2.5 text-right font-mono font-bold"
+                  :class="m.result_rappen >= 0 ? 'text-emerald-700' : 'text-red-600'">
+                  {{ m.result_rappen >= 0 ? '+' : '' }}{{ chf(m.result_rappen) }}
+                </td>
+              </tr>
+              <!-- Inline entries for this month -->
+              <template v-if="selectedMonth === String(m.month)">
+                <tr v-if="entriesForMonth(m.month).length === 0">
+                  <td colspan="4" class="py-2 pl-7 text-gray-400 italic bg-gray-50/70">
+                    Keine manuellen Buchungen — Einnahmen kommen aus Zahlungen
+                  </td>
+                </tr>
+                <tr v-for="entry in entriesForMonth(m.month)" :key="entry.id"
+                  class="bg-gray-50/70 border-t border-gray-100">
+                  <td class="py-1.5 pl-7 text-gray-600">
+                    <span class="flex items-center gap-2">
+                      <span class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        :class="entry.type === 'income' ? 'bg-emerald-400' : 'bg-red-400'"></span>
+                      <span>{{ new Date(entry.entry_date).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' }) }}</span>
+                      <span class="truncate max-w-[180px]">{{ entry.description }}</span>
+                    </span>
+                  </td>
+                  <td class="py-1.5 text-right font-mono"
+                    :class="entry.type === 'income' ? 'text-emerald-600' : 'text-gray-400'">
+                    {{ entry.type === 'income' ? chf(entry.amount_rappen) : '–' }}
+                  </td>
+                  <td class="py-1.5 text-right font-mono"
+                    :class="entry.type === 'expense' ? 'text-red-500' : 'text-gray-400'">
+                    {{ entry.type === 'expense' ? chf(entry.amount_rappen) : '–' }}
+                  </td>
+                  <td class="py-1.5 text-right">
+                    <span v-if="entry.category" class="text-gray-400">{{ entry.category.name }}</span>
+                  </td>
+                </tr>
+                <tr class="bg-gray-50/70 border-t border-gray-100">
+                  <td colspan="4" class="py-1.5 pl-7 text-gray-400 italic text-[11px]">
+                    + Zahlungseingänge aus Unterrichtsbuchungen (CHF {{ ((m.income_rappen - entriesForMonth(m.month).filter(e => e.type === 'income').reduce((s,e) => s + e.amount_rappen, 0)) / 100).toLocaleString('de-CH', { minimumFractionDigits: 2 }) }}) sind im Total enthalten
+                  </td>
+                </tr>
+              </template>
+            </template>
           </tbody>
         </table>
       </div>
@@ -700,6 +741,13 @@ const selectedMonthData = computed(() =>
     ? monthly.value.find(m => String(m.month) === selectedMonth.value) ?? null
     : null
 )
+
+function entriesForMonth(month: number) {
+  const mStr = String(month).padStart(2, '0')
+  return entries.value
+    .filter(e => e.entry_date?.slice(5, 7) === mStr)
+    .sort((a, b) => a.entry_date.localeCompare(b.entry_date))
+}
 
 // ─── Pending staff expenses ───────────────────────────────────────────────────
 interface PendingExpense {
