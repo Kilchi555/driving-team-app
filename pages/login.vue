@@ -42,7 +42,7 @@
               id="email"
               v-model="loginForm.email"
               type="email"
-              autocomplete="email"
+              autocomplete="username"
               class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:border-transparent transition-colors"
               :class="[
                 emailError ? 'border-2 border-red-500' : 'border border-gray-300'
