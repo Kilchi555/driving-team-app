@@ -331,6 +331,14 @@ const quickActions = [
     iconBg: 'bg-blue-100',
     iconColor: 'text-blue-600',
   },
+  {
+    href: '/admin/google-business-profile',
+    title: 'Google Business',
+    description: 'Bewertungen beantworten und Posts erstellen',
+    icon: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9',
+    iconBg: 'bg-red-100',
+    iconColor: 'text-red-600',
+  },
 ]
 
 onMounted(async () => {
