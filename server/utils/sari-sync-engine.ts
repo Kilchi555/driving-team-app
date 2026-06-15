@@ -307,13 +307,55 @@ export class SARISyncEngine {
       sessions.length < (partialConfig.partial_start_position ?? 3)
     )
 
-    // Check if course already exists
-    const { data: existing } = await this.supabase
+    // Check if course already exists — first by exact group ID, then by matching
+    // any current session ID (handles the case where SARI drops completed sessions
+    // from the group, causing a new groupSariId like GROUP_2_3_4 instead of GROUP_1_2_3_4).
+    let existing: { id: string; status: string; current_participants: number; price_per_participant_rappen: number; is_partial_only: boolean } | null = null
+
+    const { data: exactMatch } = await this.supabase
       .from('courses')
       .select('id, status, current_participants, price_per_participant_rappen, is_partial_only')
       .eq('sari_course_id', groupSariId)
       .eq('tenant_id', this.tenantId)
       .maybeSingle()
+
+    existing = exactMatch
+
+    if (!existing && sessions.length > 0) {
+      // Fallback: find an existing course that already has one of the current SARI sessions
+      const currentSariSessionIds = sessions.map(s => String(s.id))
+      const { data: sessionMatch } = await this.supabase
+        .from('course_sessions')
+        .select('course_id, courses!inner(id, status, current_participants, price_per_participant_rappen, is_partial_only)')
+        .eq('tenant_id', this.tenantId)
+        .in('sari_session_id', currentSariSessionIds)
+        .limit(1)
+        .maybeSingle()
+
+      if (sessionMatch?.courses) {
+        const c = sessionMatch.courses as any
+        existing = { id: c.id, status: c.status, current_participants: c.current_participants, price_per_participant_rappen: c.price_per_participant_rappen, is_partial_only: c.is_partial_only }
+        logger.info(`🔗 Matched existing course ${existing.id} via session ID fallback (group ID shifted from completed sessions)`)
+      }
+    }
+
+    // Determine the correct status for this course based on session timing.
+    // This ensures courses in progress don't fall back to 'draft' on re-creation.
+    const computeCourseStatus = (existingStatus: string | null): string => {
+      // Never override a manually managed status
+      if (existingStatus && !['draft', 'scheduled'].includes(existingStatus)) return existingStatus
+
+      const now = new Date()
+      const sessionDates = sessions.map(s => new Date(s.date.replace(' ', 'T')))
+      const allFuture = sessionDates.every(d => d > now)
+      const allPast = sessionDates.every(d => d < now)
+      const somePast = sessionDates.some(d => d < now)
+
+      if (allPast) return 'completed'
+      if (somePast && !allFuture) return 'active' // course is running (some done, some still ahead)
+      if (allFuture) return existingStatus === 'scheduled' ? 'scheduled' : 'draft'
+      return existingStatus || 'draft'
+    }
 
     let courseId: string
 
@@ -324,9 +366,13 @@ export class SARISyncEngine {
         return null
       }
 
+      const newStatus = computeCourseStatus(existing.status)
+
       // Update existing course - preserve manually-set fields
       const updateData = {
         ...courseData,
+        sari_course_id: groupSariId, // keep the group ID current (handles shifted IDs)
+        status: newStatus,
         current_participants: existing.current_participants,
         // Preserve price if already set manually (SARI doesn't provide pricing).
         // Exception: if this is a partial-only course and has no manual price yet,
@@ -360,6 +406,7 @@ export class SARISyncEngine {
       // Create new course — use partial price if applicable
       const insertData = {
         ...courseData,
+        status: computeCourseStatus(null),
         is_partial_only: isPartialOnly,
         price_per_participant_rappen: (isPartialOnly && (partialConfig?.partial_price_rappen ?? 0) > 0)
           ? partialConfig!.partial_price_rappen
