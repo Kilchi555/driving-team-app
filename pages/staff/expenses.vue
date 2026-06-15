@@ -13,7 +13,7 @@
       </div>
     </div>
 
-    <div class="max-w-lg mx-auto px-4 py-4 space-y-4">
+    <div class="max-w-lg mx-auto px-4 py-4 space-y-4" style="padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right))">
 
       <!-- Submit form -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
@@ -98,7 +98,7 @@
         <div>
           <label class="block text-xs font-medium text-gray-500 mb-1">Datum</label>
           <input v-model="form.entry_date" type="date"
-            class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[16px] focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+            class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[16px] text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none bg-white"/>
         </div>
 
         <!-- Notes (optional) -->
