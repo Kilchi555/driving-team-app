@@ -1,6 +1,7 @@
 import { defineEventHandler, getQuery, sendRedirect, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { listGbpAccounts, listGbpLocations } from '~/server/utils/gbp'
+import { getAppUrl } from '~/server/utils/app-url'
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
@@ -13,7 +14,7 @@ const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
 export default defineEventHandler(async (event) => {
   const { code, state, error } = getQuery(event) as Record<string, string>
 
-  const appUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://app.simy.ch'
+  const appUrl = getAppUrl()
 
   if (error || !code || !state) {
     return sendRedirect(event, `${appUrl}/settings/integrations?gbp=error&reason=${error || 'missing_params'}`)

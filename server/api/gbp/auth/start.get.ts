@@ -1,6 +1,7 @@
 import { defineEventHandler, sendRedirect, createError, getQuery } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { requireFeature } from '~/server/utils/require-feature'
+import { getAppUrl } from '~/server/utils/app-url'
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 const SCOPES = [
@@ -24,7 +25,7 @@ export default defineEventHandler(async (event) => {
   const clientId = process.env.GOOGLE_GBP_CLIENT_ID
   if (!clientId) throw createError({ statusCode: 500, statusMessage: 'GBP client ID not configured' })
 
-  const appUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://app.simy.ch'
+  const appUrl = getAppUrl()
   const redirectUri = `${appUrl}/api/gbp/auth/callback`
 
   // Encode tenant_id in state to verify on callback
