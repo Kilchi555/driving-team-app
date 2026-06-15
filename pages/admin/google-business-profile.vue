@@ -105,8 +105,38 @@
           </button>
         </div>
 
+        <!-- No location linked — show picker -->
+        <div v-if="!status.locationName" class="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+          <p class="text-sm font-semibold text-amber-900 mb-1">Kein Business Profile verknüpft</p>
+          <p class="text-xs text-amber-700 mb-4">Wähle deinen Standort aus, um Bewertungen, Posts und Insights zu sehen.</p>
+          <div v-if="accountsLoading" class="text-xs text-amber-600">Lade Business Profile Accounts…</div>
+          <div v-else-if="accountsError" class="text-xs text-red-600">{{ accountsError }}</div>
+          <div v-else-if="gbpAccounts.length === 0" class="text-xs text-amber-700">
+            Keine Google Business Profile Accounts gefunden. Stelle sicher, dass du mit dem richtigen Google-Account verbunden bist.
+          </div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="location in allLocations"
+              :key="location.locationId"
+              class="flex items-center justify-between bg-white rounded-xl border border-amber-200 px-4 py-3"
+            >
+              <div>
+                <p class="text-sm font-medium text-gray-900">{{ location.title || location.locationId }}</p>
+                <p class="text-xs text-gray-400">{{ location.accountName }}</p>
+              </div>
+              <button
+                @click="linkLocation(location)"
+                :disabled="linkingLocation"
+                class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors disabled:opacity-50"
+              >
+                Verknüpfen
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Tabs -->
-        <div class="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+        <div v-if="status.locationName" class="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
           <button
             v-for="tab in tabs"
             :key="tab.id"
@@ -117,7 +147,7 @@
 
 
         <!-- Insights tab -->
-        <div v-if="activeTab === 'insights'">
+        <div v-if="status.locationName && activeTab === 'insights'">
           <div v-if="insightsLoading" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div v-for="i in 4" :key="i" class="bg-white rounded-2xl p-5 border border-gray-100 animate-pulse h-24" />
           </div>
@@ -134,7 +164,7 @@
         </div>
 
         <!-- Posts tab -->
-        <div v-if="activeTab === 'posts'" class="space-y-4">
+        <div v-if="status.locationName && activeTab === 'posts'" class="space-y-4">
           <!-- New post form -->
           <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
             <p class="text-sm font-semibold text-gray-900">Neuer Post</p>
@@ -190,7 +220,7 @@
         </div>
 
         <!-- Photos tab -->
-        <div v-if="activeTab === 'photos'" class="space-y-4">
+        <div v-if="status.locationName && activeTab === 'photos'" class="space-y-4">
           <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
             <p class="text-sm font-semibold text-gray-900">Foto hochladen</p>
             <p class="text-xs text-gray-400">Das Foto muss öffentlich zugänglich sein (z.B. via Supabase Storage oder Cloudinary).</p>
@@ -212,7 +242,7 @@
         </div>
 
         <!-- Reviews tab -->
-        <div v-if="activeTab === 'reviews'" class="space-y-3">
+        <div v-if="status.locationName && activeTab === 'reviews'" class="space-y-3">
           <div v-if="reviewsLoading" class="space-y-3">
             <div v-for="i in 3" :key="i" class="bg-white rounded-2xl p-5 border border-gray-100 animate-pulse h-28" />
           </div>
@@ -497,6 +527,59 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+// Location picker
+const gbpAccounts = ref<any[]>([])
+const accountsLoading = ref(false)
+const accountsError = ref('')
+const linkingLocation = ref(false)
+
+const allLocations = computed(() => {
+  const locs: { locationId: string; title: string; accountName: string; gbpAccountName: string }[] = []
+  for (const account of gbpAccounts.value) {
+    for (const loc of account.locations ?? []) {
+      locs.push({
+        locationId: loc.name,
+        title: loc.title ?? loc.name,
+        accountName: account.accountName ?? account.name,
+        gbpAccountName: account.name,
+      })
+    }
+  }
+  return locs
+})
+
+async function loadAccounts() {
+  accountsLoading.value = true
+  accountsError.value = ''
+  try {
+    const data = await $fetch<{ accounts: any[] }>('/api/gbp/accounts')
+    gbpAccounts.value = data.accounts ?? []
+  } catch (e: any) {
+    accountsError.value = e?.data?.statusMessage || 'Fehler beim Laden der Accounts'
+  } finally {
+    accountsLoading.value = false
+  }
+}
+
+async function linkLocation(location: { locationId: string; title: string; gbpAccountName: string }) {
+  linkingLocation.value = true
+  try {
+    await $fetch('/api/gbp/link-location', {
+      method: 'POST',
+      body: { gbpAccountName: location.gbpAccountName, gbpLocationId: location.locationId, gbpLocationName: location.title },
+    })
+    await loadStatus()
+    if (status.value?.connected) {
+      loadInsights()
+      loadReviews()
+    }
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Verknüpfung fehlgeschlagen')
+  } finally {
+    linkingLocation.value = false
+  }
+}
+
 // Route-based GBP connection feedback
 const route = useRoute()
 const connectError = ref(false)
@@ -514,9 +597,11 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 onMounted(async () => {
   await loadStatus()
-  if (status.value?.connected) {
+  if (status.value?.connected && status.value?.locationName) {
     loadInsights()
     loadReviews()
+  } else if (status.value?.connected && !status.value?.locationName) {
+    loadAccounts()
   }
   if (route.query.gbp === 'connected') {
     useRouter().replace('/admin/google-business-profile')
