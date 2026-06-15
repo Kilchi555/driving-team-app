@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     'ahv_employee_rate', 'ahv_employer_rate', 'alv_employee_rate', 'alv_employer_rate',
     'nbu_rate', 'bu_rate',
     'bvg_employee_rate', 'bvg_employer_rate', 'bvg_coordination_rappen',
-    'monthly_spesen_rappen', 'child_allowance_rappen']
+    'monthly_spesen_rappen', 'child_allowance_rappen', 'spesen_items']
   const updates: Record<string, any> = { updated_at: new Date().toISOString() }
   for (const key of allowed) {
     if (key in body) updates[key] = body[key]
