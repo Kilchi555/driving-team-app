@@ -42,7 +42,7 @@
             :disabled="uploading" @change="uploadReceipt"/>
 
           <button v-if="!form.receipt_url" type="button" @click="fileInput?.click()"
-            :disabled="uploading"
+            :disabled="uploading || parsing"
             class="w-full flex items-center gap-3 p-3 border border-dashed rounded-xl transition-colors"
             :class="uploading ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200 hover:border-emerald-400 active:bg-gray-50'">
             <svg v-if="!uploading" class="w-8 h-8 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,6 +59,22 @@
             </div>
           </button>
           <p v-if="uploadError" class="text-xs text-red-500 mt-1">{{ uploadError }}</p>
+        </div>
+
+        <!-- OCR status -->
+        <div v-if="parsing" class="flex items-center gap-2 py-1">
+          <svg class="w-4 h-4 text-emerald-500 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <span class="text-xs text-gray-500">Beleg wird analysiert…</span>
+        </div>
+        <div v-else-if="parseHint" class="flex items-center gap-2 py-0.5">
+          <svg class="w-3.5 h-3.5 flex-shrink-0" :class="parseHint.includes('erkannt') && !parseHint.includes('prüfen') ? 'text-emerald-500' : 'text-amber-500'" fill="currentColor" viewBox="0 0 20 20">
+            <path v-if="parseHint.includes('erkannt') && !parseHint.includes('prüfen')" fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            <path v-else fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-xs" :class="parseHint.includes('erkannt') && !parseHint.includes('prüfen') ? 'text-emerald-600' : 'text-amber-600'">{{ parseHint }}</span>
         </div>
 
         <!-- Amount -->
@@ -94,7 +110,7 @@
 
         <p v-if="submitError" class="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{{ submitError }}</p>
 
-        <button @click="submit" :disabled="submitting || uploading"
+        <button @click="submit" :disabled="submitting || uploading || parsing"
           class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors text-sm shadow-sm">
           {{ submitting ? 'Wird eingereicht…' : 'Beleg einreichen' }}
         </button>
@@ -185,6 +201,8 @@ const form = ref({
 const fileInput    = ref<HTMLInputElement | null>(null)
 const uploading    = ref(false)
 const uploadError  = ref('')
+const parsing      = ref(false)
+const parseHint    = ref('')
 const submitting   = ref(false)
 const submitError  = ref('')
 const showSuccess  = ref(false)
@@ -204,6 +222,7 @@ async function uploadReceipt(e: Event) {
   if (!file) return
   uploading.value = true
   uploadError.value = ''
+  parseHint.value = ''
   try {
     const fd = new FormData()
     fd.append('file', file)
@@ -212,8 +231,38 @@ async function uploadReceipt(e: Event) {
     )
     form.value.receipt_url      = res.url ?? ''
     form.value.receipt_filename = res.filename ?? file.name
+
+    // Auto-parse receipt with GPT-4o Vision
+    if (form.value.receipt_url) {
+      uploading.value = false
+      parsing.value = true
+      try {
+        const ocr = await $fetch<{ success: boolean; data: { amount_chf: number | null; date: string | null; merchant: string | null; confidence: string } }>(
+          '/api/staff/parse-receipt', { method: 'POST', body: { receipt_url: form.value.receipt_url } }
+        )
+        const d = ocr.data
+        if (d.amount_chf && !form.value.amount_chf) {
+          form.value.amount_chf = d.amount_chf
+        }
+        if (d.date && form.value.entry_date === new Date().toISOString().split('T')[0]) {
+          form.value.entry_date = d.date
+        }
+        if (d.merchant && !form.value.description) {
+          form.value.description = d.merchant
+        }
+        const filled = [d.amount_chf, d.date, d.merchant].filter(Boolean).length
+        parseHint.value = filled > 0
+          ? `Automatisch erkannt${d.confidence === 'low' ? ' (bitte prüfen)' : ''}`
+          : 'Keine Daten erkannt — bitte manuell ausfüllen'
+      } catch {
+        parseHint.value = 'Automatische Erkennung nicht verfügbar'
+      } finally {
+        parsing.value = false
+      }
+    }
   } catch (err: any) {
     uploadError.value = err.data?.statusMessage ?? 'Upload fehlgeschlagen'
+    uploading.value = false
   } finally {
     uploading.value = false
   }
@@ -236,6 +285,7 @@ async function submit() {
       entry_date: new Date().toISOString().split('T')[0],
       notes: '', receipt_url: '', receipt_filename: '',
     }
+    parseHint.value = ''
     await loadMyExpenses()
   } catch (err: any) {
     submitError.value = err.data?.statusMessage ?? 'Fehler beim Einreichen'
