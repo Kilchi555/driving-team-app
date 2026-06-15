@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
     .from('payments')
     .select('total_amount_rappen, created_at, description')
     .eq('tenant_id', profile.tenant_id)
-    .eq('status', 'completed')
+    .eq('payment_status', 'completed')
     .gte('created_at', `${dateFrom}T00:00:00Z`)
     .lte('created_at', `${dateTo}T23:59:59Z`)
     .order('created_at')
