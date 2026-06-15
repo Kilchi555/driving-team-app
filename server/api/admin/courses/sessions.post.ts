@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
       .from('course_sessions')
       .select('*')
       .eq('course_id', courseId)
-      .order('start_date', { ascending: true })
+      .order('start_time', { ascending: true })
 
     if (err) throw err
 

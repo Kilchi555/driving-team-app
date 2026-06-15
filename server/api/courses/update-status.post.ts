@@ -30,13 +30,32 @@ export default defineEventHandler(async (event) => {
   // Verify course belongs to the caller's tenant
   const { data: course } = await supabase
     .from('courses')
-    .select('id, tenant_id, status, name, description, course_sessions (start_time, end_time)')
+    .select('id, tenant_id, status, name, description, instructor_id, external_instructor_name, price_per_participant_rappen, sari_managed, course_sessions (start_time, end_time)')
     .eq('id', body.courseId)
     .eq('tenant_id', profile.tenant_id)
     .single()
 
   if (!course) {
     throw createError({ statusCode: 404, statusMessage: 'Course not found' })
+  }
+
+  // Business rule: course can only be set to active if instructor and price are set
+  if (body.status === 'active') {
+    const hasInstructor = !!(course.instructor_id || course.external_instructor_name)
+    const hasPrice = (course.price_per_participant_rappen ?? 0) > 0
+
+    if (!hasInstructor) {
+      throw createError({
+        statusCode: 422,
+        statusMessage: 'Kurs kann nicht aktiviert werden: Kursleiter fehlt. Bitte zuerst einen Kursleiter zuweisen.'
+      })
+    }
+    if (!hasPrice) {
+      throw createError({
+        statusCode: 422,
+        statusMessage: 'Kurs kann nicht aktiviert werden: Kurs-Preis fehlt. Bitte zuerst einen Preis festlegen.'
+      })
+    }
   }
 
   const updateData: Record<string, any> = {

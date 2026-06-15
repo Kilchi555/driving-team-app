@@ -415,7 +415,7 @@ async function loadCoursesStats(supabase: any, tenantId: string) {
         .from('course_sessions')
         .select('id')
         .eq('tenant_id', tenantId)
-        .gte('start_date', monthStartStr)
+        .gte('start_time', monthStartStr)
     ])
 
     return {

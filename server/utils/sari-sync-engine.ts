@@ -512,6 +512,9 @@ export class SARISyncEngine {
       logger.debug(`✅ Updated course participant count to ${totalParticipants}`)
     }
 
+    // Update session-level participant counts accounting for cross-session transfers
+    await this.syncSessionParticipantCounts(courseId)
+
     logger.debug(`✅ Course group synced: "${group.name}" → ${courseId} with ${sessionsCreated} sessions and ${participantsSynced} new participants`)
 
     // ── Post-sync: fuzzy match SARI instructor → internal staff ──────────────
@@ -622,6 +625,54 @@ export class SARISyncEngine {
     }
 
     return { courseId, sessionsCreated, participantsSynced }
+  }
+
+  /**
+   * Update course_sessions.current_participants based on actual confirmed registrations,
+   * correctly accounting for participants who transferred a session to a different course.
+   *
+   * A participant attends session N of this course unless their custom_sessions[N] is set
+   * (which means they transferred that specific session to another course).
+   */
+  private async syncSessionParticipantCounts(courseId: string): Promise<void> {
+    try {
+      const { data: courseSessions } = await this.supabase
+        .from('course_sessions')
+        .select('id, session_number')
+        .eq('course_id', courseId)
+
+      if (!courseSessions || courseSessions.length === 0) return
+
+      const { data: registrations } = await this.supabase
+        .from('course_registrations')
+        .select('id, custom_sessions')
+        .eq('course_id', courseId)
+        .in('status', ['confirmed', 'enrolled'])
+
+      const allRegs = registrations || []
+
+      for (const session of courseSessions) {
+        const sNum = String(session.session_number)
+        const count = allRegs.filter(reg => {
+          if (!reg.custom_sessions) return true
+          const override = (reg.custom_sessions as Record<string, any>)[sNum]
+          return !override
+        }).length
+
+        const { error } = await this.supabase
+          .from('course_sessions')
+          .update({ current_participants: count })
+          .eq('id', session.id)
+
+        if (error) {
+          logger.error(`Failed to update session ${session.id} participant count: ${error.message}`)
+        }
+      }
+
+      logger.debug(`✅ Session-level participant counts updated for course ${courseId}`)
+    } catch (err: any) {
+      logger.error(`Failed to sync session participant counts: ${err.message}`)
+    }
   }
 
   /**
