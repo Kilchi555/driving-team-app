@@ -43,6 +43,20 @@
         </a>
       </div>
 
+      <!-- OAuth error banner -->
+      <div v-if="connectError" class="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
+        <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-red-800">Verbindung fehlgeschlagen</p>
+          <p class="text-xs text-red-600 mt-0.5">{{ connectErrorMsg }}</p>
+        </div>
+        <button @click="connectError = false" class="text-red-400 hover:text-red-600">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
       <!-- Not connected -->
       <div v-else-if="!status?.connected" class="bg-white rounded-2xl p-6 border border-gray-100">
         <div class="flex items-start gap-4">
@@ -483,8 +497,21 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-// Route-based GBP connection success
+// Route-based GBP connection feedback
 const route = useRoute()
+const connectError = ref(false)
+const connectErrorMsg = ref('')
+
+const ERROR_MESSAGES: Record<string, string> = {
+  missing_params: 'Google hat keine Autorisierungsdaten gesendet.',
+  invalid_state: 'Ungültiger Sicherheitsparameter. Bitte versuche es erneut.',
+  server_config: 'Serverkonfiguration fehlt. Bitte Support kontaktieren.',
+  token_fetch_failed: 'Verbindung zu Google fehlgeschlagen. Bitte versuche es erneut.',
+  no_access_token: 'Google hat kein Access Token gesendet.',
+  db_error: 'Verbindungsdaten konnten nicht gespeichert werden. Bitte versuche es erneut.',
+  access_denied: 'Zugriff verweigert. Bitte bestätige alle Berechtigungen bei Google.',
+}
+
 onMounted(async () => {
   await loadStatus()
   if (status.value?.connected) {
@@ -492,6 +519,12 @@ onMounted(async () => {
     loadReviews()
   }
   if (route.query.gbp === 'connected') {
+    useRouter().replace('/admin/google-business-profile')
+  }
+  if (route.query.gbp === 'error') {
+    const reason = (route.query.reason as string) || 'unknown'
+    connectErrorMsg.value = ERROR_MESSAGES[reason] || `Fehler: ${reason}`
+    connectError.value = true
     useRouter().replace('/admin/google-business-profile')
   }
 })
