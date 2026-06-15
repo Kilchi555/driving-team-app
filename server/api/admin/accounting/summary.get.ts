@@ -11,17 +11,23 @@ export default defineEventHandler(async (event) => {
   const dateFrom = `${year}-01-01`
   const dateTo = `${year}-12-31`
 
-  // 1. Einnahmen aus bestehenden Zahlungen (completed payments)
-  const { data: paymentsData, error: paymentsError } = await supabase
-    .from('payments')
-    .select('total_amount_rappen, created_at')
-    .eq('tenant_id', profile.tenant_id)
-    .eq('payment_status', 'completed')
-    .gte('created_at', `${dateFrom}T00:00:00Z`)
-    .lte('created_at', `${dateTo}T23:59:59Z`)
-    .limit(9999)
+  // 1. Payments: aggregiert per Monat via RPC (umgeht PostgREST row-limit von 1000)
+  const { data: rpcData, error: rpcError } = await supabase
+    .rpc('get_payments_monthly_summary', {
+      p_tenant_id: profile.tenant_id,
+      p_year: year,
+    })
 
-  if (paymentsError) throw createError({ statusCode: 500, statusMessage: paymentsError.message })
+  if (rpcError) throw createError({ statusCode: 500, statusMessage: rpcError.message })
+
+  // Monatliche Payment-Einnahmen als Map: month → rappen
+  const paymentsByMonth = new Map<number, number>()
+  let paymentsIncomeRappen = 0
+  for (const row of (rpcData ?? [])) {
+    const rappen = Number(row.total_rappen ?? 0)
+    paymentsByMonth.set(row.month, rappen)
+    paymentsIncomeRappen += rappen
+  }
 
   // 2. Manuelle Buchungen (Ausgaben + manuelle Einnahmen)
   const { data: entriesData, error: entriesError } = await supabase
@@ -35,7 +41,6 @@ export default defineEventHandler(async (event) => {
   if (entriesError) throw createError({ statusCode: 500, statusMessage: entriesError.message })
 
   // Aggregieren: Einnahmen
-  const paymentsIncomeRappen = (paymentsData ?? []).reduce((sum, p) => sum + (p.total_amount_rappen ?? 0), 0)
   const manualIncomeRappen = (entriesData ?? [])
     .filter(e => e.type === 'income')
     .reduce((sum, e) => sum + e.amount_rappen, 0)
@@ -58,12 +63,7 @@ export default defineEventHandler(async (event) => {
     const m = i + 1
     const mStr = String(m).padStart(2, '0')
 
-    const monthIncomePayments = (paymentsData ?? [])
-      .filter(p => {
-        const d = new Date(p.created_at)
-        return d.getFullYear() === year && d.getMonth() + 1 === m
-      })
-      .reduce((sum, p) => sum + (p.total_amount_rappen ?? 0), 0)
+    const monthIncomePayments = paymentsByMonth.get(m) ?? 0
 
     const monthIncomeManual = (entriesData ?? [])
       .filter(e => e.type === 'income' && e.entry_date?.startsWith(`${year}-${mStr}`))
