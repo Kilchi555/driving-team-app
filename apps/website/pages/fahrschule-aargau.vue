@@ -58,7 +58,7 @@
     <AusbildungsthemenSection location="Aargau" />
 
     <!-- 5. Reviews (grau-50) -->
-    <ReviewsSection category="aargau" />
+    <ReviewsSection category="spreitenbach" />
 
     <!-- 6. CTA (primary) -->
     <CtaSection title="Jetzt in Aargau starten!" />
