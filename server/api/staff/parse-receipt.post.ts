@@ -1,6 +1,6 @@
 import { defineEventHandler, createError, readBody } from 'h3'
 import OpenAI from 'openai'
-import { requireStaffProfile } from '~/server/utils/auth'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export interface ReceiptParseResult {
   amount_chf: number | null
@@ -10,7 +10,8 @@ export interface ReceiptParseResult {
 }
 
 export default defineEventHandler(async (event) => {
-  await requireStaffProfile(event)
+  const user = await getAuthenticatedUser(event)
+  if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
   const { receipt_url } = await readBody<{ receipt_url: string }>(event)
   if (!receipt_url) {
