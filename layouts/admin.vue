@@ -133,6 +133,8 @@
               class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
             <NuxtLink to="/admin/accounting" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/accounting') ? 'drawer-active' : ''">Buchhaltung</NuxtLink>
+            <NuxtLink to="/admin/payroll" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/payroll') ? 'drawer-active' : ''">Lohnbuchhaltung</NuxtLink>
 
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Verwaltung</p>
             <NuxtLink v-if="shouldShowNavLink('courses_enabled')" to="/admin/courses" @click="showMobileMenu = false"
@@ -229,6 +231,8 @@
               class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
             <NuxtLink to="/admin/accounting"
               class="drawer-link" :class="isActive('/admin/accounting') ? 'drawer-active' : ''">Buchhaltung</NuxtLink>
+            <NuxtLink to="/admin/payroll"
+              class="drawer-link" :class="isActive('/admin/payroll') ? 'drawer-active' : ''">Lohnbuchhaltung</NuxtLink>
 
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Verwaltung</p>
             <NuxtLink v-if="shouldShowNavLink('courses_enabled')" to="/admin/courses"

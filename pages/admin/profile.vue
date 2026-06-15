@@ -1090,6 +1090,112 @@
           <EmailDomainSettings />
         </div>
 
+        <!-- ═══ Rechtsform & Steuern Tab ═══ -->
+        <div v-if="activeTab === 'legal'" class="space-y-6 max-w-2xl">
+
+          <!-- Rechtsform -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
+            <h2 class="text-base font-semibold text-gray-900">Rechtsform</h2>
+
+            <div class="space-y-3">
+              <label
+                v-for="opt in [
+                  { value: 'einzelfirma', label: 'Einzelfirma / Einzelunternehmen', desc: 'Kein Mindestkapital · Vereinfachte Buchhaltung bis CHF 500\'000 Umsatz · AHV als Selbständiger (10% auf Reingewinn) · Keine Gewinnsteuer' },
+                  { value: 'gmbh', label: 'GmbH (Gesellschaft mit beschränkter Haftung)', desc: 'Mindestkapital CHF 20\'000 · Doppelte Buchhaltung Pflicht · Inhaber = Arbeitnehmer der eigenen GmbH · Gewinnsteuer + Kapitalsteuer' },
+                  { value: 'ag', label: 'AG (Aktiengesellschaft)', desc: 'Mindestkapital CHF 100\'000 · Doppelte Buchhaltung + Revisionspflicht · Inhaber = Arbeitnehmer · Gewinnsteuer + Kapitalsteuer + mögliche Dividenden' },
+                ]"
+                :key="opt.value"
+                :for="'lf-'+opt.value"
+                class="flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all"
+                :class="legalInfo.legal_form === opt.value ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'"
+              >
+                <input :id="'lf-'+opt.value" type="radio" v-model="legalInfo.legal_form" :value="opt.value" class="mt-1 accent-emerald-600"/>
+                <div>
+                  <p class="text-sm font-semibold text-gray-900">{{ opt.label }}</p>
+                  <p class="text-xs text-gray-500 mt-0.5">{{ opt.desc }}</p>
+                </div>
+              </label>
+            </div>
+
+            <!-- Legal-form specific info -->
+            <div v-if="legalInfo.legal_form === 'einzelfirma'" class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 space-y-1.5">
+              <p class="font-semibold">⚠️ Wichtig für Einzelfirma</p>
+              <ul class="list-disc list-inside space-y-1 text-xs">
+                <li>Du als Inhaber bist <strong>kein Arbeitnehmer</strong> deiner eigenen Firma</li>
+                <li>Dein "Lohn" sind <strong>Privatentnahmen</strong> (kein Lohnaufwand)</li>
+                <li>Du zahlst AHV/IV/EO als <strong>Selbständigerwerbender</strong>: 10% auf Reingewinn (AHV 8.1% + IV 1.4% + EO 0.5%)</li>
+                <li>Keine ALV (kein Anspruch auf Arbeitslosengeld)</li>
+                <li>BVG (2. Säule) ist <strong>freiwillig</strong></li>
+                <li>Buchhaltungspflicht vereinfacht (EAR) bis CHF 500\'000 Jahresumsatz</li>
+              </ul>
+            </div>
+            <div v-else class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-800 space-y-1.5">
+              <p class="font-semibold">ℹ️ {{ legalInfo.legal_form === 'gmbh' ? 'GmbH' : 'AG' }}: Inhaber = Arbeitnehmer</p>
+              <ul class="list-disc list-inside space-y-1 text-xs">
+                <li>Als Geschäftsführer/Inhaber bist du <strong>angestellt</strong> in deiner eigenen Firma</li>
+                <li>Du erhältst einen <strong>marktkonformen Lohn</strong> (inkl. AHV/ALV/BVG 50/50)</li>
+                <li>Dividenden aus dem Jahresgewinn sind <strong>nicht AHV-pflichtig</strong> (Teilbesteuerung)</li>
+                <li>BVG <strong>obligatorisch</strong> ab Jahreslohn CHF 22\'680</li>
+                <li><strong>Doppelte Buchhaltung</strong> zwingend ab Tag 1</li>
+                <li>Lohnbuchhaltung: Inhaber im Tab "Mitarbeiter" der Lohnbuchhaltung erfassen</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Handelsregister & UID -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <h2 class="text-base font-semibold text-gray-900">Handelsregister & Steuern</h2>
+
+            <div class="grid grid-cols-1 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Firmenbuchhaltungsname (offiziell)</label>
+                <input v-model="legalInfo.legal_company_name" type="text" placeholder="Fahrschule Muster GmbH"
+                  class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">UID-Nummer <span class="text-gray-400">(CHE-xxx.xxx.xxx)</span></label>
+                  <input v-model="legalInfo.uid_number" type="text" placeholder="CHE-123.456.789"
+                    class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Handelsregisternummer</label>
+                  <input v-model="legalInfo.handelsregister_nr" type="text"
+                    :placeholder="legalInfo.legal_form === 'einzelfirma' ? 'optional' : 'CH-xxx.x.xxx.xxx-x'"
+                    class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+                  <p v-if="legalInfo.legal_form === 'einzelfirma'" class="text-xs text-gray-400 mt-1">Bei Einzelfirma erst ab CHF 100\'000 Umsatz Pflicht</p>
+                </div>
+              </div>
+
+              <!-- MWST -->
+              <div class="flex items-center gap-3 p-4 rounded-xl border border-gray-200">
+                <input id="mwst" type="checkbox" v-model="legalInfo.mwst_obligated" class="accent-emerald-600"/>
+                <label for="mwst" class="cursor-pointer text-sm font-medium text-gray-900">MWST-pflichtig</label>
+                <div class="relative group ml-1">
+                  <svg class="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-pointer" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                  </svg>
+                  <div class="absolute left-0 top-6 z-20 hidden group-hover:block w-72 bg-gray-900 text-white text-xs rounded-xl p-3 shadow-xl space-y-1.5">
+                    <p class="font-semibold">MWST-Pflicht in der Schweiz</p>
+                    <p>Fahrschulen sind grundsätzlich befreit (MWSTG Art. 21 Abs. 2 Ziff. 11).</p>
+                    <p>Nur aktivieren bei steuerpfl. Zusatzleistungen (z.B. Fahrzeugverkauf) und Umsatz &gt; CHF 100\'000.</p>
+                    <p class="text-gray-400">Sätze: 8.1% Normal · 2.6% Sondersatz · 3.8% Beherbergung</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Save button -->
+          <div class="flex items-center gap-3">
+            <button @click="saveLegalInfo" :disabled="legalSaving"
+              class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shadow-sm">
+              {{ legalSaving ? 'Speichert…' : 'Speichern' }}
+            </button>
+            <span v-if="legalSaved" class="text-sm text-emerald-600 font-medium">✓ Gespeichert</span>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -1172,7 +1278,7 @@ const { showSuccess, showError } = useUIStore()
 const isSaving = ref(false)
 const route = useRoute()
 const router = useRouter()
-const VALID_TABS = ['design', 'contact', 'logos', 'security', 'features', 'eventtypes', 'payments', 'reglemente', 'email']
+const VALID_TABS = ['design', 'contact', 'logos', 'security', 'features', 'eventtypes', 'payments', 'reglemente', 'email', 'legal']
 const activeTab = ref(VALID_TABS.includes(route.query.tab as string) ? (route.query.tab as string) : 'design')
 const selectedPreset = ref('')
 const selectedFont = ref('')
@@ -1203,7 +1309,8 @@ const tabs = ref([
   { id: 'eventtypes', name: 'Eventtypen', icon: ShieldIcon },
   { id: 'payments', name: 'Zahlungen', icon: PaymentIcon },
   { id: 'email', name: 'E-Mail Domain', icon: ContactIcon },
-  { id: 'reglemente', name: 'Reglemente', icon: DocumentIcon }
+  { id: 'reglemente', name: 'Reglemente', icon: DocumentIcon },
+  { id: 'legal', name: 'Rechtsform & Steuern', icon: ShieldIcon }
 ])
 
 // Session Settings
@@ -2178,6 +2285,52 @@ const syncSARICourses = async (courseType: 'VKU' | 'PGS') => {
   }
 }
 
+// ─── Rechtsform & Steuern ─────────────────────────────────────────────────────
+const legalInfo = ref({
+  legal_form: 'einzelfirma' as 'einzelfirma' | 'gmbh' | 'ag',
+  mwst_obligated: false,
+  handelsregister_nr: '',
+  uid_number: '',
+  legal_company_name: '',
+})
+const legalSaving = ref(false)
+const legalSaved = ref(false)
+
+async function loadLegalInfo() {
+  try {
+    const data = await $fetch<any>('/api/admin/legal-info')
+    if (data) {
+      legalInfo.value = {
+        legal_form: data.legal_form ?? 'einzelfirma',
+        mwst_obligated: data.mwst_obligated ?? false,
+        handelsregister_nr: data.handelsregister_nr ?? '',
+        uid_number: data.uid_number ?? '',
+        legal_company_name: data.legal_company_name ?? '',
+      }
+    }
+  } catch {}
+}
+
+async function saveLegalInfo() {
+  legalSaving.value = true
+  legalSaved.value = false
+  try {
+    await $fetch('/api/admin/legal-info', { method: 'PATCH', body: legalInfo.value })
+    legalSaved.value = true
+    setTimeout(() => { legalSaved.value = false }, 3000)
+  } catch (e: any) {
+    alert(e.data?.statusMessage ?? 'Fehler beim Speichern')
+  } finally {
+    legalSaving.value = false
+  }
+}
+
+const LEGAL_FORM_LABELS: Record<string, string> = {
+  einzelfirma: 'Einzelfirma / Einzelunternehmen',
+  gmbh: 'GmbH (Gesellschaft mit beschränkter Haftung)',
+  ag: 'AG (Aktiengesellschaft)',
+}
+
 // Lifecycle
 onMounted(async () => {
   // Add click outside listener
@@ -2214,6 +2367,7 @@ onMounted(async () => {
   
   // Original onMounted logic
   await loadData()
+  await loadLegalInfo()
   
   // Allow auto-save after initial load
   setTimeout(() => {

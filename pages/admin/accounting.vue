@@ -1,24 +1,83 @@
 <template>
   <div class="p-4 sm:p-6 space-y-5 max-w-[1600px] mx-auto">
 
-    <!-- ═══ DISCLAIMER BANNER (OR-Konformität) ═══ -->
-    <div v-if="!disclaimerDismissed"
-      class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3.5">
-      <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-      </svg>
-      <div class="flex-1 min-w-0">
-        <p class="text-sm font-semibold text-amber-800">Hinweis zur Buchführungspflicht</p>
-        <p class="text-xs text-amber-700 mt-0.5 leading-relaxed">
-          Simy Buchhaltung ist ein digitales Hilfsmittel gemäss OR Art. 957. Es ersetzt keine professionelle Steuer- oder Rechtsberatung.
-          Als Unternehmer tragen Sie die volle Verantwortung für die Korrektheit Ihrer Buchführung und Steuererklärungen.
-          Buchungen werden nach 30 Tagen automatisch gesperrt (unveränderbar, OR Art. 957a).
-          <a href="https://www.admin.ch/opc/de/classified-compilation/19110009/index.html#a957" target="_blank" rel="noopener" class="underline hover:text-amber-900">OR Art. 957 lesen</a>
-        </p>
+    <!-- ═══ RECHTSFORM-HINWEIS ═══ -->
+    <div v-if="legalInfo" class="rounded-2xl border px-4 py-3 text-xs"
+      :class="legalInfo.legal_form === 'einzelfirma'
+        ? 'bg-amber-50 border-amber-200 text-amber-800'
+        : 'bg-blue-50 border-blue-100 text-blue-800'">
+      <template v-if="legalInfo.legal_form === 'einzelfirma'">
+        <span class="font-semibold">Einzelfirma: </span>
+        Vereinfachte Buchhaltung (Einnahmen/Ausgaben) erlaubt bis CHF 500\'000 Umsatz (OR Art. 957 Abs. 2).
+        Kein Trennungsgebot Privat/Geschäft in der Steuererklärung — Gewinn = persönliches Einkommen.
+        <span v-if="!legalInfo.mwst_obligated"> MWST nicht aktiviert.</span>
+        <span v-else class="font-medium"> MWST-pflichtig.</span>
+        <NuxtLink to="/admin/profile?tab=legal" class="underline ml-1">Rechtsform ändern →</NuxtLink>
+      </template>
+      <template v-else>
+        <span class="font-semibold">{{ legalInfo.legal_form === 'gmbh' ? 'GmbH' : 'AG' }}: </span>
+        Doppelte Buchhaltung mit Bilanz & Erfolgsrechnung zwingend (OR Art. 957 Abs. 1).
+        Unterliegt der Gewinnsteuer und Kapitalsteuer.
+        <span v-if="!legalInfo.mwst_obligated"> MWST nicht aktiviert.</span>
+        <span v-else class="font-medium"> MWST-pflichtig.</span>
+        <NuxtLink to="/admin/profile?tab=legal" class="underline ml-1">Einstellungen →</NuxtLink>
+      </template>
+    </div>
+
+    <!-- ═══ PENDING STAFF EXPENSES ═══ -->
+    <div v-if="pendingExpenses.length > 0" class="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
+      <div class="px-5 py-3 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold">
+            {{ pendingExpenses.length }}
+          </span>
+          <span class="text-sm font-semibold text-amber-800">Spesen-Einreichungen ausstehend</span>
+        </div>
       </div>
-      <button @click="dismissDisclaimer" class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-amber-100 text-amber-500 transition-colors" title="Schliessen">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
+      <div class="divide-y divide-gray-50">
+        <div v-for="exp in pendingExpenses" :key="exp.id" class="px-5 py-4 flex items-start gap-4">
+          <!-- Receipt thumbnail -->
+          <a v-if="exp.receipt_url" :href="exp.receipt_url" target="_blank"
+            class="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center hover:opacity-80 transition-opacity">
+            <img v-if="!exp.receipt_filename?.endsWith('.pdf')" :src="exp.receipt_url" class="w-full h-full object-cover" alt="Beleg"/>
+            <svg v-else class="w-7 h-7 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+            </svg>
+          </a>
+          <div v-else class="flex-shrink-0 w-14 h-14 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center">
+            <svg class="w-7 h-7 text-orange-300" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92z" clip-rule="evenodd"/>
+            </svg>
+          </div>
+
+          <!-- Details -->
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-gray-900">{{ exp.description }}</p>
+            <div class="flex items-center gap-2 flex-wrap mt-0.5">
+              <span class="text-xs text-gray-500">{{ new Date(exp.entry_date).toLocaleDateString('de-CH') }}</span>
+              <span v-if="exp.submitter" class="text-xs text-gray-400">
+                von {{ exp.submitter.first_name }} {{ exp.submitter.last_name }}
+              </span>
+            </div>
+            <p v-if="exp.notes" class="text-xs text-gray-500 mt-1 italic">{{ exp.notes }}</p>
+          </div>
+
+          <!-- Amount + actions -->
+          <div class="flex-shrink-0 text-right space-y-2">
+            <p class="text-base font-bold text-gray-900">CHF {{ (exp.amount_rappen / 100).toFixed(2) }}</p>
+            <div class="flex items-center gap-2 justify-end">
+              <button @click="handleExpense(exp.id, 'approve')" :disabled="approving === exp.id"
+                class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors">
+                Genehmigen
+              </button>
+              <button @click="rejectWithReason(exp)" :disabled="approving === exp.id"
+                class="px-3 py-1.5 bg-white hover:bg-red-50 disabled:opacity-50 text-red-600 border border-red-200 text-xs font-semibold rounded-lg transition-colors">
+                Ablehnen
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ═══ BELEG-WARNUNG ═══ -->
@@ -605,10 +664,59 @@ interface AccountingEntry {
   storno_of_id?: string | null
 }
 
+// ─── Legal form ───────────────────────────────────────────────────────────────
+const legalInfo = ref<{ legal_form: string; mwst_obligated: boolean } | null>(null)
+async function loadLegalInfo() {
+  try { legalInfo.value = await $fetch<any>('/api/admin/legal-info') } catch {}
+}
+
 const now = new Date()
 const selectedYear = ref(now.getFullYear())
 const selectedMonth = ref('')
 const availableYears = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i)
+
+// ─── Pending staff expenses ───────────────────────────────────────────────────
+interface PendingExpense {
+  id: string
+  amount_rappen: number
+  description: string
+  entry_date: string
+  receipt_url: string | null
+  receipt_filename: string | null
+  notes: string | null
+  created_at: string
+  submitter: { first_name: string; last_name: string; email: string } | null
+}
+const pendingExpenses = ref<PendingExpense[]>([])
+const approving = ref<string | null>(null)
+
+async function loadPendingExpenses() {
+  try {
+    const res = await $fetch<{ success: boolean; data: PendingExpense[] }>('/api/admin/accounting/pending-expenses')
+    pendingExpenses.value = res.data ?? []
+  } catch {}
+}
+
+async function handleExpense(id: string, action: 'approve' | 'reject', reason?: string) {
+  approving.value = id
+  try {
+    await $fetch('/api/admin/accounting/approve-expense', {
+      method: 'POST',
+      body: { id, action, rejection_reason: reason },
+    })
+    pendingExpenses.value = pendingExpenses.value.filter(e => e.id !== id)
+    if (action === 'approve') await loadAll() // refresh entries list
+  } catch (err: any) {
+    alert(err.data?.statusMessage ?? 'Fehler')
+  } finally {
+    approving.value = null
+  }
+}
+
+async function rejectWithReason(expense: PendingExpense) {
+  const reason = prompt(`Ablehnungsgrund für "${expense.description}":\n(optional)`) ?? ''
+  await handleExpense(expense.id, 'reject', reason)
+}
 
 const loading = ref(false)
 const exporting = ref(false)
@@ -718,7 +826,7 @@ async function loadCategories() {
   }
 }
 
-onMounted(loadAll)
+onMounted(() => { loadAll(); loadLegalInfo(); loadPendingExpenses() })
 
 // ─── Format helpers ───────────────────────────────────────────────────────────
 function chf(rappen: number): string {
