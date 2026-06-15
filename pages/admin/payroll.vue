@@ -599,115 +599,278 @@
                   class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
               </div>
             </div>
-            <!-- Versicherungsabgaben & Sozialleistungen -->
-            <div class="border border-gray-100 rounded-xl p-4 space-y-4 bg-gray-50">
-              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Versicherungen & Sozialleistungen</p>
+            <!-- ─── Versicherungen & Sozialleistungen ────────────────────────────── -->
+            <div class="rounded-2xl border overflow-hidden transition-all"
+              :class="editingInsurance ? 'border-emerald-200' : 'border-gray-200'">
 
-              <!-- AHV / ALV -->
-              <div>
-                <p class="text-xs font-semibold text-gray-600 mb-2">AHV/IV/EO & ALV <span class="font-normal text-gray-400">(Gesetzl. 2025: AHV 5.3% · ALV 1.1%)</span></p>
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs text-gray-500 mb-1">AHV/IV/EO <span class="text-blue-600 font-medium">AN</span> % <span class="text-gray-400">(Abzug Mitarbeiter)</span></label>
-                    <div class="relative">
-                      <input v-model.number="(empForm as any).ahv_employee_rate_pct" type="number" step="0.1" min="0" max="15" placeholder="5.3"
-                        class="w-full border border-gray-200 bg-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
-                      <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+              <!-- Header with toggle -->
+              <div class="flex items-center justify-between px-4 py-2.5 border-b transition-colors"
+                :class="editingInsurance ? 'bg-emerald-50 border-emerald-100' : 'bg-gray-50 border-gray-100'">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                  Versicherungen & Sozialleistungen
+                </span>
+                <button type="button" @click="editingInsurance = !editingInsurance"
+                  class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg px-2.5 py-1 transition-all"
+                  :class="editingInsurance
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-800'">
+                  <svg v-if="editingInsurance" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  <svg v-else class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                  </svg>
+                  {{ editingInsurance ? 'Fertig' : 'Bearbeiten' }}
+                </button>
+              </div>
+
+              <!-- ── VIEW MODE ────────────────────────────────────────────────────── -->
+              <div v-if="!editingInsurance" class="divide-y divide-gray-100 bg-white">
+
+                <!-- AHV / ALV -->
+                <div class="px-4 py-3">
+                  <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">AHV/IV/EO & ALV</p>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
+                      <span class="text-gray-500">AHV <span class="text-blue-600 font-semibold">Mitarb.</span></span>
+                      <span class="font-mono font-bold text-gray-800">{{ r2((empForm as any).ahv_employee_rate_pct) }}%</span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
+                      <span class="text-gray-500">AHV <span class="text-orange-500 font-semibold">Firma</span></span>
+                      <span class="font-mono font-bold text-gray-800">{{ r2((empForm as any).ahv_employer_rate_pct) }}%</span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
+                      <span class="text-gray-500">ALV <span class="text-blue-600 font-semibold">Mitarb.</span></span>
+                      <span class="font-mono font-bold text-gray-800">{{ r2((empForm as any).alv_employee_rate_pct) }}%</span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
+                      <span class="text-gray-500">ALV <span class="text-orange-500 font-semibold">Firma</span></span>
+                      <span class="font-mono font-bold text-gray-800">{{ r2((empForm as any).alv_employer_rate_pct) }}%</span>
                     </div>
                   </div>
-                  <div>
-                    <label class="block text-xs text-gray-500 mb-1">AHV/IV/EO <span class="text-orange-600 font-medium">AG</span> % <span class="text-gray-400">(Beitrag Firma)</span></label>
-                    <div class="relative">
-                      <input v-model.number="(empForm as any).ahv_employer_rate_pct" type="number" step="0.1" min="0" max="15" placeholder="5.3"
-                        class="w-full border border-gray-200 bg-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
-                      <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+                </div>
+
+                <!-- UVG -->
+                <div class="px-4 py-3">
+                  <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Unfallversicherung UVG</p>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
+                      <span class="text-gray-500">NBU <span class="text-blue-600 font-semibold">Mitarb.</span></span>
+                      <span class="font-mono font-bold text-gray-800">{{ r2((empForm as any).nbu_rate_pct) }}%</span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
+                      <span class="text-gray-500">BU <span class="text-orange-500 font-semibold">Firma</span></span>
+                      <span class="font-mono font-bold text-gray-800">{{ r2((empForm as any).bu_rate_pct) }}%</span>
                     </div>
                   </div>
-                  <div>
-                    <label class="block text-xs text-gray-500 mb-1">ALV <span class="text-blue-600 font-medium">AN</span> % <span class="text-gray-400">(Abzug Mitarbeiter)</span></label>
-                    <div class="relative">
-                      <input v-model.number="(empForm as any).alv_employee_rate_pct" type="number" step="0.1" min="0" max="5" placeholder="1.1"
-                        class="w-full border border-gray-200 bg-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
-                      <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+                </div>
+
+                <!-- BVG -->
+                <div class="px-4 py-3">
+                  <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">2. Säule BVG</p>
+                  <div class="grid grid-cols-3 gap-2">
+                    <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
+                      <span class="text-gray-500"><span class="text-blue-600 font-semibold">AN</span></span>
+                      <span class="font-mono font-bold text-gray-800">{{ r2((empForm as any).bvg_employee_rate_pct) }}%</span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
+                      <span class="text-gray-500"><span class="text-orange-500 font-semibold">AG</span></span>
+                      <span class="font-mono font-bold text-gray-800">{{ r2((empForm as any).bvg_employer_rate_pct) }}%</span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
+                      <span class="text-gray-500 truncate">Koord.</span>
+                      <span class="font-mono font-bold text-gray-800">{{ ((empForm as any).bvg_coordination_chf ?? 2205).toLocaleString('de-CH') }}</span>
                     </div>
                   </div>
-                  <div>
-                    <label class="block text-xs text-gray-500 mb-1">ALV <span class="text-orange-600 font-medium">AG</span> % <span class="text-gray-400">(Beitrag Firma)</span></label>
-                    <div class="relative">
-                      <input v-model.number="(empForm as any).alv_employer_rate_pct" type="number" step="0.1" min="0" max="5" placeholder="1.1"
-                        class="w-full border border-gray-200 bg-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
-                      <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+                </div>
+
+                <!-- Spesen & Kinderzulage -->
+                <div class="px-4 py-3">
+                  <div class="flex items-center justify-between mb-2">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Spesen & Zulagen</p>
+                    <span v-if="spesenItems.length > 0" class="text-xs font-bold text-blue-600">
+                      Total CHF {{ spesenItems.reduce((s, i) => s + (i.amount_chf || 0), 0).toLocaleString('de-CH') }}/Mt.
+                    </span>
+                  </div>
+                  <div v-if="spesenItems.length === 0 && !((empForm as any).child_allowance_chf > 0)"
+                    class="text-xs text-gray-400 italic py-1.5 text-center rounded-xl border border-dashed border-gray-200">
+                    Keine Spesen oder Zulagen
+                  </div>
+                  <div class="space-y-1.5">
+                    <div v-for="item in spesenItems" :key="item.id"
+                      class="flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50/50 px-3 py-2 text-xs">
+                      <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
+                        <span class="text-gray-700 font-medium">{{ item.description || 'Spesen' }}</span>
+                      </div>
+                      <span class="font-mono font-bold text-blue-700">CHF {{ item.amount_chf.toLocaleString('de-CH') }}/Mt.</span>
+                    </div>
+                    <div v-if="(empForm as any).child_allowance_chf > 0"
+                      class="flex items-center justify-between rounded-xl border border-violet-100 bg-violet-50/50 px-3 py-2 text-xs">
+                      <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>
+                        <span class="text-gray-700 font-medium">Kinderzulage</span>
+                      </div>
+                      <span class="font-mono font-bold text-violet-700">CHF {{ ((empForm as any).child_allowance_chf || 0).toLocaleString('de-CH') }}/Mt.</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- NBU / BU -->
-              <div>
-                <p class="text-xs font-semibold text-gray-600 mb-2">Unfallversicherung UVG</p>
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs text-gray-500 mb-1">NBU <span class="text-blue-600 font-medium">AN</span> % <span class="text-gray-400">(Nichtberufsunfall, Abzug Mitarbeiter)</span></label>
-                    <div class="relative">
-                      <input v-model.number="(empForm as any).nbu_rate_pct" type="number" step="0.01" min="0" max="5" placeholder="0.68"
-                        class="w-full border border-gray-200 bg-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
-                      <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+              <!-- ── EDIT MODE ────────────────────────────────────────────────────── -->
+              <div v-else class="p-4 space-y-5 bg-white">
+
+                <!-- AHV / ALV -->
+                <div>
+                  <p class="text-xs font-semibold text-gray-600 mb-2.5">
+                    AHV/IV/EO & ALV
+                    <span class="font-normal text-gray-400">(Gesetzl. 2025: AHV 5.3% · ALV 1.1%)</span>
+                  </p>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-[11px] text-gray-500 mb-1">AHV <span class="text-blue-600 font-semibold">Mitarbeiter</span></label>
+                      <div class="relative">
+                        <input v-model.number="(empForm as any).ahv_employee_rate_pct" type="number" step="0.01" min="0" max="15" placeholder="5.3"
+                          class="w-full border border-gray-200 bg-gray-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
+                        <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-500 mb-1">BU <span class="text-orange-600 font-medium">AG</span> % <span class="text-gray-400">(Berufsunfall, Beitrag Firma)</span></label>
-                    <div class="relative">
-                      <input v-model.number="(empForm as any).bu_rate_pct" type="number" step="0.01" min="0" max="5" placeholder="0.39"
-                        class="w-full border border-gray-200 bg-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
-                      <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+                    <div>
+                      <label class="block text-[11px] text-gray-500 mb-1">AHV <span class="text-orange-500 font-semibold">Firma</span></label>
+                      <div class="relative">
+                        <input v-model.number="(empForm as any).ahv_employer_rate_pct" type="number" step="0.01" min="0" max="15" placeholder="5.3"
+                          class="w-full border border-gray-200 bg-gray-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
+                        <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-[11px] text-gray-500 mb-1">ALV <span class="text-blue-600 font-semibold">Mitarbeiter</span></label>
+                      <div class="relative">
+                        <input v-model.number="(empForm as any).alv_employee_rate_pct" type="number" step="0.01" min="0" max="5" placeholder="1.1"
+                          class="w-full border border-gray-200 bg-gray-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
+                        <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-[11px] text-gray-500 mb-1">ALV <span class="text-orange-500 font-semibold">Firma</span></label>
+                      <div class="relative">
+                        <input v-model.number="(empForm as any).alv_employer_rate_pct" type="number" step="0.01" min="0" max="5" placeholder="1.1"
+                          class="w-full border border-gray-200 bg-gray-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
+                        <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- BVG -->
-              <div>
-                <p class="text-xs font-semibold text-gray-600 mb-2">2. Säule BVG / Pensionskasse</p>
-                <div class="grid grid-cols-3 gap-3">
-                  <div>
-                    <label class="block text-xs text-gray-500 mb-1">BVG <span class="text-blue-600 font-medium">AN</span> % <span class="text-gray-400">(Abzug Mitarbeiter)</span></label>
-                    <div class="relative">
-                      <input v-model.number="(empForm as any).bvg_employee_rate_pct" type="number" step="0.1" min="0" max="15" placeholder="5.0"
-                        class="w-full border border-gray-200 bg-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
-                      <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+                <!-- UVG -->
+                <div>
+                  <p class="text-xs font-semibold text-gray-600 mb-2.5">Unfallversicherung UVG</p>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-[11px] text-gray-500 mb-1">
+                        NBU <span class="text-blue-600 font-semibold">Mitarbeiter</span>
+                        <span class="text-gray-400"> · Nichtberufsunfall</span>
+                      </label>
+                      <div class="relative">
+                        <input v-model.number="(empForm as any).nbu_rate_pct" type="number" step="0.01" min="0" max="5" placeholder="0.68"
+                          class="w-full border border-gray-200 bg-gray-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
+                        <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-500 mb-1">BVG <span class="text-orange-600 font-medium">AG</span> % <span class="text-gray-400">(Beitrag Firma)</span></label>
-                    <div class="relative">
-                      <input v-model.number="(empForm as any).bvg_employer_rate_pct" type="number" step="0.1" min="0" max="15" placeholder="5.0"
-                        class="w-full border border-gray-200 bg-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
-                      <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+                    <div>
+                      <label class="block text-[11px] text-gray-500 mb-1">
+                        BU <span class="text-orange-500 font-semibold">Firma</span>
+                        <span class="text-gray-400"> · Berufsunfall</span>
+                      </label>
+                      <div class="relative">
+                        <input v-model.number="(empForm as any).bu_rate_pct" type="number" step="0.01" min="0" max="5" placeholder="0.39"
+                          class="w-full border border-gray-200 bg-gray-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
+                        <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-500 mb-1">Koordinationsabzug CHF/Mt.</label>
-                    <input v-model.number="(empForm as any).bvg_coordination_chf" type="number" step="10" min="0" placeholder="2205"
-                      class="w-full border border-gray-200 bg-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
                   </div>
                 </div>
-                <p class="text-xs text-gray-400 mt-1">BVG gilt auf koordiniertem Lohn (Brutto – Koordinationsabzug). Altersgestaffelt: 25–34J: 7% · 35–44J: 10% · 45–54J: 15% · 55–65J: 18%</p>
-              </div>
 
-              <!-- Spesen & Kinderzulage -->
-              <div>
-                <p class="text-xs font-semibold text-gray-600 mb-2">Zulagen & Spesen</p>
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs text-gray-500 mb-1">Fixe Spesen CHF/Mt. <span class="text-gray-400">(steuerfrei)</span></label>
-                    <input v-model.number="(empForm as any).monthly_spesen_chf" type="number" step="10" min="0" placeholder="0"
-                      class="w-full border border-gray-200 bg-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+                <!-- BVG -->
+                <div>
+                  <p class="text-xs font-semibold text-gray-600 mb-2.5">2. Säule BVG / Pensionskasse</p>
+                  <div class="grid grid-cols-3 gap-3">
+                    <div>
+                      <label class="block text-[11px] text-gray-500 mb-1">BVG <span class="text-blue-600 font-semibold">Mitarbeiter</span></label>
+                      <div class="relative">
+                        <input v-model.number="(empForm as any).bvg_employee_rate_pct" type="number" step="0.1" min="0" max="20" placeholder="5"
+                          class="w-full border border-gray-200 bg-gray-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
+                        <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-[11px] text-gray-500 mb-1">BVG <span class="text-orange-500 font-semibold">Firma</span></label>
+                      <div class="relative">
+                        <input v-model.number="(empForm as any).bvg_employer_rate_pct" type="number" step="0.1" min="0" max="20" placeholder="5"
+                          class="w-full border border-gray-200 bg-gray-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-8"/>
+                        <span class="absolute right-3 top-2 text-xs text-gray-400">%</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-[11px] text-gray-500 mb-1">Koordinationsabzug</label>
+                      <div class="relative">
+                        <input v-model.number="(empForm as any).bvg_coordination_chf" type="number" step="10" min="0" placeholder="2205"
+                          class="w-full border border-gray-200 bg-gray-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 pl-3 pr-10"/>
+                        <span class="absolute right-2.5 top-2 text-xs text-gray-400">CHF</span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label class="block text-xs text-gray-500 mb-1">Kinderzulage CHF/Mt. <span class="text-gray-400">(SZ: CHF 230/Kind)</span></label>
+                  <p class="text-[11px] text-gray-400 mt-1.5">Altersgestaffelt: 25–34J: 7% · 35–44J: 10% · 45–54J: 15% · 55–65J: 18%</p>
+                </div>
+
+                <!-- Spesen (mehrere mit Beschreibung) -->
+                <div>
+                  <div class="flex items-center justify-between mb-2.5">
+                    <p class="text-xs font-semibold text-gray-600">
+                      Spesen <span class="text-gray-400 font-normal">(monatlich, steuerfrei)</span>
+                    </p>
+                    <button type="button" @click="addSpesenItem"
+                      class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg px-2.5 py-1 transition-colors">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+                      </svg>
+                      Position hinzufügen
+                    </button>
+                  </div>
+                  <div v-if="spesenItems.length === 0"
+                    class="text-xs text-gray-400 italic text-center py-3 rounded-xl border border-dashed border-gray-200 bg-gray-50">
+                    Noch keine Spesen-Positionen — klick «Position hinzufügen»
+                  </div>
+                  <div class="space-y-2">
+                    <div v-for="(item, idx) in spesenItems" :key="item.id" class="flex items-center gap-2">
+                      <span class="text-xs text-gray-400 w-4 text-right flex-shrink-0 font-mono">{{ idx + 1 }}.</span>
+                      <input v-model="item.description" type="text" placeholder="Beschreibung (z.B. Auto-Spesen)"
+                        class="flex-1 min-w-0 border border-gray-200 bg-gray-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+                      <div class="relative w-28 flex-shrink-0">
+                        <span class="absolute left-2.5 top-2 text-xs text-gray-400">CHF</span>
+                        <input v-model.number="item.amount_chf" type="number" step="10" min="0" placeholder="0"
+                          class="w-full border border-gray-200 bg-gray-50 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+                      </div>
+                      <button type="button" @click="removeSpesenItem(item.id)"
+                        class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Kinderzulage -->
+                <div>
+                  <p class="text-xs font-semibold text-gray-600 mb-2">Kinderzulage <span class="font-normal text-gray-400">(monatlich)</span></p>
+                  <div class="relative max-w-[180px]">
+                    <span class="absolute left-3 top-2 text-xs text-gray-400">CHF</span>
                     <input v-model.number="(empForm as any).child_allowance_chf" type="number" step="10" min="0" placeholder="0"
-                      class="w-full border border-gray-200 bg-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+                      class="w-full border border-gray-200 bg-gray-50 rounded-xl pl-9 pr-12 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+                    <span class="absolute right-3 top-2 text-xs text-gray-400">/Mt.</span>
                   </div>
+                  <p class="text-[11px] text-gray-400 mt-1">Kanton Schwyz: CHF 230/Kind/Mt.</p>
                 </div>
               </div>
             </div>
@@ -755,9 +918,12 @@
                 <div class="flex justify-between font-bold text-emerald-700 border-t border-gray-200 pt-1.5">
                   <span>= Nettolohn</span><span>{{ chf(preview.net) }}</span>
                 </div>
-                <div v-if="preview.spesen > 0" class="flex justify-between text-blue-600">
-                  <span>+ Spesen (steuerfrei)</span><span>+{{ chf(preview.spesen) }}</span>
-                </div>
+                <template v-if="spesenItems.length > 0">
+                  <div v-for="item in spesenItems" :key="item.id" class="flex justify-between text-blue-600">
+                    <span>+ {{ item.description || 'Spesen' }} (steuerfrei)</span>
+                    <span>+{{ chf(Math.round((item.amount_chf || 0) * 100)) }}</span>
+                  </div>
+                </template>
                 <div v-if="preview.kinderzulage > 0" class="flex justify-between text-blue-600">
                   <span>+ Kinderzulage</span><span>+{{ chf(preview.kinderzulage) }}</span>
                 </div>
@@ -886,6 +1052,18 @@ const empForm = ref({
 })
 
 const empFormSalaryChf = ref<number | ''>('')
+const editingInsurance = ref(false)
+const spesenItems = ref<Array<{ id: string; description: string; amount_chf: number }>>([])
+
+function r2(n: number | undefined | null): string {
+  return parseFloat((Math.round((n ?? 0) * 100) / 100).toFixed(2)).toString().replace('.', ',')
+}
+function addSpesenItem() {
+  spesenItems.value.push({ id: `sp_${Date.now()}_${Math.random().toString(36).slice(2)}`, description: '', amount_chf: 0 })
+}
+function removeSpesenItem(id: string) {
+  spesenItems.value = spesenItems.value.filter(i => i.id !== id)
+}
 
 const preview = computed(() => {
   const gross = Math.round(Number(empFormSalaryChf.value || 0) * 100)
@@ -909,7 +1087,7 @@ const preview = computed(() => {
   const coordinated = Math.max(0, gross - coordRappen)
   const bvg_an  = r(coordinated * bvgAnRate)
   const net     = gross - ahv_an - alv_an - nbu_an - bvg_an
-  const spesen  = Math.round((f.monthly_spesen_chf  ?? 0) * 100)
+  const spesen  = spesenItems.value.reduce((s, i) => s + Math.round((i.amount_chf || 0) * 100), 0)
   const kizul   = Math.round((f.child_allowance_chf ?? 0) * 100)
   const payout  = net + spesen + kizul
 
@@ -1026,28 +1204,40 @@ async function openEmployeeModal(emp: PayrollEmployee | null) {
     iban:        e.iban       ?? '',
     start_date:  e.start_date ?? new Date().toISOString().split('T')[0],
     end_date:    e.end_date   ?? '',
-    // All rates in % for UI inputs
-    ahv_employee_rate_pct:    ((e.ahv_employee_rate     ?? 0.053)  * 100),
-    ahv_employer_rate_pct:    ((e.ahv_employer_rate     ?? 0.053)  * 100),
-    alv_employee_rate_pct:    ((e.alv_employee_rate     ?? 0.011)  * 100),
-    alv_employer_rate_pct:    ((e.alv_employer_rate     ?? 0.011)  * 100),
-    nbu_rate_pct:             ((e.nbu_rate              ?? 0.0068) * 100),
-    bu_rate_pct:              ((e.bu_rate               ?? 0.0039) * 100),
-    bvg_employee_rate_pct:    ((e.bvg_employee_rate     ?? 0.05)   * 100),
-    bvg_employer_rate_pct:    ((e.bvg_employer_rate     ?? 0.05)   * 100),
-    bvg_coordination_chf:       (e.bvg_coordination_rappen ?? 220500) / 100,
-    monthly_spesen_chf:         (e.monthly_spesen_rappen   ?? 0)       / 100,
-    child_allowance_chf:        (e.child_allowance_rappen  ?? 0)       / 100,
+    // All rates in % for UI inputs (parseFloat+toFixed avoids 0.011*100=1.0999...)
+    ahv_employee_rate_pct:    parseFloat(((e.ahv_employee_rate     ?? 0.053)  * 100).toFixed(3)),
+    ahv_employer_rate_pct:    parseFloat(((e.ahv_employer_rate     ?? 0.053)  * 100).toFixed(3)),
+    alv_employee_rate_pct:    parseFloat(((e.alv_employee_rate     ?? 0.011)  * 100).toFixed(3)),
+    alv_employer_rate_pct:    parseFloat(((e.alv_employer_rate     ?? 0.011)  * 100).toFixed(3)),
+    nbu_rate_pct:             parseFloat(((e.nbu_rate              ?? 0.0068) * 100).toFixed(3)),
+    bu_rate_pct:              parseFloat(((e.bu_rate               ?? 0.0039) * 100).toFixed(3)),
+    bvg_employee_rate_pct:    parseFloat(((e.bvg_employee_rate     ?? 0.05)   * 100).toFixed(3)),
+    bvg_employer_rate_pct:    parseFloat(((e.bvg_employer_rate     ?? 0.05)   * 100).toFixed(3)),
+    bvg_coordination_chf:     parseFloat(((e.bvg_coordination_rappen ?? 220500) / 100).toFixed(2)),
+    child_allowance_chf:      parseFloat(((e.child_allowance_rappen  ?? 0)       / 100).toFixed(2)),
   })
 
   if (emp) {
     empForm.value = toForm(emp)
     empFormSalaryChf.value = emp.gross_salary_rappen / 100
+    // Init spesen items from JSONB or legacy single value
+    const rawItems = Array.isArray((emp as any).spesen_items) ? (emp as any).spesen_items : []
+    spesenItems.value = rawItems.length > 0
+      ? rawItems.map((s: any, i: number) => ({
+          id: s.id ?? `sp_${Date.now()}_${i}`,
+          description: s.description ?? '',
+          amount_chf: typeof s.amount_chf === 'number' ? s.amount_chf : 0,
+        }))
+      : emp.monthly_spesen_rappen > 0
+        ? [{ id: `sp_legacy_${Date.now()}`, description: 'Spesen', amount_chf: emp.monthly_spesen_rappen / 100 }]
+        : []
   } else {
     empForm.value = toForm({})
     empFormSalaryChf.value = ''
+    spesenItems.value = []
     await loadStaffUsers()
   }
+  editingInsurance.value = false
   showEmployeeModal.value = true
 }
 
@@ -1098,8 +1288,9 @@ async function saveEmployee() {
       bvg_employee_rate:         (empForm.value as any).bvg_employee_rate_pct / 100,
       bvg_employer_rate:         (empForm.value as any).bvg_employer_rate_pct / 100,
       bvg_coordination_rappen: Math.round((empForm.value as any).bvg_coordination_chf * 100),
-      monthly_spesen_rappen:   Math.round((empForm.value as any).monthly_spesen_chf   * 100),
+      monthly_spesen_rappen:   spesenItems.value.reduce((s, i) => s + Math.round((i.amount_chf || 0) * 100), 0),
       child_allowance_rappen:  Math.round((empForm.value as any).child_allowance_chf  * 100),
+      spesen_items:            spesenItems.value.map(i => ({ id: i.id, description: i.description, amount_chf: i.amount_chf })),
     }
     if (editingEmployee.value) {
       await $fetch(`/api/admin/payroll/employees/${editingEmployee.value.id}`, { method: 'PATCH', body: payload })
