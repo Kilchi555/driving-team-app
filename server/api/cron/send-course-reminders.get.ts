@@ -98,7 +98,7 @@ export default defineEventHandler(async (event) => {
   } else {
     const { data: sessions, error: sessionsError } = await supabase
       .from('course_sessions')
-      .select('id, course_id, tenant_id, session_number, start_time, end_time, custom_location, staff_id, instructor_type, external_instructor_email, external_instructor_name, course:courses!course_sessions_course_id_fkey(is_active, status)')
+      .select('id, course_id, tenant_id, session_number, start_time, end_time, custom_location, staff_id, instructor_type, external_instructor_email, external_instructor_name, course:courses(is_active, status)')
       .gte('start_time', windowStart.toISOString())
       .lt('start_time', windowEnd.toISOString())
       .eq('is_active', true)

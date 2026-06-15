@@ -24,9 +24,9 @@ export default defineEventHandler(async (event) => {
 
   const { data, error } = await supabaseAdmin
     .from('courses')
-    .select('id, name, category, start_date')
+    .select('id, name, category, course_start_date')
     .eq('tenant_id', profile.tenant_id)
-    .order('start_date', { ascending: false })
+    .order('course_start_date', { ascending: false })
 
   if (error) throw createError({ statusCode: 500, message: error.message })
 
