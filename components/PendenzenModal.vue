@@ -547,33 +547,71 @@
 
       </div>
 
-      <div class="px-4 py-3 border-t bg-gray-50 flex flex-wrap items-center gap-2">
-        <a
-          v-if="selectedProposal.phone"
-          :href="`tel:${selectedProposal.phone}`"
-          class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-        >
-          📞 Anrufen
-        </a>
-        <a
-          v-if="selectedProposal.email"
-          :href="`mailto:${selectedProposal.email}`"
-          class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-        >
-          ✉️ E-Mail
-        </a>
+      <div class="px-4 pt-3 pb-1 border-t bg-gray-50">
+        <!-- Contact buttons -->
+        <div class="flex flex-wrap gap-2 mb-3">
+          <a
+            v-if="selectedProposal.phone"
+            :href="`tel:${selectedProposal.phone}`"
+            class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+          >
+            📞 Anrufen
+          </a>
+          <a
+            v-if="selectedProposal.email"
+            :href="`mailto:${selectedProposal.email}`"
+            class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+          >
+            ✉️ E-Mail
+          </a>
+        </div>
 
-        <button
-          @click="completeSelectedProposal"
-          :disabled="!selectedProposal?.id || isProposalCompleting(selectedProposal.id)"
-          class="ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <svg v-if="selectedProposal?.id && isProposalCompleting(selectedProposal.id)" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-          </svg>
-          {{ selectedProposal?.id && isProposalCompleting(selectedProposal.id) ? 'Speichere...' : 'Als erledigt markieren' }}
-        </button>
+        <!-- Outcome selector -->
+        <div class="mb-2">
+          <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Ergebnis dieser Anfrage</p>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            <button
+              v-for="opt in outcomeOptions"
+              :key="opt.value"
+              type="button"
+              @click="selectedOutcomeType = selectedOutcomeType === opt.value ? '' : opt.value"
+              :class="[
+                'flex items-center gap-1.5 px-2.5 py-2 rounded-lg border text-xs font-medium transition-all text-left',
+                selectedOutcomeType === opt.value
+                  ? opt.color === 'green'  ? 'border-green-500 bg-green-50 text-green-800'
+                  : opt.color === 'blue'   ? 'border-blue-500 bg-blue-50 text-blue-800'
+                  : opt.color === 'amber'  ? 'border-amber-500 bg-amber-50 text-amber-800'
+                  : opt.color === 'red'    ? 'border-red-500 bg-red-50 text-red-800'
+                  : 'border-gray-500 bg-gray-100 text-gray-800'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+              ]"
+            >
+              <span>{{ opt.icon }}</span>
+              <span>{{ opt.label }}</span>
+            </button>
+          </div>
+          <p v-if="selectedOutcomeType === 'potential_customer'" class="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+            Erinnerung in 30 Tagen: Simy erinnert den zuständigen Mitarbeiter, sich wieder zu melden.
+          </p>
+          <p v-if="selectedOutcomeType === 'no_show'" class="mt-1.5 text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-1">
+            Tägliche Erinnerung: Simy erinnert täglich, bis ein anderer Status gesetzt wird.
+          </p>
+        </div>
+
+        <!-- Save button -->
+        <div class="flex justify-end pb-2">
+          <button
+            @click="completeSelectedProposal"
+            :disabled="!selectedProposal?.id || isProposalCompleting(selectedProposal.id)"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg v-if="selectedProposal?.id && isProposalCompleting(selectedProposal.id)" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            {{ selectedProposal?.id && isProposalCompleting(selectedProposal.id) ? 'Speichere...' : (selectedOutcomeType ? 'Als erledigt markieren' : 'Ohne Angabe erledigen') }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -651,6 +689,7 @@ const completingProposalIds = ref<Set<string>>(new Set())
 const proposalActionError = ref('')
 const showProposalDetailModal = ref(false)
 const selectedProposal = ref<any>(null)
+const selectedOutcomeType = ref<string>('')
 
 
 // Cash Payment Confirmation Modal
@@ -802,14 +841,24 @@ const isProposalCompleting = (proposalId: string) => {
   return completingProposalIds.value.has(proposalId)
 }
 
+const outcomeOptions = [
+  { value: 'booking_confirmed', label: 'Buchung abgeschlossen', icon: '✅', color: 'green' },
+  { value: 'consultation_only', label: 'Nur Beratung', icon: '💬', color: 'blue' },
+  { value: 'potential_customer', label: 'Potenzieller Kunde', icon: '🌱', color: 'amber' },
+  { value: 'not_interested', label: 'Kein Interesse', icon: '❌', color: 'red' },
+  { value: 'no_show', label: 'Nicht erreichbar', icon: '📵', color: 'gray' },
+] as const
+
 const openProposalDetailModal = (proposal: any) => {
   selectedProposal.value = proposal
+  selectedOutcomeType.value = ''
   showProposalDetailModal.value = true
 }
 
 const closeProposalDetailModal = () => {
   showProposalDetailModal.value = false
   selectedProposal.value = null
+  selectedOutcomeType.value = ''
 }
 
 // Debug log für pendenciesCount
@@ -940,7 +989,7 @@ const loadBookingProposals = async () => {
   }
 }
 
-const markProposalAsCompleted = async (proposalId: string) => {
+const markProposalAsCompleted = async (proposalId: string, outcomeType?: string) => {
   if (!proposalId || isProposalCompleting(proposalId)) return
 
   proposalActionError.value = ''
@@ -951,7 +1000,8 @@ const markProposalAsCompleted = async (proposalId: string) => {
       body: {
         proposalId,
         status: 'accepted',
-        adminNotes: 'Marked completed from PendenzenModal'
+        outcomeType: outcomeType || null,
+        adminNotes: outcomeType ? `Erledigt – ${outcomeOptions.find(o => o.value === outcomeType)?.label || outcomeType}` : 'Marked completed from PendenzenModal'
       }
     })
 
@@ -969,7 +1019,7 @@ const markProposalAsCompleted = async (proposalId: string) => {
 const completeSelectedProposal = async () => {
   if (!selectedProposal.value?.id) return
   const proposalId = selectedProposal.value.id
-  await markProposalAsCompleted(proposalId)
+  await markProposalAsCompleted(proposalId, selectedOutcomeType.value || undefined)
 
   if (!bookingProposals.value.some((p: any) => p.id === proposalId)) {
     closeProposalDetailModal()

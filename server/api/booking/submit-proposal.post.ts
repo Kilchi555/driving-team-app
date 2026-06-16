@@ -214,6 +214,17 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Resolve UTM attribution from session if not passed directly
+    let resolvedAttribution: MarketingAttributionPayload | null = marketing_attribution ?? null
+    if (!resolvedAttribution && marketing_session_id) {
+      const { data: attrRow } = await supabase
+        .from('marketing_attributions')
+        .select('gclid, gbraid, wbraid, utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid, fbc, fbp')
+        .eq('session_id', marketing_session_id)
+        .maybeSingle()
+      if (attrRow) resolvedAttribution = attrRow as any
+    }
+
     // Create the proposal via service_role – this is a server-side endpoint, input is
     // already validated above. Admin client bypasses RLS safely.
     const { data: proposal, error: proposalError } = await supabase
@@ -235,7 +246,16 @@ export default defineEventHandler(async (event) => {
         city: city?.trim() || null,
         notes: notes?.trim() || null,
         created_by_user_id: created_by_user_id || null,
-        status: 'pending'
+        status: 'pending',
+        marketing_session_id: marketing_session_id || null,
+        utm_source: resolvedAttribution?.utm_source ?? null,
+        utm_medium: resolvedAttribution?.utm_medium ?? null,
+        utm_campaign: resolvedAttribution?.utm_campaign ?? null,
+        utm_content: resolvedAttribution?.utm_content ?? null,
+        utm_term: resolvedAttribution?.utm_term ?? null,
+        fbclid: (resolvedAttribution as any)?.fbclid ?? null,
+        fbc: (resolvedAttribution as any)?.fbc ?? null,
+        fbp: (resolvedAttribution as any)?.fbp ?? null,
       })
       .select()
       .single()
@@ -250,18 +270,8 @@ export default defineEventHandler(async (event) => {
 
     console.log('✅ Booking proposal created:', proposal.id)
 
-    // Marketing attribution for server-side Google Ads inquiry conversion
-    let marketingAttr: MarketingAttributionPayload | null = marketing_attribution ?? null
-    if (!marketingAttr && marketing_session_id) {
-      const { data: attrRow } = await supabase
-        .from('marketing_attributions')
-        .select('gclid, gbraid, wbraid, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
-        .eq('session_id', marketing_session_id)
-        .maybeSingle()
-      if (attrRow) marketingAttr = attrRow as MarketingAttributionPayload
-    }
-
-    if (marketingAttr?.gclid || marketingAttr?.gbraid || marketingAttr?.wbraid) {
+    // Upload Google Ads server-side conversion if click ID is present
+    if (resolvedAttribution?.gclid || resolvedAttribution?.gbraid || resolvedAttribution?.wbraid) {
       ;(async () => {
         try {
           const normalizedEmail = (email ?? '').trim().toLowerCase()
@@ -271,9 +281,9 @@ export default defineEventHandler(async (event) => {
 
           await recordAndUploadInquiryConversion({
             proposal_id: proposal.id,
-            gclid: marketingAttr!.gclid ?? null,
-            gbraid: marketingAttr!.gbraid ?? null,
-            wbraid: marketingAttr!.wbraid ?? null,
+            gclid: resolvedAttribution!.gclid ?? null,
+            gbraid: resolvedAttribution!.gbraid ?? null,
+            wbraid: resolvedAttribution!.wbraid ?? null,
             conversion_date_time: new Date(),
             hashed_email: hashedEmail,
             hashed_phone: hashedPhone,

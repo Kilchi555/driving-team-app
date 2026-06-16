@@ -231,10 +231,23 @@ export class AvailabilityCalculator {
 
     if (error) throw error
 
-    // Load minimum booking lead time
+    // Load minimum booking lead time (staff-level settings + tenant fallback)
     const staffIds = data?.map(s => s.id) || []
     const settingsMap = new Map()
     
+    // Fetch tenant-level default lead time
+    let tenantLeadTimeHours = 12
+    if (tenantId) {
+      const { data: tenantData } = await this.supabase
+        .from('tenants')
+        .select('minimum_booking_lead_time_hours')
+        .eq('id', tenantId)
+        .single()
+      if (tenantData?.minimum_booking_lead_time_hours != null) {
+        tenantLeadTimeHours = tenantData.minimum_booking_lead_time_hours
+      }
+    }
+
     // Only query settings if we have staff
     if (staffIds.length > 0) {
       const { data: availabilitySettings } = await this.supabase
@@ -251,7 +264,8 @@ export class AvailabilityCalculator {
 
     return (data || []).map(staff => ({
       ...staff,
-      minimum_booking_lead_time_hours: settingsMap.get(staff.id) || 24
+      // Staff-level override takes priority, then tenant default, then global fallback
+      minimum_booking_lead_time_hours: settingsMap.get(staff.id) ?? tenantLeadTimeHours
     }))
   }
 
@@ -1005,7 +1019,8 @@ export class AvailabilityCalculator {
     }
 
     try {
-      const batchSize = 1000
+      const upsertBatchSize = 1000   // Upserts use a POST body → no URL length limit
+      const deleteBatchSize = 100    // Deletes use `.in()` query params → URL limit ~8 kB; 100 UUIDs ≈ 3.7 kB ✓
 
       // Step 1: Upsert new slots.
       // onConflict on the natural key preserves the existing UUID for unchanged slots,
@@ -1013,8 +1028,8 @@ export class AvailabilityCalculator {
       logger.debug(`⬆️ Upserting ${slots.length} slots...`)
       let insertedCount = 0
 
-      for (let i = 0; i < slots.length; i += batchSize) {
-        const batch = slots.slice(i, i + batchSize)
+      for (let i = 0; i < slots.length; i += upsertBatchSize) {
+        const batch = slots.slice(i, i + upsertBatchSize)
 
         const { error: insertError } = await this.supabase
           .from('availability_slots')
@@ -1040,23 +1055,50 @@ export class AvailabilityCalculator {
         slots.map(s => `${s.staff_id}|${s.location_id}|${s.start_time}|${s.end_time}|${s.category_code}`)
       )
 
-      let existingQuery = this.supabase
-        .from('availability_slots')
-        .select('id, staff_id, location_id, start_time, end_time, category_code, reserved_by_session, reserved_until')
+      // Fetch existing slots with pagination to avoid Supabase's default 1000-row API
+      // limit. Without pagination a staff member with thousands of slots (e.g. many
+      // locations × categories × durations) would silently have stale slots skipped.
+      //
+      // PAGE_SIZE must be ≤ the PostgREST max_rows setting (default 1000 in Supabase).
+      // We use 1000 so that receiving fewer rows than PAGE_SIZE reliably signals the
+      // last page — if PAGE_SIZE were larger than max_rows the last-page check would
+      // fire on the very first request and we'd never read beyond row 1000.
+      const FETCH_PAGE_SIZE = 1000
+      let fetchOffset = 0
+      const allExistingSlots: any[] = []
 
-      if (tenantId) existingQuery = existingQuery.eq('tenant_id', tenantId)
-      if (staffId) existingQuery = existingQuery.eq('staff_id', staffId)
+      for (let pageIndex = 0; pageIndex < 500; pageIndex++) {   // 500 × 1000 = 500k slots max (safety valve)
+        let pageQuery = this.supabase
+          .from('availability_slots')
+          .select('id, staff_id, location_id, start_time, end_time, category_code, reserved_by_session, reserved_until')
 
-      const { data: existingSlots, error: fetchError } = await existingQuery
+        if (tenantId) pageQuery = pageQuery.eq('tenant_id', tenantId)
+        if (staffId)  pageQuery = pageQuery.eq('staff_id', staffId)
+        // Limit to the recalculation window so we only check slots that this run is
+        // responsible for — keeps page counts small and avoids touching past slots.
+        if (startDate) pageQuery = pageQuery.gte('start_time', startDate.toISOString())
+        if (endDate)   pageQuery = pageQuery.lte('start_time', endDate.toISOString())
 
-      if (fetchError) {
-        // Non-fatal: upsert already succeeded, skip stale cleanup rather than failing the whole job
-        logger.warn('⚠️ Could not fetch existing slots for stale-slot cleanup – skipping cleanup:', fetchError)
-        return insertedCount
+        pageQuery = pageQuery.range(fetchOffset, fetchOffset + FETCH_PAGE_SIZE - 1)
+
+        const { data: page, error: pageError } = await pageQuery
+
+        if (pageError) {
+          // Non-fatal: upsert already succeeded, skip stale cleanup rather than failing the whole job
+          logger.warn('⚠️ Could not fetch existing slots for stale-slot cleanup – skipping cleanup:', pageError)
+          return insertedCount
+        }
+
+        if (!page || page.length === 0) break       // empty page → done
+        allExistingSlots.push(...page)
+        if (page.length < FETCH_PAGE_SIZE) break    // partial page → last page
+        fetchOffset += FETCH_PAGE_SIZE
       }
 
+      logger.debug(`📋 Fetched ${allExistingSlots.length} existing slots for stale-slot check (${Math.ceil(allExistingSlots.length / FETCH_PAGE_SIZE)} pages)`)
+
       const now = new Date()
-      const staleIds = (existingSlots ?? [])
+      const staleIds = allExistingSlots
         .filter(s => {
           const key = `${s.staff_id}|${s.location_id}|${s.start_time}|${s.end_time}|${s.category_code}`
           if (newKeySet.has(key)) return false
@@ -1070,8 +1112,8 @@ export class AvailabilityCalculator {
       if (staleIds.length > 0) {
         logger.debug(`🗑️ Deleting ${staleIds.length} stale slots...`)
 
-        for (let i = 0; i < staleIds.length; i += batchSize) {
-          const batchIds = staleIds.slice(i, i + batchSize)
+        for (let i = 0; i < staleIds.length; i += deleteBatchSize) {
+          const batchIds = staleIds.slice(i, i + deleteBatchSize)
 
           let deleteQuery = this.supabase
             .from('availability_slots')

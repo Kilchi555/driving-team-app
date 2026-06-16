@@ -12,6 +12,14 @@ interface MarketingAttributionPayload {
   gclid?: string | null
   gbraid?: string | null
   wbraid?: string | null
+  utm_source?: string | null
+  utm_medium?: string | null
+  utm_campaign?: string | null
+  utm_content?: string | null
+  utm_term?: string | null
+  fbclid?: string | null
+  fbc?: string | null
+  fbp?: string | null
 }
 
 export default defineEventHandler(async (event) => {
@@ -39,6 +47,7 @@ export default defineEventHandler(async (event) => {
       notes,
       created_by_user_id,
       preferred_time_slots = [], // Empty for general inquiries
+      marketing_session_id,
       marketing_attribution,
       _hp, // Honeypot field — must be empty
     } = body
@@ -141,6 +150,17 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // Resolve UTM attribution from session if not passed directly
+    let resolvedAttribution: MarketingAttributionPayload | null = marketing_attribution ?? null
+    if (!resolvedAttribution && marketing_session_id) {
+      const { data: attrRow } = await supabase
+        .from('marketing_attributions')
+        .select('gclid, gbraid, wbraid, utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid, fbc, fbp')
+        .eq('session_id', marketing_session_id)
+        .maybeSingle()
+      if (attrRow) resolvedAttribution = attrRow as any
+    }
+
     // 3. Create the inquiry as a booking_proposal
     // For general inquiries: category_code, location_id, duration_minutes, staff_id all NULL
     // For specific requests: all fields filled
@@ -159,7 +179,16 @@ export default defineEventHandler(async (event) => {
         phone: phone.trim(),
         notes: notes.trim(),
         created_by_user_id: created_by_user_id || null,
-        status: 'pending'
+        status: 'pending',
+        marketing_session_id: marketing_session_id || null,
+        utm_source: resolvedAttribution?.utm_source ?? null,
+        utm_medium: resolvedAttribution?.utm_medium ?? null,
+        utm_campaign: resolvedAttribution?.utm_campaign ?? null,
+        utm_content: resolvedAttribution?.utm_content ?? null,
+        utm_term: resolvedAttribution?.utm_term ?? null,
+        fbclid: resolvedAttribution?.fbclid ?? null,
+        fbc: resolvedAttribution?.fbc ?? null,
+        fbp: resolvedAttribution?.fbp ?? null,
       })
       .select()
       .single()
@@ -174,8 +203,7 @@ export default defineEventHandler(async (event) => {
 
     console.log('✅ General inquiry created:', proposal.id)
 
-    const marketingAttr: MarketingAttributionPayload | null = marketing_attribution ?? null
-    if (marketingAttr?.gclid || marketingAttr?.gbraid || marketingAttr?.wbraid) {
+    if (resolvedAttribution?.gclid || resolvedAttribution?.gbraid || resolvedAttribution?.wbraid) {
       ;(async () => {
         try {
           const normalizedEmail = email.trim().toLowerCase()
@@ -185,9 +213,9 @@ export default defineEventHandler(async (event) => {
 
           await recordAndUploadInquiryConversion({
             proposal_id: proposal.id,
-            gclid: marketingAttr!.gclid ?? null,
-            gbraid: marketingAttr!.gbraid ?? null,
-            wbraid: marketingAttr!.wbraid ?? null,
+            gclid: resolvedAttribution!.gclid ?? null,
+            gbraid: resolvedAttribution!.gbraid ?? null,
+            wbraid: resolvedAttribution!.wbraid ?? null,
             conversion_date_time: new Date(),
             hashed_email: hashedEmail,
             hashed_phone: hashedPhone,

@@ -2,6 +2,7 @@
 // Called by scheduled task, no user authentication required
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-manager'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -21,6 +22,7 @@ export default defineEventHandler(async (event) => {
     logger.info('🔄 Starting scheduled external calendar sync for all staff...')
     
     const supabase = getSupabaseAdmin()
+    const slotManager = createAvailabilitySlotManager(supabase)
 
     // ============ LAYER 2: GET ALL EXTERNAL CALENDARS ============
     const { data: calendars, error: calendarsError } = await supabase
@@ -176,6 +178,22 @@ export default defineEventHandler(async (event) => {
           logger.warn(`⚠️ Failed to insert busy times for ${calendar.calendar_name}:`, insertError.message)
           failedCount++
           continue
+        }
+
+        // Immediately invalidate overlapping availability slots for all newly synced events
+        // This prevents a ~5 minute booking window while waiting for queue-recalc to run
+        try {
+          for (const bt of uniqueBusyTimes) {
+            await slotManager.invalidateSlots(
+              calendar.staff_id,
+              bt.start_time,
+              bt.end_time,
+              calendar.tenant_id
+            )
+          }
+          logger.debug(`✅ Invalidated slots for ${uniqueBusyTimes.length} busy times`)
+        } catch (slotErr: any) {
+          logger.warn(`⚠️ Failed to invalidate slots for ${calendar.calendar_name} (non-critical):`, slotErr.message)
         }
 
         // Queue affected staff for availability recalculation
