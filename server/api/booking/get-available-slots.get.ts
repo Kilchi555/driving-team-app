@@ -96,7 +96,16 @@ export default defineEventHandler(async (event: H3Event) => {
     // ============ LAYER 3: FETCH SLOTS ============
     // Use anon key so RLS policies are enforced
     const supabase = getSupabaseAdmin()
-    const now = new Date().toISOString()
+    const now = new Date()
+
+    // Load tenant's minimum booking lead time (default 12h if not set)
+    const { data: tenantData } = await supabase
+      .from('tenants')
+      .select('minimum_booking_lead_time_hours')
+      .eq('id', query.tenant_id)
+      .single()
+    const leadTimeHours = tenantData?.minimum_booking_lead_time_hours ?? 12
+    const minBookableTime = new Date(now.getTime() + leadTimeHours * 3600 * 1000).toISOString()
 
     let slotsQuery = supabase
       .from('availability_slots')
@@ -106,10 +115,10 @@ export default defineEventHandler(async (event: H3Event) => {
       // - is_available = true (not part of definitive booking)
       // - AND (no temporary reservation OR reservation has expired)
       .eq('is_available', true)
-      .or(`reserved_until.is.null,reserved_until.lt.${now}`)
+      .or(`reserved_until.is.null,reserved_until.lt.${now.toISOString()}`)
       .gte('start_time', `${query.start_date}T00:00:00Z`)
       .lte('start_time', `${query.end_date}T23:59:59Z`)
-      .gt('end_time', now) // CRITICAL: Only future slots!
+      .gt('start_time', minBookableTime) // Only show slots after the minimum lead time window
       .order('start_time', { ascending: true })
 
     // Optional filters

@@ -2,8 +2,8 @@ name: Sync External Calendars
 
 on:
   schedule:
-    # Läuft alle 30 Minuten
-    - cron: '*/30 * * * *'
+    # Läuft alle 10 Minuten
+    - cron: '*/10 * * * *'
   # Erlaubt manuellen Trigger über GitHub UI
   workflow_dispatch:
 

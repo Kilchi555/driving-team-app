@@ -1090,6 +1090,58 @@
           <EmailDomainSettings />
         </div>
 
+        <!-- ═══ Online-Buchung Tab ═══ -->
+        <div v-if="activeTab === 'booking'" class="space-y-6 max-w-2xl">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
+            <div>
+              <h2 class="text-base font-semibold text-gray-900">Online-Buchung</h2>
+              <p class="mt-1 text-sm text-gray-500">Konfigurieren Sie, wie weit im Voraus Kunden online buchen können.</p>
+            </div>
+
+            <!-- Mindest-Vorlaufzeit -->
+            <div class="border border-blue-100 rounded-xl p-5 bg-blue-50/50 space-y-4">
+              <div class="flex items-start gap-3">
+                <div class="mt-0.5 w-8 h-8 flex-shrink-0 rounded-full bg-blue-100 flex items-center justify-center">
+                  <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-gray-900">Mindest-Vorlaufzeit</p>
+                  <p class="mt-1 text-xs text-gray-500 leading-relaxed">
+                    Kunden können nur Termine buchen, die mindestens diese Anzahl Stunden in der Zukunft liegen.
+                    Einzel-Fahrlehrende können in den Mitarbeiter-Einstellungen einen abweichenden Wert festlegen.
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3 pl-11">
+                <input
+                  type="number"
+                  v-model.number="bookingSettings.minimum_booking_lead_time_hours"
+                  min="0"
+                  max="168"
+                  class="w-24 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                />
+                <span class="text-sm text-gray-700">Stunden im Voraus</span>
+              </div>
+
+              <p class="pl-11 text-xs text-gray-400">
+                Empfehlung: 8–24 Stunden &nbsp;·&nbsp; 0 = sofortige Buchung möglich &nbsp;·&nbsp; max. 168 h (7 Tage)
+              </p>
+            </div>
+
+            <!-- Save button -->
+            <div class="flex items-center gap-3">
+              <button @click="saveBookingSettings" :disabled="bookingSaving"
+                class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shadow-sm">
+                {{ bookingSaving ? 'Speichert…' : 'Speichern' }}
+              </button>
+              <span v-if="bookingSaved" class="text-sm text-blue-600 font-medium">✓ Gespeichert</span>
+            </div>
+          </div>
+        </div>
+
         <!-- ═══ Rechtsform & Steuern Tab ═══ -->
         <div v-if="activeTab === 'legal'" class="space-y-6 max-w-2xl">
 
@@ -1257,6 +1309,12 @@ const DocumentIcon = markRaw({
   </svg>`
 })
 
+const ClockIcon = markRaw({
+  template: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+  </svg>`
+})
+
 // Layout
 definePageMeta({
   middleware: 'admin',
@@ -1278,7 +1336,7 @@ const { showSuccess, showError } = useUIStore()
 const isSaving = ref(false)
 const route = useRoute()
 const router = useRouter()
-const VALID_TABS = ['design', 'contact', 'logos', 'security', 'features', 'eventtypes', 'payments', 'reglemente', 'email', 'legal']
+const VALID_TABS = ['design', 'contact', 'logos', 'security', 'features', 'eventtypes', 'payments', 'reglemente', 'email', 'legal', 'booking']
 const activeTab = ref(VALID_TABS.includes(route.query.tab as string) ? (route.query.tab as string) : 'design')
 const selectedPreset = ref('')
 const selectedFont = ref('')
@@ -1308,6 +1366,7 @@ const tabs = ref([
   { id: 'features', name: 'Funktionen', icon: ShieldIcon },
   { id: 'eventtypes', name: 'Eventtypen', icon: ShieldIcon },
   { id: 'payments', name: 'Zahlungen', icon: PaymentIcon },
+  { id: 'booking', name: 'Online-Buchung', icon: ClockIcon },
   { id: 'email', name: 'E-Mail Domain', icon: ContactIcon },
   { id: 'reglemente', name: 'Reglemente', icon: DocumentIcon },
   { id: 'legal', name: 'Rechtsform & Steuern', icon: ShieldIcon }
@@ -2331,6 +2390,35 @@ const LEGAL_FORM_LABELS: Record<string, string> = {
   ag: 'AG (Aktiengesellschaft)',
 }
 
+// ─── Booking Settings ───────────────────────────────────────────────────────
+const bookingSettings = ref({ minimum_booking_lead_time_hours: 12 })
+const bookingSaving = ref(false)
+const bookingSaved = ref(false)
+
+async function loadBookingSettings() {
+  try {
+    const data = await $fetch<{ minimum_booking_lead_time_hours: number }>('/api/admin/booking-settings')
+    bookingSettings.value.minimum_booking_lead_time_hours = data.minimum_booking_lead_time_hours
+  } catch {}
+}
+
+async function saveBookingSettings() {
+  bookingSaving.value = true
+  bookingSaved.value = false
+  try {
+    await $fetch('/api/admin/booking-settings', {
+      method: 'POST',
+      body: { minimum_booking_lead_time_hours: bookingSettings.value.minimum_booking_lead_time_hours }
+    })
+    bookingSaved.value = true
+    setTimeout(() => { bookingSaved.value = false }, 3000)
+  } catch (e: any) {
+    alert(e.data?.statusMessage ?? 'Fehler beim Speichern')
+  } finally {
+    bookingSaving.value = false
+  }
+}
+
 // Lifecycle
 onMounted(async () => {
   // Add click outside listener
@@ -2368,6 +2456,7 @@ onMounted(async () => {
   // Original onMounted logic
   await loadData()
   await loadLegalInfo()
+  await loadBookingSettings()
   
   // Allow auto-save after initial load
   setTimeout(() => {

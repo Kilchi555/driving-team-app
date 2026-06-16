@@ -7,7 +7,8 @@
       <div class="space-y-2">
         <div class="flex justify-between">
           <span class="text-gray-700">{{ lessonType || 'Grundpreis' }} ({{ durationMinutes }} min)</span>
-          <span class="font-semibold text-gray-700">CHF {{ (roundToNearestFranken(Math.round(getBasePrice() * 100)) / 100).toFixed(2) }}</span>
+          <span v-if="props.isCalculatingPrice" class="text-gray-400 text-sm italic font-normal">wird berechnet…</span>
+          <span v-else class="font-semibold text-gray-700">CHF {{ (roundToNearestFranken(Math.round(getBasePrice() * 100)) / 100).toFixed(2) }}</span>
         </div>
         
         <!-- Rabatt Anzeige - direkt im blauen Bereich -->

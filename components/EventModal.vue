@@ -175,7 +175,7 @@
               v-if="formData.type || formData.appointment_type === 'theory'"
               v-model="formData.duration_minutes"
               :available-durations="Array.isArray(availableDurations) ? availableDurations : [45]"
-              :price-per-minute="dynamicPricing.pricePerMinute || 2.11"
+              :price-per-minute="dynamicPricing.isLoading ? 0 : (dynamicPricing.pricePerMinute || 2.11)"
               :disabled="props?.mode === 'edit' && isPastAppointment"
               :show-buttons="!(props?.mode === 'edit' && isPastAppointment)"
               :is-past-appointment="props?.mode === 'edit' && isPastAppointment"
@@ -345,7 +345,7 @@
             <PriceDisplay
               ref="priceDisplayRef"
               :duration-minutes="formData.duration_minutes || 45"
-              :price-per-minute="dynamicPricing.pricePerMinute || 2.11"
+              :price-per-minute="dynamicPricing.isLoading ? 0 : (dynamicPricing.pricePerMinute || 2.11)"
               :lesson-type="currentLessonTypeText"
               :discount="formData.discount || 0"
               :discount-reason="formData.discount_reason || ''"
@@ -3349,8 +3349,16 @@ const handleLessonTypeSelected = async (lessonType: any) => {
   logger.debug('🎯 Lesson type selected:', lessonType.name)
   selectedLessonType.value = lessonType.code
   formData.value.appointment_type = lessonType.code
-  
-  // ✅ AKTUALISIERE DAUERN basierend auf dem gewählten Lesson-Type
+
+  // Reset stale pricePerMinute immediately so getBasePrice doesn't show a wrong value
+  // while the new backend calculation is in flight
+  dynamicPricing.value = {
+    ...dynamicPricing.value,
+    pricePerMinute: 0,
+    totalPriceChf: '0.00',
+    adminFeeChf: 0,
+    isLoading: true
+  }
   if (formData.value.type && selectedCategory.value) {
     logger.debug('🔄 Updating durations for lesson type change:', lessonType.code, 'category:', formData.value.type)
     
@@ -6156,6 +6164,8 @@ watch(() => formData.value.type, async (newType, oldType) => {
   if (isPopulating.value) return
   logger.debug('🚨 formData.type CHANGED:', { from: oldType, to: newType })
   if (selectedStudent.value && newType && formData.value.eventType === 'lesson') {
+    // Reset stale pricePerMinute so getBasePrice doesn't briefly show wrong values
+    dynamicPricing.value = { ...dynamicPricing.value, pricePerMinute: 0, totalPriceChf: '0.00', adminFeeChf: 0, isLoading: true }
     await calculatePriceForCurrentData()
   }
 }, { immediate: false })

@@ -90,6 +90,10 @@
       "schedule": "30 7 * * *"
     },
     {
+      "path": "/api/cron/send-proposal-followup-reminders",
+      "schedule": "0 7 * * *"
+    },
+    {
       "path": "/api/cron/send-checkin-emails",
       "schedule": "0 9 * * *"
     },
