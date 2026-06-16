@@ -81,7 +81,8 @@ const allReviews = allReviewsData as Record<string, ReviewEntry[]>
 
 // Hinweis: Die hardcodierten Reviews wurden nach ~/data/curated-reviews.json ausgelagert.
 // Aktualisieren mit: npx tsx server/scripts/import-website-reviews.ts
-const _placeholder_default = [
+const _placeholders: Record<string, ReviewEntry[]> = {
+  default: [
     { text: '„Ich habe dank Keni meine Anhängerprüfung erfolgreich bestanden. Er hat sich viel Zeit für mich genommen und mir die Manöver anschaulich erklärt. Zudem hat er mir viele hilfreiche Hinweise gegeben."', author: 'Marco S.', link: 'https://maps.app.goo.gl/pQeWXsGGTuSZW45d8' },
     { text: '„Eine sehr gute Fahrschule und ein cooles Team. Sehr empfehlenswert! Pascal ist ein sehr kompetenter und humorvoller Fahrlehrer. Er hat mich gut auf die Motorrad-Prüfung vorbereitet."', author: 'Terry T.', link: 'https://maps.app.goo.gl/2BPHzr6DBZg74RSQ6' },
     { text: '„Sehr gute Fahrschule! Mein Fahrlehrer war Rijad, und ich hatte stets eine ausgezeichnete Zeit während meiner Fahrstunden. Rijad gab mir immer präzise und hilfreiche Tipps."', author: 'Noel S.', link: 'https://maps.app.goo.gl/Xb18G3mEymJjCoweA' },
@@ -184,9 +185,10 @@ const _placeholder_default = [
     { text: '"Top driving school with competent and helpful instructors. Everyone was punctual, understanding and guided me perfectly on my way to getting my licence."', author: 'Nicolas S.', link: 'https://maps.app.goo.gl/tUe3j3BaHc2LDUm6A' },
     { text: '"André was always on time, very patient and always gave good advice for my driving. This helped me prepare perfectly for the exam. Highly recommended!"', author: 'Benjamin H.', link: 'https://maps.app.goo.gl/i91qeND8kHSnGyx86' },
     { text: '"Driving Team gives you the tools you need to pass your driving test. Thank you to the whole team and especially my instructor Marc – you are the BEST!"', author: 'Cyrill P.', link: 'https://maps.app.goo.gl/ciGZXzCh3Jx4nPSs5' },
-  ]
+  ],
+}
 
-const reviews = computed(() => allReviews[props.category] ?? allReviews['default'] ?? _placeholder_default)
+const reviews = computed(() => allReviews[props.category] ?? allReviews['default'] ?? _placeholders.default)
 
 const sliderRef = ref<HTMLElement | null>(null)
 const activeIndex = ref(0)
