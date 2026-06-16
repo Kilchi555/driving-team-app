@@ -111,45 +111,41 @@
           <p class="text-xs text-amber-700 mb-4">Wähle deinen Standort aus, um Bewertungen, Posts und Insights zu sehen.</p>
           <div v-if="accountsLoading" class="text-xs text-amber-600">Lade Business Profile Accounts…</div>
           <div v-else-if="accountsError" class="text-xs text-red-600">{{ accountsError }}</div>
-          <div v-else-if="gbpAccounts.length === 0" class="space-y-4">
-            <p class="text-xs text-amber-700">
-              Die automatische Erkennung erfordert eine freigeschaltete Google API. Trage deine GBP-Daten manuell ein:
+          <div v-else-if="gbpAccounts.length === 0" class="space-y-3">
+            <p class="text-xs text-amber-700 mb-3">
+              Wähle deinen Driving Team Standort aus:
             </p>
-            <div class="space-y-2">
+            <!-- Known Driving Team locations -->
+            <div
+              v-for="loc in knownLocations"
+              :key="loc.placeId"
+              class="flex items-center justify-between bg-white rounded-xl border border-amber-200 px-4 py-3 hover:border-amber-400 transition-colors"
+            >
               <div>
-                <label class="text-xs font-medium text-amber-900 block mb-1">Account Name</label>
-                <input
-                  v-model="manualAccountName"
-                  placeholder="accounts/123456789"
-                  class="w-full text-sm border border-amber-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
-                <p class="text-xs text-amber-600 mt-1">Zu finden unter: business.google.com → URL enthält die Account-ID</p>
-              </div>
-              <div>
-                <label class="text-xs font-medium text-amber-900 block mb-1">Location ID</label>
-                <input
-                  v-model="manualLocationId"
-                  placeholder="locations/123456789012345"
-                  class="w-full text-sm border border-amber-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
-                <p class="text-xs text-amber-600 mt-1">Zu finden unter: Google Business Profile Manager → URL der Standort-Seite</p>
-              </div>
-              <div>
-                <label class="text-xs font-medium text-amber-900 block mb-1">Name (optional)</label>
-                <input
-                  v-model="manualLocationName"
-                  placeholder="Driving Team Fahrschule"
-                  class="w-full text-sm border border-amber-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
+                <p class="text-sm font-semibold text-gray-900">{{ loc.name }}</p>
+                <p class="text-xs text-gray-400">{{ loc.address }}</p>
               </div>
               <button
-                @click="linkManualLocation"
-                :disabled="!manualAccountName || !manualLocationId || linkingLocation"
-                class="text-sm font-semibold px-4 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors disabled:opacity-40"
+                @click="linkKnownLocation(loc)"
+                :disabled="linkingLocation"
+                class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors disabled:opacity-50 shrink-0 ml-3"
               >
-                Manuell verknüpfen
+                {{ linkingLocation ? '…' : 'Verknüpfen' }}
               </button>
             </div>
+
+            <!-- Advanced: manual entry -->
+            <details class="mt-2">
+              <summary class="text-xs text-amber-600 cursor-pointer hover:text-amber-800">Standort nicht dabei? Manuell eingeben</summary>
+              <div class="space-y-2 mt-3">
+                <input v-model="manualAccountName" placeholder="accounts/123456789" class="w-full text-sm border border-amber-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                <input v-model="manualLocationId" placeholder="locations/123456789012345" class="w-full text-sm border border-amber-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                <input v-model="manualLocationName" placeholder="Name des Standorts" class="w-full text-sm border border-amber-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                <button @click="linkManualLocation" :disabled="!manualAccountName || !manualLocationId || linkingLocation" class="text-sm font-semibold px-4 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-40">
+                  Manuell verknüpfen
+                </button>
+              </div>
+            </details>
           </div>
           <div v-else class="space-y-2">
             <div
@@ -572,6 +568,24 @@ const linkingLocation = ref(false)
 const manualAccountName = ref('')
 const manualLocationId = ref('')
 const manualLocationName = ref('')
+
+// Known Driving Team locations (from Google Places API research)
+const knownLocations = [
+  { name: 'Fahrschule Zürich', address: 'Vulkanstrasse 130b, 8048 Zürich', placeId: 'ChIJU29cFMgLkEcRzMfDub2bh9s', rating: 4.9, reviews: 379 },
+  { name: 'Fahrschule Lachen', address: 'Herrengasse 17, 8853 Lachen', placeId: 'ChIJqdlnJXTJmkcRAgI05nvPXFU', rating: 5.0, reviews: 263 },
+  { name: 'Fahrschule Uster', address: 'Weiherweg 2, 8610 Uster', placeId: 'ChIJtRgKpBClmkcRxXQxbtz0uBA', rating: 5.0, reviews: 25 },
+  { name: 'Fahrschule Spreitenbach', address: 'Haldenstrasse 13, 8957 Spreitenbach', placeId: 'ChIJ_V8A6ycNkEcRz6hXDJMr6ls', rating: 5.0, reviews: 9 },
+  { name: 'Fahrschule Pfäffikon/SZ', address: 'Hofacker 2, 8808 Freienbach', placeId: 'ChIJIU1slRGxmkcRL1mci0s4NEQ', rating: null, reviews: null },
+  { name: 'Fahrschule Birmensdorf', address: 'Panoramastrasse 30, 8903 Birmensdorf', placeId: 'ChIJa6ZxPk8PkEcRmC3lYOQJZgo', rating: 5.0, reviews: 2 },
+]
+
+async function linkKnownLocation(loc: { name: string; placeId: string }) {
+  await linkLocation({
+    locationId: `locations/${loc.placeId}`,
+    title: loc.name,
+    gbpAccountName: 'accounts/driving-team',
+  })
+}
 
 const allLocations = computed(() => {
   const locs: { locationId: string; title: string; accountName: string; gbpAccountName: string }[] = []

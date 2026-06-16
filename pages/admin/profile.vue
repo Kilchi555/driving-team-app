@@ -1135,7 +1135,7 @@
                 <li>Als Geschäftsführer/Inhaber bist du <strong>angestellt</strong> in deiner eigenen Firma</li>
                 <li>Du erhältst einen <strong>marktkonformen Lohn</strong> (inkl. AHV/ALV/BVG 50/50)</li>
                 <li>Dividenden aus dem Jahresgewinn sind <strong>nicht AHV-pflichtig</strong> (Teilbesteuerung)</li>
-                <li>BVG <strong>obligatorisch</strong> ab Jahreslohn CHF 22\'680</li>
+                <li>BVG <strong>obligatorisch</strong> ab Jahreslohn CHF 22'680.-</li>
                 <li><strong>Doppelte Buchhaltung</strong> zwingend ab Tag 1</li>
                 <li>Lohnbuchhaltung: Inhaber im Tab "Mitarbeiter" der Lohnbuchhaltung erfassen</li>
               </ul>

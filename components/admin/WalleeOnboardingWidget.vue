@@ -69,7 +69,7 @@
         <p class="text-sm font-semibold text-blue-800">ℹ️ Keine UID-Nummer hinterlegt</p>
         <p class="text-sm text-blue-700">
           Für Online-Zahlungen ist eine UID-Nummer (Unternehmens-Identifikationsnummer) erforderlich.
-          Falls dein Betrieb noch nicht im Handelsregister eingetragen ist, übernimmt <strong>Simy die anfallenden Kosten</strong> für die Eintragung als Einzelfirma.
+          Falls dein Betrieb noch nicht im Handelsregister eingetragen ist, übernimmt <strong>Simy bis zu CHF 80.–</strong> der anfallenden Kosten für die Eintragung als Einzelfirma.
         </p>
         <p class="text-xs text-blue-600">
           Die Kosten entstehen erst nach einer erfolgreich abgeschlossenen Eintragung — es entstehen dir keine Vorauskosten.

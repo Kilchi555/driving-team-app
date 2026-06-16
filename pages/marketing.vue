@@ -75,6 +75,66 @@
         Kein wöchentliches Review vorhanden. Der Cron Job läuft jeden Montag und erstellt automatisch ein Review.
       </div>
 
+      <!-- Quick Links -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <button
+          @click="navigateTo('/admin/google-business-profile')"
+          class="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-4 text-left hover:border-gray-300 hover:shadow-sm transition-all"
+        >
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" :style="{ background: primaryColor + '15' }">
+            <svg class="w-5 h-5" :style="{ color: primaryColor }" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 20.25a.75.75 0 00.75.75h4.5a.75.75 0 00.75-.75v-6.75H9v6.75zM12 2.25C8.27 2.25 5.25 5.27 5.25 9c0 2.39 1.19 4.5 3 5.79V15a.75.75 0 00.75.75h6a.75.75 0 00.75-.75v-.21c1.81-1.29 3-3.4 3-5.79 0-3.73-3.02-6.75-6.75-6.75z" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-800">Google Business</p>
+            <p class="text-xs text-gray-400">Bewertungen · Posts</p>
+          </div>
+        </button>
+        <button
+          @click="navigateTo('/admin/marketing/campaigns')"
+          class="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-4 text-left hover:border-gray-300 hover:shadow-sm transition-all"
+        >
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" :style="{ background: primaryColor + '15' }">
+            <svg class="w-5 h-5" :style="{ color: primaryColor }" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-800">Google Ads</p>
+            <p class="text-xs text-gray-400">Kampagnen · Keywords</p>
+          </div>
+        </button>
+        <button
+          @click="navigateTo('/admin/marketing/leads')"
+          class="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-4 text-left hover:border-gray-300 hover:shadow-sm transition-all"
+        >
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" :style="{ background: primaryColor + '15' }">
+            <svg class="w-5 h-5" :style="{ color: primaryColor }" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-800">Leads</p>
+            <p class="text-xs text-gray-400">Anfragen · Pipeline</p>
+          </div>
+        </button>
+        <button
+          @click="navigateTo('/admin/marketing/ai')"
+          class="flex items-center gap-3 bg-white rounded-xl border border-gray-200 p-4 text-left hover:border-gray-300 hover:shadow-sm transition-all"
+        >
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" :style="{ background: primaryColor + '15' }">
+            <svg class="w-5 h-5" :style="{ color: primaryColor }" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-800">AI Content</p>
+            <p class="text-xs text-gray-400">Posts · Texte</p>
+          </div>
+        </button>
+      </div>
+
       <!-- KPI Cards -->
       <div v-if="data" class="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div class="bg-white rounded-xl border border-gray-200 p-4">
