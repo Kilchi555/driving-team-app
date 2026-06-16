@@ -303,7 +303,7 @@ const loadData = async () => {
     if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
     // Load evaluation categories (tenant-specific + global defaults)
-    const { data: categoriesData, error: categoriesError } = await supabase
+    const { data: rawCategoriesData, error: categoriesError } = await supabase
       .from('evaluation_categories')
       .select('id, name, color, display_order, is_active, tenant_id')
       .eq('is_active', true)
@@ -312,16 +312,38 @@ const loadData = async () => {
 
     if (categoriesError) throw categoriesError
 
+    // Deduplicate categories by name: prefer tenant-specific over global
+    const categoriesMap = new Map<string, typeof rawCategoriesData[0]>()
+    for (const cat of (rawCategoriesData || [])) {
+      const existing = categoriesMap.get(cat.name)
+      if (!existing || (!existing.tenant_id && cat.tenant_id)) {
+        categoriesMap.set(cat.name, cat)
+      }
+    }
+    const categoriesData = Array.from(categoriesMap.values())
+      .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+
     // Load evaluation criteria for these categories (tenant-specific + global defaults)
-    const { data: criteriaData, error: criteriaError } = await supabase
+    const { data: rawCriteriaData, error: criteriaError } = await supabase
       .from('evaluation_criteria')
       .select('id, name, description, category_id, display_order, is_active, tenant_id')
       .eq('is_active', true)
-      .in('category_id', (categoriesData || []).map(c => c.id))
+      .in('category_id', (rawCategoriesData || []).map(c => c.id))
       .or(`tenant_id.eq.${userProfile.tenant_id},tenant_id.is.null`)
       .order('category_id, display_order', { ascending: true })
 
     if (criteriaError) throw criteriaError
+
+    // Deduplicate criteria by name: prefer tenant-specific over global
+    // This prevents the same criterion appearing twice when both global and tenant versions exist
+    const criteriaByName = new Map<string, typeof rawCriteriaData[0]>()
+    for (const c of (rawCriteriaData || [])) {
+      const existing = criteriaByName.get(c.name)
+      if (!existing || (!existing.tenant_id && c.tenant_id)) {
+        criteriaByName.set(c.name, c)
+      }
+    }
+    const criteriaData = Array.from(criteriaByName.values())
 
     // Build the evaluation matrix by joining categories and criteria
     const matrix = (categoriesData || []).flatMap(category => {
