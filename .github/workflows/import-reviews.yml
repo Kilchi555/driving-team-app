@@ -1,0 +1,38 @@
+name: Weekly Review Import
+
+on:
+  schedule:
+    - cron: '0 5 * * 1'  # Jeden Montag um 05:00 UTC (07:00 Schweizer Zeit)
+  workflow_dispatch:       # Auch manuell auslösbar via GitHub UI
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run review import
+        run: npm run import:reviews
+        env:
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+
+      - name: Commit updated reviews
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: weekly review import [skip ci]'
+          file_pattern: 'apps/website/data/curated-reviews.json'
+          commit_user_name: 'Simy Bot'
+          commit_user_email: 'bot@simy.ch'

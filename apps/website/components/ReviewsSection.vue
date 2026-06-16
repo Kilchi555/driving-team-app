@@ -42,6 +42,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useHead } from '#app'
+import allReviewsData from '~/data/curated-reviews.json'
 
 const props = defineProps({
   category: {
@@ -55,11 +56,32 @@ const props = defineProps({
   linkText: {
     type: String,
     default: '→ Auf Google lesen'
+  },
+  /**
+   * Service-Name für das Schema.org Service-Objekt (z.B. "Lastwagen Fahrschule Lachen").
+   * Nur setzen auf Seiten ohne eigenes buildLocationSchema.
+   * Leer lassen wenn die Seite bereits ein vollständiges LocalBusiness-Schema hat.
+   */
+  serviceName: {
+    type: String,
+    default: ''
+  },
+  /**
+   * Echte Google-Gesamtzahl der Bewertungen (aus business.config.ts → loc.rating.count).
+   * Wird nur verwendet wenn serviceName gesetzt ist.
+   */
+  ratingCount: {
+    type: Number,
+    default: 0
   }
 })
 
-const allReviews: Record<string, { text: string; author?: string; link: string }[]> = {
-  default: [
+type ReviewEntry = { text: string; author?: string; link: string; datePublished?: string }
+const allReviews = allReviewsData as Record<string, ReviewEntry[]>
+
+// Hinweis: Die hardcodierten Reviews wurden nach ~/data/curated-reviews.json ausgelagert.
+// Aktualisieren mit: npx tsx server/scripts/import-website-reviews.ts
+const _placeholder_default = [
     { text: '„Ich habe dank Keni meine Anhängerprüfung erfolgreich bestanden. Er hat sich viel Zeit für mich genommen und mir die Manöver anschaulich erklärt. Zudem hat er mir viele hilfreiche Hinweise gegeben."', author: 'Marco S.', link: 'https://maps.app.goo.gl/pQeWXsGGTuSZW45d8' },
     { text: '„Eine sehr gute Fahrschule und ein cooles Team. Sehr empfehlenswert! Pascal ist ein sehr kompetenter und humorvoller Fahrlehrer. Er hat mich gut auf die Motorrad-Prüfung vorbereitet."', author: 'Terry T.', link: 'https://maps.app.goo.gl/2BPHzr6DBZg74RSQ6' },
     { text: '„Sehr gute Fahrschule! Mein Fahrlehrer war Rijad, und ich hatte stets eine ausgezeichnete Zeit während meiner Fahrstunden. Rijad gab mir immer präzise und hilfreiche Tipps."', author: 'Noel S.', link: 'https://maps.app.goo.gl/Xb18G3mEymJjCoweA' },
@@ -162,10 +184,9 @@ const allReviews: Record<string, { text: string; author?: string; link: string }
     { text: '"Top driving school with competent and helpful instructors. Everyone was punctual, understanding and guided me perfectly on my way to getting my licence."', author: 'Nicolas S.', link: 'https://maps.app.goo.gl/tUe3j3BaHc2LDUm6A' },
     { text: '"André was always on time, very patient and always gave good advice for my driving. This helped me prepare perfectly for the exam. Highly recommended!"', author: 'Benjamin H.', link: 'https://maps.app.goo.gl/i91qeND8kHSnGyx86' },
     { text: '"Driving Team gives you the tools you need to pass your driving test. Thank you to the whole team and especially my instructor Marc – you are the BEST!"', author: 'Cyrill P.', link: 'https://maps.app.goo.gl/ciGZXzCh3Jx4nPSs5' },
-  ],
-}
+  ]
 
-const reviews = computed(() => allReviews[props.category] ?? allReviews.default)
+const reviews = computed(() => allReviews[props.category] ?? allReviews['default'] ?? _placeholder_default)
 
 const sliderRef = ref<HTMLElement | null>(null)
 const activeIndex = ref(0)
@@ -193,57 +214,57 @@ onUnmounted(() => {
   resizeObserver?.disconnect()
 })
 
-// Generate AggregateRating Schema with individual Review objects
-const aggregateRatingSchema = computed(() => {
-  const reviewCount = reviews.value.length
-  
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'AggregateRating',
-    'itemReviewed': {
-      '@type': 'LocalBusiness',
-      'name': 'Driving Team'
-    },
-    'ratingValue': 4.9,
-    'bestRating': 5,
-    'worstRating': 1,
-    'ratingCount': reviewCount,
-    'reviewCount': reviewCount
-  }
-})
-
-// Register schemas in head - both AggregateRating and individual Reviews
+/**
+ * Service-Schema mit eingebettetem aggregateRating + einzelnen Reviews.
+ *
+ * Nur aktiv wenn `serviceName` gesetzt ist — auf Seiten die bereits
+ * buildLocationSchema() verwenden, kein Schema generieren (verhindert Duplikate).
+ *
+ * Verwendet @type: Service (nicht LocalBusiness) damit Google SERP-Sterne
+ * anzeigen kann — LocalBusiness self-serving reviews sind seit 2019 gesperrt.
+ */
 useHead({
-  script: computed(() => [
-    {
-      type: 'application/ld+json',
-      innerHTML: JSON.stringify(aggregateRatingSchema.value),
-      key: `aggregate-rating-${props.category}`
-    },
-    ...reviews.value.map((review, index) => ({
-      type: 'application/ld+json',
-      innerHTML: JSON.stringify({
-        '@context': 'https://schema.org',
+  script: computed(() => {
+    if (!props.serviceName || !props.ratingCount) return []
+
+    const serviceSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'Service',
+      'name': props.serviceName,
+      'provider': {
+        '@type': 'LocalBusiness',
+        'name': 'Driving Team Fahrschule',
+        'url': 'https://drivingteam.ch'
+      },
+      'aggregateRating': {
+        '@type': 'AggregateRating',
+        'ratingValue': '4.9',
+        'bestRating': '5',
+        'worstRating': '1',
+        'reviewCount': String(props.ratingCount)
+      },
+      'review': reviews.value.map(review => ({
         '@type': 'Review',
-        'itemReviewed': {
-          '@type': 'LocalBusiness',
-          'name': 'Driving Team'
-        },
         'reviewRating': {
           '@type': 'Rating',
-          'ratingValue': 5,
-          'bestRating': 5,
-          'worstRating': 1
+          'ratingValue': '5',
+          'bestRating': '5'
         },
         'author': {
           '@type': 'Person',
-          'name': review.author || 'Anonymous'
+          'name': review.author || 'Anonym'
         },
-        'reviewBody': review.text
-      }),
-      key: `review-${props.category}-${index}`
-    }))
-  ])
+        'reviewBody': review.text,
+        ...(review.datePublished ? { 'datePublished': review.datePublished } : {})
+      }))
+    }
+
+    return [{
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify(serviceSchema),
+      key: `service-reviews-${props.category}`
+    }]
+  })
 })
 
 function onScroll() {

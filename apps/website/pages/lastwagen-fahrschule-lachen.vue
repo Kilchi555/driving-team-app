@@ -99,20 +99,25 @@
     <section class="bg-gray-50 py-12">
       <div class="section-container">
         <h2 class="text-2xl md:text-3xl font-bold mb-8 text-center">Prüfungsstandorte in deiner Region</h2>
-        <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
           <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-primary-600">
-            <h3 class="font-bold text-lg mb-2">StVA Pfäffikon SZ</h3>
+            <h3 class="font-bold text-lg mb-2">Strassenverkehrsamt Pfäffikon SZ</h3>
             <p class="text-gray-600 text-sm mb-3">Hauptprüfungsstandort für Fahrschüler:innen aus dem Raum Lachen, Altendorf, Wangen und Pfäffikon SZ.</p>
             <p class="text-xs text-gray-400">Kanton Schwyz · empfohlen für Region Lachen</p>
           </div>
           <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-gray-300">
-            <h3 class="font-bold text-lg mb-2">StVA Kaltbrunn SG</h3>
+            <h3 class="font-bold text-lg mb-2">Strassenverkehrsamt Kaltbrunn SG</h3>
             <p class="text-gray-600 text-sm mb-3">Option für Fahrschüler:innen aus Uznach, Schmerikon und dem Raum oberer Zürichsee / St. Gallen.</p>
             <p class="text-xs text-gray-400">Kanton St. Gallen · je nach Wohnsitz</p>
           </div>
           <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-gray-300">
-            <h3 class="font-bold text-lg mb-2">StVA Hinwil ZH</h3>
+            <h3 class="font-bold text-lg mb-2">Strassenverkehrsamt Hinwil ZH</h3>
             <p class="text-gray-600 text-sm mb-3">Für Fahrschüler:innen aus dem Zürcher Oberland und Gemeinden im Kanton Zürich.</p>
+            <p class="text-xs text-gray-400">Kanton Zürich · je nach Wohnsitz</p>
+          </div>
+          <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-gray-300">
+            <h3 class="font-bold text-lg mb-2">Strassenverkehrsamt Zürich-Albisgütli</h3>
+            <p class="text-gray-600 text-sm mb-3">Für Fahrschüler:innen aus dem Raum zwischen Zürich und Richterswil, inkl. Gemeinden am linken Zürichseeufer.</p>
             <p class="text-xs text-gray-400">Kanton Zürich · je nach Wohnsitz</p>
           </div>
         </div>

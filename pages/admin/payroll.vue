@@ -64,7 +64,7 @@
       <span class="font-semibold">{{ legalInfo.legal_form === 'gmbh' ? 'GmbH' : 'AG' }}: </span>
       Als Geschäftsführer/Inhaber bist du angestellt — erfasse dich als Mitarbeiter im Tab "Mitarbeiter" mit marktkonformem Lohn.
       Dividenden aus dem Jahresgewinn sind nicht AHV-pflichtig.
-      BVG obligatorisch ab Jahreslohn CHF 22\'680.
+      BVG obligatorisch ab Jahreslohn CHF 22'680.-.
     </div>
 
     <!-- Tabs -->

@@ -68,23 +68,42 @@ async function refreshAccessToken(tenantId: string, refreshToken: string): Promi
 
 /**
  * List all GBP accounts for a given access token.
+ * Tries the newer account management API first, falls back to the older v4 API.
  */
 export async function listGbpAccounts(accessToken: string) {
-  const res = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
+  // Try newer API first
+  const newRes = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
-  return res.json()
+  const newData = await newRes.json()
+  if (newData.accounts) return newData
+
+  // Fallback: older v4 API (still active, no separate quota approval needed)
+  const oldRes = await fetch(`${GBP_REVIEWS_BASE}/accounts`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  return oldRes.json()
 }
 
 /**
  * List locations for a GBP account.
+ * Tries new businessinformation API first, falls back to v4.
  */
 export async function listGbpLocations(accessToken: string, accountName: string) {
-  const res = await fetch(
+  // Try newer API first
+  const newRes = await fetch(
     `${GBP_API_BASE}/${accountName}/locations?readMask=name,title,storefrontAddress`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   )
-  return res.json()
+  const newData = await newRes.json()
+  if (newData.locations) return newData
+
+  // Fallback: older v4 API
+  const oldRes = await fetch(
+    `${GBP_REVIEWS_BASE}/${accountName}/locations?pageSize=100`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  )
+  return oldRes.json()
 }
 
 /**
@@ -124,7 +143,7 @@ export async function getGbpInsights(tenantId: string) {
 }
 
 /**
- * Fetch GBP reviews.
+ * Fetch GBP reviews (most recent 20, for UI use).
  */
 export async function getGbpReviews(tenantId: string) {
   const accessToken = await getValidAccessToken(tenantId)
@@ -142,6 +161,73 @@ export async function getGbpReviews(tenantId: string) {
     { headers: { Authorization: `Bearer ${accessToken}` } }
   )
   return res.json()
+}
+
+export interface GbpReview {
+  reviewId: string
+  reviewer: { displayName: string; profilePhotoUrl?: string }
+  starRating: 'FIVE' | 'FOUR' | 'THREE' | 'TWO' | 'ONE'
+  comment?: string
+  createTime: string
+  updateTime: string
+  reviewReply?: { comment: string; updateTime: string }
+}
+
+export interface GbpReviewsPage {
+  reviews: GbpReview[]
+  averageRating: number
+  totalReviewCount: number
+  nextPageToken?: string
+}
+
+/**
+ * Fetch ALL GBP reviews with pagination.
+ * Useful for build-time import scripts — not for realtime API use.
+ * @param tenantId   Supabase tenant UUID whose GBP connection should be used
+ * @param maxPages   Safety cap (default 20 = up to 1 000 reviews at pageSize 50)
+ * @param connection Optional explicit connection — pass when a tenant has multiple
+ *                   GBP locations and you need to target one specifically.
+ */
+export async function getAllGbpReviews(
+  tenantId: string,
+  maxPages = 20,
+  connection?: { gbp_location_id: string; gbp_account_name: string }
+): Promise<GbpReview[]> {
+  const accessToken = await getValidAccessToken(tenantId)
+
+  let conn = connection
+  if (!conn) {
+    const supabase = getSupabaseAdmin()
+    const { data } = await supabase
+      .from('tenant_google_connections')
+      .select('gbp_location_id, gbp_account_name')
+      .eq('tenant_id', tenantId)
+      .single()
+    conn = data ?? undefined
+  }
+
+  if (!conn?.gbp_location_id) throw new Error('No GBP location linked')
+
+  const base = `${GBP_REVIEWS_BASE}/${conn.gbp_account_name}/${conn.gbp_location_id}/reviews`
+  const allReviews: GbpReview[] = []
+  let pageToken: string | undefined
+  let page = 0
+
+  do {
+    const url = new URL(base)
+    url.searchParams.set('pageSize', '50')
+    url.searchParams.set('orderBy', 'updateTime desc')
+    if (pageToken) url.searchParams.set('pageToken', pageToken)
+
+    const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } })
+    const data = await res.json() as GbpReviewsPage
+
+    if (data.reviews?.length) allReviews.push(...data.reviews)
+    pageToken = data.nextPageToken
+    page++
+  } while (pageToken && page < maxPages)
+
+  return allReviews
 }
 
 /**
