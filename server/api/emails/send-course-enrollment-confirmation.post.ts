@@ -16,12 +16,13 @@ interface ConfirmationEmailRequest {
   courseRegistrationId: string
   paymentMethod: 'wallee' | 'cash'
   totalAmount?: number // In CHF (optional, for cash display)
+  testEmail?: string  // Override recipient for testing
 }
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event) as ConfirmationEmailRequest
-    const { courseRegistrationId, paymentMethod, totalAmount } = body
+    const { courseRegistrationId, paymentMethod, totalAmount, testEmail } = body
 
     logger.debug('📧 Sending course enrollment confirmation:', {
       courseRegistrationId,
@@ -260,7 +261,7 @@ export default defineEventHandler(async (event) => {
 
     // 5. Build HTML email with responsive design
     const enrollmentEmail = {
-      to: enrollment.email,
+      to: testEmail || enrollment.email,
       subject: emailSubject,
       html: `
         <!DOCTYPE html>

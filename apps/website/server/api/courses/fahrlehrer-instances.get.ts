@@ -129,7 +129,7 @@ export default defineEventHandler(async (event) => {
     .eq('tenant_id', tenant_id)
     .eq('course_category_id', categoryRow.id)
     .eq('is_public', true)
-    .in('status', ['active', 'full'])
+    .in('status', ['active', 'scheduled', 'waitlist', 'full'])
     .order('course_start_date', { ascending: true, nullsFirst: false })
 
   if (error) {

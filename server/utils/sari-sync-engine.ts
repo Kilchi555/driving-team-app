@@ -201,11 +201,26 @@ export class SARISyncEngine {
         return 0
       }
 
+      // Build a set of all individual session IDs that are still active in SARI.
+      // We use this for session-level matching so we don't cancel a course just
+      // because its GROUP key changed (i.e. an early session expired and was removed
+      // from the group by SARI).
+      const activeSessionIdSet = new Set(activeSariIds.map(String))
+
       let deletedCount = 0
 
       for (const course of orphanedCourses) {
-        // Check if this course's sari_course_id is in the active list
-        if (!activeGroupIds.includes(course.sari_course_id)) {
+        // Check if this course's sari_course_id is in the active list.
+        // ALSO check if any of its individual session IDs are still active —
+        // if so, the course is being synced under a new (shorter) group key
+        // and must NOT be cancelled here (mapAndStoreCourseGroup will update it).
+        const courseSessionIds = (course.sari_course_id || '')
+          .replace('GROUP_', '')
+          .split('_')
+          .filter(Boolean)
+        const hasActiveSession = courseSessionIds.some(id => activeSessionIdSet.has(id))
+
+        if (!activeGroupIds.includes(course.sari_course_id) && !hasActiveSession) {
           logger.warn(`🗑️  Deactivating deleted SARI course: "${course.name}" (SARI ID: ${course.sari_course_id})`)
 
           // Soft delete: Set is_active to false and status to 'cancelled' (for SARI-deleted courses)
@@ -322,20 +337,28 @@ export class SARISyncEngine {
     existing = exactMatch
 
     if (!existing && sessions.length > 0) {
-      // Fallback: find an existing course that already has one of the current SARI sessions
+      // Fallback: find an existing course that already has one of the current SARI sessions.
+      // We use a two-step query to avoid unreliable PostgREST !inner join syntax.
       const currentSariSessionIds = sessions.map(s => String(s.id))
-      const { data: sessionMatch } = await this.supabase
+      const { data: sessionRows } = await this.supabase
         .from('course_sessions')
-        .select('course_id, courses!inner(id, status, current_participants, price_per_participant_rappen, is_partial_only)')
+        .select('course_id')
         .eq('tenant_id', this.tenantId)
         .in('sari_session_id', currentSariSessionIds)
         .limit(1)
-        .maybeSingle()
 
-      if (sessionMatch?.courses) {
-        const c = sessionMatch.courses as any
-        existing = { id: c.id, status: c.status, current_participants: c.current_participants, price_per_participant_rappen: c.price_per_participant_rappen, is_partial_only: c.is_partial_only }
-        logger.info(`🔗 Matched existing course ${existing.id} via session ID fallback (group ID shifted from completed sessions)`)
+      const matchedCourseId = sessionRows?.[0]?.course_id
+      if (matchedCourseId) {
+        const { data: matchedCourse } = await this.supabase
+          .from('courses')
+          .select('id, status, current_participants, price_per_participant_rappen, is_partial_only')
+          .eq('id', matchedCourseId)
+          .single()
+
+        if (matchedCourse) {
+          existing = matchedCourse
+          logger.info(`🔗 Matched existing course ${existing.id} via session ID fallback (group ID shifted from completed sessions)`)
+        }
       }
     }
 
@@ -360,10 +383,27 @@ export class SARISyncEngine {
     let courseId: string
 
     if (existing) {
-      // Skip courses that were manually cancelled by an admin — don't re-activate them
+      // Skip courses that were manually cancelled by an admin — don't re-activate them.
+      // However, if the course was auto-cancelled by the SARI cleanup (status_changed_by IS NULL
+      // and sari_managed = true), we re-activate it rather than creating a duplicate.
       if (existing.status === 'cancelled') {
-        logger.debug(`⏭️ Skipping SARI sync for manually cancelled course "${group.name}" (${groupSariId})`)
-        return null
+        const { data: cancelledCourse } = await this.supabase
+          .from('courses')
+          .select('status_changed_by, sari_managed')
+          .eq('id', existing.id)
+          .single()
+
+        const wasAutoCancel = cancelledCourse?.sari_managed && !cancelledCourse?.status_changed_by
+        if (!wasAutoCancel) {
+          logger.debug(`⏭️ Skipping SARI sync for manually cancelled course "${group.name}" (${groupSariId})`)
+          return null
+        }
+        // Auto-cancelled: reset is_active so we can update it below
+        await this.supabase
+          .from('courses')
+          .update({ is_active: true })
+          .eq('id', existing.id)
+        logger.info(`♻️ Re-activating auto-cancelled SARI course "${group.name}" (${existing.id})`)
       }
 
       const newStatus = computeCourseStatus(existing.status)
