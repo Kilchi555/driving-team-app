@@ -134,6 +134,43 @@ export default defineEventHandler(async (event) => {
 
   logger.debug('✅ Participant removed:', enrollmentId)
 
+  // ── 2b. Recalculate current_participants + status ──────────────────────────
+  const courseId = (course as any).id
+  if (courseId) {
+    const { count } = await supabase
+      .from('course_registrations')
+      .select('id', { count: 'exact', head: true })
+      .eq('course_id', courseId)
+      .is('deleted_at', null)
+
+    const newCount = count ?? 0
+
+    // Load max_participants and current status to decide new status
+    const { data: courseRow } = await supabase
+      .from('courses')
+      .select('max_participants, status')
+      .eq('id', courseId)
+      .single()
+
+    const isFull = newCount >= (courseRow?.max_participants ?? Infinity)
+    const currentStatus = courseRow?.status
+
+    // If course was full and now has space again, revert to active/scheduled
+    const newStatus = isFull
+      ? 'full'
+      : currentStatus === 'full' ? 'active' : undefined
+
+    const updatePayload: Record<string, unknown> = { current_participants: newCount }
+    if (newStatus !== undefined) updatePayload.status = newStatus
+
+    await supabase
+      .from('courses')
+      .update(updatePayload)
+      .eq('id', courseId)
+
+    logger.debug(`✅ Course participant count updated to ${newCount}, status: ${newStatus ?? currentStatus}`)
+  }
+
   // ── 3. Cancellation email ──────────────────────────────────────────────────
   const recipientEmail = reg.email
   const shouldNotify = notify !== false // default true if not specified
