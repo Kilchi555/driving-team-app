@@ -973,7 +973,7 @@
             <div class="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                @click="newCourse.status = 'scheduled'"
+                @click="newCourse.status = 'draft'"
                 :class="[
                   'flex flex-col items-start gap-1 p-3 rounded-lg border-2 text-left transition-all',
                   newCourse.status !== 'waitlist'
@@ -985,7 +985,7 @@
                 <span class="text-sm font-semibold" :class="newCourse.status !== 'waitlist' ? '' : 'text-gray-700'" :style="newCourse.status !== 'waitlist' ? { color: primaryColor } : {}">
                   Normaler Kurs
                 </span>
-                <span class="text-xs text-gray-500">Fester Termin, Sessions erforderlich</span>
+                <span class="text-xs text-gray-500">Wird als Entwurf gespeichert</span>
               </button>
               <button
                 type="button"
@@ -4559,7 +4559,7 @@ const newCourse = ref({
   sari_managed: false,
   sari_course_id: null as string | null,
   registration_deadline: null as string | null,
-  status: 'scheduled',
+  status: 'draft',
   payment_method: null as 'WALLEE' | 'CASH_ON_SITE' | null
 })
 
