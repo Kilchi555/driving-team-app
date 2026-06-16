@@ -4,6 +4,27 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendTenantEmail, sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 
+// ── Timezone helper ───────────────────────────────────────────────────────────
+/**
+ * Convert a date+time entered as Zurich local time to a proper UTC ISO string.
+ * Uses the same DST-aware approach as sari-sync-engine.ts.
+ *
+ * e.g. "2026-09-16" + "08:00" → "2026-09-16T06:00:00.000Z" (CEST = UTC+2)
+ *      "2026-01-10" + "08:00" → "2026-01-10T07:00:00.000Z" (CET  = UTC+1)
+ */
+function zurichLocalToUtcIso(dateStr: string, timeStr: string): string {
+  const localStr = `${dateStr}T${timeStr}:00`
+  // Step 1: treat as UTC to get a reference point
+  const asUtc = new Date(localStr + 'Z')
+  // Step 2: find out what Zurich wall-clock shows for that UTC instant
+  const zurichStr = asUtc.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
+  // Step 3: compute the offset between "fake UTC" and "Zurich wall-clock"
+  const zurichFake = new Date(zurichStr.replace(' ', 'T') + 'Z')
+  const offsetMs = asUtc.getTime() - zurichFake.getTime()
+  // Step 4: apply offset to convert local→UTC
+  return new Date(asUtc.getTime() + offsetMs).toISOString()
+}
+
 // ── ICS calendar invite generator ────────────────────────────────────────────
 function toIcsDate(dateStr: string, timeStr: string): string {
   // Format: YYYYMMDDTHHMMSS (local time with TZID=Europe/Zurich)
@@ -151,8 +172,8 @@ export default defineEventHandler(async (event) => {
     const sessionRows = sessions.map((session: any, index: number) => ({
       course_id: savedCourseId,
       session_number: index + 1,
-      start_time: `${session.date}T${session.start_time}:00`,
-      end_time: `${session.date}T${session.end_time}:00`,
+      start_time: zurichLocalToUtcIso(session.date, session.start_time),
+      end_time: zurichLocalToUtcIso(session.date, session.end_time),
       description: session.description || `Session ${index + 1}`,
       instructor_type: session.instructor_type,
       staff_id: session.instructor_type === 'internal' ? session.staff_id : null,
@@ -183,8 +204,8 @@ export default defineEventHandler(async (event) => {
   if (requiresRoom && roomId && sessions && sessions.length > 0) {
     // Build time slots for all sessions
     const timeSlots = sessions.map((session: any) => ({
-      start_time: `${session.date}T${session.start_time}:00`,
-      end_time: `${session.date}T${session.end_time}:00`,
+      start_time: zurichLocalToUtcIso(session.date, session.start_time),
+      end_time: zurichLocalToUtcIso(session.date, session.end_time),
     }))
 
     // Cancel existing room bookings for this course (on update)
