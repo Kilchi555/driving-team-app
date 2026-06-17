@@ -5,7 +5,7 @@
       <Meta name="description" content="Fahrstunden in Lachen SZ – flexible Treffpunkte, Prüfung am StVA Pfäffikon, ab CHF 95.-. Einfach online buchen und loslegen!" />
       <Meta name="keywords" content="Fahrstunden Lachen, Fahrstunden Lachen SZ, Fahrstunden buchen Lachen, Fahrlektion Lachen, Autofahrstunden Lachen, Führerschein Lachen" />
       <Meta property="og:title" content="Fahrstunden Lachen SZ | Ab CHF 95.- | Driving Team" />
-      <Meta property="og:description" content="Fahrstunden in Lachen SZ mit eidg. diplomierten Fahrlehrern. Flexible Treffpunkte im Kanton Schwyz. Prüfung in Pfäffikon SZ. Ab CHF 95.-/45 Min." />
+      <Meta property="og:description" content="Fahrstunden in Lachen SZ mit Fahrlehrern mit eidg. Fachausweis. Flexible Treffpunkte im Kanton Schwyz. Prüfung in Pfäffikon SZ. Ab CHF 95.-/45 Min." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrstunden-lachen/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrstunden-lachen/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/lachen-hero.webp" />
@@ -71,7 +71,7 @@
     <section class="py-14 bg-gray-50">
       <div class="section-container">
         <h2 class="heading-md text-center mb-3">Deine Fahrlehrer in Lachen</h2>
-        <p class="text-center text-gray-600 mb-8">Alle eidgenössisch diplomiert, mit dem Kanton Schwyz bestens vertraut.</p>
+        <p class="text-center text-gray-600 mb-8">Alle mit eidg. Fachausweis, mit dem Kanton Schwyz bestens vertraut.</p>
         <div class="flex flex-wrap justify-center gap-4 max-w-3xl mx-auto mb-6">
           <div class="bg-white border border-gray-200 rounded-xl px-5 py-4 flex items-center gap-4 shadow-sm">
             <img src="/images/team/marc.webp" alt="Marc – Fahrlehrer Lachen" class="w-14 h-14 rounded-full object-cover object-top" loading="lazy" />
@@ -202,7 +202,7 @@ const jsonLdScripts = [
     "@type": "Service",
     "name": "Fahrstunden Lachen SZ",
     "serviceType": "Fahrunterricht",
-    "description": "Professionelle Fahrstunden in Lachen SZ mit eidgenössisch diplomierten Fahrlehrern. Flexible Treffpunkte im Kanton Schwyz. Auto, Motorrad und Anhänger. Prüfung am StVA Pfäffikon SZ.",
+    "description": "Professionelle Fahrstunden in Lachen SZ mit Fahrlehrern mit eidg. Fachausweis. Flexible Treffpunkte im Kanton Schwyz. Auto, Motorrad und Anhänger. Prüfung am StVA Pfäffikon SZ.",
     "url": "https://drivingteam.ch/fahrstunden-lachen/",
     "provider": {
       "@type": "DrivingSchool",

@@ -5,7 +5,7 @@
       <Meta name="description" content="Pascal, Skender und Samir – deine Fahrlehrer in Zürich. Eidg. diplomiert, über 70'000 Lektionen Erfahrung, ab CHF 95.-. Jetzt Termin online buchen!" />
       <Meta name="keywords" content="Fahrlehrer Zürich, Fahrlehrer Zürich-Altstetten, Fahrlehrer buchen Zürich, Fahrlehrer Albanisch Zürich, Fahrlehrer Motorrad Zürich, eidg. dipl. Fahrlehrer Zürich" />
       <Meta property="og:title" content="Fahrlehrer Zürich – Pascal, Skender & Samir | Driving Team" />
-      <Meta property="og:description" content="3 eidgenössisch diplomierte Fahrlehrer in Zürich-Altstetten. Pascal (Motorrad, Mental Coach), Skender (Albanisch, Taxi), Samir. 70'000+ Lektionen. Jetzt Termin buchen." />
+      <Meta property="og:description" content="3 Fahrlehrer mit eidg. Fachausweis in Zürich-Altstetten. Pascal (Motorrad, Mental Coach), Skender (Albanisch, Taxi), Samir. 70'000+ Lektionen. Jetzt Termin buchen." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrlehrer-zuerich/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrlehrer-zuerich/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/zuerich-hero.webp" />
@@ -174,7 +174,7 @@
     <FeatureSection
       title="Was macht einen guten Fahrlehrer aus?"
       subtitle="Bei Driving Team Zürich findest du Fahrlehrer, die nicht nur technisch top sind – sondern auch menschlich."
-      :extras="['Alle drei sind eidgenössisch diplomiert (Fachausweis)', 'Über 70\'000 gemeinsame Lektionen Erfahrung', 'Du kannst deinen Fahrlehrer frei wählen & wechseln']"
+      :extras="['Alle drei sind mit eidg. Fachausweis', 'Über 70\'000 gemeinsame Lektionen Erfahrung', 'Du kannst deinen Fahrlehrer frei wählen & wechseln']"
     />
 
     <!-- Map -->
@@ -199,11 +199,11 @@
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Gibt es einen Fahrlehrer der Albanisch spricht?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja – Skender Ismajli bietet Fahrstunden auf Albanisch (Shqip) an. Er ist eidgenössisch diplomierter Fahrlehrer und unterrichtet sowohl auf Deutsch als auch auf Albanisch.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja – Skender Ismajli bietet Fahrstunden auf Albanisch (Shqip) an. Er ist Fahrlehrer mit eidg. Fachausweis und unterrichtet sowohl auf Deutsch als auch auf Albanisch.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Gibt es einen Fahrlehrer für Motorrad in Zürich?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja – Pascal Kilchenmann ist eidg. diplomierter Motorradfahrlehrer (Kat. A) und bietet Motorrad-Fahrstunden sowie den Motorrad Grundkurs in Zürich an.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja – Pascal Kilchenmann ist Motorradfahrlehrer mit eidg. Fachausweis (Kat. A) und bietet Motorrad-Fahrstunden sowie den Motorrad Grundkurs in Zürich an.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Welche Ausbildung haben die Fahrlehrer?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
@@ -313,8 +313,8 @@ const jsonLdScripts = [
     "@type": "FAQPage",
     "mainEntity": [
       { "@type": "Question", "name": "Kann ich meinen Fahrlehrer selbst wählen?", "acceptedAnswer": { "@type": "Answer", "text": "Ja, du kannst bei der Buchung direkt deinen bevorzugten Fahrlehrer auswählen – Pascal, Skender oder Samir. Ein Wechsel ist jederzeit möglich." } },
-      { "@type": "Question", "name": "Gibt es einen Fahrlehrer der Albanisch spricht?", "acceptedAnswer": { "@type": "Answer", "text": "Ja – Skender Ismajli bietet Fahrstunden auf Albanisch (Shqip) an. Er ist eidgenössisch diplomierter Fahrlehrer." } },
-      { "@type": "Question", "name": "Gibt es einen Fahrlehrer für Motorrad in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Ja – Pascal Kilchenmann ist eidg. diplomierter Motorradfahrlehrer (Kat. A) in Zürich." } },
+      { "@type": "Question", "name": "Gibt es einen Fahrlehrer der Albanisch spricht?", "acceptedAnswer": { "@type": "Answer", "text": "Ja – Skender Ismajli bietet Fahrstunden auf Albanisch (Shqip) an. Er ist Fahrlehrer mit eidg. Fachausweis." } },
+      { "@type": "Question", "name": "Gibt es einen Fahrlehrer für Motorrad in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Ja – Pascal Kilchenmann ist Motorradfahrlehrer mit eidg. Fachausweis (Kat. A) in Zürich." } },
       { "@type": "Question", "name": "Was kostet eine Fahrstunde in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Eine Fahrstunde (45 Min.) kostet CHF 95.-. Einmalige Versicherungspauschale CHF 120.-. WarmUp inkl. Prüfungsfahrt CHF 285.-." } }
     ]
   }) },

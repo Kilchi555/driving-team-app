@@ -5,7 +5,7 @@
       <Meta name="description" content="Marc, Peter und Rahel – deine Fahrlehrer in Lachen SZ. Eidg. diplomiert, über 56'000 Lektionen Erfahrung, ab CHF 95.-. Jetzt direkt online buchen!" />
       <Meta name="keywords" content="Fahrlehrer Lachen, Fahrlehrer Lachen SZ, Fahrlehrer Kanton Schwyz, Fahrlehrer Motorboot Lachen, Fahrlehrer Lastwagen Lachen, eidg. dipl. Fahrlehrer Lachen" />
       <Meta property="og:title" content="Fahrlehrer Lachen SZ – Marc, Peter & Rahel | Driving Team" />
-      <Meta property="og:description" content="3 eidgenössisch diplomierte Fahrlehrer in Lachen SZ. Marc (Motorboot, Anhänger), Peter (Lastwagen, Bus), Rahel. 56'000+ Lektionen. Jetzt Termin buchen." />
+      <Meta property="og:description" content="3 Fahrlehrer mit eidg. Fachausweis in Lachen SZ. Marc (Motorboot, Anhänger), Peter (Lastwagen, Bus), Rahel. 56'000+ Lektionen. Jetzt Termin buchen." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrlehrer-lachen/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrlehrer-lachen/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/lachen-hero.webp" />
@@ -22,7 +22,7 @@
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Driving Team Lachen SZ</p>
           <h1 class="heading-lg text-white mb-4">Fahrlehrer Lachen</h1>
-          <p class="text-base xs:text-xl text-white mb-6">Drei eidgenössisch diplomierte Fahrlehrer im Kanton Schwyz – gemeinsam mit über 56'000 Lektionen Erfahrung. Du wählst deinen Fahrlehrer selbst.</p>
+          <p class="text-base xs:text-xl text-white mb-6">Drei Fahrlehrer mit eidg. Fachausweis im Kanton Schwyz – gemeinsam mit über 56'000 Lektionen Erfahrung. Du wählst deinen Fahrlehrer selbst.</p>
           <div class="flex flex-wrap gap-2 mb-6">
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">🎓 Eidg. diplomiert</span>
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">🚢 Motorboot · 🚛 Lastwagen · 🚌 Bus</span>
@@ -158,7 +158,7 @@
           <span class="text-5xl flex-shrink-0">🚛</span>
           <div>
             <h2 class="text-xl font-bold text-orange-900 mb-2">Lastwagen & Bus Fahrlehrer Lachen – Peter</h2>
-            <p class="text-orange-800 leading-relaxed">Peter ist eidg. diplomierter Fahrlehrer für <strong>Kat. C (Lastwagen)</strong> und <strong>Kat. D (Bus)</strong>. Mit seiner Erfahrung als ehemaliger Lastwagenchauffeur bringt er dir nicht nur die Theorie, sondern echtes Praxis-Know-how.</p>
+            <p class="text-orange-800 leading-relaxed">Peter ist Fahrlehrer mit eidg. Fachausweis für <strong>Kat. C (Lastwagen)</strong> und <strong>Kat. D (Bus)</strong>. Mit seiner Erfahrung als ehemaliger Lastwagenchauffeur bringt er dir nicht nur die Theorie, sondern echtes Praxis-Know-how.</p>
             <a href="/lastwagen-fahrschule/" class="inline-block mt-4 bg-orange-600 hover:bg-orange-700 text-white font-semibold px-5 py-2 rounded-lg transition text-sm">
               🚛 Lastwagen Fahrschule →
             </a>
@@ -186,7 +186,7 @@
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Gibt es einen Lastwagen-Fahrlehrer in Lachen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja – Peter ist eidg. diplomierter Fahrlehrer für Kat. C (Lastwagen) und Kat. D (Bus) in Lachen SZ.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja – Peter ist Fahrlehrer mit eidg. Fachausweis für Kat. C (Lastwagen) und Kat. D (Bus) in Lachen SZ.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Gibt es einen Motorboot-Fahrlehrer in Lachen?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
@@ -299,7 +299,7 @@ const jsonLdScripts = [
     "@type": "FAQPage",
     "mainEntity": [
       { "@type": "Question", "name": "Kann ich meinen Fahrlehrer in Lachen selbst wählen?", "acceptedAnswer": { "@type": "Answer", "text": "Ja – bei der Buchung kannst du direkt Marc, Peter oder Rahel auswählen." } },
-      { "@type": "Question", "name": "Gibt es einen Lastwagen-Fahrlehrer in Lachen?", "acceptedAnswer": { "@type": "Answer", "text": "Ja – Peter ist eidg. diplomierter Fahrlehrer für Kat. C (Lastwagen) und Kat. D (Bus) in Lachen SZ." } },
+      { "@type": "Question", "name": "Gibt es einen Lastwagen-Fahrlehrer in Lachen?", "acceptedAnswer": { "@type": "Answer", "text": "Ja – Peter ist Fahrlehrer mit eidg. Fachausweis für Kat. C (Lastwagen) und Kat. D (Bus) in Lachen SZ." } },
       { "@type": "Question", "name": "Gibt es einen Motorboot-Fahrlehrer in Lachen?", "acceptedAnswer": { "@type": "Answer", "text": "Ja – Marc hat den Bootsführerausweis Kat. A und bietet Motorbootkurse am Zürichsee und Obersee an." } }
     ]
   }) },

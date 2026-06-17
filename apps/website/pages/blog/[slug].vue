@@ -84,7 +84,7 @@
                 </div>
                 <div>
                   <p class="font-bold text-gray-900 text-base">{{ article.author || 'Driving Team Fahrschule' }}</p>
-                  <p class="text-gray-500 text-sm mt-0.5 mb-2">Fahrschule seit 1994 · Zürich & Lachen SZ</p>
+                  <p class="text-gray-500 text-sm mt-0.5 mb-2">Fahrschule seit 2014 · Zürich & Lachen SZ</p>
                   <p class="text-gray-600 text-sm leading-relaxed">
                     Die Driving Team Fahrschule begleitet Fahrschülerinnen und Fahrschüler durch die gesamte Fahrausbildung – von der Theorieprüfung bis zum Führerschein. Alle Fahrlehrer haben einen eidgenössischen Fachausweis.
                   </p>
