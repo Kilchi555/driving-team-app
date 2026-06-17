@@ -38,21 +38,26 @@
     <section class="section-container">
       <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-8">Obligatorische Fahrstunden für den Busführerschein</h2>
       <p class="text-gray-600 mb-6">Die Anzahl der benötigten Fahrstunden für deinen Bus Führerschein hängt von deinen Vorkenntnissen ab:</p>
-      <div class="grid md:grid-cols-3 gap-6 mb-8">
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div class="bg-gray-50 rounded-lg p-6">
-          <p class="font-bold text-primary-600 text-lg mb-2">52 Fahrstunden</p>
-          <p class="text-gray-700">à 45 Minuten</p>
-          <p class="text-sm text-gray-500 mt-2">Ohne Kategorie C</p>
+          <p class="font-bold text-primary-600 text-lg mb-2">52 Fahrlektionen</p>
+          <p class="text-gray-700 text-sm">à 45 Minuten</p>
+          <p class="text-sm text-gray-500 mt-2">Mit Kat. B, C1 oder D1</p>
         </div>
         <div class="bg-gray-50 rounded-lg p-6">
-          <p class="font-bold text-primary-600 text-lg mb-2">24 Fahrstunden</p>
-          <p class="text-gray-700">à 45 Minuten</p>
-          <p class="text-sm text-gray-500 mt-2">Mit Kategorie C (Lastwagen)</p>
+          <p class="font-bold text-primary-600 text-lg mb-2">24 Fahrlektionen</p>
+          <p class="text-gray-700 text-sm">à 45 Minuten</p>
+          <p class="text-sm text-gray-500 mt-2">Mit Kat. C (ohne Fahrpraxis-Nachweis)</p>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-6">
+          <p class="font-bold text-primary-600 text-lg mb-2">12 Fahrlektionen</p>
+          <p class="text-gray-700 text-sm">à 45 Minuten</p>
+          <p class="text-sm text-gray-500 mt-2">Mit Kat. D beschränkt auf Linienverkehr</p>
         </div>
         <div class="bg-gray-50 rounded-lg p-6">
           <p class="font-bold text-primary-600 text-lg mb-2">Keine Mindestanzahl</p>
-          <p class="text-gray-700">bei genug Erfahrung</p>
-          <p class="text-sm text-gray-500 mt-2">Mit Kat. C + über 500 Std. Erfahrung in den letzten 2 Jahren</p>
+          <p class="text-gray-700 text-sm">bei Fahrpraxis-Nachweis</p>
+          <p class="text-sm text-gray-500 mt-2">Kat. C + 220 Tage / 500 Std. Erfahrung (letzte 2 Jahre)</p>
         </div>
       </div>
     </section>
@@ -65,31 +70,50 @@
           <ul class="space-y-4">
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Gültiger Auto-Führerschein Kategorie B oder C</p>
+              <div>
+                <p class="text-gray-700 font-medium">Mindestalter: 21 Jahre</p>
+              </div>
             </li>
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Mindestalter: 21 Jahre</p>
+              <div>
+                <p class="text-gray-700 font-medium">Führerausweis Kat. B (mind. 2 Jahre) oder Kat. C (mind. 3 Monate)</p>
+              </div>
             </li>
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Gültiger Lernfahrausweis der Kategorie D1 oder D</p>
+              <div>
+                <p class="text-gray-700 font-medium">Verkehrsmedizinische Untersuchung</p>
+                <p class="text-sm text-gray-500 mt-0.5">Wird nach Einreichung des Lernfahrgesuchs durch das StVA veranlasst.</p>
+              </div>
             </li>
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Bestandener Sehtest (spezielle Anforderungen für Busfahrer)</p>
+              <div>
+                <p class="text-gray-700 font-medium">Zusatztheorieprüfung (Kat. D)</p>
+                <p class="text-sm text-gray-500 mt-0.5">Keine Basistheorieprüfung und keine Verkehrskunde erforderlich.</p>
+              </div>
             </li>
             <li class="flex gap-3">
-              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Ärztliche Grunduntersuchung gemäss VZV-Anforderungen</p>
+              <span class="text-amber-500 font-bold flex-shrink-0">i</span>
+              <div>
+                <p class="text-gray-700 font-medium">Sehtest: nur wenn noch kein gültiger Ausweis vorhanden</p>
+                <p class="text-sm text-gray-500 mt-0.5">Wer bereits einen Lernfahrausweis oder Führerausweis besitzt, braucht keinen weiteren Sehtest.</p>
+              </div>
             </li>
             <li class="flex gap-3">
-              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Gültiger Schweizer Ausweis oder Pass</p>
+              <span class="text-amber-500 font-bold flex-shrink-0">i</span>
+              <div>
+                <p class="text-gray-700 font-medium">Nothelferkurs: nicht erforderlich</p>
+              </div>
             </li>
           </ul>
-          <div class="mt-6 p-4 bg-primary-50 rounded-lg">
-            <p class="text-sm text-primary-800">Für Bus-Fahrschule Kategorie D1: Du kannst bereits ab 18 Jahren beginnen, benötigst aber spezifische medizinische Anforderungen. Der CZV Grundkurs ist obligatorisch vor der Prüfung.</p>
+          <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p class="text-sm text-amber-900 font-semibold mb-1">Fahrpraxis-Nachweis (entfällt bei Mindestausbildung)</p>
+            <p class="text-sm text-amber-800">Wer keine Mindestausbildung absolviert, muss nachweisen, dass er während eines Jahres in den letzten zwei Jahren mindestens 220 Tage / 500 Stunden klaglos Kat. C oder Trolleybusse geführt hat. Bei Mindestausbildung entfällt dieser Nachweis.</p>
+          </div>
+          <div class="mt-4 p-4 bg-primary-50 rounded-lg">
+            <p class="text-sm text-primary-800">Berufliche Nutzung: Für gewerbsmässigen Personentransport (ÖV, Reisebus etc.) ist zusätzlich der <strong>CZV-Fähigkeitsausweis</strong> obligatorisch.</p>
           </div>
         </div>
       </div>
@@ -121,7 +145,7 @@
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
                 <p class="text-sm text-gray-600">Fülle das Lernfahrgesuch vollständig und wahrheitsgetreu aus. Anschliessend gehst du damit zu einem Optiker oder Arzt, um einen Sehtest durchführen zu lassen.</p>
-                <p class="text-sm text-gray-500 mt-2 italic">Voraussetzungen: Mindestens 21 Jahre alt, Kategorie B seit mindestens 2 Jahren.</p>
+                <p class="text-sm text-gray-500 mt-2 italic">Voraussetzungen: Mindestens 21 Jahre alt, Kat. B (mind. 2 Jahre) oder Kat. C (mind. 3 Monate). Kein Nothelferkurs erforderlich.</p>
                 <div class="mt-3 flex flex-wrap gap-2">
                   <a href="/documents/lernfahrgesuche/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Zürich</a>
                   <a href="/documents/lernfahrgesuche/Gesuch-LFA-SZ.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Schwyz</a>
@@ -286,7 +310,7 @@
             Was kostet der Bus Führerschein insgesamt?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Die Gesamtkosten für einen Bus-Führerschein betragen in der Schweiz durchschnittlich CHF 4'500–6'500, abhängig von der Anzahl der benötigten Fahrstunden. Dies beinhaltet den Nothelferkurs (ca. CHF 100), Sehtest (CHF 50), Lernfahrausweis (CHF 80), Theorieprüfung (CHF 40), Fahrstunden (durchschnittlich 25–35 à CHF 200), praktische Prüfung (CHF 200–250), sowie die Versicherungspauschale (CHF 200) und WarmUp-Kurs (CHF 1'066). Die genauen Kosten hängen von deinen Vorkenntnissen ab.</p>
+          <p class="text-gray-600 mt-4">Die Gesamtkosten hängen stark von deinen Vorkenntnissen ab. Mit Kat. B (52 Lektionen): ca. CHF 12'000–14'000. Mit Kat. C (24 Lektionen): ca. CHF 6'000–8'000. Darin enthalten: Lernfahrausweis (CHF 80), Theorieprüfung (CHF 40), Fahrstunden à CHF 200, Versicherungspauschale (CHF 200) und WarmUp-Kurs mit Prüfungsfahrt (CHF 1'066). Nothelferkurs ist für Kat. D nicht erforderlich.</p>
         </details>
 
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -294,7 +318,7 @@
             Was sind die Voraussetzungen für den Führerschein?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Um einen Bus-Führerschein (Kategorie D) zu erhalten, benötigst du: Mindestalter 21 Jahren, einen gültigen Auto-Führerschein (Kategorie B) seit mindestens 2 Jahren, einen bestandenen Nothelferkurs (obligatorisch), einen bestandenen Sehtest, einen gültigen Lernfahrausweis und die Anmeldung in einer Fahrschule. Du musst in der Schweiz wohnhaft sein und einen gültigen Ausweis haben.</p>
+          <p class="text-gray-600 mt-4">Mindestalter 21 Jahre, Führerausweis Kat. B (mind. 2 Jahre) oder Kat. C (mind. 3 Monate), verkehrsmedizinische Untersuchung. Kein Nothelferkurs erforderlich. Sehtest nur wenn noch kein Ausweis vorhanden. Anschliessend Mindestausbildung bei einem zugelassenen Fahrlehrer (52, 24 oder 12 Fahrlektionen je nach Vorkenntnissen) und Zusatztheorieprüfung.</p>
         </details>
 
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
