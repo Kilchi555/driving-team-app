@@ -117,31 +117,42 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
 
   // ── Active-status guard ───────────────────────────────────────────────────
-  // If setting status to 'active', check whether all internal sessions are confirmed
+  // Only block if the status is being *changed to* 'active' (not if it's already active).
   // (skip check for tenants with only 1 staff member)
   if (courseData.status === 'active' && courseId) {
-    const { count: staffCount } = await supabase
-      .from('users')
-      .select('*', { count: 'exact', head: true })
+    const { data: currentCourse } = await supabase
+      .from('courses')
+      .select('status')
+      .eq('id', courseId)
       .eq('tenant_id', profile.tenant_id)
-      .eq('role', 'staff')
+      .single()
 
-    if ((staffCount ?? 0) > 1) {
-      // Check if any internal session is still pending or declined
-      const { data: unconfirmedSessions } = await supabase
-        .from('course_sessions')
-        .select('id, confirmation_status')
-        .eq('course_id', courseId)
+    const isBeingActivated = currentCourse?.status !== 'active'
+
+    if (isBeingActivated) {
+      const { count: staffCount } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
         .eq('tenant_id', profile.tenant_id)
-        .eq('instructor_type', 'internal')
-        .not('staff_id', 'is', null)
-        .or('confirmation_status.is.null,confirmation_status.eq.pending,confirmation_status.eq.declined')
+        .eq('role', 'staff')
 
-      if (unconfirmedSessions && unconfirmedSessions.length > 0) {
-        throw createError({
-          statusCode: 409,
-          statusMessage: `Kurs kann nicht aktiviert werden: ${unconfirmedSessions.length} Session(s) noch nicht von Instruktoren bestätigt.`,
-        })
+      if ((staffCount ?? 0) > 1) {
+        // Check if any internal session is still pending or declined
+        const { data: unconfirmedSessions } = await supabase
+          .from('course_sessions')
+          .select('id, confirmation_status')
+          .eq('course_id', courseId)
+          .eq('tenant_id', profile.tenant_id)
+          .eq('instructor_type', 'internal')
+          .not('staff_id', 'is', null)
+          .or('confirmation_status.is.null,confirmation_status.eq.pending,confirmation_status.eq.declined')
+
+        if (unconfirmedSessions && unconfirmedSessions.length > 0) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: `Kurs kann nicht aktiviert werden: ${unconfirmedSessions.length} Session(s) noch nicht von Instruktoren bestätigt.`,
+          })
+        }
       }
     }
   }
@@ -338,25 +349,51 @@ export default defineEventHandler(async (event) => {
         .eq('notes', `course:${savedCourseId}`) // tag we set below
     }
 
-    // Build appointment rows: start 30 min before, end 30 min after session
-    // Always create appointments when sessions are assigned to internal staff (Modell A)
-    const apptRows = internalSessions.map((s: any) => {
-      const startMs = new Date(`${s.date}T${s.start_time}:00`).getTime() - 30 * 60 * 1000
-      const endMs   = new Date(`${s.date}T${s.end_time}:00`).getTime()   + 30 * 60 * 1000
-      return {
-        tenant_id:       profile.tenant_id,
-        staff_id:        s.staff_id,
-        user_id:         null,
-        start_time:      new Date(startMs).toISOString(),
-        end_time:        new Date(endMs).toISOString(),
-        duration_minutes: Math.round((endMs - startMs) / 60000),
-        event_type_code: 'course',
-        title:           apptTitle,
-        description:     s.description || '',
-        status:          'confirmed',
-        notes:           `course:${savedCourseId}`,
+    // Build appointment rows grouped per staff, merging back-to-back sessions
+    // (gap ≤ 5 min) into one block. Buffer: 45 min before, 15 min after.
+    const byStaffMap = new Map<string, any[]>()
+    for (const s of internalSessions) {
+      if (!byStaffMap.has(s.staff_id)) byStaffMap.set(s.staff_id, [])
+      byStaffMap.get(s.staff_id)!.push(s)
+    }
+
+    const apptRows: any[] = []
+    for (const [staffId, staffSessions] of byStaffMap) {
+      const sorted = staffSessions.sort((a: any, b: any) =>
+        (a.date + a.start_time).localeCompare(b.date + b.start_time)
+      )
+
+      // Merge consecutive sessions (gap ≤ 5 min) into blocks
+      const blocks: Array<{ startMs: number; endMs: number }> = []
+      for (const s of sorted) {
+        const startMs = new Date(`${s.date}T${s.start_time}:00`).getTime()
+        const endMs   = new Date(`${s.date}T${s.end_time}:00`).getTime()
+        const last    = blocks[blocks.length - 1]
+        if (last && startMs - last.endMs <= 5 * 60 * 1000) {
+          last.endMs = Math.max(last.endMs, endMs)
+        } else {
+          blocks.push({ startMs, endMs })
+        }
       }
-    })
+
+      for (const b of blocks) {
+        const paddedStart = b.startMs - 45 * 60 * 1000
+        const paddedEnd   = b.endMs   + 15 * 60 * 1000
+        apptRows.push({
+          tenant_id:        profile.tenant_id,
+          staff_id:         staffId,
+          user_id:          null,
+          start_time:       new Date(paddedStart).toISOString(),
+          end_time:         new Date(paddedEnd).toISOString(),
+          duration_minutes: Math.round((paddedEnd - paddedStart) / 60000),
+          event_type_code:  'course',
+          title:            apptTitle,
+          description:      '',
+          status:           'confirmed',
+          notes:            `course:${savedCourseId}`,
+        })
+      }
+    }
 
     const { error: apptErr } = await supabase.from('appointments').insert(apptRows)
     if (apptErr) {

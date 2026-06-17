@@ -134,6 +134,7 @@ export default defineEventHandler(async (event) => {
         is_partial_only,
         course_category:course_categories (
           id,
+          name,
           allow_partial_enrollment,
           partial_start_position,
           partial_price_rappen

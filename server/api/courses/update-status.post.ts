@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
   // Verify course belongs to the caller's tenant
   const { data: course } = await supabase
     .from('courses')
-    .select('id, tenant_id, status, name, description, instructor_id, external_instructor_name, price_per_participant_rappen, sari_managed, course_sessions (start_time, end_time)')
+    .select('id, tenant_id, status, name, description, instructor_id, external_instructor_name, price_per_participant_rappen, sari_managed, course_sessions (start_time, end_time, staff_id, external_instructor_name)')
     .eq('id', body.courseId)
     .eq('tenant_id', profile.tenant_id)
     .single()
@@ -41,7 +41,11 @@ export default defineEventHandler(async (event) => {
 
   // Business rule: course can only be set to active if instructor and price are set
   if (body.status === 'active') {
-    const hasInstructor = !!(course.instructor_id || course.external_instructor_name)
+    // Accept instructor at course level (legacy) OR on any session (modern / SARI)
+    const sessionInstructor = (course.course_sessions as any[] | null)?.some(
+      (s: any) => s.staff_id || s.external_instructor_name
+    )
+    const hasInstructor = !!(course.instructor_id || course.external_instructor_name || sessionInstructor)
     const hasPrice = (course.price_per_participant_rappen ?? 0) > 0
 
     if (!hasInstructor) {

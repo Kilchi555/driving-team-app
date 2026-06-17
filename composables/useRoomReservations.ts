@@ -47,10 +47,10 @@ export const useRoomReservations = () => {
   const error = ref<string | null>(null)
 
   // Load available rooms for the current tenant
-  const loadRooms = async () => {
+  const loadRooms = async (forceTenantId?: string) => {
     logger.debug('🔄 loadRooms called')
 
-    const tenantId = currentUser.value?.tenant_id
+    const tenantId = forceTenantId || currentUser.value?.tenant_id
     if (!tenantId) {
       logger.debug('⚠️ loadRooms: no tenant_id yet, skipping')
       return
