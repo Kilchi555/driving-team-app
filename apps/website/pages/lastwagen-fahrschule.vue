@@ -289,12 +289,13 @@
             <li class="flex gap-2"><span class="text-primary-500">✓</span> Effiziente Fahrausbildung</li>
             <li class="flex gap-2"><span class="text-primary-500">✓</span> Freundliche Fahrlehrer:innen</li>
             <li class="flex gap-2"><span class="text-primary-500">✓</span> Rechnung per E-Mail</li>
-            <li class="flex gap-2"><span class="text-gray-400">i</span> Anhänger</li>
+            <li class="flex gap-2"><span class="text-gray-400">i</span> Keine Theorieprüfung</li>
           </ul>
           <div class="mt-6 pt-4 border-t border-gray-100 space-y-2">
             <p class="text-sm text-gray-500">Versicherungspauschale: <strong>CHF 250.-</strong> (einmalig)</p>
             <p class="text-sm text-gray-500">WarmUp inkl. Prüfungsfahrt: <strong>CHF 866.-</strong></p>
           </div>
+          <a href="/lastwagen-fahrschule-ce/" class="mt-4 block text-center text-sm text-primary-600 font-semibold hover:underline">→ Mehr zu Kategorie CE</a>
         </div>
       </div>
     </section>
