@@ -386,7 +386,6 @@
     
     <GutscheinSection />
     <PriceSection category="taxi" />
-    <CtaSection title="Jetzt mit der Taxi Fahrschule starten!" :hideCourseButton="true" />
     <StandorteSection />
     
     <!-- Related/See Also Section -->
