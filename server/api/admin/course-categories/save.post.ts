@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
       'requires_sari_sync', 'sari_category_code',
       'session_count', 'hours_per_session', 'total_duration_hours', 'session_structure',
       'allow_partial_enrollment', 'partial_start_position', 'partial_price_rappen',
-      'is_active',
+      'is_active', 'waitlist_enabled',
     ]
     const fields: Record<string, any> = { updated_at: new Date().toISOString() }
     for (const key of ALLOWED) {

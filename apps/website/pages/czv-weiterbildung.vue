@@ -89,7 +89,7 @@
               <p class="text-sm text-gray-700"><strong>Kosten:</strong> CHF 190.- inkl. Kaffee & Gipfeli, Mittagessen und Kursbestätigung (SARI)</p>
               <p class="text-sm text-gray-700"><strong>Max. Teilnehmer:</strong> 16</p>
             </div>
-            <button @click="openModal('Radwechsel & Brandbekämpfung')" class="btn-primary mt-4 inline-block text-sm">Anfrage senden</button>
+            <a href="https://app.simy.ch/customer/courses/driving-team/?category=CZV" target="_blank" rel="noopener noreferrer" class="btn-primary mt-4 inline-block text-sm">📅 Kurs buchen</a>
           </div>
         </div>
       </div>
@@ -267,128 +267,26 @@
     <!-- Warum Driving Team -->
     <WarumSection category="chauffeur" />
 
-    <!-- Inquiry Modal -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div
-          v-if="showModal"
-          class="fixed inset-x-0 bottom-0 top-16 z-50 flex items-start justify-center p-4 pt-6 overflow-y-auto"
-          @click.self="closeModal"
-        >
-          <div class="fixed inset-0 bg-black/50 backdrop-blur-sm -z-10" @click="closeModal" />
-          <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg my-auto animate-scale-in">
-            <!-- Close Button -->
-            <button
-              @click="closeModal"
-              class="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white/80 hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-700 transition shadow"
-            >
-              ✕
-            </button>
-            <div class="p-6">
-              <GeneralInquiryForm
-                :tenant_id="tenantId"
-                mode="general"
-                :custom_title="modalTitle"
-                @submitted="onFormSubmitted"
-              />
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- Course Picker Modal (from hero button) -->
-    <CoursePickerModal
-      v-model="showPicker"
-      :tenant-id="tenantId"
-      :courses="pickerCourses"
+    <!-- Waitlist -->
+    <CategoryWaitlistForm
+      category-code="CZV"
+      category-label="CZV Weiterbildungskurs"
+      tenant-id="64259d68-195a-4c68-8875-f1b44d962830"
     />
+
   </div>
 </template>
 
 <script setup lang="ts">
+import { instructorData } from '../instructor-data'
+
 const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "CZV Weiterbildungskurse", "description": "Obligatorische CZV Weiterbildung für Berufschauffeure. 5 Kurse in 5 Jahren.", "url": "https://drivingteam.ch/czv-weiterbildung/", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch" }, "offers": { "@type": "Offer", "price": "190", "priceCurrency": "CHF" } }) },
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "CZV Kurse", "item": "https://drivingteam.ch/czv-kurse/" }, { "@type": "ListItem", "position": 3, "name": "CZV Weiterbildung", "item": "https://drivingteam.ch/czv-weiterbildung/" }] }) },
 ]
 useHead({ script: jsonLdScripts })
 
-import { ref } from 'vue'
-import { instructorData } from '../instructor-data'
-import type { CourseOption } from '~/components/CoursePickerModal.vue'
-
-const tenantId = '64259d68-195a-4c68-8875-f1b44d962830'
-const showModal = ref(false)
-const showPicker = ref(false)
-const modalTitle = ref('CZV Weiterbildung anfragen')
-
-// Get Peter from all locations as CZV instructor
 const instructors = [
-  instructorData.lachen.find(i => i.id === 'peter-lachen')
+  instructorData.lachen.find((i: any) => i.id === 'peter-lachen')
 ].filter(Boolean) as any[]
-
-// Courses shown in picker when clicking hero button
-const pickerCourses: CourseOption[] = [
-  {
-    id: 'praevention',
-    label: 'Prävention und Verhalten bei Unfällen',
-    description: 'CZV-Ziel: Sicheres Verhalten bei Verkehrsunfällen',
-    icon: '🦺',
-    courseType: 'czv_weiterbildung',
-    formType: 'inquiry',
-  },
-  {
-    id: 'traffic-health',
-    label: 'Traffic Health – Gesund im Strassenverkehr',
-    description: 'CZV-Ziel: Gesundheitsbewusstsein für Berufschauffeure',
-    icon: '❤️',
-    courseType: 'czv_weiterbildung',
-    formType: 'inquiry',
-  },
-  {
-    id: 'arv1',
-    label: 'ARV1 und Rundumkontrolle',
-    description: 'CZV-Ziel: Fahrzeugkontrolle und Arbeitszeitgesetz',
-    icon: '🔧',
-    courseType: 'czv_weiterbildung',
-    formType: 'inquiry',
-  },
-  {
-    id: 'brand',
-    label: 'Radwechsel & Brandbekämpfung',
-    description: 'CZV-Ziel: Notfallmassnahmen und Pannenhilfe',
-    icon: '🔥',
-    courseType: 'czv_weiterbildung',
-    formType: 'inquiry',
-  },
-]
-
-function openModal(title = 'CZV Weiterbildung anfragen') {
-  modalTitle.value = title
-  showModal.value = true
-  document.body.style.overflow = 'hidden'
-}
-
-function closeModal() {
-  showModal.value = false
-  document.body.style.overflow = ''
-}
-
-function onFormSubmitted() {
-  // Let the form's internal success modal display (3s), then close the page modal
-  setTimeout(() => {
-    closeModal()
-  }, 3500)
-}
 </script>
-
-<style scoped>
-@keyframes scale-in {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-.animate-scale-in { animation: scale-in 0.2s ease-out; }
-
-.modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
-</style>

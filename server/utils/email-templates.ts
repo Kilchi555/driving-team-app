@@ -798,3 +798,80 @@ export function generateWaitlistAvailableEmail(data: {
 
   return { subject, html }
 }
+
+export function generateCategoryWaitlistNotificationEmail(data: {
+  firstName: string
+  categoryName: string
+  bookingUrl: string
+  tenantName?: string
+  primaryColor?: string
+  logoUrl?: string | null
+}): string {
+  const {
+    firstName,
+    categoryName,
+    bookingUrl,
+    tenantName = 'Driving Team',
+    primaryColor = '#1d4ed8',
+    logoUrl = null,
+  } = data
+
+  const logoHtml = logoUrl
+    ? `<tr><td style="background:#fff;text-align:center;padding:20px 40px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain"></td></tr>`
+    : ''
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neuer ${categoryName} verfügbar</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          ${logoHtml}
+          <tr>
+            <td style="background-color:${primaryColor};padding:32px 40px;text-align:center;">
+              <h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:700;">Neuer Kurs verfügbar!</h1>
+              <p style="color:rgba(255,255,255,0.75);margin:8px 0 0;font-size:14px;">${tenantName}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <p style="font-size:16px;color:#111827;margin:0 0 16px;">Hallo ${firstName}</p>
+              <p style="font-size:15px;color:#374151;margin:0 0 24px;">
+                Gute Neuigkeiten! Es ist ein neuer <strong>${categoryName}</strong> verfügbar.
+                Du stehst auf der Warteliste – melde dich jetzt direkt an, bevor die Plätze ausgebucht sind.
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="${bookingUrl}" style="display:inline-block;background-color:${primaryColor};color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;">
+                      Jetzt anmelden
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="font-size:13px;color:#6b7280;margin:0 0 8px;">
+                Oder kopiere diesen Link in deinen Browser:<br>
+                <a href="${bookingUrl}" style="color:${primaryColor};word-break:break-all;">${bookingUrl}</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#f9fafb;padding:20px 40px;border-top:1px solid #e5e7eb;">
+              <p style="font-size:12px;color:#9ca3af;margin:0;text-align:center;">
+                ${tenantName} · Diese E-Mail wurde gesendet, weil du dich für die Warteliste registriert hast.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
