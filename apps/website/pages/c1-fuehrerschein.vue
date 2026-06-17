@@ -96,6 +96,64 @@
             </div>
           </div>
         </div>
+
+        <!-- Fahrzeugbilder -->
+        <div class="mt-12">
+          <h3 class="text-xl font-bold text-center mb-6 text-gray-800">Welche Fahrzeuge darfst du mit C1 fahren?</h3>
+          <div class="grid md:grid-cols-3 gap-6">
+            <div class="rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-white">
+              <img
+                src="/images/categories/c1-wohnmobil.webp"
+                alt="Wohnmobil Führerschein C1 – Schweiz"
+                class="w-full h-48 object-cover"
+                loading="lazy"
+                width="600"
+                height="400"
+              />
+              <div class="p-5">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-2xl">🏕️</span>
+                  <h4 class="font-bold text-gray-900">Wohnmobile</h4>
+                </div>
+                <p class="text-sm text-gray-600">Reisemobile und Camper über 3'500 kg – der häufigste Grund für den C1 Führerschein bei Privatpersonen.</p>
+              </div>
+            </div>
+            <div class="rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-white">
+              <img
+                src="/images/categories/c1-gesellschaftswagen-d1.webp"
+                alt="Gesellschaftswagen D1 Führerschein – Minibus bis 17 Personen"
+                class="w-full h-48 object-cover"
+                loading="lazy"
+                width="600"
+                height="400"
+              />
+              <div class="p-5">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-2xl">🚐</span>
+                  <h4 class="font-bold text-gray-900">Gesellschaftswagen D1</h4>
+                </div>
+                <p class="text-sm text-gray-600">Kleinbusse bis 17 Personen (Kategorie D1) – für Vereinsfahrten, Shuttle-Dienste und gemeinnützige Organisationen.</p>
+              </div>
+            </div>
+            <div class="rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-white">
+              <img
+                src="/images/categories/c1-transporter.webp"
+                alt="C1 Transporter Führerschein – LKW bis 7.5 Tonnen"
+                class="w-full h-48 object-cover"
+                loading="lazy"
+                width="600"
+                height="400"
+              />
+              <div class="p-5">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-2xl">🚚</span>
+                  <h4 class="font-bold text-gray-900">C1 Transporter & LKW</h4>
+                </div>
+                <p class="text-sm text-gray-600">Leichte Lastwagen und Transporter bis 7'500 kg – ideal für Handwerker, Umzugsfirmen und Lieferdienste.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
