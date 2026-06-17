@@ -122,7 +122,7 @@
               <tr>
                 <td class="p-4 text-gray-700">Mindestalter</td>
                 <td class="p-4 text-center text-gray-600">18 Jahre</td>
-                <td class="p-4 text-center bg-primary-50/30">21 Jahre (18 mit BFS)</td>
+                <td class="p-4 text-center bg-primary-50/30">18 Jahre</td>
               </tr>
               <tr>
                 <td class="p-4 text-gray-700">CZV Grundkurs</td>
@@ -263,7 +263,7 @@
                 <div class="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold flex-shrink-0">1</div>
                 <div>
                   <h3 class="font-semibold mb-1">Mindestalter 18 Jahre</h3>
-                  <p class="text-gray-600 text-sm">C1 kann ab 18 Jahren erworben werden – ein Vorteil gegenüber Kategorie C, wo ohne BFS (Berufliche Grundausbildung) 21 Jahre erforderlich sind.</p>
+                  <p class="text-gray-600 text-sm">C1 und C können beide ab 18 Jahren erworben werden.</p>
                 </div>
               </div>
               <div class="flex gap-4 items-start">
@@ -418,7 +418,7 @@
               Ab welchem Alter kann ich den C1 Führerschein machen?
               <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 mt-4">Der Führerschein C1 kann ab 18 Jahren erworben werden. Das ist ein Vorteil gegenüber Kategorie C, wo in der Regel 21 Jahre Voraussetzung sind (Ausnahme: Berufliche Fahrschüler mit BFS ab 18).</p>
+            <p class="text-gray-600 mt-4">Der Führerschein C1 und C können beide ab 18 Jahren erworben werden.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -538,7 +538,7 @@ const jsonLdScripts = [
         { '@type': 'Question', name: 'Brauche ich für ein Wohnmobil einen C1 Führerschein?', acceptedAnswer: { '@type': 'Answer', text: 'Ja – für Wohnmobile über 3500 kg Gesamtgewicht ist in der Schweiz der Führerschein C1 zwingend erforderlich. Mit Kategorie B darfst du nur Fahrzeuge bis 3500 kg fahren.' } },
         { '@type': 'Question', name: 'Was kostet der C1 Führerschein in der Schweiz?', acceptedAnswer: { '@type': 'Answer', text: 'Für Wohnmobil-Fahrer ohne CZV: ca. CHF 2600–4100. Für Berufsfahrer mit CZV Grundkurs: ca. CHF 5500–7050. Darin enthalten: Sehtest (CHF 50), Nothelferkurs (CHF 80), Fahrstunden à CHF 150 / 45 Min., Versicherungspauschale (CHF 160), WarmUp & Prüfungsfahrt (CHF 649), CZV Grundkurs (CHF 2200) und ärztliche Untersuchung.' } },
         { '@type': 'Question', name: 'Brauche ich für C1 einen CZV Grundkurs?', acceptedAnswer: { '@type': 'Answer', text: 'Nur wenn du das Fahrzeug beruflich nutzt. Wohnmobil-Fahrer, die ausschliesslich privat unterwegs sind, sind vom CZV Grundkurs befreit.' } },
-        { '@type': 'Question', name: 'Ab welchem Alter kann ich den C1 Führerschein machen?', acceptedAnswer: { '@type': 'Answer', text: 'Der C1 Führerschein kann ab 18 Jahren erworben werden – 3 Jahre früher als Kategorie C (21 Jahre).' } },
+        { '@type': 'Question', name: 'Ab welchem Alter kann ich den C1 Führerschein machen?', acceptedAnswer: { '@type': 'Answer', text: 'Der C1 und C Führerschein können beide ab 18 Jahren erworben werden.' } },
       ],
     }),
   },

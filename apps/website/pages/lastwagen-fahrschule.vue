@@ -72,7 +72,7 @@
             </li>
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Mindestalter: 18 Jahre (Kategorie C1) oder 21 Jahre (Kategorie C und CE)</p>
+              <p class="text-gray-700">Mindestalter: 18 Jahre (alle Kategorien C1, C & CE)</p>
             </li>
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>

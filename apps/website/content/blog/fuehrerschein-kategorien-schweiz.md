@@ -33,9 +33,9 @@ Dieser Artikel gibt dir einen vollständigen Überblick – von der Fahrrad-ähn
 | BE | Auto + Anhänger über 750 kg zGG | 18 Jahre |
 | B1 | Kleinmotorräder bis 45 km/h mit 3–4 Rädern | 16 Jahre |
 | C1 | Leichte Lastwagen 3'500–7'500 kg | 18 Jahre |
-| C | Schwere Lastwagen über 7'500 kg | 21 Jahre |
+| C | Schwere Lastwagen über 7'500 kg | 18 Jahre |
 | C1E | Leichter Lastwagen + Anhänger | 18 Jahre |
-| CE | Sattelschlepper und schwere Kombinationen | 21 Jahre |
+| CE | Sattelschlepper und schwere Kombinationen | 18 Jahre |
 | D1 | Kleinbusse bis 16 Passagiere | 21 Jahre |
 | D | Reisebusse über 16 Passagiere | 24 Jahre |
 | D1E | Kleinbus + Anhänger | 21 Jahre |
@@ -146,7 +146,7 @@ Fahrzeuge mit einem zGG zwischen **3'500 und 7'500 kg**. Typisch: Grosse Lieferw
 **Was darf ich fahren?**  
 Alle Lastwagen über 7'500 kg. Für den professionellen Gütertransport.
 
-**Mindestalter:** 21 Jahre  
+**Mindestalter:** 18 Jahre  
 **Beruflich:** Für gewerbsmässigen Transport zusätzlich **CZV (Chauffeurweiterbildung)** obligatorisch.  
 **Ausbildung:** Umfangreich – Theoriekurs (8 × 2 Std.), viele Fahrstunden, Fachprüfung
 
