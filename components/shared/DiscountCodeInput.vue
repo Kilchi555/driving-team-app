@@ -7,7 +7,7 @@
         type="text"
         placeholder="Code eingeben"
         :disabled="!!appliedDiscount || isValidating"
-        class="flex-1 px-4 py-2 border-2 rounded-lg text-sm transition-colors"
+        class="flex-1 px-3 py-1.5 border-2 rounded-lg text-sm transition-colors"
         :class="appliedDiscount
           ? 'border-green-400 bg-green-50 text-green-800 uppercase tracking-wider'
           : 'border-slate-300 focus:outline-none'"
@@ -20,7 +20,7 @@
         type="button"
         @click="applyCode"
         :disabled="!code.trim() || isValidating"
-        class="px-4 py-2 text-sm font-medium rounded-lg border-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+        class="px-3 py-1.5 text-sm font-medium rounded-lg border-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
         :style="{ borderColor: primaryColor, color: primaryColor }"
       >
         <span v-if="isValidating" class="flex items-center gap-1">
@@ -35,7 +35,7 @@
         v-else
         type="button"
         @click="removeCode"
-        class="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 border-2 border-slate-300 hover:border-slate-400 rounded-lg transition-colors"
+        class="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700 border-2 border-slate-300 hover:border-slate-400 rounded-lg transition-colors"
       >
         Entfernen
       </button>

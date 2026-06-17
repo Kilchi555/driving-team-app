@@ -352,7 +352,6 @@
       </div>
     </section>
 
-    <CtaSection title="Jetzt mit der Motorboot Fahrschule starten!" :hideCourseButton="true" />
     <GutscheinSection />
     <PriceSection category="motorboot" />
     <CtaSection title="Jetzt anmelden – Motorboot Fahrschule!" :hideCourseButton="true" />

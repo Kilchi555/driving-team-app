@@ -59,6 +59,19 @@
       :stats="{ requirements: 4, details: 4, hours: '12h' }"
     />
 
+    <!-- Nächste Kursdaten -->
+    <UpcomingCoursesSection
+      category="PGS"
+      location="Zürich"
+      title="Nächste Kursdaten — Motorrad Grundkurs Altstetten"
+      subtitle="Vollständiger Kurs: 3 Kursteile à 4 Stunden · Max. 5 Teilnehmer · CHF 499.–"
+      category-code="PGS"
+      category-label="Motorrad Grundkurs"
+      course-name="Motorrad Grundkurs Altstetten"
+      page-url="https://drivingteam.ch/motorrad-grundkurs-altstetten/"
+      fetch-key="pgs-altstetten-upcoming"
+    />
+
     <!-- Standort & Map -->
     <LazyStandortMapSection location-key="zuerich" />
 

@@ -366,14 +366,6 @@ definePageMeta({
   middleware: []
 })
 
-useHead(computed(() => ({
-  title: tenant.value?.name ? `Kurse – ${tenant.value.name}` : 'Kursangebot',
-  meta: [
-    { name: 'description', content: tenant.value?.name ? `Aktuelles Kursangebot von ${tenant.value.name}. Jetzt Platz sichern.` : 'Kursangebot.' },
-    { name: 'robots', content: 'noindex, nofollow' }
-  ]
-})))
-
 const route = useRoute()
 const router = useRouter()
 const slug = computed(() => route.params.slug as string)
@@ -385,6 +377,14 @@ const error = ref<string | null>(null)
 const tenant = ref<any>(null)
 const tenantBranding = ref<any>(null)
 const tenantWalleeEnabled = ref<boolean>(false)
+
+useHead(computed(() => ({
+  title: tenant.value?.name ? `Kurse – ${tenant.value.name}` : 'Kursangebot',
+  meta: [
+    { name: 'description', content: tenant.value?.name ? `Aktuelles Kursangebot von ${tenant.value.name}. Jetzt Platz sichern.` : 'Kursangebot.' },
+    { name: 'robots', content: 'noindex, nofollow' }
+  ]
+})))
 const courses = ref<any[]>([])
 const selectedCategory = ref('')
 const selectedLocation = ref('')
@@ -540,6 +540,13 @@ const loadData = async () => {
     }))
     
     logger.debug(`Loaded ${courses.value.length} future courses`)
+
+    // Auto-open modal if courseId was passed in the URL
+    const courseIdParam = route.query.courseId as string | undefined
+    if (courseIdParam) {
+      const target = courses.value.find((c: any) => c.id === courseIdParam)
+      if (target) openEnrollmentModal(target)
+    }
   } catch (err: any) {
     logger.error('Error loading data:', err)
     error.value = err.data?.statusMessage || 'Fahrschule nicht gefunden'
@@ -699,6 +706,14 @@ watch(() => route.query, (query) => {
   // Apply filter params
   if (query.category) selectedCategory.value = query.category as string
   if (query.location) selectedLocation.value = query.location as string
+
+  // Auto-open enrollment modal for a specific course
+  if (query.courseId) {
+    const target = courses.value.find((c: any) => c.id === query.courseId)
+    if (target) {
+      openEnrollmentModal(target)
+    }
+  }
 }, { immediate: true })
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000

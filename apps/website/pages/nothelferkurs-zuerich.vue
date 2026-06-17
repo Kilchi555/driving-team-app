@@ -494,6 +494,18 @@ const jsonLdScripts = [
     type: 'application/ld+json',
     innerHTML: JSON.stringify({
       "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "Driving Team Nothelferkurs Zürich",
+      "url": "https://drivingteam.ch/nothelferkurs-zuerich/",
+      "telephone": "+41444310033",
+      "address": { "@type": "PostalAddress", "streetAddress": "Vulkanstrasse 130b", "addressLocality": "Zürich", "postalCode": "8048", "addressCountry": "CH" },
+      "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "bestRating": "5", "worstRating": "1", "reviewCount": "368" }
+    })
+  },
+  {
+    type: 'application/ld+json',
+    innerHTML: JSON.stringify({
+      "@context": "https://schema.org",
       "@type": "FAQPage",
       "mainEntity": [
         { "@type": "Question", "name": "Was kostet der Nothelferkurs in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Der Nothelferkurs in Zürich kostet CHF 120.- inkl. Nothelferausweis. Barzahlung am ersten Kurstag." } },

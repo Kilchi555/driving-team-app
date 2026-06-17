@@ -201,7 +201,6 @@
     <WarumSection category="lachen" />
 
     <!-- 11. Finale CTA (primary) -->
-    <CtaSection title="Bereit? Jetzt Termin buchen!" />
 
     <!-- 12. Andere Standorte (weiß) -->
     <StandorteSection exclude="lachen" />
