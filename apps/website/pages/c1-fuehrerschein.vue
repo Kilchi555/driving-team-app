@@ -193,7 +193,7 @@
             </div>
             <div class="flex justify-between py-2 border-b border-gray-100">
               <span class="text-gray-600">CZV Grundkurs</span>
-              <span class="font-medium">CHF 590.-</span>
+              <span class="font-medium">CHF 2'200.-</span>
             </div>
             <div class="flex justify-between py-2 border-b border-gray-100">
               <span class="text-gray-600">Ärztliche Untersuchung</span>
@@ -201,7 +201,7 @@
             </div>
             <div class="flex justify-between py-3 bg-primary-50 rounded-lg px-3 mt-2">
               <span class="font-bold text-gray-900">Total (ca.)</span>
-              <span class="font-bold text-primary-600">CHF 3'900–5'300.-</span>
+              <span class="font-bold text-primary-600">CHF 5'500–7'050.-</span>
             </div>
           </div>
         </div>
@@ -394,7 +394,7 @@
               Was kostet der C1 Führerschein in der Schweiz?
               <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 mt-4">Für Wohnmobil-Fahrer ohne CZV Pflicht: ca. CHF 2'600–4'100. Für Berufsfahrer mit CZV Grundkurs: ca. CHF 3'900–5'400. Die genauen Kosten hängen von der Anzahl Fahrstunden ab, die du benötigst.</p>
+            <p class="text-gray-600 mt-4">Für Wohnmobil-Fahrer ohne CZV Pflicht: ca. CHF 2'600–4'100. Für Berufsfahrer mit CZV Grundkurs: ca. CHF 5'500–7'050. Die genauen Kosten hängen von der Anzahl Fahrstunden ab, die du benötigst.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -402,7 +402,7 @@
               Brauche ich für C1 einen CZV Grundkurs?
               <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 mt-4">Nur wenn du das Fahrzeug beruflich nutzt. Wohnmobil-Fahrer, die ausschliesslich privat unterwegs sind, sind vom CZV Grundkurs befreit. Das spart CHF 590 und einige Wochen Zeit.</p>
+            <p class="text-gray-600 mt-4">Nur wenn du das Fahrzeug beruflich nutzt. Wohnmobil-Fahrer, die ausschliesslich privat unterwegs sind, sind vom CZV Grundkurs befreit. Das spart CHF 2'200 und einige Wochen Zeit.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -536,7 +536,7 @@ const jsonLdScripts = [
       mainEntity: [
         { '@type': 'Question', name: 'Was ist der Unterschied zwischen C1 und C Führerschein?', acceptedAnswer: { '@type': 'Answer', text: 'Kategorie C1 erlaubt Fahrzeuge bis 7500 kg, Kategorie C ist unbegrenzt. Für berufliche Fahrer empfehlen wir immer Kategorie C, da ein Upgrade von C1 auf C später teuer ist. Für Wohnmobil-Fahrer reicht C1 aus.' } },
         { '@type': 'Question', name: 'Brauche ich für ein Wohnmobil einen C1 Führerschein?', acceptedAnswer: { '@type': 'Answer', text: 'Ja – für Wohnmobile über 3500 kg Gesamtgewicht ist in der Schweiz der Führerschein C1 zwingend erforderlich. Mit Kategorie B darfst du nur Fahrzeuge bis 3500 kg fahren.' } },
-        { '@type': 'Question', name: 'Was kostet der C1 Führerschein in der Schweiz?', acceptedAnswer: { '@type': 'Answer', text: 'Für Wohnmobil-Fahrer ohne CZV: ca. CHF 2700–4200. Für Berufsfahrer mit CZV Grundkurs: ca. CHF 4000–5500. Darin enthalten: Sehtest (CHF 50), Nothelferkurs (CHF 80), Fahrstunden à CHF 150 / 45 Min., Versicherungspauschale (CHF 160), WarmUp & Prüfungsfahrt (CHF 649) und ärztliche Untersuchung.' } },
+        { '@type': 'Question', name: 'Was kostet der C1 Führerschein in der Schweiz?', acceptedAnswer: { '@type': 'Answer', text: 'Für Wohnmobil-Fahrer ohne CZV: ca. CHF 2600–4100. Für Berufsfahrer mit CZV Grundkurs: ca. CHF 5500–7050. Darin enthalten: Sehtest (CHF 50), Nothelferkurs (CHF 80), Fahrstunden à CHF 150 / 45 Min., Versicherungspauschale (CHF 160), WarmUp & Prüfungsfahrt (CHF 649), CZV Grundkurs (CHF 2200) und ärztliche Untersuchung.' } },
         { '@type': 'Question', name: 'Brauche ich für C1 einen CZV Grundkurs?', acceptedAnswer: { '@type': 'Answer', text: 'Nur wenn du das Fahrzeug beruflich nutzt. Wohnmobil-Fahrer, die ausschliesslich privat unterwegs sind, sind vom CZV Grundkurs befreit.' } },
         { '@type': 'Question', name: 'Ab welchem Alter kann ich den C1 Führerschein machen?', acceptedAnswer: { '@type': 'Answer', text: 'Der C1 Führerschein kann ab 18 Jahren erworben werden – 3 Jahre früher als Kategorie C (21 Jahre).' } },
       ],
