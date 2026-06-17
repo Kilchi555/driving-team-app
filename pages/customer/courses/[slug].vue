@@ -366,14 +366,6 @@ definePageMeta({
   middleware: []
 })
 
-useHead(computed(() => ({
-  title: tenant.value?.name ? `Kurse – ${tenant.value.name}` : 'Kursangebot',
-  meta: [
-    { name: 'description', content: tenant.value?.name ? `Aktuelles Kursangebot von ${tenant.value.name}. Jetzt Platz sichern.` : 'Kursangebot.' },
-    { name: 'robots', content: 'noindex, nofollow' }
-  ]
-})))
-
 const route = useRoute()
 const router = useRouter()
 const slug = computed(() => route.params.slug as string)
@@ -385,6 +377,14 @@ const error = ref<string | null>(null)
 const tenant = ref<any>(null)
 const tenantBranding = ref<any>(null)
 const tenantWalleeEnabled = ref<boolean>(false)
+
+useHead(computed(() => ({
+  title: tenant.value?.name ? `Kurse – ${tenant.value.name}` : 'Kursangebot',
+  meta: [
+    { name: 'description', content: tenant.value?.name ? `Aktuelles Kursangebot von ${tenant.value.name}. Jetzt Platz sichern.` : 'Kursangebot.' },
+    { name: 'robots', content: 'noindex, nofollow' }
+  ]
+})))
 const courses = ref<any[]>([])
 const selectedCategory = ref('')
 const selectedLocation = ref('')
