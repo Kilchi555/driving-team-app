@@ -49,7 +49,7 @@
               </div>
               <div>
                 <p class="text-4xl font-black text-yellow-300">CHF 200</p>
-                <p class="text-white/70 text-sm">ab / Lektion</p>
+                <p class="text-white/70 text-sm">pro Lektion</p>
               </div>
               <div>
                 <p class="text-4xl font-black text-yellow-300">0</p>
@@ -102,7 +102,7 @@
                 <span class="text-yellow-300 mt-0.5">📍</span>
                 <div>
                   <p class="font-semibold text-sm">Treffpunkt & Prüfung</p>
-                  <p class="text-white/70 text-sm">Parkplatz Neubüel, Wädenswil · Prüfung StVA Zürich-Albisgütli</p>
+                  <p class="text-white/70 text-sm">Treffpunkt Parkplatz Tuggen/SZ Industrie Betti · Prüfung Pfäffikon/SZ, Kaltbrunn/SG, Hinwil/ZH & Zürich-Albisgütli</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
@@ -276,7 +276,7 @@
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-              <p class="text-sm text-gray-600">Mit LFA in der Hand startest du direkt mit den Fahrstunden. Wir fahren mit einem modernen Sattelzug (mind. 21t, 14m Länge, geschlossener Aufbau – prüfungskonform). Treffpunkt: Parkplatz Neubüel, Wädenswil.</p>
+              <p class="text-sm text-gray-600">Mit LFA in der Hand startest du direkt mit den Fahrstunden. Wir fahren mit einem modernen Sattelzug (mind. 21t, 14m Länge, geschlossener Aufbau – prüfungskonform). Treffpunkt: Parkplatz Industrie Betti, Tuggen/SZ.</p>
               <div class="mt-3 grid grid-cols-2 gap-3">
                 <div class="bg-gray-50 rounded-lg p-3">
                   <p class="text-xs font-semibold text-gray-700">Mit Kat. C vorhanden</p>
@@ -341,7 +341,7 @@
             <ul class="text-sm space-y-2 text-left mb-6">
               <li class="flex gap-2"><span>✓</span> Moderner Sattelzug</li>
               <li class="flex gap-2"><span>✓</span> Prüfungskonformes Fahrzeug</li>
-              <li class="flex gap-2"><span>✓</span> Treffpunkt Parkplatz Neubüel, Wädenswil</li>
+              <li class="flex gap-2"><span>✓</span> Treffpunkt Parkplatz Industrie Betti, Tuggen/SZ</li>
               <li class="flex gap-2"><span>✓</span> Freundliche, erfahrene Fahrlehrer</li>
             </ul>
             <p class="text-xs text-primary-300">Versicherungspauschale: CHF 200.- (einmalig)</p>
@@ -447,7 +447,7 @@
       </div>
     </section>
 
-    <LazyStandortMapSection location-key="wadenswil" />
+    <LazyStandortMapSection location-key="tuggen" />
     <CtaSection title="Kategorie CE – Jetzt anmelden!" />
   </div>
 </template>
@@ -472,8 +472,8 @@ const jsonLdScripts = [
       "courseMode": "ONSITE",
       "location": {
         "@type": "Place",
-        "name": "Parkplatz Neubüel",
-        "address": { "@type": "PostalAddress", "addressLocality": "Wädenswil", "postalCode": "8820", "addressCountry": "CH" }
+        "name": "Parkplatz Industrie Betti",
+        "address": { "@type": "PostalAddress", "addressLocality": "Tuggen", "postalCode": "8856", "addressCountry": "CH" }
       }
     }
   }) },
