@@ -5,7 +5,8 @@
  * Das Resultat wird 24h serverseitig gecacht — kein DB-Hit pro Pageload.
  * Nitro-Cache: in-memory (Vercel: pro Lambda-Instanz, lokale Dev: persistent)
  */
-import { defineCachedEventHandler, getQuery, useRuntimeConfig } from 'h3'
+import { defineEventHandler, getQuery } from 'h3'
+import { useRuntimeConfig } from 'nitropack/runtime'
 
 const ONE_DAY_S = 60 * 60 * 24
 
@@ -57,7 +58,7 @@ export interface UpcomingPgsCourse {
   }[]
 }
 
-export default defineCachedEventHandler(async (event) => {
+export default defineEventHandler(async (event) => {
   const { location = 'Zürich' } = getQuery(event) as { location?: string }
   const cfg = useRuntimeConfig(event)
   const baseUrl = (cfg.simyApiBaseUrl as string) || 'https://app.simy.ch'
@@ -114,7 +115,4 @@ export default defineCachedEventHandler(async (event) => {
     .slice(0, 4)
 
   return { courses }
-}, {
-  maxAge: ONE_DAY_S,
-  getKey: (event) => `pgs-upcoming-${((getQuery(event) as Record<string, string>).location) || 'Zürich'}`,
 })
