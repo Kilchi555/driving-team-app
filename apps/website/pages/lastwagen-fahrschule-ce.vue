@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>LKW Anhänger Führerschein Kategorie CE | Sattelzug | Driving Team</Title>
+      <Title>LKW Anhänger Führerschein Kategorie CE | Zentralachsanhänger | Driving Team</Title>
       <Meta name="description" content="Kategorie CE Führerschein in der Schweiz – keine Theorieprüfung, keine ärztliche Untersuchung. Nur praktische Fahrstunden & Prüfung. Ab CHF 200.-/Lektion. Jetzt anmelden!" />
       <Meta property="og:title" content="LKW Anhänger Führerschein Kat. CE | Driving Team Fahrschule" />
-      <Meta property="og:description" content="Kategorie CE: Der schnellste LKW-Aufstieg ohne Theorie und ohne Arztbesuch. Sattelzug, Anhängerzug, Kipper – wir bilden dich aus." />
+      <Meta property="og:description" content="Kategorie CE: Der schnellste LKW-Aufstieg ohne Theorie und ohne Arztbesuch. Zentralachsanhänger, Anhängerzug, Kipper – wir bilden dich aus." />
       <Meta property="og:url" content="https://drivingteam.ch/lastwagen-fahrschule-ce/" />
       <Meta property="og:type" content="website" />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-fahrschule-ce/" />
@@ -19,7 +19,7 @@
       <div class="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-900 to-black"></div>
       <img
         src="/images/categories/lastwagen-fahrschule-hero.webp"
-        alt="LKW Anhänger Führerschein Kategorie CE – Sattelzug Fahrschule Driving Team"
+        alt="LKW Anhänger Führerschein Kategorie CE – Zentralachsanhänger Fahrschule Driving Team"
         class="absolute inset-0 w-full h-full object-cover opacity-20"
         fetchpriority="high"
         loading="eager"
@@ -33,7 +33,7 @@
           <div class="text-white">
             <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full mb-6 border border-white/20">
               <span class="text-xl">🚛</span>
-              <span class="text-sm font-semibold">Kategorie CE – Sattelzug & Anhängerzug</span>
+              <span class="text-sm font-semibold">Kategorie CE – Zentralachsanhänger & Anhängerzug</span>
             </div>
             <h1 class="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
               LKW Anhänger<br/>
@@ -74,7 +74,7 @@
                 <span class="text-yellow-300 mt-0.5">📋</span>
                 <div>
                   <p class="font-semibold text-sm">Berechtigung</p>
-                  <p class="text-white/70 text-sm">Fahrzeugkombinationen aus Kat. C + Anhänger über 750 kg (Sattelzug, Anhängerzug, Kipper)</p>
+                  <p class="text-white/70 text-sm">Fahrzeugkombinationen aus Kat. C + Anhänger über 750 kg (Zentralachsanhänger, Anhängerzug, Kipper)</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
@@ -271,12 +271,12 @@
                 <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">2</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="text-base md:text-lg lg:text-xl font-bold">Fahrstunden mit Sattelzug</h3>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Fahrstunden mit Zentralachsanhänger</h3>
                 <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-              <p class="text-sm text-gray-600">Mit LFA in der Hand startest du direkt mit den Fahrstunden. Wir fahren mit einem modernen Sattelzug (mind. 21t, 14m Länge, geschlossener Aufbau – prüfungskonform). Treffpunkt: Parkplatz Industrie Betti, Tuggen/SZ.</p>
+              <p class="text-sm text-gray-600">Mit LFA in der Hand startest du direkt mit den Fahrstunden. Wir fahren mit einem modernen Zentralachsanhänger (mind. 21t Gesamtzugsgewicht, 14m Länge, geschlossener Aufbau – prüfungskonform). Treffpunkt: Parkplatz Industrie Betti, Tuggen/SZ.</p>
               <div class="mt-3 grid grid-cols-2 gap-3">
                 <div class="bg-gray-50 rounded-lg p-3">
                   <p class="text-xs font-semibold text-gray-700">Mit Kat. C vorhanden</p>
@@ -306,7 +306,7 @@
               <div class="mt-3 p-3 bg-gray-50 rounded-lg">
                 <p class="text-xs font-semibold text-gray-700 mb-1">Prüfungsfahrzeug-Anforderungen (gesetzlich):</p>
                 <ul class="text-xs text-gray-600 space-y-1">
-                  <li>• Sattelzug oder LKW+Anhänger</li>
+                  <li>• Sattelzug oder LKW-Anhängerzug</li>
                   <li>• Gesamtzugsgewicht: mind. 21 t</li>
                   <li>• Betriebsgewicht: mind. 15 t</li>
                   <li>• Länge: mind. 14 m · Breite: mind. 2.30 m</li>
@@ -339,7 +339,7 @@
             <p class="text-4xl font-black mb-1">CHF 200.-</p>
             <p class="text-primary-200 text-sm mb-4">à 45 Minuten</p>
             <ul class="text-sm space-y-2 text-left mb-6">
-              <li class="flex gap-2"><span>✓</span> Moderner Sattelzug</li>
+              <li class="flex gap-2"><span>✓</span> Moderner Zentralachsanhänger</li>
               <li class="flex gap-2"><span>✓</span> Prüfungskonformes Fahrzeug</li>
               <li class="flex gap-2"><span>✓</span> Treffpunkt Parkplatz Industrie Betti, Tuggen/SZ</li>
               <li class="flex gap-2"><span>✓</span> Freundliche, erfahrene Fahrlehrer</li>
@@ -447,7 +447,7 @@
       </div>
     </section>
 
-    <LazyStandortMapSection location-key="tuggen" />
+    <LazyStandortMapSection location-key="tuggen_lkw" />
     <CtaSection title="Kategorie CE – Jetzt anmelden!" />
   </div>
 </template>
@@ -460,7 +460,7 @@ const jsonLdScripts = [
     "@context": "https://schema.org",
     "@type": "Course",
     "name": "LKW Anhänger Führerschein Kategorie CE",
-    "description": "Ausbildung zur Kategorie CE (Sattelzug und Anhängerzug) bei Driving Team Fahrschule. Keine Theorieprüfung erforderlich. Fahrstunden ab CHF 200./Lektion.",
+    "description": "Ausbildung zur Kategorie CE mit Zentralachsanhänger bei Driving Team Fahrschule. Keine Theorieprüfung erforderlich. Fahrstunden ab CHF 200./Lektion.",
     "url": "https://drivingteam.ch/lastwagen-fahrschule-ce/",
     "provider": {
       "@type": "Organization",

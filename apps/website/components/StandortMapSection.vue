@@ -249,6 +249,18 @@ const locations: Record<string, {
     lat: '47.1658',
     lng: '8.9434',
   },
+  tuggen_lkw: {
+    city: 'Tuggen SZ',
+    area: 'Tuggen SZ – LKW Treffpunkt',
+    name: 'Parkplatz Industrie Betti',
+    street: 'Betti 73',
+    zip: '8856',
+    canton: 'SZ',
+    address: 'Betti 73, 8856 Tuggen SZ',
+    region: 'Tuggen, Schübelbach, Lachen, Reichenburg, Siebnen, Galgenen',
+    lat: '47.18642',
+    lng: '8.92925',
+  },
   zug: {
     city: 'Zug',
     area: 'Zug & Umgebung',
