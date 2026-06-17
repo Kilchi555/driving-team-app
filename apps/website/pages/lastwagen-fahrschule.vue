@@ -80,7 +80,10 @@
             </li>
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Bestandener Sehtest (spezielle Anforderungen für LKW-Fahrer)</p>
+              <div>
+                <p class="text-gray-700">Sehtest – nur wenn noch kein gültiger Führerausweis vorhanden</p>
+                <p class="text-sm text-gray-500 mt-0.5">Wer bereits einen Lernfahrausweis oder Führerausweis besitzt, braucht keinen neuen Sehtest.</p>
+              </div>
             </li>
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
@@ -122,7 +125,7 @@
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-                <p class="text-sm text-gray-600">Der erste Schritt zu deinem LKW Führerschein ist der Antrag für den Lernfahrausweis. Lade das Gesuchsformular herunter und kreuze die gewünschte Kategorie an (Führerschein C für schwere Motorwagen über 3.5t). Bevor du das Formular einreichst, benötigst du einen aktuellen Sehtest beim Optiker oder Augenarzt.</p>
+                <p class="text-sm text-gray-600">Der erste Schritt zu deinem LKW Führerschein ist der Antrag für den Lernfahrausweis. Lade das Gesuchsformular herunter und kreuze die gewünschte Kategorie an (Führerschein C für schwere Motorwagen über 3.5t). Da du bereits die Kategorie B besitzt, brauchst du keinen neuen Sehtest – dieser entfällt für alle, die schon einen gültigen Lernfahrausweis oder Führerausweis haben.</p>
                 <div class="mt-3 p-3 bg-gray-50 rounded-lg">
                   <p class="text-xs font-semibold text-gray-700 mb-1">Voraussetzungen:</p>
                   <ul class="text-xs text-gray-600 space-y-1">
@@ -337,7 +340,7 @@
             Was sind die Voraussetzungen für den Führerschein?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Um einen Lastwagen-Führerschein (Kategorie C oder C+E) zu erhalten, benötigst du: Mindestalter 18 Jahren, einen gültigen Auto-Führerschein (Kategorie B), einen bestandenen Nothelferkurs (obligatorisch), einen bestandenen Sehtest, einen gültigen Lernfahrausweis und die Anmeldung in einer Fahrschule. Du musst in der Schweiz wohnhaft sein und einen gültigen Ausweis haben. Für berufliche Tätigkeit brauchst du zudem den CZV-Fähigkeitsausweis.</p>
+          <p class="text-gray-600 mt-4">Um einen Lastwagen-Führerschein (Kategorie C oder C+E) zu erhalten, benötigst du: Mindestalter 18 Jahre, einen gültigen Führerausweis Kat. B, Nothelferkurs (obligatorisch für Erstausweise) und einen gültigen Lernfahrausweis. Kein neuer Sehtest erforderlich – wer bereits einen Führerausweis besitzt, ist davon befreit. Für berufliche Nutzung ist zusätzlich der CZV-Fähigkeitsausweis nötig.</p>
         </details>
 
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">

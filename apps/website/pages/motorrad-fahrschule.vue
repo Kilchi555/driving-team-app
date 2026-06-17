@@ -105,7 +105,7 @@
             </div>
           </summary>
           <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-              <p class="text-sm text-gray-600">Fülle das Lernfahrgesuch vollständig und wahrheitsgetreu aus und gehe damit zu einem Optiker oder Augenarzt, um den Sehtest eintragen zu lassen. Anschliessend musst du mit dem ausgefüllten Anmeldeformular, Nothelferausweis, einem farbigen Passfoto und ID/Pass persönlich beim Strassenverkehrsamt vorbeigehen.</p>
+              <p class="text-sm text-gray-600">Fülle das Lernfahrgesuch vollständig und wahrheitsgetreu aus. Anschliessend musst du mit dem ausgefüllten Anmeldeformular, Nothelferausweis, einem farbigen Passfoto und ID/Pass persönlich beim Strassenverkehrsamt vorbeigehen. Sehtest: nur erforderlich, wenn du noch keinen gültigen Lernfahrausweis oder Führerausweis besitzt – wer bereits Kat. B hat, ist davon befreit.</p>
               <div class="mt-3 p-3 bg-gray-50 rounded-lg">
                 <p class="text-xs font-semibold text-gray-700 mb-1">Neue Regeln seit 01.01.2021:</p>
                 <ul class="text-xs text-gray-600 space-y-1">

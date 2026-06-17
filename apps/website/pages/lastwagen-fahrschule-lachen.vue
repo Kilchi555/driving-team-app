@@ -225,7 +225,7 @@
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-              <p class="text-sm text-gray-600 mb-3">Das Lernfahrgesuch reichst du beim StVA deines Kantons ein. Je nach Wohnsitz ist das Schwyz, St. Gallen oder Zürich. Mindestalter: 18 Jahre, gültiger B-Ausweis, Sehtest beim Optiker.</p>
+              <p class="text-sm text-gray-600 mb-3">Das Lernfahrgesuch reichst du beim StVA deines Kantons ein. Je nach Wohnsitz ist das Schwyz, St. Gallen oder Zürich. Mindestalter: 18 Jahre, gültiger B-Ausweis. Da du bereits die Kat. B besitzt, brauchst du keinen neuen Sehtest – dieser entfällt für alle, die schon einen gültigen Führerausweis haben.</p>
               <div class="flex flex-wrap gap-2">
                 <a href="/documents/lernfahrgesuche/Gesuch-LFA-SZ.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">Lernfahrgesuch Schwyz</a>
                 <a href="/documents/lernfahrgesuche/Gesuch-LFA-SG.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">Lernfahrgesuch St. Gallen</a>
