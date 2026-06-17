@@ -23,9 +23,9 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">CZV Grundkurs</h1>
           <p class="text-base xs:text-xl text-white mb-8">Der obligatorische Grundkurs für Berufsfahrer:innen der Kategorien C1/C/CE (Lastwagen) und D1/D (Bus). Erhalte den Fähigkeitsausweis.</p>
-          <button @click="openModal()" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-            ✉️ Kurs anfragen
-          </button>
+          <a href="https://app.simy.ch/customer/courses/driving-team/?category=CZV-G" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+            📅 Kurs buchen
+          </a>
         </div>
       </div>
     </section>
@@ -394,7 +394,7 @@
         <h2 class="text-2xl font-bold text-gray-900 mb-4">Für Gruppen oder Firmen</h2>
         <p class="text-gray-700">Seid ihr eine Gruppe von Lernenden oder ein Transportunternehmen mit mehreren Fahrerinnen/Fahrern, die den CZV Grundkurs absolvieren müssen? Dann können wir euch massgeschneiderte Lösungen anbieten. Kurse können zeitlich flexibel geplant werden und wir bieten attraktive Gruppenrabatte.</p>
         <div class="flex flex-col md:flex-row gap-4 mt-6">
-          <button @click="openModal('CZV Grundkurs – Firmenanfrage')" class="btn-primary">✉️ Anfrage senden</button>
+          <a href="https://app.simy.ch/customer/courses/driving-team/?category=CZV-G" target="_blank" rel="noopener noreferrer" class="btn-primary">📅 Kurs buchen</a>
           <a href="tel:+41444310033" class="btn-primary bg-gray-600 hover:bg-gray-700">📞 +41 44 431 00 33</a>
         </div>
       </div>
@@ -406,7 +406,7 @@
         <h2 class="heading-md mb-6 text-white">Starten Sie jetzt mit dem CZV Grundkurs</h2>
         <p class="text-white mb-8 max-w-2xl mx-auto">Werden Sie qualifizierter Berufschauffeur/in. Wir begleiten Sie durch den gesamten Kurs und bereiten Sie optimal auf die Prüfungen vor.</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <button @click="openModal()" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">✉️ Kurs anfragen</button>
+          <a href="https://app.simy.ch/customer/courses/driving-team/?category=CZV-G" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Kurs buchen</a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">📞 +41 44 431 00 33</a>
         </div>
       </div>

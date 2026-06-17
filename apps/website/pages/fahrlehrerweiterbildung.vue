@@ -20,9 +20,9 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">Fahrlehrer Weiterbildung – Obligatorisch & Online</h1>
           <p class="text-xl text-white mb-8">Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis. Bei uns findest Kurse die Spass machen.</p>
-          <button type="button" @click="openPicker" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-            ✉️ Anmelden
-          </button>
+          <a href="https://app.simy.ch/customer/courses/driving-team/?category=Fahrlehrer" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+            📅 Kurs buchen
+          </a>
         </div>
       </div>
     </section>
@@ -62,9 +62,9 @@
               <li class="flex items-start gap-2"><span class="text-primary-600 mt-1">✓</span><span>Garantierte Durchführung</span></li>
             </ul>
             <p class="text-xs text-gray-600 mt-4 pt-4 border-t">In diesem Kurs wirst du als Fahrlehrer:in vollumfänglich auf die Kategorie BE vorbereitet, um selbstständig Anhängerfahrstunden anbieten zu können.</p>
-            <button @click="openModal('Anhänger Kategorie BE')" class="w-full mt-4 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-              Anmelden
-            </button>
+            <a href="https://app.simy.ch/customer/courses/driving-team/?category=Fahrlehrer" target="_blank" rel="noopener noreferrer" class="block w-full mt-4 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-center">
+              📅 Anmelden
+            </a>
           </div>
         </div>
 
@@ -92,9 +92,9 @@
               <li class="flex items-start gap-2"><span class="text-cyan-600 mt-1">✓</span><span>Keine Vorkenntnisse nötig</span></li>
             </ul>
             <p class="text-xs text-gray-600 mt-4 pt-4 border-t">Erlebe die Rolle eines Motorbootfahrschülers, reflektiere dein Lernverhalten und gewinne neue Erkenntnisse für deinen Fahrschulalltag.</p>
-            <button @click="openModal('Motorboot Fahrlehrerweiterbildung')" class="w-full mt-4 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-              Anmelden
-            </button>
+            <a href="https://app.simy.ch/customer/courses/driving-team/?category=Fahrlehrer" target="_blank" rel="noopener noreferrer" class="block w-full mt-4 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-center">
+              📅 Anmelden
+            </a>
           </div>
         </div>
 
@@ -122,9 +122,9 @@
               <li class="flex items-start gap-2"><span class="text-amber-600 mt-1">✓</span><span>Praktisches Fahren auf Gelände</span></li>
             </ul>
             <p class="text-xs text-gray-600 mt-4 pt-4 border-t">Erlebe die Faszination des Lastwagenfahrens, stelle dich in die Rolle der Schüler:innen und transferiere die Erkenntnisse in deinen Schulalltag.</p>
-            <button @click="openModal('Lastwagen Fahrlehrerweiterbildung Kategorie B')" class="w-full mt-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-              Anmelden
-            </button>
+            <a href="https://app.simy.ch/customer/courses/driving-team/?category=Fahrlehrer" target="_blank" rel="noopener noreferrer" class="block w-full mt-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-center">
+              📅 Anmelden
+            </a>
           </div>
         </div>
       </div>
