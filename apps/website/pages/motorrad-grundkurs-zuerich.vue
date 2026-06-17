@@ -51,83 +51,6 @@
       </div>
     </section>
 
-    <!-- Nächste Kursdaten -->
-    <section class="bg-white py-10 border-b border-gray-100">
-      <div class="section-container">
-        <div class="max-w-3xl mx-auto">
-          <h2 class="text-xl font-bold text-gray-900 mb-1">Nächste Kursdaten — Motorrad Grundkurs Zürich</h2>
-          <p class="text-sm text-gray-500 mb-6">Vollständiger Kurs: 3 Kursteile à 4 Stunden · Max. 5 Teilnehmer · CHF 499.–</p>
-
-          <!-- Loading -->
-          <div v-if="coursesStatus === 'pending'" class="flex gap-3">
-            <div v-for="i in 3" :key="i" class="h-28 flex-1 rounded-xl bg-gray-100 animate-pulse" />
-          </div>
-
-          <!-- Kurse -->
-          <div v-else-if="upcomingCourses && upcomingCourses.length > 0" class="grid sm:grid-cols-2 gap-4">
-            <div
-              v-for="course in upcomingCourses"
-              :key="course.id"
-              class="border border-gray-200 rounded-xl p-5 flex flex-col gap-3 hover:border-primary-300 hover:shadow-sm transition"
-            >
-              <!-- Sessions -->
-              <ul class="space-y-1">
-                <li
-                  v-for="(session, idx) in course.sessions"
-                  :key="idx"
-                  class="flex items-center gap-2 text-sm"
-                >
-                  <span class="text-primary-500 font-bold text-xs w-5 text-center">{{ idx + 1 }}</span>
-                  <span class="font-medium text-gray-900">{{ session.date }}</span>
-                  <span class="text-gray-400">·</span>
-                  <span class="text-gray-600">{{ session.time }}</span>
-                </li>
-              </ul>
-
-              <!-- Footer: Plätze + Preis -->
-              <div class="flex items-center justify-between pt-2 border-t border-gray-100">
-                <span
-                  class="text-xs font-semibold px-2 py-1 rounded-full"
-                  :class="course.spotsRemaining <= 1
-                    ? 'bg-red-50 text-red-700'
-                    : course.spotsRemaining <= 2
-                    ? 'bg-amber-50 text-amber-700'
-                    : 'bg-green-50 text-green-700'"
-                >
-                  {{ course.spotsRemaining === 0 ? 'Ausgebucht' : `${course.spotsRemaining} Platz${course.spotsRemaining === 1 ? '' : 'plätze'} frei` }}
-                </span>
-                <span v-if="course.priceChf" class="text-sm font-bold text-gray-900">CHF {{ course.priceChf }}.–</span>
-              </div>
-
-              <a
-                v-if="course.spotsRemaining > 0"
-                href="https://app.simy.ch/customer/courses/driving-team/?category=PGS&location=Z%C3%BCrich"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="btn-primary text-sm text-center py-2"
-              >
-                Platz sichern →
-              </a>
-              <span v-else class="text-center text-xs text-gray-400 py-1">Ausgebucht — andere Termine verfügbar</span>
-            </div>
-          </div>
-
-          <!-- Fallback: keine Kurse -->
-          <div v-else class="bg-gray-50 rounded-xl p-6 text-center">
-            <p class="text-gray-600 mb-3">Aktuell sind keine Termine online — neue Daten folgen bald.</p>
-            <a
-              href="https://app.simy.ch/customer/courses/driving-team/?category=PGS&location=Z%C3%BCrich"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="btn-primary text-sm"
-            >
-              Alle verfügbaren Termine ansehen →
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- Kursübersicht -->
     <CourseOverviewSection
       title="Motorrad Grundkurs Zürich"
@@ -149,6 +72,19 @@
         'Wenn du die Kategorie A1 OHNE GESCHWINDIGKEITSBESCHRÄNKUNG (45km/h) bereits seit mindestens 31.12.2020 besitzt und die Kategorie A beschränkt (35kW) machen willst, dann melde dich nur für den Kursteil 3 an.'
       ]"
       :stats="{ requirements: 4, details: 4, hours: '12h' }"
+    />
+
+    <!-- Nächste Kursdaten -->
+    <UpcomingCoursesSection
+      category="PGS"
+      location="Zürich"
+      title="Nächste Kursdaten — Motorrad Grundkurs Zürich"
+      subtitle="Vollständiger Kurs: 3 Kursteile à 4 Stunden · Max. 5 Teilnehmer · CHF 499.–"
+      category-code="PGS"
+      category-label="Motorrad Grundkurs"
+      course-name="Motorrad Grundkurs Zürich"
+      page-url="https://drivingteam.ch/motorrad-grundkurs-zuerich/"
+      fetch-key="pgs-zuerich-upcoming"
     />
 
     <!-- Standort & Map -->
@@ -299,14 +235,6 @@
 </template>
 
 <script setup lang="ts">
-import type { UpcomingPgsCourse } from '~/server/api/courses/upcoming-pgs.get'
-
-const { data: coursesData, status: coursesStatus } = useFetch<{ courses: UpcomingPgsCourse[] }>(
-  '/api/courses/upcoming-pgs',
-  { query: { location: 'Zürich' }, key: 'motorrad-gk-zuerich-upcoming' },
-)
-const upcomingCourses = computed(() => coursesData.value?.courses ?? [])
-
 const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorrad Grundkurs Zürich – PGS A1/A35kW/A", "description": "Obligatorischer Motorrad Grundkurs in Zürich-Altstetten für Kategorien A1, A35kW und A. 12 Stunden (3×4h), CHF 499.- Komplettpreis, max. 5 Teilnehmer, Fahrschul-Motorrad auf Anfrage verfügbar.", "url": "https://drivingteam.ch/motorrad-grundkurs-zuerich/", "courseWorkload": "PT12H", "educationalLevel": "Beginner", "category": "Motorrad Fahrausbildung", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "streetAddress": "Vulkanstrasse 130b", "addressLocality": "Zürich", "postalCode": "8048", "addressRegion": "ZH", "addressCountry": "CH" } }, "offers": { "@type": "Offer", "price": "499", "priceCurrency": "CHF", "availability": "https://schema.org/InStock", "url": "https://app.simy.ch/customer/courses/driving-team/?category=PGS&location=Z%C3%BCrich" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "courseSchedule": { "@type": "Schedule", "repeatFrequency": "P1W", "duration": "PT4H" }, "location": { "@type": "Place", "name": "Zürich-Altstetten", "address": { "@type": "PostalAddress", "streetAddress": "Vulkanstrasse 130b", "addressLocality": "Zürich", "postalCode": "8048", "addressRegion": "ZH", "addressCountry": "CH" } } }] }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Was ist ein Motorrad-Grundkurs und warum ist er notwendig?", "acceptedAnswer": {"@type": "Answer", "text": "Ein Motorrad-Grundkurs bei Driving Team Zürich vermittelt essenzielle Fähigkeiten für sicheres Motorradfahren. Er ist gesetzlich vorgeschrieben für alle, die einen Führerschein der Kategorie A1 oder A (beschränkt) anstreben."}}, {"@type": "Question", "name": "Wer muss einen Motorrad-Grundkurs in der Schweiz absolvieren?", "acceptedAnswer": {"@type": "Answer", "text": "In der Schweiz ist der Motorrad-Grundkurs Pflicht für alle, die einen Führerschein der Kategorie A1 oder A (beschränkt) anstreben."}}, {"@type": "Question", "name": "Wie viele Stunden umfasst der Motorrad-Grundkurs bei Driving Team in Zürich?", "acceptedAnswer": {"@type": "Answer", "text": "Der Motorrad-Grundkurs bei Driving Team in Zürich umfasst insgesamt 12 Stunden, aufgeteilt in 3 Kursteile à 4 Stunden."}}, {"@type": "Question", "name": "Welche Motorräder stellt Driving Team für den Grundkurs zur Verfügung?", "acceptedAnswer": {"@type": "Answer", "text": "Teilnehmende bringen in der Regel ihr eigenes Fahrzeug mit. Ein Mietfahrzeug ist für CHF 80.- pro Kursteil verfügbar."}}, {"@type": "Question", "name": "Wie viel kostet der Motorrad-Grundkurs bei Driving Team in Zürich?", "acceptedAnswer": {"@type": "Answer", "text": "Bei Driving Team in Zürich beträgt die Gebühr CHF 499.- für den kompletten Kurs (3 Teile)."}}, {"@type": "Question", "name": "Welche Themen werden im Motorrad-Grundkurs behandelt?", "acceptedAnswer": {"@type": "Answer", "text": "Teil 1: Fahrzeugbeherrschung, Parcours, Betriebssicherheit. Teil 2: Bremsmanöver, Kreisverkehr, Vortrittsregeln. Teil 3: Kurvenfahren, Sozius, Gruppenfahren."}}, {"@type": "Question", "name": "Was passiert bei schlechtem Wetter?", "acceptedAnswer": {"@type": "Answer", "text": "Bei Temperaturen unter 5 Grad oder heftigem Niederschlag kann der Kurs angepasst oder verschoben werden."}}, {"@type": "Question", "name": "Wo findet der Motorrad-Grundkurs statt?", "acceptedAnswer": {"@type": "Answer", "text": "Der Treffpunkt befindet sich direkt vor unserem Lokal: Vulkanstrasse 130b, 8048 Zürich."}}, {"@type": "Question", "name": "Gibt es eine Rückerstattungspolitik?", "acceptedAnswer": {"@type": "Answer", "text": "Frühzeitige Absagen sind kostenlos. Bei Absagen weniger als 14 Tage vor Kursbeginn: CHF 80.- Umtriebsentschädigung."}}, {"@type": "Question", "name": "Welche Sprachen werden angeboten?", "acceptedAnswer": {"@type": "Answer", "text": "Der Kurs wird grundsätzlich auf Deutsch durchgeführt. Auf Anfrage auch auf Englisch."}}, {"@type": "Question", "name": "Wie erhalte ich die unlimitierte Kategorie A?", "acceptedAnswer": {"@type": "Answer", "text": "Nach der beschränkten Kategorie A (35 kW) sind 2 Jahre Fahrpraxis erforderlich, danach folgt eine weitere praktische Prüfung für die unlimitierte Kategorie A."}}]}) },

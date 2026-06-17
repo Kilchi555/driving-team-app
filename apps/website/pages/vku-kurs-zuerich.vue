@@ -123,6 +123,19 @@
       </div>
     </section>
 
+    <!-- Nächste Kursdaten -->
+    <UpcomingCoursesSection
+      category="VKU"
+      location="Zürich"
+      title="Nächste Kursdaten — VKU Kurs Zürich"
+      subtitle="Vollständiger Kurs: 2 × 4 Stunden · Pflicht vor Fahrprüfung · CHF 190.–"
+      category-code="VKU"
+      category-label="VKU Kurs"
+      course-name="VKU Kurs Zürich"
+      page-url="https://drivingteam.ch/vku-kurs-zuerich/"
+      fetch-key="vku-zuerich-upcoming"
+    />
+
     <!-- 5. Map Section (Standort zeigen) -->
     <LazyStandortMapSection locationKey="zuerich" />
 

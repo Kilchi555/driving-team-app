@@ -257,6 +257,18 @@
       </div>
     </section>
 
+    <!-- Nächste Kursdaten -->
+    <UpcomingCoursesSection
+      category="CZV"
+      title="Nächste Kursdaten — CZV Weiterbildung"
+      subtitle="Weiterbildung für Berufschauffeure · 1 Tag alle 5 Jahre · Kategorien C1/C/CE und D1/D"
+      category-code="CZV"
+      category-label="CZV Weiterbildung"
+      course-name="CZV Weiterbildung"
+      page-url="https://drivingteam.ch/czv-weiterbildung/"
+      fetch-key="czv-weiterbildung-upcoming"
+    />
+
     <PriceSection category="lastwagen" />
 
     <GutscheinSection/>
