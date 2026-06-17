@@ -23,7 +23,7 @@
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-6">CZV Grundkurs</h1>
           <p class="text-base xs:text-xl text-white mb-8">Der obligatorische Grundkurs für Berufsfahrer:innen der Kategorien C1/C/CE (Lastwagen) und D1/D (Bus). Erhalte den Fähigkeitsausweis.</p>
-          <a href="https://app.simy.ch/customer/courses/driving-team/?category=CZV-G" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/customer/courses/driving-team/?category=CZV%20Grundkurs" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             📅 Kurs buchen
           </a>
         </div>
@@ -394,7 +394,7 @@
         <h2 class="text-2xl font-bold text-gray-900 mb-4">Für Gruppen oder Firmen</h2>
         <p class="text-gray-700">Seid ihr eine Gruppe von Lernenden oder ein Transportunternehmen mit mehreren Fahrerinnen/Fahrern, die den CZV Grundkurs absolvieren müssen? Dann können wir euch massgeschneiderte Lösungen anbieten. Kurse können zeitlich flexibel geplant werden und wir bieten attraktive Gruppenrabatte.</p>
         <div class="flex flex-col md:flex-row gap-4 mt-6">
-          <a href="https://app.simy.ch/customer/courses/driving-team/?category=CZV-G" target="_blank" rel="noopener noreferrer" class="btn-primary">📅 Kurs buchen</a>
+          <a href="https://app.simy.ch/customer/courses/driving-team/?category=CZV%20Grundkurs" target="_blank" rel="noopener noreferrer" class="btn-primary">📅 Kurs buchen</a>
           <a href="tel:+41444310033" class="btn-primary bg-gray-600 hover:bg-gray-700">📞 +41 44 431 00 33</a>
         </div>
       </div>
@@ -402,10 +402,10 @@
 
     <!-- Nächste Kursdaten -->
     <UpcomingCoursesSection
-      category="CZV-G"
+      category="CZV Grundkurs"
       title="Nächste Kursdaten — CZV Grundkurs"
       subtitle="5-tägiger Grundkurs für Berufschauffeure · Kategorien C1/C/CE und D1/D"
-      category-code="CZV-G"
+      category-code="CZV Grundkurs"
       category-label="CZV Grundkurs"
       course-name="CZV Grundkurs"
       page-url="https://drivingteam.ch/czv-grundkurs/"
@@ -418,7 +418,7 @@
         <h2 class="heading-md mb-6 text-white">Starten Sie jetzt mit dem CZV Grundkurs</h2>
         <p class="text-white mb-8 max-w-2xl mx-auto">Werden Sie qualifizierter Berufschauffeur/in. Wir begleiten Sie durch den gesamten Kurs und bereiten Sie optimal auf die Prüfungen vor.</p>
         <div class="flex flex-col md:flex-row gap-4 justify-center">
-          <a href="https://app.simy.ch/customer/courses/driving-team/?category=CZV-G" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Kurs buchen</a>
+          <a href="https://app.simy.ch/customer/courses/driving-team/?category=CZV%20Grundkurs" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">📅 Kurs buchen</a>
           <a href="tel:+41444310033" class="btn-primary bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 text-lg">📞 +41 44 431 00 33</a>
         </div>
       </div>
@@ -426,7 +426,7 @@
 
     <!-- Waitlist -->
     <CategoryWaitlistForm
-      category-code="CZV-G"
+      category-code="CZV Grundkurs"
       category-label="CZV Grundkurs"
       tenant-id="64259d68-195a-4c68-8875-f1b44d962830"
     />
