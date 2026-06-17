@@ -37,9 +37,9 @@ Dieser Artikel gibt dir einen vollständigen Überblick – von der Fahrrad-ähn
 | C1E | Leichter Lastwagen + Anhänger | 18 Jahre |
 | CE | Sattelschlepper und schwere Kombinationen | 18 Jahre |
 | D1 | Kleinbusse bis 16 Passagiere | 21 Jahre |
-| D | Reisebusse über 16 Passagiere | 24 Jahre |
+| D | Reisebusse über 16 Passagiere | 21 Jahre |
 | D1E | Kleinbus + Anhänger | 21 Jahre |
-| DE | Reisebus + Anhänger | 24 Jahre |
+| DE | Reisebus + Anhänger | 21 Jahre |
 | F | Motorkarren, Traktoren bis 45 km/h | 18 Jahre |
 | G | Landwirtschaftliche Fahrzeuge bis 30 km/h | 16 Jahre |
 | M | Motorfahrräder mit Tretpedalen | 14 Jahre |
@@ -157,7 +157,7 @@ Alle Lastwagen über 7'500 kg. Für den professionellen Gütertransport.
 ## Kategorien D1 und D – Bus und Reisebus
 
 **D1:** Kleinbusse bis **16 Sitzplätze** | Mindestalter: 21 Jahre  
-**D:** Alle Busse (mehr als 8 Fahrgäste) | Mindestalter: 24 Jahre
+**D:** Alle Busse (mehr als 8 Fahrgäste) | Mindestalter: 21 Jahre
 
 **Beruflich:** Für gewerbsmässigen Personentransport (ÖV, Taxi, Reisebus) zusätzlich CZV obligatorisch.
 

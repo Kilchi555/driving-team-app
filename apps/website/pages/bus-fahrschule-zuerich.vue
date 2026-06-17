@@ -68,7 +68,7 @@
                 <span class="text-yellow-300 mt-0.5">🎓</span>
                 <div>
                   <p class="font-semibold text-sm">Mindestalter</p>
-                  <p class="text-white/70 text-sm">D1: 21 Jahre · D: 24 Jahre (21 J. mit CZV)</p>
+                  <p class="text-white/70 text-sm">D1: 21 Jahre · D: 21 Jahre</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
@@ -124,7 +124,7 @@
             <p class="text-gray-500 text-sm mb-4">Grosse Reise- und Linienbusse</p>
             <ul class="text-sm text-gray-600 space-y-1.5">
               <li>✓ Über 16 Fahrgäste</li>
-              <li>✓ Mindestalter 24 J. (21 J. mit CZV)</li>
+              <li>✓ Mindestalter 21 J.</li>
               <li>✓ Beruflicher Personentransport</li>
               <li>✓ Voraussetzung: Kat. B</li>
             </ul>

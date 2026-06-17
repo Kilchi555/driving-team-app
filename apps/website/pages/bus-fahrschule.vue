@@ -69,7 +69,7 @@
             </li>
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Mindestalter: 24 Jahre (D1 ab 18 Jahren mit Bedingungen)</p>
+              <p class="text-gray-700">Mindestalter: 21 Jahre</p>
             </li>
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
