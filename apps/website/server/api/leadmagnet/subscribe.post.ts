@@ -230,7 +230,7 @@ function buildLastwagenEmail(firstName: string): string {
           </tr>
           <tr style="border-bottom:1px solid #fcd34d;">
             <td style="padding:8px 4px;font-weight:700;">Kat. C</td>
-            <td style="padding:8px 4px;">Über 7\'500 kg · Ab 21 J. · Professioneller Gütertransport · <strong>CZV-Fähigkeitsausweis obligatorisch</strong></td>
+            <td style="padding:8px 4px;">Über 7\'500 kg · Ab 18 J. · Professioneller Gütertransport · <strong>CZV-Fähigkeitsausweis obligatorisch</strong></td>
           </tr>
           <tr>
             <td style="padding:8px 4px;font-weight:700;">Kat. CE</td>
