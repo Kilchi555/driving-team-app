@@ -144,7 +144,7 @@
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-                <p class="text-sm text-gray-600">Fülle das Lernfahrgesuch vollständig und wahrheitsgetreu aus. Anschliessend gehst du damit zu einem Optiker oder Arzt, um einen Sehtest durchführen zu lassen.</p>
+                <p class="text-sm text-gray-600">Fülle das Lernfahrgesuch vollständig und wahrheitsgetreu aus. Da du bereits die Kat. B (oder C) besitzt, brauchst du keinen neuen Sehtest – dieser entfällt für alle, die schon einen gültigen Führerausweis haben.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Voraussetzungen: Mindestens 21 Jahre alt, Kat. B (mind. 2 Jahre) oder Kat. C (mind. 3 Monate). Kein Nothelferkurs erforderlich.</p>
                 <div class="mt-3 flex flex-wrap gap-2">
                   <a href="/documents/lernfahrgesuche/Gesuch-LFA-ZH.pdf" target="_blank" rel="noopener noreferrer" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition">📄 Lernfahrgesuch Zürich</a>

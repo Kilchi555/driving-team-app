@@ -239,7 +239,7 @@
             Was kostet der LKW Führerschein in Rapperswil?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Für den Führerschein C rechne mit CHF 4'000–6'000 je nach Fahrstundenanzahl. Darin enthalten: Sehtest (CHF 50), Lernfahrausweis, Theorieprüfung, Fahrstunden (20–30 à CHF 170), WarmUp & Prüfungsfahrt (CHF 737), Versicherungspauschale (CHF 200) und ärztliche Untersuchung. Für ein persönliches Angebot ruf uns an.</p>
+          <p class="text-gray-600 mt-4">Für den Führerschein C rechne mit CHF 4'000–6'000 je nach Fahrstundenanzahl. Darin enthalten: Lernfahrausweis, Theorieprüfung, Fahrstunden (20–30 à CHF 170), WarmUp & Prüfungsfahrt (CHF 737), Versicherungspauschale (CHF 200) und ärztliche Untersuchung. Kein Sehtest nötig – wer bereits Kat. B hat, ist davon befreit. Für ein persönliches Angebot ruf uns an.</p>
         </details>
 
       </div>
