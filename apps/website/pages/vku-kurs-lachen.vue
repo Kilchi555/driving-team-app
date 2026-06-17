@@ -104,6 +104,19 @@
       </div>
     </section>
 
+    <!-- Nächste Kursdaten -->
+    <UpcomingCoursesSection
+      category="VKU"
+      location="Lachen"
+      title="Nächste Kursdaten — VKU Kurs Lachen"
+      subtitle="Vollständiger Kurs: 2 × 4 Stunden · Pflicht vor Fahrprüfung · CHF 250.–"
+      category-code="VKU"
+      category-label="VKU Kurs"
+      course-name="VKU Kurs Lachen"
+      page-url="https://drivingteam.ch/vku-kurs-lachen/"
+      fetch-key="vku-lachen-upcoming"
+    />
+
     <!-- 5. Map Section -->
     <LazyStandortMapSection locationKey="lachen" />
 

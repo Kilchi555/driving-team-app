@@ -132,6 +132,7 @@ export default defineEventHandler(async (event) => {
         is_public,
         status,
         is_partial_only,
+        sari_managed,
         course_category:course_categories (
           id,
           name,

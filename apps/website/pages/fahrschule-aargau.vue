@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Aargau | Auto, Anhänger & Lastwagen</Title>
+      <Title>Fahrschule Aargau | Auto, Anhänger & Lastwagen | Ab CHF 95.- | Driving Team</Title>
       <Meta name="description" content="Fahrstunden im Aargau mit 85% Erfolgsquote. Auto, Motorrad & Lastwagen ab CHF 100.- pro Lektion, auf Deutsch & Albanisch. Jetzt flexibel anmelden!" />
       <Meta property="og:title" content="Fahrschule Aargau – Auto & Motorrad | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung im Kanton Aargau. Auto, Motorrad, Lastwagen. 85% Erfolgsquote, ab CHF 100/Lektion." />
@@ -160,7 +160,6 @@
     </div>
 
     <!-- 9. Finale CTA (primary) -->
-    <CtaSection title="Bereit? Jetzt Termin buchen!" />
 
     <!-- 10. Andere Standorte (weiß) -->
     <StandorteSection exclude="aargau" />

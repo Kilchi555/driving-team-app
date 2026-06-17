@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Taxi Fahrschule Zürich | BPT Code 121/122 | Driving Team</Title>
+      <Title>Taxi Fahrschule Zürich | BPT Code 121/122 | Ab CHF 95.- | Driving Team</Title>
       <Meta name="description" content="Mit dem BPT Code 121/122 legal Personen transportieren. Taxi Fahrschule in Zürich-Altstetten mit erfahrenen Fahrlehrern, ab CHF 100.-. Jetzt anmelden!" />
       <Meta name="keywords" content="Taxi Fahrschule Zürich, BPT Ausbildung Zürich, Taxi Führerschein Zürich, Code 121 Zürich, Code 122 Zürich, Personentransport Zürich, Taxi Kurs Zürich" />
       <Meta property="og:title" content="Taxi Fahrschule Zürich – BPT Ausbildung Code 121/122 | Driving Team" />
@@ -146,7 +146,7 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Taxi Fahrschule Zürich", "description": "BPT Ausbildung (Code 121/122) in Zürich-Altstetten.", "url": "https://drivingteam.ch/taxi-fahrschule-zuerich/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Zürich", "postalCode": "8048", "addressCountry": "CH" } }) },
+  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "LocalBusiness", "name": "Driving Team Taxi Fahrschule Zürich", "description": "BPT Ausbildung (Code 121/122) in Zürich-Altstetten.", "url": "https://drivingteam.ch/taxi-fahrschule-zuerich/", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "addressLocality": "Zürich", "postalCode": "8048", "addressCountry": "CH" }, "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "bestRating": "5", "worstRating": "1", "reviewCount": "368" } }) },
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Taxi Fahrschule", "item": "https://drivingteam.ch/taxi-fahrschule/" }, { "@type": "ListItem", "position": 3, "name": "Zürich", "item": "https://drivingteam.ch/taxi-fahrschule-zuerich/" }] }) },
 ]
 useHead({ script: jsonLdScripts })

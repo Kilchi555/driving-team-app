@@ -371,10 +371,10 @@
 
           <!-- Step 2: Contact & Payment -->
           <div v-else-if="step === 'contact'">
-            <h4 class="font-medium text-slate-800 mb-4">Schritt 2: Kontaktdaten & Zahlung</h4>
+            <h4 class="font-medium text-slate-800 mb-4">{{ isSariCourse ? 'Schritt 2: ' : '' }}Kontaktdaten & Zahlung</h4>
             
-            <!-- SARI Data Display -->
-            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <!-- SARI: verified name box -->
+            <div v-if="isSariCourse" class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
               <div class="flex items-center gap-2 text-green-700 mb-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -383,6 +383,97 @@
               </div>
               <p class="text-sm text-green-800">{{ sariData?.firstname }} {{ sariData?.lastname }}</p>
               <p class="text-sm text-green-700">{{ sariData?.address }}, {{ sariData?.zip }} {{ sariData?.city }}</p>
+            </div>
+
+            <!-- Non-SARI: name + address input fields -->
+            <div v-else class="space-y-4 mb-6">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Vorname *</label>
+                  <input
+                    v-model="formData.firstName"
+                    type="text"
+                    placeholder="Max"
+                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Nachname *</label>
+                  <input
+                    v-model="formData.lastName"
+                    type="text"
+                    placeholder="Mustermann"
+                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                  />
+                </div>
+              </div>
+              <div class="grid grid-cols-3 gap-3">
+                <div class="col-span-2">
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Strasse *</label>
+                  <input
+                    v-model="formData.street"
+                    type="text"
+                    placeholder="Musterstrasse"
+                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Nr. *</label>
+                  <input
+                    v-model="formData.streetNr"
+                    type="text"
+                    placeholder="12"
+                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                  />
+                </div>
+              </div>
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">PLZ *</label>
+                  <input
+                    v-model="formData.zip"
+                    type="text"
+                    placeholder="8000"
+                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                  />
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Ort *</label>
+                  <input
+                    v-model="formData.city"
+                    type="text"
+                    placeholder="Zürich"
+                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                  />
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Führerausweis-Nr. *</label>
+                  <input
+                    v-model="formData.licenseNumber"
+                    type="text"
+                    placeholder="123456789"
+                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Geburtsdatum *</label>
+                  <input
+                    v-model="formData.birthdateNonSari"
+                    type="date"
+                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                  />
+                </div>
+              </div>
             </div>
 
             <!-- Contact Details -->
@@ -477,6 +568,7 @@
 
             <div class="flex gap-3 mt-4">
               <button 
+                v-if="isSariCourse"
                 @click="step = 'lookup'"
                 class="flex-1 py-3 border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors"
               >
@@ -560,7 +652,9 @@ const getTextColor = () => {
 }
 
 // State
-const step = ref<'lookup' | 'contact'>('lookup')
+const isSariCourse = computed(() => !!props.course?.sari_managed)
+
+const step = ref<'lookup' | 'contact'>(props.course?.sari_managed ? 'lookup' : 'contact')
 const isLoading = ref(false)
 const lookupError = ref<string | null>(null)
 const enrollmentError = ref<string | null>(null)
@@ -572,7 +666,15 @@ const formData = ref({
   faberid: '',
   birthdate: '',
   email: '',
-  phone: ''
+  phone: '',
+  firstName: '',
+  lastName: '',
+  street: '',
+  streetNr: '',
+  zip: '',
+  city: '',
+  licenseNumber: '',
+  birthdateNonSari: '',
 })
 
 // Computed
@@ -597,6 +699,21 @@ const isValidEmail = computed(() => {
 const isValidPhone = computed(() => {
   const phoneClean = formData.value.phone.replace(/\s/g, '')
   return phoneClean.length >= 10
+})
+
+const isValidName = computed(() => {
+  return formData.value.firstName.trim().length >= 2 && formData.value.lastName.trim().length >= 2
+})
+
+const isValidAddress = computed(() => {
+  return (
+    formData.value.street.trim().length >= 2 &&
+    formData.value.streetNr.trim().length >= 1 &&
+    formData.value.zip.trim().length >= 4 &&
+    formData.value.city.trim().length >= 2 &&
+    formData.value.licenseNumber.trim().length >= 6 &&
+    formData.value.birthdateNonSari.trim().length >= 8
+  )
 })
 
 const agbAccepted = ref(false)
@@ -691,7 +808,12 @@ const autoHideWarningTimeout = ref<any>(null)
 
 // Check if any sessions can be changed
 const hasChangeableSessions = computed(() => {
-  return sessionGroups.value.some(s => s.isChangeable)
+  const sessions = props.course?.course_sessions
+  if (!sessions?.length) return false
+  const hasIndividualSessions = sessions.some((s: any) => s.allow_individual_booking)
+  const allowsPartial = !!props.course?.course_category?.allow_partial_enrollment
+  const isPartialOnly = !!props.course?.is_partial_only
+  return hasIndividualSessions || allowsPartial || isPartialOnly
 })
 
 // Check if user has customized any sessions
@@ -700,7 +822,9 @@ const hasCustomSessions = computed(() => {
 })
 
 const canSubmit = computed(() => {
-  const baseOk = isValidEmail.value && isValidPhone.value && sariData.value && agbAccepted.value
+  const contactOk = isValidEmail.value && isValidPhone.value && agbAccepted.value
+  const identityOk = isSariCourse.value ? !!sariData.value : (isValidName.value && isValidAddress.value)
+  const baseOk = contactOk && identityOk
   if (isForcedPartial.value || isPartialMode.value || isIndividualSessionMode.value) return baseOk && partialConfirmed.value
   return baseOk
 })
@@ -1191,8 +1315,15 @@ const submitEnrollment = async () => {
       method: 'POST',
       body: {
         courseId: props.course.id,
-        faberid: faberidClean,
-        birthdate: birthdate,
+        faberid: isSariCourse.value ? faberidClean : undefined,
+        birthdate: isSariCourse.value ? birthdate : formData.value.birthdateNonSari,
+        firstName: !isSariCourse.value ? formData.value.firstName.trim() : undefined,
+        lastName: !isSariCourse.value ? formData.value.lastName.trim() : undefined,
+        street: !isSariCourse.value ? formData.value.street.trim() : undefined,
+        streetNr: !isSariCourse.value ? formData.value.streetNr.trim() : undefined,
+        zip: !isSariCourse.value ? formData.value.zip.trim() : undefined,
+        city: !isSariCourse.value ? formData.value.city.trim() : undefined,
+        licenseNumber: !isSariCourse.value ? formData.value.licenseNumber.trim() : undefined,
         tenantId: props.tenantId,
         email: formData.value.email,
         phone: formData.value.phone,
@@ -1228,10 +1359,10 @@ const submitEnrollment = async () => {
 // Reset on close
 watch(() => props.isOpen, (isOpen) => {
   if (isOpen) {
-    // Start with session customizer open if called from course page
-    showSessionCustomizer.value = false // Will open normally unless specified
+    step.value = isSariCourse.value ? 'lookup' : 'contact'
+    showSessionCustomizer.value = false
   } else {
-    step.value = 'lookup'
+    step.value = isSariCourse.value ? 'lookup' : 'contact'
     lookupError.value = null
     enrollmentError.value = null
     sariData.value = null
@@ -1241,7 +1372,7 @@ watch(() => props.isOpen, (isOpen) => {
     showSessionSwapModal.value = false
     swappingSession.value = null
     availableSwapSessions.value = []
-    formData.value = { faberid: '', birthdate: '', email: '', phone: '' }
+    formData.value = { faberid: '', birthdate: '', email: '', phone: '', firstName: '', lastName: '', street: '', streetNr: '', zip: '', city: '', licenseNumber: '', birthdateNonSari: '' }
     appliedDiscount.value = null
     isPartialMode.value = false
     partialConfirmed.value = false

@@ -42,6 +42,13 @@ const handler = defineEventHandler(async (event) => {
       courseId, 
       faberid, 
       birthdate, 
+      firstName,            // Non-SARI courses: provided instead of faberid/birthdate
+      lastName,             // Non-SARI courses: provided instead of faberid/birthdate
+      street,               // Non-SARI courses: address
+      streetNr,             // Non-SARI courses: house number
+      zip,                  // Non-SARI courses: postal code
+      city,                 // Non-SARI courses: city
+      licenseNumber,        // Non-SARI courses: driver's license number
       tenantId,
       email,
       phone,
@@ -55,8 +62,8 @@ const handler = defineEventHandler(async (event) => {
 
     logger.debug('📝 Wallee enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions, isPartialEnrollment })
 
-    // 1. Validate inputs
-    if (!courseId || !faberid || !birthdate || !tenantId) {
+    // 1. Validate inputs — faberid/birthdate only required for SARI-managed courses (checked after course load)
+    if (!courseId || !tenantId) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Missing required fields'
@@ -139,67 +146,68 @@ const handler = defineEventHandler(async (event) => {
       }
     }
 
-    // 3. Get SARI credentials
-    let sariSecrets
-    try {
-      sariSecrets = await getTenantSecretsSecure(
-        tenantId,
-        ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD'],
-        'COURSE_ENROLLMENT_WALLEE'
-      )
-    } catch (secretsErr: any) {
-      logger.error('❌ Failed to load SARI credentials:', secretsErr.message)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'SARI not configured for this tenant'
-      })
-    }
-
-    // 4. Validate with SARI
-    const sari = new SARIClient({
-      environment: 'production',
-      clientId: sariSecrets.SARI_CLIENT_ID,
-      clientSecret: sariSecrets.SARI_CLIENT_SECRET,
-      username: sariSecrets.SARI_USERNAME || '',
-      password: sariSecrets.SARI_PASSWORD || ''
-    })
-    const faberidClean = faberid.replace(/\./g, '')
-    
+    // 3 & 4. SARI credential loading + customer validation (only for SARI-managed courses)
+    let sari: any = null
+    let faberidClean = ''
     let customerData: any
-    try {
-      customerData = await sari.getCustomer(faberidClean, birthdate)
-      logger.debug('✅ SARI customer validated:', customerData.firstname)
-    } catch (error: any) {
-      logger.error('❌ SARI validation failed:', error.message)
-      
-      // Provide specific error messages for common validation failures
-      let userMessage = 'SARI Validierung fehlgeschlagen'
-      
-      if (error.message?.includes('MISMATCH_BIRTHDATE_FABERID') || 
-          error.message?.includes('mismatch') ||
-          error.message?.includes('Ausweisnummer') ||
-          error.message?.includes('Geburtsdatum')) {
-        userMessage = 'Die Ausweisnummer und/oder das Geburtsdatum stimmen nicht überein. Bitte überprüfen Sie Ihre Eingaben.'
-      } else if (error.message?.includes('NOT_FOUND') || 
-                 error.message?.includes('nicht gefunden')) {
-        userMessage = 'Die Ausweisnummer wurde nicht gefunden. Bitte überprüfen Sie die Eingabe.'
-      } else if (error.message?.includes('LICENSE_EXPIRED')) {
-        userMessage = 'Ihr Führerschein für diese Kategorie ist abgelaufen.'
-      }
-      
-      throw createError({
-        statusCode: 400,
-        statusMessage: userMessage
-      })
-    }
 
-    // 5. Validate license requirements
-    try {
-      validateLicense(course, customerData)
-    } catch (error: any) {
-      logger.error('❌ License validation failed:', error.statusMessage || error.message)
-      // ✅ Re-throw the H3Error as-is (it already has proper statusCode and statusMessage)
-      throw error
+    if (course.sari_managed) {
+      if (!faberid || !birthdate) {
+        throw createError({ statusCode: 400, statusMessage: 'Faber-ID und Geburtsdatum erforderlich' })
+      }
+
+      let sariSecrets
+      try {
+        sariSecrets = await getTenantSecretsSecure(
+          tenantId,
+          ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD'],
+          'COURSE_ENROLLMENT_WALLEE'
+        )
+      } catch (secretsErr: any) {
+        logger.error('❌ Failed to load SARI credentials:', secretsErr.message)
+        throw createError({ statusCode: 500, statusMessage: 'SARI not configured for this tenant' })
+      }
+
+      sari = new SARIClient({
+        environment: 'production',
+        clientId: sariSecrets.SARI_CLIENT_ID,
+        clientSecret: sariSecrets.SARI_CLIENT_SECRET,
+        username: sariSecrets.SARI_USERNAME || '',
+        password: sariSecrets.SARI_PASSWORD || ''
+      })
+      faberidClean = faberid.replace(/\./g, '')
+
+      try {
+        customerData = await sari.getCustomer(faberidClean, birthdate)
+        logger.debug('✅ SARI customer validated:', customerData.firstname)
+      } catch (error: any) {
+        logger.error('❌ SARI validation failed:', error.message)
+        let userMessage = 'SARI Validierung fehlgeschlagen'
+        if (error.message?.includes('MISMATCH_BIRTHDATE_FABERID') || error.message?.includes('mismatch') ||
+            error.message?.includes('Ausweisnummer') || error.message?.includes('Geburtsdatum')) {
+          userMessage = 'Die Ausweisnummer und/oder das Geburtsdatum stimmen nicht überein. Bitte überprüfen Sie Ihre Eingaben.'
+        } else if (error.message?.includes('NOT_FOUND') || error.message?.includes('nicht gefunden')) {
+          userMessage = 'Die Ausweisnummer wurde nicht gefunden. Bitte überprüfen Sie die Eingabe.'
+        } else if (error.message?.includes('LICENSE_EXPIRED')) {
+          userMessage = 'Ihr Führerschein für diese Kategorie ist abgelaufen.'
+        }
+        throw createError({ statusCode: 400, statusMessage: userMessage })
+      }
+
+      // 5a. Validate license requirements (SARI only)
+      try {
+        validateLicense(course, customerData)
+      } catch (error: any) {
+        logger.error('❌ License validation failed:', error.statusMessage || error.message)
+        throw error
+      }
+    } else {
+      // Non-SARI course: use provided name directly
+      if (!firstName || !lastName) {
+        throw createError({ statusCode: 400, statusMessage: 'Vor- und Nachname erforderlich' })
+      }
+      customerData = { firstname: firstName.trim(), lastname: lastName.trim(), email, phone, street, streetNr, zip, city, licenseNumber, birthdate }
+      logger.debug('✅ Non-SARI enrollment, customer:', `${firstName} ${lastName}`)
     }
 
     // 5b. Validate custom sessions chronological order
@@ -333,25 +341,25 @@ const handler = defineEventHandler(async (event) => {
       }
     }
 
-    // 7. Check for duplicate enrollment by FABERID
-    // ✅ UPDATED: Only check confirmed/enrolled, not pending (pending is being removed)
-    const { data: existingEnrollment } = await supabase
-      .from('course_registrations')
-      .select('id')
-      .eq('course_id', courseId)
-      .eq('sari_faberid', faberidClean)
-      .in('status', ['confirmed', 'enrolled'])
-      .maybeSingle()
+    // 7. Check for duplicate enrollment by FABERID (SARI only) or email (non-SARI)
+    if (course.sari_managed && faberidClean) {
+      const { data: existingEnrollment } = await supabase
+        .from('course_registrations')
+        .select('id')
+        .eq('course_id', courseId)
+        .eq('sari_faberid', faberidClean)
+        .in('status', ['confirmed', 'enrolled'])
+        .maybeSingle()
 
-    if (existingEnrollment) {
-      throw createError({
-        statusCode: 409,
-        statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.'
-      })
+      if (existingEnrollment) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.'
+        })
+      }
     }
 
     // 7b. Also check by email to give clear feedback
-    // ✅ UPDATED: Only check confirmed/enrolled
     const finalEmail = email || customerData.email
     const finalPhone = phone || customerData.phone || ''
 
@@ -514,10 +522,7 @@ const handler = defineEventHandler(async (event) => {
           course_id: courseId,
           tenant_id: tenantId,
           user_id: guestUserId,
-          sari_faberid: faberidClean,
-          status: 'confirmed',
-          payment_status: 'paid',
-          payment_method: 'credit',
+          sari_faberid: faberidClean || null,
           price_paid_rappen: finalAmount,
           original_price_rappen: course.price_per_participant_rappen,
           discount_amount_rappen: validatedDiscountAmount,
@@ -526,6 +531,12 @@ const handler = defineEventHandler(async (event) => {
           phone: finalPhone,
           firstname: customerData.firstname,
           lastname: customerData.lastname,
+          street: customerData.street || null,
+          street_nr: customerData.streetNr || null,
+          zip: customerData.zip || null,
+          city: customerData.city || null,
+          birthdate: customerData.birthdate || null,
+          license_number: customerData.licenseNumber || null,
           custom_sessions: customSessions || null,
           is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
           created_at: new Date().toISOString()
@@ -566,28 +577,34 @@ const handler = defineEventHandler(async (event) => {
           ...(guestUserId ? { userId: guestUserId } : {}),
           metadata: {
             courseId: courseId,
-            sari_faberid: faberidClean,
-            sari_birthdate: birthdate,
+            sari_faberid: faberidClean || null,
+            sari_birthdate: birthdate || null,
             course_name: course.name,
             course_location: course.description,
             firstname: customerData.firstname,
             lastname: customerData.lastname,
+            street: customerData.street || null,
+            street_nr: customerData.streetNr || null,
+            zip: customerData.zip || null,
+            city: customerData.city || null,
+            birthdate: customerData.birthdate || null,
+            license_number: customerData.licenseNumber || null,
             email: finalEmail,
             phone: finalPhone,
             custom_sessions: customSessions || null,
             referral_code: referralCode || null,
             is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
-            // Always use DB value — never trust client-provided partialStartPosition
             partial_start_position: course.course_category?.partial_start_position ?? 3,
-            // Discount tracking for webhook
             discount_code: validatedDiscountCode,
             discount_amount_rappen: validatedDiscountAmount,
             original_price_rappen: course.price_per_participant_rappen,
-            sari_validation_data: {
-              license: customerData.license,
-              birthdate: customerData.birthdate,
-              faberid: faberidClean
-            }
+            ...(course.sari_managed && faberidClean ? {
+              sari_validation_data: {
+                license: customerData.license,
+                birthdate: customerData.birthdate,
+                faberid: faberidClean
+              }
+            } : {})
           }
         }
       }) as any

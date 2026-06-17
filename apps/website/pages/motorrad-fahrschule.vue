@@ -381,9 +381,6 @@
       </div>
     </section>
 
-    <!-- CTA Section -->
-    <CtaSection title="Jetzt mit der Motorrad Fahrschule starten!" />
-    
     <GutscheinSection />
     <StandorteSection />
     
