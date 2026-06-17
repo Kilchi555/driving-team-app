@@ -43,18 +43,25 @@ const handler = defineEventHandler(async (event) => {
       courseId, 
       faberid, 
       birthdate, 
+      firstName,            // Non-SARI courses
+      lastName,             // Non-SARI courses
+      street,               // Non-SARI courses: address
+      streetNr,             // Non-SARI courses: house number
+      zip,                  // Non-SARI courses: postal code
+      city,                 // Non-SARI courses: city
+      licenseNumber,        // Non-SARI courses: driver's license number
       tenantId,
       email,
       phone,
-      customSessions, // Support for swapped sessions
-      isPartialEnrollment,  // True when customer books only Teil-3
-      partialStartPosition  // Which session position to start from (e.g. 3)
+      customSessions,
+      isPartialEnrollment,
+      partialStartPosition
     } = body
 
     logger.debug('💵 Cash enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions, isPartialEnrollment })
 
     // 1. Validate inputs
-    if (!courseId || !faberid || !birthdate || !tenantId) {
+    if (!courseId || !tenantId) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Missing required fields'
@@ -119,81 +126,75 @@ const handler = defineEventHandler(async (event) => {
       })
     }
 
-    // 3. Get SARI credentials
-    const credentials = await getSARICredentialsSecure(tenantId, 'COURSE_ENROLLMENT_CASH')
-    if (!credentials) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'SARI not configured for this tenant'
-      })
-    }
-
-    // 4. Validate with SARI
-    const sari = new SARIClient(credentials)
-    const faberidClean = faberid.replace(/\./g, '')
-    
+    // 3 & 4. SARI credential loading + validation (only for SARI-managed courses)
+    let sari: any = null
+    let faberidClean = ''
     let customerData: any
-    try {
-      customerData = await sari.getCustomer(faberidClean, birthdate)
-      logger.debug('✅ SARI customer validated:', customerData.firstname)
-    } catch (error: any) {
-      logger.error('❌ SARI validation failed:', error.message)
-      throw createError({
-        statusCode: 400,
-        statusMessage: error.message || 'SARI validation failed'
-      })
-    }
 
-    // 5. Validate license requirements
-    try {
-      validateLicense(course, customerData)
-    } catch (error: any) {
-      logger.error('❌ License validation failed:', error.message)
-      throw error
-    }
+    if (course.sari_managed) {
+      if (!faberid || !birthdate) {
+        throw createError({ statusCode: 400, statusMessage: 'Faber-ID und Geburtsdatum erforderlich' })
+      }
+      const credentials = await getSARICredentialsSecure(tenantId, 'COURSE_ENROLLMENT_CASH')
+      if (!credentials) {
+        throw createError({ statusCode: 500, statusMessage: 'SARI not configured for this tenant' })
+      }
+      sari = new SARIClient(credentials)
+      faberidClean = faberid.replace(/\./g, '')
 
-    // 6. Validate SARI enrollment is possible (before confirming!)
-    if (course.sari_managed && course.sari_course_id) {
       try {
-        logger.info(`🔍 Validating SARI enrollment possibility for course ${course.sari_course_id}`)
-        
-        const enrollmentCheck = await sari.canEnrollInCourse(course.sari_course_id, faberidClean)
-        
-        if (!enrollmentCheck.canEnroll) {
-          throw createError({
-            statusCode: 400,
-            statusMessage: enrollmentCheck.reason || 'SARI enrollment not possible'
-          })
-        }
-        
-        logger.info(`✅ SARI enrollment validation passed`)
+        customerData = await sari.getCustomer(faberidClean, birthdate)
+        logger.debug('✅ SARI customer validated:', customerData.firstname)
       } catch (error: any) {
-        if (error.statusCode) throw error
-        logger.error('❌ SARI enrollment check failed:', error.message)
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Could not verify course availability'
-        })
+        logger.error('❌ SARI validation failed:', error.message)
+        throw createError({ statusCode: 400, statusMessage: error.message || 'SARI validation failed' })
+      }
+
+      // 5a. License validation
+      try {
+        validateLicense(course, customerData)
+      } catch (error: any) {
+        logger.error('❌ License validation failed:', error.message)
+        throw error
+      }
+
+      // 6. SARI enrollment possibility check
+      if (course.sari_course_id) {
+        try {
+          const enrollmentCheck = await sari.canEnrollInCourse(course.sari_course_id, faberidClean)
+          if (!enrollmentCheck.canEnroll) {
+            throw createError({ statusCode: 400, statusMessage: enrollmentCheck.reason || 'SARI enrollment not possible' })
+          }
+        } catch (error: any) {
+          if (error.statusCode) throw error
+          throw createError({ statusCode: 400, statusMessage: 'Could not verify course availability' })
+        }
+      }
+    } else {
+      // Non-SARI course
+      if (!firstName || !lastName) {
+        throw createError({ statusCode: 400, statusMessage: 'Vor- und Nachname erforderlich' })
+      }
+      customerData = { firstname: firstName.trim(), lastname: lastName.trim(), email, phone, street, streetNr, zip, city, licenseNumber, birthdate }
+      logger.debug('✅ Non-SARI cash enrollment:', `${firstName} ${lastName}`)
+    }
+
+    // 7. Duplicate check (SARI: by faberid; non-SARI: by email)
+    if (course.sari_managed && faberidClean) {
+      const { data: existingEnrollment } = await supabase
+        .from('course_registrations')
+        .select('id')
+        .eq('course_id', courseId)
+        .eq('sari_faberid', faberidClean)
+        .in('status', ['confirmed', 'pending'])
+        .maybeSingle()
+
+      if (existingEnrollment) {
+        throw createError({ statusCode: 409, statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.' })
       }
     }
 
-    // 7. Check for duplicate enrollment
-    const { data: existingEnrollment } = await supabase
-      .from('course_registrations')
-      .select('id')
-      .eq('course_id', courseId)
-      .eq('sari_faberid', faberidClean)
-      .in('status', ['confirmed', 'pending'])
-      .maybeSingle()
-
-    if (existingEnrollment) {
-      throw createError({
-        statusCode: 409,
-        statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.'
-      })
-    }
-
-    // 7b. Also check by email to give clear feedback
+    // 7b. Also check by email
     const finalEmail = email || customerData.email
     const finalPhone = phone || customerData.phone || ''
 
@@ -434,14 +435,16 @@ const handler = defineEventHandler(async (event) => {
         last_name: customerData.lastname,
         email: finalEmail,
         phone: finalPhone,
-        sari_faberid: faberidClean,
-        status: 'confirmed',
-        payment_status: 'paid', // Cash-on-site is always "paid"
+        sari_faberid: faberidClean || null,
+        street: customerData.street || null,
+        street_nr: customerData.streetNr || null,
+        zip: customerData.zip || null,
+        city: customerData.city || null,
+        birthdate: customerData.birthdate || null,
+        license_number: customerData.licenseNumber || null,
         payment_method: 'cash_on_site',
-        // Store custom sessions if any were selected
         custom_sessions: customSessions || null,
         is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
-        // Mark as SARI synced (enrollment happened before DB save)
         sari_synced: course.sari_managed ? true : null,
         sari_synced_at: course.sari_managed ? new Date().toISOString() : null
       })

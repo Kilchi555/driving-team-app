@@ -25,7 +25,7 @@ import { z } from 'zod'
 
 const ProcessPublicPaymentSchema = z.object({
   enrollmentId:  z.string().uuid().optional(),
-  amount:        z.number().positive().max(100000),
+  amount:        z.number().positive().max(1000000),
   currency:      z.enum(['CHF', 'EUR', 'USD']),
   customerEmail: z.string().email().max(254),
   customerName:  z.string().min(1).max(200).trim(),
