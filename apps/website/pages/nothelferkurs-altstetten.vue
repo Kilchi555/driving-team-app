@@ -392,6 +392,18 @@ const jsonLdScripts = [
     type: 'application/ld+json',
     innerHTML: JSON.stringify({
       "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "Driving Team Nothelferkurs Altstetten",
+      "url": "https://drivingteam.ch/nothelferkurs-altstetten/",
+      "telephone": "+41444310033",
+      "address": { "@type": "PostalAddress", "streetAddress": "Vulkanstrasse 130b", "addressLocality": "Zürich", "postalCode": "8048", "addressCountry": "CH" },
+      "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "bestRating": "5", "worstRating": "1", "reviewCount": "368" }
+    })
+  },
+  {
+    type: 'application/ld+json',
+    innerHTML: JSON.stringify({
+      "@context": "https://schema.org",
       "@type": "FAQPage",
       "mainEntity": [
         { "@type": "Question", "name": "Wo findet der Nothelferkurs in Altstetten statt?", "acceptedAnswer": { "@type": "Answer", "text": "Bei Nothelfer am Bahnhof, direkt hinter dem Bahnhof Zürich-Altstetten." } },

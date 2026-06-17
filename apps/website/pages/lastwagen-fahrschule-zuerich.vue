@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Lastwagen Fahrschule Zürich | C1, C & CE | Driving Team</Title>
+      <Title>Lastwagen Fahrschule Zürich | C1, C & CE | Ab CHF 150.- | Driving Team</Title>
       <Meta name="description" content="LKW-Führerschein C1, C & CE in Zürich – erfahrene Fahrlehrer, CZV Grundkurs, Prüfung am StVA Albisgütli, ab CHF 170.-. Jetzt anmelden!" />
       <Meta name="keywords" content="Lastwagen Fahrschule Zürich, LKW Fahrschule Zürich, Lastwagen Führerschein Zürich, Kategorie C Zürich, C1 Zürich, CE Zürich, StVA Regensdorf LKW Prüfung, LKW Fahrstunden Zürich" />
       <Meta property="og:title" content="Lastwagen Fahrschule Zürich | C1/C/CE | Driving Team" />
@@ -175,8 +175,8 @@
             <h3 class="font-bold text-xl mb-2">Kategorie CE</h3>
             <p class="text-gray-500 text-sm mb-4">Sattelzüge und Anhängerkombinationen</p>
             <ul class="text-sm text-gray-600 space-y-1.5 mb-4">
-              <li>✓ Sattelzug & grosse Züge</li>
-              <li>✓ Voraussetzung: Kat. C</li>
+              <li>✓ Sattelzug & grosse Anhängerkombinationen</li>
+              <li>✓ Voraussetzung: In Besitz der Kat. C</li>
               <li>✓ Höchste LKW-Berechtigung</li>
               <li>✓ CHF 200.-/Lektion</li>
             </ul>
