@@ -1,9 +1,9 @@
 /**
- * GET /api/courses/upcoming-pgs?location=Zürich
+ * GET /api/courses/upcoming-pgs?location=Zürich&category=PGS
  *
- * Liefert die nächsten Motorrad-Grundkurs-Termine (PGS) von app.simy.ch.
+ * Liefert die nächsten Kurs-Termine von app.simy.ch.
+ * category: 'PGS' (Motorrad Grundkurs), 'VKU', 'CZV-G', 'CZV', ...
  * Das Resultat wird 24h serverseitig gecacht — kein DB-Hit pro Pageload.
- * Nitro-Cache: in-memory (Vercel: pro Lambda-Instanz, lokale Dev: persistent)
  */
 import { defineEventHandler, getQuery } from 'h3'
 import { useRuntimeConfig } from 'nitropack/runtime'
@@ -59,7 +59,7 @@ export interface UpcomingPgsCourse {
 }
 
 export default defineEventHandler(async (event) => {
-  const { location = 'Zürich' } = getQuery(event) as { location?: string }
+  const { location = '', category = 'PGS' } = getQuery(event) as { location?: string; category?: string }
   const cfg = useRuntimeConfig(event)
   const baseUrl = (cfg.simyApiBaseUrl as string) || 'https://app.simy.ch'
 
@@ -72,17 +72,20 @@ export default defineEventHandler(async (event) => {
 
   const courses: UpcomingPgsCourse[] = (res.courses || [])
     .filter((c) => {
-      if (c.category !== 'PGS') return false
+      if (c.category !== category) return false
       if (!['active', 'scheduled', 'waitlist'].includes(c.status)) return false
-      const nameLower = (c.name || '').toLowerCase()
-      const cityLower = (c.city || '').toLowerCase()
-      const matchesLocation =
-        nameLower.includes(locLower) ||
-        cityLower.includes(locLower) ||
-        (locLower === 'zürich' && nameLower.includes('altstetten'))
-      if (!matchesLocation) return false
-      // Nur vollständige Kurse, keine Einzel-Teile
-      if (/teil\s*[123]/i.test(c.name || '')) return false
+      // Location filter (skip if no location given)
+      if (locLower) {
+        const nameLower = (c.name || '').toLowerCase()
+        const cityLower = (c.city || '').toLowerCase()
+        const matchesLocation =
+          nameLower.includes(locLower) ||
+          cityLower.includes(locLower) ||
+          (locLower === 'zürich' && nameLower.includes('altstetten'))
+        if (!matchesLocation) return false
+      }
+      // Einzelne Kursteile ausblenden (gilt für PGS; andere Kategorien haben keine solchen Namen)
+      if (category === 'PGS' && /teil\s*[123]/i.test(c.name || '')) return false
       // Muss mind. eine zukünftige Session haben
       return (c.course_sessions || []).some((s) => new Date(s.start_time) > now)
     })

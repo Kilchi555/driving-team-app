@@ -53,16 +53,21 @@
       :stats="{ requirements: 3, details: 4, hours: '12h' }"
     />
 
+    <!-- Nächste Kursdaten -->
+    <UpcomingCoursesSection
+      category="PGS"
+      location="Lachen"
+      title="Nächste Kursdaten — Motorrad Grundkurs Lachen"
+      subtitle="Vollständiger Kurs: 3 Kursteile à 4 Stunden · Max. 5 Teilnehmer · CHF 570.–"
+      category-code="PGS"
+      category-label="Motorrad Grundkurs"
+      course-name="Motorrad Grundkurs Lachen"
+      page-url="https://drivingteam.ch/motorrad-grundkurs-lachen/"
+      fetch-key="pgs-lachen-upcoming"
+    />
+
     <!-- Standort & Map -->
     <LazyStandortMapSection location-key="lachen" />
-
-    <!-- Kategorien -->
-    <ClientOnly>
-      <MotorradKategorienSection />
-    </ClientOnly>
-
-    <!-- Kurs Themen -->
-    <KursteileSection />
 
     <!-- Reviews -->
     <ReviewsSection category="motorrad-grundkurs" />

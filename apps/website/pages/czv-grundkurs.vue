@@ -400,6 +400,18 @@
       </div>
     </section>
 
+    <!-- Nächste Kursdaten -->
+    <UpcomingCoursesSection
+      category="CZV-G"
+      title="Nächste Kursdaten — CZV Grundkurs"
+      subtitle="5-tägiger Grundkurs für Berufschauffeure · Kategorien C1/C/CE und D1/D"
+      category-code="CZV-G"
+      category-label="CZV Grundkurs"
+      course-name="CZV Grundkurs"
+      page-url="https://drivingteam.ch/czv-grundkurs/"
+      fetch-key="czv-grundkurs-upcoming"
+    />
+
     <!-- CTA -->
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">

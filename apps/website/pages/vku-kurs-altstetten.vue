@@ -155,6 +155,19 @@
     <!-- Reviews -->
     <ReviewsSection category="zuerich" />
 
+    <!-- Nächste Kursdaten -->
+    <UpcomingCoursesSection
+      category="VKU"
+      location="Zürich"
+      title="Nächste Kursdaten — VKU Kurs Altstetten"
+      subtitle="Vollständiger Kurs: 2 × 4 Stunden · Pflicht vor Fahrprüfung · CHF 190.–"
+      category-code="VKU"
+      category-label="VKU Kurs"
+      course-name="VKU Kurs Zürich-Altstetten"
+      page-url="https://drivingteam.ch/vku-kurs-altstetten/"
+      fetch-key="vku-altstetten-upcoming"
+    />
+
     <!-- 5. Map Section -->
     <LazyStandortMapSection locationKey="zuerich" />
 
