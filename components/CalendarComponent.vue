@@ -1954,6 +1954,12 @@ eventClick: (clickInfo) => {
 
     // Type Assertion verwenden
     const extendedProps = appointmentData?.extendedProps as any
+
+    // Course appointments are managed through the courses page — skip EventModal
+    if (extendedProps?.eventType === 'course' || (appointmentData as any)?.event_type_code === 'course') {
+      showToast('📅 Kurs-Termin – in der Kursverwaltung bearbeiten')
+      return
+    }
     
     // Event Type erkennen
     const isStaffMeeting = extendedProps?.eventType === 'staff_meeting' ||

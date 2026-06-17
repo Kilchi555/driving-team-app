@@ -666,9 +666,9 @@
       <div v-if="activeTab === 'resources'">
         <!-- Resource Types Management -->
         <div class="bg-white rounded-lg p-4 border border-gray-200 shadow-sm mb-4">
-          <div class="flex justify-between items-center">
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
             <h3 class="text-lg font-semibold text-gray-900">📋 Ressourcenarten verwalten</h3>
-            <div class="relative">
+            <div class="relative self-start sm:self-auto">
               <button
                 @click="showResourceTypeDropdown = !showResourceTypeDropdown"
                 class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
@@ -1038,11 +1038,18 @@
             </div>
             
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Kursart</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Kursart
+                <span v-if="editingCourse && editingCourse.sari_managed" class="text-xs text-orange-600 ml-2">(SARI-verwaltet)</span>
+              </label>
               <select
                 v-model="newCourse.course_category_id"
                 @change="onCategoryChange"
-                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
+                :disabled="!!(editingCourse && editingCourse.sari_managed)"
+                :class="[
+                  'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2',
+                  editingCourse && editingCourse.sari_managed ? 'bg-gray-100 cursor-not-allowed opacity-70' : 'bg-gray-50'
+                ]"
               >
                 <option value="">Kursart wählen (optional)</option>
                 <option v-if="activeCategories.length === 0" value="" disabled>Kursarten werden geladen...</option>
@@ -1571,6 +1578,12 @@
             <label for="notifyStaffCheckbox" class="text-sm text-blue-800 font-medium cursor-pointer select-none">
               📧 Instruktoren per Email benachrichtigen &amp; Bestätigung anfordern
             </label>
+          </div>
+
+          <!-- Split-session warnings: staff assigned to only one of two back-to-back sessions -->
+          <div v-if="splitSessionWarnings.length > 0" class="mb-3 p-3 bg-yellow-50 border border-yellow-300 rounded-xl space-y-1">
+            <p class="text-sm font-semibold text-yellow-800 flex items-center gap-1">⚠️ Achtung: unvollständige Instruktoren-Zuteilung</p>
+            <p v-for="w in splitSessionWarnings" :key="w" class="text-xs text-yellow-700">{{ w }}</p>
           </div>
 
           <div class="flex justify-end space-x-3">
@@ -4647,6 +4660,51 @@ const courseSessions = ref<Array<{
   confirmation_status?: 'pending' | 'confirmed' | 'declined' | null
 }>>([])
 
+// Warn when a staff member is only assigned to one of two back-to-back sessions on the same day.
+// "Back-to-back" = gap between session end and next session start ≤ 5 minutes.
+const splitSessionWarnings = computed((): string[] => {
+  const sessions = courseSessions.value
+  if (sessions.length < 2) return []
+
+  // Group by date, sort each group by start_time
+  const byDate = new Map<string, typeof sessions>()
+  for (const s of sessions) {
+    if (!byDate.has(s.date)) byDate.set(s.date, [])
+    byDate.get(s.date)!.push(s)
+  }
+
+  const warnings: string[] = []
+  for (const [, daySessions] of byDate) {
+    if (daySessions.length < 2) continue
+    const sorted = [...daySessions].sort((a, b) => a.start_time.localeCompare(b.start_time))
+
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const a = sorted[i]
+      const b = sorted[i + 1]
+
+      // Parse as minutes for easy comparison
+      const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+      const gapMin = toMin(b.start_time) - toMin(a.end_time)
+      if (gapMin > 5) continue // not back-to-back
+
+      const staffA = a.instructor_type === 'internal' ? (a.staff_id || null) : null
+      const staffB = b.instructor_type === 'internal' ? (b.staff_id || null) : null
+
+      if (staffA && staffA !== staffB) {
+        const staffMember = availableStaff.value.find((st: any) => st.id === staffA)
+        const name = staffMember ? `${staffMember.first_name} ${staffMember.last_name}` : staffA
+        warnings.push(`${name} ist nur in Session ${a.start_time}–${a.end_time} eingeteilt, aber nicht in der direkt anschliessenden Session ${b.start_time}–${b.end_time}.`)
+      }
+      if (staffB && staffB !== staffA) {
+        const staffMember = availableStaff.value.find((st: any) => st.id === staffB)
+        const name = staffMember ? `${staffMember.first_name} ${staffMember.last_name}` : staffB
+        warnings.push(`${name} ist nur in Session ${b.start_time}–${b.end_time} eingeteilt, aber nicht in der direkt vorausgehenden Session ${a.start_time}–${a.end_time}.`)
+      }
+    }
+  }
+  return warnings
+})
+
 // External Instructor Modal
 const showExternalInstructorModal = ref(false)
 const isCreatingExternalInstructor = ref(false)
@@ -5532,7 +5590,7 @@ const createRoom = async () => {
     success.value = 'Raum erfolgreich erstellt!'
     showCreateRoomModal.value = false
     resetRoomForm()
-    await loadRooms()
+    await loadRooms(currentUser.value?.tenant_id)
 
   } catch (err: any) {
     console.error('Error creating room:', err)
@@ -5639,7 +5697,7 @@ const updateRoom = async () => {
     showEditRoomModal.value = false
     editingRoom.value = null
     resetRoomForm()
-    await loadRooms()
+    await loadRooms(currentUser.value?.tenant_id)
 
   } catch (err: any) {
     console.error('Error updating room:', err)
@@ -5689,7 +5747,7 @@ const deleteRoom = async (roomId: string) => {
     })
 
     success.value = 'Raum erfolgreich gelöscht!'
-    await loadRooms()
+    await loadRooms(currentUser.value?.tenant_id)
   } catch (err: any) {
     console.error('Error deleting room:', err)
     error.value = `Fehler beim Löschen: ${err.message}`
@@ -6171,7 +6229,7 @@ onMounted(async () => {
   await Promise.all([
     loadCourses(),
     loadStaff(),
-    loadRooms(),
+    currentUser.value?.tenant_id ? loadRooms(currentUser.value.tenant_id) : Promise.resolve(),
     currentUser.value?.tenant_id ? loadVehicles(currentUser.value.tenant_id) : Promise.resolve(),
     loadGeneralResources(),
     fetchMissingInstructors(),

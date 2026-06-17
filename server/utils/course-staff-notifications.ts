@@ -75,6 +75,34 @@ export async function deleteStaffCourseAppointments(
   if (error) logger.warn(`⚠️ Could not delete course appointments for staff ${staffId}:`, error.message)
 }
 
+/**
+ * Merges sessions that are directly consecutive (gap ≤ 5 min) into single blocks.
+ * Returns padded blocks: 45 min before first session, 15 min after last.
+ */
+function buildAppointmentBlocks(
+  sessions: CourseSessionForNotification[],
+): Array<{ startMs: number; endMs: number }> {
+  const sorted = [...sessions].sort((a, b) => a.start_time.localeCompare(b.start_time))
+  const raw: Array<{ startMs: number; endMs: number }> = []
+
+  for (const s of sorted) {
+    const startMs = new Date(s.start_time).getTime()
+    const endMs   = new Date(s.end_time).getTime()
+    const last    = raw[raw.length - 1]
+
+    if (last && startMs - last.endMs <= 5 * 60 * 1000) {
+      last.endMs = Math.max(last.endMs, endMs)
+    } else {
+      raw.push({ startMs, endMs })
+    }
+  }
+
+  return raw.map((b) => ({
+    startMs: b.startMs - 45 * 60 * 1000,
+    endMs:   b.endMs   + 15 * 60 * 1000,
+  }))
+}
+
 /** Create appointments for one staff member across all their sessions in a course. */
 export async function createStaffCourseAppointments(
   supabase: SupabaseClient,
@@ -83,24 +111,21 @@ export async function createStaffCourseAppointments(
   sessions: CourseSessionForNotification[],
 ) {
   const title = apptTitle(course, sessions)
+  const blocks = buildAppointmentBlocks(sessions)
 
-  const rows = sessions.map((s) => {
-    const startMs = new Date(s.start_time).getTime() - 30 * 60 * 1000
-    const endMs   = new Date(s.end_time).getTime()   + 30 * 60 * 1000
-    return {
-      tenant_id:        course.tenant_id,
-      staff_id:         staffId,
-      user_id:          null,
-      start_time:       new Date(startMs).toISOString(),
-      end_time:         new Date(endMs).toISOString(),
-      duration_minutes: Math.round((endMs - startMs) / 60000),
-      event_type_code:  'course',
-      title,
-      description:      s.description || '',
-      status:           'confirmed',
-      notes:            `course:${course.id}`,
-    }
-  })
+  const rows = blocks.map((b) => ({
+    tenant_id:        course.tenant_id,
+    staff_id:         staffId,
+    user_id:          null,
+    start_time:       new Date(b.startMs).toISOString(),
+    end_time:         new Date(b.endMs).toISOString(),
+    duration_minutes: Math.round((b.endMs - b.startMs) / 60000),
+    event_type_code:  'course',
+    title,
+    description:      '',
+    status:           'confirmed',
+    notes:            `course:${course.id}`,
+  }))
 
   const { error } = await supabase.from('appointments').insert(rows)
   if (error) logger.warn(`⚠️ Could not create course appointments for staff ${staffId}:`, error.message)

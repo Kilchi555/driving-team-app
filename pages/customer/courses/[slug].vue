@@ -532,9 +532,10 @@ const loadData = async () => {
       return course.course_sessions.every((s: any) => s.start_time > now)
     })
     
-    // Calculate free slots
+    // Calculate free slots; normalise category from course_category.name if the plain text field is empty
     courses.value = futureCourses.map((course: any) => ({
       ...course,
+      category: course.category || course.course_category?.name || null,
       free_slots: (course.max_participants || 0) - (course.current_participants || 0)
     }))
     
@@ -660,21 +661,16 @@ const handleEnrolled = () => {
 // Check if a course has changeable sessions (for the button)
 const hasChangeableSessions = (course: any): boolean => {
   if (!course?.course_sessions?.length) return false
-  
-  const sorted = [...course.course_sessions].sort((a: any, b: any) => 
-    a.start_time.localeCompare(b.start_time)
-  )
-  
-  // Group by date
-  const byDate: Map<string, any[]> = new Map()
-  for (const session of sorted) {
-    const date = session.start_time.split('T')[0]
-    if (!byDate.has(date)) byDate.set(date, [])
-    byDate.get(date)!.push(session)
-  }
-  
-  // Check if there are more than 1 group (more than 1 day)
-  return byDate.size > 1
+
+  // Show button only when there's actually something to customise:
+  // 1. Any session can be booked individually
+  const hasIndividualSessions = course.course_sessions.some((s: any) => s.allow_individual_booking)
+  // 2. The course category allows partial enrollment
+  const allowsPartial = !!course.course_category?.allow_partial_enrollment
+  // 3. The course is set to partial-only
+  const isPartialOnly = !!course.is_partial_only
+
+  return hasIndividualSessions || allowsPartial || isPartialOnly
 }
 
 const openSessionCustomizer = (course: any) => {
