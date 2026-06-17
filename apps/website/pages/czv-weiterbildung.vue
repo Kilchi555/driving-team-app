@@ -28,9 +28,9 @@
             <li>Aufwertung des Chauffeurberufs</li>
             <li>Umweltverträgliche und energieeffiziente Verwendung des Fahrzeugs</li>
           </ul>
-          <button @click="showPicker = true" class="btn-primary bg-white text-orange-600 hover:bg-orange-50 text-lg">
-            ✉️ Kurs anfragen
-          </button>
+          <a href="https://app.simy.ch/customer/courses/driving-team/?category=CZV" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-orange-600 hover:bg-orange-50 text-lg">
+            📅 Kurs buchen
+          </a>
         </div>
       </div>
     </section>
@@ -56,7 +56,7 @@
               <p class="text-sm text-gray-700"><strong>Kosten:</strong> CHF 190.- inkl. Kaffee & Gipfeli, Mittagessen und Kursbestätigung (SARI)</p>
               <p class="text-sm text-gray-700"><strong>Max. Teilnehmer:</strong> 16</p>
             </div>
-            <button @click="openModal('Prävention und Verhalten bei Unfällen')" class="btn-primary mt-4 inline-block text-sm">Anfrage senden</button>
+            <a href="https://app.simy.ch/customer/courses/driving-team/?category=CZV" target="_blank" rel="noopener noreferrer" class="btn-primary mt-4 inline-block text-sm">📅 Kurs buchen</a>
           </div>
 
           <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200 overflow-hidden">
@@ -67,7 +67,7 @@
               <p class="text-sm text-gray-700"><strong>Kosten:</strong> CHF 190.- inkl. Kaffee & Gipfeli, Mittagessen und Kursbestätigung (SARI)</p>
               <p class="text-sm text-gray-700"><strong>Max. Teilnehmer:</strong> 16</p>
             </div>
-            <button @click="openModal('Traffic Health – Gesund und sicher im Strassenverkehr')" class="btn-primary mt-4 inline-block text-sm">Anfrage senden</button>
+            <a href="https://app.simy.ch/customer/courses/driving-team/?category=CZV" target="_blank" rel="noopener noreferrer" class="btn-primary mt-4 inline-block text-sm">📅 Kurs buchen</a>
           </div>
 
           <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200 overflow-hidden">
@@ -78,7 +78,7 @@
               <p class="text-sm text-gray-700"><strong>Kosten:</strong> CHF 190.- inkl. Kaffee & Gipfeli, Mittagessen und Kursbestätigung (SARI)</p>
               <p class="text-sm text-gray-700"><strong>Max. Teilnehmer:</strong> 16</p>
             </div>
-            <button @click="openModal('ARV1 und Rundumkontrolle')" class="btn-primary mt-4 inline-block text-sm">Anfrage senden</button>
+            <a href="https://app.simy.ch/customer/courses/driving-team/?category=CZV" target="_blank" rel="noopener noreferrer" class="btn-primary mt-4 inline-block text-sm">📅 Kurs buchen</a>
           </div>
 
           <div class="bg-white rounded-lg p-6 shadow-sm border border-gray-200 overflow-hidden">
@@ -101,7 +101,7 @@
         <h2 class="text-2xl font-bold text-gray-900 mb-4">Für Gruppen oder Firmen</h2>
         <p class="text-gray-700">Seid ihr eine Gruppe von Chauffeuren bzw. Chauffeusen oder eine Firma mit mindestens 10 Kursteilnehmer:innen, dann können wir euch euren speziell zusammengestellten CZV-Weiterbildungskurs anbieten. Kontaktiert uns direkt für ein individuelles Angebot.</p>
         <div class="flex flex-col md:flex-row gap-4 mt-6">
-          <button @click="openModal('CZV Weiterbildung – Firmenanfrage')" class="btn-primary">✉️ Anfrage senden</button>
+          <a href="https://app.simy.ch/customer/courses/driving-team/?category=CZV" target="_blank" rel="noopener noreferrer" class="btn-primary">📅 Kurs buchen</a>
           <a href="tel:+41444310033" class="btn-primary bg-gray-600 hover:bg-gray-700">📞 +41 44 431 00 33</a>
         </div>
       </div>
