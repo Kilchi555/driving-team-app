@@ -93,9 +93,9 @@
           <!-- Kategorie C - Lastwagen -->
           <div class="snap-center shrink-0 transition-[transform,box-shadow] duration-300 ease-in-out hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)] w-[80vw] sm:w-[55vw] md:w-[40vw] lg:w-[28vw] max-w-sm bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 shadow-lg">
             <div class="text-3xl mb-3">🚚</div>
-            <h3 class="text-xl font-bold text-gray-900 mb-1">Lastwagen</h3>
-            <p class="text-sm text-gray-600 mb-5">Kategorie C · 45 Min</p>
-            <div class="mb-5">
+            <h3 class="text-xl font-bold text-gray-900 mb-1 text-center">Lastwagen</h3>
+            <p class="text-sm text-gray-600 mb-5 text-center">Kategorie C · 45 Min</p>
+            <div class="mb-5 text-center">
               <span class="text-4xl font-black text-slate-600">CHF 170</span>
               <span class="text-sm text-gray-600 ml-1">/ Lektion</span>
             </div>
