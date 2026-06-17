@@ -65,7 +65,7 @@
         '🏍️ Kompletter Kurs: <strong>CHF 499.-</strong> (3 Kursteile à CHF 190.-)',
         '👥 Maximal <strong>5 Teilnehmer</strong>',
         '📜 Inkl. <strong>Kursbestätigung & Getränk</strong>',
-        '📍 Treffpunkt: <strong>Driving Team Zürich, Vulkanstrasse 130b, 8048 Zürich</strong>'
+        '📍 Treffpunkt: <strong>Bahnhof Zürich-Altstetten, Altstetterplatz 12, 8048 Zürich</strong>'
       ]"
       :important-notes="[
         'Für Kategorie A1 sind neu ebenfalls die Kursteile 1, 2 & 3 zu absolvieren. (Für Inhaber der Kategorie B ist dann keine praktische Prüfung notwendig.)',
@@ -78,9 +78,7 @@
     <LazyStandortMapSection location-key="zuerich" />
 
     <!-- Kategorien -->
-    <ClientOnly>
-      <MotorradKategorienSection />
-    </ClientOnly>
+    <MotorradKategorienSection />
 
     <!-- Kurs Themen -->
     <KursteileSection />

@@ -315,7 +315,7 @@ export default defineEventHandler(async (event) => {
     (s: any) => s.instructor_type === 'internal' && s.staff_id,
   )
 
-  if (internalSessions.length > 0 && notifyStaff) {
+  if (internalSessions.length > 0) {
     // Determine the earliest session date for the title suffix
     const earliestDate = internalSessions
       .map((s: any) => s.date as string)
@@ -340,6 +340,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Build appointment rows: start 30 min before, end 30 min after session
+    // Always create appointments when sessions are assigned to internal staff (Modell A)
     const apptRows = internalSessions.map((s: any) => {
       const startMs = new Date(`${s.date}T${s.start_time}:00`).getTime() - 30 * 60 * 1000
       const endMs   = new Date(`${s.date}T${s.end_time}:00`).getTime()   + 30 * 60 * 1000
@@ -365,6 +366,10 @@ export default defineEventHandler(async (event) => {
       logger.debug(`✅ ${apptRows.length} course appointments created for staff`)
     }
 
+    // ── Send email only if explicitly requested (notifyStaff flag) ────────────
+    if (!notifyStaff) {
+      logger.debug('ℹ️ notifyStaff=false – skipping staff email notification')
+    } else {
     // ── Send email to each internal staff member ────────────────────────────
     // Group sessions by staff_id
     const byStaff = new Map<string, any[]>()
@@ -515,6 +520,7 @@ ${confirmButtonHtml}
         logger.warn(`⚠️ Could not send course email to ${staffUser.email}:`, emailErr.message)
       }
     }
+    } // end notifyStaff
   }
 
   // ── External instructor calendar invites ─────────────────────────────────
