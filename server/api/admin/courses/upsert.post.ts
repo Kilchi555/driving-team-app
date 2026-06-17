@@ -2,6 +2,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendTenantEmail, sendEmail } from '~/server/utils/email'
+import { generateCategoryWaitlistNotificationEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
 
 // ── Timezone helper ───────────────────────────────────────────────────────────
@@ -652,6 +653,78 @@ ${extLogoHtml}
       } catch (emailErr: any) {
         logger.warn(`⚠️ Could not send ICS invite to ${email}:`, emailErr.message)
       }
+    }
+  }
+
+  // ── Category waitlist notification ───────────────────────────────────────
+  // When a course is published as 'active', notify all waiting category waitlist entries
+  if (courseData.status === 'active' && courseData.course_category_id) {
+    try {
+      const { data: category } = await supabase
+        .from('course_categories')
+        .select('code, name, waitlist_enabled')
+        .eq('id', courseData.course_category_id)
+        .maybeSingle()
+
+      if (category?.waitlist_enabled && category.code) {
+        // Fetch all waiting entries for this category (not yet notified = status 'waiting')
+        const { data: waitlistEntries } = await supabase
+          .from('course_waitlist')
+          .select('id, first_name, email')
+          .eq('category_code', category.code)
+          .eq('tenant_id', profile.tenant_id)
+          .is('course_id', null)
+          .eq('status', 'waiting')
+
+        if (waitlistEntries && waitlistEntries.length > 0) {
+          const { data: tenant } = await supabase
+            .from('tenants')
+            .select('name, primary_color, logo_wide_url, logo_url, logo_square_url, resend_domain_verified, from_email')
+            .eq('id', profile.tenant_id)
+            .single()
+
+          const tenantName = tenant?.name || 'Driving Team'
+          const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+          const primaryColor = tenant?.primary_color || '#1d4ed8'
+          const simyUrl = `https://app.simy.ch/customer/courses/driving-team/?category=${category.code}`
+          const now = new Date().toISOString()
+
+          const toQueue = waitlistEntries.map((entry) => ({
+            tenant_id: profile.tenant_id,
+            channel: 'email',
+            recipient_email: entry.email,
+            subject: `Neuer ${category.name} verfügbar – Jetzt anmelden!`,
+            body: generateCategoryWaitlistNotificationEmail({
+              firstName: entry.first_name,
+              categoryName: category.name,
+              bookingUrl: simyUrl,
+              tenantName,
+              primaryColor,
+              logoUrl,
+            }),
+            status: 'pending',
+            send_at: now,
+            context_data: {
+              stage: 'category_waitlist_notification',
+              entry_id: entry.id,
+              category_code: category.code,
+              course_id: savedCourseId,
+            },
+          }))
+
+          await supabase.from('outbound_messages_queue').insert(toQueue)
+
+          // Mark entries as 'offered' so they don't get spammed on repeated saves
+          await supabase
+            .from('course_waitlist')
+            .update({ status: 'offered' })
+            .in('id', waitlistEntries.map((e) => e.id))
+
+          logger.info(`✅ Notified ${waitlistEntries.length} category waitlist entries for ${category.name}`)
+        }
+      }
+    } catch (wlErr: any) {
+      logger.warn('⚠️ Category waitlist notification failed (non-blocking):', wlErr.message)
     }
   }
 

@@ -2374,6 +2374,16 @@
               </div>
             </div>
 
+            <!-- Waitlist -->
+            <div class="border border-blue-200 rounded-lg p-4 bg-blue-50">
+              <ToggleSwitch
+                v-model="categoryForm.waitlist_enabled"
+                label="Warteliste aktivieren"
+                label-class="text-gray-900 font-medium"
+              />
+              <p class="text-xs text-blue-700 mt-1 ml-1">Kunden können sich auf der Website auf eine Warteliste eintragen und werden automatisch per E-Mail benachrichtigt, sobald ein neuer Kurs dieser Art auf «Aktiv» gesetzt wird.</p>
+            </div>
+
             <div>
               <label class="block text-sm font-medium text-gray-500 mb-2">Sortierung</label>
               <input
@@ -4544,7 +4554,9 @@ const categoryForm = ref({
   // Partial enrollment (Teil-3-only / upgrade path)
   allow_partial_enrollment: false,
   partial_start_position: 3,
-  partial_price_rappen: 0
+  partial_price_rappen: 0,
+  // Waitlist
+  waitlist_enabled: false,
 })
 
 const vehicleForm = ref({
@@ -5347,7 +5359,9 @@ const editCategoryItem = (category: any) => {
     // Partial enrollment
     allow_partial_enrollment: category.allow_partial_enrollment || false,
     partial_start_position: category.partial_start_position || 3,
-    partial_price_rappen: category.partial_price_rappen || 0
+    partial_price_rappen: category.partial_price_rappen || 0,
+    // Waitlist
+    waitlist_enabled: category.waitlist_enabled || false,
   }
   defaultCategoryPrice.value = category.default_price_rappen / 100
   partialCategoryPrice.value = (category.partial_price_rappen || 0) / 100
@@ -5462,7 +5476,9 @@ const resetCategoryForm = () => {
     // Partial enrollment
     allow_partial_enrollment: false,
     partial_start_position: 3,
-    partial_price_rappen: 0
+    partial_price_rappen: 0,
+    // Waitlist
+    waitlist_enabled: false,
   }
   defaultCategoryPrice.value = 0
   partialCategoryPrice.value = 0
