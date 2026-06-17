@@ -145,8 +145,6 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const supabase = getSupabaseAdmin()
-
   // Always scope to tenant
   const payload = {
     ...courseData,
