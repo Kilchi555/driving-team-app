@@ -152,6 +152,33 @@ ${pendencyHtml}
     }
   }
 
+  // If declined → remove appointments for those sessions from the appointments table
+  if (action === 'declined') {
+    try {
+      // Load session times to match against appointments
+      const { data: declinedSessions } = await supabase
+        .from('course_sessions')
+        .select('start_time, end_time, course_id')
+        .in('id', targetSessionIds)
+
+      if (declinedSessions && declinedSessions.length > 0) {
+        // Delete appointments tagged with this course for this staff
+        await supabase
+          .from('appointments')
+          .delete()
+          .eq('staff_id', tokenRow.staff_id)
+          .eq('notes', `course:${tokenRow.course_id}`)
+          .in('start_time', declinedSessions.map((s: any) => {
+            // Appointment starts 30 min before session
+            return new Date(new Date(s.start_time).getTime() - 30 * 60 * 1000).toISOString()
+          }))
+        logger.debug(`✅ Removed appointments for ${targetSessionIds.length} declined sessions`)
+      }
+    } catch (e: any) {
+      logger.warn('⚠️ Could not remove appointments for declined sessions:', e.message)
+    }
+  }
+
   // If declined → create a pendency
   if (action === 'declined') {
     const courseLabel = course?.name || course?.category || 'Kurs'
