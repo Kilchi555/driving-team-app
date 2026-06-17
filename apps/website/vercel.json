@@ -779,32 +779,32 @@
     },
     {
       "source": "/fahrschule-zuerich-2",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {
       "source": "/fahrschule-zuerich-2/",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {
       "source": "/driving-team-zuerich",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {
       "source": "/driving-team-zuerich/",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {
       "source": "/driving-team-z%C3%BCrich",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {
       "source": "/driving-team-z%C3%BCrich/",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {
@@ -1619,32 +1619,32 @@
     },
     {
       "source": "/sq/fahrlehrer-zuerich",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {
       "source": "/sq/fahrlehrer-zuerich/",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {
       "source": "/it/fahrlehrer-zuerich",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {
       "source": "/it/fahrlehrer-zuerich/",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {
       "source": "/en/fahrlehrer-zuerich",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {
       "source": "/en/fahrlehrer-zuerich/",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {
@@ -2044,12 +2044,12 @@
     },
     {
       "source": "/en/fahrschule-zuerich",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {
       "source": "/en/fahrschule-zuerich/",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {
@@ -2444,12 +2444,12 @@
     },
     {
       "source": "/sq/fahrschule-zuerich",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {
       "source": "/sq/fahrschule-zuerich/",
-      "destination": "https://drivingteam.ch/fahrschule-zuerich/",
+      "destination": "https://drivingteam.ch/",
       "permanent": true
     },
     {

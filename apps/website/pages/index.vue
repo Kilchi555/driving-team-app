@@ -267,8 +267,13 @@
             </a>
           </div>
 
-          <!-- Hidden SEO text -->
-          <p class="sr-only">Die Fahrschule Zürich von Driving Team – Auto, Motorrad, Lastwagen, Anhänger, VKU. Standorte Zürich-Altstetten und Lachen SZ. 85% Prüfungserfolg, ab CHF 95.– pro Lektion.</p>
+          <!-- Zürich Coverage Area -->
+          <div class="mt-6 text-center">
+            <p class="text-xs text-gray-400 leading-relaxed">
+              Prüfungsgebiet <strong class="text-gray-600">Albisgütli</strong> · Fahrgebiet
+              Altstetten · Wiedikon · Albisrieden · Höngg · Schlieren · Dietikon · Wettswil · Thalwil
+            </p>
+          </div>
         </div>
       </div>
     </section>
@@ -286,26 +291,46 @@
           <h2 class="text-2xl md:text-3xl font-bold text-gray-900 max-w-3xl mx-auto mb-6 text-center">
             Fahrschule Zürich – alle Kategorien
           </h2>
-          <div class="max-w-3xl mx-auto space-y-3 text-gray-600 text-center">
+          <div class="max-w-3xl mx-auto space-y-6 text-gray-600 text-center">
             <p class="text-base md:text-lg leading-relaxed">
-              Die Driving Team Fahrschule hat ihren <strong>Hauptstandort in Zürich-Altstetten</strong> – direkt beim Bahnhof Altstetten, gut erreichbar aus dem ganzen Stadtgebiet. Wir bilden in allen Führerschein-Kategorien aus: Auto, Motorrad, Anhänger, Lastwagen, Taxi und Motorboot. Nothelfer, Verkehrskunde und Theorie-Kurse finden auch am zweiten Standort in <a href="/fahrschule-lachen/" class="text-primary-600 hover:underline font-medium">Lachen SZ</a> statt.
+              Driving Team ist <strong>deine Fahrschule in Zürich</strong> – mit Hauptstandort in <strong>Zürich-Altstetten</strong>, direkt beim Bahnhof, gut erreichbar aus dem ganzen Stadtgebiet. Wir bilden in allen Führerschein-Kategorien aus: Auto (Kat. B), Motorrad (A1/A35kW/A), Anhänger (BE), Lastwagen (C1/C/CE), Taxi (BPT) und Bus (D1/D). Zweiter Standort in <a href="/fahrschule-lachen/" class="text-primary-600 hover:underline font-medium">Lachen/SZ</a> mit Auto, Anhänger und Motorboot.
             </p>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+              <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p class="font-bold text-gray-800">Prüfungsort</p>
+                <p class="text-gray-500 text-xs mt-0.5">StVA Albisgütli, Zürich</p>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p class="font-bold text-gray-800">Treffpunkt</p>
+                <p class="text-gray-500 text-xs mt-0.5">Bahnhof Zürich-Altstetten</p>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p class="font-bold text-gray-800">Fahrzeuge</p>
+                <p class="text-gray-500 text-xs mt-0.5">Modern & vollversichert</p>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <p class="font-bold text-gray-800">Sprachen</p>
+                <p class="text-gray-500 text-xs mt-0.5">DE · EN · AL</p>
+              </div>
+            </div>
+
             <ul class="space-y-3 inline-block text-left mx-auto mt-2">
               <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
                 <span class="text-primary-600 font-bold">✓</span>
-                <span>Professionelle & motivierte Instruktor:innen</span>
+                <span>Fahrlehrer mit eidg. Fachausweis – seit 2014</span>
               </li>
               <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
                 <span class="text-primary-600 font-bold">✓</span>
-                <span>Flexible Zeiten & Treffpunkte</span>
+                <span>Flexible Zeiten Mo–Sa, flexible Treffpunkte</span>
               </li>
               <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
                 <span class="text-primary-600 font-bold">✓</span>
-                <span>Ab CHF 95.–/Lektion</span>
+                <span>Ab CHF 95.–/Lektion · online buchbar</span>
               </li>
               <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
                 <span class="text-primary-600 font-bold">✓</span>
-                <span>Online Buchung und Bezahlung</span>
+                <span>4.9 ★ Google Bewertung (368 Rezensionen)</span>
               </li>
             </ul>
             <div class="mt-6">

@@ -135,7 +135,7 @@
     <!-- ====== WHY US: FEATURES ====== -->
     <FeatureSection
       title="Warum die Auto Fahrschule Driving Team in Zürich?"
-      subtitle="Wir sind deine Fahrschule in Zürich-Altstetten – mit einem Team aus erfahrenen, eidgenössisch diplomierten Fahrlehrern und einer überdurchschnittlichen Erfolgsquote. Das kannst du von uns erwarten:"
+      subtitle="Wir sind deine Fahrschule in Zürich-Altstetten – mit einem Team aus erfahrenen Fahrlehrern mit eidg. Fachausweis und einer überdurchschnittlichen Erfolgsquote. Das kannst du von uns erwarten:"
       :extras="['Unterricht auch in <strong>Englisch &amp; Albanisch</strong> möglich!']"
     />
 

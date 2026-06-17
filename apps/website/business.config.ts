@@ -17,7 +17,7 @@ export const BRAND = {
   name: 'Driving Team Fahrschule',
   shortName: 'Driving Team',
   legalName: 'Driving Team Fahrschule',
-  foundingYear: 1994,
+  foundingYear: 2014,
   website: 'https://drivingteam.ch',
   email: 'info@drivingteam.ch',
   logo: 'https://drivingteam.ch/logo.webp',
