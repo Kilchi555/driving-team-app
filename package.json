@@ -62,6 +62,7 @@
     "@types/pdfkit": "^0.17.5",
     "@types/qrcode": "^1.5.6",
     "@types/zxcvbn": "^4.4.5",
+    "fast-xml-parser": "^5.9.2",
     "google-ads-api": "^23.0.0",
     "googleapis": "^171.4.0",
     "isomorphic-dompurify": "^2.35.0",

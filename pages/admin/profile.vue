@@ -873,6 +873,215 @@
           </div>
         </div>
 
+          <!-- ──────────────────────────────────────────────────────── -->
+          <!-- SARI CZV / FL Integration (SOAP CoursesV3)              -->
+          <!-- ──────────────────────────────────────────────────────── -->
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-1">SARI CZV & Fahrlehrerweiterbildung</h2>
+            <p class="text-sm text-gray-600 mb-6">
+              Melden Sie CZV- und FL-Kurse manuell an das ASA SARI-System (SOAP CoursesV3). Zugangsdaten erhalten Sie von Kyberna AG.
+            </p>
+
+            <div class="space-y-8">
+
+              <!-- ── CZV ── -->
+              <div class="border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 class="text-base font-semibold text-gray-900">CZV (Chauffeuren-Weiterbildung)</h3>
+                    <p class="text-sm text-gray-500">Kurstyp: CZV · Basis: sari.asa.ch SOAP</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" v-model="czvSettings.sari_czv_enabled" @change="saveCZVSettings" class="sr-only peer" />
+                    <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                  </label>
+                </div>
+
+                <div v-if="czvSettings.sari_czv_enabled" class="space-y-4 border-l-4 pl-4" :style="{ borderColor: primaryColor }">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Umgebung</label>
+                    <select v-model="czvSettings.sari_czv_environment" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                      <option value="test">Test</option>
+                      <option value="production">Production</option>
+                    </select>
+                  </div>
+
+                  <!-- CZV Credentials toggle -->
+                  <button type="button" @click="showCzvCredentials = !showCzvCredentials" class="text-sm flex items-center gap-1 hover:opacity-70" :style="{ color: primaryColor }">
+                    {{ showCzvCredentials ? 'Zugangsdaten verbergen' : 'Zugangsdaten anzeigen' }}
+                  </button>
+
+                  <div v-if="showCzvCredentials" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Client ID</label>
+                      <input v-model="czvSettings.sari_czv_client_id" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Client Secret</label>
+                      <input v-model="czvSettings.sari_czv_client_secret" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Benutzername</label>
+                      <input v-model="czvSettings.sari_czv_username" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Passwort</label>
+                      <input v-model="czvSettings.sari_czv_password" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
+                    </div>
+                    <div class="md:col-span-2">
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Registration ID <span class="text-gray-400 font-normal">(von Kyberna AG pro Kursveranstalter)</span></label>
+                      <input v-model="czvSettings.sari_czv_registration_id" type="password" placeholder="z.B. bernm" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
+                    </div>
+                  </div>
+
+                  <!-- Buttons -->
+                  <div class="flex flex-wrap gap-3">
+                    <button @click="saveCZVSettings" :disabled="czvIsSaving" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 text-sm font-medium transition-colors">
+                      {{ czvIsSaving ? 'Speichern...' : 'Speichern' }}
+                    </button>
+                    <button @click="testCZVConnection" :disabled="czvIsTesting" class="px-4 py-2 text-white rounded-lg hover:opacity-90 disabled:bg-gray-400 text-sm font-medium transition-colors flex items-center gap-2" :style="{ background: primaryColor }">
+                      <svg v-if="czvIsTesting" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                      {{ czvIsTesting ? 'Teste...' : 'Verbindung testen' }}
+                    </button>
+                    <button @click="loadCZVLecturers" :disabled="czvIsLoading" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 text-sm font-medium transition-colors">
+                      Moderatoren laden
+                    </button>
+                    <button @click="loadCZVCourseTypes" :disabled="czvIsLoading" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 text-sm font-medium transition-colors">
+                      Kurstypen laden
+                    </button>
+                  </div>
+
+                  <!-- Status -->
+                  <div v-if="czvConnectionMessage" :class="['p-3 rounded-lg text-sm', czvConnectionSuccess ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800']">
+                    {{ czvConnectionMessage }}
+                  </div>
+
+                  <!-- Moderatoren Liste -->
+                  <div v-if="czvLecturers.length > 0" class="rounded-lg border border-gray-200 overflow-hidden">
+                    <div class="bg-gray-50 px-4 py-2 border-b">
+                      <p class="text-sm font-medium text-gray-700">Moderatoren/Instruktoren ({{ czvLecturers.length }})</p>
+                    </div>
+                    <div class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                      <div v-for="l in czvLecturers" :key="l.SariId" class="px-4 py-2 flex items-center justify-between text-sm">
+                        <span class="font-medium text-gray-900">{{ l.Prename }} {{ l.Name }}</span>
+                        <div class="flex gap-3 text-xs text-gray-500">
+                          <span>SARI-ID: <code class="bg-gray-100 px-1 rounded">{{ l.SariId }}</code></span>
+                          <span>FA-Nr: <code class="bg-gray-100 px-1 rounded">{{ l.FaberId }}</code></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Kurstypen Liste -->
+                  <div v-if="czvCourseTypes.length > 0" class="rounded-lg border border-gray-200 overflow-hidden">
+                    <div class="bg-gray-50 px-4 py-2 border-b">
+                      <p class="text-sm font-medium text-gray-700">Verfügbare Kursdefinitionen ({{ czvCourseTypes.length }})</p>
+                    </div>
+                    <div class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                      <div v-for="ct in czvCourseTypes" :key="ct.Name" class="px-4 py-2 text-sm">
+                        <div class="flex items-center justify-between">
+                          <span class="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-800">{{ ct.Name }}</span>
+                          <span class="text-gray-500 text-xs">Max. {{ ct.MaxMembers }} TN</span>
+                        </div>
+                        <p class="text-gray-600 mt-0.5 text-xs">{{ ct.Description.DE }}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Info -->
+                  <div class="rounded-lg p-3 text-xs text-gray-600 bg-amber-50 border border-amber-200">
+                    <strong class="text-amber-800">Wichtige SARI-Regeln:</strong>
+                    <ul class="mt-1 space-y-0.5 list-disc list-inside text-amber-700">
+                      <li>Kurse müssen mind. 6 Wochen vor Kursbeginn gemeldet werden</li>
+                      <li>Löschung nur bis 4 Tage vor Kursbeginn möglich</li>
+                      <li>Für startImport wird die 12-stellige Führerausweisnummer benötigt</li>
+                      <li>Kursdefinition (Kurstyp z.B. "WB01234") von Kyberna AG erfragen</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ── FL ── -->
+              <div class="border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 class="text-base font-semibold text-gray-900">FL (Fahrlehrerweiterbildung)</h3>
+                    <p class="text-sm text-gray-500">Kurstyp: FL · Basis: sari.asa.ch SOAP</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" v-model="czvSettings.sari_fl_enabled" @change="saveCZVSettings" class="sr-only peer" />
+                    <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                  </label>
+                </div>
+
+                <div v-if="czvSettings.sari_fl_enabled" class="space-y-4 border-l-4 pl-4" :style="{ borderColor: primaryColor }">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Umgebung</label>
+                    <select v-model="czvSettings.sari_fl_environment" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                      <option value="test">Test</option>
+                      <option value="production">Production</option>
+                    </select>
+                  </div>
+
+                  <button type="button" @click="showFlCredentials = !showFlCredentials" class="text-sm flex items-center gap-1 hover:opacity-70" :style="{ color: primaryColor }">
+                    {{ showFlCredentials ? 'Zugangsdaten verbergen' : 'Zugangsdaten anzeigen' }}
+                  </button>
+
+                  <div v-if="showFlCredentials" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Client ID</label>
+                      <input v-model="czvSettings.sari_fl_client_id" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Client Secret</label>
+                      <input v-model="czvSettings.sari_fl_client_secret" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Benutzername</label>
+                      <input v-model="czvSettings.sari_fl_username" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Passwort</label>
+                      <input v-model="czvSettings.sari_fl_password" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
+                    </div>
+                    <div class="md:col-span-2">
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Registration ID</label>
+                      <input v-model="czvSettings.sari_fl_registration_id" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
+                    </div>
+                  </div>
+
+                  <div class="flex flex-wrap gap-3">
+                    <button @click="saveCZVSettings" :disabled="czvIsSaving" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 text-sm font-medium transition-colors">
+                      {{ czvIsSaving ? 'Speichern...' : 'Speichern' }}
+                    </button>
+                    <button @click="testFLConnection" :disabled="czvIsTesting" class="px-4 py-2 text-white rounded-lg hover:opacity-90 disabled:bg-gray-400 text-sm font-medium transition-colors flex items-center gap-2" :style="{ background: primaryColor }">
+                      <svg v-if="czvIsTesting" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                      {{ czvIsTesting ? 'Teste...' : 'Verbindung testen' }}
+                    </button>
+                    <button @click="loadFLLecturers" :disabled="czvIsLoading" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 text-sm font-medium transition-colors">
+                      Moderatoren laden
+                    </button>
+                  </div>
+
+                  <div v-if="flLecturers.length > 0" class="rounded-lg border border-gray-200 overflow-hidden">
+                    <div class="bg-gray-50 px-4 py-2 border-b">
+                      <p class="text-sm font-medium text-gray-700">FL-Moderatoren ({{ flLecturers.length }})</p>
+                    </div>
+                    <div class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                      <div v-for="l in flLecturers" :key="l.SariId" class="px-4 py-2 flex items-center justify-between text-sm">
+                        <span class="font-medium text-gray-900">{{ l.Prename }} {{ l.Name }}</span>
+                        <div class="flex gap-3 text-xs text-gray-500">
+                          <span>SARI-ID: <code class="bg-gray-100 px-1 rounded">{{ l.SariId }}</code></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
         <!-- Eventtypen Tab -->
         <div v-if="activeTab === 'eventtypes'" class="space-y-6">
           <div class="bg-white rounded-lg shadow-sm border p-6">
@@ -1266,6 +1475,7 @@ import { useAuthStore } from '~/stores/auth'
 const { primaryColor } = useTenantBranding()
 import ToggleSwitch from '~/components/ToggleSwitch.vue'
 import { useFeatures } from '~/composables/useFeatures'
+import { useSARICZVSync } from '~/composables/useSARICZVSync'
 import EventTypesManager from '~/components/admin/EventTypesManager.vue'
 import ReglementeManager from '~/components/admin/ReglementeManager.vue'
 import EmailDomainSettings from '~/components/admin/EmailDomainSettings.vue'
@@ -1458,7 +1668,7 @@ const reminderSettings = ref({
   notify_staff_on_auto_delete: true
 })
 
-// SARI Integration Settings
+// SARI Integration Settings (VKU/PGS – bestehend)
 const sariSettings = ref({
   sari_enabled: false,
   sari_environment: 'test',
@@ -1475,6 +1685,36 @@ const showSariCredentials = ref(false)
 const isSARISyncing = ref(false)
 const syncingCourseType = ref<'VKU' | 'PGS' | null>(null)
 const sariSyncResult = ref<{ success: boolean; message: string } | null>(null)
+
+// SARI CZV/FL Settings (neu – SOAP CoursesV3)
+const {
+  settings: czvSettings,
+  isLoading: czvIsLoading,
+  isSaving: czvIsSaving,
+  isTesting: czvIsTesting,
+  connectionMessage: czvConnectionMessage,
+  connectionSuccess: czvConnectionSuccess,
+  lecturers: czvLecturers,
+  courseTypes: czvCourseTypes,
+  saveSettings: saveCZVSettings,
+  testConnection: testCZVConnectionFn,
+  loadCourseTypes: loadCZVCourseTypesFn,
+  loadLecturers: loadCZVLecturersFn,
+} = useSARICZVSync()
+
+const flLecturers = ref<any[]>([])
+const showCzvCredentials = ref(false)
+const showFlCredentials = ref(false)
+
+const testCZVConnection = () => testCZVConnectionFn('CZV')
+const testFLConnection = () => testCZVConnectionFn('FL')
+const loadCZVLecturers = async () => { await loadCZVLecturersFn('CZV') }
+const loadFLLecturers = async () => {
+  const { loadLecturers } = useSARICZVSync()
+  const result = await loadLecturers('FL')
+  flLecturers.value = result
+}
+const loadCZVCourseTypes = () => loadCZVCourseTypesFn('CZV')
 
 // Template Settings
 const selectedTemplateStage = ref('first')
