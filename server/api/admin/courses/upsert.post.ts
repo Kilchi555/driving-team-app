@@ -104,13 +104,46 @@ function buildIcs(events: Array<{
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
   const body = await readBody(event)
-  const { courseData, sessions, courseId } = body as {
+  const { courseData, sessions, courseId, notifyStaff } = body as {
     courseData: Record<string, any>
     sessions: any[]
     courseId?: string
+    notifyStaff?: boolean  // explicit opt-in to send staff emails
   }
 
   if (!courseData) throw createError({ statusCode: 400, statusMessage: 'Missing courseData' })
+
+  const supabase = getSupabaseAdmin()
+
+  // ── Active-status guard ───────────────────────────────────────────────────
+  // If setting status to 'active', check whether all internal sessions are confirmed
+  // (skip check for tenants with only 1 staff member)
+  if (courseData.status === 'active' && courseId) {
+    const { count: staffCount } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', profile.tenant_id)
+      .eq('role', 'staff')
+
+    if ((staffCount ?? 0) > 1) {
+      // Check if any internal session is still pending or declined
+      const { data: unconfirmedSessions } = await supabase
+        .from('course_sessions')
+        .select('id, confirmation_status')
+        .eq('course_id', courseId)
+        .eq('tenant_id', profile.tenant_id)
+        .eq('instructor_type', 'internal')
+        .not('staff_id', 'is', null)
+        .or('confirmation_status.is.null,confirmation_status.eq.pending,confirmation_status.eq.declined')
+
+      if (unconfirmedSessions && unconfirmedSessions.length > 0) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: `Kurs kann nicht aktiviert werden: ${unconfirmedSessions.length} Session(s) noch nicht von Instruktoren bestätigt.`,
+        })
+      }
+    }
+  }
 
   const supabase = getSupabaseAdmin()
 
@@ -282,7 +315,7 @@ export default defineEventHandler(async (event) => {
     (s: any) => s.instructor_type === 'internal' && s.staff_id,
   )
 
-  if (internalSessions.length > 0) {
+  if (internalSessions.length > 0 && notifyStaff) {
     // Determine the earliest session date for the title suffix
     const earliestDate = internalSessions
       .map((s: any) => s.date as string)
@@ -364,9 +397,57 @@ export default defineEventHandler(async (event) => {
       ? `<div style="background:#fff;text-align:center;padding:20px 32px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></div>`
       : ''
 
+    const appBaseUrl = process.env.APP_BASE_URL || 'https://app.simy.ch'
+
     for (const staffUser of staffUsers || []) {
       if (!staffUser.email) continue
       const staffSessions = byStaff.get(staffUser.id) || []
+
+      // Upsert a confirmation token for this staff+course
+      let confirmToken: string | null = null
+      try {
+        // Reuse existing token or create new one
+        const { data: existingToken } = await supabase
+          .from('session_confirmation_tokens')
+          .select('token')
+          .eq('course_id', savedCourseId)
+          .eq('staff_id', staffUser.id)
+          .single()
+
+        if (existingToken) {
+          confirmToken = existingToken.token
+          // Refresh expiry
+          await supabase
+            .from('session_confirmation_tokens')
+            .update({ expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() })
+            .eq('course_id', savedCourseId)
+            .eq('staff_id', staffUser.id)
+        } else {
+          const { data: newToken } = await supabase
+            .from('session_confirmation_tokens')
+            .insert({
+              tenant_id: profile.tenant_id,
+              course_id: savedCourseId,
+              staff_id: staffUser.id,
+            })
+            .select('token')
+            .single()
+          confirmToken = newToken?.token || null
+        }
+      } catch (e: any) {
+        logger.warn('⚠️ Could not generate confirmation token:', e.message)
+      }
+
+      const confirmUrl = confirmToken
+        ? `${appBaseUrl}/confirm-sessions?token=${confirmToken}`
+        : null
+
+      // Mark sessions as 'pending' confirmation
+      await supabase
+        .from('course_sessions')
+        .update({ confirmation_status: 'pending', staff_notified_at: new Date().toISOString() })
+        .eq('course_id', savedCourseId)
+        .eq('staff_id', staffUser.id)
 
       // Group sessions on the same date into one row (start of first – end of last)
       const sortedSessions = staffSessions.sort((a: any, b: any) => (a.date + a.start_time).localeCompare(b.date + b.start_time))
@@ -387,6 +468,15 @@ export default defineEventHandler(async (event) => {
         })
         .join('')
 
+      const confirmButtonHtml = confirmUrl
+        ? `<div style="text-align:center;margin:28px 0">
+            <a href="${confirmUrl}" style="display:inline-block;background:${primaryColor};color:#fff;font-weight:700;font-size:15px;padding:14px 32px;border-radius:12px;text-decoration:none">
+              📋 Sessions ansehen &amp; bestätigen
+            </a>
+          </div>
+          <p style="color:#6b7280;font-size:13px;text-align:center">Du kannst jede Session einzeln bestätigen oder ablehnen.</p>`
+        : ''
+
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>body{margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 .wrap{max-width:600px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.07)}
@@ -396,10 +486,10 @@ export default defineEventHandler(async (event) => {
 .footer{border-top:1px solid #f3f4f6;padding:20px 32px;font-size:12px;color:#9ca3af;text-align:center}</style></head>
 <body><div class="wrap">
 ${logoHtml}
-<div class="header"><h1>📅 Kurs-Zuteilung</h1></div>
+<div class="header"><h1>📅 Kurs-Anfrage</h1></div>
 <div class="body">
 <p>Hallo ${staffUser.first_name},</p>
-<p>Du wurdest als Instruktor/in für den folgenden Kurs eingetragen:</p>
+<p>Du wurdest für den folgenden Kurs eingeplant. Bitte bestätige deine Sessions:</p>
 <p style="font-size:18px;font-weight:700;color:#1e293b;margin:16px 0">${courseLabel}</p>
 <p style="color:#6b7280;margin-bottom:24px">Kursbeginn: ${dateLabel}</p>
 <table>
@@ -408,7 +498,8 @@ ${logoHtml}
   </tr></thead>
   <tbody>${sessionRows}</tbody>
 </table>
-<p style="margin-top:24px;color:#6b7280;font-size:14px">Die Termine sind bereits in deinem Kalender eingetragen.</p>
+${confirmButtonHtml}
+<p style="margin-top:24px;color:#6b7280;font-size:14px">Die Termine sind bereits provisorisch in deinem Kalender eingetragen.</p>
 </div>
 <div class="footer">${tenantName} · Powered by <a href="https://simy.ch" style="color:#9ca3af;text-decoration:underline">Simy.ch</a></div>
 </div></body></html>`
@@ -416,7 +507,7 @@ ${logoHtml}
       try {
         await sendTenantEmail(profile.tenant_id, {
           to: staffUser.email,
-          subject: `Kurs-Zuteilung: ${courseLabel} ab ${dateLabel}`,
+          subject: `Kurs-Anfrage: ${courseLabel} ab ${dateLabel}`,
           html,
         })
         logger.debug(`✅ Course assignment email sent to ${staffUser.email}`)

@@ -72,7 +72,7 @@ const LOCATIONS: Location[] = [
 // ── Keyword-Mapping ───────────────────────────────────────────────────────────
 
 const CATEGORY_KEYWORDS: Record<string, RegExp> = {
-  lastwagen:          /lastwagen|lkw|c[\s-]?führerschein|c1|sattelzug|kategorie c/i,
+  lastwagen:          /lastwagen|lkw|c[\s-]?führerschein|c1|sattelzug|kategorie c|zentralachsanhänger|anhängerzug|kipper/i,
   'motorrad-grundkurs': /grundkurs|motorrad grundkurs|töff kurs/i,
   motorrad:           /motorrad|töff|a[\s-]?führerschein|a1|a2/i,
   anhaenger:          /anhänger|hänger|be[\s-]?prüfung/i,

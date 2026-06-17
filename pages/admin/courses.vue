@@ -1317,7 +1317,13 @@
                 
                 <!-- Instructor Details Row -->
                 <div v-if="session.instructor_type" class="mt-6 p-4 rounded-lg" :style="{ background: `${primaryColor}10`, border: `1px solid ${primaryColor}33` }">
-                  <h5 class="text-sm font-medium mb-4" :style="{ color: primaryColor }">Instruktor-Details</h5>
+                  <div class="flex items-center justify-between mb-4">
+                    <h5 class="text-sm font-medium" :style="{ color: primaryColor }">Instruktor-Details</h5>
+                    <!-- Confirmation status badge -->
+                    <span v-if="session.confirmation_status === 'confirmed'" class="inline-flex items-center gap-1 text-xs font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">✅ Bestätigt</span>
+                    <span v-else-if="session.confirmation_status === 'declined'" class="inline-flex items-center gap-1 text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">❌ Abgelehnt</span>
+                    <span v-else-if="session.confirmation_status === 'pending'" class="inline-flex items-center gap-1 text-xs font-semibold bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">⏳ Ausstehend</span>
+                  </div>
                   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <!-- Internal Staff Selection -->
                     <div v-if="session.instructor_type === 'internal'">
@@ -1550,20 +1556,38 @@
         </div>
         
         <!-- Modal Footer -->
-        <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3 sticky bottom-0 bg-white">
-          <button
-            @click="cancelCreateCourse"
-            class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+        <div class="px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white">
+          <!-- Notify staff checkbox (only visible when internal sessions with staff exist) -->
+          <div
+            v-if="courseSessions.some((s: any) => s.instructor_type === 'internal' && s.staff_id)"
+            class="flex items-center gap-2 mb-3 p-3 bg-blue-50 border border-blue-100 rounded-xl"
           >
-            Abbrechen
-          </button>
-          <button
-            @click="createCourse"
-            :disabled="!canCreateCourse || isCreating"
-            class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-          >
-            {{ isCreating ? 'Speichere...' : (editingCourse ? 'Kurs aktualisieren' : 'Kurs erstellen') }}
-          </button>
+            <input
+              id="notifyStaffCheckbox"
+              v-model="notifyStaff"
+              type="checkbox"
+              class="w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer"
+            />
+            <label for="notifyStaffCheckbox" class="text-sm text-blue-800 font-medium cursor-pointer select-none">
+              📧 Instruktoren per Email benachrichtigen &amp; Bestätigung anfordern
+            </label>
+          </div>
+
+          <div class="flex justify-end space-x-3">
+            <button
+              @click="cancelCreateCourse"
+              class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            >
+              Abbrechen
+            </button>
+            <button
+              @click="createCourse"
+              :disabled="!canCreateCourse || isCreating"
+              class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            >
+              {{ isCreating ? 'Speichere...' : (editingCourse ? 'Kurs aktualisieren' : 'Kurs erstellen') }}
+            </button>
+          </div>
         </div>
         </div>
       </div>
@@ -4227,6 +4251,7 @@ const courseParticipants = ref<any[]>([])
 const isCanceling = ref(false)
 const notifyByEmail = ref(true)
 const notifyBySMS = ref(false)
+const notifyStaff = ref(false) // opt-in: send confirmation email to assigned staff
 const cancellationReasons = ['Ausfall Kursleiter', 'Zu wenig Teilnehmer', 'Technische Probleme', 'Veranstaltungsort nicht verfügbar']
 const cancellationReason = ref('')
 const cancellationReasonCustom = ref('')
@@ -4597,6 +4622,7 @@ function getCoursePaymentBadge(course: any): { label: string; icon: string; cssC
 
 // Course Sessions
 const courseSessions = ref<Array<{
+  id?: string
   date: string
   start_time: string
   end_time: string
@@ -4606,6 +4632,7 @@ const courseSessions = ref<Array<{
   external_instructor_name: string | null
   external_instructor_email: string | null
   external_instructor_phone: string | null
+  confirmation_status?: 'pending' | 'confirmed' | 'declined' | null
 }>>([])
 
 // External Instructor Modal
@@ -4849,6 +4876,7 @@ const createCourse = async () => {
           courseData,
           sessions: courseSessions.value,
           courseId: editingCourse.value?.id,
+          notifyStaff: notifyStaff.value,
         },
       })
     }
@@ -5153,6 +5181,7 @@ const loadCourseSessions = async (courseId: string) => {
           external_instructor_phone: null,
           allow_individual_booking: session.allow_individual_booking ?? false,
           individual_price: session.individual_price_rappen ? session.individual_price_rappen / 100 : 0,
+          confirmation_status: session.confirmation_status || null,
         }
       })
 
