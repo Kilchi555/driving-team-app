@@ -17,6 +17,9 @@
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />
       <Meta property="og:url" content="https://drivingteam.ch/" />
+      <Link rel="alternate" hreflang="de-CH" href="https://drivingteam.ch/" />
+      <Link rel="alternate" hreflang="en" href="https://drivingteam.ch/driving-school-zurich/" />
+      <Link rel="alternate" hreflang="x-default" href="https://drivingteam.ch/" />
       
       <!-- Twitter Card -->
       <Meta name="twitter:card" content="summary_large_image" />

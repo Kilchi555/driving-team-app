@@ -223,6 +223,15 @@
 const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML: JSON.stringify({
     "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": "Driving Team Anhänger Fahrschule Zürich",
+    "url": "https://drivingteam.ch/anhaenger-pruefung-zuerich/",
+    "telephone": "+41444310033",
+    "address": { "@type": "PostalAddress", "addressLocality": "Zürich", "postalCode": "8048", "addressCountry": "CH" },
+    "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "bestRating": "5", "worstRating": "1", "reviewCount": "368" }
+  }) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({
+    "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
       { "@type": "Question", "name": "Wo findet die Anhängerprüfung in Zürich statt?", "acceptedAnswer": { "@type": "Answer", "text": "In Regensdorf oder Zürich-Albisgütli. Welches Strassenverkehrsamt je nach Wohnort." } },
