@@ -68,34 +68,46 @@
           <ul class="space-y-4">
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Gültiger Auto-Führerschein Kategorie B</p>
-            </li>
-            <li class="flex gap-3">
-              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Mindestalter: 18 Jahre (alle Kategorien C1, C & CE)</p>
-            </li>
-            <li class="flex gap-3">
-              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Gültiger Lernfahrausweis der Kategorie C1, C oder CE</p>
-            </li>
-            <li class="flex gap-3">
-              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
               <div>
-                <p class="text-gray-700">Sehtest – nur wenn noch kein gültiger Führerausweis vorhanden</p>
-                <p class="text-sm text-gray-500 mt-0.5">Wer bereits einen Lernfahrausweis oder Führerausweis besitzt, braucht keinen neuen Sehtest.</p>
+                <p class="text-gray-700 font-medium">Mindestalter: 18 Jahre (alle Kategorien C1, C & CE)</p>
               </div>
             </li>
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Ärztliche Grunduntersuchung gemäss VZV-Anforderungen</p>
+              <div>
+                <p class="text-gray-700 font-medium">Führerausweis Kat. B (mind. Lernfahrausweis)</p>
+              </div>
             </li>
             <li class="flex gap-3">
               <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
-              <p class="text-gray-700">Gültiger Schweizer Ausweis oder Pass</p>
+              <div>
+                <p class="text-gray-700 font-medium">Verkehrsmedizinische Untersuchung</p>
+                <p class="text-sm text-gray-500 mt-0.5">Wird nach Einreichung des Lernfahrgesuchs durch das StVA veranlasst.</p>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-600 font-bold flex-shrink-0">✓</span>
+              <div>
+                <p class="text-gray-700 font-medium">Zusatztheorieprüfung (Kat. C / C1 / CE)</p>
+                <p class="text-sm text-gray-500 mt-0.5">Keine Basistheorieprüfung, keine Verkehrskunde erforderlich.</p>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-amber-500 font-bold flex-shrink-0">i</span>
+              <div>
+                <p class="text-gray-700 font-medium">Sehtest: nicht erforderlich</p>
+                <p class="text-sm text-gray-500 mt-0.5">Wer bereits einen Lernfahrausweis oder Führerausweis besitzt, braucht keinen Sehtest.</p>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-amber-500 font-bold flex-shrink-0">i</span>
+              <div>
+                <p class="text-gray-700 font-medium">Nothilfekurs: nicht erforderlich</p>
+              </div>
             </li>
           </ul>
           <div class="mt-6 p-4 bg-primary-50 rounded-lg">
-            <p class="text-sm text-primary-800">Der CZV Grundkurs ist obligatorisch für alle LKW-Kategorien und muss vor der praktischen Prüfung absolviert werden. Wenn du bereits die Kategorie C hast und C1 machen möchtest, vereinfacht sich die Ausbildung.</p>
+            <p class="text-sm text-primary-800">CZV Grundkurs: nur für die <strong>berufliche Nutzung</strong> von LKW ab 3.5t obligatorisch (Berufschauffeure). Für Privatnutzer (z.B. Wohnmobil, Hobby-Transport) entfällt der CZV.</p>
           </div>
         </div>
       </div>
@@ -332,7 +344,7 @@
             Was kostet der Lastwagen Führerschein insgesamt?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Die Gesamtkosten für einen Lastwagen-Führerschein betragen in der Schweiz durchschnittlich CHF 4'000–6'000, abhängig von deiner Situation und der Anzahl der benötigten Fahrstunden. Dies beinhaltet den Nothelferkurs (ca. CHF 100), Sehtest (CHF 50), Lernfahrausweis (CHF 80), Theorieprüfung (CHF 40), Fahrstunden (durchschnittlich 20–30 à CHF 160–170), praktische Prüfung (CHF 200), sowie die Versicherungspauschale und WarmUp-Kurs. Die genauen Kosten hängen von deinen Vorkenntnissen ab.</p>
+          <p class="text-gray-600 mt-4">Die Gesamtkosten für einen Lastwagen-Führerschein betragen in der Schweiz durchschnittlich CHF 4'000–6'000, abhängig von deiner Situation und der Anzahl der benötigten Fahrstunden. Darin enthalten: Lernfahrausweis (CHF 80), Theorieprüfung (CHF 40), Fahrstunden (20–30 à CHF 160–170), praktische Prüfung (CHF 200), Versicherungspauschale und WarmUp-Kurs. Sehtest und Nothelferkurs sind für Kat. C nicht erforderlich (du hast bereits Kat. B). Die genauen Kosten hängen von deinen Vorkenntnissen ab.</p>
         </details>
 
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -340,7 +352,7 @@
             Was sind die Voraussetzungen für den Führerschein?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Um einen Lastwagen-Führerschein (Kategorie C oder C+E) zu erhalten, benötigst du: Mindestalter 18 Jahre, einen gültigen Führerausweis Kat. B, Nothelferkurs (obligatorisch für Erstausweise) und einen gültigen Lernfahrausweis. Kein neuer Sehtest erforderlich – wer bereits einen Führerausweis besitzt, ist davon befreit. Für berufliche Nutzung ist zusätzlich der CZV-Fähigkeitsausweis nötig.</p>
+          <p class="text-gray-600 mt-4">Mindestalter 18 Jahre, Führerausweis Kat. B (mind. Lernfahrausweis), verkehrsmedizinische Untersuchung und Zusatztheorieprüfung. Kein Nothilfekurs, keine Basistheorieprüfung, keine Verkehrskunde und kein Sehtest erforderlich (wer bereits einen Führerausweis besitzt, ist befreit). Für berufliche Nutzung ab 3.5t ist zusätzlich der CZV-Fähigkeitsausweis nötig.</p>
         </details>
 
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">

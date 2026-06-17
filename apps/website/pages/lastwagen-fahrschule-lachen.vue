@@ -349,7 +349,7 @@
             Was kostet der LKW Führerschein insgesamt?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Für den Führerschein C solltest du mit CHF 4'000–6'000 rechnen, je nach Anzahl Fahrstunden. Das beinhaltet: Sehtest (CHF 50), Lernfahrausweis (CHF 80), Theorieprüfung (CHF 40), Fahrstunden (20–30 à CHF 170), WarmUp & Prüfungsfahrt (CHF 737), Versicherungspauschale (CHF 200) und ärztliche Untersuchung. Peter Thoma gibt dir gerne eine individuelle Kostenschätzung.</p>
+          <p class="text-gray-600 mt-4">Für den Führerschein C solltest du mit CHF 4'000–6'000 rechnen, je nach Anzahl Fahrstunden. Das beinhaltet: Lernfahrausweis (CHF 80), Theorieprüfung (CHF 40), Fahrstunden (20–30 à CHF 170), WarmUp & Prüfungsfahrt (CHF 737), Versicherungspauschale (CHF 200) und ärztliche Untersuchung. Sehtest und Nothelferkurs entfallen (du hast bereits Kat. B). Peter Thoma gibt dir gerne eine individuelle Kostenschätzung.</p>
         </details>
 
         <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -487,7 +487,7 @@ const jsonLdScripts = [
         { '@type': 'Question', name: 'Wo finden die LKW Fahrstunden in Lachen statt?', acceptedAnswer: { '@type': 'Answer', text: 'Die Fahrstunden starten direkt in Lachen oder an einem vereinbarten Treffpunkt in deiner Gemeinde. Peter Thoma ist in der ganzen Region aktiv – Lachen, Altendorf, Pfäffikon SZ, Wangen, Siebnen und Uznach.' } },
         { '@type': 'Question', name: 'Bei welchem StVA mache ich die Prüfung?', acceptedAnswer: { '@type': 'Answer', text: 'Das hängt von deinem Wohnsitz ab. Fahrschüler aus Lachen, Altendorf und Pfäffikon SZ machen die Prüfung meist beim StVA Pfäffikon SZ. Aus dem Raum Uznach ist das StVA Kaltbrunn SG zuständig. Bei Wohnsitz in Zürich gilt das StVA Hinwil ZH.' } },
         { '@type': 'Question', name: 'Soll ich C1 oder C machen?', acceptedAnswer: { '@type': 'Answer', text: 'Wir empfehlen fast immer direkt Kategorie C. Der Mehraufwand gegenüber C1 ist klein, aber du bist für alle Fahrzeuggrössen zugelassen. Wer später C machen möchte, muss sonst einen Grossteil der Ausbildung wiederholen.' } },
-        { '@type': 'Question', name: 'Was kostet der LKW Führerschein insgesamt in Lachen?', acceptedAnswer: { '@type': 'Answer', text: 'Für den Führerschein C solltest du mit CHF 4000–6000 rechnen. Das beinhaltet Sehtest, Lernfahrausweis, Theorieprüfung, Fahrstunden (20–30 à CHF 170), WarmUp & Prüfungsfahrt, Versicherungspauschale und ärztliche Untersuchung.' } },
+        { '@type': 'Question', name: 'Was kostet der LKW Führerschein insgesamt in Lachen?', acceptedAnswer: { '@type': 'Answer', text: 'Für den Führerschein C solltest du mit CHF 4000–6000 rechnen. Das beinhaltet Lernfahrausweis, Theorieprüfung, Fahrstunden (20–30 à CHF 170), WarmUp & Prüfungsfahrt, Versicherungspauschale und ärztliche Untersuchung. Sehtest und Nothelferkurs entfallen – du hast bereits Kat. B.' } },
         { '@type': 'Question', name: 'Brauche ich den CZV Grundkurs?', acceptedAnswer: { '@type': 'Answer', text: 'Ja, wenn du beruflich Lastwagen fahren möchtest, ist der CZV Grundkurs obligatorisch. Wer nur privat fährt, braucht ihn nicht. Driving Team bietet den CZV Grundkurs ebenfalls an.' } },
       ],
     }),
