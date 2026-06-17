@@ -230,6 +230,7 @@
         <h2 class="text-xl font-bold mb-6 text-center">Weitere Angebote</h2>
         <div class="flex flex-wrap justify-center gap-3">
           <a href="/lastwagen-fahrschule/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Lastwagen Fahrschule (alle Infos)</a>
+          <a href="/lastwagen-fahrschule-ce/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Kategorie CE – Anhänger</a>
           <a href="/czv-grundkurs/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">CZV Grundkurs</a>
           <a href="/czv-weiterbildung/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">CZV Weiterbildung</a>
           <a href="/lastwagen-theorie/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Lastwagen Theorie</a>
