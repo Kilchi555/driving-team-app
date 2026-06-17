@@ -464,7 +464,7 @@
       </div>
     </section>
 
-    <LazyStandortMapSection location-key="zuerich" />
+    <LazyStandortMapSection location-key="lachen" />
     <StandorteSection />
 
   </div>
