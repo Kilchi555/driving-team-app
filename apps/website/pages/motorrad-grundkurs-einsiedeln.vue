@@ -54,6 +54,19 @@
       :stats="{ requirements: 4, details: 4, hours: '12h' }"
     />
 
+    <!-- Nächste Kursdaten -->
+    <UpcomingCoursesSection
+      category="PGS"
+      location="Einsiedeln"
+      title="Nächste Kursdaten — Motorrad Grundkurs Einsiedeln"
+      subtitle="Vollständiger Kurs: 3 Kursteile à 4 Stunden · Max. 5 Teilnehmer · CHF 600.–"
+      category-code="PGS"
+      category-label="Motorrad Grundkurs"
+      course-name="Motorrad Grundkurs Einsiedeln"
+      page-url="https://drivingteam.ch/motorrad-grundkurs-einsiedeln/"
+      fetch-key="pgs-einsiedeln-upcoming"
+    />
+
     <!-- Standort & Map -->
     <LazyStandortMapSection location-key="einsiedeln" />
 
@@ -159,7 +172,7 @@
 
     <!-- Andere Standorte -->
     <section class="section-container py-8">
-      <h3 class="text-lg font-bold mb-5 text-center text-gray-900">Motorrad Grundkurs an weiteren Standorten</h3>
+      <h2 class="text-lg font-bold mb-5 text-center text-gray-900">Motorrad Grundkurs an weiteren Standorten</h2>
       <div class="flex flex-wrap justify-center gap-3">
         <a href="/motorrad-grundkurs-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">🏍️ Grundkurs Zürich</a>
         <a href="/motorrad-grundkurs-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">🏍️ Grundkurs Lachen</a>

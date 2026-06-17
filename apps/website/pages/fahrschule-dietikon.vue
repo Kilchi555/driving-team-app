@@ -186,7 +186,6 @@
     </div>
 
     <!-- 9. Finale CTA (primary) -->
-    <CtaSection title="Bereit? Jetzt Termin buchen!" />
 
     <!-- 10. Andere Standorte (weiß) -->
     <StandorteSection exclude="dietikon" />

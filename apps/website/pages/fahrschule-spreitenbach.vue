@@ -141,7 +141,6 @@
       <GutscheinSection />
     </div>
 
-    <CtaSection title="Bereit? Jetzt Termin buchen!" />
 
     <StandorteSection exclude="aargau" />
 
