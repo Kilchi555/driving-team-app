@@ -239,7 +239,7 @@
       </div>
     </section>
 
-    <LazyStandortMapSection location-key="zuerich" />
+    <LazyStandortMapSection location-key="wadenswil" />
     <CtaSection title="LKW Fahrschule Zürich – Jetzt anmelden!" />
   </div>
 </template>

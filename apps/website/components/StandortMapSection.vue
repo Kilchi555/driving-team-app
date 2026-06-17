@@ -177,6 +177,18 @@ const locations: Record<string, {
     lat: '47.4179',
     lng: '8.3640',
   },
+  wadenswil: {
+    city: 'Wädenswil',
+    area: 'Zürichsee-Linkes Ufer',
+    name: 'Parkplatz Neubüel',
+    street: 'Neubüelstrasse',
+    zip: '8820',
+    canton: 'ZH',
+    address: 'Neubüelstrasse, 8820 Wädenswil',
+    region: 'Wädenswil, Horgen, Thalwil, Richterswil, Schönenberg',
+    lat: '47.22640',
+    lng: '8.66700',
+  },
   reichenburg: {
     city: 'Reichenburg',
     area: 'Galgenen bis Bilten',
