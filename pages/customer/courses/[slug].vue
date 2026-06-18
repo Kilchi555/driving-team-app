@@ -383,7 +383,11 @@ useHead(computed(() => ({
   meta: [
     { name: 'description', content: tenant.value?.name ? `Aktuelles Kursangebot von ${tenant.value.name}. Jetzt Platz sichern.` : 'Kursangebot.' },
     { name: 'robots', content: 'noindex, nofollow' }
-  ]
+  ],
+  link: tenantBranding.value?.logo_url ? [
+    { rel: 'icon', type: 'image/png', href: tenantBranding.value.logo_url },
+    { rel: 'apple-touch-icon', href: tenantBranding.value.logo_url }
+  ] : []
 })))
 const courses = ref<any[]>([])
 const selectedCategory = ref('')
@@ -412,7 +416,8 @@ if (initData.value?.success && initData.value?.tenant) {
   tenantBranding.value = {
     primary_color: initData.value.tenant.primary_color || '#10B981',
     secondary_color: initData.value.tenant.secondary_color,
-    accent_color: initData.value.tenant.accent_color
+    accent_color: initData.value.tenant.accent_color,
+    logo_url: initData.value.tenant.logo_url || null,
   }
 }
 
@@ -521,7 +526,8 @@ const loadData = async () => {
     tenantBranding.value = {
       primary_color: response.tenant.primary_color || '#10B981',
       secondary_color: response.tenant.secondary_color,
-      accent_color: response.tenant.accent_color
+      accent_color: response.tenant.accent_color,
+      logo_url: response.tenant.logo_url || null,
     }
     
     // Filter courses where ALL sessions are in the future, OR it's a waitlist course
