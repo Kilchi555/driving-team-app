@@ -796,6 +796,7 @@ onMounted(async () => {
   try {
     await loadData()
     await loadMyRegistrations()
+    checkSuccessParams()
   } catch (e: any) {
     logger.error('Error:', e)
     error.value = 'Ein Fehler ist aufgetreten'
