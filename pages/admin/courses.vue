@@ -589,72 +589,86 @@
           </button>
         </div>
 
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div
             v-for="category in activeCategories"
             :key="category.id"
             @click="editCategoryItem(category)"
-            class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer"
+            class="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer overflow-hidden"
           >
-            <!-- Category Header -->
-            <div class="flex items-center justify-between mb-4">
-              <div class="flex items-center space-x-3">
-                <div 
-                  class="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
-                  :style="{ backgroundColor: category.color + '20', color: category.color }"
-                >
-                  {{ category.icon }}
+            <!-- Color accent bar -->
+            <div class="h-1 w-full" :style="{ background: category.color || primaryColor }"></div>
+
+            <div class="p-5">
+              <!-- Header -->
+              <div class="flex items-start justify-between mb-3">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                    :style="{ backgroundColor: (category.color || primaryColor) + '18', color: category.color || primaryColor }"
+                  >
+                    {{ category.icon }}
+                  </div>
+                  <div>
+                    <h3 class="font-semibold text-gray-900 leading-tight">{{ category.name }}</h3>
+                    <span
+                      class="inline-block text-xs font-mono font-medium px-1.5 py-0.5 rounded mt-0.5"
+                      :style="{ backgroundColor: (category.color || primaryColor) + '18', color: category.color || primaryColor }"
+                    >{{ category.code }}</span>
+                  </div>
                 </div>
-                <div>
-                  <h3 class="text-lg font-semibold text-gray-900">{{ category.name }}</h3>
-                  <span class="text-sm text-gray-600">{{ category.code }}</span>
-                </div>
-              </div>
-              
-              <div class="flex space-x-2">
+
                 <button
                   @click.stop="deleteCategoryItem(category)"
-                  class="text-red-400 hover:text-red-300 transition-colors"
+                  class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-all p-1 rounded"
                   title="Löschen"
                 >
-                  🗑️
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
                 </button>
               </div>
-            </div>
 
-            <!-- Category Details -->
-            <div class="space-y-2 text-sm">
-              <p class="text-gray-700">{{ category.description || 'Keine Beschreibung' }}</p>
-              
-              <div class="flex flex-wrap gap-2 mt-3">
-                <span class="px-2 py-1 bg-gray-400 rounded text-xs">
-                  Max: {{ category.default_max_participants }}
+              <!-- Description -->
+              <p class="text-sm text-gray-500 mb-4 line-clamp-2 leading-relaxed">{{ category.description || 'Keine Beschreibung' }}</p>
+
+              <!-- Stats row -->
+              <div class="flex flex-wrap gap-1.5 mb-4">
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-md text-xs font-medium">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  Max {{ category.default_max_participants }}
                 </span>
-                <span class="px-2 py-1 bg-gray-400 rounded text-xs">
-                  {{ (category.default_price_rappen / 100).toFixed(2) }} CHF
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-md text-xs font-medium">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  CHF {{ (category.default_price_rappen / 100).toFixed(0) }}
                 </span>
-                <span v-if="category.default_requires_room" class="px-2 py-1 rounded text-xs" :style="{ background: primaryColor }">
+                <span v-if="category.default_requires_room" class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-white" :style="{ backgroundColor: category.color || primaryColor }">
                   🏢 Raum
                 </span>
-                <span v-if="category.default_requires_vehicle" class="px-2 py-1 bg-green-600 rounded text-xs">
+                <span v-if="category.default_requires_vehicle" class="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-medium">
                   🚗 Fahrzeug
                 </span>
-                <span v-if="category.requires_sari_sync" class="px-2 py-1 bg-orange-600 rounded text-xs">
+                <span v-if="category.requires_sari_sync" class="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded-md text-xs font-medium">
                   🔗 SARI
                 </span>
               </div>
 
-              <!-- Public Link -->
-              <div class="mt-4 pt-3 border-t border-gray-200">
+              <!-- Footer -->
+              <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                <span class="text-xs text-gray-400">
+                  {{ category.session_count || 1 }} × {{ category.hours_per_session || 8 }}h
+                </span>
                 <a
                   :href="`/courses/category/${category.code}`"
                   target="_blank"
-                  class="inline-flex items-center px-3 py-2 text-white text-sm font-medium rounded-lg transition-colors hover:opacity-90" :style="{ background: primaryColor }"
+                  @click.stop
+                  class="inline-flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-70"
+                  :style="{ color: category.color || primaryColor }"
                 >
-                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  Übersicht
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
-                  Öffentliche Übersicht
                 </a>
               </div>
             </div>
