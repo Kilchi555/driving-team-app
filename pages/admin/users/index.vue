@@ -828,12 +828,17 @@ const invitationFilter = ref<'all' | 'users' | 'invitations'>('all')
 // ── Seat limit tracking ───────────────────────────────────────────────────────
 import { PLANS } from '~/utils/planFeatures'
 
+// Billing info loaded from server (reliable: uses service role key)
+const billingInfo = ref<{ plan: string; addon_seats: number } | null>(null)
+
 const totalSeats = computed(() => {
-  const plan = currentTenant.value?.subscription_plan || 'trial'
+  const source = billingInfo.value ?? currentTenant.value
+  const plan = source?.subscription_plan ?? source?.plan ?? 'trial'
   const planDef = PLANS.find(p => p.id === plan)
   const included = plan === 'trial' ? 3 : (planDef?.includedSeats ?? null)
   if (included === null) return null // unlimited
-  return included + (currentTenant.value?.addon_seats || 0)
+  const addonSeats = source?.addon_seats ?? 0
+  return included + addonSeats
 })
 
 const usedSeats = computed(() => {
@@ -1069,6 +1074,15 @@ const loadUsers = async () => {
         .maybeSingle()
       currentTenant.value = tenantData
       logger.debug('🔍 Current tenant:', tenantData)
+    }
+
+    // Load billing info from server API for reliable seat limit (uses service role key)
+    try {
+      const billing = await $fetch('/api/admin/billing-status') as any
+      if (billing) billingInfo.value = billing
+      logger.debug('🔍 Billing info:', billing)
+    } catch (e) {
+      logger.warn('⚠️ Could not load billing info:', e)
     }
 
     // ✅ API already returns users with stats calculated
