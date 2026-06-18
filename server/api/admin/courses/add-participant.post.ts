@@ -51,7 +51,9 @@ export default defineEventHandler(async (event) => {
     .select('id')
     .eq('email', participant.email)
     .eq('tenant_id', profile.tenant_id)
-    .single()
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (existingUser) {
     userId = existingUser.id
@@ -95,6 +97,11 @@ export default defineEventHandler(async (event) => {
       last_name: participant.last_name,
       email: participant.email,
       phone: participant.phone || null,
+      birthdate: participant.birthdate || null,
+      street: participant.street || null,
+      street_nr: participant.street_nr || null,
+      zip: participant.zip || null,
+      city: participant.city || null,
       status: 'confirmed',
       registered_at: new Date().toISOString(),
       tenant_id: profile.tenant_id,
@@ -114,7 +121,7 @@ export default defineEventHandler(async (event) => {
       method: 'POST',
       body: {
         courseRegistrationId: enrollment.id,
-        paymentMethod: 'wallee'
+        paymentMethod: 'admin'
       }
     })
     logger.debug('✅ Confirmation email queued for:', participant.email)
