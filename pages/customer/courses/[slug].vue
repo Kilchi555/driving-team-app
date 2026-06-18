@@ -706,9 +706,6 @@ const checkSuccessParams = () => {
 
 // Apply query params to filters
 watch(() => route.query, (query) => {
-  // Handle success parameter
-  checkSuccessParams()
-  
   // Apply filter params
   if (query.category) selectedCategory.value = query.category as string
   if (query.location) selectedLocation.value = query.location as string
