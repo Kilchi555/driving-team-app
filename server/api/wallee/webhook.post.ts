@@ -467,12 +467,14 @@ export default defineEventHandler(async (event) => {
                 if (payment.user_id) {
                   userId = payment.user_id
                 } else if (payment.metadata?.email) {
-                  // Look for existing user
+                  // Look for existing user (try all, not just active, to avoid duplicate-key errors)
                   const { data: existingUser } = await supabase
                     .from('users')
                     .select('id')
                     .eq('email', payment.metadata.email)
                     .eq('tenant_id', course.tenant_id)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
                     .maybeSingle()
                   
                   if (existingUser) {
@@ -543,6 +545,19 @@ export default defineEventHandler(async (event) => {
                           tenant_id: course.tenant_id
                         }
                       })
+                      // Fallback: duplicate key — look up the existing user
+                      if (createUserError?.code === '23505') {
+                        const { data: fallbackUser } = await supabase
+                          .from('users')
+                          .select('id')
+                          .eq('email', payment.metadata.email)
+                          .eq('tenant_id', course.tenant_id)
+                          .maybeSingle()
+                        if (fallbackUser) {
+                          userId = fallbackUser.id
+                          logger.info('✅ Fallback: found existing user after duplicate-key error:', userId)
+                        }
+                      }
                     }
                   }
                 }
