@@ -1854,50 +1854,6 @@
       </div>
     </div>
 
-    <!-- Remove Participant Reason Modal -->
-    <Teleport to="body">
-    <div v-if="showRemoveParticipantModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-[9998] p-4" @click.self="showRemoveParticipantModal = false">
-      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full" @click.stop>
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-lg font-bold text-gray-900">Teilnehmer entfernen</h2>
-          <p class="text-sm text-gray-500 mt-1">{{ removingParticipant?.first_name }} {{ removingParticipant?.last_name }}</p>
-        </div>
-        <div class="px-6 py-4 space-y-4">
-          <div class="space-y-3">
-            <h3 class="font-semibold text-gray-900 text-sm">Grund (optional):</h3>
-            <div class="grid grid-cols-2 gap-2">
-              <button
-                v-for="r in removalReasons" :key="r"
-                @click="removalReason = removalReason === r ? '' : r"
-                :class="['px-3 py-2 rounded-lg text-sm border transition-colors text-left', removalReason === r ? 'bg-red-50 border-red-400 text-red-700 font-medium' : 'border-gray-200 text-gray-600 hover:border-gray-300']"
-              >{{ r }}</button>
-            </div>
-            <textarea
-              v-model="removalReasonCustom"
-              placeholder="Eigener Grund (optional)…"
-              rows="2"
-              class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
-            />
-          </div>
-          <!-- Notify checkbox -->
-          <label class="flex items-center gap-3 cursor-pointer select-none p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-            <input type="checkbox" v-model="removalNotify" class="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-400" />
-            <div>
-              <span class="text-sm font-medium text-gray-900">Teilnehmer per E-Mail benachrichtigen</span>
-              <p class="text-xs text-gray-400 mt-0.5">Storno-Bestätigung wird an {{ removingParticipant?.email || 'keine E-Mail bekannt' }} gesendet</p>
-            </div>
-          </label>
-        </div>
-        <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
-          <button @click="showRemoveParticipantModal = false" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition-colors">Abbrechen</button>
-          <button @click="confirmRemoveParticipant" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors">
-            {{ removalNotify ? 'Entfernen & E-Mail senden' : 'Entfernen (ohne Benachrichtigung)' }}
-          </button>
-        </div>
-      </div>
-    </div>
-    </Teleport>
-
     <!-- Status Change Modal - Using Teleport for reliable rendering -->
     <Teleport to="body">
       <!-- DEBUG: Check if modal renders -->
@@ -3431,7 +3387,7 @@
                     </svg>
                   </button>
                   <button
-                    @click="removeParticipant(enrollment)"
+                    @click.stop="removeParticipant(enrollment)"
                     class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     title="Entfernen"
                   >
@@ -4186,6 +4142,49 @@
     </div>
   </div>
   
+  <!-- Remove Participant Reason Modal -->
+  <Teleport to="body">
+    <div v-if="showRemoveParticipantModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-[99999] p-4" @click.self="showRemoveParticipantModal = false">
+      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full" @click.stop>
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-bold text-gray-900">Teilnehmer entfernen</h2>
+          <p class="text-sm text-gray-500 mt-1">{{ removingParticipant?.first_name }} {{ removingParticipant?.last_name }}</p>
+        </div>
+        <div class="px-6 py-4 space-y-4">
+          <div class="space-y-3">
+            <h3 class="font-semibold text-gray-900 text-sm">Grund (optional):</h3>
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                v-for="r in removalReasons" :key="r"
+                @click="removalReason = removalReason === r ? '' : r"
+                :class="['px-3 py-2 rounded-lg text-sm border transition-colors text-left', removalReason === r ? 'bg-red-50 border-red-400 text-red-700 font-medium' : 'border-gray-200 text-gray-600 hover:border-gray-300']"
+              >{{ r }}</button>
+            </div>
+            <textarea
+              v-model="removalReasonCustom"
+              placeholder="Eigener Grund (optional)…"
+              rows="2"
+              class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+            />
+          </div>
+          <label class="flex items-center gap-3 cursor-pointer select-none p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+            <input type="checkbox" v-model="removalNotify" class="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-400" />
+            <div>
+              <span class="text-sm font-medium text-gray-900">Teilnehmer per E-Mail benachrichtigen</span>
+              <p class="text-xs text-gray-400 mt-0.5">Storno-Bestätigung wird an {{ removingParticipant?.email || 'keine E-Mail bekannt' }} gesendet</p>
+            </div>
+          </label>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
+          <button @click="showRemoveParticipantModal = false" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition-colors">Abbrechen</button>
+          <button @click="confirmRemoveParticipant" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors">
+            {{ removalNotify ? 'Entfernen & E-Mail senden' : 'Entfernen (ohne Benachrichtigung)' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
 </template>
 
 <script setup lang="ts">
