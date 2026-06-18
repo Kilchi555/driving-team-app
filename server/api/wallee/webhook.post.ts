@@ -59,7 +59,7 @@ export default defineEventHandler(async (event) => {
   const isProduction = host.includes('app.simy.ch') && !host.includes('preview')
   const isPreview = host.includes('preview.simy.ch')
   
-  logger.info(`Webhook received on host: ${host} (Production: ${isProduction}, Preview: ${isPreview}) [v2.1-token-fix]`)
+  logger.info(`Webhook received on host: ${host} (Production: ${isProduction}, Preview: ${isPreview}) [v2.2-no-user-required]`)
   
   let webhookLogId: string | undefined
   let transactionId: string | undefined
@@ -562,13 +562,13 @@ export default defineEventHandler(async (event) => {
                   }
                 }
                 
-                // Create registration
-                if (userId) {
-                  logger.debug(`📋 Building registration object with userId: ${userId}`)
+                // Create registration — even without a userId (email stored directly on registration)
+                if (userId || payment.metadata?.email) {
+                  logger.debug(`📋 Building registration object with userId: ${userId || 'none (guest without account)'}`)
                   registrationsToCreate.push({
                     course_id: course.id,
                     tenant_id: course.tenant_id,
-                    user_id: userId,
+                    user_id: userId || null,
                     payment_id: payment.id,
                     first_name: payment.metadata?.firstname || '',
                     last_name: payment.metadata?.lastname || '',
@@ -592,7 +592,7 @@ export default defineEventHandler(async (event) => {
                   })
                   logger.debug(`✅ Registration object added to array. Total registrations to create: ${registrationsToCreate.length}`)
                 } else {
-                  logger.error('❌ No userId available, skipping registration creation')
+                  logger.error('❌ No email in payment metadata, skipping registration creation')
                 }
               } else {
                 logger.error(`❌ Course not found for course_id: ${payment.metadata.course_id}`)
