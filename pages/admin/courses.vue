@@ -2172,6 +2172,17 @@
             ></textarea>
           </div>
 
+          <div>
+            <label class="block text-sm font-bold text-black mb-1">E-Mail: «Wichtig!» Hinweise</label>
+            <p class="text-xs text-gray-500 mb-2">Wird im gelben Bereich der Anmeldebestätigung angezeigt. HTML-Liste möglich, z.B. <code class="bg-gray-100 px-1 rounded">&lt;li&gt;Lernfahrausweis mitnehmen&lt;/li&gt;</code></p>
+            <textarea
+              v-model="categoryForm.email_important_notice"
+              rows="4"
+              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2 font-mono text-xs"
+              placeholder="<li>Gültiger Lernfahrausweis mitnehmen</li>&#10;<li>AGB's beachten</li>"
+            ></textarea>
+          </div>
+
           <!-- Visual Settings -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -4568,8 +4579,10 @@ const categoryForm = ref({
   allow_partial_enrollment: false,
   partial_start_position: 3,
   partial_price_rappen: 0,
-  // Waitlist
+    // Waitlist
   waitlist_enabled: false,
+  // Email
+  email_important_notice: '',
 })
 
 const vehicleForm = ref({
@@ -5420,6 +5433,8 @@ const editCategoryItem = (category: any) => {
     partial_price_rappen: category.partial_price_rappen || 0,
     // Waitlist
     waitlist_enabled: category.waitlist_enabled || false,
+    // Email
+    email_important_notice: category.email_important_notice || '',
   }
   defaultCategoryPrice.value = category.default_price_rappen / 100
   partialCategoryPrice.value = (category.partial_price_rappen || 0) / 100
@@ -5537,6 +5552,8 @@ const resetCategoryForm = () => {
     partial_price_rappen: 0,
     // Waitlist
     waitlist_enabled: false,
+    // Email
+    email_important_notice: '',
   }
   defaultCategoryPrice.value = 0
   partialCategoryPrice.value = 0

@@ -70,7 +70,8 @@ export default defineEventHandler(async (event) => {
           name,
           slug,
           contact_email,
-          primary_color
+          primary_color,
+          secondary_color
         )
       `)
       .eq('id', courseRegistrationId)
@@ -108,6 +109,18 @@ export default defineEventHandler(async (event) => {
 
     const course = enrollment.courses as any
     const tenant = enrollment.tenants as any
+    
+    // Fetch course category to get email_important_notice
+    let courseCategory: any = null
+    if (course?.category && tenant?.id) {
+      const { data: cat } = await supabase
+        .from('course_categories')
+        .select('email_important_notice, name')
+        .eq('code', course.category)
+        .eq('tenant_id', tenant.id)
+        .single()
+      courseCategory = cat
+    }
     
     // Format sessions - apply custom sessions if available
     let sessions = course?.course_sessions || []
@@ -192,72 +205,53 @@ export default defineEventHandler(async (event) => {
       `
     }
 
-    // 4. Build "Wichtig!" section based on course category
-    const courseCategory = course?.category?.toUpperCase() || ''
-    const isVKU = courseCategory === 'VKU'
-    const isPGS = courseCategory === 'PGS'
+    // 4. Build "Wichtig!" section – use admin-configured notice if available, otherwise fall back
+    const courseCategoryCode = course?.category?.toUpperCase() || ''
+    const isVKU = courseCategoryCode === 'VKU'
+    const isPGS = courseCategoryCode === 'PGS'
     const isEinsiedeln = course?.description?.toLowerCase().includes('einsiedeln')
     const isCashPayment = paymentMethod === 'cash'
     const tenantSlug = tenant?.slug || ''
     const agbUrl = `https://app.simy.ch/reglemente/agb?tenant=${tenantSlug}`
-    
-    let importantNotice = ''
-    if (isVKU) {
-      importantNotice = `
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #fef3c7; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f59e0b;">
-          <tr>
-            <td style="padding: 12px;">
-              <h3 style="margin: 0 0 8px 0; color: #92400e; font-size: 14px; font-weight: 600;">Wichtig!</h3>
-              <ul style="margin: 0; padding-left: 20px; color: #92400e; font-size: 13px;">
+
+    // Build the list items for importantNotice
+    let importantListItems = ''
+
+    if (courseCategory?.email_important_notice?.trim()) {
+      // Admin-configured notice – use as-is (expected to contain <li> tags)
+      importantListItems = courseCategory.email_important_notice
+    } else if (isVKU) {
+      importantListItems = `
                 <li>Gültiger Lernfahrausweis mitnehmen</li>
-                <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>
-              </ul>
-            </td>
-          </tr>
-        </table>
-      `
+                <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>`
     } else if (isPGS) {
-      let pgsNotices = `
+      importantListItems = `
                 <li>Eigenes betriebssicheres Fahrzeug ist Pflicht</li>
                 <li>Selbständiges Fahren ist Voraussetzung für die Teilnahme</li>
                 <li>Gültiger Lernfahrausweis mitnehmen</li>`
-      
-      // Add cash notice for Einsiedeln PGS
       if (isEinsiedeln && isCashPayment) {
-        pgsNotices += `
+        importantListItems += `
                 <li><strong>Kursgeld in bar mitnehmen (CHF ${price})</strong></li>`
       }
-      
-      pgsNotices += `
+      importantListItems += `
                 <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>`
-      
-      importantNotice = `
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #fef3c7; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f59e0b;">
-          <tr>
-            <td style="padding: 12px;">
-              <h3 style="margin: 0 0 8px 0; color: #92400e; font-size: 14px; font-weight: 600;">Wichtig!</h3>
-              <ul style="margin: 0; padding-left: 20px; color: #92400e; font-size: 13px;">${pgsNotices}
-              </ul>
-            </td>
-          </tr>
-        </table>
-      `
     } else {
-      // Default for other course types
-      importantNotice = `
+      importantListItems = `
+                <li>Gültiger Lernfahrausweis mitnehmen</li>
+                <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>`
+    }
+
+    const importantNotice = `
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #fef3c7; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f59e0b;">
           <tr>
             <td style="padding: 12px;">
               <h3 style="margin: 0 0 8px 0; color: #92400e; font-size: 14px; font-weight: 600;">Wichtig!</h3>
-              <ul style="margin: 0; padding-left: 20px; color: #92400e; font-size: 13px;">
-                <li>Gültiger Lernfahrausweis mitnehmen</li>
-                <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>
+              <ul style="margin: 0; padding-left: 20px; color: #92400e; font-size: 13px;">${importantListItems}
               </ul>
             </td>
           </tr>
         </table>
       `
-    }
 
     // 5. Build HTML email with responsive design
     const enrollmentEmail = {
@@ -279,7 +273,7 @@ export default defineEventHandler(async (event) => {
                   
                   <!-- Header -->
                   <tr>
-                    <td style="background: linear-gradient(135deg, ${tenant?.primary_color || '#10B981'} 0%, rgba(16, 185, 129, 0.8) 100%); color: white; padding: 25px 20px; text-align: center;">
+                    <td style="background: linear-gradient(135deg, ${tenant?.primary_color || '#10B981'} 0%, ${tenant?.secondary_color || tenant?.primary_color || '#059669'} 100%); color: white; padding: 25px 20px; text-align: center;">
                       <h1 style="margin: 0; font-size: 22px; font-weight: 600;">Anmeldebestätigung</h1>
                       <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">${tenant?.name}</p>
                     </td>
@@ -296,7 +290,8 @@ export default defineEventHandler(async (event) => {
                         <tr>
                           <td style="padding: 20px;">
                             <h3 style="margin: 0 0 15px 0; color: ${tenant?.primary_color || '#10B981'}; font-size: 15px; font-weight: 600;">Kursdetails</h3>
-                            <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Kurs:</strong> ${course?.name?.split(' - ')[0]}</p>
+                            <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Kurs:</strong> ${course?.name?.split(' - ')[0]}${courseCategory?.name ? ` – ${courseCategory.name}` : ''}</p>
+                            ${courseCategory?.description ? `<p style="margin: 0 0 8px 0; font-size: 13px; color: #6b7280;">${courseCategory.description}</p>` : ''}
                             <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Standort:</strong> ${course?.description}</p>
                             <p style="margin: 0 0 12px 0; font-size: 13px;"><strong>Kurskosten:</strong> CHF ${price}</p>
                             
