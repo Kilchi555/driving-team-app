@@ -218,8 +218,17 @@ export default defineEventHandler(async (event) => {
     let importantListItems = ''
 
     if (courseCategory?.email_important_notice?.trim()) {
-      // Admin-configured notice – use as-is (expected to contain <li> tags)
-      importantListItems = courseCategory.email_important_notice
+      // Admin-configured notice: support both plain-text lines and legacy <li> HTML
+      const raw = courseCategory.email_important_notice.trim()
+      if (raw.includes('<li>')) {
+        importantListItems = raw
+      } else {
+        importantListItems = raw.split('\n')
+          .map((s: string) => s.trim())
+          .filter((s: string) => s)
+          .map((s: string) => `\n                <li>${s}</li>`)
+          .join('')
+      }
     } else if (isVKU) {
       importantListItems = `
                 <li>Gültiger Lernfahrausweis mitnehmen</li>

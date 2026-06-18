@@ -2174,13 +2174,36 @@
 
           <div>
             <label class="block text-sm font-bold text-black mb-1">E-Mail: «Wichtig!» Hinweise</label>
-            <p class="text-xs text-gray-500 mb-2">Wird im gelben Bereich der Anmeldebestätigung angezeigt. HTML-Liste möglich, z.B. <code class="bg-gray-100 px-1 rounded">&lt;li&gt;Lernfahrausweis mitnehmen&lt;/li&gt;</code></p>
-            <textarea
-              v-model="categoryForm.email_important_notice"
-              rows="4"
-              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2 font-mono text-xs"
-              placeholder="<li>Gültiger Lernfahrausweis mitnehmen</li>&#10;<li>AGB's beachten</li>"
-            ></textarea>
+            <p class="text-xs text-gray-500 mb-2">Wird als Aufzählung im gelben Bereich der Anmeldebestätigung angezeigt.</p>
+            <div class="space-y-2">
+              <div
+                v-for="(item, index) in emailImportantNoticeItems"
+                :key="index"
+                class="flex items-center gap-2"
+              >
+                <span class="text-gray-400 text-sm">•</span>
+                <input
+                  v-model="emailImportantNoticeItems[index]"
+                  type="text"
+                  class="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 tenant-focus focus:outline-none focus:ring-2 text-sm"
+                  placeholder="z.B. Gültiger Lernfahrausweis mitnehmen"
+                />
+                <button
+                  type="button"
+                  @click="removeImportantNoticeItem(index)"
+                  class="text-gray-400 hover:text-red-500 transition-colors p-1"
+                  title="Entfernen"
+                >✕</button>
+              </div>
+            </div>
+            <button
+              type="button"
+              @click="addImportantNoticeItem"
+              class="mt-2 text-sm flex items-center gap-1 hover:opacity-80 transition-opacity"
+              :style="{ color: primaryColor }"
+            >
+              <span class="text-lg leading-none">+</span> Hinweis hinzufügen
+            </button>
           </div>
 
           <!-- Visual Settings -->
@@ -3925,13 +3948,36 @@
 
         <div>
           <label class="block text-sm font-medium text-gray-500 mb-1">E-Mail: «Wichtig!» Hinweise</label>
-          <p class="text-xs text-gray-500 mb-2">Wird im gelben Bereich der Anmeldebestätigung angezeigt. HTML-Liste möglich, z.B. <code class="bg-gray-100 px-1 rounded">&lt;li&gt;Lernfahrausweis mitnehmen&lt;/li&gt;</code></p>
-          <textarea
-            v-model="categoryForm.email_important_notice"
-            rows="4"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2 font-mono text-xs"
-            placeholder="<li>Gültiger Lernfahrausweis mitnehmen</li>&#10;<li>AGB's beachten</li>"
-          ></textarea>
+          <p class="text-xs text-gray-500 mb-2">Wird als Aufzählung im gelben Bereich der Anmeldebestätigung angezeigt.</p>
+          <div class="space-y-2">
+            <div
+              v-for="(item, index) in emailImportantNoticeItems"
+              :key="index"
+              class="flex items-center gap-2"
+            >
+              <span class="text-gray-400 text-sm">•</span>
+              <input
+                v-model="emailImportantNoticeItems[index]"
+                type="text"
+                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 tenant-focus focus:outline-none focus:ring-2 text-sm"
+                placeholder="z.B. Gültiger Lernfahrausweis mitnehmen"
+              />
+              <button
+                type="button"
+                @click="removeImportantNoticeItem(index)"
+                class="text-gray-400 hover:text-red-500 transition-colors p-1"
+                title="Entfernen"
+              >✕</button>
+            </div>
+          </div>
+          <button
+            type="button"
+            @click="addImportantNoticeItem"
+            class="mt-2 text-sm flex items-center gap-1 hover:opacity-80 transition-opacity"
+            :style="{ color: primaryColor }"
+          >
+            <span class="text-lg leading-none">+</span> Hinweis hinzufügen
+          </button>
         </div>
 
         <!-- SARI Integration -->
@@ -4566,6 +4612,35 @@ watch([vehicles, availableRooms, generalResources], () => {
 })
 
 
+
+// Manages the "Wichtig!" list items as plain text array for the UI.
+// Stored in DB as newline-separated text, converted to <li> tags in the email.
+const emailImportantNoticeItems = ref<string[]>([''])
+
+const addImportantNoticeItem = () => {
+  emailImportantNoticeItems.value.push('')
+}
+const removeImportantNoticeItem = (index: number) => {
+  if (emailImportantNoticeItems.value.length > 1) {
+    emailImportantNoticeItems.value.splice(index, 1)
+  } else {
+    emailImportantNoticeItems.value[0] = ''
+  }
+}
+const importantNoticeToString = () =>
+  emailImportantNoticeItems.value.filter(s => s.trim()).join('\n')
+const importantNoticeFromString = (val: string) => {
+  if (!val?.trim()) return ['']
+  // Support both plain-text lines and legacy <li>...</li> HTML
+  if (val.includes('<li>')) {
+    const matches = [...val.matchAll(/<li>([\s\S]*?)<\/li>/gi)]
+    const items = matches.map(m => m[1].trim()).filter(Boolean)
+    return items.length ? items : ['']
+  }
+  return val.split('\n').map(s => s.trim()).filter(Boolean).length
+    ? val.split('\n').map(s => s.trim()).filter(Boolean)
+    : ['']
+}
 
 const categoryForm = ref({
   code: '',
@@ -5447,6 +5522,7 @@ const editCategoryItem = (category: any) => {
     // Email
     email_important_notice: category.email_important_notice || '',
   }
+  emailImportantNoticeItems.value = importantNoticeFromString(category.email_important_notice || '')
   defaultCategoryPrice.value = category.default_price_rappen / 100
   partialCategoryPrice.value = (category.partial_price_rappen || 0) / 100
   showEditCategoryModal.value = true
@@ -5490,6 +5566,9 @@ const saveCategory = async () => {
 
     // Always recompute total to ensure constraint total = session_count * hours_per_session
     categoryForm.value.total_duration_hours = (categoryForm.value.session_count || 1) * (categoryForm.value.hours_per_session || 8)
+
+    // Sync important notice from the list UI
+    categoryForm.value.email_important_notice = importantNoticeToString()
 
     // Prepare session structure JSON
     const sessionStructure = {
@@ -5566,6 +5645,7 @@ const resetCategoryForm = () => {
     // Email
     email_important_notice: '',
   }
+  emailImportantNoticeItems.value = ['']
   defaultCategoryPrice.value = 0
   partialCategoryPrice.value = 0
 }
