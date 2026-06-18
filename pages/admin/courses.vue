@@ -3923,6 +3923,17 @@
           ></textarea>
         </div>
 
+        <div>
+          <label class="block text-sm font-medium text-gray-500 mb-1">E-Mail: «Wichtig!» Hinweise</label>
+          <p class="text-xs text-gray-500 mb-2">Wird im gelben Bereich der Anmeldebestätigung angezeigt. HTML-Liste möglich, z.B. <code class="bg-gray-100 px-1 rounded">&lt;li&gt;Lernfahrausweis mitnehmen&lt;/li&gt;</code></p>
+          <textarea
+            v-model="categoryForm.email_important_notice"
+            rows="4"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2 font-mono text-xs"
+            placeholder="<li>Gültiger Lernfahrausweis mitnehmen</li>&#10;<li>AGB's beachten</li>"
+          ></textarea>
+        </div>
+
         <!-- SARI Integration -->
         <div class="border-t border-gray-200 pt-4">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">SARI Integration</h3>
