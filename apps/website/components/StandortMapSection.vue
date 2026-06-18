@@ -10,7 +10,7 @@
         <div ref="mapContainer" class="lg:col-span-2 h-72 lg:h-[380px]">
           <iframe
             v-if="mapLoaded"
-            :src="`https://maps.google.com/maps?q=${encodeURIComponent(location.name + ', ' + location.street + ', ' + location.zip + ' ' + location.city + ', Schweiz')}&output=embed&hl=de&z=16`"
+            :src="`https://maps.google.com/maps?q=${location.lat},${location.lng}&output=embed&hl=de&z=16`"
             class="w-full h-full border-0"
             referrerpolicy="no-referrer-when-downgrade"
             :title="`Fahrschule Driving Team ${location.city} – Karte`"
