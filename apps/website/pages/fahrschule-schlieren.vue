@@ -63,7 +63,7 @@
 
     <!-- Standort Map -->
     <div class="bg-gray-50">
-      <LazyStandortMapSection location-key="zuerich" />
+      <LazyStandortMapSection location-key="schlieren" />
     </div>
 
     <!-- Ausbildungsthemen -->

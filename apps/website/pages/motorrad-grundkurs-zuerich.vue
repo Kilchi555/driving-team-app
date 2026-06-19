@@ -88,7 +88,7 @@
     />
 
     <!-- Standort & Map -->
-    <LazyStandortMapSection location-key="zuerich" />
+    <LazyStandortMapSection location-key="zuerich_motorrad" />
 
     <!-- Kategorien -->
     <MotorradKategorienSection />
