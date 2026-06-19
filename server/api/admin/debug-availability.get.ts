@@ -59,14 +59,41 @@ export default defineEventHandler(async (event) => {
     .not('status', 'eq', 'deleted')
   result.appointments_next7days = (apts || []).length
   
-  // 8. Actually run the calculator for Rahel (next 7 days, dry-run by checking count)
-  try {
-    const endDate7 = new Date(); endDate7.setDate(endDate7.getDate() + 7)
-    const slotsWritten = await availabilityCalculator.recalculateForStaff(TENANT_ID, RAHEL_ID, 7)
-    result.calculator_result = { slots_written: slotsWritten, error: null }
-  } catch (e: any) {
-    result.calculator_result = { slots_written: null, error: e.message }
+  // 8. Check actual slots in DB right now
+  const now2 = new Date()
+  const { data: existingSlots, error: slotErr } = await supabase
+    .from('availability_slots')
+    .select('id, start_time, end_time, category_code, is_available, staff_id')
+    .eq('tenant_id', TENANT_ID)
+    .eq('staff_id', RAHEL_ID)
+    .gte('start_time', now2.toISOString())
+    .order('start_time', { ascending: true })
+    .limit(5)
+  result.existing_slots_in_db = { 
+    error: slotErr?.message, 
+    sample: existingSlots?.map((s: any) => ({ 
+      start: s.start_time, 
+      cat: s.category_code, 
+      available: s.is_available 
+    })) 
   }
+  
+  // 9. Count total future slots in DB
+  const { count: totalCount } = await supabase
+    .from('availability_slots')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', TENANT_ID)
+    .gte('start_time', now2.toISOString())
+  result.total_future_slots_count = totalCount
+
+  // 10. Check BPT slots specifically
+  const { count: bptCount } = await supabase
+    .from('availability_slots')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', TENANT_ID)
+    .eq('category_code', 'BPT')
+    .gte('start_time', now2.toISOString())
+  result.bpt_future_slots_count = bptCount
   
   return result
 })
