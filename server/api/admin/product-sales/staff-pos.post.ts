@@ -128,8 +128,8 @@ export default defineEventHandler(async (event) => {
       customersEmailAddress: customer_email!,
       customerId: `pos-${profile.tenant_id}-${customer_email!.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`.substring(0, 100),
       merchantReference: `pos-${sale.id} | ${toAscii(resolvedCustomerName)}`.substring(0, 100),
-      successUrl: `${baseUrl}/payment/success?transaction_id=${sale.id}`,
-      failedUrl: `${baseUrl}/payment/failed?transaction_id=${sale.id}`
+      successUrl: `${baseUrl}/payment/success?payment_id=${sale.id}`,
+      failedUrl: `${baseUrl}/payment/failed?payment_id=${sale.id}`
     }
 
     let createdTransaction: any
@@ -167,33 +167,94 @@ export default defineEventHandler(async (event) => {
       // Load tenant branding for the email
       const { data: tenant } = await supabase
         .from('tenants')
-        .select('name, from_email, resend_domain_verified')
+        .select('name, from_email, resend_domain_verified, primary_color, logo_url')
         .eq('id', profile.tenant_id)
         .single()
 
       const tenantName = tenant?.name || 'Ihre Fahrschule'
-      const productList = items.map(i => `${i.quantity}× ${i.product_name} – CHF ${(i.total_price_rappen / 100).toFixed(2)}`).join('<br>')
+      const brandColor = tenant?.primary_color || '#16a34a'
+      const logoUrl = tenant?.logo_url
+      const productList = items.map(i =>
+        `<tr>
+          <td style="padding: 8px 0; color: #374151; font-size: 15px;">${i.quantity}× ${i.product_name}</td>
+          <td style="padding: 8px 0; color: #374151; font-size: 15px; text-align: right;">CHF ${(i.total_price_rappen / 100).toFixed(2)}</td>
+        </tr>`
+      ).join('')
       const totalCHF = (total_amount_rappen / 100).toFixed(2)
 
-      const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #1a1a1a;">Ihre Zahlungseinladung</h2>
-          <p>Guten Tag${customer_name ? ` ${customer_name}` : ''},</p>
-          <p>${tenantName} hat eine Zahlung für folgende Produkte für Sie vorbereitet:</p>
-          <div style="background: #f9f9f9; border-radius: 8px; padding: 16px; margin: 20px 0;">
-            <p style="margin: 0;">${productList}</p>
-            <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 12px 0;">
-            <p style="font-weight: bold; font-size: 18px; margin: 0;">Total: CHF ${totalCHF}</p>
-          </div>
-          <a href="${paymentUrl}"
-             style="display: inline-block; background: #16a34a; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin: 10px 0;">
-            💳 Jetzt bezahlen
-          </a>
-          <p style="color: #666; font-size: 13px; margin-top: 20px;">
-            Sichere Zahlung über Wallee. Dieser Link ist 24 Stunden gültig.
-          </p>
-        </div>
-      `
+      const html = `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0; padding:0; background:#f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6; padding: 40px 16px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+        <!-- Header with brand color -->
+        <tr>
+          <td style="background:${brandColor}; padding: 32px 40px; text-align:center;">
+            ${logoUrl ? `<img src="${logoUrl}" alt="${tenantName}" style="max-height:48px; max-width:200px; object-fit:contain; margin-bottom:16px; display:block; margin-left:auto; margin-right:auto;">` : ''}
+            <h1 style="margin:0; color:#ffffff; font-size:22px; font-weight:700; letter-spacing:-0.3px;">${tenantName}</h1>
+            <p style="margin:8px 0 0; color:rgba(255,255,255,0.85); font-size:14px;">Zahlungseinladung</p>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding: 36px 40px;">
+            <p style="margin:0 0 8px; font-size:16px; color:#111827; font-weight:600;">Guten Tag${customer_name ? `, ${customer_name}` : ''},</p>
+            <p style="margin:0 0 28px; font-size:15px; color:#6b7280; line-height:1.6;">${tenantName} hat für Sie eine Zahlung vorbereitet. Bitte klicken Sie auf den Button unten, um sicher zu bezahlen.</p>
+
+            <!-- Product table -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; margin-bottom:24px;">
+              <thead>
+                <tr style="background:#f9fafb;">
+                  <th style="padding:12px 16px; text-align:left; font-size:12px; font-weight:600; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em;">Produkt</th>
+                  <th style="padding:12px 16px; text-align:right; font-size:12px; font-weight:600; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em;">Betrag</th>
+                </tr>
+              </thead>
+              <tbody style="border-top:1px solid #e5e7eb;">
+                ${productList}
+              </tbody>
+              <tfoot>
+                <tr style="background:#f9fafb; border-top:2px solid #e5e7eb;">
+                  <td style="padding:14px 16px; font-size:16px; font-weight:700; color:#111827;">Total</td>
+                  <td style="padding:14px 16px; font-size:18px; font-weight:800; color:${brandColor}; text-align:right;">CHF ${totalCHF}</td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <!-- CTA Button -->
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="center" style="padding:8px 0 28px;">
+                  <a href="${paymentUrl}"
+                     style="display:inline-block; background:${brandColor}; color:#ffffff; padding:16px 40px; border-radius:10px; text-decoration:none; font-weight:700; font-size:16px; letter-spacing:-0.2px;">
+                    💳 Jetzt sicher bezahlen
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:0; font-size:13px; color:#9ca3af; text-align:center; line-height:1.6;">
+              Sichere Zahlung via Wallee · Dieser Link ist 24 Stunden gültig<br>
+              Wenn Sie Fragen haben, wenden Sie sich bitte direkt an ${tenantName}.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f9fafb; padding:20px 40px; border-top:1px solid #e5e7eb; text-align:center;">
+            <p style="margin:0; font-size:12px; color:#9ca3af;">${tenantName} · Powered by Simy</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
 
       await sendTenantEmail(profile.tenant_id, {
         to: customer_email,

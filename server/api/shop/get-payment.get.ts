@@ -21,6 +21,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
+    // ── 1. Look in payments table (regular shop/booking payments) ──────────
     let dbQuery = supabase
       .from('payments')
       .select('id, payment_status, total_amount_rappen, metadata, tenant_id, wallee_transaction_id')
@@ -28,7 +29,6 @@ export default defineEventHandler(async (event) => {
     if (paymentId && validateUUID(paymentId)) {
       dbQuery = dbQuery.eq('id', paymentId)
     } else if (transactionId) {
-      // Try as UUID first, then as wallee numeric ID
       if (validateUUID(transactionId)) {
         dbQuery = dbQuery.eq('id', transactionId)
       } else {
@@ -36,20 +36,41 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const { data, error } = await dbQuery.single()
+    const { data, error } = await dbQuery.maybeSingle()
 
-    if (error || !data) {
-      logger.warn('⚠️ shop/get-payment: not found', { paymentId, transactionId, error: error?.message })
-      throw createError({ statusCode: 404, message: 'Zahlung nicht gefunden' })
+    if (data) {
+      const { data: voucherData } = await supabase
+        .from('vouchers')
+        .select('id, code, name, description, amount_rappen, recipient_name, valid_until, tenant_id')
+        .eq('payment_id', data.id)
+      return { data, vouchers: voucherData || [] }
     }
 
-    // Also load vouchers so the success page doesn't need a second round-trip
-    const { data: voucherData } = await supabase
-      .from('vouchers')
-      .select('id, code, name, description, amount_rappen, recipient_name, valid_until, tenant_id')
-      .eq('payment_id', data.id)
+    // ── 2. Fallback: look in product_sales table (staff POS sales) ─────────
+    const saleId = paymentId || transactionId
+    if (saleId && validateUUID(saleId)) {
+      const { data: saleData } = await supabase
+        .from('product_sales')
+        .select('id, status, total_amount_rappen, tenant_id, payment_method')
+        .eq('id', saleId)
+        .maybeSingle()
 
-    return { data, vouchers: voucherData || [] }
+      if (saleData) {
+        // Map product_sale fields to the shape the success page expects
+        const mapped = {
+          id: saleData.id,
+          payment_status: saleData.status === 'completed' ? 'completed' : saleData.status === 'pending' ? 'pending' : 'failed',
+          total_amount_rappen: saleData.total_amount_rappen,
+          tenant_id: saleData.tenant_id,
+          metadata: null,
+          wallee_transaction_id: null
+        }
+        return { data: mapped, vouchers: [] }
+      }
+    }
+
+    logger.warn('⚠️ shop/get-payment: not found', { paymentId, transactionId, error: error?.message })
+    throw createError({ statusCode: 404, message: 'Zahlung nicht gefunden' })
   } catch (err: any) {
     if (err.statusCode) throw err
     logger.error('❌ shop/get-payment error:', err.message)
