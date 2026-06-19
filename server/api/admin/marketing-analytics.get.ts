@@ -150,18 +150,30 @@ export default defineEventHandler(async (event) => {
     googleAdsById[r.campaign_id].conversions += parseFloat(r.conversions ?? '0')
   }
 
-  // Match appointments to campaigns by normalized utm_campaign ↔ campaign_name
-  const aptByCampaign: Record<string, { count: number; revenue_rappen: number }> = {}
+  // Match appointments to campaigns:
+  // 1. Exact match on campaign_id (utm_campaign = numeric ID, set via {campaignid} ValueTrack)
+  // 2. Fallback: normalized name match (utm_campaign = human-readable name via custom param)
+  const aptByCampaignId: Record<string, { count: number; revenue_rappen: number }> = {}
+  const aptByCampaignName: Record<string, { count: number; revenue_rappen: number }> = {}
   for (const a of googleApts) {
-    const key = normCampaign(a.utm_campaign ?? 'unbekannt')
-    if (!aptByCampaign[key]) aptByCampaign[key] = { count: 0, revenue_rappen: 0 }
-    aptByCampaign[key].count++
-    aptByCampaign[key].revenue_rappen += revenueMap[a.id] ?? 0
+    const rawCampaign = a.utm_campaign ?? ''
+    // Numeric → campaign_id match
+    const idKey = rawCampaign.trim()
+    if (!aptByCampaignId[idKey]) aptByCampaignId[idKey] = { count: 0, revenue_rappen: 0 }
+    aptByCampaignId[idKey].count++
+    aptByCampaignId[idKey].revenue_rappen += revenueMap[a.id] ?? 0
+    // Name fallback
+    const nameKey = normCampaign(rawCampaign)
+    if (!aptByCampaignName[nameKey]) aptByCampaignName[nameKey] = { count: 0, revenue_rappen: 0 }
+    aptByCampaignName[nameKey].count++
+    aptByCampaignName[nameKey].revenue_rappen += revenueMap[a.id] ?? 0
   }
 
   const googleCampaignsEnriched = Object.values(googleAdsById).map((c) => {
-    const normName = normCampaign(c.campaign_name)
-    const attr = aptByCampaign[normName] ?? { count: 0, revenue_rappen: 0 }
+    // Try campaign_id match first, then name match
+    const attrById = aptByCampaignId[c.campaign_id] ?? { count: 0, revenue_rappen: 0 }
+    const attrByName = aptByCampaignName[normCampaign(c.campaign_name)] ?? { count: 0, revenue_rappen: 0 }
+    const attr = attrById.count > 0 ? attrById : attrByName
     const spend = c.cost_micros / 1_000_000
     const revenue = attr.revenue_rappen / 100
     return {
