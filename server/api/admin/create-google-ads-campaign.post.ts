@@ -173,6 +173,7 @@ export default defineEventHandler(async (event) => {
       manualCpc: {
         enhancedCpcEnabled: false,
       },
+      containsEuPoliticalAdvertising: false,
       // Geo targeting is set via campaign criteria after campaign creation
     },
   }])
