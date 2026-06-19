@@ -207,7 +207,7 @@ export default defineEventHandler(async (event) => {
       name: `Ad Group – ${body.campaign_name}`,
       campaign: campaignResourceName,
       status: 'ENABLED',
-      type: 'STANDARD',
+      type: 'SEARCH_STANDARD',
     },
   }])
 
