@@ -544,12 +544,18 @@ export class AvailabilityCalculator {
       const staffCategories = params.categories.filter(cat => {
         // If staff has specific category, only allow those
         if (staff.category) {
-          // staff.category can be an array ["A", "B"] or a string "A,B"
+          // staff.category can be an array ["A", "B"], a JSON string '["A","B"]', or a CSV "A,B"
           let staffCats: string[]
           if (Array.isArray(staff.category)) {
             staffCats = staff.category
           } else if (typeof staff.category === 'string') {
-            staffCats = staff.category.split(',').map((c: string) => c.trim())
+            // Try JSON.parse first (handles '["B","BPT","B Automatik"]' stored in DB)
+            try {
+              const parsed = JSON.parse(staff.category)
+              staffCats = Array.isArray(parsed) ? parsed : staff.category.split(',').map((c: string) => c.trim())
+            } catch {
+              staffCats = staff.category.split(',').map((c: string) => c.trim())
+            }
           } else {
             staffCats = []
           }
