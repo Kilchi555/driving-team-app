@@ -137,7 +137,7 @@
     />
 
     <!-- 5. Map Section (Standort zeigen) -->
-    <LazyStandortMapSection locationKey="zuerich" />
+    <LazyStandortMapSection locationKey="vku_zuerich" />
 
     <!-- 7. Why Section (Überzeugung) -->
     <WarumSection category="zuerich" />

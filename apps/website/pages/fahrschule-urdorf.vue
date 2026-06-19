@@ -60,7 +60,7 @@
     <InstructorProfileSection :instructors="instructors" />
 
     <div class="bg-gray-50">
-      <LazyStandortMapSection location-key="zuerich" />
+      <LazyStandortMapSection location-key="urdorf" />
     </div>
 
     <AusbildungsthemenSection location="Urdorf" />

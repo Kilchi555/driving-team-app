@@ -593,7 +593,7 @@
 
     <!-- ====== MAP ====== -->
     <div class="bg-gray-50">
-      <LazyStandortMapSection location-key="zuerich" />
+      <LazyStandortMapSection location-key="zuerich_motorrad" />
     </div>
 
     <!-- ====== CTA ====== -->

@@ -192,6 +192,11 @@
     <!-- Warum Section -->
     <WarumSection category="czv" />
 
+    <!-- Standort -->
+    <div class="bg-gray-50">
+      <LazyStandortMapSection location-key="lachen" />
+    </div>
+
     <!-- FAQ -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
