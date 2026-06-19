@@ -59,9 +59,9 @@ export default defineEventHandler(async (event) => {
     .not('status', 'eq', 'deleted')
   result.appointments_next7days = (apts || []).length
   
-  // 8. Run the calculator for Rahel (7 days)
+  // 8. Run the calculator for FULL TENANT (30 days) to repopulate all staff slots
   try {
-    const slotsWritten = await availabilityCalculator.recalculateForStaff(TENANT_ID, RAHEL_ID, 7)
+    const slotsWritten = await availabilityCalculator.recalculateForTenant(TENANT_ID, 30)
     result.calculator_result = { slots_written: slotsWritten, error: null }
   } catch (e: any) {
     result.calculator_result = { slots_written: null, error: e.message }
