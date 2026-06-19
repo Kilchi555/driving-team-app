@@ -279,7 +279,7 @@
     :preselected-student="posPreselectedStudent"
     :current-user="currentUser"
     @close="showPOSModal = false; posPreselectedStudent = null"
-    @sale-created="showPOSModal = false; posPreselectedStudent = null"
+    @sale-created="posPreselectedStudent = null"
   />
 
   <!-- Enhanced Student Detail Modal -->
