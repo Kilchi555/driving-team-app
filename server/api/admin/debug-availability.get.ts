@@ -3,6 +3,7 @@
  * DELETE AFTER USE
  */
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { availabilityCalculator } from '~/server/services/availability-calculator'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
@@ -57,6 +58,15 @@ export default defineEventHandler(async (event) => {
     .eq('staff_id', RAHEL_ID).gte('start_time', startDate.toISOString()).lte('start_time', endDate.toISOString())
     .not('status', 'eq', 'deleted')
   result.appointments_next7days = (apts || []).length
+  
+  // 8. Actually run the calculator for Rahel (next 7 days, dry-run by checking count)
+  try {
+    const endDate7 = new Date(); endDate7.setDate(endDate7.getDate() + 7)
+    const slotsWritten = await availabilityCalculator.recalculateForStaff(TENANT_ID, RAHEL_ID, 7)
+    result.calculator_result = { slots_written: slotsWritten, error: null }
+  } catch (e: any) {
+    result.calculator_result = { slots_written: null, error: e.message }
+  }
   
   return result
 })
