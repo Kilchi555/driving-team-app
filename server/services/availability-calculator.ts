@@ -1057,8 +1057,14 @@ export class AvailabilityCalculator {
       // Step 2: Delete stale slots whose natural key is no longer in the new set.
       // Actively reserved slots (reserved_by_session set + reserved_until in the future)
       // are always preserved even if they became stale, to avoid breaking ongoing bookings.
+      //
+      // IMPORTANT: Normalize timestamps to epoch ms before comparing. JavaScript's
+      // toISOString() returns "2026-06-20T06:15:00.000Z" but Supabase/PostgREST
+      // returns "2026-06-20T06:15:00+00:00" — raw string comparison would never match,
+      // causing every just-inserted slot to be treated as stale and immediately deleted.
+      const toEpoch = (t: string) => new Date(t).getTime()
       const newKeySet = new Set(
-        slots.map(s => `${s.staff_id}|${s.location_id}|${s.start_time}|${s.end_time}|${s.category_code}`)
+        slots.map(s => `${s.staff_id}|${s.location_id}|${toEpoch(s.start_time)}|${toEpoch(s.end_time)}|${s.category_code}`)
       )
 
       // Fetch existing slots with pagination to avoid Supabase's default 1000-row API
@@ -1106,7 +1112,7 @@ export class AvailabilityCalculator {
       const now = new Date()
       const staleIds = allExistingSlots
         .filter(s => {
-          const key = `${s.staff_id}|${s.location_id}|${s.start_time}|${s.end_time}|${s.category_code}`
+          const key = `${s.staff_id}|${s.location_id}|${toEpoch(s.start_time)}|${toEpoch(s.end_time)}|${s.category_code}`
           if (newKeySet.has(key)) return false
           // Keep actively reserved slots to avoid breaking an in-progress booking
           const isActivelyReserved =
