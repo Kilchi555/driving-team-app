@@ -59,7 +59,15 @@ export default defineEventHandler(async (event) => {
     .not('status', 'eq', 'deleted')
   result.appointments_next7days = (apts || []).length
   
-  // 8. Check actual slots in DB right now
+  // 8. Run the calculator for Rahel (7 days)
+  try {
+    const slotsWritten = await availabilityCalculator.recalculateForStaff(TENANT_ID, RAHEL_ID, 7)
+    result.calculator_result = { slots_written: slotsWritten, error: null }
+  } catch (e: any) {
+    result.calculator_result = { slots_written: null, error: e.message }
+  }
+
+  // 9. Check actual slots in DB AFTER calculator ran
   const now2 = new Date()
   const { data: existingSlots, error: slotErr } = await supabase
     .from('availability_slots')
@@ -69,7 +77,7 @@ export default defineEventHandler(async (event) => {
     .gte('start_time', now2.toISOString())
     .order('start_time', { ascending: true })
     .limit(5)
-  result.existing_slots_in_db = { 
+  result.rahel_slots_after_calc = { 
     error: slotErr?.message, 
     sample: existingSlots?.map((s: any) => ({ 
       start: s.start_time, 
@@ -78,7 +86,7 @@ export default defineEventHandler(async (event) => {
     })) 
   }
   
-  // 9. Count total future slots in DB
+  // 10. Count total future slots in DB
   const { count: totalCount } = await supabase
     .from('availability_slots')
     .select('id', { count: 'exact', head: true })
@@ -86,7 +94,7 @@ export default defineEventHandler(async (event) => {
     .gte('start_time', now2.toISOString())
   result.total_future_slots_count = totalCount
 
-  // 10. Check BPT slots specifically
+  // 11. Check BPT slots specifically
   const { count: bptCount } = await supabase
     .from('availability_slots')
     .select('id', { count: 'exact', head: true })
