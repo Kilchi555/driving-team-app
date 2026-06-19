@@ -55,37 +55,50 @@ export default defineEventHandler(async (event) => {
     'Content-Type': 'application/json',
   }
 
-  const updateMaskParts: string[] = []
-  const adUpdate: any = { resourceName: ad_resource_name, responsiveSearchAd: {} }
+  // RSA headlines/descriptions are immutable – must remove old ad and create new one.
+  // Step 1: extract adGroup resource name from the adGroupAd resource name
+  // Format: customers/xxx/adGroupAds/adGroupId~adId
+  const adGroupId = ad_group_ad_resource_name.split('/adGroupAds/')[1]?.split('~')[0]
+  const adGroupResourceName = `customers/${customerId}/adGroups/${adGroupId}`
 
-  if (headlines?.length) {
-    adUpdate.responsiveSearchAd.headlines = headlines.map((text: string) => ({ text }))
-    updateMaskParts.push('ad.responsive_search_ad.headlines')
-  }
-  if (descriptions?.length) {
-    adUpdate.responsiveSearchAd.descriptions = descriptions.map((text: string) => ({ text }))
-    updateMaskParts.push('ad.responsive_search_ad.descriptions')
-  }
+  // Step 2: Remove old ad
+  const removeRes = await fetch(`${ADS_BASE}/customers/${customerId}/adGroupAds:mutate`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      operations: [{ remove: ad_group_ad_resource_name }],
+    }),
+  })
+  const removeData = await removeRes.json() as any
+  if (!removeRes.ok) return { success: false, step: 'remove_old_ad', reason: removeData }
 
-  const res = await fetch(`${ADS_BASE}/customers/${customerId}/adGroupAds:mutate`, {
+  // Step 3: Create new ad with updated content
+  const createRes = await fetch(`${ADS_BASE}/customers/${customerId}/adGroupAds:mutate`, {
     method: 'POST',
     headers,
     body: JSON.stringify({
       operations: [{
-        update: {
-          resourceName: ad_group_ad_resource_name,
-          ad: adUpdate,
+        create: {
+          adGroup: adGroupResourceName,
+          status: 'ENABLED',
+          ad: {
+            responsiveSearchAd: {
+              headlines: headlines.map((text: string) => ({ text })),
+              descriptions: descriptions.map((text: string) => ({ text })),
+            },
+            finalUrls: body.final_url ? [body.final_url] : undefined,
+          },
         },
-        updateMask: updateMaskParts.join(','),
       }],
     }),
   })
 
-  const data = await res.json() as any
-  if (!res.ok) return { success: false, reason: data }
+  const createData = await createRes.json() as any
+  if (!createRes.ok) return { success: false, step: 'create_new_ad', reason: createData }
 
   return {
     success: true,
-    updated_resource: data.results?.[0]?.resourceName,
+    removed: ad_group_ad_resource_name,
+    created: createData.results?.[0]?.resourceName,
   }
 })
