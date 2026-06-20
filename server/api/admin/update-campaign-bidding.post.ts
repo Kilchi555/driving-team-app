@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
     method: 'POST',
     headers,
     body: JSON.stringify({
-      query: `SELECT campaign.id, campaign.name, campaign.status, campaign.bidding_strategy_type, campaign.bidding_strategy FROM campaign WHERE campaign.status != 'REMOVED'`,
+      query: `SELECT campaign.id, campaign.name, campaign.status, campaign.bidding_strategy_type, campaign.bidding_strategy, campaign.advertising_channel_type FROM campaign WHERE campaign.status != 'REMOVED'`,
     }),
   })
   const searchData = await searchRes.json() as any
@@ -68,30 +68,34 @@ export default defineEventHandler(async (event) => {
     const currentStrategy = row.campaign.biddingStrategyType
     const portfolioStrategy = row.campaign.biddingStrategy // resource name if portfolio
 
+    // Skip Performance Max campaigns — they don't support Maximize Clicks
+    if (row.campaign.advertisingChannelType === 'PERFORMANCE_MAX') {
+      results.push({ campaign_id: campaignId, campaign_name: campaignName, was_strategy: currentStrategy, ok: true, result: 'skipped_pmax' })
+      continue
+    }
+
     // Build the update: switch to targetSpend (Maximize Clicks) with CHF 3.00 cap
-    // If campaign uses a portfolio bidding strategy, we need to detach it first
+    // Use camelCase field names in body, snake_case in updateMask
     const updateBody: any = {
       resourceName: `customers/${customerId}/campaigns/${campaignId}`,
       targetSpend: {
-        cpcBidCeilingMicros: '3000000', // CHF 3.00 as string (int64)
+        cpcBidCeilingMicros: 3000000,
       },
     }
-    // Clear portfolio reference if set
+
+    // When using a portfolio bidding strategy resource, must clear it
+    let updateMask = 'target_spend.cpc_bid_ceiling_micros'
     if (portfolioStrategy) {
-      updateBody.biddingStrategy = null
+      // Detach from portfolio strategy first
+      updateBody.biddingStrategyType = 'TARGET_SPEND'
+      updateMask = 'bidding_strategy_type,target_spend.cpc_bid_ceiling_micros'
     }
 
     const mutateRes = await fetch(`${ADS_API}/customers/${customerId}/campaigns:mutate`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        operations: [{
-          update: updateBody,
-          // target_spend.cpc_bid_ceiling_micros triggers the strategy switch + sets cap
-      updateMask: portfolioStrategy
-        ? 'target_spend.cpc_bid_ceiling_micros,bidding_strategy'
-        : 'target_spend.cpc_bid_ceiling_micros',
-        }],
+        operations: [{ update: updateBody, updateMask }],
       }),
     })
 
