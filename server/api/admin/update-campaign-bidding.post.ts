@@ -87,7 +87,7 @@ export default defineEventHandler(async (event) => {
               cpcBidCeilingMicros: 3_000_000, // CHF 3.00 max CPC
             },
           },
-          updateMask: 'targetSpend',
+          updateMask: 'target_spend',
         }],
       }),
     })
@@ -99,7 +99,7 @@ export default defineEventHandler(async (event) => {
     results.push({
       campaign_id: campaignId,
       ok: res.ok,
-      result: res.ok ? 'updated' : (data?.error?.message ?? data?.raw ?? 'error'),
+      result: res.ok ? 'updated' : (data?.error?.details ?? data?.error?.message ?? data?.raw ?? 'error'),
     })
   }
 
