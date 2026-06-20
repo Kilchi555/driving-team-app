@@ -87,9 +87,10 @@ export default defineEventHandler(async (event) => {
       body: JSON.stringify({
         operations: [{
           update: updateBody,
-          updateMask: portfolioStrategy
-            ? 'target_spend,bidding_strategy'
-            : 'target_spend',
+          // target_spend.cpc_bid_ceiling_micros triggers the strategy switch + sets cap
+      updateMask: portfolioStrategy
+        ? 'target_spend.cpc_bid_ceiling_micros,bidding_strategy'
+        : 'target_spend.cpc_bid_ceiling_micros',
         }],
       }),
     })
