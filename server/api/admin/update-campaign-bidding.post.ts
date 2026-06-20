@@ -99,7 +99,8 @@ export default defineEventHandler(async (event) => {
     results.push({
       campaign_id: campaignId,
       ok: res.ok,
-      result: res.ok ? 'updated' : (data?.error?.details ?? data?.error?.message ?? data?.raw ?? 'error'),
+      status: res.status,
+      result: res.ok ? 'updated' : data,
     })
   }
 
