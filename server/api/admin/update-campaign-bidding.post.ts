@@ -5,7 +5,7 @@
 import { defineEventHandler, getHeader, createError } from 'h3'
 import { logger } from '~/utils/logger'
 
-const ADS_BASE = 'https://googleads.googleapis.com/v20'
+const ADS_BASE = 'https://googleads.googleapis.com/v23'
 
 export default defineEventHandler(async (event) => {
   const authHeader = getHeader(event, 'authorization')
@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
   ]
 
   // Also query Google Ads to find any newer campaigns (Motorrad, VKU etc.)
-  const queryRes = await fetch(`${ADS_BASE}/customers/${customerId}/googleAds:searchStream`, {
+  const queryRes = await fetch(`${ADS_BASE}/customers/${customerId}/googleAds:search`, {
     method: 'POST',
     headers,
     body: JSON.stringify({ query: `SELECT campaign.id, campaign.name, campaign.status FROM campaign WHERE campaign.status != 'REMOVED'` }),
