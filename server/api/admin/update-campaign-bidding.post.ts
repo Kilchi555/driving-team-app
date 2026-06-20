@@ -3,9 +3,8 @@
  * DELETE AFTER USE
  */
 import { defineEventHandler, getHeader, createError } from 'h3'
-import { logger } from '~/utils/logger'
 
-const ADS_BASE = 'https://googleads.googleapis.com/v23'
+const ADS_API = 'https://googleads.googleapis.com/v23'
 
 export default defineEventHandler(async (event) => {
   const authHeader = getHeader(event, 'authorization')
@@ -24,85 +23,93 @@ export default defineEventHandler(async (event) => {
     return { success: false, reason: 'missing_credentials' }
   }
 
-  // Get access token
+  // Get OAuth access token
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, refresh_token: refreshToken, grant_type: 'refresh_token' }),
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    }),
   })
   const tokenData = await tokenRes.json() as any
   if (!tokenData.access_token) {
     return { success: false, reason: 'token_error', detail: tokenData }
   }
-  const accessToken = tokenData.access_token
 
   const headers = {
-    'Authorization': `Bearer ${accessToken}`,
+    'Authorization': `Bearer ${tokenData.access_token}`,
     'developer-token': developerToken,
     'login-customer-id': customerId,
     'Content-Type': 'application/json',
   }
 
-  // All known campaign IDs (from marketing_google_ads_daily)
-  const campaignIds = [
-    '23893818404', // Anhänger Fahrschule Aargau
-    '23888643015', // Anhänger Fahrschule Lachen
-    '23893427204', // Anhänger Fahrschule Zürich
-    '23865472770', // Fahrschule Lachen Umgebung
-    '23868553846', // Fahrschule Zürich Umgebung
-    '23898300631', // Lastwagen Fahrschule Lachen
-  ]
-
-  // Also query Google Ads to find any newer campaigns (Motorrad, VKU etc.)
-  const queryRes = await fetch(`${ADS_BASE}/customers/${customerId}/googleAds:search`, {
+  // ── Step 1: Query all active campaigns with their current bidding strategy ──
+  const searchRes = await fetch(`${ADS_API}/customers/${customerId}/googleAds:search`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ query: `SELECT campaign.id, campaign.name, campaign.status FROM campaign WHERE campaign.status != 'REMOVED'` }),
+    body: JSON.stringify({
+      query: `SELECT campaign.id, campaign.name, campaign.status, campaign.bidding_strategy_type, campaign.bidding_strategy FROM campaign WHERE campaign.status != 'REMOVED'`,
+    }),
   })
-  const queryText = await queryRes.text()
-  let allCampaignIds = [...campaignIds]
-  try {
-    const queryData = JSON.parse(queryText)
-    const rows = Array.isArray(queryData) ? queryData.flatMap((r: any) => r.results || []) : queryData.results || []
-    for (const row of rows) {
-      const id = String(row.campaign?.id ?? '')
-      if (id && !allCampaignIds.includes(id)) {
-        allCampaignIds.push(id)
-        logger.info(`Found additional campaign: ${id} — ${row.campaign?.name}`)
-      }
-    }
-  } catch { /* ignore parse errors, use known list */ }
+  const searchData = await searchRes.json() as any
+  if (!searchRes.ok) {
+    return { success: false, reason: 'query_failed', detail: searchData }
+  }
 
+  const campaignRows: any[] = searchData.results || []
   const results: any[] = []
 
-  for (const campaignId of allCampaignIds) {
-    const res = await fetch(`${ADS_BASE}/customers/${customerId}/campaigns:mutate`, {
+  for (const row of campaignRows) {
+    const campaignId = String(row.campaign.id)
+    const campaignName = row.campaign.name
+    const currentStrategy = row.campaign.biddingStrategyType
+    const portfolioStrategy = row.campaign.biddingStrategy // resource name if portfolio
+
+    // Build the update: switch to targetSpend (Maximize Clicks) with CHF 3.00 cap
+    // If campaign uses a portfolio bidding strategy, we need to detach it first
+    const updateBody: any = {
+      resourceName: `customers/${customerId}/campaigns/${campaignId}`,
+      targetSpend: {
+        cpcBidCeilingMicros: '3000000', // CHF 3.00 as string (int64)
+      },
+    }
+    // Clear portfolio reference if set
+    if (portfolioStrategy) {
+      updateBody.biddingStrategy = null
+    }
+
+    const mutateRes = await fetch(`${ADS_API}/customers/${customerId}/campaigns:mutate`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
         operations: [{
-          update: {
-            resourceName: `customers/${customerId}/campaigns/${campaignId}`,
-            targetSpend: {
-              cpcBidCeilingMicros: 3_000_000, // CHF 3.00 max CPC
-            },
-          },
-          updateMask: 'target_spend',
+          update: updateBody,
+          updateMask: portfolioStrategy
+            ? 'target_spend,bidding_strategy'
+            : 'target_spend',
         }],
       }),
     })
 
-    const text = await res.text()
-    let data: any
-    try { data = JSON.parse(text) } catch { data = { raw: text.slice(0, 300) } }
-
+    const mutateData = await mutateRes.json() as any
     results.push({
       campaign_id: campaignId,
-      ok: res.ok,
-      status: res.status,
-      result: res.ok ? 'updated' : data,
+      campaign_name: campaignName,
+      was_strategy: currentStrategy,
+      had_portfolio: !!portfolioStrategy,
+      ok: mutateRes.ok,
+      status: mutateRes.status,
+      error: mutateRes.ok ? null : mutateData,
     })
   }
 
-  return { success: true, updated: results.filter(r => r.ok).length, results }
+  return {
+    success: true,
+    total: results.length,
+    updated: results.filter(r => r.ok).length,
+    results,
+  }
 })
