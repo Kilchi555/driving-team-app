@@ -142,6 +142,12 @@ export default defineEventHandler(async (event) => {
 
     const transactionId = createdTransaction?.body?.id ?? createdTransaction?.id
     if (transactionId) {
+      // Save wallee_transaction_id to product_sales so the webhook can find it
+      await supabase
+        .from('product_sales')
+        .update({ wallee_transaction_id: transactionId.toString() })
+        .eq('id', sale.id)
+
       try {
         const urlResponse = await paymentPageService.paymentPageUrl(spaceId, transactionId)
         paymentUrl = (urlResponse as any)?.body || (urlResponse as any) ||
@@ -176,8 +182,8 @@ export default defineEventHandler(async (event) => {
       const logoUrl = tenant?.logo_url
       const productList = items.map(i =>
         `<tr>
-          <td style="padding: 8px 0; color: #374151; font-size: 15px;">${i.quantity}× ${i.product_name}</td>
-          <td style="padding: 8px 0; color: #374151; font-size: 15px; text-align: right;">CHF ${(i.total_price_rappen / 100).toFixed(2)}</td>
+          <td style="padding: 8px 16px; color: #374151; font-size: 15px;">${i.quantity}× ${i.product_name}</td>
+          <td style="padding: 8px 16px; color: #374151; font-size: 15px; text-align: right;">CHF ${(i.total_price_rappen / 100).toFixed(2)}</td>
         </tr>`
       ).join('')
       const totalCHF = (total_amount_rappen / 100).toFixed(2)
@@ -202,7 +208,7 @@ export default defineEventHandler(async (event) => {
         <!-- Body -->
         <tr>
           <td style="padding: 36px 40px;">
-            <p style="margin:0 0 8px; font-size:16px; color:#111827; font-weight:600;">Guten Tag${customer_name ? `, ${customer_name}` : ''},</p>
+            <p style="margin:0 0 8px; font-size:16px; color:#111827; font-weight:600;">Guten Tag${customer_name ? ` ${customer_name}` : ''},</p>
             <p style="margin:0 0 28px; font-size:15px; color:#6b7280; line-height:1.6;">${tenantName} hat für Sie eine Zahlung vorbereitet. Bitte klicken Sie auf den Button unten, um sicher zu bezahlen.</p>
 
             <!-- Product table -->
