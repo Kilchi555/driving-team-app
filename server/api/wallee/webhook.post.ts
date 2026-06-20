@@ -240,8 +240,10 @@ export default defineEventHandler(async (event) => {
           // 1. payment-{uuid} (NEW: Course enrollment with payment ID)
           // 2. appointment-{uuid}-{timestamp}
           // 3. Direct payment ID in merchantRef
+          // 4. pos-{uuid} (Staff POS product sale)
           
           let paymentId: string | null = null
+          let productSaleId: string | null = null
           
           // Pattern 1: payment-{uuid} - NEW FORMAT from course enrollments
           // Format: "payment-{paymentId} | FirstName LastName | CourseName | Location | Date"
@@ -257,6 +259,16 @@ export default defineEventHandler(async (event) => {
             if (topupMatch) {
               paymentId = topupMatch[1]
               logger.debug('✅ Found payment ID from merchantRef (topup-uuid format):', paymentId)
+            }
+          }
+
+          // Pattern 1c: pos-{uuid} - Staff POS product sales
+          // Format: "pos-{saleId} | CustomerName"
+          if (!paymentId) {
+            const posMatch = merchantRef.match(/^pos-([a-f0-9-]{36})/)
+            if (posMatch) {
+              productSaleId = posMatch[1]
+              logger.debug('✅ Found product sale ID from merchantRef (pos-uuid format):', productSaleId)
             }
           }
           
@@ -286,6 +298,25 @@ export default defineEventHandler(async (event) => {
             }
           }
           
+          // Handle pos-{uuid}: look up product_sale directly and route through processAnonymousSale
+          if (productSaleId && !paymentId) {
+            const { data: posRecord } = await supabase
+              .from('product_sales')
+              .select('id, status, total_amount_rappen, metadata, user_id, tenant_id')
+              .eq('id', productSaleId)
+              .maybeSingle()
+            
+            if (posRecord) {
+              logger.info('✅ Found product_sale via pos-merchantRef fallback:', posRecord.id)
+              // Also save the transaction ID so future webhooks find it directly
+              await supabase
+                .from('product_sales')
+                .update({ wallee_transaction_id: transactionId })
+                .eq('id', productSaleId)
+              return await processAnonymousSale(posRecord, paymentStatus)
+            }
+          }
+
           // Fetch payment if found
           if (paymentId) {
             const { data: foundPayment, error: foundError } = await supabase
