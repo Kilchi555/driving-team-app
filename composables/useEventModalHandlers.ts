@@ -304,14 +304,18 @@ const handleDurationsChanged = (durations: number[]) => {
   
   logger.debug('📊 Flattened durations:', flatDurations)
   
-  // ✅ FIX: Bei Prüfungen die exam_duration aus den empfangenen durations ODER selectedCategory verwenden
+  // ✅ FIX: Bei Prüfungen immer exam_duration_minutes aus selectedCategory verwenden.
+  // Die empfangenen flatDurations können veraltete Fahrstunden-Dauern sein (Race Condition:
+  // CategorySelector-Watcher feuert mit Lesson-Dauern, bevor appointmentType auf 'exam' umgestellt wurde).
   if (formData.value.appointment_type === 'exam') {
-    // Der CategorySelector sendet bei appointment_type='exam' bereits exam_duration_minutes
-    // Nutze diese direkt, fallback auf selectedCategory oder 135
-    const examDuration = (flatDurations.length === 1 && flatDurations[0] > 0)
+    const categoryExamDuration = selectedCategory.value?.exam_duration_minutes
+    // Empfangene Dauer nur nutzen, wenn sie von CategorySelector als Prüfungsdauer gesendet wurde
+    // (d.h. sie stimmt mit exam_duration_minutes überein) – andernfalls Fallback auf Category-Wert.
+    const receivedIsExamDuration = categoryExamDuration && flatDurations.length === 1 && flatDurations[0] === categoryExamDuration
+    const examDuration = receivedIsExamDuration
       ? flatDurations[0]
-      : selectedCategory.value?.exam_duration_minutes || 135
-    logger.debug('📝 OVERRIDE: Using exam duration:', examDuration)
+      : categoryExamDuration || 135
+    logger.debug('📝 OVERRIDE: Using exam duration:', examDuration, '(categoryExamDuration:', categoryExamDuration, ', received:', flatDurations, ')')
     availableDurations.value = [examDuration]
     formData.value.duration_minutes = examDuration
   } else {

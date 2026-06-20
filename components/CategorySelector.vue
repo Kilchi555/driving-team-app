@@ -657,9 +657,14 @@ watch([() => allCategories.value.length, () => props.modelValue], ([categoriesCo
      logger.debug('✅ Re-emitting durations-changed:', selected.availableDurations)
      
      // ✅ RACE-SAFE Re-Emit mit Verzögerung
+     // Wichtig: selected NICHT vorher cachen, sondern im Callback neu lesen,
+     // damit appointmentType-Änderungen (z.B. Fahrstunde→Prüfung) korrekt einfließen.
      setTimeout(() => {
        if (!isAutoEmitting.value) {
-         emit('durations-changed', selected.availableDurations)
+         const freshSelected = availableCategoriesForUser.value.find(cat => cat.code === modelValue)
+         if (freshSelected) {
+           emit('durations-changed', freshSelected.availableDurations)
+         }
        }
      }, 150)
    }
