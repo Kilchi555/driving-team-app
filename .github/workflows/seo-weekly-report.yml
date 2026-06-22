@@ -26,9 +26,11 @@ jobs:
 
       - name: Run SEO report
         env:
-          GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
-          GSC_PROPERTY_URL:         ${{ secrets.GSC_PROPERTY_URL }}
-          RESEND_API_KEY:            ${{ secrets.RESEND_API_KEY }}
-          REPORT_EMAIL:              ${{ secrets.REPORT_EMAIL }}
+          GSC_PROPERTY_URL:                      ${{ secrets.GSC_PROPERTY_URL }}
+          RESEND_API_KEY:                        ${{ secrets.RESEND_API_KEY }}
+          REPORT_EMAIL:                          ${{ secrets.REPORT_EMAIL }}
+          GOOGLE_OAUTH_CLIENT_ID:                ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET:            ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN:   ${{ secrets.GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN }}
         run: node seo-report.mjs
         working-directory: .github/scripts
