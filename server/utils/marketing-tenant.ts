@@ -25,18 +25,23 @@ function fallbackTenantId(): string | null {
  * Falls back to MARKETING_TENANT_ID if no DB match found.
  */
 export async function getTenantIdByGa4Property(propertyId?: string): Promise<string | null> {
-  const pid = propertyId ?? process.env.GOOGLE_ANALYTICS_PROPERTY_ID
-  if (!pid) return fallbackTenantId()
+  const raw = propertyId ?? process.env.GOOGLE_ANALYTICS_PROPERTY_ID
+  if (!raw) return fallbackTenantId()
 
-  const cacheKey = `ga4:${pid}`
+  // Normalise: accept both "400627759" and "properties/400627759"
+  const pid = raw.startsWith('properties/') ? raw : `properties/${raw}`
+  const pidShort = pid.replace(/^properties\//, '')
+
+  const cacheKey = `ga4:${pidShort}`
   if (cache.has(cacheKey)) return cache.get(cacheKey)!
 
   try {
     const supabase = getSupabaseAdmin()
+    // Try both formats in case the tenant table uses the short form
     const { data } = await supabase
       .from('tenants')
       .select('id')
-      .eq('ga4_property_id', pid)
+      .in('ga4_property_id', [pid, pidShort])
       .maybeSingle()
     const id = data?.id ?? fallbackTenantId()
     cache.set(cacheKey, id)
@@ -54,10 +59,14 @@ export async function getTenantIdByGa4Property(propertyId?: string): Promise<str
  * Falls back to MARKETING_TENANT_ID if no DB match found.
  */
 export async function getTenantIdByGoogleAdsCustomer(customerId?: string): Promise<string | null> {
-  const cid = customerId ?? process.env.GOOGLE_ADS_CUSTOMER_ID
-  if (!cid) return fallbackTenantId()
+  const raw = customerId ?? process.env.GOOGLE_ADS_CUSTOMER_ID
+  if (!raw) return fallbackTenantId()
 
-  const cacheKey = `ads:${cid}`
+  // Normalise: accept both "191-669-8119" and "1916698119"
+  const cidClean = raw.replace(/-/g, '')
+  const cidDashes = cidClean.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')
+
+  const cacheKey = `ads:${cidClean}`
   if (cache.has(cacheKey)) return cache.get(cacheKey)!
 
   try {
@@ -65,11 +74,11 @@ export async function getTenantIdByGoogleAdsCustomer(customerId?: string): Promi
     const { data } = await supabase
       .from('tenants')
       .select('id')
-      .eq('google_ads_customer_id', cid)
+      .in('google_ads_customer_id', [cidClean, cidDashes])
       .maybeSingle()
     const id = data?.id ?? fallbackTenantId()
     cache.set(cacheKey, id)
-    if (!id) logger.warn(`marketing-tenant: no tenant found for Ads customer ${cid}`)
+    if (!id) logger.warn(`marketing-tenant: no tenant found for Ads customer ${raw}`)
     return id
   } catch (err: any) {
     logger.error('marketing-tenant: ads lookup failed', err?.message)
@@ -86,6 +95,16 @@ export async function getTenantIdByGscSite(siteUrl?: string): Promise<string | n
   const url = siteUrl ?? process.env.GOOGLE_SEARCH_CONSOLE_SITE_URL
   if (!url) return fallbackTenantId()
 
+  // Normalise: try both sc-domain: and https:// variants
+  const variants: string[] = [url]
+  if (url.startsWith('sc-domain:')) {
+    const domain = url.replace('sc-domain:', '')
+    variants.push(`https://${domain}`, `https://www.${domain}`, domain)
+  } else if (url.startsWith('https://') || url.startsWith('http://')) {
+    const domain = url.replace(/^https?:\/\/(www\.)?/, '')
+    variants.push(`sc-domain:${domain}`, domain)
+  }
+
   const cacheKey = `gsc:${url}`
   if (cache.has(cacheKey)) return cache.get(cacheKey)!
 
@@ -94,11 +113,11 @@ export async function getTenantIdByGscSite(siteUrl?: string): Promise<string | n
     const { data } = await supabase
       .from('tenants')
       .select('id')
-      .eq('gsc_site_url', url)
+      .in('gsc_site_url', variants)
       .maybeSingle()
     const id = data?.id ?? fallbackTenantId()
     cache.set(cacheKey, id)
-    if (!id) logger.warn(`marketing-tenant: no tenant found for GSC site ${url}`)
+    if (!id) logger.warn(`marketing-tenant: no tenant found for GSC site ${url} (tried: ${variants.join(', ')})`)
     return id
   } catch (err: any) {
     logger.error('marketing-tenant: gsc lookup failed', err?.message)
