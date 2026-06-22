@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Spreitenbach – ab CHF 95.- | Driving Team</Title>
-      <Meta name="description" content="Deine Fahrschule in Spreitenbach: Fahrlehrer kommt zu dir – ab CHF 95.–, 85% Prüfungserfolg, flexible Termine. Jetzt online Termin buchen!" />
-      <Meta property="og:title" content="Fahrschule Spreitenbach – ab CHF 95.- | Driving Team" />
-      <Meta property="og:description" content="Fahrschule im Limmattal – ab CHF 95.–, 85% Erfolgsquote. Flexible Treffpunkte in Spreitenbach, Dietikon und Umgebung. Online buchen." />
+      <Title>Fahrschule Spreitenbach | Fahrlehrer kommt zu dir | ab CHF 95.- | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Spreitenbach: Dein Fahrlehrer kommt direkt zu dir – kein Pendelweg. Ab CHF 95.-/Lektion, 85% Prüfungserfolg, flexible Termine. Jetzt online buchen!" />
+      <Meta property="og:title" content="Fahrschule Spreitenbach | Fahrlehrer kommt zu dir | ab CHF 95.- | Driving Team" />
+      <Meta property="og:description" content="Fahrschule Spreitenbach: Dein Fahrlehrer kommt direkt zu dir nach Spreitenbach. Ab CHF 95.-/Lektion, 85% Prüfungserfolg. Flexible Termine, Online-Buchung." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-spreitenbach/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-spreitenbach/" />
       <Link rel="preload" as="image" href="/images/locations/aargau-hero.webp" fetchpriority="high" />
@@ -126,7 +126,7 @@
         <h2 class="text-xl font-semibold text-gray-900 mb-6">Passende Angebote in Spreitenbach & Umgebung</h2>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           <a href="/auto-fahrschule/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Auto Fahrschule</a>
-          <a href="/anhaenger-fahrschule/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Anhänger Fahrschule</a>
+          <a href="/anhaenger-fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Anhänger Fahrschule</a>
           <a href="/fahrschule-dietikon/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Fahrschule Dietikon</a>
           <a href="/vku-kurse/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">VKU Kurs</a>
           <a href="/fahrschule-preise/" class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition text-center">Preise & Kosten</a>

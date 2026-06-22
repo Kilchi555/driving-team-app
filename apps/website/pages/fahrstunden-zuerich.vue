@@ -237,7 +237,7 @@
                 <li class="flex items-center gap-3 text-gray-700"><span class="text-orange-600 font-bold">✓</span> Kleine Gruppen möglich</li>
               </ul>
               <p class="text-3xl font-black text-orange-600 mb-4">CHF 120.-</p>
-              <a href="/anhaenger-fahrschule/" class="block w-full text-center bg-gradient-to-r from-orange-600 to-orange-700 text-white font-bold py-3 px-6 rounded-lg hover:shadow-lg transition">
+              <a href="/anhaenger-fahrschule-zuerich/" class="block w-full text-center bg-gradient-to-r from-orange-600 to-orange-700 text-white font-bold py-3 px-6 rounded-lg hover:shadow-lg transition">
                 Anhänger Fahrstunden →
               </a>
             </div>

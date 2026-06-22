@@ -379,11 +379,11 @@
       <div class="max-w-4xl mx-auto px-4">
         <h2 class="text-xl font-bold text-gray-900 mb-5">Weitere Kategorien & Infos für Zürich</h2>
         <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <a href="/anhaenger-fahrschule/" class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition">
+          <a href="/anhaenger-kurs/" class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition">
             <span class="text-2xl">🚐</span>
             <div>
-              <p class="font-semibold text-gray-900 text-sm">Anhänger Fahrschule</p>
-              <p class="text-xs text-gray-500">Alle Infos Kategorie BE</p>
+              <p class="font-semibold text-gray-900 text-sm">Anhängerkurs buchen</p>
+              <p class="text-xs text-gray-500">Nächste Termine & Preise</p>
             </div>
           </a>
           <a href="/auto-fahrschule-zuerich/" class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition">
