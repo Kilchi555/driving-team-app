@@ -40,16 +40,20 @@
           class="h-16 object-contain drop-shadow-md"
         />
         <div
-          v-else
+          v-else-if="tenantBranding"
           class="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg"
-          :style="{ backgroundColor: tenantBranding?.primary_color || '#10B981' }"
+          :style="{ backgroundColor: tenantBranding.primary_color }"
         >
           {{ getInitials(tenant?.name || '') }}
         </div>
+        <div
+          v-else
+          class="w-16 h-16 rounded-2xl bg-slate-200 animate-pulse"
+        />
       </div>
       <div
         class="w-10 h-10 rounded-full border-4 border-gray-200 animate-spin"
-        :style="{ borderTopColor: tenantBranding?.primary_color || '#10B981' }"
+        :style="tenantBranding ? { borderTopColor: tenantBranding.primary_color } : { borderTopColor: '#94a3b8' }"
       ></div>
       <p class="mt-4 text-sm text-gray-500">Kurse werden geladen…</p>
     </div>
