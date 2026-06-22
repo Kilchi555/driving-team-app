@@ -15,13 +15,18 @@
 import { google } from 'googleapis';
 
 // ── Config ──────────────────────────────────────────────────────────────────
-const PROPERTY    = process.env.GSC_PROPERTY_URL;
-const RESEND_KEY  = process.env.RESEND_API_KEY;
-const TO_EMAIL    = process.env.REPORT_EMAIL;
-const SA_JSON     = process.env.GSC_SERVICE_ACCOUNT_JSON;
+const PROPERTY      = process.env.GSC_PROPERTY_URL;
+const RESEND_KEY    = process.env.RESEND_API_KEY;
+const TO_EMAIL      = process.env.REPORT_EMAIL;
+const CLIENT_ID     = process.env.GOOGLE_OAUTH_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+const REFRESH_TOKEN = process.env.GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN;
 
-if (!PROPERTY || !RESEND_KEY || !TO_EMAIL || !SA_JSON) {
+if (!PROPERTY || !RESEND_KEY || !TO_EMAIL || !CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN) {
   console.error('❌ Missing required env vars');
+  console.error('  Required: GSC_PROPERTY_URL, RESEND_API_KEY, REPORT_EMAIL,');
+  console.error('            GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET,');
+  console.error('            GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN');
   process.exit(1);
 }
 
@@ -39,13 +44,10 @@ const prevStart  = new Date(today); prevStart.setDate(today.getDate() - 14);
 const THIS_WEEK  = { startDate: toISO(thisStart),  endDate: toISO(thisEnd)  };
 const PREV_WEEK  = { startDate: toISO(prevStart),  endDate: toISO(prevEnd)  };
 
-// ── GSC Auth ─────────────────────────────────────────────────────────────────
-const credentials = JSON.parse(SA_JSON);
-const auth = new google.auth.GoogleAuth({
-  credentials,
-  scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
-});
-const sc = google.webmasters({ version: 'v3', auth });
+// ── GSC Auth (OAuth2 Refresh Token) ──────────────────────────────────────────
+const oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET);
+oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+const sc = google.webmasters({ version: 'v3', auth: oauth2Client });
 
 // ── GSC Queries ───────────────────────────────────────────────────────────────
 async function queryGSC(dateRange, dimensions, rowLimit = 25) {
