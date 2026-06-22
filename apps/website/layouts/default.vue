@@ -114,7 +114,7 @@
                   </div>
                 </div>
               </a>
-              <a href="/anhaenger-fahrschule/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">
+              <a href="/anhaenger-fahrschule-zuerich/" class="block px-5 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition rounded-lg mx-2">
                 <div class="flex items-center gap-2">
                   <span class="text-lg">🚗</span>
                   <div>
@@ -274,7 +274,7 @@
               <span>🚌 Bus</span>
               <span class="text-xs text-gray-400">Kategorie D</span>
             </a>
-            <a href="/anhaenger-fahrschule/" class="flex items-center justify-between text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">
+            <a href="/anhaenger-fahrschule-zuerich/" class="flex items-center justify-between text-sm text-gray-600 hover:text-primary-600 py-1.5" @click="showDesktopMenu = false">
               <span>🚗 Anhänger</span>
               <span class="text-xs text-gray-400">Kategorie BE</span>
             </a>
@@ -459,7 +459,7 @@
             <h3 class="font-bold text-lg mb-5">Navigation</h3>
             <ul class="space-y-2 text-sm text-gray-300">
               <li><a href="/auto-fahrschule/" class="hover:text-white transition">Auto</a></li>
-              <li><a href="/anhaenger-fahrschule/" class="hover:text-white transition">Anhänger</a></li>
+              <li><a href="/anhaenger-fahrschule-zuerich/" class="hover:text-white transition">Anhänger</a></li>
               <li><a href="/taxi-fahrschule/" class="hover:text-white transition">Taxi</a></li>
               <li><a href="/motorboot-fahrschule/" class="hover:text-white transition">Motorboot</a></li>
               <li><a href="/motorrad-fahrschule/" class="hover:text-white transition">Motorrad</a></li>

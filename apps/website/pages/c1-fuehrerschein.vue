@@ -517,7 +517,7 @@
           <a href="/lastwagen-fahrschule-rapperswil/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">🚚 Lastwagen Fahrschule Rapperswil</a>
           <a href="/lastwagen-theorie/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">📚 Lastwagen Theorie</a>
           <a href="/czv-grundkurs/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">📋 CZV Grundkurs</a>
-          <a href="/anhaenger-fahrschule/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">🔗 Anhänger Fahrschule</a>
+          <a href="/anhaenger-fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">🔗 Anhänger Fahrschule</a>
         </div>
       </div>
     </section>

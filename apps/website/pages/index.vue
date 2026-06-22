@@ -164,7 +164,7 @@
             </a>
 
             <!-- Anhänger -->
-            <a href="/anhaenger-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.5s">
+            <a href="/anhaenger-fahrschule-zuerich/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.5s">
               <div class="absolute inset-0 bg-gradient-to-br from-orange-500 to-orange-700 group-hover:from-orange-600 group-hover:to-orange-800 transition-all duration-500"></div>
               <NuxtImg src="/images/categories/anhaenger-fahrschule-new.webp" width="360" height="239" sizes="(min-width:1024px) 280px, (min-width:640px) 220px, 48vw" format="webp" quality="70" alt="Anhänger Fahrschule Zürich - Kategorie BE mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
@@ -256,7 +256,7 @@
               <span class="text-sm">🚛</span>
               <span class="text-xs font-semibold text-gray-600 group-hover:text-primary-700">Lastwagen</span>
             </a>
-            <a href="/anhaenger-fahrschule/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
+            <a href="/anhaenger-fahrschule-zuerich/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
               <span class="text-sm">🚐</span>
               <span class="text-xs font-semibold text-gray-600 group-hover:text-primary-700">Anhänger</span>
             </a>

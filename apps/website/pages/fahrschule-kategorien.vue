@@ -121,7 +121,7 @@
             <li class="flex gap-2"><span class="text-orange-600">✓</span> <span>CHF 1'000–2'000 Gesamtkosten</span></li>
             <li class="flex gap-2"><span class="text-orange-600">✓</span> <span>1-3 Monate Ausbildungsdauer</span></li>
           </ul>
-          <a href="/anhaenger-fahrschule/" class="inline-block bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition" aria-label="Mehr zur Anhänger Fahrschule erfahren">
+          <a href="/anhaenger-fahrschule-zuerich/" class="inline-block bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition" aria-label="Mehr zur Anhänger Fahrschule erfahren">
             Anhänger Fahrschule — Kategorie BE
           </a>
         </div>

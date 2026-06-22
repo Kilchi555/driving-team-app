@@ -15,7 +15,7 @@
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
-    <BreadcrumbNav :breadcrumbs="[{ label: 'Fahrschule', href: '/' }, { label: 'Anhänger Fahrschule', href: '/anhaenger-fahrschule/' }, { label: 'Anhängerprüfung', href: '/anhaenger-pruefung/' }, { label: 'Zürich' }]" />
+    <BreadcrumbNav :breadcrumbs="[{ label: 'Fahrschule', href: '/' }, { label: 'Anhänger Fahrschule', href: '/anhaenger-fahrschule-zuerich/' }, { label: 'Anhängerprüfung', href: '/anhaenger-pruefung/' }, { label: 'Zürich' }]" />
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
@@ -209,7 +209,7 @@
       <div class="section-container">
         <div class="flex flex-wrap gap-3 justify-center">
           <a href="/anhaenger-pruefung-lachen/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">📍 Anhänger Prüfung Lachen SZ</a>
-          <a href="/anhaenger-fahrschule/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">🚛 Anhänger Fahrschule</a>
+          <a href="/anhaenger-fahrschule-zuerich/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">🚛 Anhänger Fahrschule</a>
           <a href="/anhaenger-fahrschule-zuerich/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">📍 Anhänger Fahrschule Zürich</a>
         </div>
       </div>
@@ -244,7 +244,7 @@ const jsonLdScripts = [
     "@type": "BreadcrumbList",
     "itemListElement": [
       { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" },
-      { "@type": "ListItem", "position": 2, "name": "Anhänger Fahrschule", "item": "https://drivingteam.ch/anhaenger-fahrschule/" },
+      { "@type": "ListItem", "position": 2, "name": "Anhänger Fahrschule", "item": "https://drivingteam.ch/anhaenger-fahrschule-zuerich/" },
       { "@type": "ListItem", "position": 3, "name": "Anhängerprüfung", "item": "https://drivingteam.ch/anhaenger-pruefung/" },
       { "@type": "ListItem", "position": 4, "name": "Zürich", "item": "https://drivingteam.ch/anhaenger-pruefung-zuerich/" }
     ]

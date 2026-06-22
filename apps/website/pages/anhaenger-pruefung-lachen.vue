@@ -188,7 +188,7 @@
       <div class="section-container">
         <div class="flex flex-wrap gap-3 justify-center">
           <a href="/anhaenger-pruefung-zuerich/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">📍 Prüfung Zürich</a>
-          <a href="/anhaenger-fahrschule/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">🚛 Anhänger Fahrschule</a>
+          <a href="/anhaenger-fahrschule-lachen/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">🚛 Anhänger Fahrschule Lachen</a>
           <a href="/fahrschule-lachen/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">📍 Fahrschule Lachen</a>
         </div>
       </div>

@@ -14,7 +14,7 @@
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
-    <BreadcrumbNav :breadcrumbs="[{ label: 'Fahrschule', href: '/' }, { label: 'Anhänger Fahrschule', href: '/anhaenger-fahrschule/' }, { label: 'Anhängerprüfung' }]" />
+    <BreadcrumbNav :breadcrumbs="[{ label: 'Fahrschule', href: '/' }, { label: 'Anhänger Fahrschule', href: '/anhaenger-fahrschule-zuerich/' }, { label: 'Anhängerprüfung' }]" />
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 md:py-12">
@@ -76,7 +76,7 @@ const jsonLdScripts = [
     "@type": "BreadcrumbList",
     "itemListElement": [
       { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" },
-      { "@type": "ListItem", "position": 2, "name": "Anhänger Fahrschule", "item": "https://drivingteam.ch/anhaenger-fahrschule/" },
+      { "@type": "ListItem", "position": 2, "name": "Anhänger Fahrschule", "item": "https://drivingteam.ch/anhaenger-fahrschule-zuerich/" },
       { "@type": "ListItem", "position": 3, "name": "Anhängerprüfung", "item": "https://drivingteam.ch/anhaenger-pruefung/" }
     ]
   }) }

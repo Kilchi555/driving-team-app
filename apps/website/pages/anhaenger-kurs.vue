@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Anhängerkurs Basis Zürich | 1 Tag, CHF 190.- | Kat. BE | Driving Team</Title>
-      <Meta name="description" content="Anhängerkurs Basis in Zürich-Altstetten – in 1 Tag zur Anhängerprüfung (Kat. BE) bereit. CHF 190.-, prüfungsrelevante Manöver, Gruppe & Einzeln. Jetzt anmelden!" />
-      <Meta name="keywords" content="Anhängerkurs Basis Zürich, Anhängerkurs, Anhänger Kurs Zürich, Anhänger Prüfung Vorbereitung, Kategorie BE Kurs, Anhänger Fahrkurs Zürich, BE Prüfung Zürich" />
-      <Meta property="og:title" content="Anhängerkurs Basis Zürich | 1 Tag | CHF 190.- | Driving Team" />
-      <Meta property="og:description" content="Anhängerkurs Basis in Zürich-Altstetten. Optimale Vorbereitung auf die Anhänger Prüfung (Kat. BE). CHF 190.- pro Person, 3 Stunden, Gruppe & Einzeln möglich." />
+      <Title>Anhängerkurs Zürich | 1 Tag zur Prüfung | CHF 190.- | Driving Team</Title>
+      <Meta name="description" content="Anhängerkurs in Zürich-Altstetten: In 1 Tag fit für die Kategorie BE Prüfung. CHF 190.- inkl. Anhänger. Prüfungsrelevante Manöver, kleine Gruppen. Jetzt anmelden!" />
+      <Meta name="keywords" content="Anhängerkurs Zürich, Anhängerkurs, Anhänger Kurs Zürich, Anhänger Prüfung Vorbereitung, Kategorie BE Kurs, Anhänger Fahrkurs Zürich, BE Prüfung Zürich" />
+      <Meta property="og:title" content="Anhängerkurs Zürich | 1 Tag zur Prüfung | CHF 190.- | Driving Team" />
+      <Meta property="og:description" content="Anhängerkurs in Zürich-Altstetten. In 1 Tag zur Kategorie BE Prüfung bereit. CHF 190.- inkl. Anhänger. Prüfungsrelevante Manöver, kleine Gruppen möglich." />
       <Meta property="og:url" content="https://drivingteam.ch/anhaenger-kurs/" />
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-kurs/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/categories/anhaenger-fahrschule-hero.webp" />
@@ -179,7 +179,7 @@
     <section class="bg-white py-12">
       <div class="section-container">
         <div class="max-w-3xl mx-auto grid sm:grid-cols-2 gap-4">
-          <a href="/anhaenger-fahrschule/" class="flex items-center gap-3 p-5 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition">
+          <a href="/anhaenger-fahrschule-zuerich/" class="flex items-center gap-3 p-5 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition">
             <span class="text-2xl">🚐</span>
             <div><p class="font-semibold text-gray-900">Anhänger Fahrschule</p><p class="text-xs text-gray-500">Einzelfahrstunden & Infos</p></div>
           </a>
