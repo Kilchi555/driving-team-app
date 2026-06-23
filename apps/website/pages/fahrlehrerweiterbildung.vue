@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrlehrer Weiterbildung ✓ Obligatorisch | Driving Team</Title>
-      <Meta name="description" content="Fahrlehrer Weiterbildung beim Driving Team. Obligatorische Weiterbildung für Fahrlehrer mit eidgenössischem Fachausweis. Kontaktiere uns für mehr Informationen." />
+      <Title>Fahrlehrer Weiterbildung | Gesetzlich vorgeschriebene Schulung | Driving Team</Title>
+      <Meta name="description" content="Obligatorische Fahrlehrer-Weiterbildung (eidg. Fachausweis) – gesetzlich vorgeschrieben alle 4 Jahre, anerkannte Module, flexible Termine. Jetzt anfragen!" />
       <Meta property="og:title" content="Fahrlehrer Weiterbildung – Obligatorische Schulung | Driving Team" />
       <Meta property="og:description" content="Obligatorische Fahrlehrer-Weiterbildung für eidg. Fachausweis. Jetzt informieren!" />
       <Meta property="og:url" content="https://drivingteam.ch/fahrlehrerweiterbildung/" />

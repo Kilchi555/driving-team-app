@@ -1,12 +1,8 @@
 <template>
   <div>
     <Head>
-      <!-- A/B Title Test:
-           Test A (Wochen 1-2, Start: 19.05.2026): Online buchen CTA
-           Test B (Wochen 3-4): <Title>Fahrschule Lachen | Schnell zum Führerschein – Driving Team</Title>
-      -->
-      <Title>Fahrschule Lachen | Online buchen – Driving Team</Title>
-      <Meta name="description" content="Deine Fahrschule in Lachen SZ – Führerschein für Auto, Motorrad, Anhänger und Lastwagen. 85% Erfolgsquote, ab CHF 95.-. Jetzt online buchen!" />
+      <Title>Fahrschule Lachen SZ | Auto, Motorrad, Anhänger | ab CHF 95.- | Driving Team</Title>
+      <Meta name="description" content="Deine Fahrschule in Lachen SZ – Auto, Motorrad, Anhänger und Lastwagen. 85% Erfolgsquote, flexible Treffpunkte, ab CHF 95.-/Lektion. Prüfung Pfäffikon SZ. Jetzt buchen!" />
       <Meta name="keywords" content="Fahrschule Lachen, Fahrschule Lachen SZ, Fahrstunden Lachen, Führerschein Lachen, Auto Fahrschule Lachen, Motorrad Fahrschule Lachen, Fahrlehrer Lachen SZ" />
       <Meta property="og:title" content="Fahrschule Lachen SZ | ab CHF 95.- | Auto, Motorrad & mehr | Driving Team" />
       <Meta property="og:description" content="Professionelle Fahrausbildung in Lachen SZ. Auto, Motorrad, Lastwagen & Kurse. Ab CHF 95.-/Lektion. Flexible Zeiten & Treffpunkte im Kanton Schwyz." />
@@ -54,6 +50,66 @@
       :extras="['Unterricht auch in <strong>Englisch</strong> möglich!']"
     />
 
+    <!-- 3. Reviews (grau-50) — bewusst früh für Vertrauen -->
+    <ReviewsSection category="lachen" />
+
+    <!-- 4. Übungsgebiete (weiß) -->
+    <section class="py-16 bg-white">
+      <div class="section-container">
+        <div class="max-w-3xl mx-auto text-center mb-10">
+          <h2 class="heading-md mb-4">Unsere Übungsgebiete rund um Lachen</h2>
+          <p class="text-gray-600">Wir kennen das March und den Zürichsee wie unsere Westentasche – jede Lektion ist auf dein Ausbildungsniveau und das Ziel der nächsten Prüfungssequenz abgestimmt.</p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          <div class="bg-gray-50 rounded-2xl p-6">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center shrink-0 mt-0.5">
+                <svg class="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </div>
+              <div>
+                <h3 class="font-bold text-gray-900 mb-1">Quartier rund um den Hafen Lachen</h3>
+                <p class="text-gray-600 text-sm leading-relaxed">30er- und 20er-Zonen mit vielen Rechtsvortritten – ideal um Vortrittsregeln im Alltag zu verinnerlichen und das Bewusstsein für Fussgänger und Velos zu schärfen.</p>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-50 rounded-2xl p-6">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center shrink-0 mt-0.5">
+                <svg class="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+              </div>
+              <div>
+                <h3 class="font-bold text-gray-900 mb-1">Industriegebiet Hämmerli, Wangen SZ</h3>
+                <p class="text-gray-600 text-sm leading-relaxed">Breite Strassen mit wenig Verkehr – perfekt für Abbiegemanöver, Rückwärtsfahren und die ersten Lektionen auf breiteren Fahrbahnen ohne Druck.</p>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-50 rounded-2xl p-6">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center shrink-0 mt-0.5">
+                <svg class="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+              </div>
+              <div>
+                <h3 class="font-bold text-gray-900 mb-1">Altendorf im Täli</h3>
+                <p class="text-gray-600 text-sm leading-relaxed">Schmale Dorfstrassen und enge Kurven – hier üben wir Begegnungsverkehr, Gegenverkehr in engen Gassen und das sichere Einspuren auf beschränktem Platz.</p>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-50 rounded-2xl p-6">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center shrink-0 mt-0.5">
+                <svg class="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+              </div>
+              <div>
+                <h3 class="font-bold text-gray-900 mb-1">Richtung Feusisberg – Kurvenfahren</h3>
+                <p class="text-gray-600 text-sm leading-relaxed">Die anspruchsvollen Kurven Richtung Feusisberg sind ideal zum Trainieren von flüssigem Kurvenfahren, korrektem Einlenken und dem Umgang mit wechselnden Strassenbreiten.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="text-center text-gray-500 text-sm mt-8">Prüfungsstandort: <strong>Strassenverkehrsamt Pfäffikon SZ</strong> — wir kennen jede Prüfungsroute.</p>
+      </div>
+    </section>
+
     <section class="py-10 bg-gray-50 text-center">
       <div class="section-container">
         <p class="text-gray-600 mb-4 text-sm">Neugierig was deine Fahrausbildung kosten wird?</p>
@@ -61,19 +117,16 @@
       </div>
     </section>
 
-    <!-- 2.5. Instructors (weiß mit gradient) -->
+    <!-- 5. Instructors (weiß mit gradient) -->
     <InstructorProfileSection :instructors="instructors" />
 
-    <!-- 3. Standort Map (grau-50) -->
+    <!-- 6. Standort Map (grau-50) -->
     <div class="bg-gray-50">
       <LazyStandortMapSection location-key="lachen" />
     </div>
 
-    <!-- 4. Themen (weiß) -->
+    <!-- 7. Themen (weiß) -->
     <AusbildungsthemenSection location="Lachen" />
-
-    <!-- 5. Reviews (grau-50) -->
-    <ReviewsSection category="lachen" />
 
     <!-- 6. CTA (primary) -->
     <CtaSection title="Jetzt in Lachen starten!" />

@@ -4,7 +4,7 @@ seoTitle: "VKU Kurs: Verkehrskunde & Sicherheit"
 description: "Was ist der VKU Kurs, warum ist er obligatorisch und wie bereitest du dich optimal vor? Alles Wichtige zum Verkehrskundeunterricht in der Schweiz."
 slug: "vku-kurs-verkehrskunde-sicherheit"
 date: "2023-09-27"
-dateModified: "2026-03-01"
+dateModified: "2026-06-23"
 author: "Driving Team Fahrschule"
 category: "VKU Kurs"
 image: "/images/blog/vku-kurs.webp"
@@ -24,7 +24,7 @@ Der Verkehrskundeunterricht ist ein **gruppenbasierter Kurs**, der von diplomier
 - **Modul 1**: Wahrnehmung, Risikobewusstsein, Gefahrenprävention
 - **Modul 2**: Verantwortung im Strassenverkehr, Umwelt, soziales Verhalten
 
-Der Kurs dauert insgesamt **16 Stunden** (früher 8 Stunden) und wird in kleinen Gruppen von max. 6 Personen durchgeführt.
+Der Kurs dauert insgesamt **8 Stunden** und wird in kleinen Gruppen von max. 6 Personen durchgeführt. Ab 1. Januar 2027 wird er auf 4 Tage (4 × 2h) verteilt und muss **vor** der Theorieprüfung absolviert werden – [mehr dazu in unserem Artikel zur VKU-Änderung 2027](/blog/vku-kurs-2027-neue-regelung/).
 
 ## Warum ist der VKU obligatorisch?
 

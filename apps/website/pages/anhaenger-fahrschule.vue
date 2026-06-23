@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Anhänger Fahrschule Kat. BE | ab CHF 120 | Driving Team</Title>
-      <Meta name="description" content="Anhänger-Führerschein (Kat. BE) ohne Theorieprüfung. 5–8 Fahrstunden, Fahrzeug inklusive, ab CHF 120.-. Jetzt direkt in Zürich oder Lachen buchen!" />
+      <Title>Anhänger Fahrschule Kat. BE | Ohne Theorieprüfung | ab CHF 120.- | Driving Team</Title>
+      <Meta name="description" content="Anhänger-Führerschein (Kat. BE) ohne Theorieprüfung – Fahrzeug gestellt, 5–8 Lektionen, ab CHF 120.-. In Zürich und Lachen buchbar. Schnellster Weg zum BE-Ausweis!" />
       <Meta property="og:title" content="Anhänger Fahrschule Kategorie BE | Driving Team" />
       <Meta property="og:description" content="Anhänger Fahrausbildung in Zürich und Lachen – Keine Theorieprüfung, 5–8 Fahrstunden, ab CHF 120.-. Weg zur Anhängerprüfung." />
       <Meta property="og:url" content="https://drivingteam.ch/anhaenger-fahrschule/" />

@@ -5,11 +5,11 @@
       <Meta name="description" content="Pflicht-Grundkurs für Kat. A in Zürich-Altstetten – 12h (3×4h), max. 5 Personen, CHF 499.-. Jetzt deinen Platz online sichern!" />
       <Meta name="keywords" content="Motorrad Grundkurs Altstetten, Motorrad Grundkurs Zürich Altstetten, PGS Kurs Altstetten, Motorrad Kurs Zürich-Altstetten, Grundkurs Motorrad Altstetten" />
       <Meta property="og:title" content="Motorrad Grundkurs Altstetten | CHF 499.- | Driving Team" />
-      <Meta property="og:description" content="Motorrad Grundkurs direkt in Zürich-Altstetten. CHF 499.- Komplettpreis. 12 Stunden (3×4h). Max. 5 Teilnehmer. Treffpunkt Vulkanstrasse 130b. Obligatorisch für Kat. A1/A2/A." />
+      <Meta property="og:description" content="Motorrad Grundkurs direkt in Zürich-Altstetten. CHF 499.- Komplettpreis. 12 Stunden (3×4h). Max. 5 Teilnehmer. Treffpunkt Vulkanstrasse 130b. Obligatorisch für Kat. A1/A35kW/A." />
       <Meta property="og:url" content="https://drivingteam.ch/motorrad-grundkurs-altstetten/" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />
-      <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-altstetten/" />
+      <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-zuerich/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/courses/motorrad-grundkurs-hero.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />

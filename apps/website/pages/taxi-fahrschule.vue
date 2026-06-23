@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Taxi Fahrschule Schweiz | BPT Kat. 121 & 122 | Driving Team</Title>
-      <Meta name="description" content="BPT-Zulassung für Taxi und Personentransport – Code 121/122 in Zürich & Lachen. Geprüfte Fahrlehrer, flexible Termine. Jetzt Taxi-Fahrstunden buchen!" />
+      <Title>Taxiausweis Schweiz | BPT Code 121 & 122 | Kosten & Ablauf | Driving Team</Title>
+      <Meta name="description" content="BPT-Zulassung (Taxiausweis) Code 121/122 in Zürich & Lachen – Fahrstunden, Prüfungsvorbereitung, Kosten ab CHF 95.-/Lektion. Alles zum Taxiführerschein. Jetzt buchen!" />
       <Meta property="og:title" content="Taxi Fahrschule Schweiz | BPT Kat. 121 & 122 | Driving Team" />
       <Meta property="og:description" content="BPT-Ausbildung Code 121/122 – Taxi Fahrschule an mehreren Standorten. Professionelle Fahrlehrer, flexible Termine." />
       <Meta property="og:url" content="https://drivingteam.ch/taxi-fahrschule/" />

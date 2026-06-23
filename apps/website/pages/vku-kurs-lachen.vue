@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>VKU Kurs Lachen SZ ✓ CHF 250.- | Pflicht vor Fahrprüfung</Title>
-      <Meta name="description" content="VKU Kurs Lachen beim Driving Team. 8 Stunden Verkehrskundeunterricht in 2 Teilen à 4 Stunden. CHF 250.- inkl. Dokumentation. Jetzt anmelden!" />
+      <Title>VKU Kurs Lachen SZ | Verkehrskundeunterricht CHF 250.- | Driving Team</Title>
+      <Meta name="description" content="Verkehrskundeunterricht (VKU) in Lachen SZ – 8 Stunden (2×4h), CHF 250.- inkl. Kursbestätigung, Pflicht vor der Fahrprüfung. Kleine Gruppen, flexible Termine. Jetzt buchen!" />
       <Meta property="og:title" content="VKU Kurs Lachen – 8h Verkehrskundeunterricht | Driving Team" />
       <Meta property="og:description" content="VKU Kurs in Lachen SZ. 2x4h, CHF 250.- inkl. Dokumentation. Jetzt anmelden!" />
       <Meta property="og:url" content="https://drivingteam.ch/vku-kurs-lachen/" />
