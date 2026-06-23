@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Anhänger Fahrschule Kat. BE | Ohne Theorieprüfung | ab CHF 120.- | Driving Team</Title>
-      <Meta name="description" content="Anhänger-Führerschein (Kat. BE) ohne Theorieprüfung – Fahrzeug gestellt, 5–8 Lektionen, ab CHF 120.-. In Zürich und Lachen buchbar. Schnellster Weg zum BE-Ausweis!" />
+      <Title>Anhänger Fahrschule BE | Ohne Theorieprüfung | Driving Team</Title>
+      <Meta name="description" content="Anhänger-Führerschein (Kat. BE) ohne Theorieprüfung – Fahrzeug gestellt, 5–8 Lektionen, ab CHF 120.-. Zürich & Lachen. Schnellster Weg zum BE-Ausweis!" />
       <Meta property="og:title" content="Anhänger Fahrschule Kategorie BE | Driving Team" />
-      <Meta property="og:description" content="Anhänger Fahrausbildung in Zürich und Lachen – Keine Theorieprüfung, 5–8 Fahrstunden, ab CHF 120.-. Weg zur Anhängerprüfung." />
+      <Meta property="og:description" content="Anhänger-Führerschein (Kat. BE) ohne Theorieprüfung – Fahrzeug gestellt, 5–8 Lektionen ab CHF 120.-. Zürich & Lachen. Schnellster Weg zum BE-Ausweis!" />
       <Meta property="og:url" content="https://drivingteam.ch/anhaenger-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-fahrschule/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/categories/anhaenger-fahrschule-new-hero.webp" />
@@ -127,8 +127,16 @@
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-                <p class="text-sm text-gray-600">Wir begleiten dich selbstverständlich zur Anhängerfahrprüfung. Du musst dir keine Gedanken um das Fahrzeug machen, denn wir stellen dir das Prüfungsfahrzeug. Als deine Anhängerfahrschule sorgen wir zudem von Anfang an für einen positiven ersten Eindruck beim Prüfungsexperten.</p>
+                <p class="text-sm text-gray-600">Wir begleiten dich selbstverständlich zur Anhängerfahrprüfung. Du musst dir keine Gedanken um das Fahrzeug machen – wir stellen Zugfahrzeug und Anhänger. Als deine Anhängerfahrschule sorgen wir von Anfang an für einen positiven ersten Eindruck beim Prüfungsexperten.</p>
                 <p class="text-sm text-gray-500 mt-2 italic">Für den BE Führerausweis brauchst du lediglich den Lernfahrausweis der Kategorie BE – keine Theorieprüfung nötig!</p>
+                <div class="mt-3 p-3 bg-gray-50 rounded-lg">
+                  <p class="text-xs font-semibold text-gray-700 mb-1">Prüfungsort:</p>
+                  <ul class="text-xs text-gray-600 space-y-1">
+                    <li>📍 <strong>Zürich:</strong> StVA Regensdorf oder Albisgütli (je nach Wohnkanton)</li>
+                    <li>📍 <strong>Region Lachen:</strong> StVA Pfäffikon SZ</li>
+                    <li>📍 <strong>Aargau/Limmattal:</strong> StVA Wettingen</li>
+                  </ul>
+                </div>
             </div>
           </details>
         </div>
@@ -450,7 +458,7 @@ const jsonLdScripts = [
         { "@type": "Question", "name": "Ab welchem Alter kann ich den BE machen?", "acceptedAnswer": { "@type": "Answer", "text": "Bereits ab einem Alter von 17 Jahren darf man den Lernfahrausweis für die Kategorie BE bestellen und somit auch Lernfahrten in Begleitung machen." } },
         { "@type": "Question", "name": "Was kostet der Anhänger Führerschein insgesamt?", "acceptedAnswer": { "@type": "Answer", "text": "Die Gesamtkosten für einen Anhänger-Führerschein betragen in der Schweiz ca. CHF 1'200–1'600. Darin enthalten: Lernfahrausweis (CHF 80), Fahrstunden (5–8 à CHF 120.-), Admin-/Versicherungspauschale (CHF 120.- einmalig), WarmUp + Prüfungsfahrt (CHF 360.-) und die Prüfungsgebühr des StVA." } },
         { "@type": "Question", "name": "Wie viele Fahrstunden brauche ich für den Anhänger-Führerschein?", "acceptedAnswer": { "@type": "Answer", "text": "Durchschnittlich 5–8 Fahrstunden. Mit viel Auto-Fahrerfahrung und privatem Üben kann es auch weniger sein. Wir empfehlen Doppellektionen (90 Min.) für effizienten Lernfortschritt." } },
-        { "@type": "Question", "name": "Wo findet die Anhängerprüfung statt?", "acceptedAnswer": { "@type": "Answer", "text": "In der Region Zürich am Prüfungszentrum Regensdorf oder Albisgütli. Für das Limmattal/Aargau ist Wettingen eine Alternative. In der Region Lachen und March im entsprechenden Prüfungsgebiet." } }
+        { "@type": "Question", "name": "Wo findet die Anhängerprüfung statt?", "acceptedAnswer": { "@type": "Answer", "text": "In der Region Zürich am StVA Regensdorf oder Albisgütli (je nach Wohnkanton). Für das Limmattal und Aargau ist Wettingen eine Alternative. In der Region Lachen findet die Prüfung am StVA Pfäffikon SZ statt." } }
       ]
     })
   }

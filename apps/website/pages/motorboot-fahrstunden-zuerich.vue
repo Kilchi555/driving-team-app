@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Bootsfahrschule Zürich | Motorboot Zürichsee ab CHF 190.- | Driving Team</Title>
-      <Meta name="description" content="Bootsfahrschule Zürich am unteren Zürichsee – Motorbootprüfung Kategorie A mit Fahrlehrer Marc. Treffpunkte in Zürich, Thalwil, Wädenswil, Richterswil. Ab CHF 190.-/90 Min. Jetzt anmelden!" />
+      <Title>Bootsfahrschule Zürich | Motorboot ab CHF 190.- | Driving Team</Title>
+      <Meta name="description" content="Bootsfahrschule am unteren Zürichsee mit Roger Schoch. Treffpunkte Zürich, Thalwil, Wädenswil, Richterswil. Motorbootprüfung Kat. A, ab CHF 190.-." />
       <Meta name="keywords" content="Bootsfahrschule Zürich, Motorboot Fahrstunden Zürich, Bootsführerschein Zürich, Motorboot Zürichsee, Motorbootprüfung Zürich, Motorboot Fahrschule Zürichsee, Boot fahren lernen Zürichsee" />
       <Meta property="og:title" content="Bootsfahrschule Zürich | Motorboot am Zürichsee | Driving Team" />
       <Meta property="og:description" content="Bootsfahrschule am unteren Zürichsee – Zürich, Thalwil, Wädenswil, Richterswil. Motorbootprüfung Kategorie A. Ab CHF 190.-/90 Min." />

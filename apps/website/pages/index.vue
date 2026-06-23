@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Zürich | Auto, Motorrad, Anhänger & Lastwagen | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Zürich – Driving Team. Ab CHF 95.–, 85% Prüfungserfolg, diplom. Fahrlehrer. Auto, Motorrad, Anhänger, Lastwagen, Taxi. Standort Zürich-Altstetten. Jetzt online Termin buchen!" />
+      <Title>Fahrschule Zürich | Auto, Motorrad, LKW & Anhänger | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Zürich mit 85% Prüfungserfolg – Auto, Motorrad, Anhänger, Lastwagen & Taxi. Ab CHF 95.-, dipl. Fahrlehrer in Altstetten. Jetzt Termin buchen!" />
       <Meta name="keywords" content="Fahrschule Zürich, Auto Fahrschule Zürich, Fahrstunden Zürich, Fahrlehrer Zürich, Motorrad Fahrschule Zürich, Anhänger Fahrschule Zürich, Lastwagen Fahrschule Zürich, Taxi Fahrschule Zürich, Fahrschule Zürich-Altstetten" />
       <Meta name="author" content="Driving Team" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />

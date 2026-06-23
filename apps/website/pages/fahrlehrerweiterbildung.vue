@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrlehrer Weiterbildung | Gesetzlich vorgeschriebene Schulung | Driving Team</Title>
+      <Title>Fahrlehrer Weiterbildung | ASA-anerkannt | Driving Team</Title>
       <Meta name="description" content="Obligatorische Fahrlehrer-Weiterbildung (eidg. Fachausweis) – gesetzlich vorgeschrieben alle 4 Jahre, anerkannte Module, flexible Termine. Jetzt anfragen!" />
       <Meta property="og:title" content="Fahrlehrer Weiterbildung – Obligatorische Schulung | Driving Team" />
       <Meta property="og:description" content="Obligatorische Fahrlehrer-Weiterbildung für eidg. Fachausweis. Jetzt informieren!" />

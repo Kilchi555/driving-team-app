@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>Kontakt | Driving Team Fahrschule Zürich & Lachen</Title>
-      <Meta name="description" content="Kontaktiere Driving Team per Formular – wir melden uns innerhalb von 24h. Fahrschule Zürich, Lachen, Pfäffikon." />
+      <Meta name="description" content="Kontaktiere Driving Team – wir melden uns innerhalb von 24 Stunden. Fahrschule Zürich, Lachen & Pfäffikon SZ. Jetzt Nachricht senden oder anrufen." />
       <Meta property="og:title" content="Kontakt | Driving Team Fahrschule" />
       <Meta property="og:description" content="Kontaktiere uns – Antwort innerhalb 24h. Fahrschule Zürich, Lachen & weitere Standorte." />
       <Meta property="og:url" content="https://drivingteam.ch/kontakt/" />

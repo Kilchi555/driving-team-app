@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Anhängerkurs Zürich | Intensivkurs 1 Tag zur BE-Prüfung | CHF 190.- | Driving Team</Title>
-      <Meta name="description" content="Anhängerkurs Zürich-Altstetten: In 1 Kurstag fit für die Kat. BE-Prüfung – Anhänger gestellt, CHF 190.- inkl. Theorie & Praxis. Für alle die bereits Auto fahren. Jetzt buchen!" />
+      <Title>Anhängerkurs Zürich | 3h Grundkurs BE | CHF 190.- | Driving Team</Title>
+      <Meta name="description" content="Anhängerkurs Zürich-Altstetten: 3h Grundkurs für eine solide BE-Basis. Anhänger gestellt, CHF 190.- inkl. Theorie & Praxis. Für Autofahrer. Jetzt buchen!" />
       <Meta name="keywords" content="Anhängerkurs Zürich, Anhängerkurs, Anhänger Kurs Zürich, Anhänger Prüfung Vorbereitung, Kategorie BE Kurs, Anhänger Fahrkurs Zürich, BE Prüfung Zürich" />
       <Meta property="og:title" content="Anhängerkurs Zürich | 1 Tag zur Prüfung | CHF 190.- | Driving Team" />
-      <Meta property="og:description" content="Anhängerkurs in Zürich-Altstetten. In 1 Tag zur Kategorie BE Prüfung bereit. CHF 190.- inkl. Anhänger. Prüfungsrelevante Manöver, kleine Gruppen möglich." />
+      <Meta property="og:description" content="Anhängerkurs Zürich-Altstetten. 3h Grundkurs für solide BE-Basis. CHF 190.- inkl. Anhänger. Prüfungsrelevante Manöver, kleine Gruppen möglich." />
       <Meta property="og:url" content="https://drivingteam.ch/anhaenger-kurs/" />
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-kurs/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/categories/anhaenger-fahrschule-hero.webp" />

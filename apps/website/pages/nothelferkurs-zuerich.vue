@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Nothelferkurs Zürich | Direkt am Bahnhof Altstetten | CHF 120.- | Driving Team</Title>
-      <Meta name="description" content="Nothelferkurs direkt am Bahnhof Zürich-Altstetten – 10h inkl. Nothelferausweis, CHF 120.-, mit ÖV erreichbar, ab 14 Jahren. Obligatorisch für den Führerschein. Jetzt buchen!" />
+      <Title>Nothelferkurs Zürich Bahnhof Altstetten | CHF 120.- | Driving Team</Title>
+      <Meta name="description" content="Nothelferkurs am Bahnhof Zürich-Altstetten – 10 Std. inkl. Nothelferausweis, CHF 120.-, mit ÖV erreichbar. Obligatorisch für den Führerschein. Jetzt buchen!" />
       <Meta name="keywords" content="Nothelferkurs Zürich, Nothelferkurs Bahnhof Altstetten, Nothelferkurs Zürich buchen, Erste Hilfe Kurs Zürich Führerschein, Nothelfer Zürich, Nothelferkurs am Bahnhof" />
       <Meta property="og:title" content="Nothelferkurs Zürich | Am Bahnhof Altstetten | CHF 120.- | Driving Team" />
-      <Meta property="og:description" content="Nothelferkurs am Bahnhof Zürich-Altstetten – direkt mit ÖV erreichbar. CHF 120.- inkl. Nothelferausweis. 10 Stunden. Obligatorisch für alle Führerscheinkategorien. Sofort buchbar." />
+      <Meta property="og:description" content="Nothelferkurs am Bahnhof Zürich-Altstetten – direkt mit ÖV erreichbar. CHF 120.- inkl. Nothelferausweis. 10 Stunden. Obligatorisch für alle Führerscheinkategorien." />
       <Meta property="og:url" content="https://drivingteam.ch/nothelferkurs-zuerich/" />
       <Meta property="og:type" content="website" />
       <Link rel="canonical" href="https://drivingteam.ch/nothelferkurs-zuerich/" />

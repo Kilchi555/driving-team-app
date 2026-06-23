@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Motorrad Grundkurs Zürich ✓ CHF 499.- | Pflicht für A1/A35kW/A</Title>
+      <Title>Motorrad Grundkurs Zürich | CHF 499.- | A1/A35kW/A | Driving Team</Title>
       <Meta name="description" content="Pflicht-Grundkurs für den Motorrad-Führerschein in Zürich – 12h (3×4h), max. 5 Personen, CHF 499.-, Fahrschulmotorrad verfügbar. Jetzt Platz sichern!" />
       <Meta name="keywords" content="Motorrad Grundkurs Zürich, Motorrad Grundkurs buchen Zürich, PGS Kurs Zürich, Motorrad Kurs Zürich, Motorrad Fahrkurs Zürich, Grundkurs Motorrad Zürich" />
       <Meta property="og:title" content="Motorrad Grundkurs Zürich | CHF 499.- | A1, A35kW, A | Driving Team" />

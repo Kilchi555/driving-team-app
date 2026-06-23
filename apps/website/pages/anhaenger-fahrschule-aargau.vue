@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Anhänger Fahrschule Aargau | Keine Theorieprüfung | Kat. BE ab CHF 120.-</Title>
+      <Title>Anhänger Fahrschule Aargau | Kat. BE ab CHF 120.- | Driving Team</Title>
       <Meta name="description" content="Anhänger-Führerschein Aargau (Kat. BE) – keine Theorieprüfung, nur 5–8 Fahrstunden, ab CHF 120.-. Prüfung Wettingen. Jetzt direkt online buchen!" />
       <Meta name="keywords" content="Anhänger Fahrschule Aargau, Kategorie BE Aargau, Anhänger Fahrstunden Aargau, BE Führerschein Aargau, Anhängerprüfung Wettingen, Anhänger Fahrschule Spreitenbach, Anhänger Fahrschule Baden" />
       <Meta property="og:title" content="Anhänger Fahrschule Aargau | Keine Theorieprüfung | Kat. BE | Driving Team" />

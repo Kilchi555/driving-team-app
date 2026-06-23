@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Motorboot Fahrschule Zürichsee | Kategorie A ab CHF 190.- | Driving Team</Title>
-      <Meta name="description" content="Motorboot Fahrschule am Zürichsee – oberer & unterer See. Bootsfahrlehrer Marc, flexible Zeiten auch abends & samstags. Motorbootprüfung Kategorie A. Ab CHF 190.-/90 Min. Jetzt anmelden!" />
+      <Title>Motorboot Fahrschule Zürichsee | ab CHF 190.- | Driving Team</Title>
+      <Meta name="description" content="Motorboot Fahrschule am Zürichsee mit Bootsfahrlehrer Marc. Auch abends & samstags buchbar. Motorbootprüfung Kat. A, ab CHF 190.-/90 Min. Jetzt anmelden!" />
       <Meta name="keywords" content="Motorboot Fahrschule Zürichsee, Bootsfahrschule Zürichsee, Motorboot Fahrschule, Motorbootprüfung Zürichsee, Motorboot Führerschein Schweiz, Bootfahrschule Zürich, Motorbootfahrschule" />
       <Meta property="og:title" content="Motorboot Fahrschule Zürichsee | Kategorie A | Driving Team" />
       <Meta property="og:description" content="Motorboot Fahrschule am Zürichsee – oberer & unterer See. Bootsfahrlehrer Marc. Ab CHF 190.-/90 Min. Motorbootprüfung Kategorie A." />

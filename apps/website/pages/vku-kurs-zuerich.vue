@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>VKU Kurs Zürich | Verkehrskundeunterricht CHF 190.- | Pflicht vor Fahrprüfung</Title>
-      <Meta name="description" content="Verkehrskundeunterricht (VKU) in Zürich-Altstetten – 8 Stunden (2×4h), CHF 190.- inkl. Kursbestätigung, Pflicht vor jeder Auto- und Motorrad-Fahrprüfung. Jetzt buchen!" />
+      <Title>VKU Zürich | Verkehrskundeunterricht | CHF 190.- | Driving Team</Title>
+      <Meta name="description" content="Verkehrskundeunterricht (VKU) in Zürich-Altstetten – 8 Std. (2×4h), CHF 190.- inkl. Kursbestätigung. Pflicht vor Auto- & Motorrad-Fahrprüfung. Jetzt buchen!" />
       <Meta name="keywords" content="VKU Kurs Zürich, Verkehrskundeunterricht Zürich, VKU Zürich, VKU Kurs Altstetten, Verkehrskunde Altstetten, VKU Kurs buchen Zürich, Verkehrskunde Kurs Zürich, VKU Fahrschule Zürich" />
       <Meta property="og:title" content="VKU Kurs Zürich | Verkehrskundeunterricht CHF 190.- | Obligatorisch | Driving Team" />
-      <Meta property="og:description" content="VKU Kurs in Zürich-Altstetten. CHF 190.- inkl. Dokumentation & Kursbestätigung. 8 Stunden (2×4h). Obligatorisch für Auto & Motorrad Führerschein. Flexible Termine." />
+      <Meta property="og:description" content="VKU Kurs in Zürich-Altstetten. CHF 190.- inkl. Dokumentation & Kursbestätigung. 8 Stunden (2×4h). Obligatorisch für Auto & Motorrad Führerschein." />
       <Meta property="og:url" content="https://drivingteam.ch/vku-kurs-zuerich/" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />

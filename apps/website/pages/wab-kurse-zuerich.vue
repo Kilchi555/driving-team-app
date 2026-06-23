@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>WAB Kurs Pfäffikon ZH | Weiterausbildung für Neulenker | ab CHF 290.- | Driving Team</Title>
-      <Meta name="description" content="WAB Kurs (Weiterausbildung für Neulenker) in Pfäffikon ZH – gesetzlich vorgeschrieben innerhalb von 12 Monaten nach der Fahrprüfung, ab CHF 290.-. Jetzt anmelden!" />
+      <Title>WAB Kurs Pfäffikon ZH | Neulenker-Weiterbildung | Driving Team</Title>
+      <Meta name="description" content="WAB Kurs in Pfäffikon ZH – Pflicht für Neulenker innerhalb 12 Monate nach der Fahrprüfung. Ab CHF 290.-. Kleine Gruppen. Jetzt anmelden!" />
       <Meta property="og:title" content="WAB Kurs Pfäffikon ZH | Weiterausbildung für Neulenker | Driving Team" />
       <Meta property="og:description" content="WAB Kurs in Pfäffikon ZH – obligatorisch innerhalb 12 Monate nach Fahrprüfung, ab CHF 290.-. Durchgeführt bei der Transportschule AG. Jetzt anmelden!" />
       <Meta property="og:url" content="https://drivingteam.ch/wab-kurse-zuerich/" />

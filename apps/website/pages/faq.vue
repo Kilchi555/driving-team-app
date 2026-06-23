@@ -2,7 +2,7 @@
   <div>
     <Head>
       <Title>FAQ | Häufig gestellte Fragen | Driving Team Fahrschule</Title>
-      <Meta name="description" content="Häufig gestellte Fragen zur Fahrschule Driving Team – Fahrstunden, Preise, Kategorien, Lernfahrten und mehr." />
+      <Meta name="description" content="Häufig gestellte Fragen zur Fahrschule Driving Team – Fahrstunden, Prüfungsvorbereitung, Preise, Kategorien und Lernfahrten. Jetzt lesen!" />
       <Meta property="og:title" content="FAQ – Häufige Fragen zur Fahrschule | Driving Team" />
       <Meta property="og:description" content="Antworten auf die häufigsten Fragen zu Fahrstunden, Preisen, Kategorien und Lernfahrten." />
       <Meta property="og:url" content="https://drivingteam.ch/faq/" />

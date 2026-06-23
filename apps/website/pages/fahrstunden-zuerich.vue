@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrstunden Zürich ab CHF 95.- | Auto, Motorrad, Anhänger</Title>
+      <Title>Fahrstunden Zürich | Auto, Motorrad & Anhänger | Driving Team</Title>
       <Meta name="description" content="Fahrstunden in Zürich ab CHF 95.- mit 85% Erfolgsquote. Flexible Zeiten, Standort Altstetten, alle Kategorien. Jetzt direkt online buchen!" />
       <Meta name="keywords" content="Fahrstunden Zürich, Fahrstunden Zürich Kosten, Auto Fahrstunden Zürich, Motorrad Fahrstunden Zürich, Anhänger Fahrstunden Zürich, Fahrstunden Zürich buchen, Fahrstunden Zürich Preis" />
       <Meta property="og:title" content="Fahrstunden Zürich ab CHF 95.- | Auto & Motorrad | Driving Team" />

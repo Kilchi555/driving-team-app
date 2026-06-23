@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Busführerschein D1 & D | Pfäffikon SZ & Zürich | ab CHF 200.-/Lektion | Driving Team</Title>
-      <Meta name="description" content="Busfahrer-Ausbildung (D1/D) mit Treffpunkt Wädenswil oder Pfäffikon SZ – Fahrprüfung am StVA Zürich-Albisgütli, ab CHF 200.-/Lektion. Erfahrene Fahrlehrer. Jetzt anfragen!" />
+      <Title>Busführerschein D1 & D | Zürich & Lachen | Driving Team</Title>
+      <Meta name="description" content="Busfahrer-Ausbildung (D1/D) ab Wädenswil oder Pfäffikon SZ – Fahrprüfung StVA Albisgütli, ab CHF 200.-/Lektion. Erfahrene Fahrlehrer. Jetzt anfragen!" />
       <Meta property="og:title" content="Bus Fahrschule Zürich | D1/D Berufliche Ausbildung | Driving Team" />
       <Meta property="og:description" content="Professionelle Busfahrer-Ausbildung D1 & D in Zürich. Prüfung am StVA Regensdorf. Erfahrene Fahrlehrer, faire Preise." />
       <Meta property="og:url" content="https://drivingteam.ch/bus-fahrschule/" />

@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>VKU Kurs Altstetten | CHF 190.- | Pflicht vor Fahrprüfung | Driving Team</Title>
+      <Title>VKU Kurs Altstetten | Verkehrskundeunterricht | Driving Team</Title>
       <Meta name="description" content="VKU Kurs direkt beim Bahnhof Altstetten – 8 Stunden (2×4h), CHF 190.- inkl. Dokumentation, Pflicht vor der Fahrprüfung. Jetzt online anmelden!" />
       <Meta name="keywords" content="VKU Kurs Altstetten, Verkehrskundeunterricht Altstetten, VKU Altstetten, Verkehrskunde Altstetten, VKU Kurs Zürich-Altstetten, Verkehrskunde Kurs Altstetten" />
       <Meta property="og:title" content="VKU Kurs Altstetten | Verkehrskundeunterricht CHF 190.- | Driving Team" />

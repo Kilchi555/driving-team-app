@@ -2,9 +2,9 @@
   <div>
     <Head>
       <Title>Auto Fahrschule Zürich & Lachen | Kat. B | ab CHF 95.- | Driving Team</Title>
-      <Meta name="description" content="Auto Fahrschule in Zürich & Lachen – Kategorie B Führerschein mit 85% Erfolgsquote, flexible Treffpunkte, ab CHF 95.-/Lektion. Prüfung am StVA. Jetzt online buchen!" />
+      <Meta name="description" content="Auto Fahrschule Zürich & Lachen – Kat. B Führerschein mit 85% Erfolgsquote, ab CHF 95.-/Lektion, flexible Treffpunkte, Prüfung am StVA. Jetzt buchen!" />
       <Meta property="og:title" content="Auto Fahrschule Zürich & Lachen | Kategorie B | Driving Team" />
-      <Meta property="og:description" content="Auto Fahrschule in Zürich für Kategorie B Ausbildung" />
+      <Meta property="og:description" content="Auto Fahrschule Zürich & Lachen – Kat. B Führerschein mit 85% Erfolgsquote, ab CHF 95.-/Lektion, flexible Treffpunkte, Prüfung am StVA." />
       <Meta property="og:url" content="https://drivingteam.ch/auto-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/auto-fahrschule/" />
       <Link rel="alternate" hreflang="de-CH" href="https://drivingteam.ch/auto-fahrschule/" />
@@ -136,13 +136,21 @@
                 <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">3</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="text-base md:text-lg lg:text-xl font-bold">Auto Theorieprüfung</h3>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Verkehrskundeunterricht VKU</h3>
                 <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-                <p class="text-gray-600 mb-2">Deine Theorieprüfung für den Führerschein</p>
-                <p class="text-sm text-gray-600">Nachdem du dein Lernfahrgesuch eingereicht hast, erhältst du eine Anmeldebestätigung mit einem PIN-Code. Dieser Code ist dein Schlüssel zur Anmeldung für die Theorieprüfung – ein wichtiger Meilenstein auf dem Weg zu deinem Führerschein. Um dich optimal vorzubereiten, empfehlen wir dir, mit einem Theoriebuch zu lernen und anschliessend die Fragen mit einer Lern-CD oder App zu üben. Sobald du die Theorieprüfung erfolgreich bestanden hast, erhältst du den Lernfahrausweis für die Kategorie B (Auto), welcher 24 Monate gültig ist.</p>
+                <p class="text-gray-600 mb-2">Der Verkehrskundeunterricht (VKU): Pflicht vor der Theorieprüfung</p>
+                <p class="text-sm text-gray-600">Im insgesamt achtstündigen Verkehrskundeunterricht (VKU) wirst du von unseren Fahrlehrern ausführlich auf den Alltag im Strassenverkehr vorbereitet. Der VKU ist obligatorisch und muss vor der praktischen Fahrprüfung abgeschlossen werden. Wir empfehlen, ihn früh im Ausbildungsprozess zu absolvieren – so kannst du das erlernte Wissen direkt in deinen Autofahrstunden anwenden.</p>
+                <p class="text-sm text-gray-500 mt-2 italic">2 Kursteile à 4 Stunden – Anmeldung direkt online möglich.</p>
+                <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p class="text-xs text-amber-800"><strong>Ab 1. Januar 2027:</strong> Der VKU muss neu <strong>vor</strong> der Theorieprüfung abgeschlossen werden und wird auf 4 Kurstage (4×2h) aufgeteilt. <a href="/blog/vku-kurs-2027-neue-regelung/" class="underline">Mehr zur neuen VKU-Regelung →</a></p>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <a href="/vku-kurs-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="VKU Verkehrskundekurs in Zürich buchen">VKU Kurs Zürich</a>
+                  <a href="/vku-kurs-lachen/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="VKU Verkehrskundekurs in Lachen buchen">VKU Kurs Lachen</a>
+                </div>
             </div>
           </details>
 
@@ -152,18 +160,13 @@
                 <div class="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary-600 text-white font-bold text-sm md:text-lg">4</div>
               </div>
               <div class="flex-1 flex items-center justify-between">
-                <h3 class="text-base md:text-lg lg:text-xl font-bold">Verkehrskunde VKU</h3>
+                <h3 class="text-base md:text-lg lg:text-xl font-bold">Auto Theorieprüfung</h3>
                 <span class="text-gray-400 group-open:rotate-180 transition-transform duration-200 flex-shrink-0 ml-2 md:ml-4 text-lg">▼</span>
               </div>
             </summary>
             <div class="px-4 md:px-8 pb-4 md:pb-6 ml-14 md:ml-[72px]">
-                <p class="text-gray-600 mb-2">Der Verkehrskundekurs (VKU): Dein Weg zur praktischen Prüfung</p>
-                <p class="text-sm text-gray-600">Im insgesamt achtstündigen Verkehrskundekurs (VKU) wirst du von unseren Fahrlehrern ausführlich auf den Alltag im Strassenverkehr vorbereitet. Der Abschluss des VKU ist obligatorisch und eine Voraussetzung für die praktische Fahrprüfung. Wir empfehlen dir, den Verkehrskundekurs (VKU) gleich zu Beginn deiner praktischen Fahrausbildung zu besuchen. So kannst du das erlernte Wissen direkt in deinen Autofahrstunden umsetzen.</p>
-                <p class="text-sm text-gray-500 mt-2 italic">2 Kursteile à 4 Stunden</p>
-                <div class="mt-3 flex flex-wrap gap-2">
-                  <a href="/vku-kurs-zuerich/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="VKU Verkehrskundekurs in Zürich buchen">VKU Kurs Zürich</a>
-                  <a href="/vku-kurs-lachen/" class="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full hover:bg-primary-200 transition" aria-label="VKU Verkehrskundekurs in Lachen buchen">VKU Kurs Lachen</a>
-                </div>
+                <p class="text-gray-600 mb-2">Deine Theorieprüfung für den Führerschein</p>
+                <p class="text-sm text-gray-600">Nachdem du dein Lernfahrgesuch eingereicht hast, erhältst du eine Anmeldebestätigung mit einem PIN-Code. Dieser Code ist dein Schlüssel zur Anmeldung für die Theorieprüfung. Um dich optimal vorzubereiten, empfehlen wir dir, mit einem Theoriebuch zu lernen und anschliessend die Fragen mit einer App zu üben. Sobald du die Theorieprüfung erfolgreich bestanden hast, erhältst du den Lernfahrausweis für die Kategorie B (Auto), welcher 24 Monate gültig ist.</p>
             </div>
           </details>
 
@@ -310,7 +313,7 @@
             Was kostet eine Fahrstunde bei euch?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Eine Fahrstunde (45 Minuten) kostet bei uns CHF 100–120, je nach Kurs- und Zeittyp. Wir bieten auch günstigere Abo-Preise an: Bei 5 Fahrstunden sparst du gegenüber Einzellektionen. Zusätzlich fallen eine Versicherungspauschale (CHF 120 einmalig) und der WarmUp + Prüfungsfahrt Kurs (CHF 285) an. Kontaktiere uns für aktuelle Preise und individuelle Angebote.</p>
+          <p class="text-gray-600 mt-4">Eine Fahrstunde (45 Minuten) kostet ab CHF 95.- (Abendtermine und Wochenende leicht teurer). Wir empfehlen Abopakete: Bei 5 Fahrstunden sparst du gegenüber Einzellektionen. Zusätzlich fallen eine Versicherungspauschale (CHF 120.- einmalig) und der WarmUp + Prüfungsfahrt Kurs (CHF 285.-) an. Kontaktiere uns für aktuelle Preise und individuelle Angebote.</p>
         </details>
       </div>
       <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -390,7 +393,7 @@ const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"Course","name":"Auto Fahrschule - Kategorie B","description":"Professionelle Auto Fahrausbildung für Kategorie B. 85% Erfolgsquote, flexible Fahrstunden, erfahrene Fahrlehrer in Zürich","provider":{"@type":"Organization","name":"Driving Team","url":"https://drivingteam.ch"},"offers":{"@type":"Offer","price":"100-120","priceCurrency":"CHF","url":"https://app.simy.ch/booking/availability/driving-team","availability":"InStock"},"educationLevel":"Intermediate","learningResourceType":"Driving Course","keywords":"Auto Fahrschule, Kategorie B Fahrstunden, Auto Führerschein, Fahrausbildung Zürich"}' },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "AggregateRating", "itemReviewed": { "@type": "Course", "name": "Auto Fahrschule - Kategorie B", "url": "https://drivingteam.ch/auto-fahrschule/" }, "ratingValue": 4.9, "bestRating": 5, "worstRating": 1, "ratingCount": 366, "reviewCount": 366 }) },
   { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://drivingteam.ch/"},{"@type":"ListItem","position":2,"name":"Auto Fahrschule","item":"https://drivingteam.ch/auto-fahrschule/"}]}' },
-  { type: 'application/ld+json', innerHTML: JSON.stringify({"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Wieviele Fahrstunden benötige ich?","acceptedAnswer":{"@type":"Answer","text":"Das ist unterschiedlich und hängt von deinem Alter, Erfahrung und Lerntempo ab. Im Durchschnitt benötigen unsere Schüler 15-20 Fahrstunden. Wir beraten dich gerne individuell."}},{"@type":"Question","name":"Wie kann ich meine Fahrausbildung beschleunigen?","acceptedAnswer":{"@type":"Answer","text":"Optimal wären 2-4 Fahrten pro Woche. Das heisst nicht unbedingt 2-4 Fahrlektionen, sondern z.B. 1 Fahrlektion und 1 Mal privat repetieren mit einer Begleitperson."}},{"@type":"Question","name":"Wieso dauert die Fahrstunde 45 Minuten?","acceptedAnswer":{"@type":"Answer","text":"Nach 45 Minuten lässt die Konzentration nach. Dies ist auch an Schulen Standard. Je nach Übungsgebiet können Fahrstunden auch länger ausfallen."}},{"@type":"Question","name":"Was kostet der Führerschein Kategorie B insgesamt?","acceptedAnswer":{"@type":"Answer","text":"Die Gesamtkosten für einen Führerschein der Kategorie B betragen in der Schweiz durchschnittlich CHF 3'500–3'600. Dies beinhaltet den Nothelferkurs (ca. CHF 100), Sehtest (CHF 50), Lernfahrausweis (CHF 80), Theorieprüfung (CHF 40), VKU-Kurs (CHF 200–300), Fahrstunden (durchschnittlich 15–20 à CHF 100–120), praktische Prüfung (CHF 130) und WAB-Kurs (CHF 350). Die genauen Kosten hängen von der Anzahl der benötigten Fahrstunden ab."}},{"@type":"Question","name":"Was sind die Voraussetzungen für den Führerschein?","acceptedAnswer":{"@type":"Answer","text":"Um einen Führerschein der Kategorie B zu erhalten, benötigst du: Mindestalter von 18 Jahren (oder 17 Jahre beim begleiteten Fahren), einen bestandenen Nothelferkurs (obligatorisch), einen bestandenen Sehtest, einen gültigen Lernfahrausweis und die Anmeldung in einer Fahrschule. Du musst zudem in der Schweiz wohnhaft sein und einen gültigen Ausweis haben."}},{"@type":"Question","name":"Wie lange dauert die komplette Fahrausbildung?","acceptedAnswer":{"@type":"Answer","text":"Die Dauer der Fahrausbildung hängt von deinem Tempo und Lernfortschritt ab. Die Theorieausbildung dauert typischerweise 6–8 Wochen mit 12 Unterrichtsabenden à 90 Minuten. Die praktische Ausbildung mit 15–20 Fahrstunden dauert 2–4 Monate. Insgesamt solltest du mit 4–6 Monaten rechnen, wenn du zügig voranschreitest und regelmässig trainingst."}},{"@type":"Question","name":"Was kostet eine Fahrstunde bei euch?","acceptedAnswer":{"@type":"Answer","text":"Eine Fahrstunde (45 Minuten) kostet bei uns CHF 100–120, je nach Kurs- und Zeittyp. Wir bieten auch günstigere Abo-Preise an: Bei 5 Fahrstunden sparst du gegenüber Einzellektionen. Zusätzlich fallen eine Versicherungspauschale (CHF 120 einmalig) und der WarmUp + Prüfungsfahrt Kurs (CHF 285) an. Kontaktiere uns für aktuelle Preise und individuelle Angebote."}}]}) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Wieviele Fahrstunden benötige ich?","acceptedAnswer":{"@type":"Answer","text":"Das ist unterschiedlich und hängt von deinem Alter, Erfahrung und Lerntempo ab. Im Durchschnitt benötigen unsere Schüler 15-20 Fahrstunden. Wir beraten dich gerne individuell."}},{"@type":"Question","name":"Wie kann ich meine Fahrausbildung beschleunigen?","acceptedAnswer":{"@type":"Answer","text":"Optimal wären 2-4 Fahrten pro Woche. Das heisst nicht unbedingt 2-4 Fahrlektionen, sondern z.B. 1 Fahrlektion und 1 Mal privat repetieren mit einer Begleitperson."}},{"@type":"Question","name":"Wieso dauert die Fahrstunde 45 Minuten?","acceptedAnswer":{"@type":"Answer","text":"Nach 45 Minuten lässt die Konzentration nach. Dies ist auch an Schulen Standard. Je nach Übungsgebiet können Fahrstunden auch länger ausfallen."}},{"@type":"Question","name":"Was kostet der Führerschein Kategorie B insgesamt?","acceptedAnswer":{"@type":"Answer","text":"Die Gesamtkosten für einen Führerschein der Kategorie B betragen in der Schweiz durchschnittlich CHF 3'500–3'600. Dies beinhaltet den Nothelferkurs (ca. CHF 100), Sehtest (CHF 50), Lernfahrausweis (CHF 80), Theorieprüfung (CHF 40), VKU-Kurs (CHF 200–300), Fahrstunden (durchschnittlich 15–20 à CHF 100–120), praktische Prüfung (CHF 130) und WAB-Kurs (CHF 350). Die genauen Kosten hängen von der Anzahl der benötigten Fahrstunden ab."}},{"@type":"Question","name":"Was sind die Voraussetzungen für den Führerschein?","acceptedAnswer":{"@type":"Answer","text":"Um einen Führerschein der Kategorie B zu erhalten, benötigst du: Mindestalter von 18 Jahren (oder 17 Jahre beim begleiteten Fahren), einen bestandenen Nothelferkurs (obligatorisch), einen bestandenen Sehtest, einen gültigen Lernfahrausweis und die Anmeldung in einer Fahrschule. Du musst zudem in der Schweiz wohnhaft sein und einen gültigen Ausweis haben."}},{"@type":"Question","name":"Wie lange dauert die komplette Fahrausbildung?","acceptedAnswer":{"@type":"Answer","text":"Die Dauer der Fahrausbildung hängt von deinem Tempo und Lernfortschritt ab. Die Theorieausbildung dauert typischerweise 6–8 Wochen mit 12 Unterrichtsabenden à 90 Minuten. Die praktische Ausbildung mit 15–20 Fahrstunden dauert 2–4 Monate. Insgesamt solltest du mit 4–6 Monaten rechnen, wenn du zügig voranschreitest und regelmässig trainingst."}},{"@type":"Question","name":"Was kostet eine Fahrstunde bei euch?","acceptedAnswer":{"@type":"Answer","text":"Eine Fahrstunde (45 Minuten) kostet ab CHF 95.- (Abendtermine und Wochenende leicht teurer). Wir empfehlen Abopakete. Zusätzlich fallen eine Versicherungspauschale (CHF 120.- einmalig) und der WarmUp + Prüfungsfahrt Kurs (CHF 285.-) an. Kontaktiere uns für aktuelle Preise und individuelle Angebote."}}]}) },
 ]
 useHead({ script: jsonLdScripts })
 
