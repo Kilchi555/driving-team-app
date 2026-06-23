@@ -100,7 +100,7 @@ export default defineNuxtPlugin(() => {
       // Use phone-specific label if set, otherwise fall back to the general conversion label
       fireGoogleAdsConversion((config.public as any).googleAdsPhoneConversionLabel || undefined)
 
-      // First-party DB log for phone clicks
+      // First-party DB log for phone clicks + Google Ads conversion upload
       const sessionId = (window as any).__analyticsSessionId || 'unknown'
       fetch('/api/phone-click', {
         method: 'POST',
@@ -109,6 +109,7 @@ export default defineNuxtPlugin(() => {
           session_id: sessionId,
           phone_number: phoneNumber,
           referrer_page: window.location.pathname,
+          marketing_attribution: (window as any).__dtMarketingAttribution ?? null,
           ...getUtmParams(),
         }),
       }).catch(() => {})
