@@ -55,10 +55,15 @@ export default defineEventHandler(async (event) => {
         metrics.clicks,
         metrics.impressions,
         metrics.conversions,
-        metrics.average_cpc
+        metrics.conversions_value,
+        metrics.average_cpc,
+        metrics.search_impression_share,
+        metrics.search_budget_lost_impression_share,
+        metrics.search_rank_lost_impression_share
       FROM campaign
       WHERE segments.date DURING LAST_7_DAYS
         AND campaign.status != 'REMOVED'
+        AND campaign.advertising_channel_type = 'SEARCH'
       ORDER BY segments.date DESC
     `
 
@@ -96,6 +101,13 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabaseAdmin()
     const tenantId = await getTenantIdByGoogleAdsCustomer(customerId)
 
+    // Google returns impression share as a float (0–1) or the string "--" when unavailable
+    const parseIS = (v: any): number | null => {
+      if (v === null || v === undefined || v === '--') return null
+      const n = Number(v)
+      return isNaN(n) ? null : n
+    }
+
     const records = apiRows.map((row: any) => ({
       tenant_id: tenantId,
       date: row.segments?.date ?? '',
@@ -105,7 +117,11 @@ export default defineEventHandler(async (event) => {
       clicks: Math.round(Number(row.metrics?.clicks ?? 0)),
       impressions: Math.round(Number(row.metrics?.impressions ?? 0)),
       conversions: Number(row.metrics?.conversions ?? 0),
+      conversions_value: Number(row.metrics?.conversionsValue ?? 0),
       cpc_micros: Math.round(Number(row.metrics?.averageCpc ?? 0)),
+      impression_share: parseIS(row.metrics?.searchImpressionShare),
+      budget_lost_is: parseIS(row.metrics?.searchBudgetLostImpressionShare),
+      rank_lost_is: parseIS(row.metrics?.searchRankLostImpressionShare),
     })).filter(r => r.date && r.campaign_id)
 
     if (records.length > 0) {
