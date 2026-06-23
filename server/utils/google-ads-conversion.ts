@@ -64,9 +64,10 @@ function readCreds(conversionActionIdOverride?: string): GoogleAdsCreds | null {
   const clientId = process.env.GOOGLE_ADS_CLIENT_ID
   const clientSecret = process.env.GOOGLE_ADS_CLIENT_SECRET
   const refreshToken = process.env.GOOGLE_ADS_REFRESH_TOKEN
-  const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID
-  const conversionActionId = conversionActionIdOverride || process.env.GOOGLE_ADS_CONVERSION_ACTION_ID
-  const managerCustomerId = process.env.GOOGLE_ADS_MANAGER_CUSTOMER_ID
+  const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID?.trim()
+  // Trim to guard against accidental trailing newlines when pasting into Vercel env vars
+  const conversionActionId = (conversionActionIdOverride || process.env.GOOGLE_ADS_CONVERSION_ACTION_ID)?.trim()
+  const managerCustomerId = process.env.GOOGLE_ADS_MANAGER_CUSTOMER_ID?.trim()
 
   if (!developerToken || !clientId || !clientSecret || !refreshToken || !customerId || !conversionActionId) {
     return null
@@ -270,7 +271,8 @@ const INQUIRY_CONVERSION_VALUE_CHF = Number(process.env.GOOGLE_ADS_INQUIRY_CONVE
 
 /**
  * Upload a booking-proposal (inquiry) conversion to Google Ads.
- * Uses GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID — no audit row (proposals ≠ appointments).
+ * Uses GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID and writes an audit row to
+ * google_ads_conversion_uploads (appointment_id = "proposal_<id>").
  */
 export async function recordAndUploadInquiryConversion(input: {
   proposal_id: string
@@ -281,25 +283,72 @@ export async function recordAndUploadInquiryConversion(input: {
   conversion_date_time?: Date | string
   hashed_email?: string | null
   hashed_phone?: string | null
+  tenant_id?: string | null
 }): Promise<void> {
   const conversionActionId = process.env.GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID
   if (!conversionActionId) {
-    logger.debug('google-ads-conversion: skipping inquiry upload — GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID not set')
+    logger.warn('google-ads-conversion: skipping inquiry upload — GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID not set')
     return
   }
 
+  const supabase = getSupabaseAdmin()
+  const syntheticId = `proposal_${input.proposal_id}`
+  const conversionDateTime = input.conversion_date_time ?? new Date()
+
+  // Record pending upload for audit trail
+  const { data: row, error: insertError } = await supabase
+    .from('google_ads_conversion_uploads')
+    .insert({
+      appointment_id: syntheticId,
+      tenant_id: input.tenant_id ?? null,
+      conversion_action_id: conversionActionId,
+      gclid: input.gclid ?? null,
+      gbraid: input.gbraid ?? null,
+      wbraid: input.wbraid ?? null,
+      conversion_value_chf: input.conversion_value_chf ?? INQUIRY_CONVERSION_VALUE_CHF,
+      conversion_date_time: typeof conversionDateTime === 'string'
+        ? conversionDateTime
+        : conversionDateTime.toISOString(),
+      upload_status: 'pending',
+      upload_attempts: 0,
+    })
+    .select('id')
+    .single()
+
+  if (insertError || !row) {
+    logger.warn('google-ads-conversion: could not record inquiry upload row', insertError?.message)
+  }
+
   const result = await uploadClickConversion({
-    appointment_id: input.proposal_id,
+    appointment_id: syntheticId,
     order_id: `inquiry-${input.proposal_id}`,
     conversion_action_id: conversionActionId,
     gclid: input.gclid,
     gbraid: input.gbraid,
     wbraid: input.wbraid,
     conversion_value_chf: input.conversion_value_chf ?? INQUIRY_CONVERSION_VALUE_CHF,
-    conversion_date_time: input.conversion_date_time ?? new Date(),
+    conversion_date_time: conversionDateTime,
     hashed_email: input.hashed_email,
     hashed_phone: input.hashed_phone,
   })
+
+  if (row?.id) {
+    const upload_status =
+      result.uploaded ? 'success'
+        : result.reason === 'no_click_id' ? 'skipped_no_click_id'
+          : 'failed'
+
+    await supabase
+      .from('google_ads_conversion_uploads')
+      .update({
+        upload_status,
+        upload_attempts: 1,
+        last_attempt_at: new Date().toISOString(),
+        error_message: result.error || result.reason || null,
+        google_response: result.google_response ?? null,
+      })
+      .eq('id', row.id)
+  }
 
   if (result.uploaded) {
     logger.info(`google-ads-conversion: inquiry uploaded for proposal ${input.proposal_id}`)

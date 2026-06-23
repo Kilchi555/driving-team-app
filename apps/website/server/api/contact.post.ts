@@ -13,6 +13,12 @@ interface MarketingAttributionPayload {
   gclid?: string | null
   gbraid?: string | null
   wbraid?: string | null
+  utm_source?: string | null
+  utm_medium?: string | null
+  utm_campaign?: string | null
+  utm_content?: string | null
+  utm_term?: string | null
+  fbclid?: string | null
 }
 
 async function uploadInquiryConversionViaSimy(
@@ -93,6 +99,7 @@ export default defineEventHandler(async (event) => {
       ? `Firma: ${company.trim()}\n\n${notes.trim()}`
       : notes.trim()
 
+    const attr = marketing_attribution as MarketingAttributionPayload | null | undefined
     const { data: proposal, error: dbError } = await supabase
       .from('booking_proposals')
       .insert({
@@ -108,6 +115,15 @@ export default defineEventHandler(async (event) => {
         staff_id: null,
         preferred_time_slots: [],
         status: 'pending',
+        utm_source: attr?.utm_source ?? null,
+        utm_medium: attr?.utm_medium ?? null,
+        utm_campaign: attr?.utm_campaign ?? null,
+        utm_content: attr?.utm_content ?? null,
+        utm_term: attr?.utm_term ?? null,
+        fbclid: attr?.fbclid ?? null,
+        gclid: attr?.gclid ?? null,
+        gbraid: attr?.gbraid ?? null,
+        wbraid: attr?.wbraid ?? null,
       })
       .select('id')
       .single()
