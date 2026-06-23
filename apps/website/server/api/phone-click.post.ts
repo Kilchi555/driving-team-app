@@ -1,4 +1,5 @@
 import { defineEventHandler, readBody } from 'h3'
+import type { H3Event } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
 import { getWebsiteTenantId } from '~/server/utils/website-tenant'
@@ -12,6 +13,70 @@ interface PhoneClickPayload {
   utm_campaign?: string | null
   utm_content?: string | null
   utm_term?: string | null
+  /** Marketing attribution blob forwarded from window.__dtMarketingAttribution */
+  marketing_attribution?: {
+    gclid?: string | null
+    gbraid?: string | null
+    wbraid?: string | null
+  } | null
+}
+
+/**
+ * Upload a phone-click conversion to Google Ads via app.simy.ch internal endpoint.
+ * Looks up the gclid from:
+ *   1. marketing_attribution blob sent directly in the request (preferred)
+ *   2. marketing_attributions DB row matching session_id (fallback)
+ */
+async function uploadPhoneClickConversion(
+  event: H3Event,
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+  directAttribution: PhoneClickPayload['marketing_attribution'],
+): Promise<void> {
+  const cfg = useRuntimeConfig(event)
+  const internalSecret = cfg.internalApiSecret as string
+  const baseUrl = (cfg.simyApiBaseUrl as string) || 'https://app.simy.ch'
+  if (!internalSecret) return
+
+  // 1. Use attribution blob from the request (gclid already in memory from the click)
+  let gclid = directAttribution?.gclid ?? null
+  let gbraid = directAttribution?.gbraid ?? null
+  let wbraid = directAttribution?.wbraid ?? null
+
+  // 2. Fallback: look up session in marketing_attributions
+  if (!gclid && !gbraid && !wbraid && sessionId && sessionId !== 'unknown') {
+    const { data } = await supabase
+      .from('marketing_attributions')
+      .select('gclid, gbraid, wbraid')
+      .eq('session_id', sessionId)
+      .maybeSingle()
+
+    gclid = data?.gclid ?? null
+    gbraid = data?.gbraid ?? null
+    wbraid = data?.wbraid ?? null
+  }
+
+  if (!gclid && !gbraid && !wbraid) return // no click ID — organic/direct visitor
+
+  const syntheticId = `phone_${sessionId}_${Date.now()}`
+
+  try {
+    await fetch(`${baseUrl.replace(/\/$/, '')}/api/internal/upload-inquiry-conversion`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Api-Secret': internalSecret,
+      },
+      body: JSON.stringify({
+        proposal_id: syntheticId,
+        gclid,
+        gbraid,
+        wbraid,
+      }),
+    })
+  } catch (err: any) {
+    console.warn('⚠️ Phone-click conversion upload failed (non-critical):', err?.message ?? err)
+  }
 }
 
 export default defineEventHandler(async (event) => {
@@ -41,6 +106,11 @@ export default defineEventHandler(async (event) => {
     })
 
     if (error) console.error('phone-click insert error:', error)
+
+    // Upload Google Ads conversion if this click can be attributed to an ad (fire-and-forget)
+    ;(async () => {
+      await uploadPhoneClickConversion(event, supabase, body.session_id || 'unknown', body.marketing_attribution ?? null)
+    })()
 
     return { ok: true }
   } catch (err) {
