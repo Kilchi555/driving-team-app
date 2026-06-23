@@ -184,25 +184,44 @@ export default defineEventHandler(async (event) => {
           AND metrics.impressions > 0
         ORDER BY segments.date DESC, metrics.cost_micros DESC
       `)
-      const records = rows
-        .filter((row: any) => row.searchTermView?.searchTerm)
-        .map((row: any) => ({
-          tenant_id: tenantId,
-          date: row.segments?.date ?? '',
-          campaign_id: String(row.campaign?.id ?? ''),
-          campaign_name: row.campaign?.name ?? '',
-          ad_group_id: String(row.adGroup?.id ?? ''),
-          ad_group_name: row.adGroup?.name ?? '',
-          search_term: row.searchTermView?.searchTerm ?? '',
-          match_type: row.segments?.keyword?.info?.matchType ?? '',
-          keyword_text: row.segments?.keyword?.info?.text ?? '',
-          cost_micros: Math.round(Number(row.metrics?.costMicros ?? 0)),
-          clicks: Math.round(Number(row.metrics?.clicks ?? 0)),
-          impressions: Math.round(Number(row.metrics?.impressions ?? 0)),
-          conversions: Number(row.metrics?.conversions ?? 0),
-          conversions_value: Number(row.metrics?.conversionsValue ?? 0),
-        }))
-        .filter((r: any) => r.date && r.search_term)
+      // Aggregate: same search_term can be triggered by multiple keywords on the same day
+      // → deduplicate by the unique key (tenant, date, campaign, ad_group, search_term)
+      const aggMap = new Map<string, any>()
+      for (const row of rows) {
+        const term = row.searchTermView?.searchTerm
+        if (!term) continue
+        const date = row.segments?.date ?? ''
+        const campaignId = String(row.campaign?.id ?? '')
+        const adGroupId = String(row.adGroup?.id ?? '')
+        if (!date || !campaignId) continue
+        const key = `${tenantId}|${date}|${campaignId}|${adGroupId}|${term}`
+        const existing = aggMap.get(key)
+        if (existing) {
+          existing.cost_micros += Math.round(Number(row.metrics?.costMicros ?? 0))
+          existing.clicks += Math.round(Number(row.metrics?.clicks ?? 0))
+          existing.impressions += Math.round(Number(row.metrics?.impressions ?? 0))
+          existing.conversions += Number(row.metrics?.conversions ?? 0)
+          existing.conversions_value += Number(row.metrics?.conversionsValue ?? 0)
+        } else {
+          aggMap.set(key, {
+            tenant_id: tenantId,
+            date,
+            campaign_id: campaignId,
+            campaign_name: row.campaign?.name ?? '',
+            ad_group_id: adGroupId,
+            ad_group_name: row.adGroup?.name ?? '',
+            search_term: term,
+            match_type: row.segments?.keyword?.info?.matchType ?? '',
+            keyword_text: row.segments?.keyword?.info?.text ?? '',
+            cost_micros: Math.round(Number(row.metrics?.costMicros ?? 0)),
+            clicks: Math.round(Number(row.metrics?.clicks ?? 0)),
+            impressions: Math.round(Number(row.metrics?.impressions ?? 0)),
+            conversions: Number(row.metrics?.conversions ?? 0),
+            conversions_value: Number(row.metrics?.conversionsValue ?? 0),
+          })
+        }
+      }
+      const records = [...aggMap.values()]
 
       for (let i = 0; i < records.length; i += 500) {
         const { error } = await supabase.from('marketing_google_ads_search_terms_daily')
