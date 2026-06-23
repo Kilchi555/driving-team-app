@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Anhängerprüfung Lachen SZ – Kategorie BE | Pfäffikon SZ</Title>
+      <Title>Anhängerprüfung Lachen SZ | Kat. BE | Pfäffikon SZ | Driving Team</Title>
       <Meta name="description" content="Anhängerprüfung (Kat. BE) in Lachen SZ – Prüfungsort Pfäffikon, kein Theorietest, Fahrzeug gestellt. In 2–4 Fahrstunden bereit. Jetzt buchen!" />
       <Meta name="keywords" content="Anhängerprüfung Lachen, Anhänger Prüfung Lachen, Kategorie BE Lachen, BE Prüfung Pfäffikon SZ, Anhänger Führerschein Lachen" />
       <Meta property="og:title" content="Anhängerprüfung Lachen SZ – Kategorie BE | Driving Team" />

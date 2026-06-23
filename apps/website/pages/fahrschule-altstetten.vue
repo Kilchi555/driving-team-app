@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Altstetten | Direkt beim Bahnhof Altstetten</Title>
+      <Title>Fahrschule Altstetten | Bahnhof Altstetten | Driving Team</Title>
       <Meta name="description" content="Deine Fahrschule direkt beim Bahnhof Altstetten – Auto, Motorrad & Anhänger ab CHF 95.-, 85% Erfolgsquote. Jetzt deine Fahrstunde online buchen!" />
       <Meta name="keywords" content="Fahrschule Altstetten, Fahrstunden Altstetten, Auto Fahrschule Altstetten, Fahrlehrer Altstetten, Fahrschule Zürich Altstetten" />
       <Meta property="og:title" content="Fahrschule Altstetten – Driving Team | Vulkanstrasse 130b" />

@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>LKW Anhänger Führerschein Kategorie CE | Zentralachsanhänger | Driving Team</Title>
-      <Meta name="description" content="Kategorie CE Führerschein in der Schweiz – keine Theorieprüfung, keine ärztliche Untersuchung. Nur praktische Fahrstunden & Prüfung. Ab CHF 200.-/Lektion. Jetzt anmelden!" />
+      <Title>Führerschein Kategorie CE | Zentralachsanhänger | Driving Team</Title>
+      <Meta name="description" content="Kat. CE Führerschein – keine Theorieprüfung, kein Arztbesuch nötig. Nur Praxis & Prüfung. Zentralachsanhänger, ab CHF 200.-/Lektion. Jetzt anmelden!" />
       <Meta property="og:title" content="LKW Anhänger Führerschein Kat. CE | Driving Team Fahrschule" />
       <Meta property="og:description" content="Kategorie CE: Der schnellste LKW-Aufstieg ohne Theorie und ohne Arztbesuch. Zentralachsanhänger, Anhängerzug, Kipper – wir bilden dich aus." />
       <Meta property="og:url" content="https://drivingteam.ch/lastwagen-fahrschule-ce/" />

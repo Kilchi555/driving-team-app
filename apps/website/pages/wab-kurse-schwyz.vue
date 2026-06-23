@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>WAB Kurs Schwyz Tuggen – Weiterausbildung Autofahren</Title>
-      <Meta name="description" content="WAB Kurse im Kanton Schwyz bei Verkehrszentrum Tuggen AG in Tuggen SZ. Ab CHF 290.- pro Kurs. Jetzt anmelden!" />
+      <Title>WAB Kurs Schwyz Tuggen | Weiterausbildung Neulenker | Driving Team</Title>
+      <Meta name="description" content="WAB Kurs in Tuggen SZ (Kanton Schwyz) – Pflicht für Neulenker innerhalb 12 Monate nach Fahrprüfung. Ab CHF 290.-. Jetzt online anmelden!" />
       <Meta property="og:title" content="WAB Kurse Schwyz – Tuggen SZ | Driving Team" />
       <Meta property="og:description" content="WAB Kurse in Tuggen SZ. Ab CHF 290.- pro Kurs. Obligatorisch für Neulenker innert 12 Monaten." />
       <Meta property="og:url" content="https://drivingteam.ch/wab-kurse-schwyz/" />

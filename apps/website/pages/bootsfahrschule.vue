@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Bootsfahrschule Lachen | Oberer Zürichsee | Motorbootprüfung | Driving Team</Title>
-      <Meta name="description" content="Bootsfahrschule Lachen am oberen Zürichsee – Motorbootprüfung Kategorie A. Fahrlehrer Marc, flexible Treffpunkte in Lachen, Rapperswil-Jona, Altendorf, Pfäffikon SZ. Ab CHF 190.-/90 Min. Jetzt anmelden!" />
+      <Title>Bootsfahrschule Lachen | Motorboot Zürichsee | Driving Team</Title>
+      <Meta name="description" content="Bootsfahrschule am oberen Zürichsee: Motorbootprüfung Kat. A mit Fahrlehrer Marc. Lachen, Rapperswil-Jona, Pfäffikon SZ. Ab CHF 190.-/90 Min. Jetzt anmelden!" />
       <Meta name="keywords" content="Bootsfahrschule Lachen, Bootsfahrschule oberer Zürichsee, Boot fahren lernen Lachen, Motorbootprüfung Zürichsee, Motorboot Fahrschule Zürichsee, Bootsfahrschule Zürichsee Rapperswil-Jona" />
       <Meta property="og:title" content="Bootsfahrschule Lachen | Oberer Zürichsee | Driving Team" />
       <Meta property="og:description" content="Bootsfahrschule am oberen Zürichsee – Lachen, Rapperswil-Jona, Altendorf. Motorbootprüfung Kategorie A. Ab CHF 190.-/90 Min." />

@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>CZV Grundkurs Lachen | Beruflich über 3.5t fahren | CHF 2'200.- | Driving Team</Title>
-      <Meta name="description" content="CZV Grundkurs in Lachen: 6 Tage Ausbildung inkl. Prüfungssimulation für den Fähigkeitsausweis (Schlüsselzahl 95). Berechtigt beruflich LKW & Bus zu fahren. Jetzt anfragen!" />
+      <Title>CZV Grundkurs Lachen | Berufschauffeur | CHF 2'200.- | Driving Team</Title>
+      <Meta name="description" content="CZV Grundkurs in Lachen: 6 Tage Ausbildung inkl. Prüfungssimulation für den Fähigkeitsausweis (95). Berechtigt beruflich LKW & Bus zu fahren. Jetzt anfragen!" />
       <Meta property="og:title" content="CZV Grundkurs Lachen | Beruflich über 3.5t fahren | Driving Team" />
       <Meta property="og:description" content="CZV Grundkurs in Lachen: 6 Tage Ausbildung (inkl. Prüfungssimulation) für den Fähigkeitsausweis Kat. C/CE und D. CHF 2'200.- inkl. Verpflegung. Jetzt anfragen!" />
       <Meta property="og:url" content="https://drivingteam.ch/czv-kurse/" />
@@ -19,7 +19,7 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">CZV Grundkurs</h1>
-        <p class="text-xl text-white mb-4">Beruflich LKW & Bus fahren – Fähigkeitsausweis (Schlüsselzahl 95)</p>
+        <p class="text-xl text-white mb-4">Beruflich LKW & Bus fahren – Fähigkeitsausweis (95)</p>
         <p class="text-primary-200 mb-8">6 Tage Grundkurs in Lachen | 5 CZV-Prüfungen | CHF 2'200.- inkl. Verpflegung</p>
         <a href="mailto:info@drivingteam.ch" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
           ✉️ Anfrage stellen

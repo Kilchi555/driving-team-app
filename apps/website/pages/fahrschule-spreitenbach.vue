@@ -1,7 +1,7 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Spreitenbach | Fahrlehrer kommt zu dir | ab CHF 95.- | Driving Team</Title>
+      <Title>Fahrschule Spreitenbach | Limmattal | ab CHF 95.- | Driving Team</Title>
       <Meta name="description" content="Fahrschule Spreitenbach: Dein Fahrlehrer kommt direkt zu dir – kein Pendelweg. Ab CHF 95.-/Lektion, 85% Prüfungserfolg, flexible Termine. Jetzt online buchen!" />
       <Meta property="og:title" content="Fahrschule Spreitenbach | Fahrlehrer kommt zu dir | ab CHF 95.- | Driving Team" />
       <Meta property="og:description" content="Fahrschule Spreitenbach: Dein Fahrlehrer kommt direkt zu dir nach Spreitenbach. Ab CHF 95.-/Lektion, 85% Prüfungserfolg. Flexible Termine, Online-Buchung." />

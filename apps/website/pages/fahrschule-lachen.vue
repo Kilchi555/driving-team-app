@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Lachen SZ | Auto, Motorrad, Anhänger | ab CHF 95.- | Driving Team</Title>
-      <Meta name="description" content="Deine Fahrschule in Lachen SZ – Auto, Motorrad, Anhänger und Lastwagen. 85% Erfolgsquote, flexible Treffpunkte, ab CHF 95.-/Lektion. Prüfung Pfäffikon SZ. Jetzt buchen!" />
+      <Title>Fahrschule Lachen SZ | Auto, Lastwagen & Anhänger | Driving Team</Title>
+      <Meta name="description" content="Deine Fahrschule in Lachen SZ – Auto, Motorboot, Anhänger & Lastwagen. 85% Erfolgsquote, ab CHF 95.-/Lektion. Prüfung Pfäffikon SZ. Jetzt buchen!" />
       <Meta name="keywords" content="Fahrschule Lachen, Fahrschule Lachen SZ, Fahrstunden Lachen, Führerschein Lachen, Auto Fahrschule Lachen, Motorrad Fahrschule Lachen, Fahrlehrer Lachen SZ" />
       <Meta property="og:title" content="Fahrschule Lachen SZ | ab CHF 95.- | Auto, Motorrad & mehr | Driving Team" />
-      <Meta property="og:description" content="Professionelle Fahrausbildung in Lachen SZ. Auto, Motorrad, Lastwagen & Kurse. Ab CHF 95.-/Lektion. Flexible Zeiten & Treffpunkte im Kanton Schwyz." />
+      <Meta property="og:description" content="Professionelle Fahrausbildung in Lachen SZ. Auto, Motorboot, Lastwagen & Kurse. Ab CHF 95.-/Lektion. Flexible Zeiten & Treffpunkte im Kanton Schwyz." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-lachen/" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />

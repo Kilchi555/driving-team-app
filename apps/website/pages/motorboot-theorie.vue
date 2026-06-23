@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>Motorboot Theorie Zürichsee | Bootsprüfung Vorbereitung | Driving Team</Title>
-      <Meta name="description" content="Motorboot Theorie Prüfungsvorbereitung am Zürichsee – Theoriestunden in Lachen SZ. Bootsprüfung Theorie, Schifffahrtsregeln, Signale & Technik. CHF 90.- / 45 Min. Jetzt anmelden!" />
+      <Title>Motorboot Theorie Zürichsee | Bootsprüfung | Driving Team</Title>
+      <Meta name="description" content="Motorboot Theorie am Zürichsee – Lachen SZ. Bootsprüfung Vorbereitung: Schifffahrtsregeln, Signale & Technik. CHF 90.-/45 Min. Jetzt anmelden!" />
       <Meta name="keywords" content="Motorboot Theorie, Bootsprüfung Theorie lernen, Motorbootprüfung Theorie, Theorie Motorbootprüfung, Bootprüfung Vorbereitung Zürichsee, Motorbootführerschein Theorie" />
       <Meta property="og:title" content="Motorboot Theorie Zürichsee | Bootsprüfung Vorbereitung | Driving Team" />
       <Meta property="og:description" content="Motorboot Theorie in Lachen SZ – Bootsprüfung Vorbereitung. Schifffahrtsregeln, Signale, Technik. CHF 90.- / 45 Min." />
