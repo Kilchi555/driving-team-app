@@ -118,7 +118,7 @@ export default defineEventHandler(async (event) => {
     return {
       ok: true,
       dry_run: true,
-      code_version: 'v2-remove-create',
+      code_version: 'v3-two-pass',
       would_change: rows2.length,
       skipped_omgroup: rows.length - rows2.length,
       keywords: summary,
