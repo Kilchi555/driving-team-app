@@ -62,9 +62,11 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
 
   // ============ LAYER 5: CAMPAIGN LEVEL SYNC ============
+  // Note: `clicks` = all interactions (video plays, reactions, profile taps, link clicks)
+  //       `outbound_clicks` = real link clicks to destination URL only (correct for CTR/CPC)
   const campaignFields = [
     'campaign_id', 'campaign_name', 'spend', 'impressions',
-    'clicks', 'reach', 'actions', 'date_start',
+    'clicks', 'outbound_clicks', 'reach', 'actions', 'date_start',
   ].join(',')
 
   const campaignUrl = new URL(`https://graph.facebook.com/v19.0/${adAccountId}/insights`)
@@ -78,7 +80,7 @@ export default defineEventHandler(async (event) => {
   // ============ LAYER 6: AD SET LEVEL SYNC ============
   const adsetFields = [
     'campaign_id', 'campaign_name', 'adset_id', 'adset_name',
-    'spend', 'impressions', 'clicks', 'reach', 'actions', 'date_start',
+    'spend', 'impressions', 'clicks', 'outbound_clicks', 'reach', 'actions', 'date_start',
   ].join(',')
 
   const adsetUrl = new URL(`https://graph.facebook.com/v19.0/${adAccountId}/insights`)
@@ -118,6 +120,9 @@ export default defineEventHandler(async (event) => {
   }
 
   // ============ LAYER 9: UPSERT CAMPAIGN DATA ============
+  const sumOutboundClicks = (outbound: any[]): number =>
+    (outbound ?? []).reduce((s: number, v: any) => s + parseInt(v?.value ?? '0'), 0)
+
   let campaignUpserted = 0
   if (campaignData.length > 0) {
     const records = campaignData.map((row: any) => ({
@@ -128,6 +133,7 @@ export default defineEventHandler(async (event) => {
       spend: parseFloat(row.spend ?? '0'),
       impressions: parseInt(row.impressions ?? '0'),
       clicks: parseInt(row.clicks ?? '0'),
+      link_clicks: sumOutboundClicks(row.outbound_clicks),
       reach: parseInt(row.reach ?? '0'),
       actions: row.actions ?? [],
     }))
@@ -156,6 +162,7 @@ export default defineEventHandler(async (event) => {
       spend: parseFloat(row.spend ?? '0'),
       impressions: parseInt(row.impressions ?? '0'),
       clicks: parseInt(row.clicks ?? '0'),
+      link_clicks: sumOutboundClicks(row.outbound_clicks),
       reach: parseInt(row.reach ?? '0'),
       actions: row.actions ?? [],
     }))
@@ -175,7 +182,7 @@ export default defineEventHandler(async (event) => {
   // ============ LAYER 11: AD LEVEL SYNC (creative performance) ============
   const adFields = [
     'campaign_id', 'campaign_name', 'adset_id', 'adset_name',
-    'ad_id', 'ad_name', 'spend', 'impressions', 'clicks', 'reach',
+    'ad_id', 'ad_name', 'spend', 'impressions', 'clicks', 'outbound_clicks', 'reach',
     'actions', 'date_start',
   ].join(',')
 
@@ -268,6 +275,7 @@ export default defineEventHandler(async (event) => {
         spend: parseFloat(row.spend ?? '0'),
         impressions: parseInt(row.impressions ?? '0'),
         clicks: parseInt(row.clicks ?? '0'),
+        link_clicks: sumOutboundClicks(row.outbound_clicks),
         reach: parseInt(row.reach ?? '0'),
         actions: row.actions ?? [],
         creative_id: cr.creative_id ?? null,
