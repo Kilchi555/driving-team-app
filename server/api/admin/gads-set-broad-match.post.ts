@@ -69,7 +69,8 @@ export default defineEventHandler(async (event) => {
   ]
 
   const query = `
-    SELECT campaign.name, ad_group.name, ad_group_criterion.keyword.text,
+    SELECT campaign.name, ad_group.name, ad_group.resource_name,
+           ad_group_criterion.keyword.text,
            ad_group_criterion.keyword.match_type, ad_group_criterion.resource_name,
            ad_group_criterion.status
     FROM ad_group_criterion
@@ -123,17 +124,24 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // 2. Mutate — update all to BROAD in batches of 1000
-  const operations = rows2.map(r => ({
-    updateMask: 'keyword.matchType',
-    update: {
-      resourceName: r.adGroupCriterion.resourceName,
-      keyword: {
-        text: r.adGroupCriterion.keyword.text,
-        matchType: 'BROAD',
+  // 2. Mutate — match_type is immutable: must REMOVE old + CREATE new broad keyword
+  // Each operation pair: remove existing, then create broad version in same ad group.
+  const operations: any[] = []
+  for (const r of rows2) {
+    // Remove old keyword
+    operations.push({ remove: r.adGroupCriterion.resourceName })
+    // Create new BROAD keyword in same ad group
+    operations.push({
+      create: {
+        adGroup: r.adGroup.resourceName,
+        keyword: {
+          text: r.adGroupCriterion.keyword.text,
+          matchType: 'BROAD',
+        },
+        status: r.adGroupCriterion.status ?? 'ENABLED',
       },
-    },
-  }))
+    })
+  }
 
   const BATCH_SIZE = 1000
   let totalUpdated = 0
