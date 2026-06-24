@@ -28,8 +28,15 @@ export default defineEventHandler(async (event) => {
   let body: { startDate?: string; endDate?: string } = {}
   try { body = await readBody(event) ?? {} } catch { body = {} }
 
-  const startDate = body.startDate ?? '7daysAgo'
-  const endDate   = body.endDate   ?? 'yesterday'
+  // Use explicit ISO dates as default — GA4 relative strings ('7daysAgo') can return
+  // empty results when the cron fires with no POST body and the API treats the range
+  // as ambiguous. Explicit dates are always reliable.
+  const fmt = (d: Date) => d.toISOString().split('T')[0]
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
+  const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+  const startDate = body.startDate ?? fmt(sevenDaysAgo)
+  const endDate   = body.endDate   ?? fmt(yesterday)
 
   logger.info(`sync-marketing-ga4: starting sync from ${startDate} to ${endDate}`)
 
