@@ -58,6 +58,16 @@ export default defineEventHandler(async (event) => {
 
   // 1. Fetch all active non-broad keywords
   const searchUrl = `https://googleads.googleapis.com/v23/customers/${customerId}/googleAds:searchStream`
+  // Only touch the known Driving Team campaigns — never OMGroup or test campaigns.
+  const ALLOWED_CAMPAIGN_PREFIXES = [
+    'Anhänger Fahrschule',
+    'Lastwagen Fahrschule',
+    'Fahrschule Zürich',
+    'Fahrschule Lachen',
+    'Motorrad Grundkurs',
+    'VKU Kurs Lachen',
+  ]
+
   const query = `
     SELECT campaign.name, ad_group.name, ad_group_criterion.keyword.text,
            ad_group_criterion.keyword.match_type, ad_group_criterion.resource_name,
@@ -81,14 +91,21 @@ export default defineEventHandler(async (event) => {
     rows.push(...(batch.results ?? []))
   }
 
-  logger.info(`[gads-broad-match] Found ${rows.length} non-broad keywords`)
+  // Filter to allowed campaigns only
+  const filteredRows = rows.filter(r => {
+    const campName: string = r.campaign?.name ?? ''
+    return ALLOWED_CAMPAIGN_PREFIXES.some(prefix => campName.startsWith(prefix))
+  })
 
-  if (rows.length === 0) {
+  logger.info(`[gads-broad-match] Found ${rows.length} non-broad keywords total, ${filteredRows.length} in allowed campaigns`)
+  const rows2 = filteredRows
+
+  if (rows2.length === 0) {
     return { ok: true, message: 'All keywords are already BROAD', changed: 0, dry_run: dryRun }
   }
 
   // Summary for dry run
-  const summary = rows.map(r => ({
+  const summary = rows2.map(r => ({
     campaign: r.campaign?.name,
     ad_group: r.adGroup?.name,
     keyword: r.adGroupCriterion?.keyword?.text,
@@ -106,7 +123,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 2. Mutate — update all to BROAD in batches of 1000
-  const operations = rows.map(r => ({
+  const operations = rows2.map(r => ({
     updateMask: 'keyword.matchType',
     update: {
       resourceName: r.adGroupCriterion.resourceName,
