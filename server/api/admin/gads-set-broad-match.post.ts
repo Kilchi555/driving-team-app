@@ -118,7 +118,7 @@ export default defineEventHandler(async (event) => {
     return {
       ok: true,
       dry_run: true,
-      code_version: 'v4-partial-failure',
+      code_version: 'v5-debug-state',
       would_change: rows2.length,
       skipped_omgroup: rows.length - rows2.length,
       sample_resource_names: rows2.slice(0, 5).map(r => ({
@@ -171,10 +171,13 @@ export default defineEventHandler(async (event) => {
     if (!res.ok) {
       errors.push({ phase: 'remove', ...data })
       logger.warn('[gads-broad-match] Remove error:', JSON.stringify(data).slice(0, 500))
+    } else if (data.partialFailureError) {
+      errors.push({ phase: 'remove_partial', partialFailureError: data.partialFailureError })
+      logger.warn('[gads-broad-match] Remove partial failure:', JSON.stringify(data.partialFailureError).slice(0, 500))
     }
   }
 
-  if (errors.length > 0) {
+  if (errors.some(e => e.phase === 'remove')) {
     return { ok: false, dry_run: false, changed: 0, errors, phase: 'remove_failed' }
   }
 
@@ -199,6 +202,6 @@ export default defineEventHandler(async (event) => {
     dry_run: false,
     changed: totalUpdated,
     errors: errors.length > 0 ? errors : undefined,
-    summary,
+    summary: summary.slice(0, 10),
   }
 })
