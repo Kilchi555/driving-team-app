@@ -121,13 +121,26 @@ export default defineEventHandler(async (event) => {
       code_version: 'v3-two-pass',
       would_change: rows2.length,
       skipped_omgroup: rows.length - rows2.length,
+      sample_resource_names: rows2.slice(0, 3).map(r => ({
+        criterion: r.adGroupCriterion?.resourceName,
+        adGroup: r.adGroup?.resourceName,
+        keyword: r.adGroupCriterion?.keyword?.text,
+      })),
       keywords: summary,
     }
   }
 
+  // Debug: log first row structure to verify field names
+  if (rows2.length > 0) {
+    logger.info('[gads-broad-match] Sample row keys:', JSON.stringify(Object.keys(rows2[0])))
+    logger.info('[gads-broad-match] Sample criterion resourceName:', rows2[0].adGroupCriterion?.resourceName)
+    logger.info('[gads-broad-match] Sample adGroup resourceName:', rows2[0].adGroup?.resourceName)
+  }
+
   // 2. Mutate — match_type is immutable: REMOVE old keywords first, then CREATE new BROAD ones.
   // Split into two separate batches to avoid OPERATION_NOT_PERMITTED_FOR_REMOVED_RESOURCE errors.
-  const removeOps = rows2.map(r => ({ remove: r.adGroupCriterion.resourceName }))
+  const removeOps = rows2.map(r => ({ remove: r.adGroupCriterion?.resourceName }))
+  logger.info('[gads-broad-match] First remove op:', JSON.stringify(removeOps[0]))
   const createOps = rows2.map(r => ({
     create: {
       adGroup: r.adGroup.resourceName,
