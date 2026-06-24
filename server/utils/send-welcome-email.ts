@@ -55,7 +55,9 @@ export async function sendWelcomeEmail(params: SendWelcomeEmailParams): Promise<
     primaryColor   = params.tenantPrimaryColor ?? tenant?.primary_color ?? '#3B82F6'
     fromEmail      = params.tenantFromEmail    ?? tenant?.from_email     ?? null
     domainVerified = params.tenantDomainVerified ?? tenant?.resend_domain_verified ?? false
-    logoUrl        = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+    const rawLogoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+    // Skip base64 data URIs – they bloat the email to 100KB+ and cause bounces
+    logoUrl = rawLogoUrl?.startsWith('data:') ? null : rawLogoUrl
   }
 
   const baseUrl  = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
