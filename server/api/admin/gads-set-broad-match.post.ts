@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
   ]
 
   const query = `
-    SELECT campaign.name, ad_group.name, ad_group.resource_name,
+    SELECT campaign.name, ad_group.name, ad_group.resource_name, ad_group.status,
            ad_group_criterion.keyword.text,
            ad_group_criterion.keyword.match_type, ad_group_criterion.resource_name,
            ad_group_criterion.status
@@ -118,12 +118,14 @@ export default defineEventHandler(async (event) => {
     return {
       ok: true,
       dry_run: true,
-      code_version: 'v3-two-pass',
+      code_version: 'v4-partial-failure',
       would_change: rows2.length,
       skipped_omgroup: rows.length - rows2.length,
-      sample_resource_names: rows2.slice(0, 3).map(r => ({
+      sample_resource_names: rows2.slice(0, 5).map(r => ({
         criterion: r.adGroupCriterion?.resourceName,
         adGroup: r.adGroup?.resourceName,
+        adGroupStatus: r.adGroup?.status,
+        criterionStatus: r.adGroupCriterion?.status,
         keyword: r.adGroupCriterion?.keyword?.text,
       })),
       keywords: summary,
@@ -163,7 +165,7 @@ export default defineEventHandler(async (event) => {
     const batch = removeOps.slice(i, i + BATCH_SIZE)
     const res = await fetch(mutateUrl, {
       method: 'POST', headers,
-      body: JSON.stringify({ operations: batch }),
+      body: JSON.stringify({ operations: batch, partialFailure: true }),
     })
     const data = await res.json() as any
     if (!res.ok) {
@@ -181,7 +183,7 @@ export default defineEventHandler(async (event) => {
     const batch = createOps.slice(i, i + BATCH_SIZE)
     const res = await fetch(mutateUrl, {
       method: 'POST', headers,
-      body: JSON.stringify({ operations: batch }),
+      body: JSON.stringify({ operations: batch, partialFailure: true }),
     })
     const data = await res.json() as any
     if (!res.ok) {
