@@ -117,7 +117,8 @@ export default defineEventHandler(async (event) => {
     return {
       ok: true,
       dry_run: true,
-      would_change: rows.length,
+      would_change: rows2.length,
+      skipped_omgroup: rows.length - rows2.length,
       keywords: summary,
     }
   }
