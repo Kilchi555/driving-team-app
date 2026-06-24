@@ -125,43 +125,57 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // 2. Mutate — match_type is immutable: must REMOVE old + CREATE new broad keyword
-  // Each operation pair: remove existing, then create broad version in same ad group.
-  const operations: any[] = []
-  for (const r of rows2) {
-    // Remove old keyword
-    operations.push({ remove: r.adGroupCriterion.resourceName })
-    // Create new BROAD keyword in same ad group
-    operations.push({
-      create: {
-        adGroup: r.adGroup.resourceName,
-        keyword: {
-          text: r.adGroupCriterion.keyword.text,
-          matchType: 'BROAD',
-        },
-        status: r.adGroupCriterion.status ?? 'ENABLED',
+  // 2. Mutate — match_type is immutable: REMOVE old keywords first, then CREATE new BROAD ones.
+  // Split into two separate batches to avoid OPERATION_NOT_PERMITTED_FOR_REMOVED_RESOURCE errors.
+  const removeOps = rows2.map(r => ({ remove: r.adGroupCriterion.resourceName }))
+  const createOps = rows2.map(r => ({
+    create: {
+      adGroup: r.adGroup.resourceName,
+      type: 'KEYWORD',
+      status: r.adGroupCriterion.status ?? 'ENABLED',
+      keyword: {
+        text: r.adGroupCriterion.keyword.text,
+        matchType: 'BROAD',
       },
-    })
-  }
+    },
+  }))
 
-  const BATCH_SIZE = 1000
+  const BATCH_SIZE = 500
   let totalUpdated = 0
   const errors: any[] = []
+  const mutateUrl = `https://googleads.googleapis.com/v23/customers/${customerId}/adGroupCriteria:mutate`
 
-  for (let i = 0; i < operations.length; i += BATCH_SIZE) {
-    const batch = operations.slice(i, i + BATCH_SIZE)
-    const mutateUrl = `https://googleads.googleapis.com/v23/customers/${customerId}/adGroupCriteria:mutate`
-    const mutateRes = await fetch(mutateUrl, {
-      method: 'POST',
-      headers,
+  // Pass 1: remove all old keywords
+  for (let i = 0; i < removeOps.length; i += BATCH_SIZE) {
+    const batch = removeOps.slice(i, i + BATCH_SIZE)
+    const res = await fetch(mutateUrl, {
+      method: 'POST', headers,
       body: JSON.stringify({ operations: batch }),
     })
-    const mutateData = await mutateRes.json() as any
-    if (!mutateRes.ok) {
-      errors.push(mutateData)
-      logger.warn('[gads-broad-match] Mutate error:', JSON.stringify(mutateData).slice(0, 500))
+    const data = await res.json() as any
+    if (!res.ok) {
+      errors.push({ phase: 'remove', ...data })
+      logger.warn('[gads-broad-match] Remove error:', JSON.stringify(data).slice(0, 500))
+    }
+  }
+
+  if (errors.length > 0) {
+    return { ok: false, dry_run: false, changed: 0, errors, phase: 'remove_failed' }
+  }
+
+  // Pass 2: create new BROAD keywords
+  for (let i = 0; i < createOps.length; i += BATCH_SIZE) {
+    const batch = createOps.slice(i, i + BATCH_SIZE)
+    const res = await fetch(mutateUrl, {
+      method: 'POST', headers,
+      body: JSON.stringify({ operations: batch }),
+    })
+    const data = await res.json() as any
+    if (!res.ok) {
+      errors.push({ phase: 'create', ...data })
+      logger.warn('[gads-broad-match] Create error:', JSON.stringify(data).slice(0, 500))
     } else {
-      totalUpdated += (mutateData.results ?? []).length
+      totalUpdated += (data.results ?? []).length
     }
   }
 
