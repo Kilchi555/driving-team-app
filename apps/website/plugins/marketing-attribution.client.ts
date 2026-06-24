@@ -132,6 +132,18 @@ export default defineNuxtPlugin({
       }
       persist(attribution)
       window.__dtMarketingAttribution = attribution
+
+      // Persist to DB immediately so we capture the visit even if the user
+      // never clicks a booking link (fire-and-forget, never blocks rendering).
+      const sessionId = (window as any).__analyticsSessionId
+        ?? localStorage.getItem('analytics_session_id')
+      if (sessionId) {
+        fetch('/api/save-attribution', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId, attribution }),
+        }).catch(() => {})
+      }
     } else {
       const stored = readStored()
       if (stored) {
