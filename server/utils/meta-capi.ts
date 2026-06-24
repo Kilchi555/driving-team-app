@@ -112,7 +112,10 @@ export async function sendCapiEvent(input: MetaCapiInput): Promise<MetaCapiResul
   const userData: Record<string, any> = {}
   if (input.hashed_email) userData.em = [input.hashed_email]
   if (input.hashed_phone) userData.ph = [input.hashed_phone]
-  if (input.fbc) userData.fbc = input.fbc
+  // Prefer _fbc cookie (set by Meta Pixel). If unavailable (iOS ITP blocks cookies),
+  // construct fbc from raw fbclid so Meta can still attribute the click.
+  const fbc = input.fbc || (input.fbclid ? `fb.1.${Date.now()}.${input.fbclid}` : null)
+  if (fbc) userData.fbc = fbc
   if (input.fbp) userData.fbp = input.fbp
   if (input.client_ip) userData.client_ip_address = input.client_ip
   if (input.user_agent) userData.client_user_agent = input.user_agent
