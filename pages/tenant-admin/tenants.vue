@@ -190,7 +190,9 @@
                 <div class="space-y-2 mb-3">
                   <input v-model="walleeTestForm.space_id" type="number" placeholder="Test Space ID" class="sa-input" @input="walleeTestFormResult = null" />
                   <input v-model="walleeTestForm.user_id" type="number" placeholder="Test User ID" class="sa-input" @input="walleeTestFormResult = null" />
-                  <input v-model="walleeTestForm.secret_key" type="password" placeholder="Test API Secret" class="sa-input" autocomplete="new-password" @input="walleeTestFormResult = null" />
+                  <input v-model="walleeTestForm.secret_key" type="password"
+                    :placeholder="walleeTestCredentialsSaved ? '•••••••• (bereits gespeichert — neu eingeben zum Ändern)' : 'Test API Secret'"
+                    class="sa-input" autocomplete="new-password" @input="walleeTestFormResult = null" />
                 </div>
 
                 <!-- Test form result banner -->
@@ -464,7 +466,15 @@ const openWalleeActivation = async (tenant: any) => {
     if (ids.test.space_id) walleeTestForm.value.space_id = ids.test.space_id
     if (ids.test.user_id)  walleeTestForm.value.user_id  = ids.test.user_id
     // Mark as having saved test creds if test space_id exists
-    if (ids.test.space_id) walleeTestCredentialsSaved.value = true
+    if (ids.test.space_id) {
+      walleeTestCredentialsSaved.value = true
+      // Secret is stored encrypted — indicate "already saved" without revealing it
+      walleeTestFormResult.value = {
+        success: true,
+        spaceName: `Space ${ids.test.space_id}`,
+        spaceId: parseInt(ids.test.space_id),
+      }
+    }
   } catch { /* non-fatal */ }
 }
 
