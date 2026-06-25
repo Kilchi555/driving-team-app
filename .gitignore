@@ -54,3 +54,5 @@ docs/pci/**/*.html
 .env.local.main
 .env.vercel.local
 .env.vercel.production
+.env.backfill
+supabase/.temp/

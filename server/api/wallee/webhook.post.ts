@@ -7,7 +7,7 @@
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
-import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
+import { getWalleeConfigForTenant, getWalleeConfigBySpace, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { SARIClient } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
 // crypto import removed - using static token validation instead of HMAC
@@ -1095,17 +1095,20 @@ async function fetchWalleeTransaction(transactionId: string, webhookSpaceId?: nu
     let spaceId = webhookSpaceId
     let walleeCredentials: { spaceId: number; userId: number; apiSecret: string } | null = null
 
-    // 1. Prefer tenant resolved from the payment row (most reliable)
-    if (paymentForConfig?.tenant_id) {
+    // 1. Prefer tenant resolved from the payment row — use space-aware lookup so that
+    //    pending transactions in the old production space are verified with correct
+    //    credentials even when test mode is active (or was recently switched off).
+    if (paymentForConfig?.tenant_id && webhookSpaceId) {
       try {
-        walleeCredentials = await getWalleeConfigForTenant(paymentForConfig.tenant_id)
-        spaceId = walleeCredentials.spaceId
+        walleeCredentials = await getWalleeConfigBySpace(paymentForConfig.tenant_id, webhookSpaceId)
+        spaceId = webhookSpaceId
       } catch (e: any) {
         logger.warn(`⚠️ [webhook] Could not load Wallee config for tenant ${paymentForConfig.tenant_id}: ${e.message}`)
       }
     }
 
     // 2. Fallback: resolve tenant directly from the incoming spaceId
+    //    Check both wallee_space_id (production) and wallee_test_mode tenants
     if (!walleeCredentials && webhookSpaceId) {
       try {
         const { data: tenantBySpace } = await supabase
@@ -1115,8 +1118,8 @@ async function fetchWalleeTransaction(transactionId: string, webhookSpaceId?: nu
           .maybeSingle()
 
         if (tenantBySpace?.id) {
-          walleeCredentials = await getWalleeConfigForTenant(tenantBySpace.id)
-          spaceId = walleeCredentials.spaceId
+          walleeCredentials = await getWalleeConfigBySpace(tenantBySpace.id, webhookSpaceId)
+          spaceId = webhookSpaceId
         }
       } catch (e: any) {
         logger.warn(`⚠️ [webhook] Could not resolve tenant for space ${webhookSpaceId}: ${e.message}`)
