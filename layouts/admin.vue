@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-layout h-[100svh] flex flex-col">
+  <div class="admin-layout h-[100svh] flex flex-col overflow-hidden">
     <!-- Trial Banner -->
     <div class="flex-shrink-0">
       <TrialBanner />

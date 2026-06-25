@@ -119,7 +119,8 @@ export default defineEventHandler(async (event) => {
       adminFeeRappen = 0,
       chargePercentage = 0,
       shouldCreditHours = true,
-      cancelledBy = 'staff'
+      cancelledBy = 'staff',
+      refundDestination = 'wallet',
     } = body
 
     if (!appointmentId || !validateUUID(appointmentId)) {
@@ -206,9 +207,10 @@ export default defineEventHandler(async (event) => {
         shouldCreditHours,
         chargePercentage,
         staffId: userData.id,
-        cancelledBy: cancelledBy === 'customer' ? 'customer' : 'staff'
+        cancelledBy: cancelledBy === 'customer' ? 'customer' : 'staff',
+        refundDestination: refundDestination || 'wallet',
       }
-    })
+    }) as any
 
     // ============ LAYER 9: AUDIT LOGGING ============
     await logAudit({
@@ -327,6 +329,7 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       message: 'Appointment cancelled by staff',
+      refundDestination: (cancellationResult as any)?.refundDestination || refundDestination || 'wallet',
       data: cancellationResult
     }
 

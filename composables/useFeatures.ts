@@ -146,66 +146,39 @@ export function useFeatures() {
 
   const setEnabled = async (key: string, value: boolean, tenantIdOverride?: string) => {
     const auth = useAuthStore()
-    const supabase = getSupabase()
-    const tenantId = tenantIdOverride || (auth.userProfile as any)?.tenant_id
-    if (!tenantId) return
+    if (!(auth.userProfile as any)?.tenant_id && !tenantIdOverride) return
 
     const prev = cache.flags.value[key]
-    
-    // Update cache immediately for responsive UI
+
+    // Optimistic UI update
     cache.flags.value = { ...cache.flags.value, [key]: value }
-    
-    // Update definitions cache as well
-    const updatedDefinitions = cache.definitions.value.map(def => 
+    cache.definitions.value = cache.definitions.value.map(def =>
       def.key === key ? { ...def, isEnabled: value } : def
     )
-    cache.definitions.value = updatedDefinitions
-    
+
     try {
-      // Find the feature definition to preserve metadata
       const featureDef = cache.definitions.value.find(def => def.key === key)
-      
-      if (featureDef) {
-        // Update the JSON metadata with new enabled state
-        const updatedMetadata = {
-          displayName: featureDef.displayName,
-          description: featureDef.description,
-          icon: featureDef.icon,
-          sortOrder: featureDef.sortOrder,
-          enabled: value
-        }
-        
-        const { error } = await supabase
-          .from('tenant_settings')
-          .upsert({
-            tenant_id: tenantId,
-            category: 'features',
-            setting_key: key,
-            setting_value: JSON.stringify(updatedMetadata),
-            setting_type: 'json'
-          }, { onConflict: 'tenant_id,category,setting_key' })
-          
-        if (error) throw error
-      } else {
-        // Fallback for legacy boolean features
-        const { error } = await supabase
-          .from('tenant_settings')
-          .upsert({
-            tenant_id: tenantId,
-            category: 'features',
-            setting_key: key,
-            setting_value: value ? 'true' : 'false',
-            setting_type: 'boolean'
-          }, { onConflict: 'tenant_id,category,setting_key' })
-          
-        if (error) throw error
-      }
-      
+      const metadata = featureDef ? {
+        displayName: featureDef.displayName,
+        description: featureDef.description,
+        icon: featureDef.icon,
+        sortOrder: featureDef.sortOrder
+      } : undefined
+
+      // Use server-side API so service_role key is used (avoids RLS 401)
+      const supabase = getSupabase()
+      const { data: { session } } = await supabase.auth.getSession()
+      await $fetch('/api/admin/features/toggle', {
+        method: 'POST',
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+        body: { key, value, metadata }
+      })
+
       logger.debug(`✅ Feature ${key} ${value ? 'enabled' : 'disabled'} successfully`)
     } catch (e) {
-      // revert on failure
+      // Revert on failure
       cache.flags.value = { ...cache.flags.value, [key]: prev }
-      cache.definitions.value = cache.definitions.value.map(def => 
+      cache.definitions.value = cache.definitions.value.map(def =>
         def.key === key ? { ...def, isEnabled: prev } : def
       )
       console.error(`❌ Failed to toggle feature ${key}:`, e)

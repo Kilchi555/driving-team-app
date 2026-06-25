@@ -37,9 +37,9 @@ export interface Terminology {
 
 const TERMS: Record<string, Terminology> = {
   driving_school: {
-    client: 'Schüler',
-    clientsPlural: 'Schüler',
-    clientPossessive: 'Schüler',
+    client: 'Benutzer',
+    clientsPlural: 'Benutzer',
+    clientPossessive: 'Benutzer',
     staff: 'Fahrlehrer',
     staffPlural: 'Fahrlehrer',
     appointment: 'Fahrstunde',

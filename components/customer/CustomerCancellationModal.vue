@@ -63,6 +63,34 @@
           </p>
         </div>
 
+        <!-- Refund Destination Choice (shown only on free cancellation with completed payment) -->
+        <div
+          v-if="selectedReason && hoursUntilAppointment !== null && hoursUntilAppointment >= 24 && canChooseWalleeRefund"
+          class="mb-4"
+        >
+          <p class="text-sm font-medium text-gray-700 mb-2">Wohin soll die Rückerstattung gehen?</p>
+          <div class="space-y-2">
+            <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border transition-colors"
+              :class="refundDestination === 'wallet' ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'"
+            >
+              <input type="radio" value="wallet" v-model="refundDestination" class="mt-0.5 text-blue-600 focus:ring-blue-400" />
+              <div>
+                <span class="text-sm font-medium text-gray-900">Guthaben aufladen</span>
+                <p class="text-xs text-gray-500 mt-0.5">CHF {{ refundAmountChf.toFixed(2) }} werden sofort Ihrem Fahrstunden-Guthaben gutgeschrieben</p>
+              </div>
+            </label>
+            <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border transition-colors"
+              :class="refundDestination === 'wallee' ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:bg-gray-50'"
+            >
+              <input type="radio" value="wallee" v-model="refundDestination" class="mt-0.5 text-green-600 focus:ring-green-400" />
+              <div>
+                <span class="text-sm font-medium text-gray-900">Auf Zahlungsmittel zurückerstatten</span>
+                <p class="text-xs text-gray-500 mt-0.5">CHF {{ refundAmountChf.toFixed(2) }} werden auf Ihre originale Zahlungsmethode zurückerstattet (3–5 Werktage)</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
         <!-- Medical Certificate Upload Section - only show when there's a penalty (less than 24h before) -->
         <div v-if="selectedReason && selectedReason.requires_proof && hoursUntilAppointment !== null && hoursUntilAppointment < 24" class="mb-4">
           <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3">
@@ -192,6 +220,22 @@ const uploadedFile = ref<File | null>(null)
 const isLoading = ref(false)
 const uploadingFile = ref(false)
 const errorMessage = ref('')
+// 'wallet' = Guthaben gutschreiben | 'wallee' = direkt auf Zahlungsmittel
+const refundDestination = ref<'wallet' | 'wallee'>('wallet')
+
+// Whether the current situation allows a direct Wallee refund
+const canChooseWalleeRefund = computed(() => {
+  if (!props.payment) return false
+  if (props.payment.payment_status !== 'completed') return false
+  if (!props.payment.wallee_transaction_id) return false
+  const walleeCapture = (props.payment.total_amount_rappen || 0) - (props.payment.credit_used_rappen || 0)
+  return walleeCapture > 0
+})
+
+const refundAmountChf = computed(() => {
+  if (!props.payment || props.payment.payment_status !== 'completed') return 0
+  return (props.payment.total_amount_rappen || 0) / 100
+})
 
 // Computed
 const hoursUntilAppointment = computed(() => {
@@ -304,7 +348,8 @@ const confirmCancellation = async () => {
       method: 'POST',
       body: {
         appointmentId: props.appointment.id,
-        cancellationReasonId: selectedReasonId.value
+        cancellationReasonId: selectedReasonId.value,
+        refundDestination: refundDestination.value,
       }
     })
 
@@ -345,6 +390,7 @@ const close = () => {
   uploadedFile.value = null
   errorMessage.value = ''
   policyInfo.value = null
+  refundDestination.value = 'wallet'
   emit('close')
 }
 

@@ -1098,21 +1098,13 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
           // ✅ For lessons/exams, use student name + location
           // ✅ Location für den Titel bestimmen - Priorität: address > name (da address sauberer ist)
           const locationData = (apt as any).location
-          const locationText = (apt as any).location_address || 
+          // For pickup bookings, show the customer's pickup address instead of the standard location
+          const pickupAddress = (apt as any).customer_pickup_address
+          const locationText = pickupAddress ||
+              (apt as any).location_address || 
               (locationData?.address) ||
               (apt as any).location_name || 
               (locationData?.name) || ''
-          
-          // ✅ Debug: Location-Daten loggen
-          logger.debug('🔍 Location debug for appointment:', apt.id, {
-            location_id: apt.location_id,
-            location_name: (apt as any).location_name,
-            location_address: (apt as any).location_address,
-            backend_location_data: locationData,
-            final_locationText: locationText,
-            userObj: userObj,
-            studentName: studentName
-          })
           
           // ✅ Titel mit Location kombinieren falls vorhanden
           if (locationText) {
@@ -1219,7 +1211,10 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
           // ✅ NEW: Payment status for color indication
           payment_status: apt.payment_status || null,
           paid_at: apt.paid_at || null,
-          is_paid: apt.payment_status === 'completed' && apt.paid_at ? true : false
+          is_paid: apt.payment_status === 'completed' && apt.paid_at ? true : false,
+          // Pickup address for pickup-type lessons
+          customer_pickup_plz: (apt as any).customer_pickup_plz || null,
+          customer_pickup_address: (apt as any).customer_pickup_address || null,
         }
       }
       
@@ -1907,8 +1902,9 @@ dateClick: (arg) => {
 eventContent: (arg) => {
   const extendedProps = arg.event.extendedProps
   const locationObj = extendedProps?.location
-  // Extract address or name from location object, or fallback to location string
-  const location = (locationObj?.address || locationObj?.name) || extendedProps?.location_address || ''
+  // For pickup bookings, show the customer's pickup address; otherwise standard location
+  const location = extendedProps?.customer_pickup_address ||
+      (locationObj?.address || locationObj?.name) || extendedProps?.location_address || ''
   const eventType = arg.event.extendedProps?.eventType || 'lesson'
   const student = extendedProps?.student || ''
   

@@ -79,6 +79,7 @@ export default defineEventHandler(async (event) => {
         staff_id,
         confirmation_token,
         location_id,
+        customer_pickup_address,
         source,
         created_by,
         payments (
@@ -138,6 +139,11 @@ export default defineEventHandler(async (event) => {
       .select('name, address, city')
       .eq('id', appointment.location_id)
       .single()
+
+    // If this is a pickup booking, use the customer's pickup address as the location display
+    const pickupAddress = (appointment as any).customer_pickup_address as string | null
+    const locationDisplay = pickupAddress ? 'Pickup-Adresse' : location?.name
+    const locationAddressDisplay = pickupAddress || [location?.address, location?.city].filter(Boolean).join(', ') || undefined
 
     // 7b. Get event type label from DB (fallback to code-based map)
     const EVENT_TYPE_LABELS: Record<string, string> = {
@@ -200,8 +206,8 @@ export default defineEventHandler(async (event) => {
           appointmentTime: appointmentDateTime,
           type: 'appointment_confirmation',
           staffName,
-          location: location?.name,
-          locationAddress: [location?.address, location?.city].filter(Boolean).join(', ') || undefined,
+          location: locationDisplay,
+          locationAddress: locationAddressDisplay,
           tenantName: tenant.name,
           tenantId,
           tenantSlug: tenant.slug,
@@ -241,8 +247,8 @@ export default defineEventHandler(async (event) => {
           appointmentTime: appointmentDateTime,
           type: 'staff_new_booking',
           staffName,
-          location: location?.name,
-          locationAddress: [location?.address, location?.city].filter(Boolean).join(', ') || undefined,
+          location: locationDisplay,
+          locationAddress: locationAddressDisplay,
           tenantName: tenant.name,
           tenantId,
           tenantSlug: tenant.slug,

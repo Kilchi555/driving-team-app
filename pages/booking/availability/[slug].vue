@@ -171,7 +171,7 @@
             <span v-if="selectedCategory" class="font-semibold">{{ selectedCategory?.name }}</span>
             <span v-else-if="selectedMainCategory" class="font-semibold">{{ selectedMainCategory?.name }}</span>
             <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
-            <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
+            <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.isPickup && pickupPLZ ? `Pickup PLZ ${pickupPLZ}` : selectedLocation?.name }}</span>
             <span v-if="selectedInstructor" class="font-semibold"> • {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</span>
             <span v-if="selectedSlot" class="font-semibold"> • {{ formatDate(selectedSlot?.start_time) }} {{ formatTime(selectedSlot?.start_time) }}</span>
           </div>
@@ -478,9 +478,11 @@
                   <input 
                     v-model="pickupPLZ"
                     type="text"
+                    inputmode="numeric"
                     placeholder="z.B. 8001"
                     maxlength="4"
                     class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 tenant-focus text-sm"
+                    @keyup.enter="pickupPLZ.length === 4 && !isCheckingPickup && checkPickupAvailability()"
                   >
                   <button
                     @click="checkPickupAvailability"
@@ -493,7 +495,7 @@
                 </div>
                 
                 <!-- Pickup Result -->
-                <div v-if="pickupCheckResult" class="mt-3 p-3 rounded-lg" :class="pickupCheckResult.available ? 'bg-green-50 border border-green-200' : 'bg-orange-50 border border-orange-200'">
+                <div v-if="pickupCheckResult" id="pickup-check-result" class="mt-3 p-3 rounded-lg animate-slide-in" :class="pickupCheckResult.available ? 'bg-green-50 border border-green-200' : 'bg-orange-50 border border-orange-200'">
                   <div class="flex flex-col sm:flex-row items-start gap-2">
                     <svg v-if="pickupCheckResult.available" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -560,6 +562,17 @@
           <div v-if="(isLoadingTimeSlots || availableTimeSlots.length > 0) && !showProposalFormManually" class="bg-white shadow rounded-lg p-4">
             <div class="text-center">
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wähle deinen Termin</h2>
+
+              <!-- Pickup travel-check info badge -->
+              <div
+                v-if="isPickupTravelCheckEnabled && selectedLocation?.isPickup && pickupPLZ"
+                class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+              >
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                </svg>
+                Nur Termine, bei denen dein Fahrlehrer rechtzeitig bei dir (PLZ {{ pickupPLZ }}) sein kann
+              </div>
               
               <!-- Countdown Timer (wenn Termin reserviert) -->
             </div>
@@ -764,7 +777,7 @@
               <div class="mt-2 text-sm" :style="{ color: getBrandPrimary() }">
                 <span class="font-semibold">{{ selectedCategory?.code }}</span>
                 <span v-if="selectedDuration" class="font-semibold"> • {{ selectedDuration }} Min.</span>
-                <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.name }}</span>
+                <span v-if="selectedLocation" class="font-semibold"> • {{ selectedLocation?.isPickup && pickupPLZ ? `Pickup PLZ ${pickupPLZ}` : selectedLocation?.name }}</span>
                 <span v-if="selectedInstructor" class="font-semibold"> • {{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</span>
               </div>
               <div class="mt-1 text-xs text-gray-500">
@@ -802,17 +815,23 @@
                 Adresse <span class="text-red-500">*</span>
               </label>
               <div class="relative">
+                <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                  </svg>
+                </div>
                 <input
                   ref="pickupAddressInput"
                   v-model="pickupAddress"
                   type="text"
-                  placeholder="z.B. Musterstrasse 123, 8048 Zürich"
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 tenant-focus"
+                  placeholder="Adresse eingeben und Vorschlag auswählen…"
+                  autocomplete="off"
+                  class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 tenant-focus"
                   @input="validatePickupAddress"
                 >
               </div>
               <p class="mt-1 text-xs text-gray-500">
-                Die Adresse muss in PLZ {{ selectedLocation.pickupPLZ }} liegen
+                Adresse in PLZ {{ selectedLocation.pickupPLZ }} auswählen — Vorschläge erscheinen beim Tippen
               </p>
             </div>
 
@@ -1197,6 +1216,11 @@ const { checkConflicts: checkCustomerConflicts, customerAppointments } = useCust
 // Prüfe ob Online-Buchung aktiviert ist
 const isOnlineBookingEnabled = computed(() => {
   return isEnabled('allow_online_booking', true) // Default: true für Rückwärtskompatibilität
+})
+
+// Fahrzeit-Check: Slots bei Pickup nach Erreichbarkeit der Kundenadresse filtern
+const isPickupTravelCheckEnabled = computed(() => {
+  return isEnabled('customer_plz_travel_check_enabled', false)
 })
 
 const route = useRoute()
@@ -2511,6 +2535,9 @@ const selectMainCategory = async (category: any) => {
                 id: location.id,
                 name: location.name,
                 address: location.address,
+                postal_code: location.postal_code || null,
+                canton: location.canton || null,
+                city: location.city || null,
                 category_pickup_settings: location.category_pickup_settings || {},
                 time_windows: parseTimeWindows(location.time_windows),
                 // Use the already-filtered available_staff from the API
@@ -2702,6 +2729,7 @@ const selectSubcategory = async (category: any) => {
                               id: location.id,
                               name: location.name,
                               address: location.address,
+                              postal_code: location.postal_code || null,
                               city: location.city || '',
                               canton: location.canton || '',
                               category_pickup_settings: location.category_pickup_settings || {},
@@ -2795,11 +2823,11 @@ const checkPickupAvailability = async () => {
       logger.debug(`🚗 Checking location "${location.name}":`)
       logger.debug(`  Max radius: ${maxRadius} min`)
       
-      // Extract PLZ from location address (assuming format "Street, PLZ City")
-      const locationPLZ = extractPLZFromAddress(location.address)
+      // Prefer the dedicated postal_code field; fall back to extracting from address
+      const locationPLZ = location.postal_code || extractPLZFromAddress(location.address)
       
       if (!locationPLZ) {
-        console.warn(`⚠️ Could not extract PLZ from location address: ${location.address}`)
+        console.warn(`⚠️ Could not determine PLZ for location "${location.name}" (address: ${location.address}). Add a postal_code to the location.`)
         continue
       }
       
@@ -2860,6 +2888,12 @@ const checkPickupAvailability = async () => {
     }
   } finally {
     isCheckingPickup.value = false
+    // Scroll the result into view after DOM update
+    await nextTick()
+    const resultEl = document.getElementById('pickup-check-result')
+    if (resultEl) {
+      resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
   }
 }
 
@@ -2953,20 +2987,42 @@ const generateTimeSlotsForSpecificCombination = async () => {
       ? filters.value.duration_minutes[0] || 45 
       : filters.value.duration_minutes || 45
     
+    // Use pickup-filtered endpoint when: feature is on AND this is a pickup booking with a known PLZ
+    const usePickupFilter = isPickupTravelCheckEnabled.value &&
+      selectedLocation.value?.isPickup &&
+      pickupPLZ.value?.length === 4
+
+
+    const slotFetchPromise = usePickupFilter
+      ? $fetch<{ success: boolean; slots: any[]; count: number }>('/api/booking/get-slots-for-pickup', {
+          method: 'POST',
+          body: {
+            tenant_id: currentTenant.value?.id || '',
+            staff_id: selectedInstructor.value.id,
+            location_id: selectedLocation.value.id,
+            category_code: selectedCategory.value.code,
+            duration_minutes: duration,
+            start_date: startDate.toISOString().split('T')[0],
+            end_date: endDate.toISOString().split('T')[0],
+            customer_plz: pickupPLZ.value
+          }
+        }).then(r => r.slots || [])
+      : fetchAvailableSlots({
+          tenant_id: currentTenant.value?.id || '',
+          staff_id: selectedInstructor.value.id,
+          location_id: selectedLocation.value.id,
+          category_code: selectedCategory.value.code,
+          duration_minutes: duration,
+          start_date: startDate.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0]
+        })
+
     // ✅ Run conflict check and slot fetch in parallel
     const [slots] = await Promise.all([
-      fetchAvailableSlots({
-        tenant_id: currentTenant.value?.id || '',
-        staff_id: selectedInstructor.value.id,
-        location_id: selectedLocation.value.id,
-        category_code: selectedCategory.value.code,
-        duration_minutes: duration,
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0]
-      }),
+      slotFetchPromise,
       checkCustomerConflicts(startDate, endDate)
     ])
-    logger.debug('✅ Fetched', slots.length, 'slots and conflict check done in parallel')
+    logger.debug('✅ Fetched', slots.length, `slots (pickup filter: ${usePickupFilter}) and conflict check done in parallel`)
     
     // Convert to format expected by UI
     let timeSlots = slots
@@ -3190,6 +3246,11 @@ const initializeAddressAutocomplete = () => {
     console.warn('Google Maps not loaded')
     return
   }
+
+  // Don't reinitialize if already attached to the same element
+  if (autocomplete) {
+    return
+  }
   
   try {
     // Create autocomplete instance with restrictions
@@ -3265,11 +3326,9 @@ const validatePickupAddress = () => {
     clearTimeout(validateTimeout)
   }
   
-  // Reset validation state (nur wenn bereits eine Validierung stattgefunden hat)
-  // Zeige keine Fehler während der Eingabe
-  if (pickupAddressDetails.value && !pickupAddressDetails.value.valid) {
-    pickupAddressDetails.value = null
-  }
+  // When the user starts typing, clear any existing validation (autocomplete or manual)
+  // so we don't show a stale "confirmed" badge while they're editing
+  pickupAddressDetails.value = null
   
   // Don't validate empty input or very short input
   if (!pickupAddress.value || pickupAddress.value.length < 10) {
@@ -3482,6 +3541,9 @@ const confirmBooking = async () => {
       notes: bookingNotes.value || undefined,
       discount_code: bookingDiscount.value?.code,
       discount_amount_rappen: bookingDiscount.value?.discountAmountRappen ?? 0,
+      // Store customer pickup PLZ and address on the appointment when booking a pickup lesson
+      customer_pickup_plz: selectedLocation.value?.isPickup ? (pickupPLZ.value || null) : null,
+      customer_pickup_address: selectedLocation.value?.isPickup ? (pickupAddressDetails.value?.formatted || pickupAddress.value || null) : null,
       // Cross-domain marketing attribution — forwarded from drivingteam.ch
       marketing_session_id: (typeof window !== 'undefined' && (window as any).__analyticsSessionId) || undefined,
       marketing_attribution: (typeof window !== 'undefined' && (window as any).__marketingAttribution) || undefined,
@@ -3596,6 +3658,7 @@ const createAppointmentSecure = async (userData: any) => {
         appointment_type: userData.appointment_type,
         category_code: userData.category_code || '',
         notes: userData.notes || undefined,
+        customer_pickup_plz: userData.customer_pickup_plz ?? null,
         marketing_session_id: userData.marketing_session_id,
         marketing_attribution: userData.marketing_attribution,
       }
@@ -3667,6 +3730,8 @@ const goBackToStep = (step: number) => {
     selectedSlot.value = null
     pickupAddress.value = ''
     pickupAddressDetails.value = null
+    // Reset autocomplete so it re-initializes when returning to step 7
+    autocomplete = null
   }
   if (step < 5) {
     selectedSlot.value = null
@@ -3753,6 +3818,22 @@ watch(() => currentStep.value, (newStep: number, oldStep: number) => {
   // Push browser history entry when moving forward so back button navigates within steps
   if (newStep > oldStep && typeof history !== 'undefined') {
     history.pushState({ bookingStep: newStep }, '')
+  }
+
+  // Initialize Google Places Autocomplete when entering pickup address step
+  if (newStep === 7 && selectedLocation.value?.isPickup) {
+    nextTick(() => {
+      if (window.google?.maps) {
+        initializeAddressAutocomplete()
+      } else {
+        // Maps not yet loaded — wait for the plugin's load event
+        const onMapsLoaded = () => {
+          initializeAddressAutocomplete()
+          window.removeEventListener('google-maps-loaded', onMapsLoaded)
+        }
+        window.addEventListener('google-maps-loaded', onMapsLoaded)
+      }
+    })
   }
 })
 
@@ -4664,5 +4745,19 @@ onBeforeUnmount(async () => {
 .fade-leave-to {
   opacity: 0;
   transform: translateY(-4px);
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out forwards;
 }
 </style>

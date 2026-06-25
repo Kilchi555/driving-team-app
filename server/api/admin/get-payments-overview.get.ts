@@ -124,29 +124,8 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
       })
     }
 
-    // Fetch appointments for all users
-    const { data: appointmentsData, error: appointmentsError } = await supabaseAdmin
-      .from('appointments')
-      .select(`
-        id,
-        user_id,
-        start_time,
-        duration_minutes,
-        status,
-        created_at
-      `)
-      .eq('tenant_id', tenantId)
-      .order('start_time', { ascending: false })
-
-    if (appointmentsError) {
-      logger.error('❌ [get-payments-overview] Error loading appointments:', appointmentsError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to load appointments'
-      })
-    }
-
-    // Fetch all payments
+    // Fetch all payments — join appointment start_time directly to avoid the 1000-row limit
+    // on a separate appointments query (there can be 2000+ appointments)
     const { data: paymentsData, error: paymentsError } = await supabaseAdmin
       .from('payments')
       .select(`
@@ -155,7 +134,8 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
         payment_status,
         paid_at,
         total_amount_rappen,
-        description
+        description,
+        appointments(id, start_time, status, deleted_at)
       `)
       .eq('tenant_id', tenantId)
 
@@ -165,6 +145,15 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
         statusCode: 500,
         statusMessage: 'Failed to load payments'
       })
+    }
+
+    // Build a lookup: appointment_id → start_time from the joined data
+    const appointmentStartTime: Record<string, string> = {}
+    for (const p of paymentsData || []) {
+      const apt = (p as any).appointments
+      if (apt?.id && apt?.start_time) {
+        appointmentStartTime[apt.id] = apt.start_time
+      }
     }
 
     // Fetch company billing addresses
@@ -179,45 +168,39 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
 
     // ✅ 6. DATA TRANSFORMATION - Process and aggregate data
     const processedUsers: UserPaymentSummary[] = (usersData || []).map(user => {
-      // Find all appointments for this user
-      const userAppointments = (appointmentsData || []).filter(appointment => 
-        appointment.user_id === user.id
-      )
-      
       // Find all payments for this user
       const userPayments = (paymentsData || []).filter(payment => 
         payment.user_id === user.id
       )
 
-      // Find appointments with pending/failed payments (unbezahlte Termine)
-      const unpaidPaymentIds = userPayments
-        .filter(p => p.payment_status === 'pending' || p.payment_status === 'failed')
-        .map(p => p.appointment_id)
-      
-      const unpaidAppointments = userAppointments.filter(apt => 
-        unpaidPaymentIds.includes(apt.id)
+      // Find open payments and their appointment start_times (from joined data)
+      const openPayments = userPayments.filter(p =>
+        p.payment_status === 'pending' ||
+        p.payment_status === 'failed' ||
+        p.payment_status === 'invoiced' ||
+        p.payment_status === 'invoice'
       )
-      
-      // Find the oldest UNPAID appointment date (for sorting)
-      const oldestUnpaidAppointment = unpaidAppointments.length > 0
-        ? unpaidAppointments.reduce((oldest, current) => {
-            const oldestTime = new Date(oldest.start_time).getTime()
-            const currentTime = new Date(current.start_time).getTime()
-            return currentTime < oldestTime ? current : oldest
-          })
-        : null
-      
-      // Fallback: Find the oldest appointment date (any status)
-      const oldestAppointment = userAppointments.length > 0
-        ? userAppointments.reduce((oldest, current) => {
-            const oldestTime = new Date(oldest.start_time).getTime()
-            const currentTime = new Date(current.start_time).getTime()
-            return currentTime < oldestTime ? current : oldest
-          })
-        : null
+
+      // Find oldest open appointment date using the joined appointment data
+      let oldestOpenDate: string | null = null
+      for (const p of openPayments) {
+        const startTime = p.appointment_id ? appointmentStartTime[p.appointment_id] : null
+        if (startTime) {
+          if (!oldestOpenDate || new Date(startTime) < new Date(oldestOpenDate)) {
+            oldestOpenDate = startTime
+          }
+        }
+      }
+
+      // Total appointments = unique appointment IDs in payments for this user
+      const uniqueAppointmentIds = new Set(
+        userPayments.filter(p => p.appointment_id).map(p => p.appointment_id)
+      )
+      const totalAppointmentsCount = uniqueAppointmentIds.size
 
       // Count different payment statuses
-      const invoicedCount = userPayments.filter(p => p.payment_status === 'invoiced').length
+      // Note: 'invoice' (without 'd') is a legacy status that means the same as 'invoiced'
+      const invoicedCount = userPayments.filter(p => p.payment_status === 'invoiced' || p.payment_status === 'invoice').length
       const completedCount = userPayments.filter(p => p.payment_status === 'completed').length
       const paidCount = userPayments.filter(p => p.payment_status === 'paid').length
       const cancelledCount = userPayments.filter(p => 
@@ -237,9 +220,14 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
         statuses: userPayments.map(p => p.payment_status)
       })
 
-      // Calculate total unpaid amount (only pending/failed are truly unpaid)
+      // Calculate total unpaid amount: pending/failed (not yet paid) + invoiced (billed but not received)
       const totalUnpaidAmount = userPayments
-        .filter(p => p.payment_status === 'pending' || p.payment_status === 'failed')
+        .filter(p => 
+          p.payment_status === 'pending' || 
+          p.payment_status === 'failed' ||
+          p.payment_status === 'invoiced' ||
+          p.payment_status === 'invoice'
+        )
         .reduce((sum, payment) => {
           return sum + ((payment.total_amount_rappen || 0) / 100)
         }, 0)
@@ -290,9 +278,9 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
         payment_status: paymentStatus,
         pending_payment_count: pendingCount,
         total_unpaid_amount: totalUnpaidAmount,
-        total_appointments: userAppointments.length,
-        // ✅ Use oldest UNPAID appointment for sorting, fallback to oldest appointment
-        oldest_appointment_date: oldestUnpaidAppointment?.start_time || oldestAppointment?.start_time || null
+        total_appointments: totalAppointmentsCount,
+        // Oldest open appointment date — computed from joined payment→appointment data (no row limit issue)
+        oldest_appointment_date: oldestOpenDate
       }
     })
 

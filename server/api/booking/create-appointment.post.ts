@@ -74,6 +74,10 @@ interface CreateAppointmentRequest {
   marketing_session_id?: string
   /** Decoded marketing attribution blob (gclid + UTMs). */
   marketing_attribution?: MarketingAttributionPayload | null
+  /** Customer pickup PLZ — stored on the appointment for pickup bookings. */
+  customer_pickup_plz?: string | null
+  /** Full formatted pickup address (e.g. "Musterstrasse 12, 8048 Zürich") */
+  customer_pickup_address?: string | null
 }
 
 export default defineEventHandler(async (event: H3Event) => {
@@ -482,6 +486,8 @@ export default defineEventHandler(async (event: H3Event) => {
         utm_campaign: marketingAttr?.utm_campaign ?? null,
         utm_content: marketingAttr?.utm_content ?? null,
         utm_term: marketingAttr?.utm_term ?? null,
+        customer_pickup_plz: body.customer_pickup_plz?.trim() || null,
+        customer_pickup_address: body.customer_pickup_address?.trim() || null,
       })
       .select()
       .single()

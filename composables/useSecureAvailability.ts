@@ -59,6 +59,10 @@ interface CreateAppointmentOptions {
   notes?: string
   discount_code?: string
   discount_amount_rappen?: number
+  /** Customer pickup PLZ — stored on the appointment for pickup bookings. */
+  customer_pickup_plz?: string | null
+  /** Full formatted pickup address (e.g. "Musterstrasse 12, 8048 Zürich") */
+  customer_pickup_address?: string | null
   /** Cross-domain marketing session ID (from drivingteam.ch). */
   marketing_session_id?: string
   /** Decoded marketing attribution blob — used for server-side Google Ads conversion. */
@@ -176,6 +180,8 @@ export const useSecureAvailability = () => {
           notes: options.notes,
           discount_code: options.discount_code,
           discount_amount_rappen: options.discount_amount_rappen ?? 0,
+          customer_pickup_plz: options.customer_pickup_plz ?? null,
+          customer_pickup_address: options.customer_pickup_address ?? null,
           marketing_session_id: options.marketing_session_id,
           marketing_attribution: options.marketing_attribution,
         }

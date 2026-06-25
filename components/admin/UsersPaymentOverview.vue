@@ -1,12 +1,12 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-4 sm:py-8">
+  <div class="min-h-screen bg-gray-50 py-2 sm:py-4">
     <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
       
       <!-- Header -->
-      <div class="mb-6 sm:mb-8">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="mb-3 sm:mb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">💰 Zahlungsübersicht</h1>
+            <h1 class="text-lg sm:text-xl font-bold text-gray-900">💰 Zahlungsübersicht</h1>
           </div>
           
           <!-- Refresh Button -->
@@ -26,98 +26,95 @@
       </div>
 
       <!-- Stats Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        <div class="bg-white rounded-lg shadow-sm border p-4 sm:p-6">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4">
+        <div class="bg-white rounded-lg shadow-sm border p-3">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs sm:text-sm text-gray-600">Alle Benutzer</p>
-              <p class="text-xl sm:text-2xl font-bold text-gray-900">{{ totalUsers }}</p>
+              <p class="text-xs text-gray-500">Alle Benutzer</p>
+              <p class="text-lg font-bold text-gray-900">{{ totalUsers }}</p>
             </div>
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <span class="text-blue-600 text-lg sm:text-xl">👥</span>
+            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <span class="text-blue-600 text-sm">👥</span>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow-sm border p-4 sm:p-6">
+        <div class="bg-white rounded-lg shadow-sm border p-3">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs sm:text-sm text-gray-600">Mit unbezahlten Terminen</p>
-              <p class="text-xl sm:text-2xl font-bold text-red-600">{{ usersWithUnpaidAppointments }}</p>
+              <p class="text-xs text-gray-500">Unbezahlt</p>
+              <p class="text-lg font-bold text-red-600">{{ usersWithUnpaidAppointments }}</p>
             </div>
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <span class="text-red-600 text-lg sm:text-xl">💸</span>
+            <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+              <span class="text-red-600 text-sm">💸</span>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow-sm border p-4 sm:p-6">
+        <div class="bg-white rounded-lg shadow-sm border p-3">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs sm:text-sm text-gray-600">Mit Firmenrechnung</p>
-              <p class="text-xl sm:text-2xl font-bold text-purple-600">{{ usersWithCompanyBilling }}</p>
+              <p class="text-xs text-gray-500">Firmenrechnung</p>
+              <p class="text-lg font-bold text-purple-600">{{ usersWithCompanyBilling }}</p>
             </div>
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <span class="text-purple-600 text-lg sm:text-xl">🏢</span>
+            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+              <span class="text-purple-600 text-sm">🏢</span>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow-sm border p-4 sm:p-6">
+        <div class="bg-white rounded-lg shadow-sm border p-3">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs sm:text-sm text-gray-600">Offener Betrag</p>
-              <p class="text-xl sm:text-2xl font-bold text-orange-600">{{ formatCurrency(totalUnpaidAmount) }}</p>
+              <p class="text-xs text-gray-500">Offener Betrag</p>
+              <p class="text-lg font-bold text-orange-600">{{ formatCurrency(totalUnpaidAmount) }}</p>
             </div>
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-              <span class="text-orange-600 text-lg sm:text-xl">💰</span>
+            <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+              <span class="text-orange-600 text-sm">💰</span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Filters -->
-      <div class="bg-white rounded-lg shadow-sm border p-4 sm:p-6 mb-6 sm:mb-8">
-        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
+      <div class="bg-white rounded-lg shadow-sm border p-3 mb-3">
+        <div class="flex flex-col sm:flex-row gap-2">
           <!-- Search -->
           <div class="flex-1">
-            <label for="search" class="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Suchen</label>
             <input
               id="search"
               v-model="searchTerm"
               type="text"
-              placeholder="Name oder E-Mail..."
-              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Name oder E-Mail suchen..."
+              class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
           </div>
 
           <!-- Status Filter -->
-          <div class="sm:w-48">
-            <label for="filter" class="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Filter</label>
+          <div class="sm:w-44">
             <select
               id="filter"
               v-model="selectedFilter"
-              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">Alle Benutzer</option>
-              <option value="unpaid">Mit unbezahlten Terminen</option>
-              <option value="overdue">Überfällig (unbezahlt & in Vergangenheit)</option>
-              <option value="company">Mit Firmenrechnung</option>
+              <option value="unpaid">Unbezahlt</option>
+              <option value="overdue">Überfällig</option>
+              <option value="company">Firmenrechnung</option>
               <option value="cash">Barzahler</option>
               <option value="invoice">Rechnungszahler</option>
             </select>
           </div>
           
           <!-- Sort Order -->
-          <div class="sm:w-48">
-            <label for="sort" class="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Sortierung</label>
+          <div class="sm:w-36">
             <select
               id="sort"
               v-model="sortOrder"
-              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="newest">Neueste zuerst</option>
               <option value="oldest">Älteste zuerst</option>
+              <option value="newest">Neueste zuerst</option>
             </select>
           </div>
         </div>
@@ -143,106 +140,48 @@
       <!-- Users Table -->
       <div v-else class="bg-white rounded-lg shadow-sm border overflow-hidden">
         <!-- Desktop Table -->
-        <div class="hidden lg:block overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
+        <div class="hidden lg:block">
+          <table class="w-full divide-y divide-gray-200">
+            <colgroup>
+              <col class="w-40">
+              <col class="w-56">
+              <col class="w-28">
+            </colgroup>
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Benutzer
-                </th>
-                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Kontakt
-                </th>
-                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Zahlungsart
-                </th>
-                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Gesamt Termine
-                </th>
-                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Offener Betrag
-                </th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Benutzer</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kontakt</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Offen</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               <tr v-for="user in filteredUsers" :key="user.user_id" class="hover:bg-gray-50 cursor-pointer" @click="navigateToUser(user.user_id)">
                 <!-- User Info -->
-                <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
+                <td class="px-3 py-2">
                   <div class="flex items-center">
-                    <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                      <span class="text-sm font-medium text-gray-600">
+                    <div class="w-7 h-7 bg-gray-200 rounded-full flex items-center justify-center shrink-0">
+                      <span class="text-xs font-medium text-gray-600">
                         {{ getInitials(user.first_name, user.last_name) }}
                       </span>
                     </div>
-                    <div class="ml-4">
-                      <div class="text-sm font-medium text-gray-900">
+                    <div class="ml-2 min-w-0">
+                      <div class="text-xs font-medium text-gray-900 truncate">
                         {{ user.first_name }} {{ user.last_name }}
                       </div>
-                      <div class="text-sm text-gray-500">{{ user.role }}</div>
+                      <div class="text-xs text-gray-400">{{ user.role }}</div>
                     </div>
                   </div>
                 </td>
 
                 <!-- Contact -->
-                <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-900">{{ user.email }}</div>
-                  <div class="text-sm text-gray-500">{{ user.phone }}</div>
-                </td>
-
-                <!-- Payment Method -->
-                <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
-                  <span 
-                    :class="getPaymentMethodClass(user.preferred_payment_method)"
-                    class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
-                  >
-                    {{ getPaymentMethodLabel(user.preferred_payment_method) }}
-                  </span>
-                </td>
-
-                <!-- Status -->
-                <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
-                  <div class="flex flex-col gap-1">
-                    <span
-                      v-if="user.payment_status === 'open'" 
-                      class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                      {{ user.pending_payment_count }} offen
-                    </span>
-                    <span
-                      v-else-if="user.payment_status === 'invoiced'" 
-                      class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
-                      Verrechnet
-                    </span>
-                    <span
-                      v-else-if="user.payment_status === 'completed'" 
-                      class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                      Bezahlt
-                    </span>
-                    <span
-                      v-else
-                      class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                      Keine Termine
-                    </span>
-                    <span
-                      v-if="user.has_company_billing" 
-                      class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
-                      Firmenrechnung
-                    </span>
-                  </div>
-                </td>
-
-                <!-- Total Appointments -->
-                <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-gray-900">
-                    {{ user.total_appointments || 0 }}
-                  </div>
+                <td class="px-3 py-2">
+                  <div class="text-xs text-gray-900 truncate">{{ user.email }}</div>
+                  <div class="text-xs text-gray-400">{{ user.phone }}</div>
                 </td>
 
                 <!-- Amount -->
-                <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-gray-900">
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <div class="text-xs font-medium text-gray-900">
                     {{ formatCurrency(user.total_unpaid_amount) }}
                   </div>
                 </td>
@@ -253,74 +192,39 @@
         
         <!-- Mobile Cards -->
         <div class="lg:hidden">
-          <div class="space-y-3 p-3">
+          <div class="space-y-2 p-2">
             <div v-for="user in filteredUsers" :key="user.user_id" 
-                 class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                 class="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer"
                  @click="navigateToUser(user.user_id)">
               <!-- User Header -->
-              <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center">
-                  <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-3">
-                    <span class="text-sm font-medium text-gray-600">
+                  <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-2 shrink-0">
+                    <span class="text-xs font-medium text-gray-600">
                       {{ getInitials(user.first_name, user.last_name) }}
                     </span>
                   </div>
                   <div>
-                    <div class="text-sm font-medium text-gray-900">
+                    <div class="text-xs font-medium text-gray-900">
                       {{ user.first_name }} {{ user.last_name }}
                     </div>
-                    <div class="text-xs text-gray-500">{{ user.role }}</div>
+                    <div class="text-xs text-gray-400">{{ user.role }}</div>
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-sm font-bold text-gray-900">
+                  <div class="text-xs font-bold text-gray-900">
                     {{ formatCurrency(user.total_unpaid_amount) }}
                   </div>
-                  <div class="text-xs text-gray-500">{{ user.total_appointments || 0 }} Termine</div>
+                  <div class="text-xs text-gray-400">{{ user.total_appointments || 0 }} Termine</div>
                 </div>
               </div>
               
               <!-- Contact Info -->
-              <div class="mb-3">
-                <div class="text-xs text-gray-500 mb-1">Kontakt</div>
-                <div class="text-sm text-gray-900">{{ user.email }}</div>
-                <div v-if="user.phone" class="text-sm text-gray-500">{{ user.phone }}</div>
+              <div class="mb-2">
+                <div class="text-xs text-gray-900">{{ user.email }}</div>
+                <div v-if="user.phone" class="text-xs text-gray-400">{{ user.phone }}</div>
               </div>
               
-              <!-- Payment Method & Status -->
-              <div class="flex flex-wrap gap-2">
-                <span 
-                  :class="getPaymentMethodClass(user.preferred_payment_method)"
-                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
-                >
-                  {{ getPaymentMethodLabel(user.preferred_payment_method) }}
-                </span>
-                <span
-                  v-if="user.payment_status === 'open'" 
-                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                  {{ user.pending_payment_count }} offen
-                </span>
-                <span
-                  v-else-if="user.payment_status === 'invoiced'" 
-                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
-                  Verrechnet
-                </span>
-                <span
-                  v-else-if="user.payment_status === 'completed'" 
-                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                  Bezahlt
-                </span>
-                <span
-                  v-else
-                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                  Keine Termine
-                </span>
-                <span
-                  v-if="user.has_company_billing" 
-                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
-                  Firmenrechnung
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -370,7 +274,7 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const searchTerm = ref('')
 const selectedFilter = ref('all')
-const sortOrder = ref<'newest' | 'oldest'>('newest') // ✅ NEU: Sortierreihenfolge
+const sortOrder = ref<'newest' | 'oldest'>('oldest')
 
 // Computed properties
 const totalUsers = computed(() => users.value.length)
@@ -388,7 +292,7 @@ const totalUnpaidAmount = computed(() =>
 )
 
 const filteredUsers = computed<UserPaymentSummary[]>(() => {
-  let filtered = users.value
+  let filtered = users.value.filter(u => u.total_unpaid_amount > 0)
 
   // Search filter
   if (searchTerm.value) {
@@ -427,26 +331,17 @@ const filteredUsers = computed<UserPaymentSummary[]>(() => {
       break
   }
 
-  // ✅ Sortierung nach Termin-Datum (ältester/neuester Termin)
+  // Sortierung nach ältestem offenem Payment-Datum (Richtung via sortOrder)
+  const direction = sortOrder.value === 'newest' ? -1 : 1
   filtered = [...filtered].sort((a, b) => {
-    // Sort by oldest_appointment_date
-    const dateA = a.oldest_appointment_date ? new Date(a.oldest_appointment_date).getTime() : 0
-    const dateB = b.oldest_appointment_date ? new Date(b.oldest_appointment_date).getTime() : 0
-    
-    // If both have no dates, sort by name
-    if (dateA === 0 && dateB === 0) {
-      const nameA = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase()
-      const nameB = `${b.first_name || ''} ${b.last_name || ''}`.toLowerCase()
-      return nameA.localeCompare(nameB)
-    }
-    
-    // Newest first: higher dates first (descending)
-    // Oldest first: lower dates first (ascending)
-    if (sortOrder.value === 'newest') {
-      return dateB - dateA // Neueste zuerst (höhere Daten zuerst)
-    } else {
-      return dateA - dateB // Älteste zuerst (niedrigere Daten zuerst)
-    }
+    const dateA = a.oldest_appointment_date ? new Date(a.oldest_appointment_date).getTime() : (direction === 1 ? Infinity : -Infinity)
+    const dateB = b.oldest_appointment_date ? new Date(b.oldest_appointment_date).getTime() : (direction === 1 ? Infinity : -Infinity)
+    if (dateA !== dateB) return (dateA - dateB) * direction
+
+    // Fallback: alphabetisch
+    const nameA = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase()
+    const nameB = `${b.first_name || ''} ${b.last_name || ''}`.toLowerCase()
+    return nameA.localeCompare(nameB)
   })
 
   return filtered

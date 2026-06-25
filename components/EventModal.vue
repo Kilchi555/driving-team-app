@@ -336,6 +336,18 @@
               @update:model-value="updateLocationId"
               @location-selected="handleLocationSelected"
             />
+
+            <!-- Pickup Address — shown when customer provided a pickup address -->
+            <div v-if="appointmentPickupAddress" class="mt-2 flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+              <svg class="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              <div>
+                <p class="font-medium text-blue-800">Pickup-Adresse</p>
+                <p class="text-blue-700">{{ appointmentPickupAddress }}</p>
+              </div>
+            </div>
           </div>
 
 
@@ -614,6 +626,34 @@
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- ── Refund-Destination: nur für Staff bei kostenloser Stornierung einer bezahlten Lektion ── -->
+        <div
+          v-if="cancellationStep === 2 && cancellationType === 'staff' && cancellationPolicyResult?.calculation?.chargePercentage === 0 && staffPaymentData?.payment_status === 'completed' && staffPaymentData?.wallee_transaction_id"
+          class="mb-4"
+        >
+          <p class="text-sm font-semibold text-gray-700 mb-2">Rückerstattung an Kunden:</p>
+          <div class="space-y-2">
+            <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border transition-colors"
+              :class="staffRefundDestination === 'wallet' ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'"
+            >
+              <input type="radio" value="wallet" v-model="staffRefundDestination" class="mt-0.5 text-blue-600 focus:ring-blue-400" />
+              <div>
+                <span class="text-sm font-medium text-gray-900">Guthaben gutschreiben</span>
+                <p class="text-xs text-gray-500 mt-0.5">Sofort verfügbar für die nächste Buchung</p>
+              </div>
+            </label>
+            <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border transition-colors"
+              :class="staffRefundDestination === 'wallee' ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:bg-gray-50'"
+            >
+              <input type="radio" value="wallee" v-model="staffRefundDestination" class="mt-0.5 text-green-600 focus:ring-green-400" />
+              <div>
+                <span class="text-sm font-medium text-gray-900">Zurück auf Zahlungsmittel (Wallee)</span>
+                <p class="text-xs text-gray-500 mt-0.5">CHF {{ ((staffPaymentData.total_amount_rappen - (staffPaymentData.credit_used_rappen || 0)) / 100).toFixed(2) }} — 3–5 Werktage</p>
+              </div>
+            </label>
           </div>
         </div>
         
@@ -1008,6 +1048,9 @@ const appointmentNumber = ref(1)
 const availableDurations = ref([45] as number[])
 const showNoPolicyModal = ref(false) // ✅ NEW: Modal when no policy found
 const manualChargePercentage = ref<number | null>(null) // ✅ NEW: Staff choice when no policy
+// Wallee refund destination choice for staff cancellations
+const staffRefundDestination = ref<'wallet' | 'wallee'>('wallet')
+const staffPaymentData = ref<any>(null) // cached payment row for refund destination UI
 const customerInviteSelectorRef = ref()
 const authStore = useAuthStore()
 // ✅ NEU: Track ob der Titel vom Benutzer manuell bearbeitet wurde
@@ -1142,6 +1185,10 @@ const formattedAvailableProducts = computed(() => {
 })
 
 // Prüft ob der Termin in der Vergangenheit liegt
+const appointmentPickupAddress = computed(() => {
+  return props.eventData?.extendedProps?.customer_pickup_address || null
+})
+
 const isPastAppointment = computed(() => {
   // Bei neuen Terminen (create mode) ist es nie ein vergangener Termin
   if (props.mode === 'create') {
@@ -1945,6 +1992,24 @@ const handleCategorySelected = async (category: any) => {
       } catch (err) {
         logger.debug('⚠️ Category change - could not load last duration, keeping current')
       }
+    }
+  }
+
+  // Reload products filtered by the newly selected driving category
+  if (category?.code) {
+    try {
+      const freshProducts = await eventModalApi.getProducts(category.code)
+      if (freshProducts && Array.isArray(freshProducts)) {
+        availableProducts.value = freshProducts.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          price: p.price_rappen / 100,
+          description: p.description
+        }))
+        logger.debug('✅ Products reloaded after category change:', availableProducts.value.length, 'category:', category.code)
+      }
+    } catch (err) {
+      logger.warn('⚠️ Could not reload products after category change:', err)
     }
   }
 }
@@ -3939,6 +4004,8 @@ const handleDelete = async () => {
   logger.debug('🗑️ Lesson/Exam/Theory - show cancellation reason modal first')
   cancellationStep.value = 0 // Starte mit Schritt 1 (Wer hat abgesagt?)
   cancellationType.value = undefined // Benutzer muss wählen
+  staffRefundDestination.value = 'wallet' // Reset refund destination
+  staffPaymentData.value = null
   await fetchCancellationReasons()
   showCancellationReasonModal.value = true
 }
@@ -4034,7 +4101,8 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
           shouldCreditHours: cancellationPolicyResult.value?.shouldCreditHours || false,
           chargePercentage: cancellationPolicyResult.value?.chargePercentage || 100,
           originalLessonPrice: payment?.lesson_price_rappen || lessonPriceRappen,
-          originalAdminFee: payment?.admin_fee_rappen || adminFeeRappen
+          originalAdminFee: payment?.admin_fee_rappen || adminFeeRappen,
+          refundDestination: staffRefundDestination.value,
         }
       })
       
@@ -4305,7 +4373,8 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
             cancellationReasonId: cancellationReasonId,
             deletionReason,
             chargePercentage,
-            shouldCreditHours: chargePercentage === 100
+            shouldCreditHours: chargePercentage === 100,
+            refundDestination: staffRefundDestination.value,
           }
         }) as any
         
@@ -4314,7 +4383,11 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
         // Build notification message
         let notificationMessage = staffCancellationResult.message || 'Der Termin wurde erfolgreich storniert.'
         if (wasFreeCancellationOfPaid) {
-          notificationMessage += ' Credits wurden rückvergütet.'
+          if (staffRefundDestination.value === 'wallee' && staffCancellationResult.refundDestination === 'wallee') {
+            notificationMessage += ' Rückerstattung via Wallee veranlasst (3–5 Werktage).'
+          } else {
+            notificationMessage += ' Credits wurden rückvergütet.'
+          }
         }
         
         // Show success notification
@@ -4869,14 +4942,19 @@ const loadAppointmentPrice = async (appointmentId: string) => {
     
     if (!payment) {
       logger.debug('⚠️ No payment found for appointment via API:', appointmentId)
+      staffPaymentData.value = null
       return 0
     }
+    
+    // Cache full payment for refund destination UI
+    staffPaymentData.value = payment
     
     const price = payment?.lesson_price_rappen || 0
     logger.debug('💰 Loaded appointment price via API:', price)
     return price
   } catch (err) {
     console.error('❌ Error loading appointment price via API:', err)
+    staffPaymentData.value = null
     return 0
   }
 }
@@ -5883,8 +5961,10 @@ watch(() => props.isVisible, async (newVisible) => {
     })
 
     // ✅ Reload available products every time modal opens (catches newly added products)
+    // Pass the driving category code so only matching products are shown.
     try {
-      const freshProducts = await eventModalApi.getProducts()
+      const drivingCategory = formData.value.type || undefined
+      const freshProducts = await eventModalApi.getProducts(drivingCategory)
       if (freshProducts && Array.isArray(freshProducts)) {
         availableProducts.value = freshProducts.map((product: any) => ({
           id: product.id,
@@ -5892,7 +5972,7 @@ watch(() => props.isVisible, async (newVisible) => {
           price: product.price_rappen / 100,
           description: product.description
         }))
-        logger.debug('✅ Products reloaded on modal open:', availableProducts.value.length)
+        logger.debug('✅ Products reloaded on modal open:', availableProducts.value.length, 'category:', drivingCategory)
       }
     } catch (err) {
       logger.warn('⚠️ Could not reload products on modal open:', err)
@@ -6235,20 +6315,20 @@ onMounted(async () => {
   // ✅ Load available products
   await loadProducts()
   
-  // ✅ NEU: Lade auch verfügbare Produkte via secure API
+  // ✅ NEU: Lade auch verfügbare Produkte via secure API (gefiltert nach Fahrkategorie)
   if (availableProducts.value.length === 0) {
     try {
-      const products = await eventModalApi.getProducts()
+      const drivingCategory = formData.value.type || undefined
+      const products = await eventModalApi.getProducts(drivingCategory)
       
       if (products) {
-        // Setze verfügbare Produkte direkt in den productSale
         availableProducts.value = products.map((product: any) => ({
           id: product.id,
           name: product.name,
           price: product.price_rappen / 100,
           description: product.description
         }))
-        logger.debug('✅ Products loaded via API:', availableProducts.value.length)
+        logger.debug('✅ Products loaded via API:', availableProducts.value.length, 'category:', drivingCategory)
       }
     } catch (err) {
       console.error('❌ Error loading products via API:', err)

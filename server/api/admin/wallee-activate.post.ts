@@ -1,10 +1,15 @@
 // server/api/admin/wallee-activate.post.ts
-// Super-admin only: set Wallee Space ID + User ID for a tenant and mark as active.
+// Super-admin only: set Wallee credentials for a tenant and mark as active.
+// Saves Space ID + User ID in the tenants table AND the API secret in tenant_secrets
+// — all in one atomic operation so the tenant is always fully configured.
 // Also handles the enable/disable toggle (deactivate: true = disable without wiping credentials).
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { encryptSecret } from '~/server/utils/encryption'
+import { invalidateWalleeConfigCache } from '~/server/utils/wallee-config'
+import { clearProviderCache } from '~/server/payment-providers/factory'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -13,7 +18,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'Super-Admin role required' })
   }
 
-  const { tenant_id, wallee_space_id, wallee_user_id, deactivate } = await readBody(event)
+  const { tenant_id, wallee_space_id, wallee_user_id, wallee_secret_key, deactivate } = await readBody(event)
   if (!tenant_id) throw createError({ statusCode: 400, statusMessage: 'tenant_id erforderlich' })
 
   const supabase = getSupabaseAdmin()
@@ -25,14 +30,20 @@ export default defineEventHandler(async (event) => {
       .update({ wallee_enabled: false, updated_at: new Date().toISOString() })
       .eq('id', tenant_id)
     if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+    invalidateWalleeConfigCache(tenant_id)
+    clearProviderCache(tenant_id)
     return { success: true, message: 'Online-Zahlungen deaktiviert (Credentials bleiben erhalten)' }
   }
 
-  // ── Full activation: requires Space ID + User ID ───────────────────────────
+  // ── Full activation: requires Space ID + User ID + Secret ─────────────────
   if (!wallee_space_id || !wallee_user_id) {
     throw createError({ statusCode: 400, statusMessage: 'wallee_space_id und wallee_user_id erforderlich' })
   }
+  if (!wallee_secret_key?.trim()) {
+    throw createError({ statusCode: 400, statusMessage: 'wallee_secret_key (API Secret) ist erforderlich' })
+  }
 
+  // 1. Update tenants table (non-secret IDs)
   const { error } = await supabase
     .from('tenants')
     .update({
@@ -46,7 +57,36 @@ export default defineEventHandler(async (event) => {
 
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
 
-  // ── End Stripe trial immediately if tenant has an active trial subscription ──
+  // 2. Store all three credentials encrypted in tenant_secrets so wallee-config
+  //    can load them without any env-var fallback
+  const secretsToUpsert = [
+    { secret_name: 'wallee_space_id',   secret_value: String(wallee_space_id) },
+    { secret_name: 'wallee_user_id',    secret_value: String(wallee_user_id) },
+    { secret_name: 'wallee_secret_key', secret_value: wallee_secret_key.trim() },
+  ].map(({ secret_name, secret_value }) => ({
+    tenant_id,
+    secret_type: 'wallee_api_key',
+    secret_name,
+    secret_value: encryptSecret(secret_value),
+    updated_at: new Date().toISOString(),
+  }))
+
+  const { error: secretsError } = await supabase
+    .from('tenant_secrets')
+    .upsert(secretsToUpsert, { onConflict: 'tenant_id,secret_type,secret_name' })
+
+  if (secretsError) {
+    // Roll back the tenants update to keep the state consistent
+    await supabase
+      .from('tenants')
+      .update({ wallee_enabled: false, wallee_onboarding_status: 'pending', updated_at: new Date().toISOString() })
+      .eq('id', tenant_id)
+    throw createError({ statusCode: 500, statusMessage: `Credentials konnten nicht gespeichert werden: ${secretsError.message}` })
+  }
+
+  // 3. Invalidate in-process credential caches so new credentials take effect immediately
+  invalidateWalleeConfigCache(tenant_id)
+  clearProviderCache(tenant_id)
   try {
     const stripeSecret = process.env.STRIPE_SECRET_KEY
     if (stripeSecret) {

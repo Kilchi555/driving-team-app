@@ -427,6 +427,79 @@
         </div>
       </div>
 
+      <!-- ── Threads aus Placements entfernen ── -->
+      <div class="bg-white rounded-2xl border overflow-hidden">
+        <div class="px-6 py-5 border-b">
+          <h2 class="text-base font-semibold text-gray-900">Threads aus Placements entfernen</h2>
+          <p class="text-sm text-gray-500 mt-1">
+            Entfernt Threads als Placement aus allen Ad Sets des Accounts — behebt den "Ad Account Has No Access To Threads Account"-Fehler.
+          </p>
+        </div>
+        <div class="px-6 py-5 space-y-4">
+          <!-- Dry Run Toggle -->
+          <label class="flex items-center gap-3 cursor-pointer select-none">
+            <button
+              type="button"
+              @click="threadsForm.dryRun = !threadsForm.dryRun"
+              class="relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 transition-colors duration-200"
+              :class="threadsForm.dryRun ? 'bg-indigo-500 border-indigo-500' : 'bg-gray-200 border-gray-200'"
+            >
+              <span
+                class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200"
+                :class="threadsForm.dryRun ? 'translate-x-4' : 'translate-x-0'"
+              />
+            </button>
+            <span class="text-sm text-gray-700">Dry Run <span class="text-gray-400">(nur simulieren, nichts speichern)</span></span>
+          </label>
+
+          <button
+            @click="removeThreads"
+            :disabled="threadsLoading"
+            class="px-5 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition disabled:opacity-50 flex items-center gap-2"
+          >
+            <svg v-if="threadsLoading" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {{ threadsLoading ? 'Wird ausgeführt…' : (threadsForm.dryRun ? 'Dry Run starten' : 'Threads entfernen') }}
+          </button>
+
+          <!-- Ergebnis -->
+          <div v-if="threadsResult" class="rounded-xl border p-4 space-y-3" :class="threadsResult.skipped > 0 ? 'border-yellow-200 bg-yellow-50' : 'border-green-200 bg-green-50'">
+            <div class="flex gap-4 text-sm font-medium">
+              <span class="text-green-700">{{ threadsResult.changed }} geändert</span>
+              <span class="text-gray-500">{{ threadsResult.no_change }} keine Änderung</span>
+              <span v-if="threadsResult.skipped > 0" class="text-red-600">{{ threadsResult.skipped }} Fehler</span>
+              <span v-if="threadsResult.dry_run" class="text-indigo-600 ml-auto">Dry Run</span>
+            </div>
+            <div class="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white overflow-hidden text-xs">
+              <div
+                v-for="r in threadsResult.results"
+                :key="r.id"
+                class="flex items-start gap-2 px-3 py-2"
+              >
+                <span
+                  class="shrink-0 mt-0.5 font-bold"
+                  :class="r.action === 'removed' ? 'text-green-600' : r.action === 'skipped' ? 'text-red-500' : 'text-gray-400'"
+                >
+                  {{ r.action === 'removed' ? '✓' : r.action === 'skipped' ? '✗' : '–' }}
+                </span>
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium text-gray-900 truncate">{{ r.name }}</div>
+                  <div class="text-gray-400 font-mono">{{ r.id }}</div>
+                  <div v-if="r.reason" class="text-gray-500 mt-0.5">{{ r.reason }}</div>
+                  <div v-if="r.error" class="text-red-600 mt-0.5">{{ r.error }}</div>
+                </div>
+                <span class="shrink-0 text-gray-400">{{ r.status }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="threadsError" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {{ threadsError }}
+          </div>
+        </div>
+      </div>
+
       <!-- ── Info-Box: Ad Set IDs ── -->
       <div class="bg-white rounded-2xl border overflow-hidden">
         <div class="px-6 py-5 border-b">
@@ -565,6 +638,36 @@ const imageFileSizeLabel = ref('')
 const isDragging = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const loading = ref(false)
+
+// ── Threads Removal ───────────────────────────────────────────────────────────
+const threadsForm = ref({ dryRun: true })
+const threadsLoading = ref(false)
+const threadsResult = ref<null | {
+  dry_run: boolean
+  total: number
+  changed: number
+  skipped: number
+  no_change: number
+  results: Array<{ id: string; name: string; status: string; action: string; reason?: string; error?: string }>
+}>(null)
+const threadsError = ref('')
+
+async function removeThreads() {
+  threadsLoading.value = true
+  threadsResult.value = null
+  threadsError.value = ''
+  try {
+    const res = await $fetch<typeof threadsResult.value>('/api/admin/meta-remove-threads', {
+      method: 'POST',
+      body: { dry_run: threadsForm.value.dryRun },
+    })
+    threadsResult.value = res
+  } catch (err: any) {
+    threadsError.value = err?.data?.message ?? err?.message ?? 'Unbekannter Fehler'
+  } finally {
+    threadsLoading.value = false
+  }
+}
 const uploadStatus = ref('')
 const result = ref<any>(null)
 const validationError = ref('')

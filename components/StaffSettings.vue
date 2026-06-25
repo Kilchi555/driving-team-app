@@ -305,8 +305,8 @@
             <div v-if="openSections.locations" class="px-4 pb-4 border-t border-gray-100">
               <div class="space-y-4 mt-4">
 
-                <!-- Header mit Button -->
-                <div class="flex justify-between items-center">
+                <!-- Header mit Buttons -->
+                <div class="flex items-center gap-2">
                   <button
                     @click="showNewLocationModal = true"
                     class="px-4 py-2 text-md font-medium text-white rounded transition-colors hover:opacity-90"
@@ -314,68 +314,67 @@
                   >
                     + Neuer Standort
                   </button>
+                  <button
+                    @click="showBufferModal = true"
+                    class="px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded transition-colors flex items-center gap-1.5"
+                    title="Puffer nach Termin einstellen"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Puffer
+                  </button>
                 </div>
 
-                <!-- Dropdown zum Hinzufügen von Standorten -->
-                <div class="space-y-2">
-                  <label class="block text-sm font-medium text-gray-700">Verfügbarer Standort hinzufügen:</label>
-                  <select 
-                    @change="(e: any) => {
-                      const locationId = e.target.value
-                      if (locationId) {
-                        toggleLocationAssignment(locationId)
-                        e.target.value = ''
-                      }
-                    }"
-                    class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2"
-                  >
-                    <option value="">-- Wähle einen Standort --</option>
-                    <option v-for="location in availableLocationsForSignup" :key="location.id" :value="location.id">
-                      {{ location.name }} ({{ location.address }})
-                    </option>
-                  </select>
-                </div>
 
                 <!-- Ihre registrierten Standorte -->
-                <div v-if="registeredLocations.length > 0">
-                  <div class="space-y-2">
-                    <div 
-                      v-for="location in registeredLocations" 
-                      :key="location.id"
-                      class="flex gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm hover:bg-blue-100 transition"
-                    >
-                      <!-- Left Column: Location Info -->
-                      <div class="flex-1">
-                        <div class="font-medium text-gray-900">{{ location.name }}</div>
-                        <div class="text-gray-600 text-xs">{{ location.address }}</div>
+                <div v-if="registeredLocations.length > 0" class="space-y-2">
+                  <button
+                    v-for="location in registeredLocations"
+                    :key="location.id"
+                    class="w-full text-left group relative bg-white border border-gray-200 rounded-xl p-3.5 hover:border-gray-300 hover:shadow-sm active:scale-[0.99] transition-all duration-150"
+                    @click="openLocationModal(location)"
+                  >
+                    <!-- Bookable indicator stripe on the left -->
+                    <span
+                      class="absolute left-0 top-3 bottom-3 w-1 rounded-full"
+                      :class="location.is_online_bookable !== false ? 'bg-green-400' : 'bg-red-300'"
+                    />
+
+                    <div class="pl-3 flex items-center justify-between gap-3">
+                      <!-- Info -->
+                      <div class="min-w-0">
+                        <p class="text-sm font-semibold text-gray-900 truncate">{{ location.name }}</p>
+                        <p class="text-xs text-gray-500 truncate mt-0.5">{{ location.address }}</p>
+                        <div class="flex items-center gap-2 mt-1.5">
+                          <!-- PLZ chip -->
+                          <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600 font-medium">
+                            <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/>
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            {{ location.postal_code || 'PLZ fehlt' }}
+                          </span>
+                          <!-- Buchbar badge -->
+                          <span
+                            class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                            :class="location.is_online_bookable !== false
+                              ? 'bg-green-50 text-green-700'
+                              : 'bg-red-50 text-red-600'"
+                          >
+                            {{ location.is_online_bookable !== false ? 'Buchbar' : 'Gesperrt' }}
+                          </span>
+                        </div>
                       </div>
-                      
-                      <!-- Right Column: Toggle and Delete Button (stacked) -->
-                      <div class="flex flex-col items-end gap-2">
-                        <!-- ✨ Online Bookable Button -->
-                        <button
-                          @click="() => toggleLocationBookable(location.id, location.is_online_bookable === false ? true : false)"
-                          :class="[
-                            'px-3 py-1 rounded text-xs font-medium transition',
-                            location.is_online_bookable !== false
-                              ? 'text-green-600 hover:text-green-800 hover:bg-green-50'
-                              : 'text-red-600 hover:text-red-800 hover:bg-red-50'
-                          ]"
-                        >
-                          {{ location.is_online_bookable !== false ? 'Buchbar' : 'Nicht buchbar' }}
-                        </button>
-                        
-                        <!-- Delete Button -->
-                        <button
-                          @click="toggleLocationAssignment(location.id)"
-                          class="px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded text-xs font-medium"
-                        >
-                          Entfernen
-                        </button>
-                      </div>
+
+                      <!-- Settings arrow -->
+                      <svg class="w-4 h-4 text-gray-300 group-hover:text-gray-500 flex-shrink-0 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                      </svg>
                     </div>
-                  </div>
+                  </button>
                 </div>
+
 
                 <!-- Keine Standorte -->
                 <div v-if="registeredLocations.length === 0" class="text-center py-6 text-gray-500">
@@ -1158,6 +1157,207 @@
       @close="closeToast"
     />
 
+    <!-- Location Settings Modal -->
+    <div v-if="showLocationSettingsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300]">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 class="text-base font-semibold text-gray-900">Standort-Einstellungen</h3>
+          <button @click="showLocationSettingsModal = false" class="text-gray-400 hover:text-gray-600 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <div class="px-5 py-4 space-y-4">
+          <!-- Location name (read-only) -->
+          <div>
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-0.5">Standort</p>
+            <p class="text-sm font-medium text-gray-900">{{ locationModalData.name }}</p>
+            <p class="text-xs text-gray-500">{{ locationModalData.address }}</p>
+          </div>
+
+          <!-- PLZ + Kanton row -->
+          <div class="flex gap-3">
+            <div class="flex-1">
+              <label class="block text-sm font-medium text-gray-700 mb-1">PLZ</label>
+              <input
+                v-model="locationModalData.postal_code"
+                type="text"
+                maxlength="10"
+                placeholder="z.B. 8050"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div class="w-24">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Kanton</label>
+              <input
+                v-model="locationModalData.canton"
+                type="text"
+                maxlength="2"
+                placeholder="ZH"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 uppercase"
+                @blur="locationModalData.canton = normalizeCanton(locationModalData.canton)"
+                @input="locationModalData.canton = locationModalData.canton.toUpperCase()"
+              />
+            </div>
+          </div>
+
+          <!-- Online buchbar -->
+          <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div>
+              <p class="text-sm font-medium text-gray-700">Online buchbar</p>
+              <p class="text-xs text-gray-500">Kunden können diesen Standort online buchen</p>
+            </div>
+            <button
+              @click="locationModalData.is_online_bookable = !locationModalData.is_online_bookable"
+              :class="[
+                'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
+                locationModalData.is_online_bookable ? 'bg-green-500' : 'bg-gray-300'
+              ]"
+            >
+              <span
+                :class="[
+                  'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                  locationModalData.is_online_bookable ? 'translate-x-5' : 'translate-x-0'
+                ]"
+              />
+            </button>
+          </div>
+
+          <!-- Zeitfenster -->
+          <div class="pt-1">
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <p class="text-sm font-medium text-gray-700">Zeitfenster</p>
+                <p class="text-xs text-gray-500">Zeiten, zu denen dieser Standort buchbar ist</p>
+              </div>
+              <button
+                @click="addTimeWindowToModal"
+                class="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 px-2 py-1 rounded-lg hover:bg-blue-50 transition"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Hinzufügen
+              </button>
+            </div>
+
+            <div v-if="locationModalData.time_windows.length === 0" class="text-xs text-gray-400 italic py-1">
+              Keine Zeitfenster — Standort ist immer verfügbar
+            </div>
+
+            <div v-else class="space-y-2">
+              <div
+                v-for="(tw, idx) in locationModalData.time_windows"
+                :key="idx"
+                class="p-2.5 bg-gray-50 rounded-lg border border-gray-200 space-y-2"
+              >
+                <!-- Start / End -->
+                <div class="flex items-center gap-2">
+                  <input
+                    v-model="tw.start"
+                    type="time"
+                    class="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <span class="text-xs text-gray-400">bis</span>
+                  <input
+                    v-model="tw.end"
+                    type="time"
+                    class="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <button @click="removeTimeWindowFromModal(idx)" class="text-red-400 hover:text-red-600 transition p-0.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                </div>
+                <!-- Day toggles -->
+                <div class="flex gap-1">
+                  <button
+                    v-for="(label, dayIdx) in DAY_LABELS"
+                    :key="dayIdx"
+                    @click="tw.days.includes(dayIdx) ? tw.days.splice(tw.days.indexOf(dayIdx), 1) : tw.days.push(dayIdx)"
+                    :class="[
+                      'flex-1 py-1 text-xs rounded font-medium transition',
+                      tw.days.includes(dayIdx)
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white border border-gray-300 text-gray-500 hover:border-blue-400'
+                    ]"
+                  >{{ label }}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
+          <button
+            @click="toggleLocationAssignment(locationModalData.id); showLocationSettingsModal = false"
+            class="px-3 py-2 text-sm text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
+          >
+            Entfernen
+          </button>
+          <div class="flex gap-2">
+            <button
+              @click="showLocationSettingsModal = false"
+              class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition"
+            >
+              Abbrechen
+            </button>
+            <button
+              @click="saveLocationSettings"
+              :disabled="locationModalSaving"
+              class="px-4 py-2 text-sm font-medium text-white rounded-lg transition disabled:opacity-50"
+              :style="{ background: primaryColor }"
+            >
+              {{ locationModalSaving ? 'Speichern…' : 'Speichern' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Buffer Settings Modal -->
+    <div v-if="showBufferModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300]">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 class="text-base font-semibold text-gray-900">Puffer nach Termin</h3>
+          <button @click="showBufferModal = false" class="text-gray-400 hover:text-gray-600 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <div class="px-5 py-4 space-y-3">
+          <p class="text-sm text-gray-600">
+            Vorbereitungszeit nach einem Termin (z.B. für Notizen, Übergabe). Die Fahrzeit zum nächsten Standort wird automatisch zusätzlich berechnet.
+          </p>
+          <div class="flex items-center gap-3 pt-1">
+            <input
+              v-model.number="staffBufferMinutes"
+              type="number"
+              min="0"
+              max="120"
+              step="5"
+              class="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <span class="text-sm text-gray-600">Minuten</span>
+          </div>
+        </div>
+
+        <div class="px-5 py-4 border-t border-gray-100 flex gap-2 justify-end">
+          <button
+            @click="showBufferModal = false"
+            class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition"
+          >
+            Abbrechen
+          </button>
+          <button
+            @click="saveBufferMinutes().then(() => { showBufferModal = false })"
+            :disabled="savingBuffer"
+            class="px-4 py-2 text-sm font-medium text-white rounded-lg transition disabled:opacity-50"
+            :style="{ background: primaryColor }"
+          >
+            {{ savingBuffer ? 'Speichern…' : 'Speichern' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- New Location Modal -->
     <div v-if="showNewLocationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300]">
       <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
@@ -1212,23 +1412,34 @@
             </div>
           </div>
 
+          <!-- PLZ + Canton row (auto-filled from Google Places) -->
+          <div class="flex gap-3">
+            <!-- PLZ -->
+            <div class="flex-1">
+              <label class="block text-sm font-medium text-gray-700 mb-1">PLZ</label>
+              <input
+                v-model="newLocationForm.postal_code"
+                type="text"
+                maxlength="10"
+                placeholder="z.B. 8048"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2"
+              />
+            </div>
+
           <!-- Canton (auto-filled from Google Places, editable as fallback) -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
-              Kanton
-              <span v-if="newLocationForm.canton" class="text-xs text-green-600 font-normal ml-1">✓ automatisch erkannt</span>
-              <span v-else class="text-xs text-gray-400 font-normal ml-1">(wird aus Adresse erkannt)</span>
-            </label>
+          <div class="flex-1">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Kanton</label>
             <input
               v-model="newLocationForm.canton"
               type="text"
               maxlength="2"
               placeholder="z.B. ZH"
-              class="tenant-focus w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 uppercase"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 uppercase"
+              @blur="newLocationForm.canton = normalizeCanton(newLocationForm.canton)"
               @input="newLocationForm.canton = newLocationForm.canton.toUpperCase()"
             />
-            <p class="text-xs text-gray-400 mt-1">2-Buchstaben Kürzel (z.B. ZH, BE, AG). Ohne Kanton wird der Standort beim Kantonfilter nicht angezeigt.</p>
           </div>
+          </div><!-- end PLZ + Canton row -->
 
           <!-- Available Categories -->
           <div>
@@ -1248,7 +1459,29 @@
           </div>
         </div>
 
-        <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 sticky bottom-0 bg-gray-50">
+        <!-- Direkt buchbar machen -->
+        <div class="px-6 py-3 border-t border-gray-100 bg-gray-50">
+          <label class="flex items-center gap-3 cursor-pointer select-none">
+            <div
+              @click="newLocationForm.make_bookable = !newLocationForm.make_bookable"
+              :class="[
+                'relative w-9 h-5 rounded-full transition-colors flex-shrink-0',
+                newLocationForm.make_bookable ? 'bg-green-500' : 'bg-gray-300'
+              ]"
+            >
+              <span :class="[
+                'absolute top-0.5 left-0.5 h-4 w-4 bg-white rounded-full shadow transition-transform',
+                newLocationForm.make_bookable ? 'translate-x-4' : 'translate-x-0'
+              ]"/>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-800">Direkt online buchbar machen</p>
+              <p class="text-xs text-gray-500">Kunden können diesen Standort sofort im Booking Flow sehen. Löst eine Slot-Neuberechnung aus.</p>
+            </div>
+          </label>
+        </div>
+
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 sticky bottom-0 bg-white">
           <button
             @click="showNewLocationModal = false"
             class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-sm"
@@ -1863,6 +2096,24 @@ const myLocations = ref<any[]>([])
 const allTenantLocations = ref<any[]>([]) // Alle Standard-Standorte des Tenants
 const categoryDurations = ref<Record<string, number[]>>({})
 
+// Location-Settings Modal
+const showLocationSettingsModal = ref(false)
+const locationModalData = ref<{
+  id: string
+  name: string
+  address: string
+  postal_code: string
+  canton: string
+  is_online_bookable: boolean
+  time_windows: Array<{ start: string; end: string; days: number[] }>
+}>({ id: '', name: '', address: '', postal_code: '', canton: '', is_online_bookable: true, time_windows: [] })
+const locationModalSaving = ref(false)
+
+// Buffer-Setting (Basis-Puffer pro Staff)
+const staffBufferMinutes = ref(15)
+const savingBuffer = ref(false)
+const showBufferModal = ref(false)
+
 // Working Hours Management
 const { 
   workingHours: staffWorkingHours,
@@ -1889,7 +2140,9 @@ const newLocationForm = ref({
   name: '',
   address: '',
   canton: '',
-  available_categories: [] as string[]
+  postal_code: '',
+  available_categories: [] as string[],
+  make_bookable: false
 })
 
 // Address autocomplete
@@ -1922,6 +2175,10 @@ const initGooglePlaces = async () => {
 const onAddressSearch = async () => {
   const query = newLocationForm.value.address.trim()
   
+  // Clear auto-filled values when user changes the address
+  newLocationForm.value.postal_code = ''
+  newLocationForm.value.canton = ''
+
   if (query.length < 3) {
     addressSuggestions.value = []
     showAddressSuggestions.value = false
@@ -2002,13 +2259,19 @@ const selectAddressSuggestion = async (suggestion: any) => {
         method: 'POST',
         body: { place_id: placeId }
       })
-      if (details?.success && details.address_components) {
-        const adminArea = details.address_components.find((c: any) =>
-          c.types.includes('administrative_area_level_1')
-        )
-        if (adminArea?.short_name) {
-          // Strip "CH-" prefix if Google returns ISO-3166-2 format
-          newLocationForm.value.canton = adminArea.short_name.replace(/^CH-/i, '').toUpperCase()
+      if (details?.success) {
+        // Auto-fill PLZ
+        if (details.postal_code) {
+          newLocationForm.value.postal_code = details.postal_code
+        }
+        // Auto-fill canton
+        if (details.address_components) {
+          const adminArea = details.address_components.find((c: any) =>
+            c.types.includes('administrative_area_level_1')
+          )
+          if (adminArea?.short_name) {
+            newLocationForm.value.canton = adminArea.short_name.replace(/^CH-/i, '').toUpperCase()
+          }
         }
       }
     } catch {
@@ -2029,6 +2292,42 @@ const hideAddressSuggestionsDelayed = () => {
   addressSuggestionsTimeout = setTimeout(() => {
     showAddressSuggestions.value = false
   }, 200)
+}
+
+// Maps full canton names (DE/FR/IT variants) to 2-letter codes
+const CANTON_NAME_MAP: Record<string, string> = {
+  'zürich': 'ZH', 'zurich': 'ZH',
+  'bern': 'BE', 'berne': 'BE',
+  'luzern': 'LU', 'lucerne': 'LU',
+  'uri': 'UR',
+  'schwyz': 'SZ',
+  'obwalden': 'OW',
+  'nidwalden': 'NW',
+  'glarus': 'GL',
+  'zug': 'ZG',
+  'freiburg': 'FR', 'fribourg': 'FR',
+  'solothurn': 'SO',
+  'basel-stadt': 'BS', 'basel stadt': 'BS', 'basel': 'BS',
+  'basel-landschaft': 'BL', 'baselland': 'BL',
+  'schaffhausen': 'SH',
+  'appenzell ausserrhoden': 'AR', 'ausserrhoden': 'AR',
+  'appenzell innerrhoden': 'AI', 'innerrhoden': 'AI',
+  'st. gallen': 'SG', 'st gallen': 'SG', 'saint-gall': 'SG',
+  'graubünden': 'GR', 'graubuenden': 'GR', 'grisons': 'GR',
+  'aargau': 'AG',
+  'thurgau': 'TG',
+  'tessin': 'TI', 'ticino': 'TI',
+  'waadt': 'VD', 'vaud': 'VD',
+  'wallis': 'VS', 'valais': 'VS',
+  'neuenburg': 'NE', 'neuchâtel': 'NE', 'neuchatel': 'NE',
+  'genf': 'GE', 'genève': 'GE', 'geneve': 'GE', 'geneva': 'GE',
+  'jura': 'JU'
+}
+
+const normalizeCanton = (value: string): string => {
+  const trimmed = value.trim()
+  const lookup = CANTON_NAME_MAP[trimmed.toLowerCase()]
+  return lookup ?? trimmed.toUpperCase().slice(0, 2)
 }
 
 // Constants
@@ -2521,6 +2820,7 @@ const createNewLocation = async () => {
         name: newLocationForm.value.name,
         address: newLocationForm.value.address,
         canton: newLocationForm.value.canton || null,
+        postal_code: newLocationForm.value.postal_code || null,
         staff_ids: [props.currentUser.id],
         tenant_id: props.currentUser.tenant_id,
         available_categories: newLocationForm.value.available_categories,
@@ -2531,14 +2831,29 @@ const createNewLocation = async () => {
     })
 
     if (data && data.length > 0) {
-      // Add to local state
-      allTenantLocations.value.push(data[0])
-      
+      const makeBookable = newLocationForm.value.make_bookable
+
+      // Fix label: explicitly set is_online_bookable on local object so the card shows correctly
+      allTenantLocations.value.push({ ...data[0], is_online_bookable: makeBookable })
+
+      // If staff wants it immediately bookable, update staff_locations + trigger recalc
+      if (makeBookable) {
+        await $fetch('/api/staff/update-location-booking', {
+          method: 'POST',
+          body: {
+            location_id: data[0].id,
+            is_online_bookable: true
+          }
+        }).catch((e: any) => {
+          console.warn('⚠️ Could not set bookable status (non-fatal):', e.message)
+        })
+      }
+
       // Reset form and close modal
       resetLocationForm()
       showNewLocationModal.value = false
-      
-      logger.debug('✅ Location created successfully:', data[0])
+
+      logger.debug('✅ Location created successfully:', data[0], { makeBookable })
     }
   } catch (err: any) {
     console.error('❌ Error creating location:', err)
@@ -2555,7 +2870,9 @@ const resetLocationForm = () => {
     name: '',
     address: '',
     canton: '',
-    available_categories: []
+    postal_code: '',
+    available_categories: [],
+    make_bookable: false
   }
 }
 
@@ -2640,6 +2957,100 @@ const toggleLocationBookable = async (locationId: string, isOnlineBookable: bool
     if (!handleSessionError(err)) {
       error.value = `Fehler beim Aktualisieren: ${err.message}`
     }
+  }
+}
+
+// ✨ Open the per-location settings modal
+const openLocationModal = (location: any) => {
+  let timeWindows: Array<{ start: string; end: string; days: number[] }> = []
+  if (location.time_windows) {
+    if (Array.isArray(location.time_windows)) {
+      timeWindows = location.time_windows
+    } else if (typeof location.time_windows === 'string') {
+      try { timeWindows = JSON.parse(location.time_windows) } catch { timeWindows = [] }
+    }
+  }
+  locationModalData.value = {
+    id: location.id,
+    name: location.name,
+    address: location.address || '',
+    postal_code: location.postal_code || '',
+    canton: location.canton || '',
+    is_online_bookable: location.is_online_bookable !== false,
+    time_windows: timeWindows
+  }
+  showLocationSettingsModal.value = true
+}
+
+const addTimeWindowToModal = () => {
+  locationModalData.value.time_windows.push({ start: '07:00', end: '19:00', days: [1, 2, 3, 4, 5] })
+}
+
+const removeTimeWindowFromModal = (index: number) => {
+  locationModalData.value.time_windows.splice(index, 1)
+}
+
+const DAY_LABELS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+
+// ✨ Save location settings (PLZ + online bookable) from modal
+const saveLocationSettings = async () => {
+  if (locationModalSaving.value) return
+  locationModalSaving.value = true
+
+  try {
+    const response = await $fetch<{ success: boolean }>('/api/staff/update-location-booking', {
+      method: 'POST',
+      body: {
+        location_id: locationModalData.value.id,
+        is_online_bookable: locationModalData.value.is_online_bookable,
+        postal_code: locationModalData.value.postal_code.trim() || null,
+        canton: locationModalData.value.canton.trim().toUpperCase() || null,
+        time_windows: locationModalData.value.time_windows.length ? locationModalData.value.time_windows : null
+      }
+    })
+
+    if (response.success) {
+      // Reflect changes in local state
+      const idx = allTenantLocations.value.findIndex(l => l.id === locationModalData.value.id)
+      if (idx >= 0) {
+        allTenantLocations.value[idx].is_online_bookable = locationModalData.value.is_online_bookable
+        allTenantLocations.value[idx].postal_code = locationModalData.value.postal_code.trim() || null
+        allTenantLocations.value[idx].canton = locationModalData.value.canton.trim().toUpperCase() || null
+        allTenantLocations.value[idx].time_windows = locationModalData.value.time_windows.length
+          ? locationModalData.value.time_windows : null
+      }
+      showLocationSettingsModal.value = false
+      saveSuccess.value = true
+      setTimeout(() => { saveSuccess.value = false }, 3000)
+    }
+  } catch (err: any) {
+    console.error('❌ Error saving location settings:', err)
+    error.value = `Fehler beim Speichern: ${err.message}`
+  } finally {
+    locationModalSaving.value = false
+  }
+}
+
+// ✨ Save base buffer time to staff_availability_settings
+const saveBufferMinutes = async () => {
+  if (savingBuffer.value) return
+  savingBuffer.value = true
+
+  try {
+    const response = await $fetch<{ success: boolean }>('/api/staff/update-availability-settings', {
+      method: 'POST',
+      body: { buffer_minutes: staffBufferMinutes.value }
+    })
+
+    if (response.success) {
+      saveSuccess.value = true
+      setTimeout(() => { saveSuccess.value = false }, 3000)
+    }
+  } catch (err: any) {
+    console.error('❌ Error saving buffer minutes:', err)
+    error.value = `Fehler beim Speichern: ${err.message}`
+  } finally {
+    savingBuffer.value = false
   }
 }
 
@@ -3531,6 +3942,14 @@ onMounted(async () => {
   
   // Initialize Google Places for address autocomplete
   await initGooglePlaces()
+
+  // Load staff availability settings (buffer_minutes etc.)
+  try {
+    const settingsResp = await $fetch<{ settings: { buffer_minutes: number } }>('/api/staff/get-availability-settings')
+    if (settingsResp?.settings?.buffer_minutes != null) {
+      staffBufferMinutes.value = settingsResp.settings.buffer_minutes
+    }
+  } catch { /* non-fatal */ }
 
   // Load affiliate enabled state so button is hidden if system is disabled
   try {

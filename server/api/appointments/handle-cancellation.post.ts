@@ -9,6 +9,7 @@ import { logAudit } from '~/server/utils/audit'
 import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-manager'
 import { uploadConversionAdjustment } from '~/server/utils/google-ads-conversion'
 import { sendCapiRefundEvent, sha256Hex } from '~/server/utils/meta-capi'
+import { processWalleeRefund } from '~/server/utils/wallee-refund'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -26,7 +27,8 @@ export default defineEventHandler(async (event) => {
       originalLessonPrice,
       originalAdminFee,
       staffId, // ✅ NEW: For audit logging
-      cancelledBy // ✅ NEW: 'customer' or 'staff'
+      cancelledBy, // ✅ NEW: 'customer' or 'staff'
+      refundDestination // ✅ NEW: 'wallet' (default) | 'wallee' — where to send the refund
     } = await readBody(event)
 
     // ⚠️ SECURITY: Verify this is called from authorized callers only
@@ -398,7 +400,8 @@ export default defineEventHandler(async (event) => {
           payment,
           actualRefundAmount,
           deletionReason,
-          appointment.tenant_id
+          appointment.tenant_id,
+          refundDestination || 'wallet'
         )
         
         return refundResult
@@ -656,7 +659,7 @@ async function markAppointmentCancelled(
   }
 }
 
-// Process refund to student credit
+// Process refund to student credit OR back via Wallee
 async function processRefund(
   supabase: any,
   appointmentId: string,
@@ -664,7 +667,8 @@ async function processRefund(
   payment: any,
   refundAmountRappen: number,
   deletionReason: string,
-  tenantId?: string
+  tenantId?: string,
+  refundDestination: 'wallet' | 'wallee' = 'wallet'
 ) {
   try {
     // Get current user for created_by
@@ -693,6 +697,78 @@ async function processRefund(
       console.warn('⚠️ Could not determine current user, using null for created_by')
     }
 
+    // ── Wallee refund branch ───────────────────────────────────────────────
+    if (refundDestination === 'wallee') {
+      logger.debug('💳 [processRefund] Refunding via Wallee (customer chose direct refund)')
+
+      const walleeResult = await processWalleeRefund({
+        payment: {
+          id: payment.id,
+          wallee_transaction_id: payment.wallee_transaction_id,
+          total_amount_rappen: payment.total_amount_rappen,
+          credit_used_rappen: payment.credit_used_rappen || 0,
+          payment_status: payment.payment_status,
+          tenant_id: tenantId || payment.tenant_id,
+        },
+        requestedAmountRappen: refundAmountRappen,
+        tenantId: tenantId || payment.tenant_id,
+        idempotencyKey: `appointment-cancel-${appointmentId}`,
+        reason: deletionReason,
+      })
+
+      if (!walleeResult.success) {
+        // Wallee refund failed — fall back to wallet credit so customer is not left empty-handed
+        logger.warn('⚠️ [processRefund] Wallee refund failed, falling back to wallet credit:', walleeResult.error)
+        // Fall through to wallet credit logic below
+      } else {
+        // Wallee refund succeeded — update payment, create credit transaction record for audit
+        const refundedAt = new Date().toISOString()
+
+        await supabase
+          .from('payments')
+          .update({
+            payment_status: 'refunded',
+            refunded_at: refundedAt,
+            notes: `${payment.notes ? payment.notes + ' | ' : ''}Wallee-Rückerstattung: ${deletionReason} (CHF ${walleeResult.refundedAmountChf.toFixed(2)}, refundId: ${walleeResult.refundId})`,
+          })
+          .eq('id', payment.id)
+
+        await supabase
+          .from('appointments')
+          .update({ credit_created: true })
+          .eq('id', appointmentId)
+
+        // Create audit record (no balance change, just a record)
+        await supabase.from('credit_transactions').insert([{
+          user_id: userId,
+          tenant_id: tenantId || payment.tenant_id || null,
+          transaction_type: 'cancellation',
+          amount_rappen: walleeResult.refundedAmountRappen,
+          balance_before_rappen: null,
+          balance_after_rappen: null,
+          payment_method: 'wallee_refund',
+          reference_id: appointmentId,
+          reference_type: 'appointment',
+          created_by: currentUserId,
+          notes: `Wallee-Rückerstattung bei Terminabsage: ${deletionReason} (CHF ${walleeResult.refundedAmountChf.toFixed(2)}, refundId: ${walleeResult.refundId})`,
+        }])
+
+        return {
+          success: true,
+          message: `Termin abgesagt – CHF ${walleeResult.refundedAmountChf.toFixed(2)} werden auf Ihr Zahlungsmittel zurückerstattet (3–5 Werktage).`,
+          refundAmount: walleeResult.refundedAmountChf,
+          action: 'wallee_refund_processed',
+          refundId: walleeResult.refundId,
+          refundDestination: 'wallee',
+          details: {
+            refundAmountChf: walleeResult.refundedAmountChf.toFixed(2),
+            deletionReason,
+          },
+        }
+      }
+    }
+
+    // ── Wallet credit branch (default) ─────────────────────────────────────
     // Load current student credit balance
     const { data: studentCredit, error: creditError } = await supabase
       .from('student_credits')
@@ -780,9 +856,10 @@ async function processRefund(
 
     return {
       success: true,
-      message: 'Appointment cancelled - refund applied to student balance',
+      message: 'Termin abgesagt – Rückerstattung wurde Ihrem Guthaben gutgeschrieben.',
       refundAmount: (refundAmountRappen / 100),
       action: 'refund_processed',
+      refundDestination: 'wallet',
       transactionId: transaction.id,
       details: {
         refundAmount: (refundAmountRappen / 100).toFixed(2),

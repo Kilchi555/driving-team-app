@@ -64,7 +64,7 @@ export default defineEventHandler(async (event) => {
         if (appointmentIds.length > 0) {
           const { error: updatePaymentsError } = await supabaseAdmin
             .from('payments')
-            .update({ payment_status: 'invoice', payment_method: 'invoice' })
+            .update({ payment_status: 'invoice', payment_method: 'invoice', invoice_id: invoice.id })
             .eq('user_id', invoiceData.user_id)
             .in('appointment_id', appointmentIds)
 

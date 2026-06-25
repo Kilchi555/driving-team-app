@@ -5,6 +5,7 @@ import { SARIClient } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
 import { generateCourseRegistrationCancellationEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
+import { processWalleeRefund } from '~/server/utils/wallee-refund'
 
 /**
  * POST /api/admin/courses/remove-participant
@@ -18,7 +19,21 @@ import { logger } from '~/utils/logger'
  */
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
-  const { enrollmentId, reason, notify } = await readBody(event) as { enrollmentId: string; reason?: string; notify?: boolean }
+  const {
+    enrollmentId,
+    reason,
+    notify,
+    processRefund: shouldProcessRefund,
+    refundAmountChf,
+  } = await readBody(event) as {
+    enrollmentId: string
+    reason?: string
+    notify?: boolean
+    /** If true, attempt a Wallee refund after removing the participant */
+    processRefund?: boolean
+    /** Refund amount in CHF. If omitted, falls back to the full Wallee-captured amount. */
+    refundAmountChf?: number
+  }
 
   if (!enrollmentId) throw createError({ statusCode: 400, statusMessage: 'Missing enrollmentId' })
 
@@ -134,6 +149,79 @@ export default defineEventHandler(async (event) => {
 
   logger.debug('✅ Participant removed:', enrollmentId)
 
+  // ── 2a. Optional Wallee refund ──────────────────────────────────────────
+  let refundResult: any = null
+
+  if (shouldProcessRefund) {
+    // Look up the payment for this enrollment
+    let payment: any = null
+
+    // Try via payment_id column on course_registrations (if populated)
+    const { data: regWithPayment } = await supabase
+      .from('course_registrations')
+      .select('payment_id')
+      .eq('id', enrollmentId)
+      .single()
+
+    if (regWithPayment?.payment_id) {
+      const { data: pd } = await supabase
+        .from('payments')
+        .select('id, payment_status, total_amount_rappen, credit_used_rappen, wallee_transaction_id, tenant_id')
+        .eq('id', regWithPayment.payment_id)
+        .single()
+      payment = pd
+    }
+
+    // Fallback: reverse lookup
+    if (!payment) {
+      const { data: pd } = await supabase
+        .from('payments')
+        .select('id, payment_status, total_amount_rappen, credit_used_rappen, wallee_transaction_id, tenant_id')
+        .eq('course_registration_id', enrollmentId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      payment = pd
+    }
+
+    if (payment) {
+      const requestedAmountRappen = refundAmountChf != null
+        ? Math.round(refundAmountChf * 100)
+        : payment.total_amount_rappen
+
+      refundResult = await processWalleeRefund({
+        payment,
+        requestedAmountRappen,
+        tenantId: profile.tenant_id,
+        idempotencyKey: `course-remove-${enrollmentId}`,
+        reason: reason || 'Kurs-Abmeldung durch Admin',
+      })
+
+      if (refundResult.success) {
+        // Mark payment as refunded in DB
+        await supabase
+          .from('payments')
+          .update({
+            payment_status: 'refunded',
+            refunded_at: new Date().toISOString(),
+            notes: `Rückerstattung durch Admin (CHF ${refundResult.refundedAmountChf.toFixed(2)}): ${reason || 'Kurs-Abmeldung'}`,
+          })
+          .eq('id', payment.id)
+
+        logger.info('✅ Payment refunded via Wallee:', {
+          paymentId: payment.id,
+          refundId: refundResult.refundId,
+          amountChf: refundResult.refundedAmountChf,
+        })
+      } else {
+        logger.warn('⚠️ Wallee refund failed (participant was still removed):', refundResult.error)
+      }
+    } else {
+      logger.debug('⚠️ No payment found for enrollment — skipping refund')
+      refundResult = { success: false, error: 'Keine Zahlung gefunden', refundedAmountRappen: 0, refundedAmountChf: 0 }
+    }
+  }
+
   // ── 2b. Recalculate current_participants + status ──────────────────────────
   const courseId = (course as any).id
   if (courseId) {
@@ -214,5 +302,5 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  return { success: true }
+  return { success: true, refund: refundResult }
 })

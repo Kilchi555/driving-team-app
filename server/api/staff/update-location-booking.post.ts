@@ -16,15 +16,24 @@ import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
+interface TimeWindow {
+  start: string
+  end: string
+  days: number[]
+}
+
 interface UpdateLocationBookingRequest {
   location_id: string
   is_online_bookable: boolean
+  postal_code?: string | null
+  canton?: string | null
+  time_windows?: TimeWindow[] | null
 }
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event) as UpdateLocationBookingRequest
-    const { location_id, is_online_bookable } = body
+    const { location_id, is_online_bookable, postal_code, canton, time_windows } = body
 
     if (!location_id || is_online_bookable === undefined) {
       throw createError({
@@ -148,9 +157,30 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // Update postal_code, canton and time_windows on the locations table if provided
+    if (postal_code !== undefined || canton !== undefined || time_windows !== undefined) {
+      const locationUpdates: Record<string, any> = {}
+      if (postal_code !== undefined) locationUpdates.postal_code = postal_code?.trim() || null
+      if (canton !== undefined) locationUpdates.canton = canton?.trim().toUpperCase() || null
+      if (time_windows !== undefined) locationUpdates.time_windows = time_windows ?? null
+
+      const { error: locUpdateError } = await supabase
+        .from('locations')
+        .update(locationUpdates)
+        .eq('id', location_id)
+        .eq('tenant_id', userProfile.tenant_id)
+
+      if (locUpdateError) {
+        logger.warn('⚠️ Could not update location fields (non-fatal):', locUpdateError)
+      } else {
+        logger.debug(`✅ Location fields updated for ${location_id}:`, locationUpdates)
+      }
+    }
+
     logger.debug(`✅ Location booking status updated`, {
       location_id,
-      is_online_bookable
+      is_online_bookable,
+      postal_code: postal_code ?? 'unchanged'
     })
 
     // Queue availability recalculation so slots reflect the new bookable state immediately

@@ -1,103 +1,115 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-4">
+  <div class="bg-gray-50 py-4">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <!-- Back Button & Header -->
-      <div class="mb-6 sm:mb-8">
+      <div class="mb-6">
         <!-- Back Link -->
-        <NuxtLink 
-          to="/admin/users" 
-          class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 mb-4"
+        <NuxtLink
+          to="/admin/users"
+          class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors mb-5"
         >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
           </svg>
           Zurück zur Benutzerverwaltung
         </NuxtLink>
-        
-        <!-- Header & Actions -->
-        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <!-- Title -->
-          <div>
-            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
-              👤 {{ displayName }}
-            </h1>
-            <p class="text-sm text-gray-500 mt-1">{{ roleLabel }}</p>
+
+        <!-- Header card -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4">
+          <!-- Avatar + Name -->
+          <div class="flex items-center gap-3 flex-1 min-w-0">
+            <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0 text-gray-500">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <h1 class="text-base font-semibold text-gray-900 truncate">{{ displayName }}</h1>
+              <p class="text-xs text-gray-400">{{ roleLabel }}</p>
+            </div>
+            <!-- Status badge -->
+            <span
+              v-if="userDetails"
+              :class="[
+                'ml-1 flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+                userDetails.deleted_at ? 'bg-red-50 text-red-600' :
+                userDetails.is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+              ]"
+            >
+              {{ userDetails.deleted_at ? 'Gelöscht' : userDetails.is_active ? 'Aktiv' : 'Inaktiv' }}
+            </span>
           </div>
-          
+
           <!-- Action Buttons -->
-          <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">        
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <!-- Edit -->
             <button
               @click="editUser"
-              class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 bg-white hover:bg-gray-50 transition-colors"
             >
-              <svg class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
               </svg>
-              <span class="hidden sm:inline">Bearbeiten</span>
-              <span class="sm:hidden ml-2">Bearbeiten</span>
+              Bearbeiten
             </button>
-            
-            <!-- Status Toggle Button -->
+
+            <!-- Status Toggle -->
             <button
               v-if="userDetails && canManageUser(userDetails as any)"
               @click="toggleUserStatus"
               :class="[
-                'inline-flex items-center justify-center px-3 sm:px-4 py-2 border rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2',
-                userDetails?.is_active 
-                  ? 'border-yellow-300 text-yellow-700 bg-white hover:bg-yellow-50 focus:ring-yellow-500' 
-                  : 'border-green-300 text-green-700 bg-white hover:bg-green-50 focus:ring-green-500'
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors',
+                userDetails?.is_active
+                  ? 'border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100'
+                  : 'border-green-200 text-green-700 bg-green-50 hover:bg-green-100'
               ]"
             >
-              <svg class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"/>
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636"/>
               </svg>
-              <span class="hidden sm:inline">{{ userDetails?.is_active ? 'Deaktivieren' : 'Aktivieren' }}</span>
-              <span class="sm:hidden ml-2">{{ userDetails?.is_active ? 'Deaktivieren' : 'Aktivieren' }}</span>
+              {{ userDetails?.is_active ? 'Deaktivieren' : 'Aktivieren' }}
             </button>
 
-            <!-- Password Reset Button -->
+            <!-- Password Reset -->
             <button
               v-if="userDetails && canManageUser(userDetails as any) && userDetails.email && !userDetails.deleted_at"
               @click="sendPasswordReset"
               :disabled="isResettingPassword"
-              class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-blue-300 rounded-md shadow-sm text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <svg v-if="isResettingPassword" class="w-4 h-4 sm:mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+              <svg v-if="isResettingPassword" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
               </svg>
-              <svg v-else class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-else class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
               </svg>
-              <span class="hidden sm:inline">{{ isResettingPassword ? 'Wird gesendet...' : 'Passwort zurücksetzen' }}</span>
-              <span class="sm:hidden ml-2">{{ isResettingPassword ? '...' : 'PW Reset' }}</span>
+              {{ isResettingPassword ? 'Wird gesendet…' : 'Passwort' }}
             </button>
 
-            <!-- Soft Delete Button -->
+            <!-- Delete -->
             <button
               v-if="userDetails && canManageUser(userDetails as any) && !userDetails.deleted_at"
               @click="showDeleteConfirm = true"
-              class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
             >
-              <svg class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
               </svg>
-              <span class="hidden sm:inline">Benutzer löschen</span>
-              <span class="sm:hidden ml-2">Löschen</span>
+              Löschen
             </button>
 
-            <!-- Restore Button -->
+            <!-- Restore -->
             <button
               v-if="userDetails && canRestoreUser(userDetails as any) && userDetails.deleted_at"
               @click="handleRestoreUser"
-              class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-green-300 rounded-md shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-green-200 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
             >
-              <svg class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
               </svg>
-              <span class="hidden sm:inline">Wiederherstellen</span>
-              <span class="sm:hidden ml-2">Wiederherstellen</span>
+              Wiederherstellen
             </button>
           </div>
         </div>
@@ -197,32 +209,6 @@
           </div>
         </div>
 
-        <!-- Aktivitäten & Termine -->
-        <div class="bg-white shadow rounded-lg overflow-hidden">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Aktivitäten & Termine</h3>
-          </div>
-          <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div class="text-center">
-                <dt class="text-sm font-medium text-gray-500">Gesamte Termine</dt>
-                <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ appointmentStats.total }}</dd>
-              </div>
-              <div class="text-center">
-                <dt class="text-sm font-medium text-gray-500">Kommende Termine</dt>
-                <dd class="mt-1 text-2xl font-semibold text-blue-600">{{ appointmentStats.upcoming }}</dd>
-              </div>
-              <div class="text-center">
-                <dt class="text-sm font-medium text-gray-500">Abgeschlossene</dt>
-                <dd class="mt-1 text-2xl font-semibold text-green-600">{{ appointmentStats.completed }}</dd>
-              </div>
-              <div class="text-center">
-                <dt class="text-sm font-medium text-gray-500">Abgesagte</dt>
-                <dd class="mt-1 text-2xl font-semibold text-red-600">{{ appointmentStats.cancelled }}</dd>
-              </div>
-            </div>
-          </div>
-        </div>
 
       <!-- Fahrlehrer & Verfügbarkeit (nur für Rolle staff) -->
       <div v-if="userDetails?.role === 'staff' && isOnlineBookingEnabled" class="bg-white shadow rounded-lg overflow-hidden">
@@ -233,13 +219,6 @@
         </div>
       </div>
 
-      <!-- Device Manager (nur für Rolle staff) -->
-      <div v-if="userDetails?.role === 'staff'" class="bg-white shadow rounded-lg overflow-hidden">
-        <div class="p-6 sm:p-6">
-          <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">📱 Geräte-Verwaltung</h3>
-          <DeviceManager />
-        </div>
-      </div>
       </div>
     </div>
 
@@ -346,28 +325,48 @@
 
           <!-- Fahrkategorien (nur für Staff) -->
           <div v-if="editForm.role === 'staff'" class="bg-gray-50 p-4 rounded-lg">
-            <h4 class="text-md font-medium text-gray-900 mb-4">Fahrkategorien</h4>
-            <p class="text-sm text-gray-600 mb-3">
-              Wählen Sie die Fahrkategorien aus, die dieser Fahrlehrer unterrichten kann:
-            </p>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              <button
-                v-for="category in availableCategories"
-                :key="category.code"
-                type="button"
-                @click="toggleCategory(category.code)"
-                :class="[
-                  'flex items-center justify-center px-3 py-2 rounded-lg border-2 transition-all text-sm font-semibold',
-                  selectedCategories.includes(category.code)
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                ]"
-              >
-                {{ category.code }}
-              </button>
-            </div>
-            <div v-if="availableCategories.length === 0" class="text-center py-4 text-sm text-gray-500">
+            <h4 class="text-sm font-semibold text-gray-900 mb-3">Fahrkategorien</h4>
+
+            <div v-if="filteredCategories.length === 0" class="text-center py-4 text-sm text-gray-500">
               Keine Kategorien verfügbar. Bitte erstellen Sie zuerst Kategorien unter Admin → Kategorien.
+            </div>
+
+            <!-- Grouped: main categories that have subs -->
+            <div v-for="group in groupedCategories" :key="group.parent.id" class="mb-3">
+              <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">{{ group.parent.name || group.parent.code }}</p>
+              <div class="flex flex-wrap gap-1.5">
+                <button
+                  v-for="cat in group.children"
+                  :key="cat.code"
+                  type="button"
+                  @click="toggleCategory(cat.code)"
+                  :class="[
+                    'px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all',
+                    selectedCategories.includes(cat.code)
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                  ]"
+                >{{ cat.code }}</button>
+              </div>
+            </div>
+
+            <!-- Standalone: main categories without subs -->
+            <div v-if="standaloneCategories.length > 0" :class="groupedCategories.length > 0 ? 'mt-2 pt-2 border-t border-gray-200' : ''">
+              <p v-if="groupedCategories.length > 0" class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Weitere</p>
+              <div class="flex flex-wrap gap-1.5">
+                <button
+                  v-for="cat in standaloneCategories"
+                  :key="cat.code"
+                  type="button"
+                  @click="toggleCategory(cat.code)"
+                  :class="[
+                    'px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all',
+                    selectedCategories.includes(cat.code)
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                  ]"
+                >{{ cat.code }}</button>
+              </div>
             </div>
           </div>
 
@@ -482,7 +481,6 @@ import { useRoute } from '#app'
 // import { getSupabase } from '~/utils/supabase'
 import { useAdminHierarchy } from '~/composables/useAdminHierarchy'
 import StaffTab from '~/components/users/StaffTab.vue'
-import DeviceManager from '~/components/DeviceManager.vue'
 import { useFeatures } from '~/composables/useFeatures'
 
 // Types
@@ -501,13 +499,6 @@ interface UserDetails {
   tenant_name?: string | null
   deleted_at?: string | null
   category?: string[] | string | null
-}
-
-interface AppointmentStats {
-  total: number
-  upcoming: number
-  completed: number
-  cancelled: number
 }
 
 interface SystemActivity {
@@ -541,7 +532,7 @@ const isOnlineBookingEnabled = computed(() => {
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const userDetails = ref<UserDetails | null>(null)
-const appointmentStats = ref<AppointmentStats>({
+const appointmentStats = ref({
   total: 0,
   upcoming: 0,
   completed: 0,
@@ -558,6 +549,26 @@ const successMessage = ref<string | null>(null)
 const auditLog = ref<any[]>([])
 const availableCategories = ref<any[]>([])
 const selectedCategories = ref<string[]>([])
+
+// Kategorie-Filterlogik: Subcategories + Main-Kategorien ohne Subs
+const parentIdsWithSubs = computed(() =>
+  new Set(availableCategories.value.filter(c => c.parent_category_id).map(c => c.parent_category_id))
+)
+const filteredCategories = computed(() =>
+  availableCategories.value.filter(c =>
+    c.parent_category_id || !parentIdsWithSubs.value.has(c.id)
+  )
+)
+const groupedCategories = computed(() => {
+  const parents = availableCategories.value.filter(c => !c.parent_category_id && parentIdsWithSubs.value.has(c.id))
+  return parents.map(parent => ({
+    parent,
+    children: availableCategories.value.filter(c => c.parent_category_id === parent.id)
+  })).filter(g => g.children.length > 0)
+})
+const standaloneCategories = computed(() =>
+  availableCategories.value.filter(c => !c.parent_category_id && !parentIdsWithSubs.value.has(c.id))
+)
 
 interface EditForm {
   first_name: string | null
@@ -716,49 +727,6 @@ const loadUserDetails = async () => {
   }
 }
 
-const loadAppointmentStats = async () => {
-  try {
-    const response = await $fetch('/api/admin/users', {
-      method: 'POST',
-      body: {
-        action: 'get-user-appointments',
-        user_id: userId
-      }
-    }) as any
-
-    if (!response?.success || !response?.data) {
-      console.warn('Could not load appointment stats')
-      return
-    }
-
-    const appointments = response.data
-    const now = new Date()
-    const stats = {
-      total: appointments?.length || 0,
-      upcoming: 0,
-      completed: 0,
-      cancelled: 0
-    }
-
-    appointments?.forEach((appointment: any) => {
-      const startTime = new Date(appointment.start_time)
-      
-      if (appointment.status === 'completed') {
-        stats.completed++
-      } else if (appointment.status === 'cancelled') {
-        stats.cancelled++
-      } else if (startTime > now) {
-        stats.upcoming++
-      }
-    })
-
-    appointmentStats.value = stats
-    logger.debug('✅ Appointment stats loaded:', stats)
-
-  } catch (err: unknown) {
-    console.error('❌ Error loading appointment stats:', err)
-  }
-}
 
 const loadSystemActivities = async () => {
   try {
@@ -1024,7 +992,6 @@ onMounted(async () => {
     await Promise.all([
       loadCurrentUser(), // Load current admin user for permissions
       loadUserDetails(),
-      loadAppointmentStats(),
       loadSystemActivities(),
       loadAuditLog()
     ])

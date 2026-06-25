@@ -366,6 +366,8 @@ const credentialGroups: CredentialGroup[] = [
     dashboardUrl: 'https://app-wallee.com/account/admin',
     credentials: [
       { key: 'WALLEE_SECRET_KEY', description: 'Application User Secret für Wallee API', targets: ['vercel'], critical: true, rotateInstructions: 'Wallee Dashboard → Account → Application Users → User auswählen → Authentication Key regenerieren.' },
+      { key: 'WALLEE_SPACE_ID', description: 'Wallee Space ID (Zahl) — ändert sich bei Neuanmeldung', targets: ['vercel'], critical: true, rotateInstructions: 'Wallee Dashboard → Space → Space ID aus der URL oder den Einstellungen kopieren. Nach Änderung auch in der Super-Admin Tenants-Seite (wallee_space_id) aktualisieren.' },
+      { key: 'WALLEE_APPLICATION_USER_ID', description: 'Application User ID (Zahl) — ändert sich bei neuem Application User', targets: ['vercel'], critical: true, rotateInstructions: 'Wallee Dashboard → Account → Application Users → User auswählen → User ID kopieren. Nach Änderung auch in der Super-Admin Tenants-Seite (wallee_user_id) aktualisieren.' },
     ],
   },
   {

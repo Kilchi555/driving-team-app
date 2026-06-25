@@ -140,11 +140,28 @@
               <div class="space-y-3">
                 <div>
                   <label class="sa-label">Wallee Space ID *</label>
-                  <input v-model="walleeForm.space_id" type="number" placeholder="z.B. 82592" class="sa-input" />
+                  <input v-model="walleeForm.space_id" type="number" placeholder="z.B. 82592" class="sa-input" @input="walleeTestResult = null" />
                 </div>
                 <div>
                   <label class="sa-label">Wallee User ID *</label>
-                  <input v-model="walleeForm.user_id" type="number" placeholder="z.B. 140525" class="sa-input" />
+                  <input v-model="walleeForm.user_id" type="number" placeholder="z.B. 140525" class="sa-input" @input="walleeTestResult = null" />
+                </div>
+                <div>
+                  <label class="sa-label">Wallee API Secret *</label>
+                  <input v-model="walleeForm.secret_key" type="password" placeholder="Authentication Key aus Wallee" class="sa-input" autocomplete="new-password" @input="walleeTestResult = null" />
+                  <p class="sa-hint mt-1">Wallee → Account → Application Users → User auswählen → Authentication Key</p>
+                </div>
+
+                <!-- Test result banner -->
+                <div v-if="walleeTestResult" :class="[
+                  'rounded-lg px-4 py-3 text-sm flex items-start gap-2',
+                  walleeTestResult.success ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'
+                ]">
+                  <span class="text-base leading-none mt-0.5">{{ walleeTestResult.success ? '✅' : '❌' }}</span>
+                  <span v-if="walleeTestResult.success">
+                    Verbindung erfolgreich — Space <strong>{{ walleeTestResult.spaceName }}</strong> (ID {{ walleeTestResult.spaceId }})
+                  </span>
+                  <span v-else>{{ walleeTestResult.error }}</span>
                 </div>
               </div>
 
@@ -171,7 +188,10 @@
             </div>
 
             <div class="sa-modal-footer">
-              <button @click="activateWallee" :disabled="walleeLoading" class="sa-btn-success">
+              <button @click="testWalleeCredentials" :disabled="walleeTesting || !walleeForm.space_id || !walleeForm.user_id || !walleeForm.secret_key" class="sa-btn-ghost">
+                {{ walleeTesting ? 'Wird getestet…' : '🔌 Verbindung testen' }}
+              </button>
+              <button @click="activateWallee" :disabled="walleeLoading || !walleeTestResult?.success" class="sa-btn-success" :title="!walleeTestResult?.success ? 'Bitte zuerst die Verbindung testen' : ''">
                 {{ walleeLoading ? 'Wird aktiviert…' : 'Aktivieren' }}
               </button>
               <button v-if="walleeTenant?.wallee_onboarding_status === 'pending'"
@@ -271,13 +291,16 @@ const showWalleeModal    = ref(false)
 const walleeTenant       = ref<any>(null)
 const walleeError        = ref('')
 const walleeLoading      = ref(false)
-const walleeForm         = ref({ space_id: '', user_id: '' })
+const walleeForm         = ref({ space_id: '', user_id: '', secret_key: '' })
+const walleeTesting      = ref(false)
+const walleeTestResult   = ref<{ success: boolean; spaceName?: string; spaceId?: number; error?: string } | null>(null)
 const trialExtendLoading = ref(false)
 const pciForm            = ref({ approver: '', title: '' })
 
 const openWalleeActivation = (tenant: any) => {
   walleeTenant.value = tenant
-  walleeForm.value   = { space_id: '', user_id: '' }
+  walleeForm.value   = { space_id: '', user_id: '', secret_key: '' }
+  walleeTestResult.value = null
   pciForm.value      = { approver: '', title: '' }
   walleeError.value  = ''
   showWalleeModal.value = true
@@ -291,13 +314,36 @@ const openPciDocs = () => {
   window.open(`/api/admin/pci-docs?${params.toString()}`, '_blank')
 }
 
+const testWalleeCredentials = async () => {
+  walleeTestResult.value = null
+  walleeTesting.value = true
+  try {
+    const result = await $fetch<any>('/api/admin/wallee-test-credentials', {
+      method: 'POST',
+      body: {
+        wallee_space_id: walleeForm.value.space_id,
+        wallee_user_id: walleeForm.value.user_id,
+        wallee_secret_key: walleeForm.value.secret_key,
+      },
+    })
+    walleeTestResult.value = result
+  } catch (err: any) {
+    walleeTestResult.value = {
+      success: false,
+      error: err?.data?.statusMessage || 'Verbindungstest fehlgeschlagen',
+    }
+  } finally {
+    walleeTesting.value = false
+  }
+}
+
 const activateWallee = async () => {
   walleeError.value = ''
   walleeLoading.value = true
   try {
     await $fetch('/api/admin/wallee-activate', {
       method: 'POST',
-      body: { tenant_id: walleeTenant.value.id, wallee_space_id: walleeForm.value.space_id, wallee_user_id: walleeForm.value.user_id },
+      body: { tenant_id: walleeTenant.value.id, wallee_space_id: walleeForm.value.space_id, wallee_user_id: walleeForm.value.user_id, wallee_secret_key: walleeForm.value.secret_key },
     })
     showWalleeModal.value = false
     await loadTenants()
