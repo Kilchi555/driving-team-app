@@ -123,7 +123,7 @@ function buildUserHtml(
   const ctaLabel = isStaff ? 'Zum Fahrlehrer-Dashboard' : 'Jetzt einloggen'
 
   const logoHtml = logoUrl
-    ? `<tr><td style="background:#fff;text-align:center;padding:24px 36px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></td></tr>`
+    ? `<tr><td style="background:#fff;text-align:center;padding:24px 36px 20px"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></td></tr>`
     : ''
 
   return `<!DOCTYPE html>
