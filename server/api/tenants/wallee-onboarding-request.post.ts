@@ -11,6 +11,81 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 const SIMY_TEAM_EMAIL = 'info@simy.ch'
 const SIMY_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@simy.ch'
 
+// Swiss Handelsregisteramt by canton
+const HRA_BY_CANTON: Record<string, { name: string; address: string; url: string }> = {
+  ZH: { name: 'Handelsregisteramt Kanton Zürich',        address: 'Selnaustrasse 32, 8001 Zürich',         url: 'https://www.zh.ch/de/wirtschaft-arbeit/handelsregister.html' },
+  BE: { name: 'Handelsregister Kanton Bern',             address: 'Schermenweg 11, 3001 Bern',             url: 'https://www.be.ch/de/start/themen/wirtschaft-arbeit/handelsregister.html' },
+  LU: { name: 'Handelsregister Kanton Luzern',           address: 'Bahnhofstrasse 15, 6002 Luzern',        url: 'https://www.lu.ch/verwaltung/JSD/handelsregister' },
+  UR: { name: 'Handelsregister Kanton Uri',              address: 'Rathausplatz 1, 6460 Altdorf',          url: 'https://www.ur.ch/handelsregister' },
+  SZ: { name: 'Handelsregister Kanton Schwyz',           address: 'Kollegiumstrasse 28, 6431 Schwyz',      url: 'https://www.sz.ch/handelsregister' },
+  OW: { name: 'Handelsregister Kanton Obwalden',         address: 'Rathaus, 6060 Sarnen',                  url: 'https://www.ow.ch/handelsregister' },
+  NW: { name: 'Handelsregister Kanton Nidwalden',        address: 'Dorfplatz 2, 6371 Stans',               url: 'https://www.nw.ch/handelsregister' },
+  GL: { name: 'Handelsregister Kanton Glarus',           address: 'Kirchgasse 2, 8750 Glarus',             url: 'https://www.gl.ch/handelsregister' },
+  ZG: { name: 'Handelsregister Kanton Zug',              address: 'Ägeristrasse 56, 6301 Zug',             url: 'https://www.zg.ch/handelsregister' },
+  FR: { name: 'Registre du commerce Fribourg',           address: 'Route du Mont-Carmel 1, 1762 Givisiez', url: 'https://www.fr.ch/handelsregister' },
+  SO: { name: 'Handelsregister Kanton Solothurn',        address: 'Ambassadoren-Hof, 4509 Solothurn',      url: 'https://www.so.ch/handelsregister' },
+  BS: { name: 'Handelsregister Kanton Basel-Stadt',      address: 'Eisengasse 8, 4001 Basel',              url: 'https://www.bs.ch/handelsregister' },
+  BL: { name: 'Handelsregister Kanton Basel-Landschaft', address: 'Rheinstrasse 29, 4410 Liestal',         url: 'https://www.bl.ch/handelsregister' },
+  SH: { name: 'Handelsregister Kanton Schaffhausen',     address: 'Beckenstube 7, 8200 Schaffhausen',      url: 'https://www.sh.ch/handelsregister' },
+  AR: { name: 'Handelsregister Kanton Appenzell A.Rh.',  address: 'Obstmarkt 1, 9102 Herisau',             url: 'https://www.ar.ch/handelsregister' },
+  AI: { name: 'Handelsregister Kanton Appenzell I.Rh.',  address: 'Marktgasse 2, 9050 Appenzell',          url: 'https://www.ai.ch/handelsregister' },
+  SG: { name: 'Handelsregister Kanton St. Gallen',       address: 'Davidstrasse 35, 9001 St. Gallen',      url: 'https://www.sg.ch/handelsregister' },
+  GR: { name: 'Handelsregister Kanton Graubünden',       address: 'Rohanstrasse 5, 7001 Chur',             url: 'https://www.gr.ch/handelsregister' },
+  AG: { name: 'Handelsregister Kanton Aargau',           address: 'Entfelderstrasse 22, 5001 Aarau',       url: 'https://www.ag.ch/handelsregister' },
+  TG: { name: 'Handelsregister Kanton Thurgau',          address: 'Promenadenstrasse 8, 8510 Frauenfeld',  url: 'https://www.tg.ch/handelsregister' },
+  TI: { name: 'Registro di commercio Ticino',            address: 'Via Ghiringhelli 19, 6500 Bellinzona',  url: 'https://www.ti.ch/registrocommercio' },
+  VD: { name: 'Registre du commerce Vaud',               address: 'Place du Château 4, 1014 Lausanne',     url: 'https://www.vd.ch/registreducommerce' },
+  VS: { name: 'Registre du commerce Valais',             address: 'Place de la Planta 3, 1950 Sion',       url: 'https://www.vs.ch/registreducommerce' },
+  NE: { name: 'Registre du commerce Neuchâtel',          address: 'Rue du Pommier 1, 2000 Neuchâtel',      url: 'https://www.ne.ch/registreducommerce' },
+  GE: { name: 'Registre du commerce Genève',             address: 'Rue du Pré-de-la-Bichette 1, 1202 Genève', url: 'https://www.ge.ch/registreducommerce' },
+  JU: { name: 'Registre du commerce Jura',               address: 'Rue du 24-Septembre 1, 2800 Delémont',  url: 'https://www.jura.ch/registreducommerce' },
+}
+
+function getCantonFromZip(zip: string | null | undefined): string | null {
+  if (!zip) return null
+  const z = parseInt(zip.replace(/\D/g, ''), 10)
+  if (isNaN(z)) return null
+  if (z >= 1200 && z <= 1299) return 'GE'
+  if (z >= 1000 && z <= 1199) return 'VD'
+  if (z >= 1300 && z <= 1599) return 'VD'
+  if (z >= 1600 && z <= 1799) return 'FR'
+  if (z >= 1800 && z <= 1999) return 'VS'
+  if (z >= 2000 && z <= 2399) return 'NE'
+  if (z >= 2800 && z <= 2999) return 'JU'
+  if (z >= 3000 && z <= 3999) return 'BE'
+  if (z >= 4000 && z <= 4099) return 'BS'
+  if (z >= 4100 && z <= 4499) return 'BL'
+  if (z >= 4500 && z <= 4799) return 'SO'
+  if (z >= 5000 && z <= 5799) return 'AG'
+  if (z >= 6000 && z <= 6059) return 'LU'
+  if (z >= 6060 && z <= 6079) return 'OW'
+  if (z >= 6080 && z <= 6099) return 'LU'
+  if (z >= 6100 && z <= 6199) return 'LU'
+  if (z >= 6200 && z <= 6299) return 'LU'
+  if (z >= 6300 && z <= 6369) return 'ZG'
+  if (z >= 6370 && z <= 6389) return 'NW'
+  if (z >= 6390 && z <= 6399) return 'OW'
+  if (z >= 6400 && z <= 6459) return 'SZ'
+  if (z >= 6460 && z <= 6479) return 'UR'
+  if (z >= 6480 && z <= 6499) return 'UR'
+  if (z >= 6500 && z <= 6999) return 'TI'
+  if (z >= 7000 && z <= 7999) return 'GR'
+  if (z >= 8000 && z <= 8099) return 'ZH'
+  if (z >= 8100 && z <= 8199) return 'ZH'
+  if (z >= 8200 && z <= 8299) return 'SH'
+  if (z >= 8300 && z <= 8499) return 'ZH'
+  if (z >= 8500 && z <= 8599) return 'TG'
+  if (z >= 8600 && z <= 8799) return 'ZH'
+  if (z >= 8800 && z <= 8899) return 'SZ'
+  if (z >= 8900 && z <= 8999) return 'ZH'
+  if (z >= 9000 && z <= 9099) return 'SG'
+  if (z >= 9100 && z <= 9199) return 'AR'
+  if (z >= 9200 && z <= 9499) return 'SG'
+  if (z >= 9500 && z <= 9599) return 'SG'
+  if (z >= 9600 && z <= 9699) return 'SG'
+  return null
+}
+
 export default defineEventHandler(async (event) => {
   // ─── Auth ─────────────────────────────────────────────────────────────────
   const authUser = await getAuthenticatedUser(event)
@@ -261,10 +336,22 @@ export default defineEventHandler(async (event) => {
           <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:20px;margin:20px 0">
             <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#c2410c">Was ist die UID-Nummer?</p>
             <p style="margin:0;font-size:14px;color:#9a3412;line-height:1.6">
-              Die UID ist deine Unternehmens-Identifikationsnummer (z.B. CHE-123.456.789). 
+              Die UID ist deine Unternehmens-Identifikationsnummer (z.B. CHE-123.456.789).
               Du findest sie im <a href="https://www.uid.admin.ch" style="color:#c2410c">UID-Register</a> oder auf deinen Steuerunterlagen.
             </p>
           </div>
+          ${(() => {
+            const canton = getCantonFromZip(tenantData?.invoice_zip)
+            const hra = canton ? HRA_BY_CANTON[canton] : null
+            if (!hra) return ''
+            return `
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:20px;margin:20px 0">
+            <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#1d4ed8">📍 Zuständiges Handelsregisteramt (${canton})</p>
+            <p style="margin:0 0 4px;font-size:14px;color:#1e40af;font-weight:600">${hra.name}</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#1e40af">${hra.address}</p>
+            <a href="${hra.url}" style="font-size:14px;color:#1d4ed8">${hra.url} →</a>
+          </div>`
+          })()}
           <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:20px;margin:20px 0">
             <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#15803d">Noch keine UID? Kein Problem.</p>
             <p style="margin:0;font-size:14px;color:#166534;line-height:1.6">
