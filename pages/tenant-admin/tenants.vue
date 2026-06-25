@@ -236,10 +236,10 @@
                     </button>
                   </div>
 
-                  <!-- Test payment: available whenever test credentials exist -->
+                  <!-- Test payment: always available in this section -->
                   <div class="space-y-2">
                     <button @click="createTestPayment" :disabled="walleeTestPaymentLoading"
-                      class="text-xs py-1.5 px-3 rounded-lg font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 disabled:opacity-50 transition-colors">
+                      class="w-full text-xs py-2 px-3 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors">
                       {{ walleeTestPaymentLoading ? 'Erstelle…' : '💳 Test-Zahlung erstellen (CHF 1.00)' }}
                     </button>
 
