@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
     .from('tenant_secrets')
     .select('secret_name, secret_value')
     .eq('tenant_id', tenant_id)
-    .eq('secret_type', 'wallee_test_api_key')
+    .eq('secret_type', 'wallee_api_key')
 
   if (loadError) throw createError({ statusCode: 500, statusMessage: loadError.message })
 

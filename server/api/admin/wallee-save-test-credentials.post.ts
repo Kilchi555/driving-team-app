@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
     { secret_name: 'wallee_test_secret_key', secret_value: wallee_secret_key.trim() },
   ].map(({ secret_name, secret_value }) => ({
     tenant_id,
-    secret_type: 'wallee_test_api_key',
+    secret_type: 'wallee_api_key',
     secret_name,
     secret_value: encryptSecret(secret_value),
     updated_at: new Date().toISOString(),
