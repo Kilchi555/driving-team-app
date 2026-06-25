@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
 
   const { data, error } = await supabase
     .from('staff_availability_settings')
-    .select('buffer_minutes, home_plz, minimum_booking_lead_time_hours, availability_mode, pickup_radius_minutes')
+    .select('buffer_minutes, home_plz, minimum_booking_lead_time_hours, availability_mode, pickup_radius_minutes, max_travel_minutes')
     .eq('staff_id', userProfile.id)
     .maybeSingle()
 
@@ -44,6 +44,7 @@ export default defineEventHandler(async (event) => {
       minimum_booking_lead_time_hours: data?.minimum_booking_lead_time_hours ?? 24,
       availability_mode: data?.availability_mode ?? 'standard',
       pickup_radius_minutes: data?.pickup_radius_minutes ?? 10,
+      max_travel_minutes: data?.max_travel_minutes ?? null,
     }
   }
 })

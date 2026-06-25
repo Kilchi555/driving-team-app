@@ -6,7 +6,7 @@
     style="padding-bottom: env(safe-area-inset-bottom, 0px)"
     @click.self="$emit('close')"
   >
-    <div class="bg-gray-100 rounded-t-3xl w-full max-w-4xl mx-auto max-h-[92svh] flex flex-col shadow-2xl">
+    <div class="bg-gray-100 rounded-t-3xl w-full max-w-4xl mx-auto flex flex-col shadow-2xl overflow-y-auto max-h-[92svh]">
 
       <!-- Drag Handle -->
       <div class="flex justify-center pt-3 pb-1 flex-shrink-0">
@@ -49,25 +49,25 @@
 
       <!-- Quick Actions Grid -->
       <div class="px-4 pb-3 flex-shrink-0">
-        <div class="grid gap-3" :class="affiliateEnabled ? 'grid-cols-3' : 'grid-cols-2'">
+        <div class="flex gap-2">
           <button
             @click="openExamStatistics"
-            class="bg-white rounded-2xl p-4 flex flex-col items-center gap-2 active:opacity-60 transition-opacity shadow-sm"
+            class="flex-1 min-w-0 bg-white rounded-2xl px-2 py-2 flex items-center justify-center gap-1.5 active:opacity-60 transition-opacity shadow-sm overflow-hidden"
           >
-            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+            <div class="w-6 h-6 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0">
+              <svg class="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
               </svg>
             </div>
-            <span class="text-xs font-medium text-gray-700">Statistik</span>
+            <span class="text-xs font-medium text-gray-700 truncate">Statistik</span>
           </button>
 
           <button
             @click="openCashControl"
-            class="bg-white rounded-2xl p-4 flex flex-col items-center gap-2 active:opacity-60 transition-opacity shadow-sm"
+            class="shrink-0 bg-white rounded-2xl px-2 py-2 flex items-center gap-1.5 active:opacity-60 transition-opacity shadow-sm"
           >
-            <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-              <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+            <div class="w-6 h-6 bg-green-100 rounded-md flex items-center justify-center flex-shrink-0">
+              <svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
               </svg>
             </div>
@@ -77,20 +77,20 @@
           <button
             v-if="affiliateEnabled"
             @click="openAffiliateModal"
-            class="bg-white rounded-2xl p-4 flex flex-col items-center gap-2 active:opacity-60 transition-opacity shadow-sm"
+            class="flex-1 min-w-0 bg-white rounded-2xl px-2 py-2 flex items-center justify-center gap-1.5 active:opacity-60 transition-opacity shadow-sm overflow-hidden"
           >
-            <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-              <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+            <div class="w-6 h-6 bg-purple-100 rounded-md flex items-center justify-center flex-shrink-0">
+              <svg class="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
               </svg>
             </div>
-            <span class="text-xs font-medium text-gray-700">Empfehlen</span>
+            <span class="text-xs font-medium text-gray-700 truncate">Empfehlen</span>
           </button>
         </div>
       </div>
 
-      <!-- Scrollable Settings Content -->
-      <div class="overflow-y-auto flex-1 px-4 pb-6">
+      <!-- Settings Content -->
+      <div class="px-4 pb-6">
         <div class="space-y-2">
         
         <!-- Error State -->
@@ -517,38 +517,36 @@
 
         <!-- Footer Actions -->
         <div class="mt-2 space-y-2">
-          <button
-            @click="openCalendarIntegration"
-            class="w-full bg-white rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity shadow-sm"
-          >
-            <div class="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
-            </div>
-            <span class="text-sm font-medium text-gray-700 flex-1 text-left">Kalender-Link</span>
-            <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-            </svg>
-          </button>
+          <!-- Links + Belege Upload nebeneinander -->
+          <div class="grid grid-cols-2 gap-2">
+            <!-- Links -->
+            <button
+              @click="showLinksSheet = true"
+              class="bg-white rounded-2xl px-3 py-2 flex items-center gap-2.5 active:opacity-60 transition-opacity shadow-sm"
+            >
+              <div class="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                </svg>
+              </div>
+              <span class="text-xs font-medium text-gray-700">Links</span>
+            </button>
 
-          <!-- Beleg einreichen (beta) -->
-          <NuxtLink
-            v-if="props.currentUser?.email === 'kilchi@drivingteam.ch'"
-            to="/staff/expenses"
-            @click="$emit('close')"
-            class="w-full bg-white rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity shadow-sm"
-          >
-            <div class="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
-              </svg>
-            </div>
-            <span class="text-sm font-medium text-gray-700 flex-1 text-left">Beleg einreichen</span>
-            <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-            </svg>
-          </NuxtLink>
+            <!-- Belege Upload -->
+            <NuxtLink
+              v-if="props.currentUser?.email === 'kilchi@drivingteam.ch'"
+              to="/staff/expenses"
+              @click="$emit('close')"
+              class="bg-white rounded-2xl px-3 py-2 flex items-center gap-2.5 active:opacity-60 transition-opacity shadow-sm"
+            >
+              <div class="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+                </svg>
+              </div>
+              <span class="text-xs font-medium text-gray-700">Belege Upload</span>
+            </NuxtLink>
+          </div>
 
           <button
             @click="handleLogout"
@@ -566,6 +564,214 @@
       </div><!-- end space-y-2 settings -->
       </div><!-- end overflow-y-auto -->
   </Teleport>
+
+    <!-- Links Sheet -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition ease-out duration-300"
+        enter-from-class="opacity-0 translate-y-4"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition ease-in duration-200"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 translate-y-4"
+      >
+        <div v-if="showLinksSheet" class="fixed inset-0 z-[500] bg-black/50 flex items-end justify-center" @click.self="showLinksSheet = false">
+          <div class="bg-white rounded-t-3xl w-full max-w-md shadow-2xl pb-safe">
+            <!-- Handle -->
+            <div class="flex justify-center pt-3 pb-1">
+              <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+            </div>
+            <!-- Header -->
+            <div class="flex items-center justify-between px-5 pt-2 pb-4 border-b border-gray-100">
+              <h2 class="text-base font-semibold text-gray-900">Links</h2>
+              <button @click="showLinksSheet = false" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <!-- Links list -->
+            <div class="px-4 py-3 space-y-2 overflow-y-auto max-h-[70vh]">
+
+              <!-- Kalender-Link -->
+              <button
+                @click="showLinksSheet = false; openCalendarIntegration()"
+                class="w-full bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity"
+              >
+                <div class="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <div class="flex-1 text-left">
+                  <div class="text-sm font-medium text-gray-800">Kalender-Link</div>
+                  <div class="text-xs text-gray-400">Termine im Apple/Google Kalender abonnieren</div>
+                </div>
+                <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+              </button>
+
+              <!-- Registrierungs-Link -->
+              <button
+                @click="openLinkAction({ url: registrationLink, title: 'Registrierungs-Link' })"
+                class="w-full bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity"
+              >
+                <div class="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                  </svg>
+                </div>
+                <div class="flex-1 text-left">
+                  <div class="text-sm font-medium text-gray-800">Registrierungs-Link</div>
+                  <div class="text-xs text-gray-400">Für neue Schüler zum Anmelden teilen</div>
+                </div>
+                <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+              </button>
+
+              <!-- Buchungsseite -->
+              <button
+                @click="openLinkAction({ url: `${appBaseUrl}/booking/availability/${tenantSlug}`, title: 'Buchungsseite' })"
+                class="w-full bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity"
+              >
+                <div class="w-9 h-9 bg-violet-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <div class="flex-1 text-left">
+                  <div class="text-sm font-medium text-gray-800">Buchungsseite</div>
+                  <div class="text-xs text-gray-400">Online-Buchungsseite für Schüler</div>
+                </div>
+                <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+              </button>
+
+              <!-- Shop -->
+              <button
+                @click="openLinkAction({ url: `${appBaseUrl}/shop?tenant=${tenantSlug}`, title: 'Shop' })"
+                class="w-full bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity"
+              >
+                <div class="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                  </svg>
+                </div>
+                <div class="flex-1 text-left">
+                  <div class="text-sm font-medium text-gray-800">Shop</div>
+                  <div class="text-xs text-gray-400">Lernmaterial & Pakete kaufen</div>
+                </div>
+                <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+              </button>
+
+              <!-- Kurse -->
+              <button
+                @click="openLinkAction({ url: `${appBaseUrl}/customer/courses/${tenantSlug}`, title: 'Kurse' })"
+                class="w-full bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity"
+              >
+                <div class="w-9 h-9 bg-teal-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                  </svg>
+                </div>
+                <div class="flex-1 text-left">
+                  <div class="text-sm font-medium text-gray-800">Kurse</div>
+                  <div class="text-xs text-gray-400">Kursübersicht verwalten</div>
+                </div>
+                <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+              </button>
+
+              <!-- Website -->
+              <button
+                v-if="tenantWebsiteUrl"
+                @click="openLinkAction({ url: tenantWebsiteUrl!, title: 'Website' })"
+                class="w-full bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity"
+              >
+                <div class="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                  </svg>
+                </div>
+                <div class="flex-1 text-left">
+                  <div class="text-sm font-medium text-gray-800">Website</div>
+                  <div class="text-xs text-gray-400 truncate">{{ tenantWebsiteUrl }}</div>
+                </div>
+                <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+              </button>
+
+            </div>
+            <div class="h-6"></div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Link Action Sheet -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition ease-out duration-200"
+        enter-from-class="opacity-0 translate-y-2"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition ease-in duration-150"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 translate-y-2"
+      >
+        <div v-if="linkActionTarget" class="fixed inset-0 z-[600] bg-black/50 flex items-end justify-center" @click.self="linkActionTarget = null">
+          <div class="bg-white rounded-t-3xl w-full max-w-md shadow-2xl pb-safe">
+            <div class="flex justify-center pt-3 pb-1">
+              <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+            </div>
+            <div class="px-5 pt-2 pb-1">
+              <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">{{ linkActionTarget.title }}</p>
+              <p class="text-xs text-gray-400 truncate mt-0.5">{{ linkActionTarget.url }}</p>
+            </div>
+            <div class="px-4 py-3 space-y-2">
+              <!-- Öffnen -->
+              <button
+                @click="linkActionOpen()"
+                class="w-full bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity"
+              >
+                <div class="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                  </svg>
+                </div>
+                <span class="text-sm font-medium text-gray-800">Öffnen</span>
+              </button>
+              <!-- Kopieren -->
+              <button
+                @click="linkActionCopy()"
+                class="w-full bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity"
+              >
+                <div class="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <span class="text-sm font-medium text-gray-800">Link kopieren</span>
+              </button>
+              <!-- Teilen -->
+              <button
+                v-if="canNativeShare"
+                @click="linkActionShare()"
+                class="w-full bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity"
+              >
+                <div class="w-9 h-9 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                  </svg>
+                </div>
+                <span class="text-sm font-medium text-gray-800">Teilen</span>
+              </button>
+            </div>
+            <!-- Abbrechen -->
+            <div class="px-4 pb-4">
+              <button
+                @click="linkActionTarget = null"
+                class="w-full bg-gray-100 rounded-2xl px-4 py-3 text-sm font-medium text-gray-600 active:opacity-60 transition-opacity"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- Edit Profile Modal -->
     <Teleport to="body">
@@ -991,171 +1197,134 @@
       </div>
     </Teleport>
 
-    <!-- Calendar Integration Modal -->
-    <div v-if="showCalendarIntegration" class="fixed inset-0 z-[300] bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-        <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <h3 class="text-lg font-semibold text-gray-900">📅 Kalender-Integration</h3>
-          <button
-            @click="showCalendarIntegration = false"
-            class="text-gray-500 hover:text-gray-700 text-2xl leading-none font-bold"
-          >
-            ×
-          </button>
-        </div>
-        
-        <div class="p-6 space-y-6">
-          <!-- Calendar Link Section -->
-          <div class="space-y-4">
-            <div class="flex items-center space-x-2">
-              <span class="text-2xl">📱</span>
-              <h4 class="text-md font-semibold text-gray-900">Handy-Kalender Integration</h4>
-            </div>
-            
-            <!-- Loading State -->
-            <div v-if="isLoadingCalendarToken" class="flex items-center space-x-2 text-gray-500">
-              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
-              <span class="text-sm">Laden...</span>
-            </div>
-            
-            <!-- No Token Yet -->
-            <div v-else-if="!calendarTokenLink" class="space-y-3">
-              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div class="flex items-start space-x-2">
-                  <span class="text-blue-600 text-lg">ℹ️</span>
-                  <div class="text-sm text-blue-800">
-                    <strong>Kalender-Link erstellen</strong><br>
-                    Generieren Sie einen persönlichen Link um Ihre Termine in Ihrem Handy-Kalender anzuzeigen.
+    <!-- Calendar Integration Sheet -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition ease-out duration-300"
+        enter-from-class="opacity-0 translate-y-4"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition ease-in duration-200"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 translate-y-4"
+      >
+        <div v-if="showCalendarIntegration" class="fixed inset-0 z-[500] bg-black/50 flex items-end justify-center" @click.self="showCalendarIntegration = false">
+          <div class="bg-white rounded-t-3xl w-full max-w-md shadow-2xl pb-safe overflow-hidden">
+
+            <!-- Header with branding gradient -->
+            <div class="relative px-5 pt-5 pb-6" :style="{ background: `linear-gradient(135deg, ${primaryColor}15 0%, ${primaryColor}08 100%)` }">
+              <div class="flex justify-center mb-3">
+                <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+              </div>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-2xl flex items-center justify-center" :style="{ background: `${primaryColor}20` }">
+                    <svg class="w-5 h-5" :style="{ color: primaryColor }" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 class="text-base font-semibold text-gray-900">Kalender-Integration</h3>
+                    <p class="text-xs text-gray-400">Termine im Handy-Kalender abonnieren</p>
                   </div>
                 </div>
+                <button @click="showCalendarIntegration = false" class="w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors shadow-sm">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
               </div>
-              
-              <button
-                @click="generateCalendarToken"
-                :disabled="isGeneratingToken"
-                class="w-full px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-              >
-                <span v-if="isGeneratingToken" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
-                <span>{{ isGeneratingToken ? 'Generiere...' : 'Kalender-Link generieren' }}</span>
-              </button>
             </div>
-            
-            <!-- Has Token -->
-            <div v-else class="space-y-3">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Ihr Kalender-Link:</label>
-                <div class="flex space-x-2">
-                  <input
-                    :value="calendarTokenLink"
-                    readonly
-                    class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 text-gray-600"
-                  >
+
+            <div class="px-4 pb-4 space-y-3">
+
+              <!-- Loading -->
+              <div v-if="isLoadingCalendarToken" class="flex items-center justify-center gap-2 py-8 text-gray-400">
+                <div class="animate-spin rounded-full h-5 w-5 border-2 border-gray-200" :style="{ borderTopColor: primaryColor }"></div>
+                <span class="text-sm">Laden…</span>
+              </div>
+
+              <!-- No Token -->
+              <div v-else-if="!calendarTokenLink" class="space-y-3">
+                <div class="bg-gray-50 rounded-2xl p-4">
+                  <p class="text-sm text-gray-600 leading-relaxed">Erstelle einen persönlichen Kalender-Link, um deine Termine automatisch in deinem iPhone- oder Android-Kalender anzuzeigen.</p>
+                </div>
+                <button
+                  @click="generateCalendarToken"
+                  :disabled="isGeneratingToken"
+                  class="w-full py-3.5 rounded-2xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-opacity disabled:opacity-50"
+                  :style="{ background: primaryColor }"
+                >
+                  <span v-if="isGeneratingToken" class="animate-spin rounded-full h-4 w-4 border-2 border-white/40" :style="{ borderTopColor: 'white' }"></span>
+                  <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                  {{ isGeneratingToken ? 'Wird erstellt…' : 'Kalender-Link erstellen' }}
+                </button>
+              </div>
+
+              <!-- Has Token -->
+              <div v-else class="space-y-3">
+                <!-- Link display -->
+                <div class="bg-gray-50 rounded-2xl p-3.5">
+                  <p class="text-xs font-medium text-gray-400 mb-1.5">Dein Kalender-Link</p>
+                  <p class="text-xs text-gray-500 font-mono break-all leading-relaxed">{{ calendarTokenLink }}</p>
+                </div>
+
+                <!-- Actions -->
+                <div class="grid grid-cols-2 gap-2">
                   <button
                     @click="copyCalendarLink"
-                    class="px-4 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors"
-                  >
-                    Kopieren
-                  </button>
-                </div>
-              </div>
-              
-              <div class="bg-green-50 p-3 rounded-lg">
-                <div class="flex items-start space-x-2">
-                  <span class="text-green-600 text-sm">✅</span>
-                  <div class="text-sm text-green-800">
-                    <strong>Anleitung iPhone:</strong><br>
-                    1. Kopieren Sie den Link<br>
-                    2. Öffnen Sie Einstellungen → Kalender → Accounts<br>
-                    3. Tippen Sie auf "Account hinzufügen" → "Kalenderabo hinzufügen"<br>
-                    4. Fügen Sie den Link ein und bestätigen Sie
-                  </div>
-                </div>
-              </div>
-              
-              <button
-                @click="generateCalendarToken"
-                :disabled="isGeneratingToken"
-                class="w-full px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
-              >
-                <span v-if="isGeneratingToken" class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></span>
-                <span>{{ isGeneratingToken ? 'Generiere...' : 'Neuen Link generieren (alter wird ungültig)' }}</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Registration Link Section -->
-          <div class="space-y-4">
-            <div class="flex items-center space-x-2">
-              <span class="text-2xl">👥</span>
-              <h4 class="text-md font-semibold text-gray-900">Schüler-Registrierung</h4>
-            </div>
-            
-            <div class="space-y-3">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Registrierungs-Link:</label>
-                <div class="flex space-x-2">
-                  <input
-                    :value="registrationLink"
-                    readonly
-                    class="tenant-focus flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 focus:ring-2"
-                  />
-                  <button
-                    @click="copyToClipboard(registrationLink, 'Registrierungs-Link')"
-                    class="px-4 py-2 text-white rounded text-sm transition-colors hover:opacity-90"
+                    class="flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold text-white transition-opacity active:opacity-70"
                     :style="{ background: primaryColor }"
                   >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                     Kopieren
                   </button>
+                  <button
+                    v-if="canNativeShare"
+                    @click="shareCalendarLink"
+                    class="flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold border transition-colors active:opacity-70"
+                    :style="{ borderColor: primaryColor, color: primaryColor }"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                    Teilen
+                  </button>
                 </div>
-              </div>
-              
-              <div class="bg-green-50 p-3 rounded-lg">
-                <div class="flex items-start space-x-2">
-                  <span class="text-green-600 text-sm">📧</span>
-                  <div class="text-sm text-green-800">
-                    <strong>Verwendung:</strong> Senden Sie diesen Link per SMS, E-Mail oder WhatsApp an neue Schüler. 
-                    Sie können sich direkt registrieren und Termine buchen.
+
+                <!-- iPhone instructions -->
+                <div class="bg-gray-50 rounded-2xl p-4 space-y-2">
+                  <p class="text-xs font-semibold text-gray-700">So fügst du den Link hinzu:</p>
+                  <div class="space-y-1.5">
+                    <div v-for="(step, i) in calendarSteps" :key="i" class="flex items-start gap-2.5">
+                      <span class="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-white text-[10px] font-bold mt-0.5" :style="{ background: primaryColor }">{{ i + 1 }}</span>
+                      <span class="text-xs text-gray-500 leading-relaxed">{{ step }}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
 
-          <!-- Quick Actions -->
-          <div class="border-t pt-4">
-            <h4 class="text-md font-semibold text-gray-900 mb-3">Schnellaktionen</h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <button
-                @click="shareViaWhatsApp"
-                class="flex items-center justify-center space-x-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-              >
-                <span>📱</span>
-                <span>WhatsApp teilen</span>
-              </button>
-              <button
-                @click="shareViaEmail"
-                class="flex items-center justify-center space-x-2 px-4 py-2 text-white rounded-lg transition-colors hover:opacity-90"
-                :style="{ background: primaryColor }"
-              >
-                <span>📧</span>
-                <span>E-Mail teilen</span>
-              </button>
+                <!-- Regenerate -->
+                <button
+                  @click="generateCalendarToken"
+                  :disabled="isGeneratingToken"
+                  class="w-full py-3 rounded-2xl text-xs font-medium text-gray-400 bg-gray-50 flex items-center justify-center gap-2 transition-colors active:bg-gray-100 disabled:opacity-50"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                  {{ isGeneratingToken ? 'Wird erstellt…' : 'Neuen Link erstellen (alter wird ungültig)' }}
+                </button>
+              </div>
+
             </div>
           </div>
         </div>
-
-
-      </div>
-    </div>
+      </Transition>
+    </Teleport>
 
     <!-- Toast Notification -->
-    <Toast
-      :show="showToast"
-      :type="toastType"
-      :title="toastTitle"
-      :message="toastMessage"
-      @close="closeToast"
-    />
+    <Teleport to="body">
+      <Toast
+        :show="showToast"
+        :type="toastType"
+        :title="toastTitle"
+        :message="toastMessage"
+        @close="closeToast"
+      />
+    </Teleport>
 
     <!-- Location Settings Modal -->
     <div v-if="showLocationSettingsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300]">
@@ -1322,20 +1491,48 @@
           </button>
         </div>
 
-        <div class="px-5 py-4 space-y-3">
-          <p class="text-sm text-gray-600">
-            Vorbereitungszeit nach einem Termin (z.B. für Notizen, Übergabe). Die Fahrzeit zum nächsten Standort wird automatisch zusätzlich berechnet.
-          </p>
-          <div class="flex items-center gap-3 pt-1">
-            <input
-              v-model.number="staffBufferMinutes"
-              type="number"
-              min="0"
-              max="120"
-              step="5"
-              class="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-            <span class="text-sm text-gray-600">Minuten</span>
+        <div class="px-5 py-4 space-y-5">
+          <!-- Buffer minutes -->
+          <div class="space-y-2">
+            <label class="block text-sm font-semibold text-gray-700">Puffer nach Termin</label>
+            <p class="text-sm text-gray-500">
+              Vorbereitungszeit nach einem Termin (z.B. für Notizen, Übergabe). Die Fahrzeit zum nächsten Standort wird automatisch zusätzlich berechnet.
+            </p>
+            <div class="flex items-center gap-3">
+              <input
+                v-model.number="staffBufferMinutes"
+                type="number"
+                min="0"
+                max="120"
+                step="5"
+                class="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <span class="text-sm text-gray-600">Minuten</span>
+            </div>
+          </div>
+
+          <!-- Max travel minutes -->
+          <div class="space-y-2 border-t border-gray-100 pt-4">
+            <label class="block text-sm font-semibold text-gray-700">Maximaler Anfahrtsweg</label>
+            <p class="text-sm text-gray-500">
+              Wenn nach einem Termin der nächste Slot an einem anderen Standort liegt und die Fahrzeit diesen Wert überschreitet, wird der Slot online nicht angeboten.<br>
+              Liegt kein vorheriger Termin, gibt es keine Einschränkung.<br>
+              Beispiel: 15 Min. → Uster-Slots werden nach einem Zürich-Termin nicht angeboten (35 min Fahrzeit).<br>
+              <span class="text-gray-400">0 = deaktiviert</span>
+            </p>
+            <div class="flex items-center gap-3">
+              <input
+                v-model.number="staffMaxTravelMinutes"
+                type="number"
+                min="0"
+                max="120"
+                step="5"
+                class="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <span class="text-sm text-gray-600">Minuten</span>
+              <span v-if="staffMaxTravelMinutes > 0" class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">aktiv</span>
+              <span v-else class="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded">deaktiviert</span>
+            </div>
           </div>
         </div>
 
@@ -1641,7 +1838,7 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted, onBeforeUnmount, reactive, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, reactive, watch, nextTick } from 'vue'
 import { logger } from '~/utils/logger'
 import { navigateTo } from '#app/composables/router'
 // ✅ Removed direct Supabase import - using secure APIs via useDatabaseQuery
@@ -1956,6 +2153,52 @@ const affiliateEnabled = ref(
 // Calendar Integration Modal State
 const showCalendarIntegration = ref(false)
 
+// Links Sheet
+const showLinksSheet = ref(false)
+
+// Tenant extra data for links
+const tenantWebsiteUrl = ref<string | null>(null)
+
+// Link Action Sheet
+interface LinkAction { url: string; title: string }
+const linkActionTarget = ref<LinkAction | null>(null)
+const canNativeShare = computed(() => process.client && !!navigator.share)
+
+const calendarSteps = [
+  'Link kopieren',
+  'Einstellungen → Kalender → Accounts',
+  'Account hinzufügen → Kalenderabo hinzufügen',
+  'Link einfügen & bestätigen'
+]
+
+const shareCalendarLink = async () => {
+  if (!calendarTokenLink.value) return
+  try { await navigator.share({ title: 'Kalender-Link', url: calendarTokenLink.value }) } catch { /* cancelled */ }
+}
+
+const openLinkAction = (link: LinkAction) => {
+  linkActionTarget.value = link
+}
+const linkActionOpen = () => {
+  if (!linkActionTarget.value) return
+  window.open(linkActionTarget.value.url, '_blank', 'noopener,noreferrer')
+  linkActionTarget.value = null
+}
+const linkActionCopy = async () => {
+  if (!linkActionTarget.value) return
+  const { url, title } = linkActionTarget.value
+  linkActionTarget.value = null
+  await nextTick()
+  await copyToClipboard(url, title + ' Link')
+}
+const linkActionShare = async () => {
+  if (!linkActionTarget.value) return
+  try {
+    await navigator.share({ title: linkActionTarget.value.title, url: linkActionTarget.value.url })
+  } catch { /* user cancelled */ }
+  linkActionTarget.value = null
+}
+
 // Toast State
 const showToast = ref(false)
 const toastType = ref<'success' | 'error' | 'warning' | 'info'>('info')
@@ -2111,6 +2354,7 @@ const locationModalSaving = ref(false)
 
 // Buffer-Setting (Basis-Puffer pro Staff)
 const staffBufferMinutes = ref(15)
+const staffMaxTravelMinutes = ref(0)
 const savingBuffer = ref(false)
 const showBufferModal = ref(false)
 
@@ -2426,11 +2670,18 @@ const copyCalendarLink = async () => {
   await copyToClipboard(calendarTokenLink.value, 'Kalender-Link')
 }
 
-const registrationLink = computed(() => {
-  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
-  // Use the service selection page first
-  return `${baseUrl}/services/driving-team`
+const appBaseUrl = computed(() => {
+  if (process.client) {
+    const { hostname } = window.location
+    // In local dev, use the current origin; in production use app.simy.ch
+    return hostname === 'localhost' || hostname.startsWith('192.') || hostname.startsWith('10.')
+      ? window.location.origin
+      : 'https://app.simy.ch'
+  }
+  return 'https://app.simy.ch'
 })
+
+const registrationLink = computed(() => `${appBaseUrl.value}/services/${tenantSlug.value}`)
 
 const activeExamLocations = computed(() => {
   // Filtere basierend auf Namen-Matching (wie in StaffSettings)
@@ -3031,7 +3282,7 @@ const saveLocationSettings = async () => {
   }
 }
 
-// ✨ Save base buffer time to staff_availability_settings
+// ✨ Save base buffer time + max detour to staff_availability_settings
 const saveBufferMinutes = async () => {
   if (savingBuffer.value) return
   savingBuffer.value = true
@@ -3039,7 +3290,10 @@ const saveBufferMinutes = async () => {
   try {
     const response = await $fetch<{ success: boolean }>('/api/staff/update-availability-settings', {
       method: 'POST',
-      body: { buffer_minutes: staffBufferMinutes.value }
+      body: {
+        buffer_minutes: staffBufferMinutes.value,
+        max_travel_minutes: staffMaxTravelMinutes.value > 0 ? staffMaxTravelMinutes.value : null
+      }
     })
 
     if (response.success) {
@@ -3945,9 +4199,10 @@ onMounted(async () => {
 
   // Load staff availability settings (buffer_minutes etc.)
   try {
-    const settingsResp = await $fetch<{ settings: { buffer_minutes: number } }>('/api/staff/get-availability-settings')
+    const settingsResp = await $fetch<{ settings: { buffer_minutes: number; max_travel_minutes: number | null } }>('/api/staff/get-availability-settings')
     if (settingsResp?.settings?.buffer_minutes != null) {
       staffBufferMinutes.value = settingsResp.settings.buffer_minutes
+      staffMaxTravelMinutes.value = settingsResp.settings.max_travel_minutes ?? 0
     }
   } catch { /* non-fatal */ }
 
@@ -3956,6 +4211,15 @@ onMounted(async () => {
     const result = await $fetch<any>('/api/affiliate/stats')
     affiliateEnabled.value = result.data?.enabled !== false
     localStorage.setItem('staff_affiliateEnabled', String(affiliateEnabled.value))
+  } catch { /* non-fatal */ }
+
+  // Load extra tenant info for Links sheet (website url)
+  try {
+    const slug = tenantSlug.value
+    if (slug) {
+      const brandingResp = await $fetch<any>('/api/tenants/branding', { query: { slug } })
+      tenantWebsiteUrl.value = brandingResp?.social?.website ?? brandingResp?.website_url ?? null
+    }
   } catch { /* non-fatal */ }
 
   // Load monthly hours (visible for monthly-salary staff)

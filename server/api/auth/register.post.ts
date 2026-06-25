@@ -156,6 +156,24 @@ async function registerCustomer(event: any, body: RegisterRequest) {
     })
   }
 
+  // Check if phone already exists (global unique constraint on users.phone)
+  const formattedPhone = phone ? phone.trim() : ''
+  if (formattedPhone) {
+    const { data: existingPhone } = await supabase
+      .from('users')
+      .select('id')
+      .eq('phone', formattedPhone)
+      .maybeSingle()
+
+    if (existingPhone) {
+      logger.warn('❌ [REGISTER-CUSTOMER] Phone already registered')
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Diese Telefonnummer ist bereits registriert. Bitte melde dich an oder nutze eine andere Nummer.'
+      })
+    }
+  }
+
   // ===== LAYER 4: AUTH CREATION =====
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email,
@@ -218,8 +236,20 @@ async function registerCustomer(event: any, body: RegisterRequest) {
       error: userError.message,
       errorCode: userError.code,
       errorDetails: userError.details,
-      insertData: userInsertData
     })
+
+    // Return user-friendly message for known constraint violations
+    if (userError.code === '23505') {
+      const isPhoneConflict = userError.message?.includes('phone') || userError.details?.includes('phone')
+      const isEmailConflict = userError.message?.includes('email') || userError.details?.includes('email')
+      if (isPhoneConflict) {
+        throw createError({ statusCode: 409, statusMessage: 'Diese Telefonnummer ist bereits registriert. Bitte melde dich an oder nutze eine andere Nummer.' })
+      }
+      if (isEmailConflict) {
+        throw createError({ statusCode: 409, statusMessage: 'Diese E-Mail-Adresse ist bereits registriert.' })
+      }
+    }
+
     throw createError({
       statusCode: 400,
       statusMessage: 'Failed to create user profile. Please try again.'

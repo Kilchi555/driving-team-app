@@ -10,7 +10,7 @@
   >
     <div
       v-if="show"
-      class="fixed top-8 left-1/2 -translate-x-1/2 z-50 max-w-2xl w-11/12 bg-white shadow-2xl rounded-xl pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden"
+      class="fixed top-8 left-1/2 -translate-x-1/2 z-[9999] max-w-2xl w-11/12 bg-white shadow-2xl rounded-xl pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden"
     >
       <div class="p-6">
         <div class="flex items-start">

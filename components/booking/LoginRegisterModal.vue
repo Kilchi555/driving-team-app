@@ -786,12 +786,17 @@ const handleRegister = async () => {
   } catch (err: any) {
     console.error('Registration error:', err)
     const msg = err?.statusMessage || err?.data?.statusMessage || err?.message || ''
-    // Server-side duplicate-email fallback (e.g. registered under another tenant
-    // or a race with the live check) → surface the login shortcut.
+    // Server-side duplicate-email or duplicate-phone → surface the login shortcut.
     if (err?.statusCode === 409 || /bereits registriert|already registered/i.test(msg)) {
-      emailCheckStatus.value = 'taken'
-      emailCheckMessage.value = 'Diese E-Mail-Adresse ist bereits registriert.'
-      error.value = ''
+      if (/telefon|phone|nummer/i.test(msg)) {
+        // Phone number conflict — show as general error since email field isn't the issue
+        error.value = msg || 'Diese Telefonnummer ist bereits registriert. Bitte melde dich an oder nutze eine andere Nummer.'
+        activeTab.value = 'login'
+      } else {
+        emailCheckStatus.value = 'taken'
+        emailCheckMessage.value = 'Diese E-Mail-Adresse ist bereits registriert.'
+        error.value = ''
+      }
     } else {
       error.value = msg || 'Fehler bei der Registrierung. Bitte versuchen Sie es erneut.'
     }

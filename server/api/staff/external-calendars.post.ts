@@ -158,10 +158,69 @@ export default defineEventHandler(async (event) => {
         success: true,
         message: 'Kalender-Verbindung getrennt!'
       }
+    } else if (action === 'update-default-plz') {
+      const { calendarId, defaultPostalCode } = data
+
+      if (!calendarId) {
+        throw createError({ statusCode: 400, message: 'calendarId is required' })
+      }
+
+      // Verify ownership
+      const { data: calendarCheck, error: calendarCheckError } = await supabase
+        .from('external_calendars')
+        .select('staff_id, tenant_id')
+        .eq('id', calendarId)
+        .single()
+
+      if (calendarCheckError || !calendarCheck) {
+        throw createError({ statusCode: 404, message: 'Calendar not found' })
+      }
+
+      if (calendarCheck.staff_id !== userData.id || calendarCheck.tenant_id !== userData.tenant_id) {
+        throw createError({ statusCode: 403, message: 'You do not have permission to update this calendar' })
+      }
+
+      const { error: updateError } = await supabase
+        .from('external_calendars')
+        .update({ default_postal_code: defaultPostalCode || null })
+        .eq('id', calendarId)
+
+      if (updateError) throw updateError
+
+      // Update existing busy times for this calendar that have no event_location
+      // and no postal_code yet, so they immediately benefit from the new default
+      if (defaultPostalCode) {
+        await supabase
+          .from('external_busy_times')
+          .update({ postal_code: defaultPostalCode })
+          .eq('external_calendar_id', calendarId)
+          .is('event_location', null)
+          .is('postal_code', null)
+      } else {
+        // Clearing the PLZ: remove postal_code from events that got it from the default
+        await supabase
+          .from('external_busy_times')
+          .update({ postal_code: null })
+          .eq('external_calendar_id', calendarId)
+          .is('event_location', null)
+      }
+
+      logger.info('📍 Default PLZ updated for external calendar', {
+        calendarId,
+        staffId: userData.id,
+        defaultPostalCode
+      })
+
+      return {
+        success: true,
+        message: defaultPostalCode
+          ? `Standard-PLZ ${defaultPostalCode} gespeichert`
+          : 'Standard-PLZ entfernt'
+      }
     } else {
       throw createError({
         statusCode: 400,
-        message: 'Invalid action. Use: load, connect, or disconnect'
+        message: 'Invalid action. Use: load, connect, disconnect, or update-default-plz'
       })
     }
   } catch (err: any) {

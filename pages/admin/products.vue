@@ -664,9 +664,10 @@ const formData = ref({
   allowed_driving_category_codes: [] as string[]
 })
 
-// Auto-set show_in_shop based on category (mirrors migration logic)
+// Auto-set show_in_shop based on category — only for NEW products, never override existing setting
 const SHOP_CATEGORIES = ['Gutschein', 'Lehrmittel', 'Zubehör', 'Bücher']
 watch(() => formData.value.category, (newCategory) => {
+  if (editingProduct.value) return // never override manual setting when editing
   if (SHOP_CATEGORIES.includes(newCategory) || formData.value.is_voucher || formData.value.allow_custom_amount) {
     formData.value.show_in_shop = true
   }

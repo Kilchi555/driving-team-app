@@ -32,6 +32,8 @@ interface Staff {
   tenant_id: string
   minimum_booking_lead_time_hours?: number
   buffer_minutes?: number
+  max_travel_minutes?: number | null
+  home_plz?: string | null
 }
 
 interface Category {
@@ -93,6 +95,7 @@ interface ExternalBusyTime {
   start_time: string
   end_time: string
   tenant_id: string
+  postal_code?: string | null
 }
 
 interface AvailabilitySlot {
@@ -269,16 +272,20 @@ export class AvailabilityCalculator {
 
     // Only query settings if we have staff
     const bufferMap = new Map<string, number>()
+    const travelMap = new Map<string, number | null>()
+    const homePlzMap = new Map<string, string | null>()
     if (staffIds.length > 0) {
       const { data: availabilitySettings } = await this.supabase
         .from('staff_availability_settings')
-        .select('staff_id, minimum_booking_lead_time_hours, buffer_minutes')
+        .select('staff_id, minimum_booking_lead_time_hours, buffer_minutes, max_travel_minutes, home_plz')
         .in('staff_id', staffIds)
 
       if (availabilitySettings) {
         availabilitySettings.forEach(s => {
           settingsMap.set(s.staff_id, s.minimum_booking_lead_time_hours)
           if (s.buffer_minutes != null) bufferMap.set(s.staff_id, s.buffer_minutes)
+          travelMap.set(s.staff_id, s.max_travel_minutes ?? null)
+          homePlzMap.set(s.staff_id, s.home_plz ?? null)
         })
       }
     }
@@ -287,7 +294,9 @@ export class AvailabilityCalculator {
       ...staff,
       // Staff-level override takes priority, then tenant default, then global fallback
       minimum_booking_lead_time_hours: settingsMap.get(staff.id) ?? tenantLeadTimeHours,
-      buffer_minutes: bufferMap.get(staff.id) ?? 15
+      buffer_minutes: bufferMap.get(staff.id) ?? 15,
+      max_travel_minutes: travelMap.get(staff.id) ?? null,
+      home_plz: homePlzMap.get(staff.id) ?? null
     }))
   }
 
@@ -521,7 +530,7 @@ export class AvailabilityCalculator {
 
     let query = this.supabase
       .from('external_busy_times')
-      .select('id, staff_id, start_time, end_time, tenant_id')
+      .select('id, staff_id, start_time, end_time, tenant_id, postal_code')
       .in('staff_id', staffIds)
       .gte('start_time', startDate.toISOString())
       .lte('start_time', endDate.toISOString())
@@ -794,6 +803,7 @@ export class AvailabilityCalculator {
         busyTimes: params.busyTimes,
         bufferMinutes: params.bufferMinutes,
         newLocationPostalCode: params.location.postal_code,
+        maxTravelMinutes: params.staff.max_travel_minutes ?? null,
         staff: params.staff
       })
 
@@ -832,6 +842,7 @@ export class AvailabilityCalculator {
     busyTimes: ExternalBusyTime[]
     bufferMinutes: number
     newLocationPostalCode?: string
+    maxTravelMinutes?: number | null
     staff?: Staff
   }): Promise<boolean> {
     const slotStartTime = params.slotStart.getTime()
@@ -908,6 +919,83 @@ export class AvailabilityCalculator {
         (slotStartTime <= busyStart - bufferMs && slotEndTime >= busyEnd + bufferMs)
       ) {
         return true
+      }
+
+      // Travel time check for busy times that have a known postal_code
+      if (
+        params.newLocationPostalCode &&
+        busyTime.postal_code &&
+        params.newLocationPostalCode !== busyTime.postal_code
+      ) {
+        try {
+          const travelTime = await this.getTravelTimeForSlot(
+            params.newLocationPostalCode,
+            busyTime.postal_code,
+            params.slotStart
+          )
+
+          if (travelTime !== null && travelTime > 0) {
+            const requiredGapMs = (travelTime * 60 * 1000) + bufferMs
+
+            // Slot ends → drive to busy time location
+            const requiredStartAfterSlot = slotEndTime + requiredGapMs
+            if (slotEndTime <= busyStart && busyStart < requiredStartAfterSlot) {
+              logger.debug(`⚠️ TRAVEL CONFLICT (Slot→BusyTime): ${travelTime}min travel from ${params.newLocationPostalCode}→${busyTime.postal_code}`)
+              return true
+            }
+
+            // Busy time ends → drive to slot location
+            const requiredStartAfterBusy = busyEnd + requiredGapMs
+            if (busyEnd <= slotStartTime && slotStartTime < requiredStartAfterBusy) {
+              logger.debug(`⚠️ TRAVEL CONFLICT (BusyTime→Slot): ${travelTime}min travel from ${busyTime.postal_code}→${params.newLocationPostalCode}`)
+              return true
+            }
+          }
+        } catch (err: any) {
+          logger.warn('⚠️ Travel time check for busy time failed (non-fatal):', err.message)
+        }
+      }
+    }
+
+    // Max travel check: if the staff has configured a max_travel_minutes,
+    // find where the instructor is coming from (previous appointment or home PLZ)
+    // and block this slot if the travel time exceeds their preference.
+    if (
+      params.newLocationPostalCode &&
+      params.maxTravelMinutes != null &&
+      params.maxTravelMinutes > 0
+    ) {
+      try {
+        // Find the most recent appointment ending before this slot
+        const prevApt = [...params.appointments]
+          .filter(a => new Date(a.end_time).getTime() <= slotStartTime && a.location?.postal_code)
+          .sort((a, b) => new Date(b.end_time).getTime() - new Date(a.end_time).getTime())[0]
+
+        // Also check busy times as a previous location source
+        const prevBusy = [...params.busyTimes]
+          .filter(bt => new Date(bt.end_time).getTime() <= slotStartTime && bt.postal_code)
+          .sort((a, b) => new Date(b.end_time).getTime() - new Date(a.end_time).getTime())[0]
+
+        // Pick whichever ended most recently
+        let fromPlz: string | null = null
+        const prevAptTime = prevApt ? new Date(prevApt.end_time).getTime() : 0
+        const prevBusyTime = prevBusy ? new Date(prevBusy.end_time).getTime() : 0
+        if (prevAptTime >= prevBusyTime && prevApt?.location?.postal_code) {
+          fromPlz = prevApt.location.postal_code
+        } else if (prevBusyTime > prevAptTime && prevBusy?.postal_code) {
+          fromPlz = prevBusy.postal_code
+        }
+        // No home_plz fallback: if there's no prior appointment, we don't restrict the slot
+
+        if (fromPlz && fromPlz !== params.newLocationPostalCode) {
+          const travelTime = await this.getTravelTimeForSlot(fromPlz, params.newLocationPostalCode, params.slotStart)
+          if (travelTime !== null && travelTime > params.maxTravelMinutes) {
+            logger.debug(`⚠️ MAX TRAVEL EXCEEDED: ${fromPlz}→${params.newLocationPostalCode} = ${travelTime}min (max: ${params.maxTravelMinutes}min)`)
+            return true
+          }
+        }
+      } catch (err: any) {
+        logger.warn('⚠️ Max travel check failed (non-fatal):', err.message)
       }
     }
 
