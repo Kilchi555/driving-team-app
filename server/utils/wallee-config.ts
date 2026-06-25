@@ -97,7 +97,16 @@ async function loadProdCredentials(tenantId: string): Promise<WalleeConfig | nul
   return null
 }
 
-/** Load test credentials for a tenant from tenant_secrets (WALLEE_TEST_* keys). */
+/**
+ * Load test credentials for a tenant from tenant_secrets (WALLEE_TEST_* keys).
+ * Exported so the super-admin test-payment endpoint can use test credentials
+ * directly without activating wallee_test_mode globally.
+ */
+export async function getWalleeTestConfigForTenant(tenantId: string): Promise<WalleeConfig | null> {
+  return loadTestCredentials(tenantId)
+}
+
+/** Internal: load test credentials for a tenant from tenant_secrets (WALLEE_TEST_* keys). */
 async function loadTestCredentials(tenantId: string): Promise<WalleeConfig | null> {
   if (testCache.has(tenantId)) {
     return testCache.get(tenantId) ?? null
