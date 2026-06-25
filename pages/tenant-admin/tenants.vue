@@ -165,6 +165,75 @@
                 </div>
               </div>
 
+              <!-- ── Test-Modus Section ──────────────────────────────────── -->
+              <div class="sa-info-card border-amber-200 bg-amber-50">
+                <div class="flex items-center gap-2 mb-3">
+                  <span class="text-base">🧪</span>
+                  <p class="sa-toggle-label text-amber-900">Test-Modus</p>
+                  <span v-if="walleeTenant?.wallee_test_mode"
+                    class="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-200 text-amber-800">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Aktiv
+                  </span>
+                </div>
+                <p class="sa-toggle-sub mb-3">
+                  Neue Zahlungen laufen über einen separaten Test-Space.
+                  Offene Transaktionen im Produktions-Space bleiben davon unberührt (Space-aware Webhook).
+                </p>
+
+                <!-- Test credential inputs -->
+                <div class="space-y-2 mb-3">
+                  <input v-model="walleeTestForm.space_id" type="number" placeholder="Test Space ID" class="sa-input" @input="walleeTestFormResult = null" />
+                  <input v-model="walleeTestForm.user_id" type="number" placeholder="Test User ID" class="sa-input" @input="walleeTestFormResult = null" />
+                  <input v-model="walleeTestForm.secret_key" type="password" placeholder="Test API Secret" class="sa-input" autocomplete="new-password" @input="walleeTestFormResult = null" />
+                </div>
+
+                <!-- Test form result banner -->
+                <div v-if="walleeTestFormResult" :class="[
+                  'rounded-lg px-3 py-2 text-sm flex items-start gap-2 mb-3',
+                  walleeTestFormResult.success ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'
+                ]">
+                  <span class="leading-none mt-0.5">{{ walleeTestFormResult.success ? '✅' : '❌' }}</span>
+                  <span v-if="walleeTestFormResult.success">
+                    Space <strong>{{ walleeTestFormResult.spaceName }}</strong> ({{ walleeTestFormResult.spaceId }}) — Verbindung OK
+                  </span>
+                  <span v-else>{{ walleeTestFormResult.error }}</span>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  <button @click="testWalleeTestCredentials" :disabled="walleeTestTesting || !walleeTestForm.space_id || !walleeTestForm.user_id || !walleeTestForm.secret_key"
+                    class="sa-btn-ghost text-xs py-1.5 px-3">
+                    {{ walleeTestTesting ? 'Wird getestet…' : '🔌 Verbindung testen' }}
+                  </button>
+                  <button @click="saveTestCredentials" :disabled="walleeTestSaving || !walleeTestFormResult?.success"
+                    class="sa-btn-amber text-xs py-1.5 px-3"
+                    :title="!walleeTestFormResult?.success ? 'Bitte zuerst Verbindung testen' : ''">
+                    {{ walleeTestSaving ? 'Speichern…' : '💾 Test-Credentials speichern' }}
+                  </button>
+                </div>
+
+                <!-- Test mode toggle (only when test credentials are saved) -->
+                <div v-if="walleeTestCredentialsSaved" class="mt-3 pt-3 border-t border-amber-200 space-y-2">
+                  <div class="sa-toggle-row">
+                    <div>
+                      <p class="sa-toggle-label text-amber-900">Test-Modus aktiv</p>
+                      <p class="sa-toggle-sub">Neue Zahlungen → Test-Space</p>
+                    </div>
+                    <button @click="toggleTestMode" :disabled="walleeTestModeToggling"
+                      :class="['sa-toggle', walleeTenant?.wallee_test_mode ? 'sa-toggle-on bg-amber-400' : 'sa-toggle-off']">
+                      <span :class="['sa-toggle-thumb', walleeTenant?.wallee_test_mode ? 'translate-x-5' : 'translate-x-0']" />
+                    </button>
+                  </div>
+
+                  <button v-if="walleeTenant?.wallee_test_mode" @click="promoteTestCredentials" :disabled="walleePromoting"
+                    class="w-full text-xs py-2 px-3 rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 transition-colors">
+                    {{ walleePromoting ? 'Wird übertragen…' : '🚀 Als Produktions-Credentials übernehmen' }}
+                  </button>
+                  <p v-if="walleeTenant?.wallee_test_mode" class="sa-hint">
+                    Übernimmt Test-Credentials als neue Produktions-Credentials und deaktiviert den Test-Modus.
+                  </p>
+                </div>
+              </div>
+
               <!-- PCI documents (per-tenant merchant docs for Wallee) -->
               <div class="sa-info-card">
                 <p class="sa-toggle-label">PCI-Dokumente</p>
@@ -297,10 +366,22 @@ const walleeTestResult   = ref<{ success: boolean; spaceName?: string; spaceId?:
 const trialExtendLoading = ref(false)
 const pciForm            = ref({ approver: '', title: '' })
 
+// Test-Modus state
+const walleeTestForm            = ref({ space_id: '', user_id: '', secret_key: '' })
+const walleeTestTesting         = ref(false)
+const walleeTestFormResult      = ref<{ success: boolean; spaceName?: string; spaceId?: number; error?: string } | null>(null)
+const walleeTestSaving          = ref(false)
+const walleeTestCredentialsSaved = ref(false)
+const walleeTestModeToggling    = ref(false)
+const walleePromoting           = ref(false)
+
 const openWalleeActivation = (tenant: any) => {
   walleeTenant.value = tenant
   walleeForm.value   = { space_id: '', user_id: '', secret_key: '' }
   walleeTestResult.value = null
+  walleeTestForm.value = { space_id: '', user_id: '', secret_key: '' }
+  walleeTestFormResult.value = null
+  walleeTestCredentialsSaved.value = false
   pciForm.value      = { approver: '', title: '' }
   walleeError.value  = ''
   showWalleeModal.value = true
@@ -370,6 +451,87 @@ const toggleWalleeAdmin = async () => {
   } catch (err: any) {
     walleeError.value = err?.data?.statusMessage || 'Fehler beim Umschalten'
   } finally { walleeLoading.value = false }
+}
+
+const testWalleeTestCredentials = async () => {
+  walleeTestFormResult.value = null
+  walleeTestTesting.value = true
+  try {
+    const result = await $fetch<any>('/api/admin/wallee-test-credentials', {
+      method: 'POST',
+      body: {
+        wallee_space_id: walleeTestForm.value.space_id,
+        wallee_user_id: walleeTestForm.value.user_id,
+        wallee_secret_key: walleeTestForm.value.secret_key,
+      },
+    })
+    walleeTestFormResult.value = result
+  } catch (err: any) {
+    walleeTestFormResult.value = { success: false, error: err?.data?.statusMessage || 'Verbindungstest fehlgeschlagen' }
+  } finally {
+    walleeTestTesting.value = false
+  }
+}
+
+const saveTestCredentials = async () => {
+  if (!walleeTenant.value) return
+  walleeTestSaving.value = true
+  walleeError.value = ''
+  try {
+    await $fetch('/api/admin/wallee-save-test-credentials', {
+      method: 'POST',
+      body: {
+        tenant_id: walleeTenant.value.id,
+        wallee_space_id: walleeTestForm.value.space_id,
+        wallee_user_id: walleeTestForm.value.user_id,
+        wallee_secret_key: walleeTestForm.value.secret_key,
+      },
+    })
+    walleeTestCredentialsSaved.value = true
+  } catch (err: any) {
+    walleeError.value = err?.data?.statusMessage || 'Fehler beim Speichern der Test-Credentials'
+  } finally {
+    walleeTestSaving.value = false
+  }
+}
+
+const toggleTestMode = async () => {
+  if (!walleeTenant.value) return
+  walleeTestModeToggling.value = true
+  walleeError.value = ''
+  const newTestMode = !walleeTenant.value.wallee_test_mode
+  try {
+    await $fetch('/api/admin/wallee-toggle-test-mode', {
+      method: 'POST',
+      body: { tenant_id: walleeTenant.value.id, test_mode: newTestMode },
+    })
+    walleeTenant.value = { ...walleeTenant.value, wallee_test_mode: newTestMode }
+    await loadTenants()
+  } catch (err: any) {
+    walleeError.value = err?.data?.statusMessage || 'Fehler beim Umschalten des Test-Modus'
+  } finally {
+    walleeTestModeToggling.value = false
+  }
+}
+
+const promoteTestCredentials = async () => {
+  if (!walleeTenant.value) return
+  if (!confirm(`Test-Credentials als neue Produktions-Credentials für "${walleeTenant.value.name}" übernehmen? Das kann nicht rückgängig gemacht werden.`)) return
+  walleePromoting.value = true
+  walleeError.value = ''
+  try {
+    const result = await $fetch<any>('/api/admin/wallee-promote-test-credentials', {
+      method: 'POST',
+      body: { tenant_id: walleeTenant.value.id },
+    })
+    walleeTenant.value = { ...walleeTenant.value, wallee_test_mode: false, wallee_space_id: result.newSpaceId }
+    await loadTenants()
+    alert(`✅ ${result.message}`)
+  } catch (err: any) {
+    walleeError.value = err?.data?.statusMessage || 'Fehler beim Übertragen der Credentials'
+  } finally {
+    walleePromoting.value = false
+  }
 }
 
 const extendStripeTrial = async () => {
