@@ -1694,11 +1694,6 @@ const loadUserDetails = async () => {
     studentCredit.value = response.studentCredit
     eventTypes.value = response.eventTypes || []
     companyBillingAddress.value = response.companyBillingAddress || null
-    console.log('🔍 DEBUG loadUserDetails:', {
-      userDetails: userDetails.value,
-      companyBillingAddress: companyBillingAddress.value,
-      apiResponse: response
-    })
     logger.debug('✅ User details loaded via API')
     
   } catch (err: any) {

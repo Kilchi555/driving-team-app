@@ -8,6 +8,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useRoute } from '#app'
 import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
+import { logger } from '~/utils/logger'
 
 // Prevent multiple redirects happening at once
 let isRedirecting = false
@@ -39,7 +40,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         (request as any)?.headers?.['X-Auth-Request'] === 'true'
 
       if (status === 401 && isCredentialProbeEndpoint) {
-        console.debug('ℹ️ Auth endpoint returned 401 - credential error, let component handle it')
+        logger.debug('ℹ️ Auth endpoint returned 401 - credential error, let component handle it')
         const d = (response as any)?._data
         throw createError({ statusCode: status, statusMessage: d?.statusMessage || response?.statusText || 'Request failed', data: d?.data ?? d ?? undefined })
       }

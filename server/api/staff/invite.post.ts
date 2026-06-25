@@ -250,18 +250,19 @@ export default defineEventHandler(async (event) => {
     // Get tenant info for branding using service role
     const { data: tenant } = await serviceSupabase
       .from('tenants')
-      .select('name, contact_email, twilio_from_sender')
+      .select('name, contact_email, twilio_from_sender, slug')
       .eq('id', userProfile.tenant_id)
       .single()
 
     const tenantName = tenant?.name || 'Driving Team'
     const smsSenderName = tenant?.twilio_from_sender || tenantName
+    const loginLink = tenant?.slug ? `${baseUrl}/${tenant.slug}` : baseUrl
 
     // Send invitation via SMS
     logger.debug(`📱 Sending SMS to ${sanitizedPhone} with link: ${inviteLink}`)
 
     try {
-      const smsMessage = `Hallo ${sanitizedFirstName}! Sie wurden als Fahrlehrer bei ${tenantName} eingeladen. Registrierung: ${inviteLink}`
+      const smsMessage = `Hallo ${sanitizedFirstName}! Sie wurden als Fahrlehrer bei ${tenantName} eingeladen. Registrierung: ${inviteLink}\nLogin nach Registrierung: ${loginLink}`
 
       const smsResult = await sendSMS({
         to: sanitizedPhone,

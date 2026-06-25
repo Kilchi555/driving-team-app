@@ -49,7 +49,14 @@
 
       <!-- Quick Actions Grid -->
       <div class="px-4 pb-3 flex-shrink-0">
-        <div class="flex gap-2">
+        <!-- Loading skeleton while affiliate status is being fetched -->
+        <div v-if="!affiliateStatusLoaded" class="flex gap-2">
+          <div class="flex-1 bg-white rounded-2xl px-2 py-2 h-[38px] animate-pulse shadow-sm" />
+          <div class="flex-1 bg-white rounded-2xl px-2 py-2 h-[38px] animate-pulse shadow-sm" />
+          <div class="flex-1 bg-white rounded-2xl px-2 py-2 h-[38px] animate-pulse shadow-sm" />
+        </div>
+
+        <div v-else class="flex gap-2">
           <button
             @click="openExamStatistics"
             class="flex-1 min-w-0 bg-white rounded-2xl px-2 py-2 flex items-center justify-center gap-1.5 active:opacity-60 transition-opacity shadow-sm overflow-hidden"
@@ -2149,6 +2156,10 @@ const affiliateLoading = ref(false)
 const affiliateEnabled = ref(
   typeof window !== 'undefined' && localStorage.getItem('staff_affiliateEnabled') === 'true'
 )
+// true once we've loaded the affiliate status (from cache or API)
+const affiliateStatusLoaded = ref(
+  typeof window !== 'undefined' && localStorage.getItem('staff_affiliateEnabled') !== null
+)
 
 // Calendar Integration Modal State
 const showCalendarIntegration = ref(false)
@@ -4211,7 +4222,9 @@ onMounted(async () => {
     const result = await $fetch<any>('/api/affiliate/stats')
     affiliateEnabled.value = result.data?.enabled !== false
     localStorage.setItem('staff_affiliateEnabled', String(affiliateEnabled.value))
-  } catch { /* non-fatal */ }
+  } catch { /* non-fatal */ } finally {
+    affiliateStatusLoaded.value = true
+  }
 
   // Load extra tenant info for Links sheet (website url)
   try {
