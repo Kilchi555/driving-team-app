@@ -217,7 +217,7 @@ export default defineEventHandler(async (event) => {
 
     throw createError({
       statusCode: 500,
-      statusMessage: `Failed to save secrets: ${error.message}`
+      statusMessage: 'Failed to save secrets. Please try again.'
     })
   }
 })

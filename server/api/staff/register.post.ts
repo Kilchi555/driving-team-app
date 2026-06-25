@@ -10,11 +10,9 @@ import { sanitizeString, validateBasicPassword, validateEmail } from '~/server/u
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
   try {
-    // ✅ LAYER 1: Get client IP for rate limiting
-    const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 
-                      getHeader(event, 'x-real-ip') || 
-                      event.node.req.socket.remoteAddress || 
-                      'unknown'
+    // ✅ LAYER 1: Get client IP for rate limiting (spoofing-resistant)
+    const { getClientIP } = await import('~/server/utils/ip-utils')
+    const ipAddress = getClientIP(event)
 
     const body = await readBody(event)
     const { 

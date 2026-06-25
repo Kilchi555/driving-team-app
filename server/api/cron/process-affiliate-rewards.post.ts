@@ -111,6 +111,7 @@ export default defineEventHandler(async (event) => {
       try {
         const result = await $fetch('/api/affiliate/process-reward', {
           method: 'POST',
+          headers: { 'x-internal-secret': process.env.CRON_SECRET || '' },
           body: {
             appointment_id: completedPayment.appointment_id || undefined,
             course_registration_id: completedPayment.course_registration_id || undefined,

@@ -483,6 +483,7 @@ const handler = defineEventHandler(async (event) => {
       let courseCategory: string | null = course.category || null
       $fetch('/api/affiliate/process-reward', {
         method: 'POST',
+        headers: { 'x-internal-secret': process.env.CRON_SECRET || '' },
         body: {
           course_registration_id: enrollment.id,
           course_id: course.id,
