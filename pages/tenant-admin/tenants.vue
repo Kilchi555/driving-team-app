@@ -127,35 +127,6 @@
                   <span class="sa-info-label">User ID</span><span class="sa-info-val">{{ walleeTenant?.wallee_user_id || '—' }}</span>
                 </div>
                 <p class="sa-hint">Credentials ändern: Space ID + User ID eingeben und erneut aktivieren.</p>
-
-                <!-- Test Payment -->
-                <div class="mt-2 pt-2 border-t border-gray-100">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <button @click="createTestPayment" :disabled="walleeTestPaymentLoading"
-                      class="text-xs py-1.5 px-3 rounded-lg font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 disabled:opacity-50 transition-colors">
-                      {{ walleeTestPaymentLoading ? 'Erstelle…' : '💳 Test-Zahlung erstellen (CHF 1.00)' }}
-                    </button>
-                    <span v-if="walleeTestPaymentResult" class="text-xs text-gray-500">
-                      → Space <strong>{{ walleeTestPaymentResult.spaceId }}</strong>
-                      <span :class="walleeTestPaymentResult.isTestMode ? 'text-amber-600' : 'text-green-600'">
-                        ({{ walleeTestPaymentResult.isTestMode ? '🧪 Test' : '🟢 Prod' }})
-                      </span>
-                    </span>
-                  </div>
-
-                  <!-- Test payment result -->
-                  <div v-if="walleeTestPaymentResult" class="mt-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-xs text-blue-800 flex items-start gap-2">
-                    <span>✅</span>
-                    <div>
-                      <p class="font-medium">{{ walleeTestPaymentResult.message }}</p>
-                      <a :href="walleeTestPaymentResult.paymentUrl" target="_blank"
-                        class="underline text-blue-700 font-medium mt-0.5 block">
-                        → Zahlung öffnen &amp; abschliessen (CHF {{ walleeTestPaymentResult.amount }})
-                      </a>
-                      <p class="text-blue-500 mt-0.5">Transaction ID: {{ walleeTestPaymentResult.transactionId }}</p>
-                    </div>
-                  </div>
-                </div>
               </template>
 
               <!-- Business info if present -->
@@ -171,17 +142,18 @@
 
               <!-- Credential inputs -->
               <div class="space-y-3">
+                <p class="sa-hint -mb-1">Produktions-Credentials ändern oder neu setzen:</p>
                 <div>
                   <label class="sa-label">Wallee Space ID *</label>
-                  <input v-model="walleeForm.space_id" type="number" placeholder="z.B. 82592" class="sa-input" @input="walleeTestResult = null" />
+                  <input v-model="walleeForm.space_id" type="number" class="sa-input" @input="walleeTestResult = null" />
                 </div>
                 <div>
                   <label class="sa-label">Wallee User ID *</label>
-                  <input v-model="walleeForm.user_id" type="number" placeholder="z.B. 140525" class="sa-input" @input="walleeTestResult = null" />
+                  <input v-model="walleeForm.user_id" type="number" class="sa-input" @input="walleeTestResult = null" />
                 </div>
                 <div>
                   <label class="sa-label">Wallee API Secret *</label>
-                  <input v-model="walleeForm.secret_key" type="password" placeholder="Authentication Key aus Wallee" class="sa-input" autocomplete="new-password" @input="walleeTestResult = null" />
+                  <input v-model="walleeForm.secret_key" type="password" placeholder="••••••••  (neu eingeben zum Ändern)" class="sa-input" autocomplete="new-password" @input="walleeTestResult = null" />
                   <p class="sa-hint mt-1">Wallee → Account → Application Users → User auswählen → Authentication Key</p>
                 </div>
 
@@ -244,8 +216,8 @@
                   </button>
                 </div>
 
-                <!-- Test mode toggle (only when test credentials are saved) -->
-                <div v-if="walleeTestCredentialsSaved" class="mt-3 pt-3 border-t border-amber-200 space-y-2">
+                <!-- Test mode toggle: show if just saved OR already active -->
+                <div v-if="walleeTestCredentialsSaved || walleeTenant?.wallee_test_mode" class="mt-3 pt-3 border-t border-amber-200 space-y-2">
                   <div class="sa-toggle-row">
                     <div>
                       <p class="sa-toggle-label text-amber-900">Test-Modus aktiv</p>
@@ -255,6 +227,25 @@
                       :class="['sa-toggle', walleeTenant?.wallee_test_mode ? 'sa-toggle-on bg-amber-400' : 'sa-toggle-off']">
                       <span :class="['sa-toggle-thumb', walleeTenant?.wallee_test_mode ? 'translate-x-5' : 'translate-x-0']" />
                     </button>
+                  </div>
+
+                  <!-- Test payment -->
+                  <div class="pt-1">
+                    <button @click="createTestPayment" :disabled="walleeTestPaymentLoading"
+                      class="text-xs py-1.5 px-3 rounded-lg font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 disabled:opacity-50 transition-colors">
+                      {{ walleeTestPaymentLoading ? 'Erstelle…' : '💳 Test-Zahlung erstellen (CHF 1.00)' }}
+                    </button>
+                    <div v-if="walleeTestPaymentResult" class="mt-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-xs text-blue-800 flex items-start gap-2">
+                      <span>✅</span>
+                      <div>
+                        <p class="font-medium">{{ walleeTestPaymentResult.message }}</p>
+                        <a :href="walleeTestPaymentResult.paymentUrl" target="_blank"
+                          class="underline text-blue-700 font-medium mt-0.5 block">
+                          → Zahlung öffnen &amp; abschliessen (CHF {{ walleeTestPaymentResult.amount }})
+                        </a>
+                        <p class="text-blue-500 mt-0.5">Transaction ID: {{ walleeTestPaymentResult.transactionId }}</p>
+                      </div>
+                    </div>
                   </div>
 
                   <button v-if="walleeTenant?.wallee_test_mode" @click="promoteTestCredentials" :disabled="walleePromoting"
@@ -414,7 +405,12 @@ const walleePromoting           = ref(false)
 
 const openWalleeActivation = (tenant: any) => {
   walleeTenant.value = tenant
-  walleeForm.value   = { space_id: '', user_id: '', secret_key: '' }
+  // Pre-fill production credentials from known (non-secret) values
+  walleeForm.value = {
+    space_id: tenant.wallee_space_id ? String(tenant.wallee_space_id) : '',
+    user_id:  tenant.wallee_user_id  ? String(tenant.wallee_user_id)  : '',
+    secret_key: '', // secret never transmitted back; admin must re-enter to change
+  }
   walleeTestResult.value = null
   walleeTestForm.value = { space_id: '', user_id: '', secret_key: '' }
   walleeTestFormResult.value = null
