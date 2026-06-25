@@ -204,9 +204,13 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
         sync_source: 'ics'
       }
       
-      // Only add event_location if event has location data
+      // If event has a specific location, store it for PLZ resolution
       if (event.location) {
         busyTime.event_location = event.location
+      } else if (calendar.default_postal_code) {
+        // No event-specific location → use calendar's default PLZ directly
+        // This enables travel time conflict detection for location-less events (e.g. "Privat")
+        busyTime.postal_code = calendar.default_postal_code
       }
       
       return busyTime

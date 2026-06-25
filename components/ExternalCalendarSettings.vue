@@ -8,36 +8,76 @@
         <div 
           v-for="calendar in externalCalendars" 
           :key="calendar.id"
-          class="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg space-y-3 sm:space-y-0"
+          class="p-3 bg-gray-50 rounded-lg space-y-3"
         >
-          <div class="flex items-center space-x-3 min-w-0 flex-1">
-            <div 
-              class="w-4 h-4 rounded flex-shrink-0"
-              :style="{ backgroundColor: calendar.calendar_color || '#3B82F6' }"
-            ></div>
-            <div class="min-w-0 flex-1">
-              <div class="font-medium text-gray-900 truncate">
-                {{ getProviderName(calendar.provider) }} - {{ calendar.calendar_name || calendar.account_identifier }}
-              </div>
-              <div class="text-sm text-gray-500 truncate">
-                Letzte Synch.: {{ formatLastSync(calendar.last_sync_at) }}
+          <!-- Calendar header row -->
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+            <div class="flex items-center space-x-3 min-w-0 flex-1">
+              <div 
+                class="w-4 h-4 rounded flex-shrink-0"
+                :style="{ backgroundColor: calendar.calendar_color || '#3B82F6' }"
+              ></div>
+              <div class="min-w-0 flex-1">
+                <div class="font-medium text-gray-900 truncate">
+                  {{ getProviderName(calendar.provider) }} - {{ calendar.calendar_name || calendar.account_identifier }}
+                </div>
+                <div class="text-sm text-gray-500 truncate">
+                  Letzte Synch.: {{ formatLastSync(calendar.last_sync_at) }}
+                </div>
               </div>
             </div>
+            <div class="flex items-center space-x-2 flex-shrink-0">
+              <button
+                @click="syncCalendar(calendar.id)"
+                :disabled="isSyncing"
+                class="text-blue-600 hover:text-blue-800 text-sm font-medium disabled:opacity-50 px-2 py-1"
+              >
+                {{ isSyncing ? 'Sync...' : 'Sync' }}
+              </button>
+              <button
+                @click="disconnectCalendar(calendar.id)"
+                class="text-red-600 hover:text-red-800 text-sm font-medium px-2 py-1"
+              >
+                Trennen
+              </button>
+            </div>
           </div>
-          <div class="flex items-center space-x-2 flex-shrink-0">
-            <button
-              @click="syncCalendar(calendar.id)"
-              :disabled="isSyncing"
-              class="text-blue-600 hover:text-blue-800 text-sm font-medium disabled:opacity-50 px-2 py-1"
-            >
-              {{ isSyncing ? 'Sync...' : 'Sync' }}
-            </button>
-            <button
-              @click="disconnectCalendar(calendar.id)"
-              class="text-red-600 hover:text-red-800 text-sm font-medium px-2 py-1"
-            >
-              Trennen
-            </button>
+
+          <!-- PLZ config row -->
+          <div class="border-t border-gray-200 pt-2">
+            <div class="flex items-center gap-2">
+              <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-500 mb-1">
+                  Standard-PLZ für Termine ohne Ort
+                  <span class="text-gray-400 font-normal">(z.B. 8048 für Zürich)</span>
+                </label>
+                <div class="flex gap-2">
+                  <input
+                    :value="plzDraft[calendar.id] ?? calendar.default_postal_code ?? ''"
+                    @input="plzDraft[calendar.id] = ($event.target as HTMLInputElement).value"
+                    @keyup.enter="saveDefaultPLZ(calendar.id)"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="4"
+                    placeholder="PLZ"
+                    class="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <button
+                    @click="saveDefaultPLZ(calendar.id)"
+                    :disabled="plzSaving[calendar.id]"
+                    class="text-sm px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded transition-colors"
+                  >
+                    {{ plzSaving[calendar.id] ? '...' : 'Speichern' }}
+                  </button>
+                </div>
+              </div>
+              <div v-if="calendar.default_postal_code" class="flex-shrink-0 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1 mt-4">
+                ✓ PLZ {{ calendar.default_postal_code }} aktiv
+              </div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">
+              Wenn gesetzt, werden Termine ohne Standortangabe (z.B. "Privat") für die Fahrzeit-Prüfung mit dieser PLZ berücksichtigt.
+            </p>
           </div>
         </div>
       </div>
@@ -228,6 +268,8 @@ const isConnecting = ref(false)
 const isSyncing = ref(false)
 const error = ref<string | null>(null)
 const success = ref<string | null>(null)
+const plzDraft = ref<Record<string, string>>({})
+const plzSaving = ref<Record<string, boolean>>({})
 
 const newCalendar = ref({
   provider: '',
@@ -436,6 +478,34 @@ const disconnectCalendar = async (calendarId: string) => {
     }
   } catch (err: any) {
     error.value = 'Fehler beim Trennen der Verbindung'
+  }
+}
+
+const saveDefaultPLZ = async (calendarId: string) => {
+  const plz = (plzDraft.value[calendarId] ?? '').trim()
+  plzSaving.value[calendarId] = true
+  error.value = null
+  success.value = null
+
+  try {
+    const response = await $fetch<{ success: boolean; message: string }>('/api/staff/external-calendars', {
+      method: 'POST',
+      body: {
+        action: 'update-default-plz',
+        data: { calendarId, defaultPostalCode: plz || null }
+      }
+    })
+
+    if (response.success) {
+      success.value = response.message
+      delete plzDraft.value[calendarId]
+      await loadExternalCalendars()
+      setTimeout(() => { success.value = null }, 3000)
+    }
+  } catch (err: any) {
+    error.value = err.message || 'Fehler beim Speichern der PLZ'
+  } finally {
+    plzSaving.value[calendarId] = false
   }
 }
 

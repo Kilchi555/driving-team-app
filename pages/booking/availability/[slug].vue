@@ -558,6 +558,23 @@
 
         <!-- Step 5: Time Slot Selection -->
         <div v-if="currentStep === 6" class="space-y-4">
+
+          <!-- Reservation Expired Banner -->
+          <div v-if="reservationExpiredNotice" class="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl animate-slide-in">
+            <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div class="flex-1">
+              <p class="text-sm font-medium text-amber-800">Reservierung abgelaufen</p>
+              <p class="text-xs text-amber-700 mt-0.5">Die Zeitbeschränkung ist abgelaufen. Bitte wähle erneut deinen Wunschtermin.</p>
+            </div>
+            <button @click="reservationExpiredNotice = false" class="text-amber-500 hover:text-amber-700">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
           <!-- Time Slot Selection Card - only show header if slots are available AND not showing proposal form -->
           <div v-if="(isLoadingTimeSlots || availableTimeSlots.length > 0) && !showProposalFormManually" class="bg-white shadow rounded-lg p-4">
             <div class="text-center">
@@ -796,7 +813,7 @@
             </div>
 
           <!-- Pickup Info -->
-          <div class="mb-6 p-4 border rounded-lg" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
+          <div class="mt-4 mb-6 p-4 border rounded-lg" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
             <div class="flex items-start gap-3">
               <svg class="w-5 h-5 flex-shrink-0 mt-0.5" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -1206,6 +1223,7 @@ const justCompletedBooking = ref(false)
 const reservationExpiry = ref<Date | null>(null)
 const remainingSeconds = ref(300) // 5 minutes in seconds
 const countdownInterval = ref<NodeJS.Timeout | null>(null)
+const reservationExpiredNotice = ref(false)
 
 
 const { isEnabled, load: loadFeatures } = useFeatures()
@@ -3173,6 +3191,9 @@ const generateTimeSlotsForSpecificCombination = async () => {
 // ✅ NEW: Check for customer appointment conflicts and travel time
 const selectTimeSlot = async (slot: any) => {
   try {
+    // Dismiss expiry notice when user picks a new slot
+    reservationExpiredNotice.value = false
+
     if (slot.has_conflict) {
       logger.warn('⚠️ Attempting to select slot with conflict (should be disabled)')
       error.value = 'Dieser Termin hat einen Zeitkonflikt. Bitte wählen Sie einen anderen Termin.'
@@ -3703,11 +3724,26 @@ const createAppointmentSecure = async (userData: any) => {
 // Handle successful login/registration
 const handleAuthSuccess = () => {
   showLoginModal.value = false
-  // Wait a moment for auth state to settle before retrying booking
-  setTimeout(() => {
-    logger.debug('🔄 Retrying booking after auth success...')
-    confirmBooking()
-  }, 500)
+
+  // Check if the reservation is still valid
+  const reservationStillValid = currentReservationId.value &&
+    reservedUntil.value &&
+    reservedUntil.value.getTime() > Date.now()
+
+  if (reservationStillValid) {
+    // Reservation still active — retry booking directly
+    setTimeout(() => {
+      logger.debug('🔄 Retrying booking after auth success (reservation still valid)...')
+      confirmBooking()
+    }, 500)
+  } else {
+    // Reservation expired during registration — go back to slot selection
+    // Keep category, duration, location and instructor selections intact
+    logger.debug('⏰ Reservation expired during registration — returning to slot selection')
+    selectedSlot.value = null
+    reservationExpiredNotice.value = true
+    currentStep.value = 6
+  }
 }
 
 // Handle successful document upload
@@ -3931,6 +3967,8 @@ const startCountdown = () => {
     clearInterval(countdownInterval.value)
   }
 
+  let isHandlingExpiry = false
+
   const updateCountdown = async () => {
     if (!reservedUntil.value) return
 
@@ -3938,13 +3976,24 @@ const startCountdown = () => {
     const diff = reservedUntil.value.getTime() - now.getTime()
     
     if (diff <= 0) {
-      // Zeit abgelaufen
+      // Prevent multiple parallel expiry handlers
+      if (isHandlingExpiry) return
+      isHandlingExpiry = true
+
       logger.debug('⏰ Reservation expired')
-      // Cancel silently - just clean up state
+
+      // Stop the interval immediately before any async work
+      if (countdownInterval.value) {
+        clearInterval(countdownInterval.value)
+        countdownInterval.value = null
+      }
+
       await cancelReservation(true)
-      // Notify user without alert - just go back
-      logger.debug('🔄 Going back to step 5 due to reservation expiry')
-      goBackToStep(5)
+
+      // Show user-visible banner and navigate back to slot selection (step 6)
+      reservationExpiredNotice.value = true
+      logger.debug('🔄 Going back to slot selection (step 6) due to reservation expiry')
+      goBackToStep(6)
     } else {
       remainingSeconds.value = Math.ceil(diff / 1000)
     }

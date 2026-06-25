@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
   if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
   const body = await readBody(event)
-  const { buffer_minutes, home_plz } = body
+  const { buffer_minutes, home_plz, max_travel_minutes } = body
 
   // Validate buffer_minutes
   if (buffer_minutes !== undefined) {
@@ -25,6 +25,17 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 400,
         statusMessage: 'buffer_minutes must be between 0 and 120'
+      })
+    }
+  }
+
+  // Validate max_travel_minutes
+  if (max_travel_minutes !== undefined && max_travel_minutes !== null) {
+    const parsed = parseInt(max_travel_minutes)
+    if (isNaN(parsed) || parsed < 0 || parsed > 120) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'max_travel_minutes must be between 0 and 120'
       })
     }
   }
@@ -44,6 +55,7 @@ export default defineEventHandler(async (event) => {
   const updates: Record<string, any> = { updated_at: new Date().toISOString() }
   if (buffer_minutes !== undefined) updates.buffer_minutes = parseInt(buffer_minutes)
   if (home_plz !== undefined) updates.home_plz = home_plz?.trim() || null
+  if (max_travel_minutes !== undefined) updates.max_travel_minutes = max_travel_minutes !== null ? parseInt(max_travel_minutes) : null
 
   const { error } = await supabase
     .from('staff_availability_settings')
