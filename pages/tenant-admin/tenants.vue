@@ -714,13 +714,15 @@ onMounted(() => loadTenants())
   background:#141620; border:1px solid rgba(255,255,255,0.1);
   border-radius:16px; width:100%; max-width:480px;
   box-shadow:0 40px 80px rgba(0,0,0,0.5);
+  display:flex; flex-direction:column;
+  max-height:calc(100svh - 3rem);
   overflow:hidden;
 }
-.sa-modal-header { padding:1.5rem 1.5rem 0; }
+.sa-modal-header { padding:1.5rem 1.5rem 0; flex-shrink:0; }
 .sa-modal-title  { font-size:1.1rem; font-weight:700; color:#f1f5f9; }
 .sa-modal-sub    { font-size:0.8rem; color:#64748b; margin-top:0.25rem; }
-.sa-modal-body   { padding:1.25rem 1.5rem; space-y:1rem; }
-.sa-modal-footer { padding:1rem 1.5rem 1.5rem; display:flex; gap:0.75rem; align-items:center; border-top:1px solid rgba(255,255,255,0.06); }
+.sa-modal-body   { padding:1.25rem 1.5rem; space-y:1rem; overflow-y:auto; flex:1; }
+.sa-modal-footer { padding:1rem 1.5rem 1.5rem; display:flex; gap:0.75rem; align-items:center; border-top:1px solid rgba(255,255,255,0.06); flex-shrink:0; }
 
 .sa-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.875rem; }
 .sa-label { display:block; font-size:0.75rem; font-weight:500; color:#94a3b8; margin-bottom:0.375rem; }
