@@ -121,10 +121,11 @@
                 <div class="sa-info-row">
                   <span class="sa-info-label">Space ID</span>
                   <span class="sa-info-val">
-                    {{ walleeTenant?.wallee_space_id || '—' }}
+                    {{ walleeTenant?.wallee_space_id || walleeForm.space_id || '—' }}
                     <span v-if="walleeTenant?.wallee_test_mode" class="ml-1 text-xs text-amber-600 font-medium">(Test-Modus aktiv)</span>
                   </span>
-                  <span class="sa-info-label">User ID</span><span class="sa-info-val">{{ walleeTenant?.wallee_user_id || '—' }}</span>
+                  <span class="sa-info-label">User ID</span>
+                  <span class="sa-info-val">{{ walleeTenant?.wallee_user_id || walleeForm.user_id || '—' }}</span>
                 </div>
                 <p class="sa-hint">Credentials ändern: Space ID + User ID eingeben und erneut aktivieren.</p>
               </template>
@@ -440,14 +441,9 @@ const walleeTestCredentialsSaved = ref(false)
 const walleeTestModeToggling    = ref(false)
 const walleePromoting           = ref(false)
 
-const openWalleeActivation = (tenant: any) => {
+const openWalleeActivation = async (tenant: any) => {
   walleeTenant.value = tenant
-  // Pre-fill production credentials from known (non-secret) values
-  walleeForm.value = {
-    space_id: tenant.wallee_space_id ? String(tenant.wallee_space_id) : '',
-    user_id:  tenant.wallee_user_id  ? String(tenant.wallee_user_id)  : '',
-    secret_key: '', // secret never transmitted back; admin must re-enter to change
-  }
+  walleeForm.value   = { space_id: '', user_id: '', secret_key: '' }
   walleeTestResult.value = null
   walleeTestForm.value = { space_id: '', user_id: '', secret_key: '' }
   walleeTestFormResult.value = null
@@ -457,6 +453,19 @@ const openWalleeActivation = (tenant: any) => {
   pciForm.value      = { approver: '', title: '' }
   walleeError.value  = ''
   showWalleeModal.value = true
+
+  // Load current space/user IDs from tenant_secrets (non-secret, safe to display)
+  try {
+    const ids = await $fetch<any>('/api/admin/wallee-get-space-ids', {
+      query: { tenant_id: tenant.id },
+    })
+    if (ids.prod.space_id) walleeForm.value.space_id = ids.prod.space_id
+    if (ids.prod.user_id)  walleeForm.value.user_id  = ids.prod.user_id
+    if (ids.test.space_id) walleeTestForm.value.space_id = ids.test.space_id
+    if (ids.test.user_id)  walleeTestForm.value.user_id  = ids.test.user_id
+    // Mark as having saved test creds if test space_id exists
+    if (ids.test.space_id) walleeTestCredentialsSaved.value = true
+  } catch { /* non-fatal */ }
 }
 
 const openPciDocs = () => {
