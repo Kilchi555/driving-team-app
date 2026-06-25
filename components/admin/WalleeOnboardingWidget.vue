@@ -17,6 +17,9 @@
         <span v-else-if="status === 'pending'" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
           <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> In Bearbeitung
         </span>
+        <span v-else-if="status === 'pending_uid'" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+          <span class="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></span> UID ausstehend
+        </span>
         <span v-else class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
           <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> Nicht eingerichtet
         </span>
@@ -46,6 +49,35 @@
             :class="enabled ? 'translate-x-6' : 'translate-x-1'"></span>
         </button>
       </div>
+    </div>
+
+    <!-- PENDING UID -->
+    <div v-else-if="status === 'pending_uid'" class="space-y-3">
+      <div class="bg-orange-50 border border-orange-200 rounded-xl p-4">
+        <p class="text-sm font-semibold text-orange-800 mb-1">📋 Antrag eingereicht — UID fehlt noch</p>
+        <p class="text-sm text-orange-700">
+          Wir haben deinen Antrag erhalten. Um fortzufahren, benötigst du eine <strong>UID-Nummer</strong> (Unternehmens-Identifikationsnummer).
+          Falls dein Betrieb noch nicht im Handelsregister eingetragen ist, übernimmt <strong>Simy bis zu CHF 80.–</strong> der anfallenden Kosten.
+        </p>
+        <p class="text-xs text-orange-600 mt-2">
+          Trage deine UID unten ein sobald du sie hast, oder wende dich an
+          <a href="mailto:info@simy.ch" class="underline font-medium">info@simy.ch</a> für Unterstützung.
+        </p>
+      </div>
+      <!-- Allow submitting UID later -->
+      <form @submit.prevent="submitUidUpdate" class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">UID-Nummer nachreichen</label>
+          <input v-model="form.uidNumber" type="text"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
+            placeholder="CHE-123.456.789" />
+        </div>
+        <button type="submit" :disabled="submitting || !form.uidNumber"
+          class="w-full py-2.5 px-4 rounded-xl font-semibold text-sm text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 transition-colors">
+          {{ submitting ? 'Wird gespeichert…' : 'UID einreichen' }}
+        </button>
+      </form>
+      <p class="text-xs text-gray-400 text-center">Bei Fragen: <a href="mailto:info@simy.ch" class="underline">info@simy.ch</a></p>
     </div>
 
     <!-- PENDING -->
@@ -97,13 +129,13 @@
               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Max Muster" />
           </div>
-          <!-- UID Number -->
+          <!-- UID Number (optional) -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">UID-Nummer *</label>
-            <input v-model="form.uidNumber" type="text" required
+            <label class="block text-sm font-medium text-gray-700 mb-1">UID-Nummer <span class="text-gray-400 font-normal">(optional)</span></label>
+            <input v-model="form.uidNumber" type="text"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="CHE-123.456.789" />
-            <p class="text-xs text-gray-400 mt-1">Unternehmens-Identifikationsnummer (UID)</p>
+            <p class="text-xs text-gray-400 mt-1">Ohne UID wird der Antrag vorgemerkt — du wirst informiert wie du eine UID beantragst.</p>
           </div>
           <!-- IBAN -->
           <div>
@@ -149,7 +181,7 @@
 import { ref, onMounted } from 'vue'
 
 const loading = ref(true)
-const status = ref<'not_started' | 'pending' | 'active'>('not_started')
+const status = ref<'not_started' | 'pending_uid' | 'pending' | 'active'>('not_started')
 const enabled = ref(false)
 const appliedAt = ref<string | null>(null)
 const submitting = ref(false)
@@ -180,6 +212,7 @@ onMounted(async () => {
       '/api/tenants/wallee-onboarding-status'
     )
     status.value = (data.status as any) || 'not_started'
+    if (data.uidNumber) form.value.uidNumber = data.uidNumber
     enabled.value = data.enabled
     appliedAt.value = data.appliedAt
     hasUid.value = !!data.uidNumber?.trim()
@@ -190,6 +223,22 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+const submitUidUpdate = async () => {
+  submitting.value = true
+  submitError.value = ''
+  try {
+    const fd = new FormData()
+    fd.append('uid_number', form.value.uidNumber)
+    fd.append('uid_update_only', 'true')
+    await $fetch('/api/tenants/wallee-onboarding-request', { method: 'POST', body: fd })
+    status.value = 'pending'
+  } catch (e: any) {
+    submitError.value = e?.data?.statusMessage || e?.message || 'Fehler beim Einreichen der UID'
+  } finally {
+    submitting.value = false
+  }
+}
 
 const submitApplication = async () => {
   submitting.value = true
