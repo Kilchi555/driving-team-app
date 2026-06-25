@@ -209,6 +209,7 @@ export default defineEventHandler(async (event) => {
     // ✅ AFFILIATE REWARD HOOK – trigger for course enrollment
     $fetch('/api/affiliate/process-reward', {
       method: 'POST',
+      headers: { 'x-internal-secret': process.env.CRON_SECRET || '' },
       body: {
         course_id: courseId,
         user_id: userId,

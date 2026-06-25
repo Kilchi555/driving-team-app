@@ -346,6 +346,54 @@ async function registerStaff(event: any, body: RegisterRequest) {
     })
   }
 
+  // ===== LAYER 1b: INVITATION TOKEN REQUIRED =====
+  // Staff may only register via a valid, non-expired invitation from an admin.
+  // The invitation token is stored in body.invitation_token and must match a
+  // pending row in staff_invitations for the supplied tenant_id + email.
+  const invitationToken = (body as any).invitation_token
+  if (!invitationToken) {
+    logger.warn('❌ [REGISTER-STAFF] No invitation token provided')
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'A valid invitation is required to register as staff'
+    })
+  }
+
+  // Validate the invitation token against the database
+  const { data: invitation, error: invError } = await supabase
+    .from('staff_invitations')
+    .select('id, email, tenant_id, expires_at, status')
+    .eq('invitation_token', invitationToken)
+    .eq('status', 'pending')
+    .single()
+
+  if (invError || !invitation) {
+    logger.warn('❌ [REGISTER-STAFF] Invitation not found or already used', { invitationToken: invitationToken.substring(0, 8) + '...' })
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Invitation not found, already used, or expired'
+    })
+  }
+
+  if (new Date(invitation.expires_at) < new Date()) {
+    logger.warn('❌ [REGISTER-STAFF] Invitation expired', { expires_at: invitation.expires_at })
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Invitation has expired. Please request a new one.'
+    })
+  }
+
+  // Ensure invitation matches the claimed tenant and email
+  if (invitation.tenant_id !== tenant_id) {
+    logger.warn('❌ [REGISTER-STAFF] Invitation tenant mismatch')
+    throw createError({ statusCode: 403, statusMessage: 'Invitation not valid for this tenant' })
+  }
+
+  if (invitation.email.toLowerCase() !== email.toLowerCase()) {
+    logger.warn('❌ [REGISTER-STAFF] Invitation email mismatch')
+    throw createError({ statusCode: 403, statusMessage: 'Invitation not valid for this email address' })
+  }
+
   // ===== LAYER 2: PASSWORD STRENGTH VALIDATION =====
   const passwordValidation = validatePassword(password)
   logPasswordValidationAttempt(null, email, passwordValidation.isValid, `Strength: ${passwordValidation.strength}`)
@@ -430,6 +478,13 @@ async function registerStaff(event: any, body: RegisterRequest) {
       statusMessage: 'Failed to create staff profile. Please try again.'
     })
   }
+
+  // ===== LAYER 5b: MARK INVITATION AS ACCEPTED =====
+  // Consume the single-use invitation token so it cannot be reused.
+  await supabase
+    .from('staff_invitations')
+    .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+    .eq('invitation_token', (body as any).invitation_token)
 
   // ===== LAYER 6: AUDIT LOGGING =====
   logger.info('✅ [REGISTER-STAFF] Staff member registered successfully', {

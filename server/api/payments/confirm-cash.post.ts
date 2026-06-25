@@ -222,6 +222,7 @@ export default defineEventHandler(async (event) => {
       if (payment.user_id) {
         $fetch('/api/affiliate/process-reward', {
           method: 'POST',
+          headers: { 'x-internal-secret': process.env.CRON_SECRET || '' },
           body: {
             appointment_id: payment.appointment_id,
             user_id: payment.user_id,

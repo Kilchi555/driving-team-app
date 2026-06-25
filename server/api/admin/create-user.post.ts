@@ -39,10 +39,10 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get user profile to get tenant_id
+    // Get user profile to get tenant_id AND role
     const { data: userProfile } = await supabase
       .from('users')
-      .select('tenant_id')
+      .select('tenant_id, role')
       .eq('auth_user_id', user.id)
       .single()
 
@@ -51,6 +51,12 @@ export default defineEventHandler(async (event) => {
         statusCode: 403,
         statusMessage: 'User profile not found'
       })
+    }
+
+    // Only admins and staff may create users on behalf of a tenant
+    if (!['admin', 'staff', 'super_admin', 'superadmin'].includes(userProfile.role)) {
+      logger.warn('⚠️ [create-user] Unauthorized: role not permitted', { role: userProfile.role })
+      throw createError({ statusCode: 403, statusMessage: 'Access denied: insufficient role' })
     }
 
     // Check if user already exists

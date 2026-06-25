@@ -100,23 +100,30 @@ export function createRateLimitMiddleware(config: RateLimitConfig) {
 }
 
 /**
- * Get IP address from request
+ * Get IP address from request (spoofing-resistant).
+ * Uses the same priority order as server/utils/ip-utils.ts.
  */
 function getIpAddress(event: any): string {
-  // Check X-Forwarded-For first (behind proxy)
-  const forwarded = event.headers['x-forwarded-for']
+  // 1. Vercel edge header (client cannot override)
+  const vercelIP = event.headers.get?.('x-vercel-forwarded-for') || event.headers['x-vercel-forwarded-for']
+  if (vercelIP) return vercelIP.toString().trim()
+
+  // 2. Trusted reverse-proxy header
+  const realIP = event.headers.get?.('x-real-ip') || event.headers['x-real-ip']
+  if (realIP) return realIP.toString().trim()
+
+  // 3. TCP socket address
+  const socketIP = event.node?.req?.socket?.remoteAddress
+  if (socketIP) return socketIP
+
+  // 4. Last resort: rightmost x-forwarded-for entry (added by closest trusted proxy)
+  const forwarded = event.headers.get?.('x-forwarded-for') || event.headers['x-forwarded-for']
   if (forwarded) {
-    return forwarded.split(',')[0].trim()
+    const parts = forwarded.toString().split(',').map((s: string) => s.trim()).filter(Boolean)
+    if (parts.length > 0) return parts[parts.length - 1]
   }
 
-  // Check X-Real-IP (nginx proxy)
-  const realIp = event.headers['x-real-ip']
-  if (realIp) {
-    return realIp
-  }
-
-  // Fall back to connection address
-  return event.node.req.socket?.remoteAddress || 'unknown'
+  return 'unknown'
 }
 
 /**

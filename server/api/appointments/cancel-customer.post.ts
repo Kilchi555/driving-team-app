@@ -103,7 +103,7 @@ export default defineEventHandler(async (event) => {
       console.error('❌ Profile error:', profileError)
       throw createError({
         statusCode: 500,
-        message: `Database error: ${profileError.message}`
+        message: 'Failed to load user profile. Please try again later.'
       })
     }
 
@@ -120,7 +120,7 @@ export default defineEventHandler(async (event) => {
       
       throw createError({
         statusCode: 403,
-        message: `User profile not found. Please contact support. (auth_user_id: ${user.id})`
+        message: 'User profile not found. Please contact support.'
       })
     }
 

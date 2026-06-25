@@ -28,12 +28,28 @@ export default defineEventHandler(async (event) => {
   // Load target user — must be in same tenant
   const { data: targetUser } = await supabase
     .from('users')
-    .select('id, email, first_name, tenant_id, auth_user_id, failed_login_attempts')
+    .select('id, email, first_name, tenant_id, auth_user_id, failed_login_attempts, role')
     .eq('id', body.user_id)
     .single()
 
   if (!targetUser || targetUser.tenant_id !== caller.tenant_id) {
     throw createError({ statusCode: 404, statusMessage: 'User not found' })
+  }
+
+  // Staff may not reset passwords of admins or super_admins (privilege escalation prevention)
+  const targetIsPrivileged = ['admin', 'super_admin', 'superadmin'].includes(targetUser.role)
+  const callerIsStaffOnly = caller.role === 'staff'
+  if (callerIsStaffOnly && targetIsPrivileged) {
+    await logAudit({
+      user_id: caller.id,
+      action: 'admin_password_reset',
+      resource_type: 'user',
+      resource_id: body.user_id,
+      status: 'failed',
+      error_message: 'Staff attempted to reset an admin password',
+      ip_address: clientIP,
+    })
+    throw createError({ statusCode: 403, statusMessage: 'Staff may not reset admin passwords' })
   }
 
   if (!targetUser.email) {

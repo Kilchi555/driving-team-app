@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
 
     // ============ LAYER 5: VERIFY ADMIN PERMISSIONS ============
     // Only admins and tenant_admins can adjust credit
-    if (!['admin', 'tenant_admin'].includes(userData.role)) {
+    if (!['admin', 'tenant_admin', 'super_admin', 'superadmin'].includes(userData.role)) {
       logger.warn(
         `⚠️ Non-admin user ${userData.id} tried to adjust credit`,
         { role: userData.role }
@@ -102,15 +102,28 @@ export default defineEventHandler(async (event) => {
 
     targetUser = targetUserData
 
-    // Verify tenant isolation - can only adjust users in same tenant
-    if (targetUser.tenant_id !== tenantId) {
+    // Verify tenant isolation - ALL roles (including super_admin) are restricted to
+    // their own tenant unless an explicit cross-tenant flag is provided.
+    // This prevents a compromised super_admin from silently touching other tenants.
+    const isCrossTenantAllowed =
+      ['super_admin', 'superadmin'].includes(userData.role) &&
+      (body as any).allow_cross_tenant === true
+
+    if (targetUser.tenant_id !== tenantId && !isCrossTenantAllowed) {
       logger.warn(
-        `⚠️ Admin ${requestingUser.id} tried to adjust credit for user from different tenant`,
+        `⚠️ User ${requestingUser.id} (${userData.role}) tried to adjust credit for user from different tenant`,
         { adminTenant: tenantId, targetTenant: targetUser.tenant_id }
       )
       throw createError({
         statusCode: 403,
         statusMessage: 'Cannot adjust credit for users from other tenants'
+      })
+    }
+
+    if (isCrossTenantAllowed) {
+      logger.warn(`⚠️ [SUPER_ADMIN] Cross-tenant credit adjustment authorised`, {
+        adminId: requestingUser.id,
+        targetTenant: targetUser.tenant_id
       })
     }
 

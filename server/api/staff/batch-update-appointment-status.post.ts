@@ -24,6 +24,7 @@ async function triggerAffiliateRewards(
       try {
         await $fetch('/api/affiliate/process-reward', {
           method: 'POST',
+          headers: { 'x-internal-secret': process.env.CRON_SECRET || '' },
           body: { appointment_id: appt.id, user_id: appt.student_id, tenant_id: tenantId, driving_category: appt.type ?? null },
         })
       } catch (err: any) {

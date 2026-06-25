@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader } from 'h3'
+import { requireAdminProfile } from '~/server/utils/auth'
 import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-manager'
 import {
   validateAppointmentData,
@@ -12,6 +13,10 @@ import {
 
 export default defineEventHandler(async (event) => {
   try {
+    // ============ AUTHENTICATION & AUTHORIZATION ============
+    // Only staff, admin, and super_admin may create or edit appointments.
+    const callerProfile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'superadmin'])
+
     const body = await readBody(event)
     const { 
       mode, 
@@ -41,6 +46,43 @@ export default defineEventHandler(async (event) => {
         statusCode: 400,
         statusMessage: 'Appointment data is required'
       })
+    }
+
+    // ============ PRICE SANITY CHECKS ============
+    // Prevent rogue staff from submitting obviously manipulated price values.
+    // Full server-side price recalculation would require a pricing-table lookup
+    // (done separately); these guards catch the most blatant manipulation attempts.
+    if (typeof totalAmountRappenForPayment === 'number' && totalAmountRappenForPayment < 0) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid price: total amount cannot be negative' })
+    }
+    if (typeof discountAmountRappen === 'number' && discountAmountRappen < 0) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid price: discount cannot be negative' })
+    }
+    if (typeof creditUsedRappen === 'number' && creditUsedRappen < 0) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid price: credit used cannot be negative' })
+    }
+    // Guard: discount cannot exceed the total before discount
+    if (
+      typeof discountAmountRappen === 'number' &&
+      typeof basePriceRappen === 'number' &&
+      basePriceRappen > 0 &&
+      discountAmountRappen > basePriceRappen + (adminFeeRappen || 0) + (productsPriceRappen || 0)
+    ) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid price: discount exceeds total price' })
+    }
+
+    // ============ TENANT ISOLATION ============
+    // Ensure the appointment belongs to the caller's own tenant.
+    // super_admin is exempt (can act cross-tenant for support tasks).
+    if (!['super_admin', 'superadmin'].includes(callerProfile.role)) {
+      const appointmentTenantId = appointmentData.tenant_id
+      if (appointmentTenantId && appointmentTenantId !== callerProfile.tenant_id) {
+        logger.warn('⚠️ [save] Tenant mismatch — caller tried to write to foreign tenant', {
+          callerTenant: callerProfile.tenant_id,
+          appointmentTenant: appointmentTenantId
+        })
+        throw createError({ statusCode: 403, statusMessage: 'Access denied: tenant mismatch' })
+      }
     }
 
     if (mode === 'edit' && !eventId) {
@@ -401,6 +443,7 @@ export default defineEventHandler(async (event) => {
               if (paymentResult.payment_status === 'completed' && result.user_id) {
                 $fetch('/api/affiliate/process-reward', {
                   method: 'POST',
+                  headers: { 'x-internal-secret': process.env.CRON_SECRET || '' },
                   body: {
                     appointment_id: result.id,
                     user_id: result.user_id,

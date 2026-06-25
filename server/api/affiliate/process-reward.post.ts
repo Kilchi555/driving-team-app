@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import logger from '~/utils/logger'
 
@@ -10,20 +10,23 @@ import logger from '~/utils/logger'
  *
  * Body: { appointment_id: string, user_id: string, tenant_id: string }
  *
- * Flow:
- * 1. Find if the user was referred (users.referred_by_code)
- * 2. Find the matching affiliate_codes row
- * 3. Find pending affiliate_referrals row for this user
- * 4. Fetch reward amount from tenant_settings (category=affiliate, key=reward_rappen)
- * 5. Credit affiliate's student_credits (deposit)
- * 6. Mark referral as 'credited', update counters
- *
- * Idempotent: if referral is already credited, returns success without re-crediting.
- *
- * Security: This endpoint uses the service role key (no user auth required).
- * It should only be called from server-side code, never from the client.
+ * Security: Requires X-Internal-Secret header matching CRON_SECRET.
+ * Must only be called from server-side code via $fetch with this header.
  */
 export default defineEventHandler(async (event) => {
+  // ============ INTERNAL-ONLY GUARD ============
+  // This endpoint must never be callable from the public internet.
+  const internalSecret = process.env.CRON_SECRET
+  if (!internalSecret) {
+    logger.error('❌ [Affiliate] CRON_SECRET not configured – endpoint disabled')
+    throw createError({ statusCode: 503, statusMessage: 'Service unavailable' })
+  }
+  const providedSecret = getHeader(event, 'x-internal-secret')
+  if (!providedSecret || providedSecret !== internalSecret) {
+    logger.warn('❌ [Affiliate] Unauthorized internal call – missing or invalid X-Internal-Secret')
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
+
   const supabaseAdmin = getSupabaseAdmin()
 
   const body = await readBody(event)
