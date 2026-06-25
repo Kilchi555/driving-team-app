@@ -119,10 +119,43 @@
                   </button>
                 </div>
                 <div class="sa-info-row">
-                  <span class="sa-info-label">Space ID</span><span class="sa-info-val">{{ walleeTenant?.wallee_space_id || '—' }}</span>
+                  <span class="sa-info-label">Space ID</span>
+                  <span class="sa-info-val">
+                    {{ walleeTenant?.wallee_space_id || '—' }}
+                    <span v-if="walleeTenant?.wallee_test_mode" class="ml-1 text-xs text-amber-600 font-medium">(Test-Modus aktiv)</span>
+                  </span>
                   <span class="sa-info-label">User ID</span><span class="sa-info-val">{{ walleeTenant?.wallee_user_id || '—' }}</span>
                 </div>
                 <p class="sa-hint">Credentials ändern: Space ID + User ID eingeben und erneut aktivieren.</p>
+
+                <!-- Test Payment -->
+                <div class="mt-2 pt-2 border-t border-gray-100">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <button @click="createTestPayment" :disabled="walleeTestPaymentLoading"
+                      class="text-xs py-1.5 px-3 rounded-lg font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 disabled:opacity-50 transition-colors">
+                      {{ walleeTestPaymentLoading ? 'Erstelle…' : '💳 Test-Zahlung erstellen (CHF 1.00)' }}
+                    </button>
+                    <span v-if="walleeTestPaymentResult" class="text-xs text-gray-500">
+                      → Space <strong>{{ walleeTestPaymentResult.spaceId }}</strong>
+                      <span :class="walleeTestPaymentResult.isTestMode ? 'text-amber-600' : 'text-green-600'">
+                        ({{ walleeTestPaymentResult.isTestMode ? '🧪 Test' : '🟢 Prod' }})
+                      </span>
+                    </span>
+                  </div>
+
+                  <!-- Test payment result -->
+                  <div v-if="walleeTestPaymentResult" class="mt-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-xs text-blue-800 flex items-start gap-2">
+                    <span>✅</span>
+                    <div>
+                      <p class="font-medium">{{ walleeTestPaymentResult.message }}</p>
+                      <a :href="walleeTestPaymentResult.paymentUrl" target="_blank"
+                        class="underline text-blue-700 font-medium mt-0.5 block">
+                        → Zahlung öffnen &amp; abschliessen (CHF {{ walleeTestPaymentResult.amount }})
+                      </a>
+                      <p class="text-blue-500 mt-0.5">Transaction ID: {{ walleeTestPaymentResult.transactionId }}</p>
+                    </div>
+                  </div>
+                </div>
               </template>
 
               <!-- Business info if present -->
@@ -366,6 +399,10 @@ const walleeTestResult   = ref<{ success: boolean; spaceName?: string; spaceId?:
 const trialExtendLoading = ref(false)
 const pciForm            = ref({ approver: '', title: '' })
 
+// Test payment state
+const walleeTestPaymentLoading = ref(false)
+const walleeTestPaymentResult  = ref<{ paymentUrl: string; transactionId: string; spaceId: number; isTestMode: boolean; amount: number; message: string } | null>(null)
+
 // Test-Modus state
 const walleeTestForm            = ref({ space_id: '', user_id: '', secret_key: '' })
 const walleeTestTesting         = ref(false)
@@ -382,6 +419,7 @@ const openWalleeActivation = (tenant: any) => {
   walleeTestForm.value = { space_id: '', user_id: '', secret_key: '' }
   walleeTestFormResult.value = null
   walleeTestCredentialsSaved.value = false
+  walleeTestPaymentResult.value = null
   pciForm.value      = { approver: '', title: '' }
   walleeError.value  = ''
   showWalleeModal.value = true
@@ -451,6 +489,24 @@ const toggleWalleeAdmin = async () => {
   } catch (err: any) {
     walleeError.value = err?.data?.statusMessage || 'Fehler beim Umschalten'
   } finally { walleeLoading.value = false }
+}
+
+const createTestPayment = async () => {
+  if (!walleeTenant.value) return
+  walleeTestPaymentLoading.value = true
+  walleeTestPaymentResult.value = null
+  walleeError.value = ''
+  try {
+    const result = await $fetch<any>('/api/admin/wallee-create-test-payment', {
+      method: 'POST',
+      body: { tenant_id: walleeTenant.value.id },
+    })
+    walleeTestPaymentResult.value = result
+  } catch (err: any) {
+    walleeError.value = err?.data?.statusMessage || 'Fehler beim Erstellen der Test-Zahlung'
+  } finally {
+    walleeTestPaymentLoading.value = false
+  }
 }
 
 const testWalleeTestCredentials = async () => {
