@@ -216,12 +216,18 @@
                   </button>
                 </div>
 
-                <!-- Test mode toggle: show if just saved OR already active -->
-                <div v-if="walleeTestCredentialsSaved || walleeTenant?.wallee_test_mode" class="mt-3 pt-3 border-t border-amber-200 space-y-2">
+                <!-- Test mode toggle + actions: show if just saved OR already active -->
+                <div v-if="walleeTestCredentialsSaved || walleeTenant?.wallee_test_mode" class="mt-3 pt-3 border-t border-amber-200 space-y-3">
+
+                  <!-- Warning when test mode is on: real customers affected -->
+                  <div v-if="walleeTenant?.wallee_test_mode" class="rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs text-orange-800">
+                    ⚠️ <strong>Test-Modus aktiv:</strong> Neue Kundenzahlungen gehen aktuell in den Test-Space. Nur für kurze Tests empfohlen.
+                  </div>
+
                   <div class="sa-toggle-row">
                     <div>
-                      <p class="sa-toggle-label text-amber-900">Test-Modus aktiv</p>
-                      <p class="sa-toggle-sub">Neue Zahlungen → Test-Space</p>
+                      <p class="sa-toggle-label text-amber-900">Test-Modus</p>
+                      <p class="sa-toggle-sub">{{ walleeTenant?.wallee_test_mode ? 'An — neue Zahlungen → Test-Space' : 'Aus — Produktion läuft normal' }}</p>
                     </div>
                     <button @click="toggleTestMode" :disabled="walleeTestModeToggling"
                       :class="['sa-toggle', walleeTenant?.wallee_test_mode ? 'sa-toggle-on bg-amber-400' : 'sa-toggle-off']">
@@ -229,8 +235,8 @@
                     </button>
                   </div>
 
-                  <!-- Test payment -->
-                  <div class="pt-1">
+                  <!-- Test payment (only when test mode on) -->
+                  <div v-if="walleeTenant?.wallee_test_mode">
                     <button @click="createTestPayment" :disabled="walleeTestPaymentLoading"
                       class="text-xs py-1.5 px-3 rounded-lg font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 disabled:opacity-50 transition-colors">
                       {{ walleeTestPaymentLoading ? 'Erstelle…' : '💳 Test-Zahlung erstellen (CHF 1.00)' }}
@@ -248,13 +254,17 @@
                     </div>
                   </div>
 
-                  <button v-if="walleeTenant?.wallee_test_mode" @click="promoteTestCredentials" :disabled="walleePromoting"
-                    class="w-full text-xs py-2 px-3 rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 transition-colors">
-                    {{ walleePromoting ? 'Wird übertragen…' : '🚀 Als Produktions-Credentials übernehmen' }}
-                  </button>
-                  <p v-if="walleeTenant?.wallee_test_mode" class="sa-hint">
-                    Übernimmt Test-Credentials als neue Produktions-Credentials und deaktiviert den Test-Modus.
-                  </p>
+                  <!-- Promote: always available once test credentials exist -->
+                  <div class="pt-1 border-t border-amber-200">
+                    <button @click="promoteTestCredentials" :disabled="walleePromoting"
+                      class="w-full text-xs py-2 px-3 rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 transition-colors">
+                      {{ walleePromoting ? 'Wird übertragen…' : '🚀 Als Produktions-Credentials übernehmen' }}
+                    </button>
+                    <p class="sa-hint mt-1">
+                      Übernimmt Test-Credentials als neue Produktions-Credentials und deaktiviert den Test-Modus.
+                      Test-Modus muss dafür nicht aktiv sein.
+                    </p>
+                  </div>
                 </div>
               </div>
 
