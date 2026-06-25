@@ -59,9 +59,8 @@ export default defineEventHandler(async (event) => {
     .from('payments')
     .insert({
       tenant_id,
-      amount: amount,
-      currency: 'CHF',
-      status: 'pending',
+      total_amount_rappen: Math.round(amount * 100),
+      payment_status: 'pending',
       payment_method: 'wallee',
       payment_provider: 'wallee',
       description: `[SUPER-ADMIN TEST] Wallee ${isTestMode ? 'Test-Space' : 'Prod-Space'} verification`,
