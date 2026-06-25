@@ -584,23 +584,23 @@
           </template>
 
           <!-- Navigation -->
-          <div class="flex justify-between pt-2 border-t">
+          <div class="flex justify-between items-center pt-5 mt-2 border-t gap-3">
             <button
               v-if="currentStep > 0"
               type="button"
               @click="currentStep--"
-              class="px-5 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+              class="px-5 py-3 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors whitespace-nowrap flex-shrink-0"
             >← Zurück</button>
             <div v-else></div>
 
-            <div class="flex gap-2">
+            <div class="flex gap-2 flex-1 justify-end">
               <!-- Next / Submit -->
               <button
                 v-if="currentStep < STEP_LOADING"
                 :type="currentStep === 6 ? 'submit' : 'button'"
                 @click="currentStep < 6 ? nextStep() : undefined"
                 :disabled="!canProceed"
-                class="px-5 py-2 text-sm text-white rounded-lg transition-opacity font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                class="px-6 py-3 text-sm text-white rounded-xl transition-opacity font-medium disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
                 :style="{ background: tenantColor }"
               >{{ currentStep === 6 ? 'Registrierung abschliessen' : 'Weiter →' }}</button>
             </div>
