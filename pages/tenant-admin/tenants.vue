@@ -208,7 +208,8 @@
                 </div>
 
                 <div class="flex flex-wrap gap-2">
-                  <button @click="testWalleeTestCredentials" :disabled="walleeTestTesting || !walleeTestForm.space_id || !walleeTestForm.user_id || !walleeTestForm.secret_key"
+                  <button @click="testWalleeTestCredentials"
+                    :disabled="walleeTestTesting || !walleeTestForm.space_id || !walleeTestForm.user_id || (!walleeTestForm.secret_key && !walleeTestCredentialsSaved)"
                     class="sa-btn-ghost text-xs py-1.5 px-3">
                     {{ walleeTestTesting ? 'Wird getestet…' : '🔌 Verbindung testen' }}
                   </button>
@@ -581,14 +582,24 @@ const testWalleeTestCredentials = async () => {
   walleeTestFormResult.value = null
   walleeTestTesting.value = true
   try {
-    const result = await $fetch<any>('/api/admin/wallee-test-credentials', {
-      method: 'POST',
-      body: {
-        wallee_space_id: walleeTestForm.value.space_id,
-        wallee_user_id: walleeTestForm.value.user_id,
-        wallee_secret_key: walleeTestForm.value.secret_key,
-      },
-    })
+    let result: any
+    if (walleeTestForm.value.secret_key) {
+      // New secret entered → test with provided credentials
+      result = await $fetch('/api/admin/wallee-test-credentials', {
+        method: 'POST',
+        body: {
+          wallee_space_id: walleeTestForm.value.space_id,
+          wallee_user_id: walleeTestForm.value.user_id,
+          wallee_secret_key: walleeTestForm.value.secret_key,
+        },
+      })
+    } else {
+      // No new secret → test using stored credentials from DB
+      result = await $fetch('/api/admin/wallee-test-saved-credentials', {
+        method: 'POST',
+        body: { tenant_id: walleeTenant.value?.id, mode: 'test' },
+      })
+    }
     walleeTestFormResult.value = result
   } catch (err: any) {
     walleeTestFormResult.value = { success: false, error: err?.data?.statusMessage || 'Verbindungstest fehlgeschlagen' }
