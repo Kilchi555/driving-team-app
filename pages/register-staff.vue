@@ -511,7 +511,9 @@ const loadInvitation = async () => {
     // Pre-fill editable fields from invitation
     firstName.value = data.first_name || ''
     lastName.value = data.last_name || ''
-    email.value = data.email || ''
+    // Don't pre-fill placeholder emails generated during invite creation
+    const isPlaceholderEmail = data.email?.startsWith('pending_') && data.email?.includes('@invite.simy.ch')
+    email.value = isPlaceholderEmail ? '' : (data.email || '')
     if (email.value) onEmailInput(email.value)
     phone.value = data.phone || ''
     logger.debug('✅ Invitation loaded:', data)

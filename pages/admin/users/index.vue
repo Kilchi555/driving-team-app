@@ -1090,6 +1090,11 @@ const loadUsers = async () => {
     logger.debug('✅ Users loaded from API:', users.value.length)
 
     // Load pending staff invitations
+    if (!tenantId) {
+      logger.warn('⚠️ Cannot load invitations: tenantId is undefined')
+      return
+    }
+
     const { data: invitationsData, error: invitationsError } = await supabase
       .from('staff_invitations')
       .select('*')
@@ -1098,7 +1103,7 @@ const loadUsers = async () => {
       .order('created_at', { ascending: false })
 
     if (invitationsError) {
-      console.warn('Warning loading invitations:', invitationsError)
+      logger.warn('Warning loading invitations:', invitationsError)
     } else if (invitationsData && invitationsData.length > 0) {
       logger.debug('✅ Invitations loaded:', invitationsData.length)
       
