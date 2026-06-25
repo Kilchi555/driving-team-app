@@ -236,21 +236,46 @@
                   </div>
 
                   <!-- Test payment (only when test mode on) -->
-                  <div v-if="walleeTenant?.wallee_test_mode">
+                  <div v-if="walleeTenant?.wallee_test_mode" class="space-y-2">
                     <button @click="createTestPayment" :disabled="walleeTestPaymentLoading"
                       class="text-xs py-1.5 px-3 rounded-lg font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 disabled:opacity-50 transition-colors">
                       {{ walleeTestPaymentLoading ? 'Erstelle…' : '💳 Test-Zahlung erstellen (CHF 1.00)' }}
                     </button>
-                    <div v-if="walleeTestPaymentResult" class="mt-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-xs text-blue-800 flex items-start gap-2">
-                      <span>✅</span>
-                      <div>
-                        <p class="font-medium">{{ walleeTestPaymentResult.message }}</p>
-                        <a :href="walleeTestPaymentResult.paymentUrl" target="_blank"
-                          class="underline text-blue-700 font-medium mt-0.5 block">
-                          → Zahlung öffnen &amp; abschliessen (CHF {{ walleeTestPaymentResult.amount }})
+
+                    <div v-if="walleeTestPaymentResult" class="rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-xs text-blue-800 space-y-1.5">
+                      <p class="font-medium">{{ walleeTestPaymentResult.message }}</p>
+
+                      <a :href="walleeTestPaymentResult.paymentUrl" target="_blank"
+                        class="flex items-center gap-1 underline text-blue-700 font-medium">
+                        → Zahlung öffnen &amp; abschliessen (CHF {{ walleeTestPaymentResult.amount }})
+                      </a>
+
+                      <!-- Status checker -->
+                      <div class="pt-1 border-t border-blue-200 flex items-center gap-2 flex-wrap">
+                        <button @click="checkPaymentStatus" :disabled="walleeStatusChecking"
+                          class="py-1 px-2 rounded font-medium bg-blue-100 hover:bg-blue-200 text-blue-800 disabled:opacity-50 transition-colors">
+                          {{ walleeStatusChecking ? 'Prüfe…' : '🔄 Status prüfen' }}
+                        </button>
+
+                        <span v-if="walleePaymentStatus" :class="[
+                          'inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold',
+                          walleePaymentStatus.dbStatus === 'completed' ? 'bg-green-100 text-green-800' :
+                          walleePaymentStatus.dbStatus === 'failed'    ? 'bg-red-100 text-red-800' :
+                                                                          'bg-amber-100 text-amber-800'
+                        ]">
+                          {{ walleePaymentStatus.dbStatus === 'completed' ? '✅' : walleePaymentStatus.dbStatus === 'failed' ? '❌' : '⏳' }}
+                          DB: {{ walleePaymentStatus.dbStatus }}
+                          <span v-if="walleePaymentStatus.walleeState" class="opacity-70">/ Wallee: {{ walleePaymentStatus.walleeState }}</span>
+                        </span>
+
+                        <a v-if="walleePaymentStatus?.walleeDashboardUrl"
+                          :href="walleePaymentStatus.walleeDashboardUrl" target="_blank"
+                          class="underline text-blue-600">
+                          Im Wallee-Dashboard öffnen →
                         </a>
-                        <p class="text-blue-500 mt-0.5">Transaction ID: {{ walleeTestPaymentResult.transactionId }}</p>
                       </div>
+
+                      <p class="text-blue-400">Transaction ID: {{ walleeTestPaymentResult.transactionId }}</p>
                     </div>
                   </div>
 
@@ -402,7 +427,9 @@ const pciForm            = ref({ approver: '', title: '' })
 
 // Test payment state
 const walleeTestPaymentLoading = ref(false)
-const walleeTestPaymentResult  = ref<{ paymentUrl: string; transactionId: string; spaceId: number; isTestMode: boolean; amount: number; message: string } | null>(null)
+const walleeTestPaymentResult  = ref<{ paymentUrl: string; transactionId: string; paymentId: string; spaceId: number; isTestMode: boolean; amount: number; message: string } | null>(null)
+const walleeStatusChecking     = ref(false)
+const walleePaymentStatus      = ref<{ dbStatus: string; walleeState: string | null; walleeDashboardUrl: string | null } | null>(null)
 
 // Test-Modus state
 const walleeTestForm            = ref({ space_id: '', user_id: '', secret_key: '' })
@@ -426,6 +453,7 @@ const openWalleeActivation = (tenant: any) => {
   walleeTestFormResult.value = null
   walleeTestCredentialsSaved.value = false
   walleeTestPaymentResult.value = null
+  walleePaymentStatus.value = null
   pciForm.value      = { approver: '', title: '' }
   walleeError.value  = ''
   showWalleeModal.value = true
@@ -495,6 +523,21 @@ const toggleWalleeAdmin = async () => {
   } catch (err: any) {
     walleeError.value = err?.data?.statusMessage || 'Fehler beim Umschalten'
   } finally { walleeLoading.value = false }
+}
+
+const checkPaymentStatus = async () => {
+  if (!walleeTestPaymentResult.value?.paymentId) return
+  walleeStatusChecking.value = true
+  try {
+    const result = await $fetch<any>('/api/admin/wallee-check-payment-status', {
+      query: { payment_id: walleeTestPaymentResult.value.paymentId },
+    })
+    walleePaymentStatus.value = result
+  } catch (err: any) {
+    walleeError.value = err?.data?.statusMessage || 'Status konnte nicht geladen werden'
+  } finally {
+    walleeStatusChecking.value = false
+  }
 }
 
 const createTestPayment = async () => {
