@@ -801,7 +801,7 @@ onMounted(() => loadTenants())
 .sa-toggle-on  { background:#4f46e5; }
 .sa-toggle-off { background:#374151; }
 .sa-toggle-thumb {
-  position:absolute; top:2px;
+  position:absolute; top:2px; left:2px;
   width:20px; height:20px; border-radius:50%; background:white;
   box-shadow:0 1px 4px rgba(0,0,0,0.3); transition:transform 0.2s;
 }
