@@ -136,6 +136,9 @@
                 Kategorie
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Fahrkategorien
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Preis
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -180,6 +183,18 @@
                 <span v-else class="text-gray-400">-</span>
               </td>
               <td class="px-6 py-4">
+                <div v-if="product.allowed_driving_category_codes && product.allowed_driving_category_codes.length > 0" class="flex flex-wrap gap-1">
+                  <span
+                    v-for="code in product.allowed_driving_category_codes"
+                    :key="code"
+                    class="inline-flex px-1.5 py-0.5 text-xs bg-indigo-100 text-indigo-800 rounded font-medium"
+                  >
+                    {{ code }}
+                  </span>
+                </div>
+                <span v-else class="text-xs text-gray-400">Alle</span>
+              </td>
+              <td class="px-6 py-4">
                 <div class="text-sm font-medium text-gray-900">
                   CHF {{ (product.price_rappen / 100).toFixed(2) }}
                 </div>
@@ -215,7 +230,7 @@
 
             <!-- Empty State -->
             <tr v-if="filteredProducts.length === 0">
-              <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+              <td colspan="7" class="px-6 py-12 text-center text-gray-500">
                 <div class="text-lg">📦 Keine Produkte gefunden</div>
                 <div class="text-sm mt-2">
                   {{ searchTerm || selectedCategory || selectedStatus ? 'Versuchen Sie eine andere Suche' : 'Erstellen Sie das erste Produkt' }}
@@ -410,6 +425,45 @@
             />
           </div>
 
+          <!-- Driving Category Restriction -->
+          <div v-if="leafDrivingCategories.length > 0" class="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+            <div class="mb-3">
+              <label class="text-sm font-medium text-indigo-800">
+                🚗 Fahrkategorie-Zuordnung
+              </label>
+              <p class="text-xs text-indigo-600 mt-1">
+                Wähle aus, in welchen Fahrkategorien dieses Produkt im EventModal erscheint.
+                Ohne Auswahl = in allen Kategorien sichtbar (Standard).
+              </p>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <label
+                v-for="cat in leafDrivingCategories"
+                :key="cat.code"
+                class="flex items-center gap-2 cursor-pointer p-2 rounded-lg border transition-colors"
+                :class="formData.allowed_driving_category_codes.includes(cat.code)
+                  ? 'bg-indigo-100 border-indigo-400'
+                  : 'bg-white border-gray-200 hover:border-indigo-300'"
+              >
+                <input
+                  type="checkbox"
+                  :value="cat.code"
+                  v-model="formData.allowed_driving_category_codes"
+                  class="rounded border-gray-300"
+                  :style="{ accentColor: primaryColor }"
+                />
+                <span class="text-sm font-medium text-gray-800">{{ cat.code }}</span>
+                <span class="text-xs text-gray-500 truncate">{{ cat.name }}</span>
+              </label>
+            </div>
+            <p v-if="formData.allowed_driving_category_codes.length === 0" class="text-xs text-indigo-500 mt-2">
+              ✅ Erscheint in allen Fahrkategorien
+            </p>
+            <p v-else class="text-xs text-indigo-700 mt-2 font-medium">
+              Nur sichtbar in: {{ formData.allowed_driving_category_codes.join(', ') }}
+            </p>
+          </div>
+
           <!-- Stock Management -->
           <div class="space-y-4">
             <div class="flex items-center">
@@ -564,13 +618,24 @@ interface Product {
   created_at: string
   is_voucher?: boolean
   allow_custom_amount?: boolean
-  is_credit_product?: boolean  // ✅ NEW
-  credit_amount_rappen?: number  // ✅ NEW
+  is_credit_product?: boolean
+  credit_amount_rappen?: number
   show_in_shop?: boolean
+  allowed_driving_category_codes?: string[] | null
+}
+
+interface DrivingCategory {
+  id: number
+  code: string
+  name: string
+  color: string
+  is_active: boolean
+  parent_category_id?: number | null
 }
 
 // State
 const products = ref<Product[]>([])
+const drivingCategories = ref<DrivingCategory[]>([])
 const isLoading = ref(false)
 const showModal = ref(false)
 const showStatisticsModal = ref(false)
@@ -584,7 +649,7 @@ const topSellingProduct = ref<{ name: string; quantity: number }>({ name: '', qu
 const formData = ref({
   name: '',
   description: '',
-  price: 0.01, // Changed from 0 to 0.01 to make form valid initially
+  price: 0.01,
   category: '',
   track_stock: false,
   stock_quantity: 0,
@@ -593,9 +658,10 @@ const formData = ref({
   is_active: true,
   is_voucher: false,
   allow_custom_amount: false,
-  is_credit_product: false,  // ✅ NEW
-  credit_amount: 0,  // ✅ NEW
-  show_in_shop: false
+  is_credit_product: false,
+  credit_amount: 0,
+  show_in_shop: false,
+  allowed_driving_category_codes: [] as string[]
 })
 
 // Auto-set show_in_shop based on category (mirrors migration logic)
@@ -644,6 +710,16 @@ const uniqueCategories = computed(() => {
 const totalProducts = computed(() => products.value.length)
 const activeProducts = computed(() => products.value.filter(p => p.is_active).length)
 const categoriesCount = computed(() => uniqueCategories.value.length)
+
+// Show sub-categories when a parent has children; otherwise show the parent itself.
+const leafDrivingCategories = computed(() => {
+  const parentIds = new Set(
+    drivingCategories.value
+      .filter(c => c.parent_category_id != null)
+      .map(c => c.parent_category_id as number)
+  )
+  return drivingCategories.value.filter(c => !parentIds.has(c.id))
+})
 
 const isFormValid = computed(() => {
   // Wenn individueller Betrag erlaubt ist, brauchen wir keinen Preis
@@ -694,7 +770,7 @@ const openCreateModal = () => {
   formData.value = {
     name: '',
     description: '',
-    price: 0.01, // Changed from 0 to 0.01 to make form valid initially
+    price: 0.01,
     category: '',
     track_stock: false,
     stock_quantity: 0,
@@ -703,8 +779,10 @@ const openCreateModal = () => {
     is_active: true,
     is_voucher: false,
     allow_custom_amount: false,
-    is_credit_product: false,  // ✅ NEW
-    credit_amount: 0  // ✅ NEW
+    is_credit_product: false,
+    credit_amount: 0,
+    show_in_shop: false,
+    allowed_driving_category_codes: []
   }
   showModal.value = true
 }
@@ -723,9 +801,10 @@ const editProduct = (product: Product) => {
     is_active: product.is_active,
     is_voucher: product.is_voucher || false,
     allow_custom_amount: product.allow_custom_amount || false,
-    is_credit_product: product.is_credit_product || false,  // ✅ NEW
-    credit_amount: product.credit_amount_rappen ? product.credit_amount_rappen / 100 : 0,  // ✅ NEW
-    show_in_shop: product.show_in_shop || false
+    is_credit_product: product.is_credit_product || false,
+    credit_amount: product.credit_amount_rappen ? product.credit_amount_rappen / 100 : 0,
+    show_in_shop: product.show_in_shop || false,
+    allowed_driving_category_codes: product.allowed_driving_category_codes || []
   }
   showModal.value = true
 }
@@ -763,7 +842,10 @@ const saveProduct = async () => {
       allow_custom_amount: formData.value.is_voucher ? formData.value.allow_custom_amount : false,
       is_credit_product: formData.value.is_credit_product,
       credit_amount_rappen: formData.value.is_credit_product ? Math.round(formData.value.credit_amount * 100) : null,
-      show_in_shop: formData.value.show_in_shop
+      show_in_shop: formData.value.show_in_shop,
+      allowed_driving_category_codes: formData.value.allowed_driving_category_codes.length > 0
+        ? formData.value.allowed_driving_category_codes
+        : null
     }
 
     logger.debug('📦 Product data to save:', productData)
@@ -813,9 +895,19 @@ const toggleProductStatus = async (product: Product) => {
   }
 }
 
+const loadDrivingCategories = async () => {
+  try {
+    const response = await $fetch('/api/admin/categories') as any
+    drivingCategories.value = (response.categories || []).filter((c: DrivingCategory) => c.is_active)
+  } catch (error) {
+    console.error('❌ Error loading driving categories:', error)
+  }
+}
+
 // Lifecycle
 // Load data immediately when component is created (not waiting for mount)
 loadProducts()
+loadDrivingCategories()
 
 // Auth check
 const authStore = useAuthStore()

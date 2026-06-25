@@ -4167,6 +4167,83 @@
               class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
             />
           </div>
+
+          <!-- Refund Preview Section -->
+          <div v-if="refundPreviewLoading" class="flex items-center gap-2 text-sm text-gray-500 py-2">
+            <svg class="animate-spin h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            Zahlung wird geprüft…
+          </div>
+
+          <div v-else-if="refundPreview?.payment" class="rounded-lg border overflow-hidden">
+            <div class="px-3 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+              <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Zahlungsstatus</span>
+              <span
+                class="text-xs font-medium px-2 py-0.5 rounded-full"
+                :class="{
+                  'bg-green-100 text-green-700': refundPreview.payment.status === 'completed',
+                  'bg-yellow-100 text-yellow-700': refundPreview.payment.status === 'pending',
+                  'bg-gray-100 text-gray-600': !['completed','pending'].includes(refundPreview.payment.status),
+                }"
+              >
+                {{ refundPreview.payment.status === 'completed' ? 'Bezahlt' : refundPreview.payment.status === 'pending' ? 'Ausstehend' : refundPreview.payment.status }}
+              </span>
+            </div>
+            <div class="px-3 py-2 space-y-1 text-sm text-gray-700">
+              <div class="flex justify-between">
+                <span class="text-gray-500">Bezahlt</span>
+                <span class="font-medium">CHF {{ refundPreview.payment.totalPaidChf.toFixed(2) }}</span>
+              </div>
+              <div v-if="refundPreview.payment.creditUsedChf > 0" class="flex justify-between text-xs">
+                <span class="text-gray-400">davon Guthaben</span>
+                <span>CHF {{ refundPreview.payment.creditUsedChf.toFixed(2) }}</span>
+              </div>
+              <div v-if="refundPreview.policyName" class="flex justify-between text-xs border-t border-gray-100 pt-1 mt-1">
+                <span class="text-gray-400">Policy</span>
+                <span class="text-right">{{ refundPreview.policyName }}</span>
+              </div>
+              <div v-if="refundPreview.policyDescription" class="text-xs text-gray-500 italic">{{ refundPreview.policyDescription }}</div>
+            </div>
+
+            <!-- Refund amount highlight -->
+            <div
+              v-if="refundPreview.refundAmountChf > 0"
+              class="px-3 py-2 border-t border-gray-100 flex items-center justify-between"
+              :class="refundPreview.canRefundViaWallee ? 'bg-green-50' : 'bg-gray-50'"
+            >
+              <span class="text-sm font-medium" :class="refundPreview.canRefundViaWallee ? 'text-green-800' : 'text-gray-700'">
+                Rückerstattung ({{ refundPreview.refundPercentage }}%)
+              </span>
+              <span class="text-sm font-bold" :class="refundPreview.canRefundViaWallee ? 'text-green-700' : 'text-gray-800'">
+                CHF {{ refundPreview.refundAmountChf.toFixed(2) }}
+              </span>
+            </div>
+            <div v-else class="px-3 py-2 border-t border-gray-100 bg-gray-50 text-xs text-gray-500">
+              Keine Rückerstattung gemäss Stornierungsrichtlinie
+            </div>
+
+            <!-- Wallee refund toggle (only shown if all conditions met AND admin actively opts in) -->
+            <div v-if="refundPreview.canRefundViaWallee && refundPreview.refundAmountChf > 0" class="px-3 py-3 border-t border-gray-100">
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input type="checkbox" v-model="removalProcessRefund" class="w-4 h-4 mt-0.5 rounded border-gray-300 text-green-600 focus:ring-green-400" />
+                <div>
+                  <span class="text-sm font-medium text-gray-900">CHF {{ refundPreview.refundAmountChf.toFixed(2) }} via Wallee zurückerstatten</span>
+                  <p class="text-xs text-gray-400 mt-0.5">Geld wird direkt auf das Zahlungsmittel des Teilnehmers zurückgebucht (3–5 Werktage). Muss aktiv aktiviert werden.</p>
+                </div>
+              </label>
+            </div>
+            <div v-else-if="!refundPreview.canRefundViaWallee && refundPreview.payment?.status === 'completed' && refundPreview.refundBlockedReason" class="px-3 py-2 border-t border-gray-100 bg-yellow-50 flex gap-2 items-start">
+              <svg class="w-4 h-4 text-yellow-600 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+              <p class="text-xs text-yellow-700">{{ refundPreview.refundBlockedReason }}</p>
+            </div>
+          </div>
+
+          <div v-else-if="!refundPreviewLoading && refundPreview !== null && !refundPreview?.payment" class="text-sm text-gray-400 italic">
+            Keine Zahlung gefunden — keine Rückerstattung notwendig.
+          </div>
+
           <label class="flex items-center gap-3 cursor-pointer select-none p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
             <input type="checkbox" v-model="removalNotify" class="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-400" />
             <div>
@@ -4178,7 +4255,12 @@
         <div class="px-6 py-4 border-t border-gray-200 flex gap-3 justify-end">
           <button @click="showRemoveParticipantModal = false" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition-colors">Abbrechen</button>
           <button @click="confirmRemoveParticipant" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors">
-            {{ removalNotify ? 'Entfernen & E-Mail senden' : 'Entfernen (ohne Benachrichtigung)' }}
+            <span v-if="removalProcessRefund && refundPreview?.refundAmountChf > 0">
+              Entfernen &amp; CHF {{ refundPreview.refundAmountChf.toFixed(2) }} rückerstatten
+            </span>
+            <span v-else>
+              {{ removalNotify ? 'Entfernen & E-Mail senden' : 'Entfernen (ohne Benachrichtigung)' }}
+            </span>
           </button>
         </div>
       </div>
@@ -4367,6 +4449,11 @@ const removalReasons = ['Krankheit', 'Persönliche Gründe', 'Umplanung', 'Keine
 const removalReason = ref('')
 const removalReasonCustom = ref('')
 const removalNotify = ref(true)
+
+// Refund Preview State
+const refundPreview = ref<any>(null)
+const refundPreviewLoading = ref(false)
+const removalProcessRefund = ref(false)
 
 // Status Change Modal
 const showStatusChangeModal = ref(false)
@@ -6745,12 +6832,30 @@ const addParticipant = async () => {
   }
 }
 
-const removeParticipant = (enrollment: any) => {
+const removeParticipant = async (enrollment: any) => {
   removingParticipant.value = enrollment
   removalReason.value = ''
   removalReasonCustom.value = ''
   removalNotify.value = true
+  removalProcessRefund.value = false
+  refundPreview.value = null
   showRemoveParticipantModal.value = true
+
+  // Load refund preview in background
+  refundPreviewLoading.value = true
+  try {
+    const preview = await $fetch('/api/admin/courses/refund-preview', {
+      method: 'POST',
+      body: { enrollmentId: enrollment.id },
+    }) as any
+    refundPreview.value = preview
+    // Default always false — admin must actively opt in to the refund
+  } catch {
+    // Non-fatal: just hide the refund section
+    refundPreview.value = null
+  } finally {
+    refundPreviewLoading.value = false
+  }
 }
 
 const confirmRemoveParticipant = async () => {
@@ -6763,16 +6868,28 @@ const confirmRemoveParticipant = async () => {
     || ''
 
   try {
-    await $fetch('/api/admin/courses/remove-participant', {
+    const result = await $fetch('/api/admin/courses/remove-participant', {
       method: 'POST',
-      body: { enrollmentId: enrollment.id, reason: reasonText || undefined, notify: removalNotify.value },
-    })
+      body: {
+        enrollmentId: enrollment.id,
+        reason: reasonText || undefined,
+        notify: removalNotify.value,
+        processRefund: removalProcessRefund.value,
+        refundAmountChf: removalProcessRefund.value ? (refundPreview.value?.refundAmountChf ?? undefined) : undefined,
+      },
+    }) as any
 
     // Reload enrollments
     await loadCourseEnrollments(selectedCourse.value.id)
     await loadCourses() // Update course statistics
-    
-    success.value = 'Teilnehmer erfolgreich entfernt!'
+
+    if (result?.refund?.success) {
+      success.value = `Teilnehmer entfernt. CHF ${result.refund.refundedAmountChf?.toFixed(2)} wurden via Wallee zurückerstattet.`
+    } else if (removalProcessRefund.value && result?.refund?.error) {
+      success.value = `Teilnehmer entfernt. Rückerstattung fehlgeschlagen: ${result.refund.error}`
+    } else {
+      success.value = 'Teilnehmer erfolgreich entfernt!'
+    }
   } catch (err) {
     console.error('Error removing participant:', err)
     error.value = 'Fehler beim Entfernen des Teilnehmers'

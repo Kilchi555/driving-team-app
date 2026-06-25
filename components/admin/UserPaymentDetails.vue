@@ -1258,14 +1258,14 @@ v-if="(appointment.credit_used || 0) > 0"
               class="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors sm:ml-3"
               @click="executeConfirmAction"
             >
-              Bestätigen
+              {{ confirmLabel || 'Bestätigen' }}
             </button>
             <button
               type="button"
               class="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
               @click="cancelAction"
             >
-              Abbrechen
+              {{ cancelLabel || 'Abbrechen' }}
             </button>
           </div>
         </div>
@@ -1309,6 +1309,15 @@ v-if="(appointment.credit_used || 0) > 0"
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
         </svg>
         Erneut senden
+      </button>
+      <button
+        class="w-full text-left px-4 py-2 text-xs text-green-700 hover:bg-green-50 border-b border-gray-200 flex items-center font-semibold"
+        @click.stop="markInvoicedAsPaid(appointments.find(a => a.id === openInvoiceMenu)!)"
+      >
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Als bezahlt markieren
       </button>
       <button
         class="w-full text-left px-4 py-2 text-xs text-blue-700 hover:bg-blue-50 border-b border-gray-200 flex items-center"
@@ -1507,6 +1516,8 @@ const showConfirmModal = ref(false)
 const confirmTitle = ref('')
 const confirmMessage = ref('')
 const confirmAction = ref<(() => void) | null>(null)
+const confirmLabel = ref('')
+const cancelLabel = ref('')
 
 // Computed properties for display
 const displayName = computed(() => {
@@ -1638,8 +1649,7 @@ const filteredAppointments = computed(() => {
     case 'deleted':
       return appointments.value.filter(apt => apt.deleted_at)
     default:
-      // Show ALL appointments (including cancelled and deleted)
-      return appointments.value
+      return appointments.value.filter(apt => !apt.deleted_at)
   }
 })
 
@@ -2386,26 +2396,33 @@ const deleteAppointmentAction = async (appointment: Appointment) => {
     // Soft-Delete appointment + associated payments via secure API
     await paymentOp('soft_delete_appointment', { appointment_id: appointment.id })
     
-    // Send deletion notification (SMS/Email) to customer
-    try {
-      await $fetch('/api/reminders/send-deletion-notification', {
-        method: 'POST',
-        body: {
-          appointmentId: appointment.id,
-          userId: appointment.user_id,
-          tenantId: appointment.tenant_id,
-          type: 'customer'
-        }
-      })
-    } catch (smsError) {
-      console.warn('⚠️ Could not send deletion notification SMS/Email:', smsError)
-    }
-    
-    // Aktualisiere den lokalen Termin-Status
+    // Termin sofort aus der UI entfernen (deleted_at setzen)
     const appointmentIndex = appointments.value.findIndex(apt => apt.id === appointment.id)
     if (appointmentIndex !== -1) {
       appointments.value[appointmentIndex].deleted_at = new Date().toISOString()
     }
+
+    // Kunde benachrichtigen? → Admin wird gefragt
+    showConfirmation(
+      'Kunde benachrichtigen?',
+      'Soll der Kunde per SMS/Email über die Löschung dieses Termins informiert werden?',
+      async () => {
+        try {
+          await $fetch('/api/reminders/send-deletion-notification', {
+            method: 'POST',
+            body: {
+              appointmentId: appointment.id,
+              userId: appointment.user_id,
+              tenantId: appointment.tenant_id,
+              type: 'customer'
+            }
+          })
+        } catch (smsError) {
+          console.warn('⚠️ Could not send deletion notification SMS/Email:', smsError)
+        }
+      },
+      { confirmLabel: 'Ja, benachrichtigen', cancelLabel: 'Nein, überspringen' }
+    )
     
     // Schöne Erfolgsmeldung
     showSuccessToast(
@@ -2607,9 +2624,36 @@ const resendInvoice = async (appointment: Appointment) => {
   )
 }
 
+const markInvoicedAsPaid = async (appointment: Appointment) => {
+  openInvoiceMenu.value = null
+
+  showConfirmation(
+    'Als bezahlt markieren',
+    `Möchtest du die Rechnung für "${appointment.title}" als bezahlt markieren? Das Payment wird auf "completed" gesetzt.`,
+    async () => {
+      isUpdatingPayment.value = true
+      try {
+        await paymentOp('mark_paid', {
+          appointment_id: appointment.id,
+          user_id: userId,
+          amount_rappen: Math.round(calculateAppointmentAmount(appointment) * 100)
+        })
+
+        showSuccessToast('✅ Als bezahlt markiert', 'Die Rechnung wurde als bezahlt markiert.')
+        await loadUserAppointments()
+      } catch (err: any) {
+        showErrorToast('Fehler', `Fehler beim Markieren: ${err.message}`)
+      } finally {
+        isUpdatingPayment.value = false
+      }
+    },
+    { confirmLabel: 'Ja, als bezahlt markieren', cancelLabel: 'Abbrechen' }
+  )
+}
+
 const switchToCash = async (appointment: Appointment) => {
   openInvoiceMenu.value = null
-  
+
   showConfirmation(
     'Zu Bar bezahlt wechseln',
     `Möchtest du die Zahlung für "${appointment.title}" zu "Bar bezahlt" wechseln?`,
@@ -2866,10 +2910,12 @@ const closeToast = () => {
 }
 
 // Confirmation functions
-const showConfirmation = (title: string, message: string, action: () => void) => {
+const showConfirmation = (title: string, message: string, action: () => void, options?: { confirmLabel?: string, cancelLabel?: string }) => {
   confirmTitle.value = title
   confirmMessage.value = message
   confirmAction.value = action
+  confirmLabel.value = options?.confirmLabel || ''
+  cancelLabel.value = options?.cancelLabel || ''
   showConfirmModal.value = true
 }
 
@@ -2879,11 +2925,15 @@ const executeConfirmAction = () => {
   }
   showConfirmModal.value = false
   confirmAction.value = null
+  confirmLabel.value = ''
+  cancelLabel.value = ''
 }
 
 const cancelAction = () => {
   showConfirmModal.value = false
   confirmAction.value = null
+  confirmLabel.value = ''
+  cancelLabel.value = ''
 }
 
 // Test function for debugging
@@ -3104,19 +3154,25 @@ const sendDirectEmail = async () => {
     }
     
     // Rechnungspositionen vorbereiten
-    const invoiceItems = selectedAppointmentData.map((appointment, index) => ({
-      product_name: appointment.title || 'Fahrstunde',
-      product_description: `Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')}`,
-      appointment_id: appointment.id,
-      appointment_title: appointment.title,
-      appointment_date: appointment.start_time,
-      appointment_duration_minutes: appointment.duration_minutes,
-      quantity: 1,
-      unit_price_rappen: appointment.amount,
-      vat_rate: 7.70,
-      sort_order: index,
-      notes: `Termin: ${appointment.title}`
-    }))
+    const invoiceItems = selectedAppointmentData.map((appointment, index) => {
+      const unitPrice = appointment.amount || 0
+      const vatAmount = Math.round(unitPrice * 7.70 / 100)
+      return {
+        product_name: appointment.title || 'Fahrstunde',
+        product_description: `Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')}`,
+        appointment_id: appointment.id,
+        appointment_title: appointment.title,
+        appointment_date: appointment.start_time,
+        appointment_duration_minutes: appointment.duration_minutes,
+        quantity: 1,
+        unit_price_rappen: unitPrice,
+        total_price_rappen: unitPrice,
+        vat_rate: 7.70,
+        vat_amount_rappen: vatAmount,
+        sort_order: index,
+        notes: `Termin: ${appointment.title}`
+      }
+    })
     
     logger.debug('📋 Invoice data prepared for database:', { invoiceFormData, invoiceItems })
     

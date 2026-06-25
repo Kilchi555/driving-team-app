@@ -503,7 +503,7 @@
                 <div 
                   v-for="feature in featureDefinitions" 
                   :key="feature.key"
-                  class="bg-gray-50 rounded-lg border p-3 sm:p-4 hover:shadow-md transition-shadow"
+                  class="bg-gray-50 rounded-lg border p-3 sm:p-4 hover:shadow-md transition-shadow flex flex-col"
                 >
                   <div class="flex flex-col h-full">
                     <div class="flex-1 mb-3">
@@ -520,6 +520,23 @@
                           <span :class="['absolute top-0.5 left-0.5 h-4 w-4 sm:h-5 sm:w-5 bg-white rounded-full transition-transform', feature.isEnabled ? 'translate-x-4' : 'translate-x-0']"></span>
                         </div>
                       </label>
+                    </div>
+                  </div>
+
+                  <!-- Hinweis für Fahrzeit-Check bei Pickup -->
+                  <div
+                    v-if="feature.key === 'customer_plz_travel_check_enabled' && feature.isEnabled"
+                    class="mt-3 pt-3 border-t border-amber-200 bg-amber-50 -mx-3 -mb-3 sm:-mx-4 sm:-mb-4 px-3 sm:px-4 pb-3 sm:pb-4 rounded-b-lg"
+                  >
+                    <div class="flex gap-2">
+                      <svg class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      <div class="text-xs text-amber-800 leading-relaxed">
+                        <p class="font-semibold mb-1">Zusätzliche Konfiguration erforderlich</p>
+                        <p>Damit Kunden den Fahrzeit-Check beim Buchen sehen, muss <strong>pro Standort</strong> noch festgelegt werden, für welche <strong>Fahrzeugkategorien</strong> der Pickup-Service angeboten wird.</p>
+                        <p class="mt-1">Dies machst du unter <strong>Admin → Mitarbeiter → Standort auswählen → Kategorien</strong> (Pickup aktivieren).</p>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -211,10 +211,14 @@ export const useEventModalApi = () => {
   // ═══════════════════════════════════════════════════════════════
 
   /**
-   * Get all products for current tenant
+   * Get products for current tenant.
+   * Pass the driving licence category code (e.g. "B") to receive only products
+   * that are relevant for that category. Omit to get all products.
    */
-  const getProducts = async () => {
-    return apiCall<any[]>('/api/staff/get-products', {})
+  const getProducts = async (categoryCode?: string) => {
+    return apiCall<any[]>('/api/staff/get-products', {
+      query: categoryCode ? { category_code: categoryCode } : {}
+    })
   }
 
   /**

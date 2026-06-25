@@ -2,6 +2,8 @@
 // Convert a payment from pending (cash/invoice) back to online payment
 
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
+import { Wallee as WalleeSDK } from 'wallee'
 import { logger } from '~/utils/logger'
 
 interface ConvertToOnlineRequest {
@@ -80,29 +82,18 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 4. If there's an existing Wallee transaction, void it
-    if (payment.wallee_transaction_id) {
+    // 4. If there's an existing Wallee transaction, void it using per-tenant credentials
+    if (payment.wallee_transaction_id && payment.tenant_id) {
       logger.debug(`🔄 Voiding existing Wallee transaction: ${payment.wallee_transaction_id}`)
       try {
-        // Void the transaction
-        const voidResult = await fetch(
-          `https://app-default.wallee.com/api/transaction/void?spaceId=${process.env.WALLEE_SPACE_ID}&id=${payment.wallee_transaction_id}`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json;charset=utf-8',
-              'Authorization': `Bearer ${process.env.WALLEE_SECRET_KEY}`
-            }
-          }
-        )
-
-        if (voidResult.ok) {
-          logger.debug(`✅ Wallee transaction ${payment.wallee_transaction_id} voided`)
-        } else {
-          console.warn(`⚠️ Could not void Wallee transaction: ${voidResult.statusText}`)
-        }
-      } catch (err) {
-        console.error(`❌ Error voiding Wallee transaction:`, err)
+        const walleeConfig = await getWalleeConfigForTenant(payment.tenant_id)
+        const sdkConfig = getWalleeSDKConfig(walleeConfig.spaceId, walleeConfig.userId, walleeConfig.apiSecret)
+        const transactionVoidService = new WalleeSDK.api.TransactionVoidService(sdkConfig)
+        await transactionVoidService.voidOnline(walleeConfig.spaceId, parseInt(payment.wallee_transaction_id))
+        logger.debug(`✅ Wallee transaction ${payment.wallee_transaction_id} voided`)
+      } catch (err: any) {
+        // Non-fatal — the transaction may already be in a final state
+        logger.warn(`⚠️ Could not void Wallee transaction ${payment.wallee_transaction_id}: ${err.message}`)
       }
     }
 

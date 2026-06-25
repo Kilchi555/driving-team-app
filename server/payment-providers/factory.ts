@@ -5,17 +5,20 @@ import type { IPaymentProvider, PaymentProviderConfig } from './types'
 import { WalleeProvider } from './wallee-provider'
 import { StripeProvider } from './stripe-provider'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getWalleeConfigForTenant } from '~/server/utils/wallee-config'
 import { logger } from '~/utils/logger'
 import { createError } from 'h3'
 
 /**
  * Lädt die Payment Provider Konfiguration für einen Tenant aus der Datenbank
- * ✅ SECURITY: wallee_secret_key comes from environment variable only
+ * Credentials resolution order:
+ *   1. tenant_secrets table (per-tenant, encrypted) — preferred
+ *   2. tenants table (space_id / user_id) + WALLEE_SECRET_KEY env var — legacy fallback
  */
 export async function getPaymentProviderConfig(tenantId: string): Promise<PaymentProviderConfig> {
   const supabase = getSupabaseAdmin()
 
-  // ✅ SECURITY: Only load non-sensitive IDs from database
+  // Check wallee_enabled flag from tenants table
   const { data: tenant, error } = await supabase
     .from('tenants')
     .select('wallee_space_id, wallee_user_id, wallee_onboarding_status, wallee_enabled')
@@ -39,25 +42,15 @@ export async function getPaymentProviderConfig(tenantId: string): Promise<Paymen
     throw createError({ statusCode: 402, statusMessage: msg })
   }
 
-  // ✅ SECURITY: API Secret ALWAYS comes from environment variable (never from DB)
-  const apiSecret = process.env.WALLEE_SECRET_KEY
-  if (!apiSecret) {
-    throw new Error('WALLEE_SECRET_KEY environment variable is required')
-  }
-
-  const spaceId = tenant.wallee_space_id
-  const userId  = tenant.wallee_user_id
-
-  if (!spaceId || !userId) {
-    throw new Error('Wallee credentials (space_id / user_id) not configured for tenant')
-  }
+  // Load full Wallee config via the shared helper (tenant_secrets → env var fallback)
+  const walleeConfig = await getWalleeConfigForTenant(tenantId)
 
   return {
     provider: 'wallee',
-    apiKey: '', // Nicht verwendet für Wallee
-    spaceId,
-    userId,
-    apiSecret,
+    apiKey: '',
+    spaceId: walleeConfig.spaceId,
+    userId: walleeConfig.userId,
+    apiSecret: walleeConfig.apiSecret,
     isActive: true
   }
 }

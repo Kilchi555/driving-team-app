@@ -194,6 +194,30 @@ export default defineEventHandler(async (event) => {
       return { success: true, data }
     }
 
+    if (action === 'get-user-appointments') {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('id, start_time, end_time, status, duration_minutes')
+        .eq('user_id', user_id)
+        .order('start_time', { ascending: false })
+        .limit(200)
+
+      if (error) throw error
+      return { success: true, data: data || [] }
+    }
+
+    if (action === 'get-tenant-categories') {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, code, name, is_active, parent_category_id')
+        .eq('tenant_id', tenant_id)
+        .eq('is_active', true)
+        .order('code')
+
+      if (error) throw error
+      return { success: true, data: data || [] }
+    }
+
     throw createError({
       statusCode: 400,
       message: `Unknown action: ${action}`

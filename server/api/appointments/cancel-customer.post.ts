@@ -8,6 +8,7 @@ import { logAudit } from '~/server/utils/audit'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateUUID } from '~/server/utils/validators'
 import { generateCustomerCancelledAdminEmail } from '~/server/utils/email'
+import { processWalleeRefund } from '~/server/utils/wallee-refund'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -67,7 +68,7 @@ export default defineEventHandler(async (event) => {
 
     // ============ LAYER 3: READ & VALIDATE INPUT ============
     const body = await readBody(event)
-    const { appointmentId, cancellationReasonId } = body
+    const { appointmentId, cancellationReasonId, refundDestination } = body
 
     // ============ LAYER 4: INPUT VALIDATION ============
     const errors: any = {}
@@ -439,86 +440,74 @@ export default defineEventHandler(async (event) => {
       }
       
       if (payment.payment_status === 'completed') {
-        // ✅ Payment was completed → Refund the WALLEE portion to student credit (not the credit portion, that was already refunded above)
+        // Payment was completed: refund the Wallee portion either to wallet or directly via Wallee
         const creditAlreadyUsed = payment.credit_used_rappen || 0
         const walleePortionToRefund = payment.total_amount_rappen - creditAlreadyUsed
-        
+
         if (walleePortionToRefund > 0) {
-          logger.debug('💳 Refunding Wallee payment portion to student credit:', {
-            paymentId: payment.id,
-            totalAmount: (payment.total_amount_rappen / 100).toFixed(2),
-            creditUsed: (creditAlreadyUsed / 100).toFixed(2),
-            walleeRefund: (walleePortionToRefund / 100).toFixed(2)
-          })
-          
-          // Load or create student credit
-          let { data: studentCredit, error: creditError } = await supabaseAdmin
-            .from('student_credits')
-            .select('id, balance_rappen')
-            .eq('user_id', appointment.user_id)
-            .single()
-          
-          // Create if doesn't exist
-          if (creditError && creditError.code === 'PGRST116') {
-            const { data: newCredit, error: createError } = await supabaseAdmin
-              .from('student_credits')
-              .insert([{
+          if (refundDestination === 'wallee') {
+            // ── Direct Wallee refund ─────────────────────────────────────
+            logger.debug('💳 Customer chose direct Wallee refund:', {
+              paymentId: payment.id,
+              walleeRefundChf: (walleePortionToRefund / 100).toFixed(2),
+            })
+
+            const walleeResult = await processWalleeRefund({
+              payment: {
+                id: payment.id,
+                wallee_transaction_id: payment.wallee_transaction_id,
+                total_amount_rappen: payment.total_amount_rappen,
+                credit_used_rappen: creditAlreadyUsed,
+                payment_status: payment.payment_status,
+                tenant_id: userProfile.tenant_id,
+              },
+              requestedAmountRappen: walleePortionToRefund,
+              tenantId: userProfile.tenant_id,
+              idempotencyKey: `appointment-cancel-${appointmentId}`,
+              reason: `Kundenstornierung: ${reason.name_de}`,
+            })
+
+            if (walleeResult.success) {
+              logger.info('✅ Customer Wallee refund successful:', {
+                refundId: walleeResult.refundId,
+                amountChf: walleeResult.refundedAmountChf,
+              })
+
+              // Audit transaction (no balance change, refund goes back to card)
+              await supabaseAdmin.from('credit_transactions').insert([{
                 user_id: appointment.user_id,
-                balance_rappen: 0,
-                tenant_id: userProfile.tenant_id
+                tenant_id: userProfile.tenant_id,
+                transaction_type: 'cancellation',
+                amount_rappen: walleeResult.refundedAmountRappen,
+                balance_before_rappen: null,
+                balance_after_rappen: null,
+                payment_method: 'wallee_refund',
+                reference_id: appointmentId,
+                reference_type: 'appointment',
+                created_by: userProfile.id,
+                notes: `Wallee-Rückerstattung bei Kundenstornierung: ${reason.name_de} (CHF ${walleeResult.refundedAmountChf.toFixed(2)})`,
               }])
-              .select('id, balance_rappen')
-              .single()
-            
-            if (createError) {
-              console.error('❌ Failed to create student credit:', createError)
             } else {
-              studentCredit = newCredit
-              logger.debug('✅ Created new student credit record:', newCredit.id)
+              // Fallback to wallet if Wallee refund failed
+              logger.warn('⚠️ Wallee refund failed, crediting wallet instead:', walleeResult.error)
+              await creditWalletRefund(
+                supabaseAdmin, appointment.user_id, userProfile.tenant_id,
+                walleePortionToRefund, payment, appointmentId, reason.name_de, userProfile.id
+              )
             }
-          }
-          
-          if (studentCredit) {
-            const oldBalance = studentCredit.balance_rappen || 0
-            const newBalance = oldBalance + walleePortionToRefund
-            
-            // Update credit balance
-            const { error: updateCreditError } = await supabaseAdmin
-              .from('student_credits')
-              .update({
-                balance_rappen: newBalance,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', studentCredit.id)
-            
-            if (updateCreditError) {
-              console.error('❌ Failed to update student credit:', updateCreditError)
-            } else {
-              logger.debug('✅ Student credit updated (Wallee refund):', {
-                oldBalance: (oldBalance / 100).toFixed(2),
-                refund: (walleePortionToRefund / 100).toFixed(2),
-                newBalance: (newBalance / 100).toFixed(2)
-              })
-              
-              // Create credit transaction
-              await supabaseAdmin
-                .from('credit_transactions')
-                .insert([{
-                  user_id: appointment.user_id,
-                  tenant_id: userProfile.tenant_id,
-                  transaction_type: 'cancellation',
-                  amount_rappen: walleePortionToRefund,
-                  balance_before_rappen: oldBalance,
-                  balance_after_rappen: newBalance,
-                  payment_method: 'refund',
-                  reference_id: appointmentId,
-                  reference_type: 'appointment',
-                  created_by: userProfile.id,
-                  notes: `Kostenlose Stornierung (Wallee-Rückerstattung): ${reason.name_de} (CHF ${(walleePortionToRefund / 100).toFixed(2)})`
-                }])
-              
-              logger.debug('✅ Wallee refund credit transaction created')
-            }
+          } else {
+            // ── Wallet credit (default) ──────────────────────────────────
+            logger.debug('💳 Refunding Wallee payment portion to student credit:', {
+              paymentId: payment.id,
+              totalAmount: (payment.total_amount_rappen / 100).toFixed(2),
+              creditUsed: (creditAlreadyUsed / 100).toFixed(2),
+              walleeRefund: (walleePortionToRefund / 100).toFixed(2)
+            })
+
+            await creditWalletRefund(
+              supabaseAdmin, appointment.user_id, userProfile.tenant_id,
+              walleePortionToRefund, payment, appointmentId, reason.name_de, userProfile.id
+            )
           }
         }
         
@@ -528,7 +517,9 @@ export default defineEventHandler(async (event) => {
           .update({
             payment_status: 'refunded',
             refunded_at: new Date().toISOString(),
-            notes: `Kostenlose Stornierung: ${reason.name_de}`,
+            notes: refundDestination === 'wallee'
+              ? `Kundenstornierung (Wallee-Rückerstattung): ${reason.name_de}`
+              : `Kostenlose Stornierung: ${reason.name_de}`,
             updated_at: toLocalTimeString(now)
           })
           .eq('id', payment.id)
@@ -694,7 +685,8 @@ export default defineEventHandler(async (event) => {
       success: true,
       message: 'Termin erfolgreich abgesagt',
       requiresMedicalCertificate: reason.requires_proof || false,
-      chargePercentage
+      chargePercentage,
+      refundDestination: refundDestination || 'wallet',
     }
 
   } catch (error: any) {
@@ -719,4 +711,61 @@ export default defineEventHandler(async (event) => {
     throw error
   }
 })
+
+/**
+ * Credits a refund amount to the student's wallet balance.
+ * Extracted as a helper to avoid code duplication between the wallet and Wallee-fallback branches.
+ */
+async function creditWalletRefund(
+  supabase: any,
+  userId: string,
+  tenantId: string,
+  amountRappen: number,
+  payment: any,
+  appointmentId: string,
+  reasonName: string,
+  createdBy: string
+) {
+  let { data: studentCredit, error: creditError } = await supabase
+    .from('student_credits')
+    .select('id, balance_rappen')
+    .eq('user_id', userId)
+    .single()
+
+  if (creditError && creditError.code === 'PGRST116') {
+    const { data: newCredit, error: createErr } = await supabase
+      .from('student_credits')
+      .insert([{ user_id: userId, balance_rappen: 0, tenant_id: tenantId }])
+      .select('id, balance_rappen')
+      .single()
+
+    if (!createErr) studentCredit = newCredit
+  }
+
+  if (!studentCredit) return
+
+  const oldBalance = studentCredit.balance_rappen || 0
+  const newBalance = oldBalance + amountRappen
+
+  const { error: updateErr } = await supabase
+    .from('student_credits')
+    .update({ balance_rappen: newBalance, updated_at: new Date().toISOString() })
+    .eq('id', studentCredit.id)
+
+  if (!updateErr) {
+    await supabase.from('credit_transactions').insert([{
+      user_id: userId,
+      tenant_id: tenantId,
+      transaction_type: 'cancellation',
+      amount_rappen: amountRappen,
+      balance_before_rappen: oldBalance,
+      balance_after_rappen: newBalance,
+      payment_method: 'refund',
+      reference_id: appointmentId,
+      reference_type: 'appointment',
+      created_by: createdBy,
+      notes: `Kostenlose Stornierung (Gutschrift): ${reasonName} (CHF ${(amountRappen / 100).toFixed(2)})`,
+    }])
+  }
+}
 

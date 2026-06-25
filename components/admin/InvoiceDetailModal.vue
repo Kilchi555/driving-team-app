@@ -1,449 +1,412 @@
 <template>
-  <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto" @vue:mounted="onModalOpen">
-    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-      <!-- Background overlay -->
-      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="closeModal"/>
+  <!-- Backdrop -->
+  <div v-if="show" class="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:p-4" @vue:mounted="onModalOpen">
+    <div class="fixed inset-0 bg-gray-900/60 transition-opacity" @click="closeModal"/>
 
-      <!-- Modal panel -->
-      <div class="admin-modal inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
-        <!-- Header -->
-        <div class="sticky top-0 z-10 bg-white px-4 py-3 border-b border-gray-200 shadow-sm">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-medium text-gray-900">
-              {{ isEditing ? 'Rechnung bearbeiten' : 'Rechnungsdetails' }}
-            </h3>
-            <div class="flex items-center space-x-2">
-              <!-- Action Buttons -->
-              <div v-if="!isEditing" class="flex items-center space-x-2">
-                <button
-                  class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  @click="startEditing"
-                >
-                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Bearbeiten
-                </button>
-                <button
-                  class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  @click="emit('send', invoice?.id || '')"
-                >
-                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Versenden
-                </button>
-                <button
-                  class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                  @click="emit('markAsPaid', invoice?.id || '')"
-                >
-                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Als bezahlt markieren
-                </button>
-                <button
-                  class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                  @click="emit('cancel', invoice?.id || '')"
-                >
-                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  Stornieren
-                </button>
-              </div>
-              
-              <!-- Edit Mode Buttons -->
-              <div v-else class="flex items-center space-x-2">
-                <button
-                  :disabled="isSaving"
-                  class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
-                  @click="saveChanges"
-                >
-                  <svg v-if="isSaving" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                  </svg>
-                  <svg v-else class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  {{ isSaving ? 'Speichern...' : 'Speichern' }}
-                </button>
-                <button
-                  :disabled="isSaving"
-                  class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50"
-                  @click="cancelEditing"
-                >
-                  Abbrechen
-                </button>
-              </div>
-              
-              <!-- Close Button -->
-              <button
-                class="text-gray-400 hover:text-gray-600 focus:outline-none ml-2"
-                @click="closeModal"
-              >
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-              </button>
-            </div>
-          </div>
+    <!-- Modal panel – full-screen sheet on mobile, centered dialog on sm+ -->
+    <div class="admin-modal relative w-full bg-white shadow-xl transition-all
+                rounded-t-2xl max-h-[95dvh]
+                sm:rounded-2xl sm:max-w-4xl sm:max-h-[90dvh]
+                flex flex-col overflow-hidden">
+
+      <!-- ── Sticky Header ── -->
+      <div class="flex-none sticky top-0 z-10 bg-white border-b border-gray-200">
+        <!-- Mobile drag handle -->
+        <div class="flex justify-center pt-3 pb-1 sm:hidden">
+          <div class="w-10 h-1 bg-gray-300 rounded-full"/>
         </div>
 
-        <!-- Content -->
-        <div class="bg-white px-4 py-5 sm:p-6">
-          <!-- Loading state -->
-          <div v-if="!invoice" class="text-center py-8">
-            <div class="text-gray-500">Lade Rechnungsdetails...</div>
+        <div class="flex items-center justify-between px-4 py-3 gap-2">
+          <h3 class="text-base font-semibold text-gray-900 truncate">
+            <span class="hidden sm:inline">{{ isEditing ? 'Rechnung bearbeiten' : 'Rechnungsdetails' }}</span>
+            <span class="sm:hidden">{{ invoice?.invoice_number || (isEditing ? 'Bearbeiten' : 'Details') }}</span>
+          </h3>
+
+          <div class="flex items-center gap-1.5 flex-shrink-0">
+            <!-- View mode buttons -->
+            <template v-if="!isEditing">
+              <!-- Edit – icon only on mobile -->
+              <button
+                class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                @click="startEditing"
+              >
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span class="hidden sm:inline">Bearbeiten</span>
+              </button>
+              <!-- Send -->
+              <button
+                class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                @click="emit('send', invoice?.id || '')"
+              >
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span class="hidden sm:inline">Versenden</span>
+              </button>
+              <!-- Mark paid -->
+              <button
+                class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-transparent rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                @click="emit('markAsPaid', invoice?.id || '')"
+              >
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="hidden sm:inline">Als bezahlt markieren</span>
+              </button>
+              <!-- Cancel invoice -->
+              <button
+                class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-transparent rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                @click="emit('cancel', invoice?.id || '')"
+              >
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span class="hidden sm:inline">Stornieren</span>
+              </button>
+            </template>
+
+            <!-- Edit mode buttons -->
+            <template v-else>
+              <button
+                :disabled="isSaving"
+                class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-transparent rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+                @click="saveChanges"
+              >
+                <svg v-if="isSaving" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                </svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                {{ isSaving ? 'Speichern...' : 'Speichern' }}
+              </button>
+              <button
+                :disabled="isSaving"
+                class="inline-flex items-center px-2.5 py-2 sm:px-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50"
+                @click="cancelEditing"
+              >
+                Abbrechen
+              </button>
+            </template>
+
+            <!-- Close -->
+            <button class="p-1.5 text-gray-400 hover:text-gray-600 focus:outline-none ml-1" @click="closeModal">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-          
-          <!-- Invoice content -->
-          <div v-else>
-            <!-- Invoice Header -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-              <!-- Linke Spalte: Rechnungsinformationen -->
-              <div>
-                <h4 class="text-lg font-semibold text-gray-900 mb-2">Rechnungsinformationen</h4>
-                <div class="space-y-2">
-                  <div>
-                    <span class="text-sm font-medium text-gray-500">Rechnungsnummer:</span>
-                    <span class="ml-2 text-sm text-gray-900">{{ invoice.invoice_number }}</span>
+        </div>
+      </div>
+
+      <!-- ── Scrollable Content ── -->
+      <div class="flex-1 overflow-y-auto">
+        <div class="px-4 py-5 sm:px-6 space-y-6">
+
+          <!-- Loading state -->
+          <div v-if="!invoice" class="text-center py-12 text-gray-500">
+            Lade Rechnungsdetails...
+          </div>
+
+          <template v-else>
+
+            <!-- ── Info Grid: 3 cards on desktop, stacked on mobile ── -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+              <!-- Rechnungsinformationen -->
+              <div class="bg-gray-50 rounded-xl p-4 space-y-2">
+                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Rechnungsinformationen</h4>
+                <dl class="space-y-1.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <dt class="text-sm text-gray-500 flex-shrink-0">Nummer</dt>
+                    <dd class="text-sm font-medium text-gray-900 text-right">{{ invoice.invoice_number }}</dd>
                   </div>
-                  <div>
-                    <span class="text-sm font-medium text-gray-500">Status:</span>
-                    <InvoiceStatusBadge :status="invoice.status" class="ml-2" />
+                  <div class="flex items-center justify-between gap-2">
+                    <dt class="text-sm text-gray-500 flex-shrink-0">Status</dt>
+                    <dd><InvoiceStatusBadge :status="invoice.status" /></dd>
                   </div>
-                  <div>
-                    <span class="text-sm font-medium text-gray-500">Zahlungsstatus:</span>
-                    <PaymentStatusBadge :status="invoice.payment_status" class="ml-2" />
+                  <div class="flex items-center justify-between gap-2">
+                    <dt class="text-sm text-gray-500 flex-shrink-0">Zahlung</dt>
+                    <dd><PaymentStatusBadge :status="invoice.payment_status" /></dd>
                   </div>
-                  <div>
-                    <span class="text-sm font-medium text-gray-500">Erstellt am:</span>
-                    <span class="ml-2 text-sm text-gray-900">{{ formatDate(invoice.created_at) }}</span>
+                  <div class="flex items-center justify-between gap-2">
+                    <dt class="text-sm text-gray-500 flex-shrink-0">Erstellt</dt>
+                    <dd class="text-sm text-gray-900">{{ formatDate(invoice.created_at) }}</dd>
                   </div>
-                  <div v-if="invoice.due_date">
-                    <span class="text-sm font-medium text-gray-500">Fälligkeitsdatum:</span>
-                    <span class="ml-2 text-sm text-gray-900" :class="{ 'text-red-600': isOverdue(invoice.due_date) }">
+                  <div v-if="invoice.due_date" class="flex items-center justify-between gap-2">
+                    <dt class="text-sm text-gray-500 flex-shrink-0">Fällig</dt>
+                    <dd class="text-sm font-medium" :class="isOverdue(invoice.due_date) ? 'text-red-600' : 'text-gray-900'">
                       {{ formatDate(invoice.due_date) }}
-                    </span>
+                    </dd>
                   </div>
-                </div>
+                </dl>
               </div>
 
-              <!-- Mittlere Spalte: Kundeninformationen -->
-              <div>
-                <h4 class="text-lg font-semibold text-gray-900 mb-2">Kundeninformationen</h4>
-                <div class="grid grid-cols-2 gap-4">
-                  <!-- Linke Spalte der Kundeninformationen -->
-                  <div class="space-y-3">
-                    <!-- Vorname -->
-                    <div>
-                      <label class="block text-sm font-medium text-gray-500 mb-1">Vorname</label>
-                      <span class="text-sm text-gray-900">{{ customerData?.first_name || 'Nicht verfügbar' }}</span>
-                    </div>
-                    
-                    <!-- E-Mail -->
-                    <div>
-                      <label class="block text-sm font-medium text-gray-500 mb-1">E-Mail</label>
-                      <span class="text-sm text-gray-900">{{ customerData?.email || 'Nicht verfügbar' }}</span>
-                    </div>
-                    
-                    <!-- Straße -->
-                    <div>
-                      <label class="block text-sm font-medium text-gray-500 mb-1">Strasse</label>
-                      <span class="text-sm text-gray-900">{{ customerData?.street || 'Keine Straße' }} {{ customerData?.street_nr || '' }}</span>
-                    </div>
+              <!-- Kundeninformationen -->
+              <div class="bg-gray-50 rounded-xl p-4 space-y-2">
+                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Kundeninformationen</h4>
+                <dl class="space-y-1.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <dt class="text-sm text-gray-500 flex-shrink-0">Name</dt>
+                    <dd class="text-sm font-medium text-gray-900 text-right">{{ customerData?.first_name || '' }} {{ customerData?.last_name || '' }}</dd>
                   </div>
-                  
-                  <!-- Rechte Spalte der Kundeninformationen -->
-                  <div class="space-y-3">
-                    <!-- Nachname -->
-                    <div>
-                      <label class="block text-sm font-medium text-gray-500 mb-1">Nachname</label>
-                      <span class="text-sm text-gray-900">{{ customerData?.last_name || 'Nicht verfügbar' }}</span>
-                    </div>
-                    
-                    <!-- Telefon -->
-                    <div>
-                      <label class="block text-sm font-medium text-gray-500 mb-1">Telefon</label>
-                      <span class="text-sm text-gray-900">{{ customerData?.phone || 'Nicht verfügbar' }}</span>
-                    </div>
-                    
-                    <!-- PLZ und Ort -->
-                    <div>
-                      <label class="block text-sm font-medium text-gray-500 mb-1">PLZ und Ort</label>
-                      <span class="text-sm text-gray-900">{{ customerData?.zip || 'Keine PLZ' }} {{ customerData?.city || 'Kein Ort' }}</span>
-                    </div>
+                  <div class="flex items-start justify-between gap-2">
+                    <dt class="text-sm text-gray-500 flex-shrink-0">E-Mail</dt>
+                    <dd class="text-sm text-gray-900 text-right break-all">{{ customerData?.email || '—' }}</dd>
                   </div>
-                </div>
+                  <div class="flex items-center justify-between gap-2">
+                    <dt class="text-sm text-gray-500 flex-shrink-0">Telefon</dt>
+                    <dd class="text-sm text-gray-900">{{ customerData?.phone || '—' }}</dd>
+                  </div>
+                  <div class="flex items-center justify-between gap-2">
+                    <dt class="text-sm text-gray-500 flex-shrink-0">Adresse</dt>
+                    <dd class="text-sm text-gray-900 text-right">
+                      {{ customerData?.street || '' }} {{ customerData?.street_nr || '' }}<br v-if="customerData?.zip || customerData?.city">
+                      {{ customerData?.zip || '' }} {{ customerData?.city || '' }}
+                    </dd>
+                  </div>
+                </dl>
               </div>
 
-              <!-- Rechte Spalte: Rechnungsadresse & Bearbeitbare Felder -->
-              <div>
-                <h4 class="text-lg font-semibold text-gray-900 mb-2">Rechnungsadresse</h4>
-                <div class="space-y-4">
-                  <!-- Bearbeitbare Felder in 2 Spalten -->
-                  <div class="grid grid-cols-2 gap-4">
-                    <!-- Linke Spalte der rechten Spalte -->
-                    <div class="space-y-3">
-                      <!-- Company Billing E-Mail -->
-                      <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">Rechnungs-E-Mail</label>
-                        <input
-                          v-if="isEditing"
-                          v-model="safeEditedInvoice.billing_email"
-                          type="email"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          :placeholder="invoice.billing_email || invoice.customer_email || 'rechnung@firma.ch'"
-                        >
-                        <span v-else-if="invoice.billing_email" class="text-sm text-gray-900">{{ invoice.billing_email }}</span>
-                        <span v-else class="text-sm text-gray-400">{{ invoice.customer_email || 'Nicht angegeben' }}</span>
-                      </div>
-                      
-                      <!-- Firma -->
-                      <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">Firma (optional)</label>
-                        <input
-                          v-if="isEditing"
-                          v-model="safeEditedInvoice.billing_company_name"
-                          type="text"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          :placeholder="invoice.billing_company_name || 'Firmenname'"
-                        >
-                        <span v-else-if="invoice.billing_company_name" class="text-sm text-gray-900">{{ invoice.billing_company_name }}</span>
-                        <span v-else class="text-sm text-gray-400">Nicht angegeben</span>
-                      </div>
-                      
-                      <!-- Kontaktperson -->
-                      <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">Kontaktperson (optional)</label>
-                        <input
-                          v-if="isEditing"
-                          v-model="safeEditedInvoice.billing_contact_person"
-                          type="text"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          :placeholder="invoice.billing_contact_person || 'Kontaktperson'"
-                        >
-                        <span v-else-if="invoice.billing_contact_person" class="text-sm text-gray-900">{{ invoice.billing_contact_person }}</span>
-                        <span v-else class="text-sm text-gray-400">Nicht angegeben</span>
-                      </div>
+              <!-- Rechnungsadresse -->
+              <div class="bg-gray-50 rounded-xl p-4 space-y-3 sm:col-span-2 lg:col-span-1">
+                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Rechnungsadresse</h4>
+                <div class="grid grid-cols-1 gap-3">
+
+                  <!-- E-Mail -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Rechnungs-E-Mail</label>
+                    <input
+                      v-if="isEditing"
+                      v-model="safeEditedInvoice.billing_email"
+                      type="email"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      :placeholder="invoice.billing_email || invoice.customer_email || 'rechnung@firma.ch'"
+                    >
+                    <span v-else class="text-sm text-gray-900">{{ invoice.billing_email || invoice.customer_email || '—' }}</span>
+                  </div>
+
+                  <!-- Firma & Kontakt in 2 cols -->
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-gray-500 mb-1">Firma</label>
+                      <input
+                        v-if="isEditing"
+                        v-model="safeEditedInvoice.billing_company_name"
+                        type="text"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        :placeholder="invoice.billing_company_name || 'Firmenname'"
+                      >
+                      <span v-else class="text-sm text-gray-900">{{ invoice.billing_company_name || '—' }}</span>
                     </div>
-                    
-                                        <!-- Rechte Spalte der rechten Spalte -->
-                    <div class="space-y-3">
-                      <!-- Straße und Hausnummer in einer Zeile -->
-                      <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">Strasse, Nr.</label>
-                        <div v-if="isEditing" class="flex space-x-2">
-                          <input
-                            v-model="safeEditedInvoice.billing_street"
-                            type="text"
-                            class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            :placeholder="invoice.billing_street || 'Straße'"
-                          >
-                          <input
-                            v-model="safeEditedInvoice.billing_street_number"
-                            type="text"
-                            class="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            :placeholder="invoice.billing_street_number || 'Nr.'"
-                          >
-                        </div>
-                        <span v-else-if="invoice.billing_street || invoice.billing_street_number" class="text-sm text-gray-900">
-                          {{ invoice.billing_street || '' }} {{ invoice.billing_street_number || '' }}
-                        </span>
-                        <span v-else class="text-sm text-gray-400">Nicht angegeben</span>
-                      </div>
-                      
-                      <!-- PLZ -->
-                      <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">PLZ</label>
-                        <input
-                          v-if="isEditing"
-                          v-model="safeEditedInvoice.billing_zip"
-                          type="text"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          :placeholder="invoice.billing_zip || 'PLZ'"
-                        >
-                        <span v-else-if="invoice.billing_zip" class="text-sm text-gray-900">{{ invoice.billing_zip }}</span>
-                        <span v-else class="text-sm text-gray-400">Nicht angegeben</span>
-                      </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-500 mb-1">Kontaktperson</label>
+                      <input
+                        v-if="isEditing"
+                        v-model="safeEditedInvoice.billing_contact_person"
+                        type="text"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        :placeholder="invoice.billing_contact_person || 'Kontaktperson'"
+                      >
+                      <span v-else class="text-sm text-gray-900">{{ invoice.billing_contact_person || '—' }}</span>
+                    </div>
+                  </div>
 
-                      <!-- Ort und Land in einer Zeile -->
-                      <div class="grid grid-cols-2 gap-4">
-                        <div>
-                          <label class="block text-sm font-medium text-gray-500 mb-1">Ort</label>
-                          <input
-                            v-if="isEditing"
-                            v-model="safeEditedInvoice.billing_city"
-                            type="text"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            :placeholder="invoice.billing_city || 'Ort'"
-                          >
-                          <span v-else-if="invoice.billing_city" class="text-sm text-gray-900">{{ invoice.billing_city }}</span>
-                          <span v-else class="text-sm text-gray-400">Nicht angegeben</span>
-                        </div>
-                        <div>
-                          <label class="block text-sm font-medium text-gray-500 mb-1">Land</label>
-                          <input
-                            v-if="isEditing"
-                            v-model="safeEditedInvoice.billing_country"
-                            type="text"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            :placeholder="invoice.billing_country || 'Land'"
-                          >
-                          <span v-else-if="invoice.billing_country" class="text-sm text-gray-900">{{ invoice.billing_country }}</span>
-                          <span v-else class="text-sm text-gray-400">Nicht angegeben</span>
-                        </div>
-                      </div>
+                  <!-- Strasse & Nr -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Strasse, Nr.</label>
+                    <div v-if="isEditing" class="flex gap-2">
+                      <input
+                        v-model="safeEditedInvoice.billing_street"
+                        type="text"
+                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        :placeholder="invoice.billing_street || 'Strasse'"
+                      >
+                      <input
+                        v-model="safeEditedInvoice.billing_street_number"
+                        type="text"
+                        class="w-16 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        :placeholder="invoice.billing_street_number || 'Nr.'"
+                      >
+                    </div>
+                    <span v-else class="text-sm text-gray-900">{{ invoice.billing_street || '' }} {{ invoice.billing_street_number || '' || '—' }}</span>
+                  </div>
 
+                  <!-- PLZ / Ort / Land -->
+                  <div class="grid grid-cols-3 gap-2">
+                    <div>
+                      <label class="block text-xs font-medium text-gray-500 mb-1">PLZ</label>
+                      <input
+                        v-if="isEditing"
+                        v-model="safeEditedInvoice.billing_zip"
+                        type="text"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        :placeholder="invoice.billing_zip || 'PLZ'"
+                      >
+                      <span v-else class="text-sm text-gray-900">{{ invoice.billing_zip || '—' }}</span>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-500 mb-1">Ort</label>
+                      <input
+                        v-if="isEditing"
+                        v-model="safeEditedInvoice.billing_city"
+                        type="text"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        :placeholder="invoice.billing_city || 'Ort'"
+                      >
+                      <span v-else class="text-sm text-gray-900">{{ invoice.billing_city || '—' }}</span>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-500 mb-1">Land</label>
+                      <input
+                        v-if="isEditing"
+                        v-model="safeEditedInvoice.billing_country"
+                        type="text"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        :placeholder="invoice.billing_country || 'Land'"
+                      >
+                      <span v-else class="text-sm text-gray-900">{{ invoice.billing_country || '—' }}</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Beautiful Invoice Overview -->
-            <div class="bg-gray-50 rounded-lg p-4 mb-6">
-              <!-- Loading indicator für detaillierte Daten -->
-              <div v-if="isLoadingDetails" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <div class="flex items-center text-blue-700">
-                  <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <!-- ── Rechnungsübersicht ── -->
+            <div class="bg-gray-50 rounded-xl p-4">
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Rechnungsübersicht</h4>
+                <div v-if="isLoadingDetails" class="flex items-center text-blue-600 text-xs gap-1.5">
+                  <svg class="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                   </svg>
-                  <span class="text-sm">Lade detaillierte Preisaufschlüsselung...</span>
+                  Lade...
                 </div>
               </div>
-              <div class="flex items-center justify-between mb-4">
-                <h4 class="text-base font-medium text-gray-900">Rechnungsübersicht</h4>
-                <div>
-                  <!-- Zeige Total ohne stornierte Payments wenn es gelöschte Payments gibt -->
-                  <div v-if="allInvoicePayments.some(p => p.deleted_at)" class="text-right">
-                    <div class="text-xs text-gray-500 mb-1">Gesamtbetrag (ohne storniert):</div>
-                    <span class="text-lg font-semibold text-green-600">
-                      {{ formatCurrency(totalExcludingCancelled) }}
-                    </span>
-                  </div>
-                  <!-- Standard-Total -->
-                  <div v-else>
-                    <span class="text-lg font-semibold text-green-600">
-                      Gesamtbetrag: {{ fallbackPayment ? formatCurrency(fallbackPayment.total_amount_rappen) : formatCurrency(invoice.total_amount_rappen) }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Verrechnete Lektionen mit detaillierter Preisaufschlüsselung -->
-              <div class="max-h-64 overflow-y-auto">
-                <div class="space-y-2">
-                  <!-- ✅ Alle Payments der Rechnung anzeigen (inkl. gelöschte/stornierte) -->
-                  <div v-if="allInvoicePayments.length > 0">
-                    <div v-for="payment in allInvoicePayments" :key="payment.id">
-                      <!-- Gelöschtes/Storniertes Payment -->
-                      <div v-if="payment.deleted_at" class="bg-gray-100 border border-gray-300 rounded-md p-3 opacity-60">
-                        <div class="flex items-center space-x-2 mb-2">
-                          <span class="text-xs font-semibold px-2 py-1 bg-red-100 text-red-700 rounded">Storniert</span>
-                        </div>
-                        <div class="space-y-2">
-                          <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                              <div class="text-md font-semibold text-gray-500 mb-1 line-through">
-                                <h4>{{ payment.description || 'Termin' }}</h4>
-                              </div>
-                              <div class="text-xs text-gray-500">
-                                Gelöscht am: {{ new Date(payment.deleted_at).toLocaleDateString('de-CH') }}
-                              </div>
-                            </div>
-                            <div class="text-right">
-                              <div class="text-sm font-semibold text-gray-500 line-through">
-                                {{ formatCurrency(payment.total_amount_rappen) }}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <!-- Aktives Payment -->
-                      <div v-else class="bg-white border border-gray-200 rounded-md p-3">
-                        <div class="space-y-2">
-                          <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                              <div class="text-md font-semibold text-gray-600 mb-1">
-                                <h4>{{ payment.description || 'Termin' }}</h4>
-                              </div>
-                              <div class="text-xs text-gray-500">
-                                Erstellt: {{ new Date(payment.created_at).toLocaleDateString('de-CH') }}
-                              </div>
-                            </div>
-                            <div class="text-right">
-                              <div class="text-sm font-semibold text-green-600">
-                                {{ formatCurrency(payment.total_amount_rappen) }}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
 
-                  
-                  <!-- Products -->
-                  <div v-if="invoice.productSales && invoice.productSales.length > 0">
-                    <div v-for="sale in invoice.productSales" :key="sale.id">
-                      <div
-                        v-for="item in sale.product_sale_items" 
-                        :key="item.id" 
-                        class="bg-white border border-gray-200 rounded-md p-3">
-                        <div class="space-y-2">
-                          <!-- Hauptprodukt -->
-                          <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                              <h5 class="text-sm font-medium text-gray-900">
-                                {{ item.product?.name || 'Unbekanntes Produkt' }}
-                              </h5>
-                              <div class="text-xs text-gray-500">
-                                Produkt - {{ item.quantity }}x
-                              </div>
-                            </div>
-                            <div class="text-right flex items-center space-x-2">
-                              <div class="text-sm font-semibold text-green-600">
-                                {{ formatCurrency(item.total_price_rappen) }}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <!-- Detaillierte Preisaufschlüsselung -->
-                          <div class="border-t border-gray-100 pt-2 space-y-1">
-                            <!-- Produkt-Preis -->
-                            <div class="flex justify-between text-xs">
-                              <span class="text-gray-600">{{ item.product?.name || 'Produkt' }}:</span>
-                              <span class="text-gray-800">{{ formatCurrency(item.unit_price_rappen) }}</span>
-                            </div>
-                          </div>
+              <!-- Invoice items – desktop table / mobile cards -->
+              <div v-if="invoice.items && invoice.items.length > 0" class="mb-4">
+                <!-- Desktop table header (hidden on mobile) -->
+                <div class="hidden sm:grid sm:grid-cols-12 bg-white border border-gray-200 rounded-t-lg px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <div class="col-span-6">Position</div>
+                  <div class="col-span-2 text-center">Menge</div>
+                  <div class="col-span-2 text-right">Einzelpreis</div>
+                  <div class="col-span-2 text-right">Total</div>
+                </div>
+                <!-- Rows -->
+                <div class="rounded-lg sm:rounded-t-none border border-gray-200 sm:border-t-0 overflow-hidden divide-y divide-gray-100 bg-white">
+                  <div
+                    v-for="item in invoice.items"
+                    :key="item.id"
+                    class="px-4 py-3"
+                  >
+                    <!-- Mobile: stacked layout -->
+                    <div class="flex items-start justify-between gap-3 sm:hidden">
+                      <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium text-gray-900">{{ item.product_name }}</div>
+                        <div v-if="item.product_description" class="text-xs text-gray-500 mt-0.5">{{ item.product_description }}</div>
+                        <div v-if="item.appointment_date" class="text-xs text-gray-500 mt-0.5">
+                          {{ new Date(item.appointment_date).toLocaleDateString('de-CH') }}
+                          <span v-if="item.appointment_start_time"> · {{ item.appointment_start_time.slice(0, 5) }} Uhr</span>
+                          <span v-if="item.appointment_duration_minutes"> · {{ item.appointment_duration_minutes }} Min.</span>
                         </div>
+                        <div v-if="item.notes" class="text-xs text-gray-400 mt-0.5 italic">{{ item.notes }}</div>
+                        <div class="text-xs text-gray-400 mt-1">{{ item.quantity }}× · {{ formatCurrency(item.unit_price_rappen) }} / Stk.</div>
                       </div>
+                      <div class="text-sm font-semibold text-gray-900 flex-shrink-0">{{ formatCurrency(item.total_price_rappen) }}</div>
+                    </div>
+                    <!-- Desktop: grid layout -->
+                    <div class="hidden sm:grid sm:grid-cols-12 items-start">
+                      <div class="col-span-6">
+                        <div class="text-sm font-medium text-gray-900">{{ item.product_name }}</div>
+                        <div v-if="item.product_description" class="text-xs text-gray-500 mt-0.5">{{ item.product_description }}</div>
+                        <div v-if="item.appointment_date" class="text-xs text-gray-500 mt-0.5">
+                          {{ new Date(item.appointment_date).toLocaleDateString('de-CH') }}
+                          <span v-if="item.appointment_start_time"> · {{ item.appointment_start_time.slice(0, 5) }} Uhr</span>
+                          <span v-if="item.appointment_duration_minutes"> · {{ item.appointment_duration_minutes }} Min.</span>
+                        </div>
+                        <div v-if="item.notes" class="text-xs text-gray-400 mt-0.5 italic">{{ item.notes }}</div>
+                      </div>
+                      <div class="col-span-2 text-center text-sm text-gray-700">{{ item.quantity }}×</div>
+                      <div class="col-span-2 text-right text-sm text-gray-700">{{ formatCurrency(item.unit_price_rappen) }}</div>
+                      <div class="col-span-2 text-right text-sm font-semibold text-gray-900">{{ formatCurrency(item.total_price_rappen) }}</div>
                     </div>
                   </div>
-                  
-                  
+                </div>
+              </div>
+
+              <!-- Fallback: payments -->
+              <div v-else-if="allInvoicePayments.length > 0" class="mb-4 rounded-lg border border-gray-200 overflow-hidden divide-y divide-gray-100 bg-white">
+                <div
+                  v-for="payment in allInvoicePayments"
+                  :key="payment.id"
+                  class="flex items-center justify-between gap-3 px-4 py-3"
+                  :class="{ 'opacity-50': payment.deleted_at }"
+                >
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="text-sm font-medium" :class="payment.deleted_at ? 'line-through text-gray-400' : 'text-gray-900'">
+                        {{ payment.description || 'Termin' }}
+                      </span>
+                      <span v-if="payment.deleted_at" class="text-xs px-1.5 py-0.5 bg-red-100 text-red-600 rounded">Storniert</span>
+                    </div>
+                    <div class="text-xs text-gray-400 mt-0.5">
+                      {{ payment.deleted_at
+                        ? 'Gelöscht am ' + new Date(payment.deleted_at).toLocaleDateString('de-CH')
+                        : 'Erstellt ' + new Date(payment.created_at).toLocaleDateString('de-CH') }}
+                    </div>
+                  </div>
+                  <div class="text-sm font-semibold flex-shrink-0" :class="payment.deleted_at ? 'line-through text-gray-400' : 'text-gray-900'">
+                    {{ formatCurrency(payment.total_amount_rappen) }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Empty state -->
+              <div v-else-if="!isLoadingDetails" class="text-sm text-gray-400 italic py-2">Keine Positionen verfügbar.</div>
+
+              <!-- Totals -->
+              <div class="flex justify-end mt-2">
+                <div class="w-full sm:w-64 space-y-1.5 border-t border-gray-200 pt-3">
+                  <div v-if="invoice.discount_amount_rappen > 0" class="flex justify-between text-sm text-gray-600">
+                    <span>Zwischentotal</span>
+                    <span>{{ formatCurrency(invoice.subtotal_rappen + invoice.discount_amount_rappen) }}</span>
+                  </div>
+                  <div v-if="invoice.discount_amount_rappen > 0" class="flex justify-between text-sm text-emerald-600">
+                    <span>Rabatt</span>
+                    <span>−{{ formatCurrency(invoice.discount_amount_rappen) }}</span>
+                  </div>
+                  <div v-if="invoice.vat_amount_rappen > 0" class="flex justify-between text-sm text-gray-600">
+                    <span>Subtotal</span>
+                    <span>{{ formatCurrency(invoice.subtotal_rappen) }}</span>
+                  </div>
+                  <div v-if="invoice.vat_amount_rappen > 0" class="flex justify-between text-sm text-gray-600">
+                    <span>MwSt. ({{ invoice.vat_rate }}%)</span>
+                    <span>{{ formatCurrency(invoice.vat_amount_rappen) }}</span>
+                  </div>
+                  <div class="flex justify-between pt-2 border-t border-gray-300">
+                    <span class="text-base font-semibold text-gray-900">Gesamtbetrag</span>
+                    <span class="text-base font-bold text-green-600">{{ formatCurrency(invoice.total_amount_rappen) }}</span>
+                  </div>
                 </div>
               </div>
             </div>
 
             <!-- Notes -->
-            <div v-if="invoice.notes || invoice.internal_notes || isEditing" class="mb-6">
-              <h4 class="text-lg font-semibold text-gray-900 mb-2">Notizen</h4>
-              <div class="bg-gray-50 rounded-lg p-4">
-                <!-- Nachricht an den Kunden -->
-                <div v-if="isEditing || invoice.notes" class="mb-3">
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Nachricht an den Kunden</label>
+            <div v-if="invoice.notes || invoice.internal_notes || isEditing">
+              <div class="bg-gray-50 rounded-xl p-4 space-y-3">
+                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Notizen</h4>
+                <div v-if="isEditing || invoice.notes">
+                  <label class="block text-xs font-medium text-gray-500 mb-1.5">Nachricht an den Kunden</label>
                   <textarea
                     v-if="isEditing"
                     v-model="safeEditedInvoice.notes"
                     rows="3"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Sehr geehrte Damen und Herren, anbei erhalten Sie die Rechnung für die durchgeführten Fahrstunden..."
                   />
                   <p v-else-if="invoice.notes" class="text-sm text-gray-700">{{ invoice.notes }}</p>
@@ -452,7 +415,7 @@
               </div>
             </div>
 
-          </div>
+          </template>
         </div>
       </div>
     </div>

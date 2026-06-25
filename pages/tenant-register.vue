@@ -404,12 +404,12 @@
                       </svg>
                       <span v-else class="w-3 h-3 flex-shrink-0 rounded-sm border-2 border-current opacity-40"></span>
                       {{ cc.code || cc.name }}
-                      <button type="button" @click.stop="removeCustomCategory(cc.tempId)"
-                        class="ml-0.5 opacity-60 hover:opacity-100 transition-opacity">
+                      <span role="button" tabindex="0" @click.stop="removeCustomCategory(cc.tempId)" @keydown.enter.stop="removeCustomCategory(cc.tempId)"
+                        class="ml-0.5 opacity-60 hover:opacity-100 transition-opacity cursor-pointer">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
-                      </button>
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -479,11 +479,11 @@
                       </svg>
                       <span v-else class="w-3 h-3 flex-shrink-0 rounded-sm border-2 border-current opacity-40"></span>
                       {{ sub.code || sub.name }}
-                      <button type="button" @click.stop="removeCustomCategory(sub.tempId)" class="ml-0.5 opacity-60 hover:opacity-100 transition-opacity">
+                      <span role="button" tabindex="0" @click.stop="removeCustomCategory(sub.tempId)" @keydown.enter.stop="removeCustomCategory(sub.tempId)" class="ml-0.5 opacity-60 hover:opacity-100 transition-opacity cursor-pointer">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
-                      </button>
+                      </span>
                     </button>
                   </div>
                 </div>

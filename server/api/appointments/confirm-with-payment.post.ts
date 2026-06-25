@@ -122,6 +122,7 @@ export default defineEventHandler(async (event) => {
         .from('customer_payment_methods')
         .select('id')
         .eq('user_id', appointment.user_id)
+        .eq('tenant_id', requestingUser.tenant_id)
         .eq('is_active', true)
         .order('is_default', { ascending: false })
         .order('created_at', { ascending: false })

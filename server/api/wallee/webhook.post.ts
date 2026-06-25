@@ -167,7 +167,7 @@ export default defineEventHandler(async (event) => {
     
     logger.debug('🔍 Searching for payment with wallee_transaction_id:', transactionId)
     
-    let { data: payments, error: findError } = await supabase
+    let paymentQuery = supabase
       .from('payments')
       .select(`
         id,
@@ -182,17 +182,27 @@ export default defineEventHandler(async (event) => {
         credit_used_rappen
       `)
       .eq('wallee_transaction_id', transactionId)
+
+    // Prefer composite lookup (space + transaction) to avoid cross-tenant collisions
+    if (spaceId) {
+      paymentQuery = paymentQuery.eq('wallee_space_id', spaceId) as any
+    }
+
+    let { data: payments, error: findError } = await paymentQuery
     
     // ============ LAYER 3.5: FALLBACK - Search in transaction history table ============
     if (findError || !payments || payments.length === 0) {
       logger.debug('⚠️ Payment not found by current transaction ID, checking history table...')
       
       try {
-        const { data: historyRecord } = await supabase
+        let histQuery = supabase
           .from('payment_wallee_transactions')
           .select('payment_id')
           .eq('wallee_transaction_id', transactionId)
-          .maybeSingle()
+        if (spaceId) {
+          histQuery = histQuery.eq('wallee_space_id', spaceId) as any
+        }
+        const { data: historyRecord } = await histQuery.maybeSingle()
         
         if (historyRecord?.payment_id) {
           logger.info('✅ Found payment via transaction history:', historyRecord.payment_id)
@@ -1082,29 +1092,49 @@ async function fetchWalleeTransaction(transactionId: string, webhookSpaceId?: nu
       }
     }
     
-    let spaceId = webhookSpaceId || parseInt(process.env.WALLEE_SPACE_ID || '82592')
-    let userId = parseInt(process.env.WALLEE_APPLICATION_USER_ID || '140525')
-    let apiSecret = process.env.WALLEE_SECRET_KEY
-    
-    if (!apiSecret) {
-      throw new Error('WALLEE_SECRET_KEY not configured')
-    }
-    
+    let spaceId = webhookSpaceId
+    let walleeCredentials: { spaceId: number; userId: number; apiSecret: string } | null = null
+
+    // 1. Prefer tenant resolved from the payment row (most reliable)
     if (paymentForConfig?.tenant_id) {
       try {
-        const walleeConfig = await getWalleeConfigForTenant(paymentForConfig.tenant_id)
-        spaceId = walleeConfig.spaceId
-        userId = walleeConfig.userId
-        apiSecret = walleeConfig.apiSecret
-      } catch (e) {
-        // Use default config
+        walleeCredentials = await getWalleeConfigForTenant(paymentForConfig.tenant_id)
+        spaceId = walleeCredentials.spaceId
+      } catch (e: any) {
+        logger.warn(`⚠️ [webhook] Could not load Wallee config for tenant ${paymentForConfig.tenant_id}: ${e.message}`)
       }
     }
-    
-    const config = getWalleeSDKConfig(spaceId, userId, apiSecret)
+
+    // 2. Fallback: resolve tenant directly from the incoming spaceId
+    if (!walleeCredentials && webhookSpaceId) {
+      try {
+        const { data: tenantBySpace } = await supabase
+          .from('tenants')
+          .select('id')
+          .eq('wallee_space_id', webhookSpaceId)
+          .maybeSingle()
+
+        if (tenantBySpace?.id) {
+          walleeCredentials = await getWalleeConfigForTenant(tenantBySpace.id)
+          spaceId = walleeCredentials.spaceId
+        }
+      } catch (e: any) {
+        logger.warn(`⚠️ [webhook] Could not resolve tenant for space ${webhookSpaceId}: ${e.message}`)
+      }
+    }
+
+    if (!walleeCredentials || !spaceId) {
+      throw new Error(
+        `[webhook] Cannot fetch transaction ${transactionId}: no Wallee credentials found. ` +
+        `spaceId=${webhookSpaceId}, tenantId=${paymentForConfig?.tenant_id ?? 'unknown'}. ` +
+        `Ensure the tenant has credentials saved in tenant_secrets.`
+      )
+    }
+
+    const config = getWalleeSDKConfig(walleeCredentials.spaceId, walleeCredentials.userId, walleeCredentials.apiSecret)
     
     transactionService = new WalleeSDK.api.TransactionService(config)
-    const response = await transactionService.read(spaceId, parseInt(transactionId))
+    const response = await transactionService.read(walleeCredentials.spaceId, parseInt(transactionId))
     return response.body
   } catch (error: any) {
     logger.warn('⚠️ Could not fetch Wallee transaction:', error.message)

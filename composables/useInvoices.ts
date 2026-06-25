@@ -203,18 +203,39 @@ export const useInvoices = () => {
 
   // Rechnung als bezahlt markieren
   const markInvoiceAsPaid = async (id: string, paymentMethod: string, amount?: number): Promise<InvoiceUpdateResponse> => {
-    const updates: any = {
-      status: 'paid',
-      payment_status: 'paid',
-      payment_method: paymentMethod,
-      paid_at: new Date().toISOString()
-    }
+    isLoading.value = true
+    error.value = null
 
-    if (amount) {
-      updates.paid_amount_rappen = amount
-    }
+    try {
+      const response = await $fetch('/api/invoices/mark-invoice-paid', {
+        method: 'POST',
+        body: {
+          invoice_id: id,
+          payment_method: paymentMethod,
+          ...(amount ? { paid_amount_rappen: amount } : {})
+        }
+      }) as any
 
-    return updateInvoice(id, updates)
+      if (!response?.success) {
+        throw new Error('Failed to mark invoice as paid')
+      }
+
+      // Lokalen State aktualisieren
+      const index = invoices.value.findIndex(inv => inv.id === id)
+      if (index !== -1) {
+        invoices.value[index] = { ...invoices.value[index], payment_status: 'paid', status: 'paid' }
+      }
+      if (currentInvoice.value?.id === id) {
+        currentInvoice.value = { ...currentInvoice.value, payment_status: 'paid', status: 'paid' }
+      }
+
+      return { data: response }
+    } catch (err: any) {
+      error.value = err.message || 'Fehler beim Markieren als bezahlt'
+      return { error: error.value || undefined }
+    } finally {
+      isLoading.value = false
+    }
   }
 
   // Rechnung versenden

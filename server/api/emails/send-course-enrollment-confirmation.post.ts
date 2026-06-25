@@ -245,13 +245,13 @@ export default defineEventHandler(async (event) => {
       }
     } else if (isVKU) {
       importantListItems = `
-                <li>Gültiger Lernfahrausweis mitnehmen</li>
+                <li>Gültiger Lern- und/oder Fahrausweis mitnehmen</li>
                 <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>`
     } else if (isPGS) {
       importantListItems = `
                 <li>Eigenes betriebssicheres Fahrzeug ist Pflicht</li>
                 <li>Selbständiges Fahren ist Voraussetzung für die Teilnahme</li>
-                <li>Gültiger Lernfahrausweis mitnehmen</li>`
+                <li>Gültiger Lern- und/oder Fahrausweis mitnehmen</li>`
       if (isEinsiedeln && isCashPayment) {
         importantListItems += `
                 <li><strong>Kursgeld in bar mitnehmen (CHF ${price})</strong></li>`
@@ -260,7 +260,7 @@ export default defineEventHandler(async (event) => {
                 <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>`
     } else {
       importantListItems = `
-                <li>Gültiger Lernfahrausweis mitnehmen</li>
+                <li>Gültiger Lern- und/oder Fahrausweis mitnehmen</li>
                 <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>`
     }
 

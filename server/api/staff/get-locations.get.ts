@@ -96,7 +96,7 @@ export default defineEventHandler(async (event) => {
         // Get staff's standard locations
         const { data: staffLocations, error: staffError } = await supabaseAdmin
           .from('locations')
-          .select('id, name, address, formatted_address, postal_code, city, tenant_id, location_type, user_id, is_active, public_bookable')
+          .select('id, name, address, formatted_address, postal_code, canton, city, tenant_id, location_type, user_id, is_active, public_bookable, time_windows')
           .eq('tenant_id', tenantId)
           .eq('is_active', true)
           .eq('user_id', userProfile.id)
@@ -153,7 +153,7 @@ export default defineEventHandler(async (event) => {
         // (Supabase JSON filtering is limited, so we do it in memory)
         const { data: allLocations, error } = await supabaseAdmin
           .from('locations')
-          .select('id, name, address, formatted_address, postal_code, city, tenant_id, location_type, user_id, is_active, public_bookable, staff_ids')
+          .select('id, name, address, formatted_address, postal_code, canton, city, tenant_id, location_type, user_id, is_active, public_bookable, staff_ids, time_windows')
           .eq('tenant_id', tenantId)
           .eq('is_active', true)
           .eq('location_type', 'standard')

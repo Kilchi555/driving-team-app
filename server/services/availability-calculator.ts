@@ -19,6 +19,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { wallTimeToUtc, parseWorkingTimeParts, DEFAULT_TIMEZONE } from '~/server/utils/zurich-wall-time'
+import { isWithinTimeWindows } from '~/utils/travelTimeValidation'
 
 // Types
 interface Staff {
@@ -30,6 +31,7 @@ interface Staff {
   category?: string | null
   tenant_id: string
   minimum_booking_lead_time_hours?: number
+  buffer_minutes?: number
 }
 
 interface Category {
@@ -39,6 +41,12 @@ interface Category {
   lesson_duration_minutes: number[]
   is_active: boolean
   tenant_id: string
+}
+
+interface TimeWindow {
+  start: string  // HH:MM
+  end: string    // HH:MM
+  days: number[] // 0=Sunday … 6=Saturday (JS convention)
 }
 
 interface Location {
@@ -52,6 +60,7 @@ interface Location {
   category?: string[] // Deprecated, use available_categories
   tenant_id: string
   postal_code?: string // For travel time calculations
+  time_windows?: TimeWindow[] // Optional booking availability windows
 }
 
 interface StaffWorkingHours {
@@ -112,6 +121,13 @@ export class AvailabilityCalculator {
   private supabase = getSupabaseAdmin()
 
   /**
+   * In-memory travel time cache for the duration of one calculateAvailability() run.
+   * Key: "fromPlz→toPlz". Value: minutes (offpeak), or -1 = confirmed no route.
+   * Prevents repeated DB + Google API calls for the same PLZ pair within one run.
+   */
+  private travelTimeCache = new Map<string, number>()
+
+  /**
    * Calculate availability for a date range
    */
   async calculateAvailability(options: CalculateOptions): Promise<number> {
@@ -128,6 +144,9 @@ export class AvailabilityCalculator {
       throw new Error('Missing endDate in options')
     }
     
+    // Clear in-memory travel time cache for this run
+    this.travelTimeCache.clear()
+
     logger.debug('🔄 Starting availability calculation...', {
       tenantId: options.tenantId,
       staffId: options.staffId,
@@ -249,15 +268,17 @@ export class AvailabilityCalculator {
     }
 
     // Only query settings if we have staff
+    const bufferMap = new Map<string, number>()
     if (staffIds.length > 0) {
       const { data: availabilitySettings } = await this.supabase
         .from('staff_availability_settings')
-        .select('staff_id, minimum_booking_lead_time_hours')
+        .select('staff_id, minimum_booking_lead_time_hours, buffer_minutes')
         .in('staff_id', staffIds)
 
       if (availabilitySettings) {
         availabilitySettings.forEach(s => {
           settingsMap.set(s.staff_id, s.minimum_booking_lead_time_hours)
+          if (s.buffer_minutes != null) bufferMap.set(s.staff_id, s.buffer_minutes)
         })
       }
     }
@@ -265,7 +286,8 @@ export class AvailabilityCalculator {
     return (data || []).map(staff => ({
       ...staff,
       // Staff-level override takes priority, then tenant default, then global fallback
-      minimum_booking_lead_time_hours: settingsMap.get(staff.id) ?? tenantLeadTimeHours
+      minimum_booking_lead_time_hours: settingsMap.get(staff.id) ?? tenantLeadTimeHours,
+      buffer_minutes: bufferMap.get(staff.id) ?? 15
     }))
   }
 
@@ -327,7 +349,7 @@ export class AvailabilityCalculator {
       // Now load the location details from locations table
       let locQuery = this.supabase
         .from('locations')
-        .select('id, name, address, location_type, is_active, staff_ids, available_categories, tenant_id, postal_code')
+        .select('id, name, address, location_type, is_active, staff_ids, available_categories, tenant_id, postal_code, time_windows')
         .in('id', locationIds)
         .eq('is_active', true)
         .eq('location_type', 'standard')
@@ -364,11 +386,22 @@ export class AvailabilityCalculator {
             availableCategories = []
           }
         }
+
+        // Parse time_windows (JSONB → array)
+        let timeWindows: TimeWindow[] = []
+        if (loc.time_windows) {
+          if (Array.isArray(loc.time_windows)) {
+            timeWindows = loc.time_windows
+          } else if (typeof loc.time_windows === 'string') {
+            try { timeWindows = JSON.parse(loc.time_windows) } catch { timeWindows = [] }
+          }
+        }
         
         return {
           ...loc,
           staff_ids: parsedStaffIds,
-          available_categories: availableCategories
+          available_categories: availableCategories,
+          time_windows: timeWindows
         }
       })
       
@@ -455,27 +488,29 @@ export class AvailabilityCalculator {
 
     if (appointmentsError) throw appointmentsError
 
-    // ✅ NEW: Load location details (postal_code) for travel time calculation
-    if (appointments && appointments.length > 0) {
-      const locationIds = [...new Set(appointments.map(a => a.location_id))]
-      
-      const { data: locations, error: locError } = await this.supabase
+    if (!appointments || appointments.length === 0) return []
+
+    // Enrich appointments with location postal_code for travel time checks
+    const locationIds = [...new Set(appointments.map((a: any) => a.location_id).filter(Boolean))]
+
+    if (locationIds.length > 0) {
+      const { data: locationData, error: locError } = await this.supabase
         .from('locations')
         .select('id, postal_code')
         .in('id', locationIds)
-      
-      if (!locError && locations) {
-        const locMap = new Map(locations.map(l => [l.id, l]))
-        
-        // Enrich appointments with location data
-        return appointments.map(apt => ({
+
+      if (locError) {
+        logger.warn('⚠️ Could not enrich appointments with location data (travel time check disabled):', locError.message)
+      } else if (locationData && locationData.length > 0) {
+        const locMap = new Map(locationData.map((l: any) => [l.id, l]))
+        return appointments.map((apt: any) => ({
           ...apt,
-          location: locMap.get(apt.location_id)
+          location: locMap.get(apt.location_id) ?? undefined
         }))
       }
     }
 
-    return appointments || []
+    return appointments
   }
 
   /**
@@ -662,7 +697,8 @@ export class AvailabilityCalculator {
                   endTime: hours.end_time,
                   timezone: hours.timezone || DEFAULT_TIMEZONE,
                   durationMinutes,
-                  bufferMinutes: params.bufferMinutes,
+                  // Per-staff buffer takes priority over the global default
+                  bufferMinutes: staff.buffer_minutes ?? params.bufferMinutes,
                   minBookableTime,
                   appointments: staffAppointments,
                   busyTimes: staffBusyTimes,
@@ -740,6 +776,16 @@ export class AvailabilityCalculator {
         continue
       }
 
+      // Check location time windows: convert UTC slot to wall-clock time in the location's timezone
+      if (params.location.time_windows?.length) {
+        const localStr = currentSlot.toLocaleString('en-US', { timeZone: params.timezone })
+        const localDate = new Date(localStr)
+        if (!isWithinTimeWindows(localDate, params.location.time_windows)) {
+          currentSlot.setUTCMinutes(currentSlot.getUTCMinutes() + 15)
+          continue
+        }
+      }
+
       // Check if slot conflicts with appointments or busy times
       const hasConflict = await this.hasConflict({
         slotStart: currentSlot,
@@ -792,7 +838,6 @@ export class AvailabilityCalculator {
     const slotEndTime = params.slotEnd.getTime()
     const bufferMs = params.bufferMinutes * 60 * 1000
 
-    logger.debug(`🔍 hasConflict check for slot ${params.slotStart.toISOString()}, appointments: ${params.appointments.length}`)
 
     // Check appointments
     for (const apt of params.appointments) {
@@ -811,81 +856,44 @@ export class AvailabilityCalculator {
         return true
       }
 
-      // ✅ NEW: Check travel time between appointment location and new slot location
-      // IMPORTANT: Only check if appointment location is a standard location with postal_code
-      // AND: Only check if the appointment is at one of the online-bookable locations
-      // DEACTIVATED: Travel time checking disabled
-      /*
-      logger.debug(`📍 Appointment location check:`, {
-        aptPostalCode: apt.location?.postal_code,
-        newPostalCode: params.newLocationPostalCode,
-        hasPostal: !!apt.location?.postal_code,
-        sameLocation: params.newLocationPostalCode === apt.location?.postal_code
-      })
-
-      if (params.newLocationPostalCode && apt.location?.postal_code && 
-          params.newLocationPostalCode !== apt.location.postal_code) {
+      // Travel time check: if the slot is at a different PLZ than the appointment,
+      // the instructor needs enough time to drive there on top of the base buffer.
+      // Only runs if both locations have a postal_code configured.
+      if (
+        params.newLocationPostalCode &&
+        apt.location?.postal_code &&
+        params.newLocationPostalCode !== apt.location.postal_code
+      ) {
         try {
-          logger.debug(`🚗 Checking travel time from ${apt.location.postal_code} to ${params.newLocationPostalCode}`)
-          
           const travelTime = await this.getTravelTimeForSlot(
             apt.location.postal_code,
             params.newLocationPostalCode,
             params.slotStart
           )
 
-          logger.debug(`⏱️ Travel time result:`, { travelTime, slotStart: params.slotStart.toISOString() })
-
           if (travelTime !== null && travelTime > 0) {
-            const travelBufferMs = travelTime * 60 * 1000
-            
-            // CASE 1: Appointment ends, then staff needs to travel to new location
-            // Slot cannot start until: appointmentEnd + travelTime
-            const requiredFreeTimeStart = aptEnd + travelBufferMs
+            // Required gap = travel time + base buffer (so instructor arrives with breathing room)
+            const requiredGapMs = (travelTime * 60 * 1000) + bufferMs
 
-            logger.debug(`⏱️ Travel time analysis (Apt→Slot):`, {
-              travelTimeMinutes: travelTime,
-              aptEnd: new Date(aptEnd).toISOString(),
-              requiredStart: new Date(requiredFreeTimeStart).toISOString(),
-              slotStart: params.slotStart.toISOString(),
-              conflict: slotStartTime < requiredFreeTimeStart
-            })
-
-            // If slot starts before staff can travel there from appointment, it's a conflict
-            // BUT: Only if appointment ends BEFORE slot starts (apt→slot progression)
-            if (aptEnd <= slotStartTime && slotStartTime < requiredFreeTimeStart) {
-              logger.warn(`⚠️ TRAVEL TIME CONFLICT (Apt→Slot): slot ${params.slotStart.toISOString()} needs ${travelTime}min travel from ${apt.location.postal_code} to ${params.newLocationPostalCode}`)
+            // CASE 1: appointment ends → instructor drives to new slot location
+            const requiredStartAfterApt = aptEnd + requiredGapMs
+            if (aptEnd <= slotStartTime && slotStartTime < requiredStartAfterApt) {
+              logger.debug(`⚠️ TRAVEL CONFLICT (Apt→Slot): ${travelTime}min travel + ${params.bufferMinutes}min buffer from ${apt.location.postal_code}→${params.newLocationPostalCode}`)
               return true
             }
 
-            // CASE 2: Slot ends, then staff needs to travel to appointment location
-            // Appointment cannot start until: slotEnd + travelTime
-            const requiredFreeTimeForApt = slotEndTime + travelBufferMs
-
-            logger.debug(`⏱️ Travel time analysis (Slot→Apt):`, {
-              travelTimeMinutes: travelTime,
-              slotEnd: new Date(slotEndTime).toISOString(),
-              requiredStart: new Date(requiredFreeTimeForApt).toISOString(),
-              aptStart: new Date(aptStart).toISOString(),
-              conflict: aptStart < requiredFreeTimeForApt
-            })
-
-            // If appointment starts before staff can travel there from slot, it's a conflict
-            // BUT: Only if slot ends BEFORE appointment starts (slot→apt progression)
-            logger.debug(`⏱️ Slot→Apt adjacency check: slotEnd (${new Date(slotEndTime).toISOString()}) <= aptStart (${new Date(aptStart).toISOString()})? ${slotEndTime <= aptStart}`)
-            
-            if (slotEndTime <= aptStart && aptStart < requiredFreeTimeForApt) {
-              logger.warn(`⚠️ TRAVEL TIME CONFLICT (Slot→Apt): appointment ${new Date(aptStart).toISOString()} needs ${travelTime}min travel from ${params.newLocationPostalCode} to ${apt.location.postal_code}`)
+            // CASE 2: slot ends → instructor drives to appointment location
+            const requiredStartAfterSlot = slotEndTime + requiredGapMs
+            if (slotEndTime <= aptStart && aptStart < requiredStartAfterSlot) {
+              logger.warn(`⚠️ TRAVEL CONFLICT (Slot→Apt): ${travelTime}min travel + ${params.bufferMinutes}min buffer from ${params.newLocationPostalCode}→${apt.location.postal_code}`)
               return true
             }
           }
         } catch (err: any) {
-          logger.warn('⚠️ Error checking travel time:', err.message)
-          // Non-critical: continue without travel time check if error occurs
+          logger.warn('⚠️ Travel time check failed (non-fatal, skipping):', err.message)
         }
       }
-      */
-      // Note: Appointments with custom locations (no postal_code) don't trigger travel time checks
+      // Appointments/locations without postal_code skip travel time check
     }
 
     // Check busy times
@@ -1002,12 +1010,113 @@ export class AvailabilityCalculator {
   //   }
   // }
 
-  /*
-  // DEACTIVATED: Get travel time between two postal codes using cache or Google API
-  // private async getTravelTimeForSlot(fromPostalCode: string, toPostalCode: string, slotTime: Date): Promise<number | null> {
-  //   // ... entire method disabled ...
-  // }
-  */
+  /**
+   * Get travel time in minutes between two Swiss postal codes.
+   * Checks plz_distance_cache first; falls back to Google Distance Matrix API on a cache miss.
+   * Returns null when the API key is missing or the route cannot be determined.
+   */
+  private async getTravelTimeForSlot(
+    fromPostalCode: string,
+    toPostalCode: string,
+    slotTime: Date
+  ): Promise<number | null> {
+    if (fromPostalCode === toPostalCode) return 0
+
+    // Normalise key — distance is symmetric
+    const cacheKey = [fromPostalCode, toPostalCode].sort().join('→')
+
+    try {
+      // 1. In-memory cache (fastest — avoids DB round-trip for same pair in one run)
+      if (this.travelTimeCache.has(cacheKey)) {
+        const cached = this.travelTimeCache.get(cacheKey)!
+        if (cached === -1) return null // confirmed no-route
+        // Apply peak multiplier: offpeak value stored, peak ≈ ×1.3
+        return this.isPeakSlotTime(slotTime) ? Math.ceil(cached * 1.3) : cached
+      }
+
+      // 2. DB cache (plz_distance_cache table, bidirectional lookup)
+      const { data: dbCached, error: cacheErr } = await this.supabase
+        .from('plz_distance_cache')
+        .select('driving_time_minutes_peak, driving_time_minutes_offpeak')
+        .or(
+          `and(from_plz.eq.${fromPostalCode},to_plz.eq.${toPostalCode}),` +
+          `and(from_plz.eq.${toPostalCode},to_plz.eq.${fromPostalCode})`
+        )
+        .maybeSingle()
+
+      if (!cacheErr && dbCached) {
+        // -1 stored in DB means "no route confirmed" — skip Google
+        const offpeakVal = dbCached.driving_time_minutes_offpeak
+        if (offpeakVal === -1) {
+          this.travelTimeCache.set(cacheKey, -1)
+          return null
+        }
+        this.travelTimeCache.set(cacheKey, offpeakVal)
+        const peak = this.isPeakSlotTime(slotTime)
+        return peak ? dbCached.driving_time_minutes_peak : offpeakVal
+      }
+
+      // 3. Cache miss → call Google Distance Matrix API
+      const config = useRuntimeConfig()
+      const apiKey = (config.googleDistanceMatrixKey || config.googleMapsApiKey) as string | undefined
+      if (!apiKey) {
+        logger.warn('⚠️ googleDistanceMatrixKey not configured – skipping travel time check for this run')
+        this.travelTimeCache.set(cacheKey, -1) // only in-memory, not in DB
+        return null
+      }
+
+      const origin = encodeURIComponent(`${fromPostalCode}, Switzerland`)
+      const dest   = encodeURIComponent(`${toPostalCode}, Switzerland`)
+      const url    = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${dest}&mode=driving&language=de&key=${apiKey}`
+
+      const resp = await $fetch<any>(url)
+      const element = resp?.rows?.[0]?.elements?.[0]
+
+      if (resp?.status !== 'OK' || element?.status !== 'OK') {
+        logger.warn(`⚠️ Google API: no route for ${fromPostalCode}→${toPostalCode} – skipping travel check for this run`)
+        // Only cache in-memory (not in DB) — transient API errors should not permanently disable travel checks
+        this.travelTimeCache.set(cacheKey, -1)
+        return null
+      }
+
+      const offpeak = Math.ceil(element.duration.value / 60)
+      const peak    = Math.ceil(offpeak * 1.3)
+      const distKm  = Math.round((element.distance?.value ?? 0) / 1000)
+
+      // 4. Persist success to both caches
+      this.travelTimeCache.set(cacheKey, offpeak)
+      await this.supabase
+        .from('plz_distance_cache')
+        .upsert(
+          {
+            from_plz: fromPostalCode,
+            to_plz: toPostalCode,
+            driving_time_minutes: offpeak,
+            driving_time_minutes_offpeak: offpeak,
+            driving_time_minutes_peak: peak,
+            distance_km: distKm,
+            last_updated: new Date().toISOString()
+          },
+          { onConflict: 'from_plz,to_plz' }
+        )
+
+      logger.debug(`🚗 Travel time ${fromPostalCode}→${toPostalCode}: offpeak=${offpeak}min peak=${peak}min (cached)`)
+      return this.isPeakSlotTime(slotTime) ? peak : offpeak
+
+    } catch (err: any) {
+      logger.warn('⚠️ getTravelTimeForSlot error:', err.message)
+      this.travelTimeCache.set(cacheKey, -1) // only in-memory, not in DB
+      return null
+    }
+  }
+
+  /** True if the given time falls in morning (07–09) or evening (17–19) rush hour, Mon–Fri */
+  private isPeakSlotTime(date: Date): boolean {
+    const day  = date.getUTCDay() // 0=Sun, 6=Sat
+    if (day === 0 || day === 6) return false
+    const hour = date.getUTCHours()
+    return (hour >= 7 && hour < 9) || (hour >= 17 && hour < 19)
+  }
 
   /**
    * Write slots to availability_slots table

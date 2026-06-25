@@ -208,16 +208,16 @@
               <td class="px-5 py-3.5">
                 <div class="flex flex-wrap gap-1">
                   <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold" :class="getStatusBadgeClass(invoice.status)">
-                    {{ getStatusLabel() }}
+                    {{ invoiceStatusLabel(invoice.status) }}
                   </span>
                   <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold" :class="getPaymentStatusBadgeClass(invoice.payment_status)">
-                    {{ getPaymentStatusLabel() }}
+                    {{ invoicePaymentStatusLabel(invoice.payment_status) }}
                   </span>
                 </div>
               </td>
               <td class="px-5 py-3.5">
                 <p class="text-sm text-gray-700">{{ formatDate(invoice.due_date) }}</p>
-                <p v-if="isOverdue(invoice.due_date)" class="text-xs text-red-600 font-semibold mt-0.5">Überfällig</p>
+                <p v-if="isOverdue(invoice.due_date, invoice.status, invoice.payment_status)" class="text-xs text-red-600 font-semibold mt-0.5">Überfällig</p>
               </td>
             </tr>
           </tbody>
@@ -547,16 +547,14 @@ const handleMarkAsPaid = async (id: string) => {
   try {
     logger.debug('💰 Mark as paid requested:', id)
     
-    // Verwende die Funktion aus dem useInvoices Composable
     const result = await markInvoiceAsPaid(id, 'paid')
     
-    if (result && 'success' in result && result.success) {
+    if (result && result.data) {
       logger.debug('✅ Invoice marked as paid successfully')
-      // Modal schließen und Daten neu laden
       showDetailModal.value = false
       await refreshData()
     } else {
-      console.error('❌ Failed to mark invoice as paid:', result)
+      console.error('❌ Failed to mark invoice as paid:', result?.error)
     }
   } catch (error) {
     console.error('Fehler beim Markieren als bezahlt:', error)
@@ -609,7 +607,8 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('de-CH')
 }
 
-const isOverdue = (dueDate: string) => {
+const isOverdue = (dueDate: string, status?: string, paymentStatus?: string) => {
+  if (status === 'paid' || status === 'cancelled' || paymentStatus === 'paid') return false
   return new Date(dueDate) < new Date()
 }
 
@@ -655,6 +654,27 @@ const getStatusBadgeClass = (status: string) => {
     'cancelled': 'bg-red-100 text-red-800'
   }
   return classes[status] || 'bg-gray-100 text-gray-800'
+}
+
+const invoiceStatusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    'draft': 'Entwurf',
+    'sent': 'Versendet',
+    'paid': 'Bezahlt',
+    'overdue': 'Überfällig',
+    'cancelled': 'Storniert'
+  }
+  return labels[status] || status
+}
+
+const invoicePaymentStatusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    'pending': 'Ausstehend',
+    'partial': 'Teilzahlung',
+    'paid': 'Bezahlt',
+    'overdue': 'Überfällig'
+  }
+  return labels[status] || status
 }
 
 const getPaymentStatusBadgeClass = (status: string) => {

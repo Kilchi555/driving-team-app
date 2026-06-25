@@ -1,13 +1,15 @@
-import { defineEventHandler, createError } from 'h3'
+import { defineEventHandler, createError, getQuery } from 'h3'
 import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import { createClient } from '@supabase/supabase-js'
 import logger from '~/utils/logger'
 
 /**
  * ✅ GET /api/staff/get-products
- * 
- * Secure API to fetch products for EventModal
- * 
+ *
+ * Secure API to fetch products for EventModal.
+ * Accepts optional `category_code` query param (driving licence category, e.g. "B").
+ * Products with `allowed_driving_category_codes = NULL` are shown for every category.
+ *
  * Security Layers:
  *   1. Bearer Token Authentication
  *   2. Tenant Isolation
@@ -15,6 +17,8 @@ import logger from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
+    const { category_code } = getQuery(event)
+
     // ✅ LAYER 1: AUTHENTICATION
     const authUser = await getAuthUserFromRequest(event)
     if (!authUser) {
@@ -47,12 +51,23 @@ export default defineEventHandler(async (event) => {
     const tenantId = userProfile.tenant_id
 
     // ✅ LAYER 3: DATABASE QUERY with Tenant Isolation
-    const { data: products, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('products')
       .select('*')
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
+      .order('display_order', { ascending: true })
       .order('name', { ascending: true })
+
+    // When a driving category code is supplied, only return products that either
+    // have no category restriction (NULL) or explicitly include this code.
+    if (category_code && typeof category_code === 'string') {
+      query = query.or(
+        `allowed_driving_category_codes.is.null,allowed_driving_category_codes.cs.{${category_code}}`
+      )
+    }
+
+    const { data: products, error } = await query
 
     if (error) {
       logger.error('❌ Error fetching products:', error)
@@ -62,10 +77,10 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 4: AUDIT LOGGING
     logger.debug('✅ Products fetched:', {
       userId: userProfile.id,
       tenantId,
+      category_code: category_code || 'all',
       count: products?.length || 0
     })
 

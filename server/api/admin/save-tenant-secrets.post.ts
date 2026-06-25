@@ -15,6 +15,8 @@ import { getSupabaseServerWithSession } from '~/utils/supabase'
 import { encryptSecret } from '~/server/utils/encryption'
 import { logAudit } from '~/server/utils/audit'
 import { logger } from '~/utils/logger'
+import { invalidateWalleeConfigCache } from '~/server/utils/wallee-config'
+import { clearProviderCache } from '~/server/payment-providers/factory'
 
 interface SaveSecretsRequest {
   tenant_id: string
@@ -158,6 +160,14 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.info(`✅ Successfully saved ${upsertedSecrets?.length || 0} secrets for tenant ${body.tenant_id}`)
+
+    // Invalidate Wallee credential caches if any Wallee secret was updated
+    const hasWalleeSecret = Object.keys(body.secrets).some(k => k.toLowerCase().startsWith('wallee_'))
+    if (hasWalleeSecret) {
+      invalidateWalleeConfigCache(body.tenant_id)
+      clearProviderCache(body.tenant_id)
+      logger.info(`🔄 [wallee-config] Cache invalidated for tenant ${body.tenant_id} after Wallee secret update`)
+    }
 
     // ✅ LAYER 7: Audit logging
     await logAudit({

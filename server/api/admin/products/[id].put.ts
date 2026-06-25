@@ -14,10 +14,16 @@ export default defineEventHandler(async (event) => {
     name, description, price_rappen, category,
     track_stock, stock_quantity, image_url, display_order,
     is_active, is_voucher, allow_custom_amount,
-    is_credit_product, credit_amount_rappen, show_in_shop
+    is_credit_product, credit_amount_rappen, show_in_shop,
+    allowed_driving_category_codes
   } = body
 
   if (!name) throw createError({ statusCode: 400, statusMessage: 'name is required' })
+
+  const drivingCodes: string[] | null =
+    Array.isArray(allowed_driving_category_codes) && allowed_driving_category_codes.length > 0
+      ? allowed_driving_category_codes.map(String)
+      : null
 
   const productData = {
     name: String(name).trim(),
@@ -34,6 +40,7 @@ export default defineEventHandler(async (event) => {
     is_credit_product: Boolean(is_credit_product),
     credit_amount_rappen: is_credit_product ? (Number(credit_amount_rappen) || null) : null,
     show_in_shop: Boolean(show_in_shop),
+    allowed_driving_category_codes: drivingCodes,
     tenant_id: profile.tenant_id
   }
 

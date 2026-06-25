@@ -254,49 +254,42 @@
                       </div>
 
                       <!-- Pickup-Einstellungen (nur wenn Pickup-Modus aktiv) -->
-                      <div 
+                      <div
                         v-if="staff.availability_mode !== 'standard' && location.available_categories?.length > 0"
-                        class="mt-3 pt-3 border-t border-gray-200"
+                        class="mt-3 pt-3 border-t border-gray-100"
                       >
-                        <label class="text-xs font-medium text-gray-700 block mb-2">Pickup-Einstellungen:</label>
-                        <div class="space-y-2">
-                          <div 
-                            v-for="categoryCode in location.available_categories" 
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pickup per Kategorie</p>
+                        <div class="flex flex-wrap gap-2">
+                          <div
+                            v-for="categoryCode in location.available_categories"
                             :key="`pickup-${categoryCode}`"
-                            class="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg"
+                            :class="[
+                              'flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer select-none',
+                              getLocationCategoryPickup(location, categoryCode)
+                                ? 'bg-blue-50 border-blue-300 text-blue-800'
+                                : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300'
+                            ]"
+                            @click="toggleLocationCategoryPickup(location, categoryCode, { target: { checked: !getLocationCategoryPickup(location, categoryCode) } } as any)"
                           >
-                            <span class="text-xs font-medium text-gray-700 w-8">{{ categoryCode }}</span>
-                            <!-- Pickup Toggle -->
-                            <button
-                              @click="toggleLocationCategoryPickup(location, categoryCode, { target: { checked: !getLocationCategoryPickup(location, categoryCode) } } as any)"
-                              :class="[
-                                'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
-                                getLocationCategoryPickup(location, categoryCode) 
-                                  ? 'bg-blue-600' 
-                                  : 'bg-gray-300'
-                              ]"
-                            >
-                              <span
-                                :class="[
-                                  'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                                  getLocationCategoryPickup(location, categoryCode) 
-                                    ? 'translate-x-4' 
-                                    : 'translate-x-0.5'
-                                ]"
-                              />
-                            </button>
-                            <!-- Radius Input (nur wenn Pickup aktiv) -->
-                            <input 
+                            <!-- Dot indicator -->
+                            <span :class="['w-1.5 h-1.5 rounded-full flex-shrink-0', getLocationCategoryPickup(location, categoryCode) ? 'bg-blue-500' : 'bg-gray-300']" />
+                            {{ categoryCode }}
+                            <!-- Radius badge when active -->
+                            <span
                               v-if="getLocationCategoryPickup(location, categoryCode)"
-                              type="number" 
-                              :value="getLocationCategoryPickupRadius(location, categoryCode)"
-                              @change="updateLocationCategoryPickupRadius(location, categoryCode, ($event.target as HTMLInputElement).value)"
-                              min="5" 
-                              max="60" 
-                              class="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder="Min"
+                              class="ml-1 flex items-center gap-1"
+                              @click.stop
                             >
-                            <span v-if="getLocationCategoryPickup(location, categoryCode)" class="text-xs text-gray-600">Min</span>
+                              <input
+                                type="number"
+                                :value="getLocationCategoryPickupRadius(location, categoryCode)"
+                                @change="updateLocationCategoryPickupRadius(location, categoryCode, ($event.target as HTMLInputElement).value)"
+                                min="5"
+                                max="60"
+                                class="w-10 px-1 py-0.5 text-xs border border-blue-300 rounded bg-white text-center focus:outline-none focus:ring-1 focus:ring-blue-400"
+                              />
+                              <span class="text-blue-600 text-xs">min</span>
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -609,10 +602,12 @@
 
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useUIStore } from '~/stores/ui'
+import { useAuthStore } from '~/stores/auth'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import { useFeatures } from '~/composables/useFeatures'
 import { useRuntimeConfig } from '#app'
 import { parseTimeWindows } from '~/utils/travelTimeValidation'
+import { getSupabase } from '~/utils/supabase'
 
 // Props
 const props = defineProps<{
@@ -626,9 +621,11 @@ const emit = defineEmits<{
 }>()
 
 // Supabase client
+const supabase = getSupabase()
 
 // Composables
 const uiStore = useUIStore()
+const authStore = useAuthStore()
 const { isEnabled, load: loadFeatures } = useFeatures()
 
 // Prüfe ob Online-Buchung aktiviert ist

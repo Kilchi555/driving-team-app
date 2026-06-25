@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
   // Rechnung laden (tenant-scoped)
   const { data: invoice } = await supabase
     .from('invoices')
-    .select('id, tenant_id, total_amount_rappen, payment_status')
+    .select('id, user_id, tenant_id, total_amount_rappen, payment_status')
     .eq('id', invoice_id)
     .eq('tenant_id', staffUser.tenant_id)
     .single()
@@ -53,12 +53,30 @@ export default defineEventHandler(async (event) => {
 
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
 
-  // Alle zugehörigen Zahlungen der Rechnung auf completed setzen
+  // Payments via invoice_id aktualisieren (für neue Rechnungen)
   await supabase
     .from('payments')
     .update({ payment_status: 'completed', paid_at: paidAt, updated_at: now })
     .eq('invoice_id', invoice_id)
-    .in('payment_status', ['invoiced', 'pending', 'open'])
+    .in('payment_status', ['invoice', 'invoiced', 'pending', 'open', 'failed'])
+
+  // Fallback: Payments über Invoice-Items → appointment_ids aktualisieren
+  // (für ältere Rechnungen wo invoice_id auf den Payments noch nicht gesetzt war)
+  const { data: invoiceItems } = await supabase
+    .from('invoice_items')
+    .select('appointment_id')
+    .eq('invoice_id', invoice_id)
+    .not('appointment_id', 'is', null)
+
+  if (invoiceItems && invoiceItems.length > 0) {
+    const appointmentIds = invoiceItems.map(item => item.appointment_id)
+    await supabase
+      .from('payments')
+      .update({ payment_status: 'completed', invoice_id, paid_at: paidAt, updated_at: now })
+      .eq('user_id', invoice.user_id ?? '')
+      .in('appointment_id', appointmentIds)
+      .in('payment_status', ['invoice', 'invoiced', 'pending', 'open', 'failed'])
+  }
 
   return { success: true, invoice_id }
 })
