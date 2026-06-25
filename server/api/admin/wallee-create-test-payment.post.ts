@@ -13,7 +13,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
+import { getWalleeTestConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { Wallee } from 'wallee'
 import { logger } from '~/utils/logger'
 
@@ -40,15 +40,17 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Tenant nicht gefunden' })
   }
 
-  // Load Wallee credentials (automatically uses test credentials if test mode active)
-  let walleeConfig: { spaceId: number; userId: number; apiSecret: string }
-  try {
-    walleeConfig = await getWalleeConfigForTenant(tenant_id)
-  } catch (e: any) {
-    throw createError({ statusCode: 500, statusMessage: `Wallee nicht konfiguriert: ${e.message}` })
+  // Always use TEST credentials directly — test payments never affect production,
+  // regardless of whether wallee_test_mode is on or off.
+  const walleeConfig = await getWalleeTestConfigForTenant(tenant_id)
+  if (!walleeConfig) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Keine Test-Credentials konfiguriert. Bitte zuerst Test-Credentials im Test-Modus Bereich speichern.',
+    })
   }
 
-  const isTestMode = !!tenant.wallee_test_mode
+  const isTestMode = true // test payment always uses test space
   const { spaceId } = walleeConfig
   const sdkConfig = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
 
