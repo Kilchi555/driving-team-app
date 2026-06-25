@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: payment, error } = await supabase
     .from('payments')
-    .select('id, status, amount, currency, wallee_transaction_id, wallee_space_id, tenant_id, metadata, created_at, updated_at')
+    .select('id, payment_status, total_amount_rappen, wallee_transaction_id, wallee_space_id, tenant_id, metadata, created_at, updated_at')
     .eq('id', payment_id)
     .single()
 
@@ -53,11 +53,10 @@ export default defineEventHandler(async (event) => {
 
   return {
     paymentId: payment.id,
-    dbStatus: payment.status,
+    dbStatus: payment.payment_status,
     walleeState,
     walleeDashboardUrl,
-    amount: payment.amount,
-    currency: payment.currency,
+    amount: (payment.total_amount_rappen / 100).toFixed(2),
     transactionId: payment.wallee_transaction_id,
     spaceId: payment.wallee_space_id,
     isTestPayment: !!(payment.metadata as any)?.super_admin_test,
