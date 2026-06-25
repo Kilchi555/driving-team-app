@@ -18,15 +18,17 @@ export interface LogEntry {
   userAgent?: string
 }
 
-// Check isDev at runtime (works in browser and server)
-const isDev = () => {
-  // In Nuxt/Node
-  if (typeof process !== 'undefined' && process.env) {
-    return process.env.NODE_ENV === 'development'
+// Check isDev at build/runtime.
+// Vite replaces import.meta.env.DEV with a boolean literal at build time,
+// so in production bundles this entire function collapses to `return false`.
+const isDev = (): boolean => {
+  // Vite / Nuxt 3 (preferred — tree-shaken in production builds)
+  if (typeof import.meta !== 'undefined' && 'env' in import.meta) {
+    return (import.meta as any).env?.DEV === true
   }
-  // Fallback: check if running in dev server (localhost)
-  if (typeof window !== 'undefined') {
-    return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  // Node.js server-side fallback
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV) {
+    return process.env.NODE_ENV === 'development'
   }
   return false
 }
@@ -101,10 +103,11 @@ export const logger = {
   },
 
   /**
-   * Info logs - always shown
-   * Flexible: accepts (message, ...args) OR (component, message, ...args)
+   * Info logs - shown in development only.
+   * Use logger.warn() for messages that should always be visible in production.
    */
   info: (...args: any[]) => {
+    if (!isDev()) return
     console.log(...args)
   },
 
