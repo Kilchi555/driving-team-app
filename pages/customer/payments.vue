@@ -346,7 +346,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { Capacitor } from '@capacitor/core'
 import { openPdf } from '~/utils/openPdf'
 import { roundToNearest5Rappen as roundToNearestFranken } from '~/utils/rounding'
-import { navigateTo } from '#app'
+import { navigateTo, useRoute, useRouter } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
@@ -565,8 +565,8 @@ const getPaymentUrls = () => {
     }
   }
   return {
-    successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
-    failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`
+    successUrl: `${window.location.origin}/customer/payments?payment_success=true`,
+    failedUrl: `${window.location.origin}/customer/payments?payment_failed=true`
   }
 }
 
@@ -1383,9 +1383,15 @@ onMounted(async () => {
 
   // Only load if userProfile is already available
   if (userProfile.value?.id) {
-  await loadAllData()
+    await loadAllData()
   }
   // Otherwise, the watcher above will trigger loadAllData when userProfile becomes available
+
+  // After Wallee redirect back to this page, clean up query params
+  const route = useRoute()
+  if (route.query.payment_success || route.query.payment_failed) {
+    useRouter().replace({ path: '/customer/payments' })
+  }
 })
 </script>
 
