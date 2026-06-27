@@ -4,6 +4,7 @@
     v-model="showInvoicePreview"
     :draft="invoiceDraft"
     @sent="onInvoiceSentFromModal"
+    @view-invoice="onViewInvoiceFromModal"
   />
   <!-- Invoice View Modal – Bestehende Rechnung anzeigen -->
   <InvoicePreviewModal
@@ -3081,6 +3082,30 @@ function onInvoiceSentFromModal(result: { invoice_id: string; invoice_number: st
   // Payments neu laden damit invoice_id und status aktualisiert sind
   loadPayments()
   selectedPayments.value = []
+}
+
+async function onViewInvoiceFromModal(invoice_id: string) {
+  showInvoicePreview.value = false
+  try {
+    let token: string | undefined
+    try {
+      const sessionCacheRaw = typeof localStorage !== 'undefined' ? localStorage.getItem('supabase-session-cache') : null
+      if (sessionCacheRaw) token = JSON.parse(sessionCacheRaw)?.access_token
+    } catch { /* ignore */ }
+    if (!token) {
+      const supabaseClient = getSupabase()
+      const { data: { session } } = await supabaseClient.auth.getSession()
+      token = session?.access_token
+    }
+    const res = await $fetch<{ success: boolean; data: any }>('/api/invoices/get', {
+      query: { invoice_id },
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    viewInvoiceData.value = res.data
+    showInvoiceView.value = true
+  } catch (err: any) {
+    alert(`Rechnung konnte nicht geladen werden: ${err?.data?.statusMessage || err.message}`)
+  }
 }
 
 // ── Invoice View (für bereits verrechnete Zahlungen) ────────

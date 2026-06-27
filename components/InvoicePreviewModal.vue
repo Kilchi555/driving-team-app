@@ -381,9 +381,22 @@
               </svg>
               {{ isResending ? 'Wird gesendet…' : 'Erneut senden' }}
             </button>
-            <!-- Rechnung senden (nur im draft-Modus) -->
+            <!-- Rechnung anzeigen (nach erfolgreichem Senden) -->
             <button
-              v-if="props.mode !== 'view'"
+              v-if="props.mode !== 'view' && hasSent"
+              @click="emit('view-invoice', sentInvoiceId!)"
+              class="flex-1 px-5 py-2.5 rounded-xl text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:brightness-110"
+              :style="{ background: primaryGradient }"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Rechnung anzeigen
+            </button>
+            <!-- Rechnung senden (nur im draft-Modus, solange noch nicht gesendet) -->
+            <button
+              v-if="props.mode !== 'view' && !hasSent"
               @click="sendInvoice"
               :disabled="isSending || !draft || !isBillingComplete"
               class="flex-1 px-5 py-2.5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:brightness-110 disabled:shadow-none disabled:hover:brightness-100"
@@ -494,6 +507,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   'sent': [result: { invoice_id: string; invoice_number: string; total_amount_rappen: number }]
+  'view-invoice': [invoice_id: string]
 }>()
 
 // Tenant branding
@@ -521,6 +535,8 @@ const isLoadingPdf = ref(false)
 const isSavingAddress = ref(false)
 const error = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
+const hasSent = ref(false)
+const sentInvoiceId = ref<string | null>(null)
 const localDueDate = ref('')
 const localNote = ref('')
 const editingAddress = ref(false)
@@ -577,6 +593,8 @@ watch(() => props.draft, (d) => {
     editingDueDate.value = false
     expandedItems.value = []
     qrDataUrl.value = null
+    hasSent.value = false
+    sentInvoiceId.value = null
     localBilling.value = {
       company_name: d.billing_company_name || (d as any).billing_company_name || '',
       first_name: d.billing_first_name || ((d as any).billing_contact_person?.split(' ')[0] || ''),
@@ -854,6 +872,8 @@ async function sendInvoice() {
       invoice_number: result.invoice_number,
       total_amount_rappen: result.total_amount_rappen,
     })
+    hasSent.value = true
+    sentInvoiceId.value = result.invoice_id
     successMessage.value = `Rechnung ${result.invoice_number} wurde erfolgreich versendet.`
     setTimeout(() => { successMessage.value = null }, 3000)
   } catch (err: any) {

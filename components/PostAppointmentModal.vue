@@ -4,6 +4,7 @@
     v-model="showInvoicePreview"
     :draft="invoiceDraft"
     @sent="onInvoiceSent"
+    @view-invoice="showInvoicePreview = false"
   />
 
   <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 z-50">
