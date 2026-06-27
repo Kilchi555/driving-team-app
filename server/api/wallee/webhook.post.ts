@@ -420,10 +420,19 @@ export default defineEventHandler(async (event) => {
     
     // ============ LAYER 6: PREVENT STATUS DOWNGRADES ============
     const newPriority = STATUS_PRIORITY[paymentStatus] ?? -1
+    const isTerminalFailure = paymentStatus === 'failed' || paymentStatus === 'cancelled'
     const paymentsToUpdate = payments.filter(p => {
       const currentPriority = STATUS_PRIORITY[p.payment_status] ?? -1
       const shouldUpdate = newPriority >= currentPriority
-      
+
+      // Special case: if Wallee reports failed/cancelled for a payment that is
+      // currently 'processing' (our optimistic lock or Wallee CONFIRMED state),
+      // we still allow it — the lock must be released so the customer can retry.
+      if (!shouldUpdate && isTerminalFailure && p.payment_status === 'processing') {
+        logger.info(`🔓 Releasing processing lock on ${p.id}: Wallee says ${paymentStatus}`)
+        return true
+      }
+
       if (!shouldUpdate) {
         logger.debug(`⏭️ Skipping downgrade: ${p.payment_status} → ${paymentStatus}`)
       }
@@ -441,6 +450,14 @@ export default defineEventHandler(async (event) => {
     }
     
     // ============ LAYER 7: UPDATE PAYMENTS ============
+    // For failed/cancelled Wallee events: payments that were in 'processing' (our
+    // optimistic lock) are reset to 'pending' so the customer can retry — not
+    // permanently marked as failed (which would block the pay button).
+    const getEffectiveStatus = (p: { payment_status: string }) => {
+      if (isTerminalFailure && p.payment_status === 'processing') return 'pending'
+      return paymentStatus
+    }
+
     const updateData: any = {
       payment_status: paymentStatus,
       updated_at: new Date().toISOString()
@@ -451,15 +468,34 @@ export default defineEventHandler(async (event) => {
     }
     
     const paymentIdsToUpdate = paymentsToUpdate.map(p => p.id)
-    
-    const { error: updateError } = await supabase
-      .from('payments')
-      .update(updateData)
-      .in('id', paymentIdsToUpdate)
-    
-    if (updateError) {
-      logger.error('❌ Error updating payments:', updateError)
-      return { success: false, error: 'Failed to update payments' }
+
+    // Split into two groups when terminal failure hits a 'processing' payment
+    const lockReleaseIds = isTerminalFailure
+      ? paymentsToUpdate.filter(p => p.payment_status === 'processing').map(p => p.id)
+      : []
+    const normalUpdateIds = paymentIdsToUpdate.filter(id => !lockReleaseIds.includes(id))
+
+    // Reset lock-held payments back to pending
+    if (lockReleaseIds.length > 0) {
+      const { error: releaseErr } = await supabase
+        .from('payments')
+        .update({ payment_status: 'pending', updated_at: new Date().toISOString() })
+        .in('id', lockReleaseIds)
+      if (releaseErr) logger.error('❌ Error releasing processing locks:', releaseErr)
+      else logger.info(`🔓 Released ${lockReleaseIds.length} processing lock(s) back to pending`)
+    }
+
+    // Normal status update for the rest
+    if (normalUpdateIds.length > 0) {
+      const { error: updateError } = await supabase
+        .from('payments')
+        .update(updateData)
+        .in('id', normalUpdateIds)
+
+      if (updateError) {
+        logger.error('❌ Error updating payments:', updateError)
+        return { success: false, error: 'Failed to update payments' }
+      }
     }
     
     logger.info(`✅ Updated ${paymentsToUpdate.length} payment(s) to: ${paymentStatus}`)
