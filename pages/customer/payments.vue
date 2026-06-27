@@ -259,7 +259,16 @@
             
             <!-- Action Buttons -->
             <!-- Hide "Jetzt bezahlen" button only if appointment is cancelled with 0% charge (free cancellation) -->
-            <div v-if="payment.payment_status === 'pending' && (!isAppointmentCancelled(payment) || (isAppointmentCancelled(payment) && getCancellationChargePercentage(payment) > 0))">
+            <!-- Processing spinner — shown while payment is being initiated server-side -->
+            <div v-if="payment.payment_status === 'processing'" class="flex items-center gap-2 text-sm text-gray-500">
+              <svg class="animate-spin h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              Zahlung wird verarbeitet…
+            </div>
+
+            <div v-else-if="payment.payment_status === 'pending' && (!isAppointmentCancelled(payment) || (isAppointmentCancelled(payment) && getCancellationChargePercentage(payment) > 0))">
               <div class="flex flex-row justify-between items-center">
                 <!-- Rabattcode Link (links) – nur bei Fahrstunden-Zahlungen ohne bestehenden Rabatt -->
                 <button

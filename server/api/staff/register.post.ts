@@ -212,7 +212,10 @@ export default defineEventHandler(async (event) => {
         zip: zip || null,
         city: sanitizedCity,
         language: language || 'de',
-        accepted_terms_at: acceptedTerms ? new Date().toISOString() : null
+        accepted_terms_at: acceptedTerms ? new Date().toISOString() : null,
+        category: Array.isArray(selectedCategories) && selectedCategories.length > 0
+          ? selectedCategories
+          : null
       })
       .select('id')
       .single()
@@ -229,24 +232,7 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ User profile created:', newUser.id)
 
-    // 4. Store categories if provided
-    if (selectedCategories && selectedCategories.length > 0) {
-      try {
-        const categoryInserts = selectedCategories.map((code: string) => ({
-          user_id: newUser.id,
-          category_code: code,
-          tenant_id: invitation.tenant_id
-        }))
-        
-        await serviceSupabase
-          .from('staff_categories')
-          .insert(categoryInserts)
-        
-        logger.debug('✅ Categories stored:', selectedCategories.length)
-      } catch (catErr) {
-        console.warn('⚠️ Categories storage failed (non-fatal):', catErr)
-      }
-    }
+    logger.debug('✅ Categories stored in users.category:', selectedCategories?.length ?? 0)
 
     // 5. Setup working hours (service role)
     const hoursToInsert = Array.isArray(workingHours) ? workingHours : []

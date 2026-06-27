@@ -46,6 +46,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
   let tenantId: string | undefined
   let auditDetails: any = {}
   let userData: { id: string; tenant_id: string; email?: string; first_name?: string; last_name?: string } | undefined
+  let body: PaymentProcessRequest | undefined
 
   try {
     logger.debug('💳 Unified Payment Processing API called')
@@ -74,7 +75,6 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     }
 
     // ============ LAYER 3: READ & VALIDATE INPUT ============
-    let body: PaymentProcessRequest
     try {
       body = await readBody(event)
     } catch (e) {
@@ -162,8 +162,8 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       throw createError({ statusCode: 403, statusMessage: 'Unauthorized' })
     }
 
-    // Only allow processing pending payments
-    if (payment.payment_status !== 'pending') {
+    // Only allow processing pending (or already-claimed processing) payments
+    if (payment.payment_status !== 'pending' && payment.payment_status !== 'processing') {
       logger.warn('❌ Payment is not pending. Status:', payment.payment_status)
       await logAudit({
         user_id: authenticatedUserId,
@@ -175,6 +175,36 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       })
       throw createError({ statusCode: 400, statusMessage: `Payment must be pending to process (current: ${payment.payment_status})` })
     }
+
+    // ── ATOMIC LOCK: claim the payment by flipping pending → processing ──────
+    // Uses a conditional UPDATE so only one concurrent request succeeds.
+    // If the payment is already 'processing' from a prior request, we fall
+    // through to the existing-transaction check below and reuse its URL.
+    let claimedLock = false
+    if (payment.payment_status === 'pending') {
+      const { data: claimResult, error: claimError } = await supabaseAdmin
+        .from('payments')
+        .update({ payment_status: 'processing', updated_at: new Date().toISOString() })
+        .eq('id', payment.id)
+        .eq('payment_status', 'pending') // only succeeds if still pending
+        .select('id')
+        .maybeSingle()
+
+      if (claimError) {
+        logger.error('❌ Failed to claim payment lock:', claimError)
+        throw createError({ statusCode: 500, statusMessage: 'Failed to initiate payment' })
+      }
+
+      if (!claimResult) {
+        // Another concurrent request already claimed this payment
+        logger.warn('⚠️ Payment already claimed by concurrent request:', payment.id)
+        throw createError({ statusCode: 409, statusMessage: 'Zahlung wird bereits verarbeitet. Bitte warten.' })
+      }
+
+      claimedLock = true
+      logger.debug('🔒 Payment lock claimed:', payment.id)
+    }
+    auditDetails.claimed_lock = claimedLock
 
     auditDetails.payment_id = body.paymentId
     auditDetails.customer_id = payment.user_id
@@ -653,11 +683,26 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     const errorMessage = error.statusMessage || error.message || 'Internal server error'
     const statusCode = error.statusCode || 500
 
+    // If we claimed the processing lock but Wallee/downstream failed,
+    // reset to pending so the customer can retry.
+    if (auditDetails.claimed_lock && userData?.id) {
+      try {
+        await getSupabaseAdmin()
+          .from('payments')
+          .update({ payment_status: 'pending', updated_at: new Date().toISOString() })
+          .eq('id', body?.paymentId)
+          .eq('payment_status', 'processing')
+        logger.info('🔓 Payment lock released back to pending after error:', body?.paymentId)
+      } catch (resetErr) {
+        logger.error('⚠️ Could not reset payment lock to pending:', resetErr)
+      }
+    }
+
     // Log with user_id if available (after user lookup), otherwise use auth_user_id
     try {
       await logAudit({
-        user_id: userData?.id || null,  // Will be undefined if user lookup failed
-        auth_user_id: authenticatedUserId || null,  // Always available
+        user_id: userData?.id || null,
+        auth_user_id: authenticatedUserId || null,
         action: 'process_payment',
         status: 'error',
         error_message: errorMessage,

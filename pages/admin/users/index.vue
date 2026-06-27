@@ -89,6 +89,7 @@
       <div class="flex flex-col sm:flex-row gap-3 flex-wrap items-stretch sm:items-center px-5 py-4">
         <div>
           <p class="text-sm font-bold text-gray-900">{{ filteredUsers.length }} Benutzer</p>
+          <p v-if="selectedStatus === 'deleted'" class="text-xs text-amber-600 mt-0.5">Gelöscht – Klick auf Zeile zum Wiederherstellen</p>
         </div>
 
         <!-- Invitation Filter -->
@@ -122,7 +123,8 @@
           <option value="">Alle Status</option>
           <option value="active">Aktiv</option>
           <option value="inactive">Inaktiv</option>
-          <option value="unpaid">Mit offenen Zahlungen</option>
+          <option v-if="activeTab === 'customers'" value="unpaid">Mit offenen Zahlungen</option>
+          <option v-if="activeTab !== 'customers'" value="deleted">Gelöscht</option>
         </select>
 
         <!-- Tab-abhängige Aktionen -->
@@ -207,9 +209,11 @@
               :key="user.id"
               :class="[
                 'transition-colors group',
-                user.is_invitation
-                  ? 'bg-gray-50/50 opacity-75'
-                  : 'tenant-row-hover cursor-pointer'
+                user.deleted_at
+                  ? 'bg-red-50/30 opacity-70 cursor-pointer hover:opacity-100'
+                  : user.is_invitation
+                    ? 'bg-gray-50/50 opacity-75'
+                    : 'tenant-row-hover cursor-pointer'
               ]"
               @click="user.is_invitation ? null : navigateToUserDetails(user.id)"
             >
@@ -245,7 +249,11 @@
               </td>
 
               <td class="px-5 py-3.5">
-                <span v-if="user.is_invitation"
+                <span v-if="user.deleted_at"
+                  class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-700">
+                  Gelöscht
+                </span>
+                <span v-else-if="user.is_invitation"
                   :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', user.invitation_status === 'expired' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700']">
                   {{ user.invitation_status === 'expired' ? 'Abgelaufen' : 'Eingeladen' }}
                 </span>
@@ -266,12 +274,19 @@
               </td>
             </tr>
 
+            <!-- Loading deleted users -->
+            <tr v-if="selectedStatus === 'deleted' && isLoadingDeleted">
+              <td colspan="5" class="px-6 py-12 text-center text-gray-400">
+                <div class="text-sm">Gelöschte Benutzer werden geladen…</div>
+              </td>
+            </tr>
+
             <!-- Empty State -->
-            <tr v-if="filteredUsers.length === 0">
+            <tr v-else-if="filteredUsers.length === 0">
               <td colspan="5" class="px-6 py-12 text-center text-gray-500">
                 <div class="text-lg">👤 Keine Benutzer gefunden</div>
                 <div class="text-sm mt-2">
-                  {{ searchTerm ? 'Versuchen Sie eine andere Suche' : 'Erstellen Sie den ersten Benutzer' }}
+                  {{ selectedStatus === 'deleted' ? 'Keine gelöschten Benutzer vorhanden' : searchTerm ? 'Versuchen Sie eine andere Suche' : 'Erstellen Sie den ersten Benutzer' }}
                 </div>
               </td>
             </tr>
@@ -759,7 +774,7 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, onActivated } from 'vue'
 import { logger } from '~/utils/logger'
 import { useRuntimeConfig, navigateTo } from '#app'
 import { toLocalTimeString } from '~/utils/dateUtils'
@@ -794,6 +809,7 @@ interface User {
   preferred_payment_method: string | null
   is_active: boolean
   created_at: string
+  deleted_at?: string | null
   appointment_count?: number
   completed_appointments?: number
   unpaid_count?: number
@@ -824,6 +840,8 @@ const selectedStatus = ref('')
 const showCreateUserModal = ref(false)
 const currentTenant = ref<any>(null)
 const invitationFilter = ref<'all' | 'users' | 'invitations'>('all')
+const deletedUsers = ref<User[]>([])
+const isLoadingDeleted = ref(false)
 
 // ── Seat limit tracking ───────────────────────────────────────────────────────
 import { PLANS } from '~/utils/planFeatures'
@@ -913,7 +931,45 @@ watch(activeTab, (tab) => {
   if (tab === 'customers') selectedRole.value = 'client'
   else if (tab === 'staff') selectedRole.value = 'staff'
   else if (tab === 'admins') selectedRole.value = 'admin'
+  // Reset incompatible status filters on tab switch
+  if (tab === 'customers' && selectedStatus.value === 'deleted') selectedStatus.value = ''
+  if (tab !== 'customers' && selectedStatus.value === 'unpaid') selectedStatus.value = ''
 }, { immediate: true })
+
+const loadDeletedUsers = async () => {
+  if (isLoadingDeleted.value) return
+  isLoadingDeleted.value = true
+  try {
+    const response = await $fetch('/api/admin/users/manage', {
+      method: 'POST',
+      body: { action: 'get_deleted_users' }
+    }) as any
+    deletedUsers.value = (response.users || []).map((u: any) => ({
+      id: u.id,
+      first_name: u.first_name,
+      last_name: u.last_name,
+      email: u.email || '',
+      phone: null,
+      role: u.role || 'staff',
+      admin_level: u.admin_level,
+      is_primary_admin: u.is_primary_admin,
+      preferred_payment_method: null,
+      is_active: u.is_active,
+      created_at: u.created_at,
+      deleted_at: u.deleted_at
+    }))
+  } catch (e) {
+    logger.warn('⚠️ Could not load deleted users:', e)
+  } finally {
+    isLoadingDeleted.value = false
+  }
+}
+
+watch(selectedStatus, (status) => {
+  if (status === 'deleted' && deletedUsers.value.length === 0) {
+    loadDeletedUsers()
+  }
+})
 
 // Toast state for fallback link
 const showInviteToast = ref(false)
@@ -1000,6 +1056,27 @@ const newUsersCount = computed(() => {
 })
 
 const filteredUsers = computed(() => {
+  // "Gelöscht" filter uses a separate data set
+  if (selectedStatus.value === 'deleted') {
+    let filtered = deletedUsers.value
+    if (selectedRole.value) {
+      filtered = filtered.filter(user => user.role === selectedRole.value)
+    }
+    if (searchTerm.value) {
+      const search = searchTerm.value.toLowerCase()
+      filtered = filtered.filter(user =>
+        (user.first_name?.toLowerCase().includes(search)) ||
+        (user.last_name?.toLowerCase().includes(search)) ||
+        user.email.toLowerCase().includes(search)
+      )
+    }
+    return filtered.sort((a, b) => {
+      const aName = `${a.last_name || ''} ${a.first_name || ''}`.trim()
+      const bName = `${b.last_name || ''} ${b.first_name || ''}`.trim()
+      return aName.localeCompare(bName)
+    })
+  }
+
   let filtered = users.value
 
   // Invitation filter
@@ -1008,7 +1085,6 @@ const filteredUsers = computed(() => {
   } else if (invitationFilter.value === 'invitations') {
     filtered = filtered.filter(user => user.is_invitation)
   }
-  // 'all' shows everything, no filter needed
 
   // Search filter
   if (searchTerm.value) {
@@ -1041,7 +1117,6 @@ const filteredUsers = computed(() => {
   }
 
   return filtered.sort((a, b) => {
-    // Sort by last name, then first name
     const aName = `${a.last_name || ''} ${a.first_name || ''}`.trim()
     const bName = `${b.last_name || ''} ${b.first_name || ''}`.trim()
     return aName.localeCompare(bName)
@@ -1712,6 +1787,16 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('click', closeRoleDropdown)
+})
+
+// Refresh user list when navigating back to this page (e.g. after deletion on detail page)
+onActivated(async () => {
+  await loadUsers()
+  // Also refresh deleted users if that filter is active
+  if (selectedStatus.value === 'deleted') {
+    deletedUsers.value = []
+    await loadDeletedUsers()
+  }
 })
 </script>
 
