@@ -966,20 +966,32 @@ function parsePaymentMetadata(payment: any): Record<string, any> {
 // ✅ Produktzeile inkl. gekaufter Gutscheine (Shop)
 const getProductsLabel = (payment: any): string => {
   const meta = parsePaymentMetadata(payment)
-  const products = meta?.products
-  if (!Array.isArray(products) || products.length === 0) {
-    if (Number(payment.products_price_rappen) > 0) return 'Shop / Produktkauf'
-    return 'Produkte'
+  const metaProducts = meta?.products
+
+  // Primary: use metadata.products (has voucher/name info)
+  if (Array.isArray(metaProducts) && metaProducts.length > 0) {
+    const parts = metaProducts.map((p: any) => {
+      const qty = p.quantity && Number(p.quantity) > 1 ? `${p.quantity}× ` : ''
+      const name = (p.name || p.product_name || '').trim() || 'Position'
+      if (p.is_voucher) return `${qty}Gutschein: ${name}`
+      return `${qty}${name}`
+    })
+    return parts.filter(Boolean).join(', ') || 'Produkte'
   }
 
-  const parts = products.map((p: any) => {
-    const qty = p.quantity && Number(p.quantity) > 1 ? `${p.quantity}× ` : ''
-    const name = (p.name || p.product_name || '').trim() || 'Position'
-    if (p.is_voucher) return `${qty}Gutschein: ${name}`
-    return `${qty}${name}`
-  })
+  // Fallback: appointment_products join
+  const aptProducts = payment.appointment_products
+  if (Array.isArray(aptProducts) && aptProducts.length > 0) {
+    const parts = aptProducts.map((p: any) => {
+      const qty = p.quantity && Number(p.quantity) > 1 ? `${p.quantity}× ` : ''
+      const name = (p.product_name || '').trim() || 'Position'
+      return `${qty}${name}`
+    })
+    return parts.filter(Boolean).join(', ') || 'Produkte'
+  }
 
-  return parts.filter(Boolean).join(', ') || 'Produkte'
+  if (Number(payment.products_price_rappen) > 0) return 'Shop / Produktkauf'
+  return 'Produkte'
 }
 
 const formatPaymentTimeline = (dateString: string): string => {
