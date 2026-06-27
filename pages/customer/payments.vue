@@ -337,6 +337,16 @@
     />
     </div><!-- end scrollable content -->
   </div>
+
+  <!-- Toast Notification -->
+  <Toast
+    :show="showToast"
+    :type="toastType"
+    :title="toastTitle"
+    :message="toastMessage"
+    :duration="3000"
+    @close="showToast = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -357,6 +367,7 @@ import CustomerMedicalCertificateModal from '~/components/customer/CustomerMedic
 import CustomerCreditWalletPanel from '~/components/customer/CustomerCreditWalletPanel.vue'
 import { formatDateTime as formatDateTimeUtil } from '~/utils/dateUtils'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import Toast from '~/components/Toast.vue'
 
 const { primaryColor } = useTenantBranding()
 
@@ -382,6 +393,19 @@ const {
   isLoading: paymentsLoading,
   error: paymentsError
 } = useCustomerPayments()
+
+// Toast State
+const showToast = ref(false)
+const toastType = ref<'success' | 'error' | 'warning' | 'info'>('success')
+const toastTitle = ref('')
+const toastMessage = ref('')
+
+const displayToast = (type: 'success' | 'error' | 'warning' | 'info', title: string, message = '') => {
+  toastType.value = type
+  toastTitle.value = title
+  toastMessage.value = message
+  showToast.value = true
+}
 
 // State
 const isLoading = ref(true)
@@ -1387,9 +1411,13 @@ onMounted(async () => {
   }
   // Otherwise, the watcher above will trigger loadAllData when userProfile becomes available
 
-  // After Wallee redirect back to this page, clean up query params
+  // After Wallee redirect back to this page, show toast and clean up query params
   const route = useRoute()
-  if (route.query.payment_success || route.query.payment_failed) {
+  if (route.query.payment_success === 'true') {
+    displayToast('success', 'Zahlung erfolgreich!', 'Deine Zahlung wurde erfolgreich verarbeitet.')
+    useRouter().replace({ path: '/customer/payments' })
+  } else if (route.query.payment_failed === 'true') {
+    displayToast('error', 'Zahlung fehlgeschlagen', 'Die Zahlung konnte nicht verarbeitet werden. Bitte versuche es erneut.')
     useRouter().replace({ path: '/customer/payments' })
   }
 })
