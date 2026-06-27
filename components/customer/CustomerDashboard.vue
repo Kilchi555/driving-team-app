@@ -62,33 +62,6 @@
     <!-- Scrollable content -->
     <div class="flex-1 overflow-y-auto">
 
-    <!-- BANNER: Bestätigung erforderlich (deaktiviert - Termine werden direkt als 'confirmed' gesetzt) -->
-    <div v-if="false && showContent && pendingConfirmations.length > 0" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-      <div 
-        @click="showConfirmationModal = true"
-        class="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl shadow-lg p-6 cursor-pointer hover:from-orange-600 hover:to-red-600 transition-all transform hover:scale-[1.01]"
-      >
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-4 flex-1">
-            <div class="bg-white bg-opacity-20 rounded-full p-3">
-              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            </div>
-            <div class="flex-1">
-              <h3 class="text-xl font-bold mb-1">
-                {{ pendingConfirmations.length }} {{ pendingConfirmations.length === 1 ? 'Termin' : 'Termine' }} benötigt{{ pendingConfirmations.length === 1 ? '' : '' }} Ihre Bestätigung
-              </h3>
-            </div>
-          </div>
-          <div class="ml-4">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Loading State - removed large spinner, uses small one in content area instead -->
 
@@ -903,180 +876,6 @@
       </div>
     </div>
 
-    <!-- MODAL: Bestätigung (deaktiviert - Termine werden direkt als 'confirmed' gesetzt) -->
-    <div v-if="false && showConfirmationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div class="p-6">
-          <!-- Header -->
-          <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center space-x-3">
-              <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-              <div>
-                <h2 class="text-xl font-bold text-gray-900">Terminbestätigung</h2>
-              </div>
-            </div>
-            <button 
-              @click="showConfirmationModal = false"
-              class="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <!-- Hinweis zur automatischen Zahlung absichtlich entfernt: erscheint erst auf der Bestätigungsseite -->
-
-          <!-- Pending Confirmations List -->
-          <div class="space-y-3 mb-6">
-            <div 
-              v-for="appointment in pendingConfirmations" 
-              :key="appointment.id"
-              class="border rounded-xl p-4 shadow-sm"
-              :class="isOverdue(appointment) ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-white'"
-            >
-              <div class="flex flex-col gap-3">
-                <!-- Header: Status Badge oben rechts -->
-                <div class="flex justify-end">
-                  <span v-if="isOverdue(appointment)" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-800 flex-shrink-0">
-                    Überfällig
-                  </span>
-                </div>
-                
-                <!-- Datum, Zeit & Dauer -->
-                <div class="flex items-center text-sm gap-1.5">
-                  <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span class="text-gray-900 font-semibold">{{ formatDateTime(appointment.start_time) }}</span>
-                  <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3" />
-                  </svg>
-                  <span class="text-gray-600">{{ appointment.duration_minutes || 45 }} Min</span>
-                </div>
-
-                <!-- Details Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-
-                  <!-- Event Type Code + "mit" + Staff Name -->
-                  <div class="flex items-center gap-2 text-gray-600">
-                    <span
-                      class="text-xs px-2 py-1 rounded font-medium"
-                      :style="{ background: `${primaryColor}20`, color: primaryColor }"
-                    >
-                      {{ getEventTypeLabel(appointment.event_type_code) }}
-                    </span>
-                    <span class="font-medium">mit {{ getInstructorName(appointment) }}</span>
-                  </div>
-
-                  <!-- Zahlungsart & Kategorie -->
-                  <div class="flex items-center justify-between text-gray-600">
-                    <div class="flex items-center">
-                      <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v4a1 1 0 001 1h4a1 1 0 001-1V7m-6 0V5a2 2 0 012-2h2a2 2 0 012 2v2m0 0h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V7m0 0V5a2 2 0 012-2h2a2 2 0 012 2v2" />
-                      </svg>
-                      <span class="font-medium">{{ getPaymentMethodLabel(appointment.payment?.payment_method) }}</span>
-                    </div>
-                    <div class="flex items-center">
-                      <svg class="w-4 h-4 text-gray-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" />
-                      </svg>
-                      <span class="font-medium">{{ getCategoryLabel(appointment) }}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Payment Details (Produkte & Rabatte) -->
-                <div v-if="hasPaymentDetails(appointment)" class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
-                  <div class="space-y-1.5">
-                    <!-- Payment details from payment object or direct fields -->
-                    <div v-if="appointment.payment">
-                      <div v-if="getPaymentField(appointment, 'lesson_price_rappen') > 0" class="flex justify-between items-center">
-                        <span class="text-gray-700">{{ getEventTypeLabel(appointment.event_type_code) }}</span>
-                        <span class="text-gray-900 font-medium text-xs">CHF {{ formatPrice(getPaymentField(appointment, 'lesson_price_rappen')) }}</span>
-                      </div>
-                      <div v-if="getPaymentField(appointment, 'admin_fee_rappen') > 0" class="flex justify-between items-center">
-                        <span class="text-gray-700">Verwaltungsgebühr</span>
-                        <span class="text-gray-900 font-medium text-xs">CHF {{ formatPrice(getPaymentField(appointment, 'admin_fee_rappen')) }}</span>
-                      </div>
-                      <div v-if="getPaymentField(appointment, 'products_price_rappen') > 0" class="flex justify-between items-center">
-                        <span class="text-gray-700">Produkte</span>
-                        <span class="text-gray-900 font-medium text-xs">CHF {{ formatPrice(getPaymentField(appointment, 'products_price_rappen')) }}</span>
-                      </div>
-                      <div v-if="getPaymentField(appointment, 'discount_amount_rappen') > 0" class="flex justify-between items-center">
-                        <span class="text-gray-700">Rabatt</span>
-                        <span class="text-red-600 font-medium text-xs">- CHF {{ formatPrice(getPaymentField(appointment, 'discount_amount_rappen')) }}</span>
-                      </div>
-                    </div>
-                    <!-- Fallback: Direct payment fields if no payment object -->
-                    <template v-else>
-                      <div v-if="getPaymentField(appointment, 'lesson_price_rappen') > 0" class="flex justify-between items-center">
-                        <span class="text-gray-700">{{ getEventTypeLabel(appointment.event_type_code) }}</span>
-                        <span class="text-gray-900 font-medium text-xs">CHF {{ formatPrice(getPaymentField(appointment, 'lesson_price_rappen')) }}</span>
-                      </div>
-                      <div v-if="getPaymentField(appointment, 'admin_fee_rappen') > 0" class="flex justify-between items-center">
-                        <span class="text-gray-700">Verwaltungsgebühr</span>
-                        <span class="text-gray-900 font-medium text-xs">CHF {{ formatPrice(getPaymentField(appointment, 'admin_fee_rappen')) }}</span>
-                      </div>
-                      <div v-if="getPaymentField(appointment, 'products_price_rappen') > 0" class="flex justify-between items-center">
-                        <span class="text-gray-700">Produkte</span>
-                        <span class="text-gray-900 font-medium text-xs">CHF {{ formatPrice(getPaymentField(appointment, 'products_price_rappen')) }}</span>
-                      </div>
-                      <div v-if="getPaymentField(appointment, 'discount_amount_rappen') > 0" class="flex justify-between items-center">
-                        <span class="text-gray-700">Rabatt</span>
-                        <span class="text-red-600 font-medium text-xs">- CHF {{ formatPrice(getPaymentField(appointment, 'discount_amount_rappen')) }}</span>
-                      </div>
-                    </template>
-                  </div>
-                  <div class="border-t border-gray-300 mt-2 pt-2 space-y-2">
-                    <!-- Total -->
-                    <div class="flex justify-between items-center">
-                      <span class="font-semibold text-gray-900 text-xs">Total</span>
-                      <span class="font-bold text-gray-900 text-sm">CHF {{ formatPrice((appointment.payment?.total_amount_rappen || appointment.total_amount_rappen) || 0) }}</span>
-                    </div>
-                    <!-- Credit Used -->
-                    <div v-if="appointment.payment?.credit_used_rappen && appointment.payment.credit_used_rappen > 0" class="flex justify-between items-center">
-                      <span class="text-gray-600 text-xs">Verwendetes Guthaben</span>
-                      <span class="text-green-600 font-medium text-xs">-CHF {{ formatPrice(appointment.payment.credit_used_rappen) }}</span>
-                    </div>
-                    <!-- Still to Pay (if credit was used) -->
-                    <div v-if="appointment.payment?.credit_used_rappen && appointment.payment.credit_used_rappen > 0" class="flex justify-between items-center border-t border-gray-200 pt-2">
-                      <span class="font-semibold text-gray-900 text-xs">Noch zu zahlen</span>
-                      <span class="font-bold text-sm" :style="{ color: primaryColor }">CHF {{ formatPrice(Math.max(0, (appointment.payment?.total_amount_rappen || 0) - (appointment.payment?.credit_used_rappen || 0))) }}</span>
-                    </div>
-                    <!-- Payment Method -->
-                    <div v-if="getPaymentMethod(appointment)" class="flex items-center justify-between text-xs">
-                      <span class="text-gray-600">Zahlungsmethode:</span>
-                      <span class="text-gray-900 font-medium">{{ getPaymentMethodLabel(getPaymentMethod(appointment)) }}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Action Button -->
-                <button
-                  @click="confirmAppointment(appointment)"
-                  :disabled="confirmingAppointments.has(appointment.id)"
-                  class="w-full px-4 py-2.5 text-white rounded-lg transition-colors text-sm font-medium shadow focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 hover:opacity-90"
-                  :style="{ background: primaryColor, '--tw-ring-color': `${primaryColor}66` } as any"
-                >
-                  <svg v-if="confirmingAppointments.has(appointment.id)" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span>{{ confirmingAppointments.has(appointment.id) ? 'Wird bestätigt...' : 'Jetzt bestätigen' }}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-             
-        </div>
-      </div>
-    </div>
 
     <!-- Modals -->
     <EvaluationsOverviewModal 
@@ -1252,68 +1051,6 @@
     @document-uploaded="loadUserDocuments"
   />
   
-  <!-- 💳 Payment Confirmation Dialog -->
-  <Teleport to="body">
-    <div v-if="showPaymentConfirmDialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full animate-in fade-in relative">
-        <!-- Close Button (top right) -->
-        <button
-          @click="handlePayLater"
-          class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-          aria-label="Schließen"
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
-        <!-- Header -->
-        <div class="flex items-center justify-center mb-6">
-          <div
-            class="w-16 h-16 rounded-full flex items-center justify-center"
-            :style="{ background: `${primaryColor}20` }"
-          >
-            <svg class="w-8 h-8" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h10m4 0a1 1 0 11-2 0 1 1 0 012 0zM7 15a1 1 0 11-2 0 1 1 0 012 0z" />
-            </svg>
-          </div>
-        </div>
-        
-        <!-- Content -->
-        <h2 class="text-2xl font-bold text-gray-900 mb-3 text-center">Zahlung erforderlich</h2>
-        <p class="text-gray-600 text-center mb-8">
-          Dein Termin wurde erfolgreich bestätigt! Möchtest du jetzt bezahlen oder später?
-        </p>
-        
-        <!-- Buttons -->
-        <div class="flex gap-3">
-          <!-- Später Button -->
-          <button
-            @click="handlePayLater"
-            :disabled="isProcessingPayment"
-            class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Später
-          </button>
-          
-          <!-- Jetzt Bezahlen Button — nur sichtbar wenn Online-Zahlung aktiviert -->
-          <button
-            v-if="walleeEnabled"
-            @click="handlePayNow"
-            :disabled="isProcessingPayment"
-            class="flex-1 px-4 py-3 text-white font-semibold rounded-lg disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 hover:opacity-90"
-            :style="{ background: primaryColor }"
-          >
-            <svg v-if="isProcessingPayment" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span v-if="isProcessingPayment">Lädt...</span>
-            <span v-else>Jetzt</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
   
 </template>
 
@@ -1402,9 +1139,6 @@ const instructors = ref<any[]>([])
 const showInstructorModal = ref(false)
 const selectedInstructor = ref<any>(null)
 
-// ✅ State für Bestätigungen
-const pendingConfirmations = ref<any[]>([])
-const showConfirmationModal = ref(false)
 const showReglementeModal = ref(false)
 const showReglementDetailModal = ref(false)
 const showReglementContent = ref('')
@@ -1522,15 +1256,7 @@ const HOURS_BEFORE_APPOINTMENT_FOR_CAPTURE = 24  // Capture exactly 24h before
 const HOURS_BEFORE_APPOINTMENT_FOR_IMMEDIATE = 24 // Charge immediately if < 24h away
 const automaticPaymentHoursBefore = ref(HOURS_BEFORE_APPOINTMENT_FOR_CAPTURE)
 const automaticAuthorizationHoursBefore = ref(HOURS_BEFORE_APPOINTMENT_FOR_CAPTURE) // Same as capture time
-const confirmingAppointments = ref<Set<string>>(new Set()) // Loading state per appointment ID
-
-// Payment Confirmation Dialog State
-const showPaymentConfirmDialog = ref(false)
-const pendingPaymentUrl = ref<string | null>(null)
-const isProcessingPayment = ref(false)
 const { walleeEnabled, loadWalleeStatus } = useWalleeStatus()
-const currentPaymentAppointment = ref<any>(null)
-const currentPayment = ref<any>(null)
 
 // Profile Modal State
 const showProfileModal = ref(false)
@@ -1781,15 +1507,6 @@ const completedAppointments = computed(() => {
 })
 
 
-// ✅ Computed: Überfällige Bestätigungen (Termin bereits vorbei)
-const overdueConfirmations = computed(() => {
-  const now = new Date()
-  return pendingConfirmations.value.filter(apt => {
-    const appointmentDate = new Date(apt.start_time)
-    return appointmentDate < now
-  })
-})
-
 // ✅ Computed: Überfällige Zahlungen (Termin vorbei + nicht bezahlt + pending_confirmation)
 const overduePayments = computed(() => {
   const now = new Date()
@@ -1806,13 +1523,6 @@ const overduePayments = computed(() => {
     return status === 'pending_confirmation'
   })
 })
-
-// ✅ Computed: Prüfung ob Bestätigung überfällig ist
-const isOverdue = (appointment: any) => {
-  const now = new Date()
-  const appointmentDate = new Date(appointment.start_time)
-  return appointmentDate < now
-}
 
 // ✅ Helper: Format price
 const formatPrice = (rappen: number) => {
@@ -2156,44 +1866,6 @@ const loadAllData = async () => {
   }
 }
 
-// ✅ Load pending confirmation appointments
-const loadPendingConfirmations = async () => {
-  if (!currentUser.value?.id) return
-
-  const cached = getCached<any[]>('pendingConfirmations')
-  if (cached) {
-    pendingConfirmations.value = cached
-    return
-  }
-
-  try {
-    const response = await $fetch('/api/customer/get-pending-confirmations', {
-      method: 'GET'
-    }) as any
-    
-    if (!response?.success || !response?.data) {
-      throw new Error('Failed to load pending confirmations from API')
-    }
-
-    const confirmationsData = response.data
-
-    if (!confirmationsData || confirmationsData.length === 0) {
-      pendingConfirmations.value = []
-      setCache('pendingConfirmations', [])
-      return
-    }
-
-    pendingConfirmations.value = confirmationsData.map((apt: any) => ({
-      ...apt
-    }))
-    setCache('pendingConfirmations', pendingConfirmations.value)
-
-    logger.debug('✅ Pending confirmations loaded with full data from API')
-  } catch (err: any) {
-    console.error('❌ Error loading pending confirmations:', err)
-  }
-}
-
 // Helper: Event Type Label
 const getEventTypeLabel = (code: string | null | undefined) => {
   if (!code) return 'Fahrlektion'
@@ -2221,30 +1893,6 @@ const getCategoryLabel = (appointment: any) => {
   if (appointment.categories?.name) return appointment.categories.name
   if (appointment.type) return `Kategorie ${appointment.type}`
   return 'Kategorie offen'
-}
-
-// Helper: Check if appointment has payment details to show
-const hasPaymentDetails = (appointment: any) => {
-  // Payment-Objekt existiert mit Werten
-  if (appointment.payment) {
-    if (appointment.payment.lesson_price_rappen > 0 ||
-        appointment.payment.admin_fee_rappen > 0 ||
-        appointment.payment.products_price_rappen > 0 ||
-        appointment.payment.discount_amount_rappen > 0 ||
-        appointment.payment.total_amount_rappen > 0) {
-      return true
-    }
-  }
-  
-  // Direkte Payment-Felder existieren (alter Fallback)
-  if (appointment.lesson_price_rappen > 0 ||
-      appointment.admin_fee_rappen > 0 ||
-      appointment.products_price_rappen > 0 ||
-      appointment.discount_amount_rappen > 0) {
-    return true
-  }
-  
-  return false
 }
 
 // Helper: Get payment field value
@@ -2277,190 +1925,6 @@ const getPaymentMethodLabel = (method: string) => {
     'bank_transfer': 'Banküberweisung'
   }
   return labels[method] || method
-}
-
-// ✅ Confirm appointment and redirect directly to Wallee (skip extra confirmation page)
-const confirmAppointment = async (appointment: any) => {
-  if (confirmingAppointments.value.has(appointment.id)) return // Verhindere Doppelklick
-  
-  try {
-    confirmingAppointments.value.add(appointment.id)
-    
-    if (!appointment?.id) {
-      displayToast('error', 'Fehler', 'Termin-ID fehlt')
-      confirmingAppointments.value.delete(appointment.id)
-      return
-    }
-
-    // ✅ Payment ist bereits von der API geladen (in appointment.payment)!
-    // Keine separate Query nötig - das würde RLS-Fehler verursachen
-    const payment = appointment.payment
-    
-    if (!payment) {
-      displayToast('error', 'Fehler', 'Zahlungsdaten für den Termin nicht gefunden')
-      confirmingAppointments.value.delete(appointment.id)
-      return
-    }
-
-    // ✅ NEU: Wenn payment_method 'cash', 'invoice' oder 'credit' ist, NICHT zu Wallee weiterleiten!
-    if (payment?.payment_method === 'cash' || payment?.payment_method === 'invoice' || payment?.payment_method === 'credit') {
-      logger.debug('✅ Payment method is', payment.payment_method, '- no online payment needed')
-      
-      // ✅ WICHTIG: Confirm the appointment via secure API auch für non-Wallee payments!
-      try {
-        const confirmResult = await $fetch('/api/appointments/confirm', {
-          method: 'POST',
-          body: {
-            appointmentId: appointment.id
-          }
-        }) as { 
-          success?: boolean
-          appointment?: any
-          error?: string 
-        }
-        
-        if (!confirmResult.success) {
-          console.error('⚠️ Could not confirm appointment:', confirmResult.error)
-          displayToast('error', 'Fehler', `Termin konnte nicht bestätigt werden: ${confirmResult.error}`)
-          confirmingAppointments.value.delete(appointment.id)
-          return
-        }
-        
-        logger.debug('✅ Appointment confirmed via secure API:', {
-          appointmentId: appointment.id
-        })
-      } catch (err: any) {
-        console.error('⚠️ Error confirming appointment via API:', err)
-        displayToast('error', 'Fehler', `Fehler beim Bestätigen des Termins: ${err.message}`)
-        confirmingAppointments.value.delete(appointment.id)
-        return
-      }
-      
-      displayToast('success', 'Termin bestätigt!', `Zahlungsart: ${getPaymentMethodLabel(payment.payment_method)}`)
-      
-      confirmingAppointments.value.delete(appointment.id)
-      
-      // ✅ Entferne bestätigten Termin aus der pendingConfirmations Liste
-      const index = pendingConfirmations.value.findIndex((apt: any) => apt.id === appointment.id)
-      if (index !== -1) {
-        pendingConfirmations.value.splice(index, 1)
-        logger.debug('✅ Removed confirmed appointment from pending list')
-      }
-      
-      // ✅ Force refresh pending confirmations - load all remaining
-      logger.debug('🔄 Refreshing pending confirmations after confirmation...')
-      clearDashboardCache()
-      await loadPendingConfirmations()
-      
-      // ✅ Schließe das Modal
-      showConfirmationModal.value = false
-      
-      return // Fertig, nicht zu Wallee weiterleiten!
-    }
-
-    const amountRappen = payment?.total_amount_rappen || 0
-    
-    // ✅ NEW: If amount is 0 (fully covered by credit or discounts), confirm and show success
-    if (amountRappen <= 0) {
-      logger.debug('✅ Payment fully covered by credit or discounts - no online payment needed')
-      
-      // ✅ WICHTIG: Confirm the appointment via secure API!
-      try {
-        const confirmResult = await $fetch('/api/appointments/confirm', {
-          method: 'POST',
-          body: {
-            appointmentId: appointment.id
-          }
-        }) as { 
-          success?: boolean
-          appointment?: any
-          error?: string 
-        }
-        
-        if (!confirmResult.success) {
-          console.error('⚠️ Could not confirm appointment:', confirmResult.error)
-          displayToast('error', 'Fehler', `Termin konnte nicht bestätigt werden: ${confirmResult.error}`)
-          confirmingAppointments.value.delete(appointment.id)
-          return
-        }
-        
-        logger.debug('✅ Appointment confirmed via secure API (credit-covered):', {
-          appointmentId: appointment.id
-        })
-      } catch (err: any) {
-        console.error('⚠️ Error confirming appointment via API:', err)
-        displayToast('error', 'Fehler', `Fehler beim Bestätigen des Termins: ${err.message}`)
-        confirmingAppointments.value.delete(appointment.id)
-        return
-      }
-      
-      displayToast('success', 'Termin bestätigt!', 'Zahlung wurde durch Guthaben oder Gutscheine gedeckt')
-      confirmingAppointments.value.delete(appointment.id)
-      
-      // ✅ Entferne bestätigten Termin aus der pendingConfirmations Liste
-      const index = pendingConfirmations.value.findIndex((apt: any) => apt.id === appointment.id)
-      if (index !== -1) {
-        pendingConfirmations.value.splice(index, 1)
-        logger.debug('✅ Removed confirmed appointment from pending list')
-      }
-      
-      // ✅ Schließe das Modal
-      showConfirmationModal.value = false
-      
-      // ✅ Refresh pending confirmations
-      clearDashboardCache()
-      await loadPendingConfirmations()
-      
-      return // Fertig!
-    }
-
-    // ✅ Confirm appointment via secure API
-    try {
-      const confirmResult = await $fetch('/api/appointments/confirm', {
-        method: 'POST',
-        body: {
-          appointmentId: appointment.id
-        }
-      }) as { 
-        success?: boolean
-        appointment?: any
-        error?: string 
-      }
-      
-      if (!confirmResult.success) {
-        console.error('⚠️ Could not confirm appointment:', confirmResult.error)
-        displayToast('error', 'Fehler', `Termin konnte nicht bestätigt werden: ${confirmResult.error}`)
-        confirmingAppointments.value.delete(appointment.id)
-        return
-      }
-      
-      logger.debug('✅ Appointment confirmed via secure API:', {
-        appointmentId: appointment.id
-      })
-    } catch (err: any) {
-      console.error('⚠️ Error confirming appointment via API:', err)
-      displayToast('error', 'Fehler', `Fehler beim Bestätigen des Termins: ${err.message}`)
-      confirmingAppointments.value.delete(appointment.id)
-      return
-    }
-
-    // ✅ ONLINE PAYMENT: Zeige "Jetzt oder Später bezahlen" Dialog
-    // Speichere Appointment und Payment für handlePayNow
-    currentPaymentAppointment.value = appointment
-    currentPayment.value = payment
-    confirmingAppointments.value.delete(appointment.id)
-    
-    // Zeige den Dialog
-    showPaymentConfirmDialog.value = true
-    logger.debug('💳 Showing payment confirmation dialog for online payment')
-    // Benutzer entscheidet im Dialog ob jetzt oder später bezahlt wird
-    // handlePayNow() oder handlePayLater() wird aufgerufen
-    
-  } catch (err: any) {
-    console.error('❌ Fehler beim Bestätigen des Termins:', err)
-    displayToast('error', 'Fehler', err?.message || 'Unbekannter Fehler')
-    confirmingAppointments.value.delete(appointment.id)
-  }
 }
 
 const loadAppointments = async (skipCache = false) => {
@@ -2967,15 +2431,6 @@ onMounted(async () => {
       clearDashboardCache()
     }
     
-    // ✅ Reset payment modal if user navigates back from Wallee
-    window.addEventListener('pageshow', (event) => {
-      if (event.persisted) {
-        logger.debug('📱 User returned to page (browser back)')
-        showPaymentConfirmDialog.value = false
-        isProcessingPayment.value = false
-      }
-    })
-    
     // Einfacher: Warte auf Auth-Store Initialisierung
     let attempts = 0
     while (!authStore.isInitialized && attempts < 50) {
@@ -3020,9 +2475,6 @@ onMounted(async () => {
     }
     
     await loadAllData()
-    if (paymentSuccess) {
-      await loadPendingConfirmations()
-    }
     
     // Feature-Flags parallel (keine Verzögerung der Affiliate-Karte hinter Shop-Request)
     await Promise.all([loadShopFeatureEnabled(), loadCoursesFeatureEnabled(), loadAffiliateStats()])
@@ -3055,92 +2507,6 @@ onMounted(async () => {
   }
 })
 
-// Payment Confirmation Dialog Functions
-const handlePayNow = async () => {
-  if (!currentPayment.value || !currentPaymentAppointment.value) {
-    displayToast('error', 'Fehler', 'Zahlungsdaten fehlen')
-    return
-  }
-  
-  isProcessingPayment.value = true
-  logger.debug('💳 Starting secure payment process...')
-  
-  try {
-    const payment = currentPayment.value
-    const appointment = currentPaymentAppointment.value
-    
-    // ✅ NEW: Convert payment to online if needed (same as payments.vue)
-    if (payment.payment_method !== 'wallee') {
-      logger.debug('🔄 Converting payment to online first:', payment.id)
-      
-      try {
-        const userData = currentUser.value
-        const result = await $fetch('/api/payments/convert-to-online', {
-          method: 'POST',
-          body: {
-            paymentId: payment.id,
-            customerEmail: userData?.email
-          }
-        }) as { success: boolean }
-        
-        if (result.success) {
-          logger.debug('✅ Payment converted to online')
-          payment.payment_method = 'wallee'
-        }
-      } catch (conversionError) {
-        logger.warn('⚠️ Payment conversion failed (not critical):', conversionError)
-        // Continue anyway - payment might already be wallee or conversion not needed
-      }
-    }
-    
-    // ✅ Call secure payment API (same as /customer/payments page)
-    const walleeResponse = await $fetch('/api/payments/process', {
-      method: 'POST',
-      body: {
-        paymentId: payment.id,
-        successUrl: `${window.location.origin}/customer-dashboard?payment_success=true`,
-        failedUrl: `${window.location.origin}/customer-dashboard?payment_failed=true`
-      }
-    }) as { success?: boolean; paymentUrl?: string; transactionId?: number | string; error?: string }
-    
-    if (walleeResponse.success && walleeResponse.paymentUrl) {
-      logger.debug('✅ Wallee transaction created:', walleeResponse.transactionId)
-      
-      // Redirect to Wallee payment page
-      window.location.href = walleeResponse.paymentUrl
-    } else {
-      throw new Error(walleeResponse.error || 'Wallee transaction failed')
-    }
-    
-  } catch (err: any) {
-    console.error('❌ Error initiating payment:', err)
-    displayToast('error', 'Fehler', `Zahlung konnte nicht gestartet werden: ${err?.data?.message || err?.message || 'Unbekannter Fehler'}`)
-    isProcessingPayment.value = false
-  }
-}
-
-const handlePayLater = async () => {
-  showPaymentConfirmDialog.value = false
-  showConfirmationModal.value = false  // ← Close confirmation modal too!
-  pendingPaymentUrl.value = null
-  isProcessingPayment.value = false
-  currentPaymentAppointment.value = null
-  currentPayment.value = null
-  
-  displayToast('success', 'Erfolg', 'Dein Termin ist bestätigt! Du kannst später von deinem Dashboard bezahlen.')
-  logger.debug('✅ Payment postponed')
-  
-  // Reload the dashboard data so "pending confirmations" disappears
-  logger.debug('🔄 Reloading dashboard data...')
-  clearDashboardCache()
-  try {
-    await loadAllData()
-    await loadPayments()
-    logger.debug('✅ Dashboard data reloaded')
-  } catch (err) {
-    logger.error('❌ Error reloading dashboard:', err)
-  }
-}
 </script>
 
 <style scoped>
