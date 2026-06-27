@@ -13,9 +13,9 @@
             <h1 class="text-base font-semibold text-gray-900">Pendenzen</h1>
             <span :class="[
               'px-2 py-0.5 rounded-full text-xs font-semibold',
-              (pendingCount + unconfirmedNext24hCount + bookingProposalsCount + medicalCertificatesCount) > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+              (pendingCount + unconfirmedNext24hCount + bookingProposalsCount) > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
             ]">
-              {{ pendingCount + unconfirmedNext24hCount + bookingProposalsCount + medicalCertificatesCount }}
+              {{ pendingCount + unconfirmedNext24hCount + bookingProposalsCount }}
             </span>
           </div>
           
@@ -67,18 +67,6 @@
           >
             Anfragen
           </button>
-          <button
-            :class="[
-              'px-3 py-3 text-sm border-b-2 whitespace-nowrap transition-all font-medium',
-              activeTab === 'arztzeugnisse' ? '' : 'border-transparent text-gray-500 hover:text-gray-700',
-              activeTab === 'arztzeugnisse' && medicalCertificatesCount > 0 ? 'border-red-500 text-red-600' : activeTab !== 'arztzeugnisse' && medicalCertificatesCount > 0 ? 'text-red-500' : ''
-            ]"
-            :style="activeTab === 'arztzeugnisse' && medicalCertificatesCount === 0 ? { borderBottomColor: 'var(--color-primary, #111827)', color: 'var(--color-primary, #111827)' } : {}"
-            @click="activeTab = 'arztzeugnisse'"
-          >
-            Arztzeugnisse
-            <span v-if="medicalCertificatesCount > 0" class="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">{{ medicalCertificatesCount }}</span>
-          </button>
         </div>
       </div>
 
@@ -104,7 +92,7 @@
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="pendingCount === 0 && unconfirmedNext24hCount === 0 && bookingProposalsCount === 0 && medicalCertificatesCount === 0" class="flex items-center justify-center py-8">
+        <div v-else-if="pendingCount === 0 && unconfirmedNext24hCount === 0 && bookingProposalsCount === 0" class="flex items-center justify-center py-8">
           <div class="text-center px-4">
             <div class="text-6xl mb-4">🎉</div>
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Pendenzen!</h3>
@@ -360,90 +348,6 @@
           </div>
         </div>
 
-        <!-- Arztzeugnisse Tab -->
-        <div v-else-if="activeTab === 'arztzeugnisse'" class="p-3">
-          <div v-if="medicalCertificates.length === 0" class="flex items-center justify-center py-8">
-            <div class="text-center px-4">
-              <div class="text-6xl mb-4">✅</div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine ausstehenden Arztzeugnisse</h3>
-              <p class="text-gray-600">Alle Einreichungen wurden geprüft.</p>
-            </div>
-          </div>
-
-          <div v-else class="space-y-3">
-            <div
-              v-for="cert in medicalCertificates"
-              :key="cert.appointment_id"
-              class="rounded-xl border border-blue-200 bg-blue-50 p-4"
-            >
-              <!-- Header: Name + Datum -->
-              <div class="flex items-start justify-between gap-2 mb-3">
-                <div>
-                  <p class="font-semibold text-gray-900">{{ cert.customer_name }}</p>
-                  <p class="text-sm text-gray-600">{{ formatLocalDate(cert.appointment_start_time) }} {{ formatLocalTime(cert.appointment_start_time) }} Uhr</p>
-                </div>
-                <a
-                  v-if="cert.medical_certificate_url"
-                  :href="cert.medical_certificate_url"
-                  target="_blank"
-                  rel="noopener"
-                  class="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white border border-blue-200 text-blue-700 hover:bg-blue-100 transition-colors"
-                >
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                  </svg>
-                  Zeugnis ansehen
-                </a>
-              </div>
-
-              <!-- Reject reason input (toggled) -->
-              <div v-if="rejectingCertId === cert.appointment_id" class="mb-3">
-                <textarea
-                  v-model="rejectNotes"
-                  placeholder="Ablehnungsgrund eingeben…"
-                  rows="2"
-                  class="w-full text-sm border border-red-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-400 resize-none"
-                ></textarea>
-                <p v-if="rejectError" class="text-xs text-red-600 mt-1">{{ rejectError }}</p>
-              </div>
-
-              <!-- Action buttons -->
-              <div class="flex gap-2">
-                <template v-if="rejectingCertId === cert.appointment_id">
-                  <button
-                    @click="confirmReject(cert.appointment_id)"
-                    :disabled="certActionLoading === cert.appointment_id"
-                    class="flex-1 px-3 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
-                  >
-                    {{ certActionLoading === cert.appointment_id ? 'Wird abgelehnt…' : 'Ablehnen bestätigen' }}
-                  </button>
-                  <button
-                    @click="rejectingCertId = null; rejectNotes = ''; rejectError = ''"
-                    class="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 transition-colors"
-                  >
-                    Abbrechen
-                  </button>
-                </template>
-                <template v-else>
-                  <button
-                    @click="approveCertificate(cert.appointment_id)"
-                    :disabled="certActionLoading === cert.appointment_id"
-                    class="flex-1 px-3 py-2 rounded-lg text-sm font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 transition-colors"
-                  >
-                    {{ certActionLoading === cert.appointment_id ? 'Wird genehmigt…' : '✓ Genehmigen' }}
-                  </button>
-                  <button
-                    @click="startReject(cert.appointment_id)"
-                    :disabled="certActionLoading === cert.appointment_id"
-                    class="flex-1 px-3 py-2 rounded-lg text-sm font-semibold text-white bg-red-500 hover:bg-red-600 disabled:opacity-50 transition-colors"
-                  >
-                    ✕ Ablehnen
-                  </button>
-                </template>
-              </div>
-            </div>
-          </div>
-        </div>
 
       </div>
     </div>
@@ -639,7 +543,7 @@ import CancellationReasonModal from '~/components/CancellationReasonModal.vue'
 interface Props {
   isOpen: boolean
   currentUser: any
-  defaultTab?: 'pendenzen' | 'bewertungen' | 'anfragen' | 'unconfirmed' | 'arztzeugnisse'
+  defaultTab?: 'pendenzen' | 'bewertungen' | 'anfragen' | 'unconfirmed'
 }
 
 const props = defineProps<Props>()
@@ -683,7 +587,7 @@ const {
 // Modal state
 const showEvaluationModal = ref(false)
 const selectedAppointment = ref<any>(null)
-const activeTab = ref<'pendenzen' | 'bewertungen' | 'anfragen' | 'arztzeugnisse'>(props.defaultTab === 'unconfirmed' ? 'bewertungen' : ((props.defaultTab as any) || 'bewertungen'))
+const activeTab = ref<'pendenzen' | 'bewertungen' | 'anfragen'>(props.defaultTab === 'unconfirmed' ? 'bewertungen' : ((props.defaultTab as any) || 'bewertungen'))
 const bookingProposals = ref<any[]>([])
 const completingProposalIds = ref<Set<string>>(new Set())
 const proposalActionError = ref('')
@@ -696,66 +600,6 @@ const selectedOutcomeType = ref<string>('')
 const showCashPaymentModal = ref(false)
 const currentPayment = ref<any>(null)
 
-// Medical certificates state
-const medicalCertificates = ref<any[]>([])
-const medicalCertificatesCount = computed(() => medicalCertificates.value.length)
-const certActionLoading = ref<string | null>(null)
-const rejectingCertId = ref<string | null>(null)
-const rejectNotes = ref('')
-const rejectError = ref('')
-
-const loadMedicalCertificates = async () => {
-  try {
-    const data = await $fetch('/api/admin/medical-certificate-reviews') as any[]
-    medicalCertificates.value = (data || []).filter((c: any) => c.medical_certificate_status === 'uploaded')
-  } catch (err) {
-    logger.warn('⚠️ Failed to load medical certificates:', err)
-    medicalCertificates.value = []
-  }
-}
-
-const approveCertificate = async (appointmentId: string) => {
-  certActionLoading.value = appointmentId
-  try {
-    await $fetch('/api/medical-certificate/approve', {
-      method: 'POST',
-      body: { appointmentId }
-    })
-    await loadMedicalCertificates()
-  } catch (err: any) {
-    logger.warn('⚠️ Failed to approve certificate:', err?.message || err)
-  } finally {
-    certActionLoading.value = null
-  }
-}
-
-const startReject = (appointmentId: string) => {
-  rejectingCertId.value = appointmentId
-  rejectNotes.value = ''
-  rejectError.value = ''
-}
-
-const confirmReject = async (appointmentId: string) => {
-  if (!rejectNotes.value.trim()) {
-    rejectError.value = 'Bitte einen Ablehnungsgrund eingeben.'
-    return
-  }
-  certActionLoading.value = appointmentId
-  try {
-    await $fetch('/api/medical-certificate/reject', {
-      method: 'POST',
-      body: { appointmentId, notes: rejectNotes.value.trim() }
-    })
-    rejectingCertId.value = null
-    rejectNotes.value = ''
-    rejectError.value = ''
-    await loadMedicalCertificates()
-  } catch (err: any) {
-    rejectError.value = err?.data?.statusMessage || 'Fehler beim Ablehnen. Bitte erneut versuchen.'
-  } finally {
-    certActionLoading.value = null
-  }
-}
 
 // ✅ NEUE REFS FÜR EXAM RESULT
 const showExamResultModal = ref(false)
@@ -1283,9 +1127,6 @@ const refreshData = async () => {
   
   // Lade offene Booking-Anfragen
   await loadBookingProposals()
-  
-  // Lade ausstehende Arztzeugnisse
-  await loadMedicalCertificates()
   
   // Lade Pendenzen für diesen User
   // Nutze tenant_id vom currentUser
