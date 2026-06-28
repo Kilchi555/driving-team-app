@@ -444,6 +444,7 @@ export default defineEventHandler(async (event) => {
         const creditAlreadyUsed = payment.credit_used_rappen || 0
         const walleePortionToRefund = payment.total_amount_rappen - creditAlreadyUsed
 
+        let walleeRefundId: string | null = null
         if (walleePortionToRefund > 0) {
           if (refundDestination === 'wallee') {
             // ── Direct Wallee refund ─────────────────────────────────────
@@ -468,6 +469,7 @@ export default defineEventHandler(async (event) => {
             })
 
             if (walleeResult.success) {
+              walleeRefundId = walleeResult.refundId || null
               logger.info('✅ Customer Wallee refund successful:', {
                 refundId: walleeResult.refundId,
                 amountChf: walleeResult.refundedAmountChf,
@@ -517,6 +519,7 @@ export default defineEventHandler(async (event) => {
           .update({
             payment_status: 'refunded',
             refunded_at: new Date().toISOString(),
+            ...(walleeRefundId ? { wallee_refund_id: walleeRefundId } : {}),
             notes: refundDestination === 'wallee'
               ? `Kundenstornierung (Wallee-Rückerstattung): ${reason.name_de}`
               : `Kostenlose Stornierung: ${reason.name_de}`,
