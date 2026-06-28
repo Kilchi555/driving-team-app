@@ -742,6 +742,7 @@ async function processRefund(
           .update({
             payment_status: 'refunded',
             refunded_at: refundedAt,
+            wallee_refund_id: walleeResult.refundId || null,
             notes: `${payment.notes ? payment.notes + ' | ' : ''}Wallee-Rückerstattung: ${deletionReason} (CHF ${walleeResult.refundedAmountChf.toFixed(2)}, refundId: ${walleeResult.refundId})`,
           })
           .eq('id', payment.id)

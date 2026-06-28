@@ -181,6 +181,14 @@ export default defineEventHandler(async (event) => {
       .eq('id', pendingTx.id)
   }
 
+  // Store refund ID on the payments row so the Refund webhook can locate it
+  if (refundResult.refundId) {
+    await supabase
+      .from('payments')
+      .update({ wallee_refund_id: refundResult.refundId })
+      .eq('id', payment.id)
+  }
+
   return {
     success: true,
     message: 'Auszahlung erfolgreich veranlasst',

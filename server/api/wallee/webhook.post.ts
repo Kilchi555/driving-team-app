@@ -104,6 +104,21 @@ export default defineEventHandler(async (event) => {
       logger.error('❌ FAILED to create immediate webhook log (exception):', immediateLogErr.message)
     }
     
+    // ============ LAYER 0.5: ROUTE REFUND WEBHOOKS ============
+    // Wallee sends separate webhooks for Transaction and Refund entities.
+    // Refund webhooks have listenerEntityTechnicalName === 'Refund'.
+    if (body.listenerEntityTechnicalName === 'Refund') {
+      const result = await handleWalleeRefundWebhook(body, supabase, webhookLogId)
+      if (webhookLogId) {
+        await supabase
+          .from('webhook_logs')
+          .update({ success: result.success, payment_status_after: result.status, processing_duration_ms: Date.now() - startTime })
+          .eq('id', webhookLogId)
+          .catch(() => {})
+      }
+      return result
+    }
+
     // ============ LAYER 1: PARSE & VALIDATE PAYLOAD ============
     if (!body.entityId || !body.state) {
       logger.warn('❌ Invalid webhook payload - missing entityId or state')
@@ -651,15 +666,20 @@ export default defineEventHandler(async (event) => {
                     last_name: payment.metadata?.lastname || '',
                     email: payment.metadata?.email,
                     phone: payment.metadata?.phone,
-                    sari_faberid: payment.metadata?.sari_faberid,
+                    sari_faberid: payment.metadata?.sari_faberid || null,
                     street: payment.metadata?.street || null,
                     street_nr: payment.metadata?.street_nr || null,
                     zip: payment.metadata?.zip || null,
                     city: payment.metadata?.city || null,
-                    birthdate: payment.metadata?.birthdate || null,
+                    birthdate: payment.metadata?.birthdate || payment.metadata?.sari_birthdate || null,
                     license_number: payment.metadata?.license_number || null,
                     status: registrationStatus,
                     payment_status: paymentStatusUpdate,
+                    payment_method: 'wallee',
+                    amount_paid_rappen: payment.total_amount_rappen || 0,
+                    discount_applied_rappen: payment.metadata?.discount_amount_rappen || 0,
+                    registration_date: new Date().toISOString(),
+                    registered_at: new Date().toISOString(),
                     custom_sessions: payment.metadata?.custom_sessions || null,
                     is_partial_enrollment: !!(payment.metadata?.is_partial_enrollment),
                     sari_synced: paymentStatus === 'completed',
@@ -787,21 +807,44 @@ export default defineEventHandler(async (event) => {
         // Step 3: Update all registrations (existing + newly created)
         if (updatedRegistrations.length > 0) {
           const registrationIds = updatedRegistrations.map(r => r.id)
-          const { error: updateError } = await supabase
-            .from('course_registrations')
-            .update({
-              status: registrationStatus,
-              payment_status: paymentStatusUpdate,
-              webhook_processed_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .in('id', registrationIds)
-          
-          if (updateError) {
-            logger.warn('⚠️ Error updating course registrations:', updateError)
-          } else {
-            logger.info(`✅ Updated ${registrationIds.length} course registration(s) to: ${registrationStatus}`)
+
+          // Build payment amount lookup by registration id
+          const paymentAmountByRegId: Record<string, number> = {}
+          for (const p of paymentsToUpdate) {
+            if (p.course_registration_id && p.total_amount_rappen > 0) {
+              paymentAmountByRegId[p.course_registration_id] = p.total_amount_rappen
+            }
           }
+
+          const baseUpdate = {
+            status: registrationStatus,
+            payment_status: paymentStatusUpdate,
+            webhook_processed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+
+          // If all registrations map to a single known amount, do one bulk update
+          const uniqueAmounts = [...new Set(Object.values(paymentAmountByRegId))]
+          if (uniqueAmounts.length === 1 && uniqueAmounts[0] > 0) {
+            const { error: updateError } = await supabase
+              .from('course_registrations')
+              .update({ ...baseUpdate, amount_paid_rappen: uniqueAmounts[0] })
+              .in('id', registrationIds)
+            if (updateError) logger.warn('⚠️ Error updating course registrations:', updateError)
+          } else {
+            // Per-registration update (different amounts or unknown)
+            for (const reg of updatedRegistrations) {
+              const amount = paymentAmountByRegId[reg.id]
+              const payload = amount && amount > 0 ? { ...baseUpdate, amount_paid_rappen: amount } : baseUpdate
+              const { error: updateError } = await supabase
+                .from('course_registrations')
+                .update(payload)
+                .eq('id', reg.id)
+              if (updateError) logger.warn(`⚠️ Error updating registration ${reg.id}:`, updateError)
+            }
+          }
+
+          logger.info(`✅ Updated ${registrationIds.length} course registration(s) to: ${registrationStatus}`)
           
           // ============ ENROLL IN SARI AFTER PAYMENT ============
           if (paymentStatus === 'completed') {
@@ -1918,6 +1961,137 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
     logger.error('❌ SARI enrollment failed:', error.message)
     // Non-critical - payment was successful, enrollment can be done manually
   }
+}
+
+// ============ WALLEE REFUND WEBHOOK HANDLER ============
+// Called when Wallee sends a Refund entity event (SUCCESSFUL or FAILED).
+// - SUCCESSFUL: confirms our optimistic 'refunded' status (usually a no-op).
+// - FAILED:     reverts the payment to 'completed' so staff can investigate / retry.
+async function handleWalleeRefundWebhook(
+  body: WalleeWebhookPayload,
+  supabase: any,
+  webhookLogId?: string
+): Promise<{ success: boolean; status?: string; message: string }> {
+  const refundId = body.entityId.toString()
+  const refundState = body.state // e.g. 'SUCCESSFUL', 'FAILED', 'PENDING'
+  const spaceId = body.spaceId
+
+  logger.info('🔔 Wallee REFUND webhook:', { refundId, refundState, spaceId })
+
+  // Only act on terminal states
+  if (refundState !== 'SUCCESSFUL' && refundState !== 'FAILED') {
+    logger.info(`⏭️ Refund webhook non-terminal state (${refundState}), skipping`)
+    return { success: true, message: `Refund ${refundState} acknowledged, no action needed` }
+  }
+
+  // ── 1. Look up payment by wallee_refund_id ───────────────────────────────
+  let payment: any = null
+
+  const { data: byRefundId } = await supabase
+    .from('payments')
+    .select('id, payment_status, tenant_id, wallee_transaction_id, total_amount_rappen')
+    .eq('wallee_refund_id', refundId)
+    .maybeSingle()
+
+  if (byRefundId) {
+    payment = byRefundId
+  } else {
+    // ── 2. Fallback: fetch Refund from Wallee API → get transaction ID ────
+    logger.info(`⚠️ No payment found by wallee_refund_id=${refundId}, fetching from Wallee API…`)
+    try {
+      const WalleeModule = await import('wallee')
+      let WalleeSDK: any = null
+      if (WalleeModule.Wallee?.api?.RefundService) WalleeSDK = WalleeModule.Wallee
+      else if (WalleeModule.default?.api?.RefundService) WalleeSDK = WalleeModule.default
+      else if (WalleeModule.api?.RefundService) WalleeSDK = WalleeModule
+
+      if (WalleeSDK) {
+        // Resolve credentials from the spaceId that originated the webhook
+        let walleeCredentials: { spaceId: number; userId: number; apiSecret: string } | null = null
+        if (spaceId) {
+          try {
+            const { data: tenantBySpace } = await supabase
+              .from('tenants')
+              .select('id')
+              .eq('wallee_space_id', spaceId)
+              .maybeSingle()
+            if (tenantBySpace?.id) {
+              walleeCredentials = await getWalleeConfigBySpace(tenantBySpace.id, spaceId)
+            }
+          } catch (e: any) {
+            logger.warn('⚠️ Could not resolve credentials for refund webhook:', e.message)
+          }
+        }
+
+        if (walleeCredentials) {
+          const config = getWalleeSDKConfig(walleeCredentials.spaceId, walleeCredentials.userId, walleeCredentials.apiSecret)
+          const refundService = new WalleeSDK.api.RefundService(config)
+          const refundEntity = (await refundService.read(walleeCredentials.spaceId, parseInt(refundId)))?.body
+
+          const transactionId = refundEntity?.transaction?.id?.toString()
+          if (transactionId) {
+            const { data: byTxId } = await supabase
+              .from('payments')
+              .select('id, payment_status, tenant_id, wallee_transaction_id, total_amount_rappen')
+              .eq('wallee_transaction_id', transactionId)
+              .maybeSingle()
+            if (byTxId) {
+              payment = byTxId
+              // Backfill wallee_refund_id so future webhooks hit directly
+              await supabase.from('payments').update({ wallee_refund_id: refundId }).eq('id', byTxId.id)
+              logger.info('✅ Found payment via Wallee API fallback, refund ID backfilled:', byTxId.id)
+            }
+          }
+        }
+      }
+    } catch (fallbackErr: any) {
+      logger.error('❌ Wallee API fallback for refund webhook failed:', fallbackErr.message)
+    }
+  }
+
+  if (!payment) {
+    logger.warn('⚠️ Refund webhook: payment not found for refundId:', refundId)
+    return { success: false, message: 'Payment not found for refund ID' }
+  }
+
+  // ── 3. Handle terminal state ──────────────────────────────────────────────
+  if (refundState === 'SUCCESSFUL') {
+    // Confirm our optimistic 'refunded' status
+    if (payment.payment_status !== 'refunded') {
+      await supabase
+        .from('payments')
+        .update({ payment_status: 'refunded', refunded_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', payment.id)
+      logger.info('✅ Refund SUCCESSFUL — payment status confirmed as refunded:', payment.id)
+    } else {
+      logger.info('✅ Refund SUCCESSFUL — payment already marked refunded:', payment.id)
+    }
+    return { success: true, status: 'refunded', message: 'Refund confirmed successful' }
+  }
+
+  // refundState === 'FAILED'
+  // Revert payment to 'completed' so the admin can see and retry/handle manually
+  logger.error(`❌ Wallee REFUND FAILED for payment ${payment.id} (refundId: ${refundId})`)
+
+  await supabase
+    .from('payments')
+    .update({
+      payment_status: 'completed',
+      wallee_refund_id: null,
+      notes: `⚠️ Wallee-Rückerstattung FEHLGESCHLAGEN (refundId: ${refundId}). Bitte manuell prüfen und erneut veranlassen.`,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', payment.id)
+
+  // Log loudly — an admin needs to act
+  logger.error('🚨 ADMIN ACTION REQUIRED: Wallee refund failed, payment reverted to completed.', {
+    paymentId: payment.id,
+    refundId,
+    amount: `CHF ${((payment.total_amount_rappen || 0) / 100).toFixed(2)}`,
+    tenantId: payment.tenant_id,
+  })
+
+  return { success: true, status: 'reverted_to_completed', message: 'Refund failed — payment reverted to completed' }
 }
 
 // ============ UPDATE SESSION PARTICIPANT COUNTS ============
