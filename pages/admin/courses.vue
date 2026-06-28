@@ -19,6 +19,18 @@
               <span class="hidden xs:inline sm:inline">{{ sariSyncing ? 'Synchronisiert…' : 'SARI Sync' }}</span>
             </button>
             <button
+              @click="runSariBackfill"
+              :disabled="sariBackfilling"
+              class="flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium transition-colors text-sm"
+              :class="sariBackfilling ? 'bg-blue-100 text-blue-400 cursor-not-allowed' : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200'"
+              title="Fehlende Adressdaten aus SARI ergänzen"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" :class="sariBackfilling ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <span class="hidden sm:inline">{{ sariBackfilling ? 'Ergänzt…' : 'SARI Daten ergänzen' }}</span>
+            </button>
+            <button
               @click="openCreateCourseModal"
               class="text-white bg-green-600 hover:bg-green-700 px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-1.5 text-sm"
             >
@@ -3107,28 +3119,6 @@
           </button>
         </div>
 
-        <!-- Enrollment link -->
-        <div class="mx-5 sm:mx-6 mt-4">
-          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Anmeldelink teilen</label>
-          <div class="flex gap-2">
-            <div class="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-600 min-w-0">
-              <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
-              </svg>
-              <span class="truncate text-xs">{{ enrollmentLink }}</span>
-            </div>
-            <button
-              @click="copyEnrollmentLink"
-              class="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium rounded-xl transition-colors"
-            >
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-              </svg>
-              Kopieren
-            </button>
-          </div>
-        </div>
-
         <!-- Participant list actions: send by email + print -->
         <div class="mx-5 sm:mx-6 mt-4 flex gap-2">
           <button
@@ -3343,7 +3333,7 @@
               class="rounded-2xl border transition-all"
               :class="transferringEnrollmentId === enrollment.id ? 'border-indigo-300 bg-indigo-50/50' : 'border-gray-100 bg-gray-50/50 hover:border-gray-200 hover:bg-white'"
             >
-              <div class="flex items-center gap-3 p-3">
+              <div class="flex items-center gap-3 p-3 cursor-pointer" @click="openParticipantDetail(enrollment)">
                 <!-- Avatar -->
                 <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
                   {{ (enrollment.first_name?.[0] || '').toUpperCase() + (enrollment.last_name?.[0] || '').toUpperCase() }}
@@ -3365,7 +3355,7 @@
                   </div>
                 </div>
                 <!-- Actions -->
-                <div class="flex items-center gap-1 flex-shrink-0">
+                <div class="flex items-center gap-1 flex-shrink-0" @click.stop>
                   <button
                     v-if="selectedCourse?.sari_managed && transferringEnrollmentId !== enrollment.id"
                     @click="startTransfer(enrollment.id)"
@@ -4142,6 +4132,186 @@
     </div>
   </div>
   
+  <!-- Participant Detail Modal -->
+  <Teleport to="body">
+    <div v-if="showParticipantDetail" class="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-[99999] p-0 sm:p-4" @click.self="closeParticipantDetail">
+      <div class="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[90vh]" @click.stop>
+
+        <!-- Header -->
+        <div class="flex items-center gap-3 px-5 py-4 border-b border-gray-100 flex-shrink-0">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+            {{ (selectedParticipant?.first_name?.[0] || '').toUpperCase() + (selectedParticipant?.last_name?.[0] || '').toUpperCase() }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <h2 class="text-base font-semibold text-gray-900">{{ selectedParticipant?.first_name }} {{ selectedParticipant?.last_name }}</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Teilnehmer-Angaben</p>
+          </div>
+          <button @click="closeParticipantDetail" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Scrollable Content -->
+        <div class="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+
+          <!-- Loading -->
+          <div v-if="isLoadingParticipantUser" class="flex items-center justify-center py-6">
+            <div class="animate-spin w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full"></div>
+          </div>
+
+          <!-- BLOCK 1: Anmeldung (immer verfügbar) -->
+          <div>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Kursanmeldung</p>
+            <div class="bg-gray-50 rounded-xl divide-y divide-gray-100">
+              <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Status</span>
+                <span :class="getEnrollmentStatusBadge(selectedParticipant?.status)" class="px-2 py-0.5 text-xs font-medium rounded-full">{{ getEnrollmentStatusText(selectedParticipant?.status) }}</span>
+              </div>
+              <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Zahlung</span>
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-semibold text-gray-900">CHF {{ ((selectedParticipant?.amount_paid_rappen || 0) / 100).toFixed(2) }}</span>
+                  <span :class="{
+                    'bg-green-100 text-green-700': selectedParticipant?.payment_status === 'paid',
+                    'bg-amber-100 text-amber-700': selectedParticipant?.payment_status === 'pending',
+                    'bg-red-100 text-red-700': selectedParticipant?.payment_status === 'failed',
+                    'bg-gray-100 text-gray-500': selectedParticipant?.payment_status === 'refunded'
+                  }" class="px-2 py-0.5 text-xs font-medium rounded-full">
+                    {{ selectedParticipant?.payment_status === 'paid' ? 'Bezahlt' : selectedParticipant?.payment_status === 'pending' ? 'Ausstehend' : selectedParticipant?.payment_status === 'failed' ? 'Fehlgeschlagen' : selectedParticipant?.payment_status === 'refunded' ? 'Rückerstattet' : selectedParticipant?.payment_status }}
+                  </span>
+                </div>
+              </div>
+              <div v-if="selectedParticipant?.discount_applied_rappen" class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Rabatt</span>
+                <span class="text-sm text-gray-700">CHF {{ (selectedParticipant.discount_applied_rappen / 100).toFixed(2) }}</span>
+              </div>
+              <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Angemeldet am</span>
+                <span class="text-sm text-gray-700">{{ selectedParticipant?.registration_date ? new Date(selectedParticipant.registration_date).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—' }}</span>
+              </div>
+              <div v-if="courseSessions.length > 0" class="px-4 py-2.5">
+                <span class="text-xs text-gray-500 block mb-1.5">Kursdaten</span>
+                <div class="space-y-0.5">
+                  <div v-for="(session, idx) in courseSessions" :key="session.id" class="text-sm text-gray-800">
+                    <span class="text-xs text-gray-400 mr-1">Teil {{ idx + 1 }}:</span>{{ new Date(session.date + 'T' + session.start_time).toLocaleDateString('de-CH', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }) }}, {{ session.start_time }}–{{ session.end_time }}
+                  </div>
+                </div>
+              </div>
+              <div v-if="selectedParticipant?.is_partial_enrollment" class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Teilanmeldung</span>
+                <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">Nur Teil 3</span>
+              </div>
+              <div v-if="selectedParticipant?.notes" class="px-4 py-2.5">
+                <span class="text-xs text-gray-500 block mb-1">Notizen</span>
+                <span class="text-sm text-gray-700">{{ selectedParticipant.notes }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BLOCK 2: Persönliche Angaben aus der Anmeldung -->
+          <div>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Kontakt (Anmeldung)</p>
+            <div class="bg-gray-50 rounded-xl divide-y divide-gray-100">
+              <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Name</span>
+                <span class="text-sm font-medium text-gray-900">{{ selectedParticipant?.first_name }} {{ selectedParticipant?.last_name }}</span>
+              </div>
+              <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">E-Mail</span>
+                <a :href="`mailto:${selectedParticipant?.email}`" class="text-sm text-blue-600 hover:underline">{{ selectedParticipant?.email || '—' }}</a>
+              </div>
+              <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Telefon</span>
+                <a v-if="selectedParticipant?.phone" :href="`tel:${selectedParticipant.phone}`" class="text-sm text-green-600 hover:underline">{{ selectedParticipant.phone }}</a>
+                <span v-else class="text-sm text-gray-400">Nicht angegeben</span>
+              </div>
+              <div v-if="selectedParticipant?.street || selectedParticipant?.zip || selectedParticipant?.city" class="flex items-start justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Adresse</span>
+                <div class="text-sm text-gray-900 text-right">
+                  <div v-if="selectedParticipant?.street">{{ selectedParticipant.street }} {{ selectedParticipant.street_nr }}</div>
+                  <div v-if="selectedParticipant?.zip || selectedParticipant?.city">{{ selectedParticipant.zip }} {{ selectedParticipant.city }}</div>
+                </div>
+              </div>
+              <div v-if="selectedParticipant?.birthdate" class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Geburtsdatum</span>
+                <span class="text-sm text-gray-900">{{ new Date(selectedParticipant.birthdate).toLocaleDateString('de-CH') }}</span>
+              </div>
+              <div v-if="selectedParticipant?.sari_faberid" class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Ausweisnummer (LFA)</span>
+                <span class="text-sm font-mono text-gray-900">{{ selectedParticipant.sari_faberid }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BLOCK 3: Vollständiges Benutzerprofil (wenn user_id vorhanden) -->
+          <div v-if="selectedParticipantUser && !isLoadingParticipantUser">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Benutzerprofil</p>
+            <div class="bg-gray-50 rounded-xl divide-y divide-gray-100">
+              <div v-if="selectedParticipantUser.birthdate" class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Geburtsdatum</span>
+                <span class="text-sm text-gray-900">{{ new Date(selectedParticipantUser.birthdate).toLocaleDateString('de-CH') }}</span>
+              </div>
+              <div v-if="selectedParticipantUser.street || selectedParticipantUser.zip || selectedParticipantUser.city" class="flex items-start justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Adresse</span>
+                <div class="text-sm text-gray-900 text-right">
+                  <div v-if="selectedParticipantUser.street">{{ selectedParticipantUser.street }} {{ selectedParticipantUser.street_nr }}</div>
+                  <div v-if="selectedParticipantUser.zip || selectedParticipantUser.city">{{ selectedParticipantUser.zip }} {{ selectedParticipantUser.city }}</div>
+                </div>
+              </div>
+              <div v-if="selectedParticipantUser.faberid" class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Ausweisnummer (LFA)</span>
+                <span class="text-sm font-mono text-gray-900">{{ selectedParticipantUser.faberid }}</span>
+              </div>
+              <div v-if="selectedParticipantUser.profession" class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Beruf</span>
+                <span class="text-sm text-gray-900">{{ selectedParticipantUser.profession }}</span>
+              </div>
+              <div v-if="selectedParticipantUser.category?.length" class="flex items-start justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Fahrkategorien</span>
+                <div class="flex flex-wrap gap-1 justify-end max-w-[200px]">
+                  <span v-for="cat in (Array.isArray(selectedParticipantUser.category) ? selectedParticipantUser.category : [selectedParticipantUser.category])" :key="cat" class="px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800 rounded">{{ cat }}</span>
+                </div>
+              </div>
+              <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs text-gray-500">Mitglied seit</span>
+                <span class="text-sm text-gray-900">{{ new Date(selectedParticipantUser.created_at).toLocaleDateString('de-CH') }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kein Account -->
+          <div v-if="!selectedParticipant?.user_id && !isLoadingParticipantUser" class="px-1">
+            <p class="text-xs text-gray-400 italic">Dieser Teilnehmer hat kein verknüpftes Benutzerkonto.</p>
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="px-5 pb-5 pt-3 border-t border-gray-100 flex gap-2 flex-shrink-0">
+          <NuxtLink
+            v-if="selectedParticipant?.user_id"
+            :to="`/admin/users/${selectedParticipant.user_id}`"
+            class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors"
+            @click="closeParticipantDetail"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+            </svg>
+            Vollständiges Profil
+          </NuxtLink>
+          <button
+            @click="closeParticipantDetail"
+            class="flex-1 px-4 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors"
+          >
+            Schließen
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
   <!-- Remove Participant Reason Modal -->
   <Teleport to="body">
     <div v-if="showRemoveParticipantModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-[99999] p-4" @click.self="showRemoveParticipantModal = false">
@@ -4552,6 +4722,37 @@ const courseDetailTab = ref<'participants' | 'edit'>('participants')
 const currentEnrollments = ref<any[]>([])
 const deletedEnrollments = ref<any[]>([])
 const showDeletedParticipants = ref(false)
+
+// Participant detail modal
+const selectedParticipant = ref<any>(null)
+const selectedParticipantUser = ref<any>(null)
+const isLoadingParticipantUser = ref(false)
+const showParticipantDetail = ref(false)
+
+const openParticipantDetail = async (enrollment: any) => {
+  selectedParticipant.value = enrollment
+  selectedParticipantUser.value = null
+  showParticipantDetail.value = true
+  if (enrollment.user_id) {
+    isLoadingParticipantUser.value = true
+    try {
+      const response = await $fetch('/api/admin/users', {
+        method: 'POST',
+        body: { action: 'get-user-by-id', user_id: enrollment.user_id }
+      }) as any
+      if (response?.success) selectedParticipantUser.value = response.data
+    } catch (e) {
+      console.error('Error loading user details:', e)
+    } finally {
+      isLoadingParticipantUser.value = false
+    }
+  }
+}
+const closeParticipantDetail = () => {
+  showParticipantDetail.value = false
+  selectedParticipant.value = null
+  selectedParticipantUser.value = null
+}
 
 // Only count non-cancelled registrations for capacity (cancelled don't occupy a spot)
 const activeEnrollmentCount = computed(() => currentEnrollments.value.filter(e => e.status !== 'cancelled').length)
@@ -7009,6 +7210,21 @@ const getEnrollmentStatusText = (status: string) => {
 
 // ── SARI Manual Sync ──────────────────────────────────────────────────────────
 const sariSyncing = ref(false)
+
+const sariBackfilling = ref(false)
+const runSariBackfill = async () => {
+  if (sariBackfilling.value) return
+  if (!confirm('Fehlende Adressdaten (Strasse, PLZ, Ort, Geburtsdatum) aus SARI ergänzen?\n\nDies betrifft alle Anmeldungen mit Lernfahrausweis-Nr. bei denen diese Felder leer sind.')) return
+  sariBackfilling.value = true
+  try {
+    const result = await $fetch('/api/admin/courses/sari-backfill', { method: 'POST', body: {} }) as any
+    alert(result.message || `${result.updated} Registrierungen aktualisiert.`)
+  } catch (err: any) {
+    alert('Fehler: ' + (err?.data?.statusMessage || err?.message || 'Unbekannter Fehler'))
+  } finally {
+    sariBackfilling.value = false
+  }
+}
 
 const triggerSariSync = async () => {
   if (sariSyncing.value) return

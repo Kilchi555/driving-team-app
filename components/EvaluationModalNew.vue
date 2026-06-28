@@ -116,9 +116,20 @@
                 :key="criteriaId"
                 class="border border-gray-200 rounded-lg p-4"
               >
-                <div class="mb-4">
-                  <h4 class="font-semibold text-gray-900 text-lg">{{ getCriteriaById(criteriaId)?.criteria_name }}</h4>
-                  <p class="text-gray-600">{{ getCriteriaById(criteriaId)?.criteria_description }}</p>
+                <div class="mb-4 flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <h4 class="font-semibold text-gray-900 text-lg leading-snug">{{ getCriteriaById(criteriaId)?.criteria_name }}</h4>
+                    <p class="text-gray-600 text-sm mt-0.5">{{ getCriteriaById(criteriaId)?.criteria_description }}</p>
+                  </div>
+                  <button
+                    @click="openGuide(criteriaId)"
+                    title="Unterrichtsguide öffnen"
+                    class="flex-shrink-0 w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 hover:bg-indigo-100 transition-colors mt-0.5"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/>
+                    </svg>
+                  </button>
                 </div>
 
                 <!-- Rating Scale -->
@@ -185,10 +196,17 @@
       </div>
     </div>
   </div>
+
+  <StaffGuideModal
+    v-if="showGuide"
+    :initial-criterion-id="guideInitialCriterionId"
+    @close="showGuide = false"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import StaffGuideModal from '~/components/StaffGuideModal.vue'
 
 // Props
 interface Props {
@@ -221,6 +239,15 @@ const evaluationScale = ref<any[]>([])
 const selectedCriteriaOrder = ref<string[]>([])
 const criteriaRatings = ref<Record<string, number>>({})
 const criteriaNotes = ref<Record<string, string>>({})
+
+// Guide
+const showGuide = ref(false)
+const guideInitialCriterionId = ref<string | null>(null)
+
+const openGuide = (criteriaId: string) => {
+  guideInitialCriterionId.value = criteriaId
+  showGuide.value = true
+}
 
 // Computed
 const filteredCriteria = computed(() => {

@@ -200,6 +200,12 @@
               <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rolle</th>
               <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Kontakt</th>
               <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+              <th v-if="activeTab === 'staff'" class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <span class="flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/></svg>
+                  Guide bearbeiten
+                </span>
+              </th>
               <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tenant</th>
             </tr>
           </thead>
@@ -263,6 +269,36 @@
                 </span>
               </td>
 
+              <!-- Guide-Edit Toggle (only for staff tab, non-invitation, non-deleted) -->
+              <td v-if="activeTab === 'staff'" class="px-5 py-3.5" @click.stop>
+                <button
+                  v-if="!user.is_invitation && !user.deleted_at"
+                  @click="toggleGuideEdit(user)"
+                  :disabled="togglingGuideEdit === user.id"
+                  :title="user.can_edit_guide ? 'Zugriff entziehen' : 'Zugriff gewähren'"
+                  class="flex items-center gap-2 group"
+                >
+                  <!-- Toggle pill -->
+                  <div
+                    class="relative w-8 h-4.5 rounded-full transition-colors flex-shrink-0"
+                    :class="user.can_edit_guide ? 'bg-indigo-500' : 'bg-gray-200'"
+                    style="height: 18px; width: 32px;"
+                  >
+                    <div
+                      class="absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow transition-all"
+                      :class="user.can_edit_guide ? 'left-[14px]' : 'left-0.5'"
+                    />
+                    <div v-if="togglingGuideEdit === user.id" class="absolute inset-0 flex items-center justify-center">
+                      <div class="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin opacity-50"/>
+                    </div>
+                  </div>
+                  <span class="text-xs" :class="user.can_edit_guide ? 'text-indigo-600 font-semibold' : 'text-gray-400'">
+                    {{ user.can_edit_guide ? 'Erlaubt' : 'Nein' }}
+                  </span>
+                </button>
+                <span v-else class="text-xs text-gray-300">—</span>
+              </td>
+
               <td class="px-5 py-3.5">
                 <p class="text-sm text-gray-700">{{ currentTenant?.name || 'Unbekannt' }}</p>
                 <div class="text-xs text-gray-500">
@@ -276,14 +312,14 @@
 
             <!-- Loading deleted users -->
             <tr v-if="selectedStatus === 'deleted' && isLoadingDeleted">
-              <td colspan="5" class="px-6 py-12 text-center text-gray-400">
+              <td :colspan="activeTab === 'staff' ? 6 : 5" class="px-6 py-12 text-center text-gray-400">
                 <div class="text-sm">Gelöschte Benutzer werden geladen…</div>
               </td>
             </tr>
 
             <!-- Empty State -->
             <tr v-else-if="filteredUsers.length === 0">
-              <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+              <td :colspan="activeTab === 'staff' ? 6 : 5" class="px-6 py-12 text-center text-gray-500">
                 <div class="text-lg">👤 Keine Benutzer gefunden</div>
                 <div class="text-sm mt-2">
                   {{ selectedStatus === 'deleted' ? 'Keine gelöschten Benutzer vorhanden' : searchTerm ? 'Versuchen Sie eine andere Suche' : 'Erstellen Sie den ersten Benutzer' }}
@@ -808,6 +844,7 @@ interface User {
   is_primary_admin?: boolean
   preferred_payment_method: string | null
   is_active: boolean
+  can_edit_guide?: boolean
   created_at: string
   deleted_at?: string | null
   appointment_count?: number
@@ -823,6 +860,7 @@ interface User {
 const authStore = useAuthStore()
 const supabase = getSupabase()
 const activeTab = ref<string>('customers')
+const togglingGuideEdit = ref<string | null>(null)
 const tabs = computed(() => {
   const base = [
     { id: 'customers', name: t.value.clientsPlural },
@@ -1294,6 +1332,24 @@ const getRoleBadgeClass = (user: User): string => {
 
 const navigateToUserDetails = (userId: string) => {
   useRouter().push(`/admin/users/${userId}`)
+}
+
+const toggleGuideEdit = async (user: User) => {
+  if (togglingGuideEdit.value) return
+  togglingGuideEdit.value = user.id
+  const newValue = !user.can_edit_guide
+  try {
+    await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: { action: 'update-staff', user_id: user.id, user_data: { can_edit_guide: newValue } }
+    })
+    const idx = users.value.findIndex(u => u.id === user.id)
+    if (idx !== -1) users.value[idx] = { ...users.value[idx], can_edit_guide: newValue }
+  } catch (e) {
+    console.error('Error toggling guide edit:', e)
+  } finally {
+    togglingGuideEdit.value = null
+  }
 }
 
 const formatExpiryDate = (dateString: string): string => {

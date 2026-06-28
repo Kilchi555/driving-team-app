@@ -12,6 +12,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { encryptSecret } from '~/server/utils/encryption'
 import { invalidateWalleeConfigCache } from '~/server/utils/wallee-config'
 import { clearProviderCache } from '~/server/payment-providers/factory'
+import { ensureWalleeWebhook } from '~/server/utils/wallee-webhook-setup'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -55,5 +56,23 @@ export default defineEventHandler(async (event) => {
   invalidateWalleeConfigCache(tenant_id)
   clearProviderCache(tenant_id)
 
-  return { success: true, message: 'Test-Credentials gespeichert' }
+  // Auto-register our webhook in the test space (non-fatal if it fails)
+  let webhookMessage = ''
+  try {
+    const webhookResult = await ensureWalleeWebhook(
+      parseInt(wallee_space_id),
+      parseInt(wallee_user_id),
+      wallee_secret_key.trim(),
+    )
+    webhookMessage = webhookResult.skipped
+      ? ' (Webhook bereits vorhanden)'
+      : webhookResult.success
+        ? ' (Webhook registriert)'
+        : ` (Webhook-Warnung: ${webhookResult.message})`
+  } catch (webhookErr: any) {
+    console.error(`⚠️ Webhook-Registrierung fehlgeschlagen (non-fatal): ${webhookErr?.message}`)
+    webhookMessage = ' (Webhook konnte nicht registriert werden – bitte manuell)'
+  }
+
+  return { success: true, message: `Test-Credentials gespeichert${webhookMessage}` }
 })

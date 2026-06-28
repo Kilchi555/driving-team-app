@@ -10,6 +10,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { encryptSecret } from '~/server/utils/encryption'
 import { invalidateWalleeConfigCache } from '~/server/utils/wallee-config'
 import { clearProviderCache } from '~/server/payment-providers/factory'
+import { ensureWalleeWebhook } from '~/server/utils/wallee-webhook-setup'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -87,6 +88,20 @@ export default defineEventHandler(async (event) => {
   // 3. Invalidate in-process credential caches so new credentials take effect immediately
   invalidateWalleeConfigCache(tenant_id)
   clearProviderCache(tenant_id)
+
+  // 4. Auto-register our webhook in the tenant's Wallee space (non-fatal if it fails)
+  try {
+    const webhookResult = await ensureWalleeWebhook(
+      parseInt(wallee_space_id),
+      parseInt(wallee_user_id),
+      wallee_secret_key.trim(),
+    )
+    if (!webhookResult.success) {
+      console.warn(`⚠️ Webhook-Registrierung fehlgeschlagen für Tenant ${tenant_id}: ${webhookResult.message}`)
+    }
+  } catch (webhookErr: any) {
+    console.error(`⚠️ Webhook-Registrierung fehlgeschlagen (non-fatal): ${webhookErr?.message}`)
+  }
   try {
     const stripeSecret = process.env.STRIPE_SECRET_KEY
     if (stripeSecret) {

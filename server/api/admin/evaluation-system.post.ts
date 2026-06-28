@@ -431,5 +431,25 @@ export default defineEventHandler(async (event) => {
     return { success: true }
   }
 
+  // ─── save-staff-content ────────────────────────────────────────────────────
+  if (action === 'save-staff-content') {
+    const { id, staff_content } = body
+    if (!id) throw createError({ statusCode: 400, statusMessage: 'Missing id' })
+    const { data: criteriaCheck } = await supabase
+      .from('evaluation_criteria')
+      .select('id, tenant_id')
+      .eq('id', id)
+      .single()
+    if (!criteriaCheck || criteriaCheck.tenant_id !== tenantId) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+    const { error } = await supabase
+      .from('evaluation_criteria')
+      .update({ staff_content, updated_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+    return { success: true }
+  }
+
   throw createError({ statusCode: 400, statusMessage: `Unknown action: ${action}` })
 })

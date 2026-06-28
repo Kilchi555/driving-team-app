@@ -152,55 +152,56 @@
               <div>
                 <dt class="text-sm font-medium text-gray-500">E-Mail</dt>
                 <dd class="mt-1 text-sm text-gray-900">
-                  <a :href="emailLink" class="text-blue-600 hover:text-blue-800">
-                    {{ displayEmail }}
-                  </a>
+                  <a :href="emailLink" class="text-blue-600 hover:text-blue-800">{{ displayEmail }}</a>
                 </dd>
               </div>
               <div>
                 <dt class="text-sm font-medium text-gray-500">Telefon</dt>
                 <dd class="mt-1 text-sm text-gray-900">
-                  <a v-if="userDetails?.phone" :href="phoneLink" class="text-blue-600 hover:text-blue-800">
-                    {{ userDetails.phone }}
-                  </a>
+                  <a v-if="userDetails?.phone" :href="phoneLink" class="text-blue-600 hover:text-blue-800">{{ userDetails.phone }}</a>
                   <span v-else class="text-gray-400">Nicht angegeben</span>
                 </dd>
+              </div>
+              <div v-if="userDetails?.birthdate">
+                <dt class="text-sm font-medium text-gray-500">Geburtsdatum</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ formatDateShort(userDetails.birthdate) }}</dd>
+              </div>
+              <div v-if="userDetails?.street || userDetails?.zip || userDetails?.city">
+                <dt class="text-sm font-medium text-gray-500">Adresse</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                  <div v-if="userDetails?.street">{{ userDetails.street }} {{ userDetails.street_nr }}</div>
+                  <div v-if="userDetails?.zip || userDetails?.city">{{ userDetails.zip }} {{ userDetails.city }}</div>
+                </dd>
+              </div>
+              <div v-if="userDetails?.faberid">
+                <dt class="text-sm font-medium text-gray-500">Ausweisnummer (LFA)</dt>
+                <dd class="mt-1 text-sm font-mono text-gray-900">{{ userDetails.faberid }}</dd>
+              </div>
+              <div v-if="userDetails?.profession">
+                <dt class="text-sm font-medium text-gray-500">Beruf</dt>
+                <dd class="mt-1 text-sm text-gray-900">{{ userDetails.profession }}</dd>
               </div>
               <div>
                 <dt class="text-sm font-medium text-gray-500">Rolle</dt>
                 <dd class="mt-1">
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="roleClass">
-                    {{ roleLabel }}
-                  </span>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="roleClass">{{ roleLabel }}</span>
                 </dd>
               </div>
               <div>
                 <dt class="text-sm font-medium text-gray-500">Status</dt>
                 <dd class="mt-1">
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="statusClass">
-                    {{ userDetails?.is_active ? 'Aktiv' : 'Inaktiv' }}
-                  </span>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="statusClass">{{ userDetails?.is_active ? 'Aktiv' : 'Inaktiv' }}</span>
                 </dd>
               </div>
               <div>
                 <dt class="text-sm font-medium text-gray-500">Registriert am</dt>
                 <dd class="mt-1 text-sm text-gray-900">{{ formatDate(userDetails?.created_at) }}</dd>
               </div>
-              <div>
-                <dt class="text-sm font-medium text-gray-500">Letzte Anmeldung</dt>
-                <dd class="mt-1 text-sm text-gray-900">Nicht verfügbar</dd>
-              </div>
-              <div v-if="userDetails?.role === 'staff'" class="md:col-span-2">
+              <div v-if="userDetails?.role === 'staff'" class="md:col-span-3">
                 <dt class="text-sm font-medium text-gray-500 mb-2">Fahrkategorien</dt>
                 <dd class="mt-1">
                   <div v-if="userDetails.category && userDetails.category.length > 0" class="flex flex-wrap gap-1.5">
-                    <span
-                      v-for="categoryCode in (Array.isArray(userDetails.category) ? userDetails.category : [userDetails.category])"
-                      :key="categoryCode"
-                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
-                    >
-                      {{ categoryCode }}
-                    </span>
+                    <span v-for="cat in (Array.isArray(userDetails.category) ? userDetails.category : [userDetails.category])" :key="cat" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">{{ cat }}</span>
                   </div>
                   <span v-else class="text-sm text-gray-400">Keine Kategorien zugewiesen</span>
                 </dd>
@@ -209,15 +210,122 @@
           </div>
         </div>
 
-
-      <!-- Fahrlehrer & Verfügbarkeit (nur für Rolle staff) -->
-      <div v-if="userDetails?.role === 'staff' && isOnlineBookingEnabled" class="bg-white shadow rounded-lg overflow-hidden">
-        <div class="p-0 sm:p-0">
-          <div class="overflow-x-auto">
-            <StaffTab :current-user="{ id: userDetails?.id, role: 'admin' }" :tenant-settings="{}" />
+        <!-- Kursanmeldungen -->
+        <div v-if="userCourseRegistrations.length > 0" class="bg-white shadow rounded-lg overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Kursanmeldungen</h3>
+            <span class="text-sm text-gray-500">{{ userCourseRegistrations.length }} Total</span>
+          </div>
+          <div class="divide-y divide-gray-100">
+            <div v-for="reg in userCourseRegistrations" :key="reg.id" class="px-6 py-4">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-gray-900 truncate">{{ reg.course?.name || '—' }}</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Angemeldet: {{ formatDateShort(reg.registration_date || reg.created_at) }}</p>
+                  <div v-if="reg.course?.course_sessions?.length" class="mt-1 space-y-0.5">
+                    <p
+                      v-for="session in reg.course.course_sessions.slice().sort((a: any, b: any) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())"
+                      :key="session.start_time"
+                      class="text-xs text-gray-400"
+                    >
+                      {{ session.session_number ? `Teil ${session.session_number}: ` : '' }}{{ new Date(session.start_time).toLocaleDateString('de-CH', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }) }}, {{ new Date(session.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) }}–{{ new Date(session.end_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) }}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                  <span :class="{
+                    'bg-green-100 text-green-700': reg.status === 'confirmed',
+                    'bg-amber-100 text-amber-700': reg.status === 'pending',
+                    'bg-red-100 text-red-700': reg.status === 'cancelled',
+                    'bg-gray-100 text-gray-600': !['confirmed','pending','cancelled'].includes(reg.status)
+                  }" class="px-2 py-0.5 text-xs font-medium rounded-full">
+                    {{ reg.status === 'confirmed' ? 'Bestätigt' : reg.status === 'pending' ? 'Ausstehend' : reg.status === 'cancelled' ? 'Storniert' : reg.status }}
+                  </span>
+                  <span class="text-xs font-semibold text-gray-900">{{ formatCHF(reg.amount_paid_rappen || 0) }}</span>
+                  <span :class="{
+                    'text-green-600': reg.payment_status === 'paid',
+                    'text-amber-600': reg.payment_status === 'pending',
+                    'text-red-600': reg.payment_status === 'failed'
+                  }" class="text-xs">
+                    {{ reg.payment_status === 'paid' ? 'Bezahlt' : reg.payment_status === 'pending' ? 'Ausstehend' : reg.payment_status }}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+
+        <!-- Zahlungen -->
+        <div v-if="userPayments.length > 0" class="bg-white shadow rounded-lg overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Zahlungen</h3>
+            <span class="text-sm text-gray-500">{{ userPayments.length }} Total</span>
+          </div>
+          <div class="divide-y divide-gray-100">
+            <div v-for="pay in userPayments" :key="pay.id" class="px-6 py-4">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-gray-900 truncate">
+                    {{ pay.appointments?.title || (pay.appointments?.event_type_code === 'lesson' ? 'Fahrstunde' : pay.appointments?.event_type_code ? pay.appointments.event_type_code : 'Zahlung') }}
+                  </p>
+                  <p class="text-xs text-gray-500 mt-0.5">{{ formatDateShort(pay.created_at) }}</p>
+                  <p v-if="pay.appointments?.start_time" class="text-xs text-gray-400">Termin: {{ formatDateShort(pay.appointments.start_time) }}</p>
+                  <p v-if="pay.paid_at" class="text-xs text-gray-400">Bezahlt: {{ formatDateShort(pay.paid_at) }}</p>
+                </div>
+                <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                  <span class="text-sm font-bold text-gray-900">{{ formatCHF(pay.total_amount_rappen || 0) }}</span>
+                  <span :class="{
+                    'bg-green-100 text-green-700': pay.payment_status === 'completed',
+                    'bg-amber-100 text-amber-700': pay.payment_status === 'pending',
+                    'bg-red-100 text-red-700': pay.payment_status === 'failed',
+                    'bg-gray-100 text-gray-600': pay.payment_status === 'cancelled'
+                  }" class="px-2 py-0.5 text-xs font-medium rounded-full">
+                    {{ pay.payment_status === 'completed' ? 'Bezahlt' : pay.payment_status === 'pending' ? 'Ausstehend' : pay.payment_status === 'failed' ? 'Fehlgeschlagen' : pay.payment_status === 'cancelled' ? 'Storniert' : pay.payment_status }}
+                  </span>
+                  <span class="text-xs text-gray-400">{{ pay.payment_method || '—' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Termine -->
+        <div v-if="userAppointments.length > 0" class="bg-white shadow rounded-lg overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Termine</h3>
+            <span class="text-sm text-gray-500">{{ userAppointments.length }} Total</span>
+          </div>
+          <div class="divide-y divide-gray-100">
+            <div v-for="appt in userAppointments" :key="appt.id" class="px-6 py-4">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-gray-900">{{ appt.type || 'Fahrstunde' }}</p>
+                  <p class="text-xs text-gray-500 mt-0.5">{{ formatDateShort(appt.start_time) }}</p>
+                  <p v-if="appt.staff" class="text-xs text-gray-400">Fahrlehrer: {{ appt.staff?.first_name }} {{ appt.staff?.last_name }}</p>
+                  <p v-if="appt.duration_minutes" class="text-xs text-gray-400">{{ appt.duration_minutes }} Min.</p>
+                </div>
+                <span :class="{
+                  'bg-green-100 text-green-700': appt.status === 'confirmed',
+                  'bg-blue-100 text-blue-700': appt.status === 'completed',
+                  'bg-amber-100 text-amber-700': appt.status === 'pending',
+                  'bg-red-100 text-red-700': appt.status === 'cancelled',
+                  'bg-gray-100 text-gray-600': !['confirmed','completed','pending','cancelled'].includes(appt.status)
+                }" class="px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0 mt-0.5">
+                  {{ appt.status === 'confirmed' ? 'Bestätigt' : appt.status === 'completed' ? 'Abgeschlossen' : appt.status === 'pending' ? 'Ausstehend' : appt.status === 'cancelled' ? 'Storniert' : appt.status }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fahrlehrer & Verfügbarkeit (nur für Rolle staff) -->
+        <div v-if="userDetails?.role === 'staff' && isOnlineBookingEnabled" class="bg-white shadow rounded-lg overflow-hidden">
+          <div class="p-0 sm:p-0">
+            <div class="overflow-x-auto">
+              <StaffTab :current-user="{ id: userDetails?.id, role: 'admin' }" :tenant-settings="{}" />
+            </div>
+          </div>
+        </div>
 
       </div>
     </div>
@@ -499,6 +607,14 @@ interface UserDetails {
   tenant_name?: string | null
   deleted_at?: string | null
   category?: string[] | string | null
+  // Personal data
+  street?: string | null
+  street_nr?: string | null
+  zip?: string | null
+  city?: string | null
+  birthdate?: string | null
+  faberid?: string | null
+  profession?: string | null
 }
 
 interface SystemActivity {
@@ -540,6 +656,11 @@ const appointmentStats = ref({
 })
 const systemActivities = ref<SystemActivity[]>([])
 const showEditModal = ref(false)
+
+// Extended data
+const userCourseRegistrations = ref<any[]>([])
+const userPayments = ref<any[]>([])
+const userAppointments = ref<any[]>([])
 const showDeleteConfirm = ref(false)
 const deleteReason = ref('')
 const isSaving = ref(false)
@@ -986,16 +1107,55 @@ const toggleCategory = (categoryCode: string) => {
   }
 }
 
+const loadUserCourseRegistrations = async () => {
+  try {
+    const response = await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: { action: 'get-user-course-registrations', user_id: userId }
+    }) as any
+    if (response?.success) userCourseRegistrations.value = response.data || []
+  } catch (e) { console.warn('Could not load course registrations:', e) }
+}
+
+const loadUserPayments = async () => {
+  try {
+    const response = await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: { action: 'get-user-payments', user_id: userId }
+    }) as any
+    if (response?.success) userPayments.value = response.data || []
+  } catch (e) { console.warn('Could not load payments:', e) }
+}
+
+const loadUserAppointmentsList = async () => {
+  try {
+    const response = await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: { action: 'get-user-appointments', user_id: userId }
+    }) as any
+    if (response?.success) userAppointments.value = response.data || []
+  } catch (e) { console.warn('Could not load appointments:', e) }
+}
+
+const formatCHF = (rappen: number) => `CHF ${(rappen / 100).toFixed(2)}`
+
+const formatDateShort = (d?: string | null) => {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
 onMounted(async () => {
   try {
     await loadFeatures()
     await Promise.all([
-      loadCurrentUser(), // Load current admin user for permissions
+      loadCurrentUser(),
       loadUserDetails(),
       loadSystemActivities(),
-      loadAuditLog()
+      loadAuditLog(),
+      loadUserCourseRegistrations(),
+      loadUserPayments(),
+      loadUserAppointmentsList(),
     ])
-    // Load categories after user details are loaded
     if (userDetails.value?.role === 'staff') {
       await loadCategories()
     }

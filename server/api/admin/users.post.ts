@@ -7,7 +7,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 
 // Allowed columns per update action to prevent mass assignment
 const ADMIN_UPDATE_WHITELIST = ['first_name', 'last_name', 'email', 'phone', 'is_active', 'role'] as const
-const STAFF_UPDATE_WHITELIST = ['first_name', 'last_name', 'email', 'phone', 'is_active'] as const
+const STAFF_UPDATE_WHITELIST = ['first_name', 'last_name', 'email', 'phone', 'is_active', 'can_edit_guide'] as const
 
 function pickFields<T extends object>(data: T, allowed: readonly string[]): Partial<T> {
   return Object.fromEntries(
@@ -197,10 +197,35 @@ export default defineEventHandler(async (event) => {
     if (action === 'get-user-appointments') {
       const { data, error } = await supabase
         .from('appointments')
-        .select('id, start_time, end_time, status, duration_minutes')
+        .select('id, start_time, end_time, status, duration_minutes, type, notes, staff:users!appointments_staff_id_fkey(first_name, last_name)')
         .eq('user_id', user_id)
         .order('start_time', { ascending: false })
         .limit(200)
+
+      if (error) throw error
+      return { success: true, data: data || [] }
+    }
+
+    if (action === 'get-user-course-registrations') {
+      const { data, error } = await supabase
+        .from('course_registrations')
+        .select('id, status, payment_status, amount_paid_rappen, discount_applied_rappen, registration_date, created_at, sari_faberid, is_partial_enrollment, course:courses(id, name, price_per_participant_rappen, course_sessions(start_time, end_time, session_number))')
+        .eq('user_id', user_id)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(100)
+
+      if (error) throw error
+      return { success: true, data: data || [] }
+    }
+
+    if (action === 'get-user-payments') {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('id, total_amount_rappen, payment_status, payment_method, created_at, paid_at, invoice_id, wallee_transaction_id, notes, appointment_id, appointments(id, title, start_time, event_type_code)')
+        .eq('user_id', user_id)
+        .order('created_at', { ascending: false })
+        .limit(100)
 
       if (error) throw error
       return { success: true, data: data || [] }

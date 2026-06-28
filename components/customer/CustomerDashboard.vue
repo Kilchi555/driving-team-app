@@ -66,7 +66,7 @@
     <!-- Loading State - removed large spinner, uses small one in content area instead -->
 
     <!-- Error State -->
-    <div v-else-if="error" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div v-if="error" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div class="bg-red-50 border-l-4 border-red-400 rounded-lg p-6">
         <div class="flex">
           <div class="flex-shrink-0">
