@@ -178,12 +178,20 @@ export class WalleeProvider implements IPaymentProvider {
       const sdkConfig = getWalleeSDKConfig(this.spaceId, this.userId, this.apiSecret)
       const refundService = new Wallee.api.RefundService(sdkConfig)
 
+      // externalId is Wallee's deduplication key: two requests with the same
+      // externalId in the same space are treated as the same refund (idempotent).
+      // We derive it from the caller's idempotency_key so retries are safe.
+      const idempotencyKey = (request.metadata?.idempotency_key as string) || null
+      const externalId = idempotencyKey
+        ? `refund-${idempotencyKey}`
+        : `refund-${request.transactionId}-${Date.now()}`
+
       const refund: Wallee.model.RefundCreate = {
         type: Wallee.model.RefundType.MERCHANT_INITIATED_ONLINE,
         amount: request.amount,
         transaction: Number(request.transactionId),
-        merchantReference: `refund-${Date.now()}`,
-        externalId: `refund-${Date.now()}`
+        merchantReference: externalId,
+        externalId,
       }
 
       const response = await refundService.refund(this.spaceId, refund)

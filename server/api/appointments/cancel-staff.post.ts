@@ -195,9 +195,14 @@ export default defineEventHandler(async (event) => {
     })
 
     // ============ LAYER 8: PROCESS CANCELLATION ============
-    // Call handle-cancellation.post.ts with all necessary data
+    // Call handle-cancellation.post.ts with all necessary data.
+    // The X-Internal-Secret header proves this is a trusted server-side call.
+    const { internalCancellationSecret } = useRuntimeConfig()
     const cancellationResult = await $fetch('/api/appointments/handle-cancellation', {
       method: 'POST',
+      headers: {
+        'x-internal-secret': internalCancellationSecret as string,
+      },
       body: {
         appointmentId,
         cancellationReasonId,
