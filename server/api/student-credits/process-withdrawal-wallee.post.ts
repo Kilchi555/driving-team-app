@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: currentUser } = await supabase
     .from('users')
-    .select('role')
+    .select('role, tenant_id')
     .eq('auth_user_id', authUser.id)
     .single()
 
@@ -58,6 +58,11 @@ export default defineEventHandler(async (event) => {
       .single()
     if (error || !data) throw createError({ statusCode: 404, statusMessage: 'Student credit not found' })
     studentCredit = data
+  }
+
+  // ── Tenant isolation: admin may only process withdrawals for their own tenant ──
+  if (studentCredit.tenant_id && currentUser?.tenant_id && studentCredit.tenant_id !== currentUser.tenant_id) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden: student belongs to a different tenant' })
   }
 
   if (!studentCredit.pending_withdrawal_rappen || studentCredit.pending_withdrawal_rappen <= 0) {
@@ -108,7 +113,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const walleeRefundId = refundResult.wallee_refund_id || idempotencyKey
+  // refundResult.refundId is the actual Wallee refund ID (property name from WalleeRefundResult)
+  const walleeRefundId = refundResult.refundId || idempotencyKey
 
   logger.info('✅ Wallee withdrawal refund succeeded:', {
     userId: studentCredit.user_id,
@@ -116,11 +122,14 @@ export default defineEventHandler(async (event) => {
     walleeRefundId,
   })
 
-  // ── Update student_credits ────────────────────────────────────────────────
+  // ── Update student_credits (atomic: only if state matches what we read) ──────
+  // The extra .eq conditions on balance_rappen and pending_withdrawal_rappen prevent
+  // a race condition where two concurrent withdrawal requests would both succeed and
+  // deduct the balance twice.
   const newBalance = Math.max(0, studentCredit.balance_rappen - withdrawalAmountRappen)
   const completedTotal = (studentCredit.completed_withdrawal_rappen || 0) + withdrawalAmountRappen
 
-  const { error: updateError } = await supabase
+  const { data: updatedRows, error: updateError } = await supabase
     .from('student_credits')
     .update({
       balance_rappen: newBalance,
@@ -131,10 +140,22 @@ export default defineEventHandler(async (event) => {
       updated_at: new Date().toISOString(),
     })
     .eq('id', studentCredit.id)
+    .eq('pending_withdrawal_rappen', withdrawalAmountRappen)  // guard: still the same pending amount
+    .select('id')
 
   if (updateError) {
     logger.error('❌ Failed to update student_credits after successful Wallee refund:', updateError)
     throw createError({ statusCode: 500, statusMessage: 'Wallee-Rückerstattung war erfolgreich, aber Datenbankupdate fehlgeschlagen. Bitte manuell prüfen.' })
+  }
+
+  if (!updatedRows || updatedRows.length === 0) {
+    // Another request already processed this withdrawal — the Wallee refund above may be a duplicate.
+    // Log loudly so an admin can investigate; do not throw (the money is already on its way).
+    logger.error('⚠️ Withdrawal race condition detected: student_credits row was modified concurrently. Wallee refund may be duplicated.', {
+      studentCreditId: studentCredit.id,
+      walleeRefundId,
+    })
+    throw createError({ statusCode: 409, statusMessage: 'Diese Auszahlung wurde bereits verarbeitet. Bitte prüfen Sie Wallee auf doppelte Rückerstattungen.' })
   }
 
   // ── Update pending credit_transaction ────────────────────────────────────

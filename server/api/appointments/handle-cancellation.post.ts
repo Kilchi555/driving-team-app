@@ -1,7 +1,7 @@
 // server/api/appointments/handle-cancellation.post.ts
 // INTERNAL ONLY: Handles appointment cancellation with automatic refund processing
-// ⚠️ SECURITY: Only called from cancel-customer.post.ts or cancel-staff.post.ts
-// ⚠️ SECURITY: These callers must verify auth + authorization + tenant before calling
+// ⚠️ SECURITY: Protected by X-Internal-Secret header — never call from client-side code.
+// Callers (cancel-staff.post.ts) must verify auth + authorization + tenant first.
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
@@ -13,6 +13,19 @@ import { processWalleeRefund } from '~/server/utils/wallee-refund'
 
 export default defineEventHandler(async (event) => {
   try {
+    // ── INTERNAL-ONLY GUARD ────────────────────────────────────────────────
+    // This route must never be called directly from a browser or external client.
+    // Only server-side $fetch calls (cancel-staff, cancel-customer) may reach it,
+    // and they must supply the pre-shared secret set in NUXT_INTERNAL_CANCELLATION_SECRET.
+    const config = useRuntimeConfig()
+    const expectedSecret = config.internalCancellationSecret
+    const providedSecret = getHeader(event, 'x-internal-secret')
+
+    if (!expectedSecret || !providedSecret || providedSecret !== expectedSecret) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const supabase = getSupabaseAdmin()
     const slotManager = createAvailabilitySlotManager(supabase)
     
