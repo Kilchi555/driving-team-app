@@ -2634,6 +2634,13 @@ const markInvoicedAsPaid = async (appointment: Appointment) => {
           amount_rappen: Math.round(calculateAppointmentAmount(appointment) * 100)
         })
 
+        // Optimistic local update so badge changes immediately
+        const idx = appointments.value.findIndex(a => a.id === appointment.id)
+        if (idx !== -1) {
+          appointments.value[idx].payment_status = 'completed'
+          appointments.value[idx].is_paid = true
+        }
+
         showSuccessToast('✅ Als bezahlt markiert', 'Die Rechnung wurde als bezahlt markiert.')
         await loadUserAppointments()
       } catch (err: any) {
@@ -2914,14 +2921,15 @@ const showConfirmation = (title: string, message: string, action: () => void, op
   showConfirmModal.value = true
 }
 
-const executeConfirmAction = () => {
-  if (confirmAction.value) {
-    confirmAction.value()
-  }
+const executeConfirmAction = async () => {
+  const action = confirmAction.value
   showConfirmModal.value = false
   confirmAction.value = null
   confirmLabel.value = ''
   cancelLabel.value = ''
+  if (action) {
+    await action()
+  }
 }
 
 const cancelAction = () => {
@@ -3756,18 +3764,19 @@ const markAllSelectedAsPaid = async () => {
     
     await paymentOp('mark_paid_bulk', { appointment_ids: [...selectedAppointments.value] })
     
-    // Aktualisiere alle ausgewählten Termine lokal
+    // Optimistic local update for both is_paid AND payment_status
     for (const appointmentId of selectedAppointments.value) {
       const appointmentIndex = appointments.value.findIndex(apt => apt.id === appointmentId)
       if (appointmentIndex !== -1) {
         appointments.value[appointmentIndex].is_paid = true
+        appointments.value[appointmentIndex].payment_status = 'completed'
       }
     }
     
-    // Auswahl aufheben
     selectedAppointments.value = []
     
     logger.debug('✅ All selected appointments marked as paid')
+    await loadUserAppointments()
     
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
