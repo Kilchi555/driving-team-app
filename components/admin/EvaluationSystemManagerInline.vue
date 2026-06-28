@@ -744,7 +744,7 @@
         <div class="bg-blue-600 text-white p-4">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-bold">
-              Lerninhalt bearbeiten: {{ editingEducationalContent.name }}
+              Inhalte bearbeiten: {{ editingEducationalContent.name }}
             </h3>
             <button @click="closeEducationalContentModal" class="text-white hover:text-blue-200">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -752,9 +752,46 @@
               </svg>
             </button>
           </div>
+          <!-- Main tabs: Student vs Staff -->
+          <div class="flex gap-1 mt-3">
+            <button
+              @click="educationalEditorTab = 'student'"
+              :class="['px-3 py-1.5 rounded-md text-sm font-medium transition-colors', educationalEditorTab === 'student' ? 'bg-white text-blue-700' : 'text-blue-100 hover:bg-blue-500']"
+            >📘 Schülerinhalt</button>
+            <button
+              @click="educationalEditorTab = 'staff'"
+              :class="['px-3 py-1.5 rounded-md text-sm font-medium transition-colors', educationalEditorTab === 'staff' ? 'bg-white text-blue-700' : 'text-blue-100 hover:bg-blue-500']"
+            >👨‍🏫 Lehrerguide</button>
+          </div>
         </div>
 
-        <!-- Fahrkategorie-Tabs -->
+        <!-- STAFF CONTENT TAB -->
+        <div v-if="educationalEditorTab === 'staff'" class="p-4 space-y-4">
+          <p class="text-xs text-gray-500 bg-indigo-50 rounded-xl p-3">
+            Dieser Inhalt ist nur für Fahrlehrer sichtbar. Die 13 Sektionen folgen einem pädagogischen Rahmen für professionellen Fahrunterricht.
+          </p>
+
+          <StaffGuideEditorForm
+            v-model="staffContentForm"
+            :uploading-key="currentUploadingStaffSection"
+            :image-previews="staffImagePreviews"
+            @add-files="handleAdminStaffAddFiles"
+            @remove-preview="handleAdminStaffRemovePreview"
+          />
+
+          <div class="flex justify-end gap-3 pt-2 border-t">
+            <button @click="closeEducationalContentModal" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Abbrechen</button>
+            <button @click="saveStaffContent" :disabled="isSavingStaffContent || isUploadingStaffImage" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2">
+              <svg v-if="isSavingStaffContent" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              {{ isUploadingStaffImage ? 'Bilder hochladen...' : isSavingStaffContent ? 'Speichern...' : 'Lehrerguide speichern' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- STUDENT CONTENT TAB -->
+        <template v-if="educationalEditorTab === 'student'">
+
+        <!-- Fahrkategorie-Tabs (nur für Schülerinhalt) -->
         <div v-if="editingEducationalContent.driving_categories && editingEducationalContent.driving_categories.length > 0" class="border-b border-gray-200 bg-gray-50">
           <nav class="flex space-x-2 px-6 overflow-x-auto">
             <button
@@ -1021,6 +1058,8 @@
             </button>
           </div>
         </div>
+
+        </template><!-- end student tab -->
       </div>
     </div>
 
@@ -1075,6 +1114,12 @@ interface Criteria {
       text?: string
       images?: string[]
     }>
+  } | null
+  staff_content?: {
+    teaching_goal?: string
+    checklist?: string[]
+    common_mistakes?: string[]
+    sections?: Array<{ title?: string; text?: string }>
   } | null
 }
 
@@ -1131,6 +1176,21 @@ const educationalContentForm = ref<{
 
 // New: Current editing driving category in educational content editor
 const editingEducationalDrivingCategory = ref<string>('_default')
+
+// Staff content tab in editor
+const educationalEditorTab = ref<'student' | 'staff'>('student')
+import StaffGuideEditorForm from '~/components/StaffGuideEditorForm.vue'
+import { parseStaffContent, serializeStaffContent, emptyStaffContent } from '~/types/staff-content'
+import type { StaffContent } from '~/types/staff-content'
+
+const staffContentForm = ref<StaffContent>(emptyStaffContent())
+const isSavingStaffContent = ref(false)
+
+// Staff image upload state (keyed by 'vis' | 'tips')
+const isUploadingStaffImage = ref(false)
+const currentUploadingStaffSection = ref<string | null>(null)
+const staffImagePreviews = ref<Map<string, string[]>>(new Map())
+const staffPendingFiles = ref<Map<string, File[]>>(new Map())
 
 // Image upload state
 const isUploadingImage = ref(false)
@@ -1868,6 +1928,15 @@ const deleteScale = async (id: string) => {
 const openEducationalContentModal = (criteria: Criteria) => {
   editingEducationalContent.value = criteria
   editingEducationalDrivingCategory.value = '_default'
+  educationalEditorTab.value = 'student'
+  
+  // Load staff content form with new typed structure
+  staffContentForm.value = parseStaffContent(criteria.staff_content)
+
+  // Reset staff image upload state
+  staffImagePreviews.value.clear()
+  staffPendingFiles.value.clear()
+  currentUploadingStaffSection.value = null
   
   // Load existing content - handle both old and new structure
   if (criteria.educational_content) {
@@ -1910,17 +1979,104 @@ const openEducationalContentModal = (criteria: Criteria) => {
   sectionImageInputs.value.clear()
 }
 
+const handleAdminStaffAddFiles = (key: string, files: File[]) => {
+  const previews = staffImagePreviews.value.get(key) || []
+  const pending = staffPendingFiles.value.get(key) || []
+  for (const file of files) {
+    previews.push(URL.createObjectURL(file))
+    pending.push(file)
+  }
+  staffImagePreviews.value.set(key, [...previews])
+  staffPendingFiles.value.set(key, [...pending])
+}
+
+const handleAdminStaffRemovePreview = (key: string, index: number) => {
+  const previews = staffImagePreviews.value.get(key) || []
+  const pending = staffPendingFiles.value.get(key) || []
+  previews.splice(index, 1)
+  pending.splice(index, 1)
+  staffImagePreviews.value.set(key, [...previews])
+  staffPendingFiles.value.set(key, [...pending])
+}
+
+const uploadStaffImages = async (key: string, criterionId: string): Promise<string[]> => {
+  const files = staffPendingFiles.value.get(key) || []
+  const urls: string[] = []
+  for (const file of files) {
+    currentUploadingStaffSection.value = key
+    const ext = file.name.split('.').pop()
+    const fileName = `staff/${criterionId}/${key}/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`
+    const reader = new FileReader()
+    const fileData = await new Promise<string>((resolve, reject) => {
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+    const res = await $fetch('/api/system/secure-operations', {
+      method: 'POST',
+      body: { action: 'upload-evaluation-content', file: { data: fileData.split(',')[1], name: fileName, type: file.type }, fileName }
+    }) as any
+    if (!res?.success) throw new Error(res?.error || 'Upload failed')
+    urls.push(res.data.publicUrl)
+  }
+  return urls
+}
+
+const saveStaffContent = async () => {
+  if (!editingEducationalContent.value) return
+  isSavingStaffContent.value = true
+  isUploadingStaffImage.value = true
+  try {
+    const sc = staffContentForm.value
+    const criterionId = editingEducationalContent.value.id
+
+    // Upload images for visualisierung and tipps_fahrlehrer
+    const visUrls = await uploadStaffImages('vis', criterionId)
+    const tipsUrls = await uploadStaffImages('tips', criterionId)
+
+    // Merge uploaded URLs into form
+    if (visUrls.length) sc.visualisierung!.images = [...(sc.visualisierung!.images || []), ...visUrls]
+    if (tipsUrls.length) sc.tipps_fahrlehrer!.images = [...(sc.tipps_fahrlehrer!.images || []), ...tipsUrls]
+
+    const staffContentToSave = serializeStaffContent(sc)
+
+    await $fetch('/api/admin/evaluation-system', {
+      method: 'POST',
+      body: { action: 'save-staff-content', id: criterionId, staff_content: staffContentToSave }
+    })
+
+    const criteriaIndex = criteria.value.findIndex(c => c.id === criterionId)
+    if (criteriaIndex !== -1) criteria.value[criteriaIndex].staff_content = staffContentToSave as any
+
+    staffImagePreviews.value.clear()
+    staffPendingFiles.value.clear()
+    currentUploadingStaffSection.value = null
+    uiStore.showSuccess('Gespeichert', 'Lehrerguide wurde erfolgreich gespeichert.')
+  } catch (e: any) {
+    console.error('Error saving staff content:', e)
+    uiStore.showError('Fehler', `Fehler beim Speichern: ${e.message}`)
+  } finally {
+    isSavingStaffContent.value = false
+    isUploadingStaffImage.value = false
+  }
+}
+
 const closeEducationalContentModal = () => {
   editingEducationalContent.value = null
   editingEducationalDrivingCategory.value = '_default'
+  educationalEditorTab.value = 'student'
   educationalContentForm.value = {
     title: '',
     sections: []
   }
+  staffContentForm.value = emptyStaffContent()
   sectionImagePreviews.value.clear()
   sectionPendingFiles.value.clear()
   sectionImageInputs.value.clear()
   currentUploadingSection.value = null
+  staffImagePreviews.value.clear()
+  staffPendingFiles.value.clear()
+  currentUploadingStaffSection.value = null
 }
 
 // Switch between driving categories in educational content editor

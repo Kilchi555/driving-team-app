@@ -111,19 +111,19 @@
         </div>
 
         <!-- Accordion Sections -->
-        <div class="space-y-2">
+        <div class="space-y-2 max-w-sm mx-auto">
 
         <!-- Externe Kalender Einstellungen -->
         <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
           <button  
             @click="toggleSection('externalCalendars')" 
-            class="w-full px-4 py-3.5 text-left flex items-center gap-3 active:opacity-60 transition-opacity"
+            class="w-full px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
           >
-            <div class="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <div class="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             </div>
             <span class="text-sm font-medium text-gray-900 flex-1">Externe Kalender</span>
-            <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.externalCalendars ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <svg class="w-3.5 h-3.5 text-gray-300 transition-transform" :class="openSections.externalCalendars ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
           </button>
           
           <div v-if="openSections.externalCalendars" class="px-4 pb-4 border-t">
@@ -133,16 +133,16 @@
 
         <!-- Nur Arbeitsstunden für 4 Monate - KEINE lessons mehr! -->
         <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div class="w-full px-4 py-3.5 flex items-center gap-3">
+          <div class="w-full px-3 py-3 flex items-center gap-2.5">
             <button
               @click="toggleSection('workingStats')"
-              class="flex items-center gap-3 flex-1 text-left active:opacity-60 transition-opacity"
+              class="flex items-center gap-2.5 flex-1 text-left active:opacity-60 transition-opacity"
             >
-              <div class="w-8 h-8 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <div class="w-6 h-6 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5 text-orange-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               </div>
               <span class="text-sm font-medium text-gray-900 flex-1">Arbeitsstunden</span>
-              <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.workingStats ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+              <svg class="w-3.5 h-3.5 text-gray-300 transition-transform" :class="openSections.workingStats ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             </button>
           </div>
           
@@ -267,14 +267,30 @@
           </div>
         </div>
 
+        <!-- Unterrichtsguide -->
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <button
+            @click="showStaffGuide = true"
+            class="w-full px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
+          >
+            <div class="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/>
+              </svg>
+            </div>
+            <span class="text-sm font-medium text-gray-900 flex-1">Unterrichtsguide</span>
+            <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+
         <!-- 6. Prüfungsstandorte -->
         <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
           <button
             @click="toggleSection('examLocations')"
-            class="w-full px-4 py-3.5 text-left flex items-center gap-3 active:opacity-60 transition-opacity"
+            class="w-full px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
           >
-            <div class="w-8 h-8 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            <div class="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
             </div>
             <span class="text-sm font-medium text-gray-900 flex-1">Prüfungsstandorte</span>
             <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.examLocations ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -300,10 +316,10 @@
           <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
             <button
               @click="toggleSection('locations')"
-              class="w-full px-4 py-3.5 text-left flex items-center gap-3 active:opacity-60 transition-opacity"
+              class="w-full px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
             >
-              <div class="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              <div class="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
               </div>
               <span class="text-sm font-medium text-gray-900 flex-1">Treffpunkte / Standorte</span>
               <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.locations ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -395,10 +411,10 @@
           <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
             <button
               @click="toggleSection('worktime')"
-              class="w-full px-4 py-3.5 text-left flex items-center gap-3 active:opacity-60 transition-opacity"
+              class="w-full px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
             >
-              <div class="w-8 h-8 bg-teal-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <div class="w-6 h-6 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5 text-teal-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               </div>
               <span class="text-sm font-medium text-gray-900 flex-1">Arbeitszeiten</span>
               <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.worktime ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -508,10 +524,10 @@
       <div v-if="props.currentUser?.role === 'admin' || props.currentUser?.role === 'tenant_admin'" class="bg-white rounded-2xl shadow-sm overflow-hidden">
         <button
           @click="toggleSection('voucherCodes')"
-          class="w-full px-4 py-3.5 text-left flex items-center gap-3 active:opacity-60 transition-opacity"
+          class="w-full px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
         >
-          <div class="w-8 h-8 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+          <div class="w-6 h-6 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-3.5 h-3.5 text-yellow-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
           </div>
           <span class="text-sm font-medium text-gray-900 flex-1">Gutschein- & Rabattcodes</span>
           <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.voucherCodes ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -559,8 +575,8 @@
             @click="handleLogout"
             class="w-full bg-white rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity shadow-sm"
           >
-            <div class="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+            <div class="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
               </svg>
             </div>
@@ -1841,6 +1857,12 @@
       </div>
     </div>
   </Teleport>
+
+  <StaffGuideModal
+    v-if="showStaffGuide"
+    :can-edit="props.currentUser?.can_edit_guide === true || props.currentUser?.role === 'admin' || props.currentUser?.role === 'tenant_admin'"
+    @close="showStaffGuide = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -1850,6 +1872,7 @@ import { logger } from '~/utils/logger'
 import { navigateTo } from '#app/composables/router'
 // ✅ Removed direct Supabase import - using secure APIs via useDatabaseQuery
 import Toast from '~/components/Toast.vue'
+import StaffGuideModal from '~/components/StaffGuideModal.vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import ExamLocationSearchDropdown from './ExamLocationSearchDropdown.vue'
 import StaffExamStatistics from './StaffExamStatistics.vue'
@@ -2221,6 +2244,7 @@ const isLoading = ref(false)
 const isSaving = ref(false)
 const error = ref<string | null>(null)
 const saveSuccess = ref(false)
+const showStaffGuide = ref(false)
 const availableExamLocations = ref<ExamLocation[]>([])
 const staffExamLocations = ref<StaffExamLocation[]>([])
 const isLoadingExamLocations = ref(false)

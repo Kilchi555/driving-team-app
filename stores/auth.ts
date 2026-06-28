@@ -27,6 +27,7 @@ interface UserProfile {
   is_active: boolean
   preferred_payment_method?: string | null
   tenant?: TenantTrialInfo | null
+  can_edit_guide?: boolean
 }
 
 export const useAuthStore = defineStore('authV2', () => {

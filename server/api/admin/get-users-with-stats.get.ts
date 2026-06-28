@@ -126,6 +126,7 @@ export default defineEventHandler(async (event) => {
         is_primary_admin,
         preferred_payment_method,
         is_active,
+        can_edit_guide,
         created_at,
         tenant_id
       `)

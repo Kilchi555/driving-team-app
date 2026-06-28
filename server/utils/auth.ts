@@ -134,7 +134,7 @@ export async function getAuthenticatedUser(event: H3Event) {
                 const supabaseAdmin = getSupabaseAdmin()
                 const { data: dbUser } = await supabaseAdmin
                   .from('users')
-                  .select('id, tenant_id, auth_user_id, role, email, first_name, last_name')
+                  .select('id, tenant_id, auth_user_id, role, email, first_name, last_name, can_edit_guide')
                   .eq('auth_user_id', authUser.id)
                   .single()
                 if (dbUser) {
@@ -147,7 +147,7 @@ export async function getAuthenticatedUser(event: H3Event) {
                       .single()
                     if (tenantRow) tenantTrialData = tenantRow
                   }
-                  return { ...authUser, tenant_id: dbUser.tenant_id, db_user_id: dbUser.id, role: dbUser.role, profile: { id: dbUser.id, tenant_id: dbUser.tenant_id, role: dbUser.role, email: dbUser.email || authUser.email, first_name: dbUser.first_name, last_name: dbUser.last_name, tenant: tenantTrialData } }
+                  return { ...authUser, tenant_id: dbUser.tenant_id, db_user_id: dbUser.id, role: dbUser.role, profile: { id: dbUser.id, tenant_id: dbUser.tenant_id, role: dbUser.role, email: dbUser.email || authUser.email, first_name: dbUser.first_name, last_name: dbUser.last_name, can_edit_guide: (dbUser as any).can_edit_guide ?? false, tenant: tenantTrialData } }
                 }
               }
               return authUser
@@ -169,7 +169,7 @@ export async function getAuthenticatedUser(event: H3Event) {
       const supabase = getSupabaseAdmin()
       const { data: dbUser, error: userError } = await supabase
         .from('users')
-        .select('id, tenant_id, auth_user_id, role, email, first_name, last_name')
+        .select('id, tenant_id, auth_user_id, role, email, first_name, last_name, can_edit_guide')
         .eq('auth_user_id', authUser.id)
         .single()
       
@@ -198,6 +198,7 @@ export async function getAuthenticatedUser(event: H3Event) {
             email: dbUser.email || authUser.email,
             first_name: dbUser.first_name,
             last_name: dbUser.last_name,
+            can_edit_guide: dbUser.can_edit_guide ?? false,
             tenant: tenantTrialData
           }
         }
