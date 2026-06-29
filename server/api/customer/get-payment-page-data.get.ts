@@ -175,12 +175,6 @@ export default defineEventHandler(async (event) => {
             first_name,
             last_name
           )
-        ),
-        appointment_products (
-          id,
-          product_name,
-          quantity,
-          unit_price_rappen
         )
       `)
         .eq('tenant_id', tenantId)
