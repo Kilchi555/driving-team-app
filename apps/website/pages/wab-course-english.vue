@@ -2,10 +2,10 @@
   <div>
     <Head>
       <Title>WAB Course English – Zürich & Schwyz | Driving Team</Title>
-      <Meta name="description" content="WAB refresher course in English – mandatory within 12 months of your driving test. CHF 490, locations in Pfäffikon ZH & Tuggen SZ. Book online!" />
+      <Meta name="description" content="WAB refresher course in English – mandatory within 12 months of your driving test. CHF 470 (Pfäffikon ZH) / CHF 490 (Tuggen SZ). Book online!" />
       <Meta name="keywords" content="WAB course English, WAB Kurs English Switzerland, WAB refresher course English, advanced driving training English Switzerland, Pfäffikon ZH, Tuggen SZ" />
       <Meta property="og:title" content="WAB Course in English – Switzerland | Pfäffikon ZH & Tuggen SZ | Driving Team" />
-      <Meta property="og:description" content="Mandatory WAB refresher course in English. Two locations in Zurich and Schwyz canton. Register online now. CHF 490 per course." />
+      <Meta property="og:description" content="Mandatory WAB refresher course in English. Two locations: Pfäffikon ZH (CHF 470) & Tuggen SZ (CHF 490). Register online now." />
       <Meta property="og:url" content="https://drivingteam.ch/wab-course-english/" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="en_CH" />
@@ -111,7 +111,7 @@
           <span class="text-primary-600 text-xl">💰</span>
           <div>
             <p class="font-semibold text-gray-900">Costs</p>
-            <p class="text-gray-600">CHF 490.- per course (incl. vehicle rental). Invoice after registration — pay at least 3 days before the course.</p>
+            <p class="text-gray-600">CHF 470.- (Pfäffikon ZH) / CHF 490.- (Tuggen SZ) per course. Invoice after registration — pay at least 3 days before the course.</p>
           </div>
         </div>
         <div class="flex items-start gap-3">
@@ -125,7 +125,7 @@
           <span class="text-primary-600 text-xl">🚗</span>
           <div>
             <p class="font-semibold text-gray-900">What to bring</p>
-            <p class="text-gray-600">Valid driving licence, vehicle in safe operating condition (each participant needs their own vehicle). Rental vehicle included in the price.</p>
+            <p class="text-gray-600">Valid driving licence and your own vehicle in safe operating condition. If you need a rental vehicle (CHF 70.-), this must be noted in the remarks when registering.</p>
           </div>
         </div>
         <div class="flex items-start gap-3">
@@ -186,7 +186,7 @@
               How much does the WAB course cost?
               <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 mt-4">The English WAB course costs CHF 490.- per course, including the rental vehicle. Exact prices and available dates are shown directly in the registration system above.</p>
+            <p class="text-gray-600 mt-4">The English WAB course costs CHF 470.- in Pfäffikon ZH and CHF 490.- in Tuggen SZ. If you need a rental vehicle, an additional CHF 70.- applies — this must be noted in the remarks when registering. Exact prices and available dates are shown directly in the registration system above.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -210,7 +210,7 @@
               Do I need to bring my own vehicle?
               <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 mt-4">No — the course fee includes a rental vehicle. If you prefer to use your own car, that is also possible. Each participant needs their own vehicle for the practical parts of the course.</p>
+            <p class="text-gray-600 mt-4">Yes — each participant must bring their own vehicle in roadworthy condition. If you don't have a car, you can rent one on-site for CHF 70.-, but this must be noted in the remarks when registering.</p>
           </details>
 
           <details class="bg-white border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
@@ -351,11 +351,11 @@
 const faqItems = [
   { q: 'What is the WAB course?', a: 'The WAB course (Weiterausbildung Autofahren) is a mandatory advanced driving training course for all new category B licence holders in Switzerland. It must be completed within 12 months of passing the practical driving test.' },
   { q: 'Who must attend the WAB course?', a: 'All new drivers aged 18 and over who have received their first category B (car) driving licence in Switzerland must complete the WAB course within 12 months.' },
-  { q: 'How much does the English WAB course cost?', a: 'The English WAB course costs CHF 490.- per course, including the rental vehicle.' },
+  { q: 'How much does the English WAB course cost?', a: 'The English WAB course costs CHF 470.- in Pfäffikon ZH and CHF 490.- in Tuggen SZ. A rental vehicle can be added for CHF 70.-, but must be noted in the remarks when registering.' },
   { q: 'Where does the English WAB course take place?', a: 'The English WAB course takes place at two locations: Transportschule AG in Pfäffikon ZH (canton Zurich) and Verkehrszentrum Tuggen in Tuggen SZ (canton Schwyz).' },
   { q: 'How long is the WAB course?', a: 'The WAB course lasts one full day from 09:00 to 17:30.' },
   { q: 'What happens if I miss the 12-month deadline?', a: 'If you do not complete the WAB course within 12 months of receiving your driving licence, your licence automatically becomes invalid.' },
-  { q: 'Do I need to bring my own vehicle?', a: 'No — the course fee includes a rental vehicle. You may also bring your own car in roadworthy condition.' },
+  { q: 'Do I need to bring my own vehicle?', a: 'Yes — each participant must bring their own vehicle in roadworthy condition. If you don\'t have a car, you can rent one on-site for CHF 70.-, but this must be noted in the remarks when registering.' },
   { q: 'Is the WAB certificate valid forever?', a: 'Yes, the WAB course certificate is valid for life. It is a one-time requirement during the probationary period.' },
 ]
 
@@ -372,7 +372,7 @@ const jsonLdScripts = [
       courseWorkload: 'PT8H',
       category: 'WAB Refresher Course',
       provider: { '@type': 'Organization', name: 'Driving Team Fahrschule', url: 'https://drivingteam.ch', telephone: '+41444310033', address: { '@type': 'PostalAddress', streetAddress: 'Vulkanstrasse 130b', addressLocality: 'Zürich', postalCode: '8048', addressCountry: 'CH' } },
-      offers: { '@type': 'Offer', price: '490', priceCurrency: 'CHF', availability: 'https://schema.org/InStock', url: 'https://drivingteam.ch/wab-course-english/' },
+      offers: { '@type': 'Offer', price: '470', priceCurrency: 'CHF', availability: 'https://schema.org/InStock', url: 'https://drivingteam.ch/wab-course-english/' },
       hasCourseInstance: [
         {
           '@type': 'CourseInstance',
