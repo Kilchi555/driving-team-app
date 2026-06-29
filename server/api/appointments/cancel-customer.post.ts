@@ -363,79 +363,73 @@ export default defineEventHandler(async (event) => {
     if (payment && hoursUntilAppointment >= hoursBeforeCancellationFree) {
       // ✅ FREE CANCELLATION: Handle based on payment status
       
-      // ✅ ALWAYS refund credit_used_rappen if any credit was used (regardless of payment_status)
+      // ✅ ALWAYS refund credit_used_rappen back to wallet — this portion was never charged to Wallee
       if (payment.credit_used_rappen && payment.credit_used_rappen > 0) {
-        logger.debug('💳 Refunding used credit:', {
+        logger.debug('💳 Refunding credit portion back to wallet:', {
           paymentId: payment.id,
           creditUsed: (payment.credit_used_rappen / 100).toFixed(2)
         })
-        
-        // Load or create student credit
+
         let { data: studentCreditForRefund, error: creditErrorForRefund } = await supabaseAdmin
           .from('student_credits')
           .select('id, balance_rappen')
           .eq('user_id', appointment.user_id)
-          .single()
-        
-        // Create if doesn't exist (shouldn't happen if they had credit, but safety)
-        if (creditErrorForRefund && creditErrorForRefund.code === 'PGRST116') {
-          const { data: newCredit, error: createError } = await supabaseAdmin
+          .eq('tenant_id', userProfile.tenant_id)
+          .maybeSingle()
+
+        if (creditErrorForRefund) {
+          logger.error('❌ Failed to load student_credits for credit refund:', creditErrorForRefund)
+          throw createError({ statusCode: 500, statusMessage: 'Stornierung fehlgeschlagen: Guthaben konnte nicht geladen werden.' })
+        }
+
+        // Create row if it doesn't exist yet
+        if (!studentCreditForRefund) {
+          const { data: newCredit, error: createCreditErr } = await supabaseAdmin
             .from('student_credits')
-            .insert([{
-              user_id: appointment.user_id,
-              balance_rappen: 0,
-              tenant_id: userProfile.tenant_id
-            }])
+            .insert([{ user_id: appointment.user_id, balance_rappen: 0, tenant_id: userProfile.tenant_id }])
             .select('id, balance_rappen')
             .single()
-          
-          if (!createError) {
-            studentCreditForRefund = newCredit
+          if (createCreditErr) {
+            logger.error('❌ Failed to create student_credits for credit refund:', createCreditErr)
+            throw createError({ statusCode: 500, statusMessage: 'Stornierung fehlgeschlagen: Guthabenkonto konnte nicht erstellt werden.' })
           }
+          studentCreditForRefund = newCredit
         }
-        
+
         if (studentCreditForRefund) {
           const oldCreditBalance = studentCreditForRefund.balance_rappen || 0
           const creditRefundAmount = payment.credit_used_rappen
           const newCreditBalance = oldCreditBalance + creditRefundAmount
-          
-          // Update credit balance
+
           const { error: updateCreditRefundError } = await supabaseAdmin
             .from('student_credits')
-            .update({
-              balance_rappen: newCreditBalance,
-              updated_at: new Date().toISOString()
-            })
+            .update({ balance_rappen: newCreditBalance, updated_at: new Date().toISOString() })
             .eq('id', studentCreditForRefund.id)
-          
-          if (!updateCreditRefundError) {
-            logger.debug('✅ Credit refunded:', {
-              oldBalance: (oldCreditBalance / 100).toFixed(2),
-              refund: (creditRefundAmount / 100).toFixed(2),
-              newBalance: (newCreditBalance / 100).toFixed(2)
-            })
-            
-            // Create credit transaction for the refund
-            await supabaseAdmin
-              .from('credit_transactions')
-              .insert([{
-                user_id: appointment.user_id,
-                tenant_id: userProfile.tenant_id,
-                transaction_type: 'cancellation_credit_refund',
-                amount_rappen: creditRefundAmount,
-                balance_before_rappen: oldCreditBalance,
-                balance_after_rappen: newCreditBalance,
-                payment_method: 'credit_refund',
-                reference_id: payment.id,
-                reference_type: 'payment',
-                created_by: userProfile.id,
-                notes: `Guthaben-Rückerstattung bei kostenloser Stornierung: ${reason.name_de} (CHF ${(creditRefundAmount / 100).toFixed(2)})`
-              }])
-            
-            logger.debug('✅ Credit refund transaction created')
-          } else {
-            logger.error('❌ Failed to refund credit:', updateCreditRefundError)
+
+          if (updateCreditRefundError) {
+            logger.error('❌ Failed to refund credit portion to wallet:', updateCreditRefundError)
+            throw createError({ statusCode: 500, statusMessage: 'Stornierung fehlgeschlagen: Guthaben-Rückerstattung fehlgeschlagen.' })
           }
+
+          logger.debug('✅ Credit portion refunded to wallet:', {
+            oldBalance: (oldCreditBalance / 100).toFixed(2),
+            refund: (creditRefundAmount / 100).toFixed(2),
+            newBalance: (newCreditBalance / 100).toFixed(2)
+          })
+
+          await supabaseAdmin.from('credit_transactions').insert([{
+            user_id: appointment.user_id,
+            tenant_id: userProfile.tenant_id,
+            transaction_type: 'cancellation_credit_refund',
+            amount_rappen: creditRefundAmount,
+            balance_before_rappen: oldCreditBalance,
+            balance_after_rappen: newCreditBalance,
+            payment_method: 'credit_refund',
+            reference_id: payment.id,
+            reference_type: 'payment',
+            created_by: userProfile.id,
+            notes: `Guthaben-Rückerstattung bei Stornierung: ${reason.name_de} (CHF ${(creditRefundAmount / 100).toFixed(2)})`
+          }])
         }
       }
       
