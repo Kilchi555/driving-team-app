@@ -306,8 +306,8 @@ const locations: Record<string, {
     canton: 'ZH',
     address: 'Barzloostrasse 9, 8330 Pfäffikon ZH',
     region: 'Pfäffikon ZH, Illnau-Effretikon, Fehraltorf, Wetzikon, Volketswil',
-    lat: '47.3678',
-    lng: '8.7752',
+    lat: '47.3697724',
+    lng: '8.7683426',
   },
   tuggen: {
     city: 'Tuggen SZ',
