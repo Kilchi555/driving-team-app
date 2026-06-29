@@ -1631,8 +1631,10 @@ const saveBookingPrefs = () => {
       mainCategoryId: selectedMainCategory.value?.id ?? null,
       categoryId: selectedCategory.value?.id ?? null,
       canton: selectedCanton.value,
-      locationId: selectedLocation.value?.id ?? null,
-      instructorId: selectedInstructor.value?.id ?? null,
+      // Don't save pickup locations — restoring without isPickup:true would
+      // silently book a regular appointment and show the wrong Treffpunkt
+      locationId: selectedLocation.value?.isPickup ? null : (selectedLocation.value?.id ?? null),
+      instructorId: selectedLocation.value?.isPickup ? null : (selectedInstructor.value?.id ?? null),
       duration: selectedDuration.value,
       savedAt: Date.now(),
     }))
