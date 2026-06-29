@@ -3019,7 +3019,8 @@ const generateTimeSlotsForSpecificCombination = async () => {
           body: {
             tenant_id: currentTenant.value?.id || '',
             staff_id: selectedInstructor.value.id,
-            location_id: selectedLocation.value.id,
+            // No location_id filter: instructor drives to the customer,
+            // so slots from all their locations are valid — travel time is the only constraint.
             category_code: selectedCategory.value.code,
             duration_minutes: duration,
             start_date: startDate.toISOString().split('T')[0],
