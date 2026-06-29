@@ -90,13 +90,15 @@
                 </div>
               </div>
 
-              <!-- Location -->
-              <div v-if="lesson.location_details && (lesson.location_details.address || lesson.location_details.formatted_address)" class="mb-3">
+              <!-- Location / Pickup -->
+              <div v-if="lesson.customer_pickup_address || (lesson.location_details && (lesson.location_details.address || lesson.location_details.formatted_address))" class="mb-3">
                 <div class="flex items-start gap-2">
                   <span class="text-lg mt-0.5">📍</span>
                   <div>
                     <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Treffpunkt</p>
-                    <p class="text-xs text-gray-900">{{ formatLocationAddress(lesson.location_details) }}</p>
+                    <p class="text-xs text-gray-900">
+                      {{ lesson.customer_pickup_address || formatLocationAddress(lesson.location_details) }}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -229,6 +231,7 @@ async function addLessonToCalendar(lesson: any) {
     ? `${lesson.staff.first_name} ${lesson.staff.last_name}`
     : null
   const locationStr =
+    lesson.customer_pickup_address ||
     lesson.location_details?.address ||
     lesson.location_details?.formatted_address ||
     lesson.location_name ||

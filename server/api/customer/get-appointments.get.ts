@@ -76,6 +76,8 @@ export default defineEventHandler(async (event) => {
         staff_id,
         tenant_id,
         confirmation_token,
+        customer_pickup_address,
+        customer_pickup_plz,
         staff:users!staff_id (
           id,
           first_name,
