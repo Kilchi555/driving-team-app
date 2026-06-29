@@ -3496,6 +3496,16 @@ const confirmBooking = async () => {
     if (!selectedCategory.value?.code) {
       throw new Error('Bitte wählen Sie eine Kategorie aus')
     }
+
+    // Guard: pickup booking requires a valid address before we proceed
+    if (selectedLocation.value?.isPickup && !pickupAddressDetails.value?.valid) {
+      logger.warn('⚠️ Pickup booking attempted without a valid address — redirecting to address step')
+      isCreatingBooking.value = false
+      currentStep.value = 7
+      await nextTick()
+      scrollContainerRef.value?.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
     
     isCreatingBooking.value = true
     
@@ -3680,6 +3690,7 @@ const createAppointmentSecure = async (userData: any) => {
         category_code: userData.category_code || '',
         notes: userData.notes || undefined,
         customer_pickup_plz: userData.customer_pickup_plz ?? null,
+        customer_pickup_address: userData.customer_pickup_address ?? null,
         marketing_session_id: userData.marketing_session_id,
         marketing_attribution: userData.marketing_attribution,
       }
@@ -3731,6 +3742,19 @@ const handleAuthSuccess = () => {
     reservedUntil.value.getTime() > Date.now()
 
   if (reservationStillValid) {
+    // For pickup bookings: if the address hasn't been entered yet, go back to step 7
+    // so the user can enter their address before confirming
+    if (selectedLocation.value?.isPickup && !pickupAddressDetails.value?.valid) {
+      logger.debug('📍 Pickup booking after login — returning to address step')
+      currentStep.value = 7
+      nextTick(() => {
+        scrollContainerRef.value?.scrollTo({ top: 0, behavior: 'smooth' })
+        // Re-initialize autocomplete since the input is now mounted
+        setTimeout(() => initializeAddressAutocomplete(), 300)
+      })
+      return
+    }
+
     // Reservation still active — retry booking directly
     setTimeout(() => {
       logger.debug('🔄 Retrying booking after auth success (reservation still valid)...')
