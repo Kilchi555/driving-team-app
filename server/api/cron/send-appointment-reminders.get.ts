@@ -76,6 +76,7 @@ export default defineEventHandler(async (event) => {
       location_id,
       custom_location_name,
       custom_location_address,
+      customer_pickup_address,
       tenant_id,
       user:users!appointments_user_id_fkey (
         id,
@@ -192,17 +193,21 @@ export default defineEventHandler(async (event) => {
     const staffName   = apt.staff ? `${apt.staff.first_name} ${apt.staff.last_name}` : null
     const staffPhone  = apt.staff?.phone || null
 
-    // Meeting point — avoid duplicating city if already part of address
+    // Meeting point — pickup address takes priority over standard location
     let meetingPoint = ''
-    const loc = apt.location_id ? locationMap.get(apt.location_id) : null
-    if (loc?.name) {
-      meetingPoint = loc.name
-      if (loc.address) meetingPoint += `, ${loc.address}`
-      // Only append city if not already contained in name or address
-      if (loc.city && !meetingPoint.includes(loc.city)) meetingPoint += ` ${loc.city}`
-    } else if (apt.custom_location_name) {
-      meetingPoint = apt.custom_location_name
-      if (apt.custom_location_address) meetingPoint += `, ${apt.custom_location_address}`
+    if ((apt as any).customer_pickup_address) {
+      meetingPoint = (apt as any).customer_pickup_address
+    } else {
+      const loc = apt.location_id ? locationMap.get(apt.location_id) : null
+      if (loc?.name) {
+        meetingPoint = loc.name
+        if (loc.address) meetingPoint += `, ${loc.address}`
+        // Only append city if not already contained in name or address
+        if (loc.city && !meetingPoint.includes(loc.city)) meetingPoint += ` ${loc.city}`
+      } else if (apt.custom_location_name) {
+        meetingPoint = apt.custom_location_name
+        if (apt.custom_location_address) meetingPoint += `, ${apt.custom_location_address}`
+      }
     }
 
     // Payment section — only for billable event types (lesson, exam)
