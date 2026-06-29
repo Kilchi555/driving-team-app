@@ -13,6 +13,7 @@ import type {
 } from './types'
 import { buildMerchantReference } from '~/utils/merchantReference'
 import { getWalleeSDKConfig } from '~/server/utils/wallee-config'
+import { logger } from '~/utils/logger'
 
 export class WalleeProvider implements IPaymentProvider {
   readonly name = 'wallee' as const
