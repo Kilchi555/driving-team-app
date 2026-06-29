@@ -57,12 +57,37 @@ export async function logAudit(entry: AuditLogEntry): Promise<void> {
       })
 
     if (error) {
-      console.error('Failed to log audit entry - database error:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      })
+      // If user_id FK fails (deleted user still has auth token), retry without user_id
+      if (error.code === '23503' && entry.user_id) {
+        const { error: retryError } = await supabase
+          .from('audit_logs')
+          .insert({
+            user_id: null,
+            auth_user_id: entry.auth_user_id || null,
+            action: entry.action,
+            resource_type: entry.resource_type || null,
+            resource_id: entry.resource_id || null,
+            status: entry.status,
+            details: entry.details || null,
+            error_message: entry.error_message || null,
+            ip_address: entry.ip_address || null,
+            tenant_id: entry.tenant_id || null,
+            created_at: new Date().toISOString()
+          })
+        if (retryError) {
+          console.error('Failed to log audit entry - database error:', {
+            code: retryError.code,
+            message: retryError.message
+          })
+        }
+      } else {
+        console.error('Failed to log audit entry - database error:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        })
+      }
     } else {
       console.debug('Audit entry logged successfully:', entry.action, entry.status)
     }
