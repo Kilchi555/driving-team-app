@@ -110,11 +110,12 @@ export default defineEventHandler(async (event) => {
     if (body.listenerEntityTechnicalName === 'Refund') {
       const result = await handleWalleeRefundWebhook(body, supabase, webhookLogId)
       if (webhookLogId) {
-        await supabase
-          .from('webhook_logs')
-          .update({ success: result.success, payment_status_after: result.status, processing_duration_ms: Date.now() - startTime })
-          .eq('id', webhookLogId)
-          .catch(() => {})
+        try {
+          await supabase
+            .from('webhook_logs')
+            .update({ success: result.success, payment_status_after: result.status, processing_duration_ms: Date.now() - startTime })
+            .eq('id', webhookLogId)
+        } catch { /* non-fatal */ }
       }
       return result
     }
@@ -786,19 +787,21 @@ export default defineEventHandler(async (event) => {
               // ⚠️ DEBUG: Update payment metadata with error info
               for (const payment of paymentsToUpdate) {
                 if (!payment.metadata?.course_id) continue
-                
-                await supabase
-                  .from('payments')
-                  .update({
-                    metadata: {
-                      ...payment.metadata,
-                      webhook_registration_error: insertError?.message || 'Unknown error creating registration',
-                      webhook_error_timestamp: new Date().toISOString(),
-                      webhook_error_code: insertError?.code
-                    }
-                  })
-                  .eq('id', payment.id)
-                  .catch(e => logger.warn('Could not update payment metadata with error:', e.message))
+                try {
+                  await supabase
+                    .from('payments')
+                    .update({
+                      metadata: {
+                        ...payment.metadata,
+                        webhook_registration_error: insertError?.message || 'Unknown error creating registration',
+                        webhook_error_timestamp: new Date().toISOString(),
+                        webhook_error_code: insertError?.code
+                      }
+                    })
+                    .eq('id', payment.id)
+                } catch (e: any) {
+                  logger.warn('Could not update payment metadata with error:', e.message)
+                }
               }
             }
           }
