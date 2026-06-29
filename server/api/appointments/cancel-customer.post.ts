@@ -492,10 +492,19 @@ export default defineEventHandler(async (event) => {
             } else {
               // Fallback to wallet if Wallee refund failed
               logger.warn('⚠️ Wallee refund failed, crediting wallet instead:', walleeResult.error)
-              await creditWalletRefund(
-                supabaseAdmin, appointment.user_id, userProfile.tenant_id,
-                walleePortionToRefund, payment, appointmentId, reason.name_de, userProfile.id
-              )
+              try {
+                await creditWalletRefund(
+                  supabaseAdmin, appointment.user_id, userProfile.tenant_id,
+                  walleePortionToRefund, payment, appointmentId, reason.name_de, userProfile.id
+                )
+              } catch (walletErr: any) {
+                logger.error('❌ Wallet fallback also failed — customer needs manual refund:', {
+                  userId: appointment.user_id,
+                  amountRappen: walleePortionToRefund,
+                  error: walletErr.message,
+                })
+                throw createError({ statusCode: 500, statusMessage: 'Stornierung fehlgeschlagen: Rückerstattung konnte weder via Wallee noch auf das Guthaben verbucht werden.' })
+              }
             }
           } else {
             // ── Wallet credit (default) ──────────────────────────────────
@@ -733,19 +742,32 @@ async function creditWalletRefund(
     .from('student_credits')
     .select('id, balance_rappen')
     .eq('user_id', userId)
-    .single()
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
 
-  if (creditError && creditError.code === 'PGRST116') {
+  if (creditError) {
+    logger.error('❌ creditWalletRefund: failed to fetch student_credits:', creditError)
+    throw new Error(`Failed to fetch student_credits: ${creditError.message}`)
+  }
+
+  if (!studentCredit) {
     const { data: newCredit, error: createErr } = await supabase
       .from('student_credits')
       .insert([{ user_id: userId, balance_rappen: 0, tenant_id: tenantId }])
       .select('id, balance_rappen')
       .single()
 
-    if (!createErr) studentCredit = newCredit
+    if (createErr) {
+      logger.error('❌ creditWalletRefund: failed to create student_credits row:', createErr)
+      throw new Error(`Failed to create student_credits: ${createErr.message}`)
+    }
+    studentCredit = newCredit
   }
 
-  if (!studentCredit) return
+  if (!studentCredit) {
+    logger.error('❌ creditWalletRefund: no student_credits record after create attempt')
+    throw new Error('Could not find or create student_credits record')
+  }
 
   const oldBalance = studentCredit.balance_rappen || 0
   const newBalance = oldBalance + amountRappen
@@ -755,20 +777,29 @@ async function creditWalletRefund(
     .update({ balance_rappen: newBalance, updated_at: new Date().toISOString() })
     .eq('id', studentCredit.id)
 
-  if (!updateErr) {
-    await supabase.from('credit_transactions').insert([{
-      user_id: userId,
-      tenant_id: tenantId,
-      transaction_type: 'cancellation',
-      amount_rappen: amountRappen,
-      balance_before_rappen: oldBalance,
-      balance_after_rappen: newBalance,
-      payment_method: 'refund',
-      reference_id: appointmentId,
-      reference_type: 'appointment',
-      created_by: createdBy,
-      notes: `Kostenlose Stornierung (Gutschrift): ${reasonName} (CHF ${(amountRappen / 100).toFixed(2)})`,
-    }])
+  if (updateErr) {
+    logger.error('❌ creditWalletRefund: failed to update balance:', updateErr)
+    throw new Error(`Failed to update credit balance: ${updateErr.message}`)
   }
+
+  const { error: txErr } = await supabase.from('credit_transactions').insert([{
+    user_id: userId,
+    tenant_id: tenantId,
+    transaction_type: 'cancellation',
+    amount_rappen: amountRappen,
+    balance_before_rappen: oldBalance,
+    balance_after_rappen: newBalance,
+    payment_method: 'refund',
+    reference_id: appointmentId,
+    reference_type: 'appointment',
+    created_by: createdBy,
+    notes: `Kostenlose Stornierung (Gutschrift): ${reasonName} (CHF ${(amountRappen / 100).toFixed(2)})`,
+  }])
+
+  if (txErr) {
+    logger.warn('⚠️ creditWalletRefund: credit_transactions insert failed (balance already updated):', txErr)
+  }
+
+  logger.info('✅ creditWalletRefund: wallet credited successfully', { userId, amountRappen, newBalance })
 }
 

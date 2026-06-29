@@ -438,9 +438,12 @@ export default defineEventHandler(async (event) => {
             .from('student_credits')
             .select('id, balance_rappen')
             .eq('user_id', appointment.user_id)
-            .single()
+            .eq('tenant_id', appointment.tenant_id)
+            .maybeSingle()
           
-          if (!creditError && studentCredit) {
+          if (creditError) {
+            logger.error('❌ Could not load student_credits for refund:', creditError)
+          } else if (studentCredit) {
             const oldBalance = studentCredit.balance_rappen || 0
             const newBalance = oldBalance + payment.credit_used_rappen
             
@@ -454,7 +457,7 @@ export default defineEventHandler(async (event) => {
               .eq('id', studentCredit.id)
             
             if (updateCreditError) {
-              console.warn('⚠️ Could not refund credit to student balance:', updateCreditError)
+              logger.error('❌ Could not refund credit to student balance:', updateCreditError)
             } else {
               logger.debug('✅ Credit refunded to student balance:', {
                 oldBalance: (oldBalance / 100).toFixed(2),
@@ -489,7 +492,7 @@ export default defineEventHandler(async (event) => {
           .eq('id', payment.id)
         
         if (updatePaymentError) {
-          console.warn('⚠️ Could not update payment status:', updatePaymentError)
+          logger.error('❌ Could not update payment status:', updatePaymentError)
         } else {
           logger.debug('✅ Payment status updated:', {
             paymentId: payment.id,
@@ -527,9 +530,12 @@ export default defineEventHandler(async (event) => {
             .from('student_credits')
             .select('id, balance_rappen')
             .eq('user_id', appointment.user_id)
-            .single()
+            .eq('tenant_id', appointment.tenant_id)
+            .maybeSingle()
           
-          if (!creditError && studentCredit) {
+          if (creditError) {
+            logger.error('❌ Could not load student_credits for refund:', creditError)
+          } else if (studentCredit) {
             const oldBalance = studentCredit.balance_rappen || 0
             const newBalance = oldBalance + payment.credit_used_rappen
             
@@ -543,7 +549,7 @@ export default defineEventHandler(async (event) => {
               .eq('id', studentCredit.id)
             
             if (updateCreditError) {
-              console.warn('⚠️ Could not refund credit to student balance:', updateCreditError)
+              logger.error('❌ Could not refund credit to student balance:', updateCreditError)
             } else {
               logger.debug('✅ Credit refunded to student balance:', {
                 oldBalance: (oldBalance / 100).toFixed(2),
@@ -577,7 +583,7 @@ export default defineEventHandler(async (event) => {
           .eq('id', payment.id)
         
         if (updatePaymentError) {
-          console.warn('⚠️ Could not update payment status:', updatePaymentError)
+          logger.error('❌ Could not update payment status:', updatePaymentError)
         } else {
           logger.debug('✅ Payment marked as cancelled (free cancellation):', {
             paymentId: payment.id,
@@ -784,13 +790,27 @@ async function processRefund(
 
     // ── Wallet credit branch (default) ─────────────────────────────────────
     // Load current student credit balance
-    const { data: studentCredit, error: creditError } = await supabase
+    const resolvedTenantId = tenantId || payment.tenant_id
+    let { data: studentCredit, error: creditError } = await supabase
       .from('student_credits')
       .select('id, balance_rappen')
       .eq('user_id', userId)
-      .single()
+      .eq('tenant_id', resolvedTenantId)
+      .maybeSingle()
 
     if (creditError) throw new Error(`Failed to load student credit: ${creditError.message}`)
+
+    if (!studentCredit) {
+      const { data: newCredit, error: createErr } = await supabase
+        .from('student_credits')
+        .insert([{ user_id: userId, balance_rappen: 0, tenant_id: resolvedTenantId }])
+        .select('id, balance_rappen')
+        .single()
+      if (createErr) throw new Error(`Failed to create student credit: ${createErr.message}`)
+      studentCredit = newCredit
+    }
+
+    if (!studentCredit) throw new Error('Could not find or create student_credits record')
 
     const oldBalance = studentCredit.balance_rappen || 0
     const newBalance = oldBalance + refundAmountRappen
