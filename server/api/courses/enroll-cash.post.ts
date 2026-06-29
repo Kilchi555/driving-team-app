@@ -55,7 +55,8 @@ const handler = defineEventHandler(async (event) => {
       phone,
       customSessions,
       isPartialEnrollment,
-      partialStartPosition
+      partialStartPosition,
+      marketingSessionId    // Optional: analytics session ID from drivingteam.ch for attribution
     } = body
 
     logger.debug('💵 Cash enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions, isPartialEnrollment })
@@ -452,7 +453,8 @@ const handler = defineEventHandler(async (event) => {
         custom_sessions: customSessions || null,
         is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
         sari_synced: course.sari_managed ? true : null,
-        sari_synced_at: course.sari_managed ? new Date().toISOString() : null
+        sari_synced_at: course.sari_managed ? new Date().toISOString() : null,
+        notes: marketingSessionId ? `marketing_session_id:${marketingSessionId}` : null
       })
       .select('id')
       .single()

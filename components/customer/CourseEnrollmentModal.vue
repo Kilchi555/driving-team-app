@@ -1311,6 +1311,8 @@ const submitEnrollment = async () => {
     const isPartial = isForcedPartial.value || isPartialMode.value
     const isIndividual = isIndividualSessionMode.value && individualSessionNumber.value !== null
 
+    const marketingSessionId = (typeof window !== 'undefined' && (window as any).__analyticsSessionId) || undefined
+
     const response = await $fetch(endpoint, {
       method: 'POST',
       body: {
@@ -1333,6 +1335,7 @@ const submitEnrollment = async () => {
         discountAmountRappen: appliedDiscount.value?.discountAmountRappen ?? 0,
         isPartialEnrollment: (isPartial || isIndividual) || undefined,
         individualSessionNumber: isIndividual ? individualSessionNumber.value : undefined,
+        marketingSessionId,
       }
     }) as any
     
