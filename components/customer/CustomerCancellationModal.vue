@@ -395,7 +395,15 @@ const close = () => {
 }
 
 const getAppointmentTitle = (appointment: any) => {
-  return appointment.type || 'Fahrlektion'
+  const EVENT_LABELS: Record<string, string> = {
+    lesson: 'Fahrlektion',
+    exam: 'Prüfung',
+    theory: 'Theorie',
+    other: 'Termin',
+  }
+  const eventLabel = EVENT_LABELS[appointment.event_type_code] || 'Fahrlektion'
+  const category = appointment.type || ''
+  return category ? `${eventLabel} • ${category}` : eventLabel
 }
 
 const formatAppointmentDate = (dateString: string) => {
