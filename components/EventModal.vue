@@ -2453,7 +2453,7 @@ const handleEndTimeUpdate = (newEndTime: string) => {
 // Uses a sequence number to discard stale results when inputs change mid-flight
 let _priceCalcSeq = 0
 const calculatePriceForCurrentData = async (): Promise<void> => {
-  if (!formData.value.type || !formData.value.duration_minutes || formData.value.eventType !== 'lesson') {
+  if (!formData.value.type || !formData.value.duration_minutes || !isLessonType(formData.value.eventType)) {
     logger.debug('🚫 Skipping price calculation - missing data:', {
       type: formData.value.type,
       duration: formData.value.duration_minutes,
