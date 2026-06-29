@@ -3385,7 +3385,27 @@ const validatePickupAddress = () => {
         }
         return
       }
-      
+
+      // Check that the address has a house number (at least one digit before the PLZ)
+      const beforePLZ = pickupAddress.value.substring(0, pickupAddress.value.indexOf(extractedPLZ))
+      if (!/\d/.test(beforePLZ)) {
+        pickupAddressDetails.value = {
+          valid: false,
+          error: 'Bitte geben Sie eine vollständige Adresse mit Hausnummer ein (z.B. Musterstrasse 5, 8610 Uster).'
+        }
+        return
+      }
+
+      // Check that the city name after the PLZ is at least 3 characters
+      const afterPLZ = pickupAddress.value.substring(pickupAddress.value.indexOf(extractedPLZ) + extractedPLZ.length).replace(/[\s,]+/, '').trim()
+      if (afterPLZ.length < 3) {
+        pickupAddressDetails.value = {
+          valid: false,
+          error: 'Bitte geben Sie den vollständigen Ortsnamen ein (z.B. Weiherweg 2, 8610 Uster).'
+        }
+        return
+      }
+
       // Address is valid
       pickupAddressDetails.value = {
         valid: true,
