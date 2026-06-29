@@ -97,9 +97,12 @@ export default defineEventHandler(async (event) => {
       })
 
       if (refundResult.success) {
+        // Use the actual refunded amount (may be less than requested if capped by Wallee)
+        const actualRefundedRappen = refundResult.refundedAmountRappen
+
         // Atomically deduct from balance — guard prevents double-withdrawal
-        const newBalance = Math.max(0, creditData.balance_rappen - amountRappen)
-        const completedTotal = (creditData.completed_withdrawal_rappen || 0) + amountRappen
+        const newBalance = Math.max(0, creditData.balance_rappen - actualRefundedRappen)
+        const completedTotal = (creditData.completed_withdrawal_rappen || 0) + actualRefundedRappen
 
         const { data: updatedRows } = await supabase
           .from('student_credits')
@@ -107,7 +110,7 @@ export default defineEventHandler(async (event) => {
             balance_rappen: newBalance,
             completed_withdrawal_rappen: completedTotal,
             last_withdrawal_at: now.toISOString(),
-            last_withdrawal_amount_rappen: amountRappen,
+            last_withdrawal_amount_rappen: actualRefundedRappen,
             last_withdrawal_status: 'completed',
             last_wallee_refund_id: refundResult.refundId || null,
             updated_at: now.toISOString(),
@@ -129,7 +132,7 @@ export default defineEventHandler(async (event) => {
           user_id: userProfile.id,
           tenant_id: userProfile.tenant_id,
           transaction_type: 'withdrawal',
-          amount_rappen: -amountRappen,
+          amount_rappen: -actualRefundedRappen,
           balance_before_rappen: creditData.balance_rappen,
           balance_after_rappen: newBalance,
           payment_method: 'wallee_refund',
