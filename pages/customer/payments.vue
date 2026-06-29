@@ -1099,7 +1099,9 @@ const getCancellationMessage = (payment: any): string => {
   // ✅ NEW: Check payment status for free cancellations
   if (chargePercentage === 0) {
     if (payment.payment_status === 'refunded') {
-      return 'Auf Guthaben rückvergütet'
+      return payment.wallee_refund_id
+        ? 'Zahlung rückerstattet'
+        : 'Auf Guthaben rückvergütet'
     } else if (payment.payment_status === 'cancelled') {
       return 'Kostenlos storniert'
     } else if (payment.payment_status === 'completed') {
