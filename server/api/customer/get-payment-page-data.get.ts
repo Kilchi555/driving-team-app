@@ -156,6 +156,7 @@ export default defineEventHandler(async (event) => {
         credit_used_rappen,
         credit_transaction_id,
         wallee_transaction_id,
+        wallee_refund_id,
         refunded_at,
         appointments (
           id,
