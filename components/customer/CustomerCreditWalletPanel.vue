@@ -287,8 +287,8 @@
                 <span class="font-medium text-gray-900">****{{ savedIbanLast4 }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">Verarbeitung</span>
-                <span class="text-gray-700">1–3 Werktage</span>
+                <span class="text-gray-600">Rückerstattung auf</span>
+                <span class="text-gray-700">Zahlungsmittel (3–5 Werktage)</span>
               </div>
             </div>
             <p v-if="withdrawalError" class="text-red-600 text-xs">{{ withdrawalError }}</p>
@@ -300,7 +300,7 @@
                 :disabled="isSubmittingWithdrawal"
                 @click="submitWithdrawal"
               >
-                {{ isSubmittingWithdrawal ? 'Wird eingereicht…' : 'Jetzt beantragen' }}
+                {{ isSubmittingWithdrawal ? 'Wird verarbeitet…' : 'Jetzt auszahlen' }}
               </button>
             </div>
           </div>
@@ -311,8 +311,17 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <p class="font-semibold text-gray-900">Antrag eingereicht!</p>
-            <p class="text-sm text-gray-500">CHF {{ Number(withdrawalAmountInput).toFixed(2) }} werden in 1–3 Werktagen überwiesen.</p>
+            <p class="font-semibold text-gray-900">
+              {{ withdrawalMethod === 'wallee' ? 'Rückerstattung eingeleitet!' : 'Antrag eingereicht!' }}
+            </p>
+            <p class="text-sm text-gray-500">
+              <template v-if="withdrawalMethod === 'wallee'">
+                CHF {{ Number(withdrawalAmountInput).toFixed(2) }} werden auf dein Zahlungsmittel zurückerstattet (3–5 Werktage).
+              </template>
+              <template v-else>
+                CHF {{ Number(withdrawalAmountInput).toFixed(2) }} werden in 1–3 Werktagen auf dein Konto überwiesen.
+              </template>
+            </p>
             <button type="button" class="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700" @click="closeWithdrawalModal">
               Schliessen
             </button>
@@ -479,6 +488,7 @@ const creditTransactions = ref<any[]>([])
 const isLoadingCreditTransactions = ref(false)
 const showRedeemModal = ref(false)
 const withdrawalStep = ref<'iban' | 'edit-iban' | 'amount' | 'confirm' | 'success'>('iban')
+const withdrawalMethod = ref<'wallee' | 'iban'>('wallee')
 const ibanInput = ref('')
 const accountHolderInput = ref('')
 const streetInput = ref('')
@@ -775,7 +785,14 @@ async function submitWithdrawal() {
       body: { amountRappen: Math.round(amountChf * 100) }
     }) as any
     if (res?.success) {
-      pendingWithdrawalRappen.value += Math.round(amountChf * 100)
+      withdrawalMethod.value = res.method || 'iban'
+      if (res.method === 'wallee') {
+        // Balance already deducted server-side — refresh from server
+        await refreshWallet()
+      } else {
+        // IBAN path: amount is frozen (pending)
+        pendingWithdrawalRappen.value += Math.round(amountChf * 100)
+      }
       withdrawalStep.value = 'success'
       emit('balanceUpdated')
     }
