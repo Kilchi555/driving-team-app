@@ -560,32 +560,27 @@ export const usePricing = (options: UsePricingOptions = {}) => {
   // ✅ NEUE VALIDIERUNG: Theorielektionen und Fahrkategorien behandeln
   const validDrivingCategories = ['A', 'A1', 'A35kW', 'B', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'DE', 'Motorboot', 'Boot', 'BPT']
   
-  // ✅ Theorielektionen: Immer 85.- CHF, unabhängig von der Kategorie
+  // ✅ Theorielektionen: Preis skaliert mit Duration (85 CHF = 45 min Basis)
   if (appointmentType === 'theory') {
-    logger.debug(`📚 Theorielektion erkannt (appointment_type: ${appointmentType}): Verwende Standardpreis 85.- CHF`)
+    const durationVal = Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes
+    const THEORY_BASE_RAPPEN = 8500 // 85 CHF for 45 minutes
+    const THEORY_BASE_DURATION_MIN = 45
+    const pricePerMinuteRappen = THEORY_BASE_RAPPEN / THEORY_BASE_DURATION_MIN
+    const scaledPriceRappen = roundToNearestFranken(Math.round(pricePerMinuteRappen * durationVal))
     
-    const theoryPriceRappen = 8500 // 85.00 CHF in Rappen
-    const totalRappen = theoryPriceRappen // Keine Admin-Fee für Theorielektionen
+    logger.debug(`📚 Theorielektion: ${durationVal}min → CHF ${(scaledPriceRappen / 100).toFixed(2)}`)
     
     const result: CalculatedPrice = {
-      base_price_rappen: theoryPriceRappen,
+      base_price_rappen: scaledPriceRappen,
       admin_fee_rappen: 0,
-      total_rappen: totalRappen,
-      base_price_chf: (theoryPriceRappen / 100).toFixed(2),
+      total_rappen: scaledPriceRappen,
+      base_price_chf: (scaledPriceRappen / 100).toFixed(2),
       admin_fee_chf: '0.00',
-      total_chf: (totalRappen / 100).toFixed(2),
-      category_code: categoryCode, // Bleibt die gewählte Fahrkategorie (z.B. 'B', 'A', etc.)
+      total_chf: (scaledPriceRappen / 100).toFixed(2),
+      category_code: categoryCode,
       duration_minutes: durationMinutes,
       appointment_number: 1
     }
-    
-    logger.debug('✅ Theorielektion Preis berechnet:', {
-      category: categoryCode, // Zeigt die gewählte Fahrkategorie
-      appointmentType: appointmentType,
-      duration: durationMinutes,
-      total: result.total_chf,
-      note: 'Standardpreis für Theorielektionen, unabhängig von der Kategorie'
-    })
     
     return result
   }
