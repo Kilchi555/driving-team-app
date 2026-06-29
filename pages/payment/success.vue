@@ -39,10 +39,22 @@
       </div>
 
       <!-- Loading -->
-      <div v-else-if="isLoading" class="bg-white rounded-3xl shadow-2xl p-12 text-center">
-        <div class="inline-block w-14 h-14 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-6"></div>
-        <h2 class="text-xl font-semibold text-gray-800 mb-2">Zahlung wird verarbeitet…</h2>
-        <p class="text-gray-500 text-sm">Bitte einen Moment warten.</p>
+      <div v-else-if="isLoading" class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+        <div class="px-8 py-10 text-center text-white" :style="`background: linear-gradient(135deg, ${brandPrimary} 0%, ${brandPrimary}cc 100%)`">
+          <div v-if="brandLogo" class="flex justify-center mb-4">
+            <img :src="brandLogo" alt="Logo" class="h-10 object-contain rounded-lg bg-white/20 px-3 py-1" />
+          </div>
+          <div class="inline-block w-14 h-14 border-4 border-white/30 border-t-white rounded-full animate-spin mb-5"></div>
+          <h2 class="text-xl font-semibold mb-1">Zahlung wird verarbeitet…</h2>
+          <p class="text-white/70 text-sm">Bitte einen Moment warten.</p>
+        </div>
+        <div class="px-8 py-5 text-center">
+          <div class="flex justify-center gap-2">
+            <span class="w-2 h-2 rounded-full animate-bounce" :style="`background:${brandPrimary}; animation-delay:0ms`"></span>
+            <span class="w-2 h-2 rounded-full animate-bounce" :style="`background:${brandPrimary}; animation-delay:150ms`"></span>
+            <span class="w-2 h-2 rounded-full animate-bounce" :style="`background:${brandPrimary}; animation-delay:300ms`"></span>
+          </div>
+        </div>
       </div>
 
       <!-- ── SUCCESS + VOUCHERS ── -->
@@ -171,51 +183,95 @@
       </div>
 
       <!-- Failed -->
-      <div v-else-if="paymentStatus === 'failed'" class="bg-white rounded-3xl shadow-2xl p-10 text-center">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-5">
-          <svg class="w-9 h-9 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
+      <div v-else-if="paymentStatus === 'failed'" class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+        <div class="px-8 py-10 text-center text-white bg-gradient-to-br from-red-500 to-rose-600">
+          <div v-if="brandLogo" class="flex justify-center mb-4">
+            <img :src="brandLogo" alt="Logo" class="h-10 object-contain rounded-lg bg-white/20 px-3 py-1" />
+          </div>
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 mb-4">
+            <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </div>
+          <h1 class="text-2xl font-bold mb-1">Zahlung fehlgeschlagen</h1>
+          <p class="text-red-100 text-sm">Die Zahlung konnte nicht verarbeitet werden.</p>
         </div>
-        <h2 class="text-xl font-bold text-gray-900 mb-2">Zahlung fehlgeschlagen</h2>
-        <p class="text-gray-500 text-sm mb-6">Die Zahlung konnte nicht verarbeitet werden.</p>
-        <button @click="redirectToDashboard" class="w-full py-3 rounded-2xl bg-gray-800 text-white font-semibold text-sm">
-          Zurück
-        </button>
+        <div class="px-8 py-6 text-center">
+          <p class="text-sm text-gray-500 mb-5">Bitte versuche es erneut oder kontaktiere uns, falls das Problem weiterhin besteht.</p>
+          <button @click="redirectToDashboard" class="w-full py-3 rounded-2xl bg-gray-800 text-white font-semibold text-sm">
+            Zurück
+          </button>
+        </div>
       </div>
 
       <!-- Pending -->
-      <div v-else-if="paymentStatus === 'pending'" class="bg-white rounded-3xl shadow-2xl p-10 text-center">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 mb-5">
-          <svg class="w-9 h-9 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
+      <div v-else-if="paymentStatus === 'pending'" class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+        <!-- Branded header -->
+        <div
+          class="px-8 py-10 text-center text-white"
+          :style="`background: linear-gradient(135deg, ${brandPrimary} 0%, ${brandPrimary}cc 100%)`"
+        >
+          <div v-if="brandLogo" class="flex justify-center mb-4">
+            <img :src="brandLogo" alt="Logo" class="h-10 object-contain rounded-lg bg-white/20 px-3 py-1" />
+          </div>
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 mb-4">
+            <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <h1 class="text-2xl font-bold mb-1">Zahlung ausstehend</h1>
+          <p class="text-white/80 text-sm">Deine Zahlung wird gerade geprüft…</p>
         </div>
-        <h2 class="text-xl font-bold text-gray-900 mb-2">Zahlung wird verarbeitet</h2>
-        <p class="text-gray-500 text-sm mb-6">Das kann einen Moment dauern.</p>
-        <button @click="checkStatus" class="w-full py-3 rounded-2xl bg-amber-500 text-white font-semibold text-sm mb-3">
-          Status aktualisieren
-        </button>
-        <button @click="redirectToDashboard" class="w-full py-3 rounded-2xl bg-gray-100 text-gray-700 font-semibold text-sm">
-          Zum Dashboard
-        </button>
+
+        <!-- Info + animated dots -->
+        <div class="px-8 py-5 border-b border-gray-100 text-center">
+          <p class="text-sm text-gray-500">Die Seite wird automatisch aktualisiert. Dies dauert in der Regel nur wenige Sekunden.</p>
+        </div>
+        <div class="px-8 py-6 text-center">
+          <div class="flex justify-center gap-2 mb-5">
+            <span class="w-2.5 h-2.5 rounded-full animate-bounce" :style="`background:${brandPrimary}; animation-delay:0ms`"></span>
+            <span class="w-2.5 h-2.5 rounded-full animate-bounce" :style="`background:${brandPrimary}; animation-delay:150ms`"></span>
+            <span class="w-2.5 h-2.5 rounded-full animate-bounce" :style="`background:${brandPrimary}; animation-delay:300ms`"></span>
+          </div>
+          <button
+            @click="checkStatus"
+            class="w-full py-3 rounded-2xl text-white font-semibold text-sm mb-3 transition-opacity hover:opacity-90"
+            :style="`background:${brandPrimary}`"
+          >
+            Status manuell aktualisieren
+          </button>
+          <button @click="redirectToDashboard" class="w-full py-3 rounded-2xl bg-gray-100 text-gray-700 font-semibold text-sm">
+            Zum Dashboard
+          </button>
+        </div>
       </div>
 
       <!-- Not found -->
-      <div v-else class="bg-white rounded-3xl shadow-2xl p-10 text-center">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-5">
-          <svg class="w-9 h-9 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-          </svg>
+      <div v-else class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+        <div class="px-8 py-10 text-center text-white bg-gradient-to-br from-gray-500 to-gray-700">
+          <div v-if="brandLogo" class="flex justify-center mb-4">
+            <img :src="brandLogo" alt="Logo" class="h-10 object-contain rounded-lg bg-white/20 px-3 py-1" />
+          </div>
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 mb-4">
+            <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          </div>
+          <h1 class="text-2xl font-bold mb-1">Zahlung nicht gefunden</h1>
+          <p class="text-white/70 text-sm">Die Zahlungsinformationen konnten nicht geladen werden.</p>
         </div>
-        <h2 class="text-xl font-bold text-gray-900 mb-2">Zahlung nicht gefunden</h2>
-        <p class="text-gray-500 text-sm mb-6">Die Zahlungsinformationen konnten nicht geladen werden.</p>
-        <button @click="checkStatus" class="w-full py-3 rounded-2xl bg-blue-600 text-white font-semibold text-sm mb-3">
-          Neu laden
-        </button>
-        <button @click="redirectToDashboard" class="w-full py-3 rounded-2xl bg-gray-100 text-gray-700 font-semibold text-sm">
-          Zum Dashboard
-        </button>
+        <div class="px-8 py-6 text-center">
+          <button
+            @click="checkStatus"
+            class="w-full py-3 rounded-2xl text-white font-semibold text-sm mb-3 transition-opacity hover:opacity-90"
+            :style="`background:${brandPrimary}`"
+          >
+            Neu laden
+          </button>
+          <button @click="redirectToDashboard" class="w-full py-3 rounded-2xl bg-gray-100 text-gray-700 font-semibold text-sm">
+            Zum Dashboard
+          </button>
+        </div>
       </div>
 
     </div>
@@ -245,6 +301,7 @@ const countdown = ref(5)
 const vouchers = ref<any[]>([])
 const copiedCode = ref<string | null>(null)
 const brandPrimary = ref('#1a56db')
+const brandLogo = ref<string | null>(null)
 
 let countdownInterval: NodeJS.Timeout | null = null
 let statusCheckInterval: NodeJS.Timeout | null = null
@@ -341,12 +398,13 @@ const copyCode = async (code: string) => {
   } catch { /* ignore */ }
 }
 
-// Load tenant branding for voucher card color
+// Load tenant branding for voucher card color + pending/failed states
 const loadBranding = async (tenantId: string) => {
   try {
     const supabase = getSupabase()
-    const { data } = await supabase.from('tenants').select('primary_color').eq('id', tenantId).single()
+    const { data } = await supabase.from('tenants').select('primary_color, logo_url').eq('id', tenantId).single()
     if (data?.primary_color) brandPrimary.value = data.primary_color
+    if (data?.logo_url) brandLogo.value = data.logo_url
   } catch { /* ignore */ }
 }
 
