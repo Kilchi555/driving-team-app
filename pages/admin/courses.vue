@@ -1431,19 +1431,48 @@
                       Nur diese Session einzeln buchbar machen
                     </label>
                   </div>
-                  <div v-if="session.allow_individual_booking" class="mt-3 flex items-center gap-3 flex-wrap">
-                    <div class="flex items-center gap-1.5 bg-white border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-offset-0 focus-within:border-transparent" :style="{ '--tw-ring-color': primaryColor }">
-                      <span class="pl-3 text-sm text-gray-500 select-none">CHF</span>
-                      <input
-                        v-model.number="session.individual_price"
-                        type="number"
-                        min="0"
-                        step="0.05"
-                        placeholder="0.00"
-                        class="w-24 pr-3 py-2 bg-transparent text-gray-900 session-input focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                      />
+                  <div v-if="session.allow_individual_booking" class="mt-3 space-y-3">
+                    <!-- Price -->
+                    <div class="flex items-center gap-3 flex-wrap">
+                      <div class="flex items-center gap-1.5 bg-white border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-offset-0 focus-within:border-transparent" :style="{ '--tw-ring-color': primaryColor }">
+                        <span class="pl-3 text-sm text-gray-500 select-none">CHF</span>
+                        <input
+                          v-model.number="session.individual_price"
+                          type="number"
+                          min="0"
+                          step="0.05"
+                          placeholder="0.00"
+                          class="w-24 pr-3 py-2 bg-transparent text-gray-900 session-input focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        />
+                      </div>
+                      <p class="text-xs text-gray-500">Einzelbuchung für diese Session (z.B. A1-Inhaber)</p>
                     </div>
-                    <p class="text-xs text-gray-500">Einzelbuchung für diese Session (z.B. A1-Inhaber)</p>
+
+                    <!-- Confirmation modal toggle -->
+                    <div class="flex items-center gap-2">
+                      <input
+                        :id="`require-confirm-${index}`"
+                        v-model="session.individual_booking_requires_confirmation"
+                        type="checkbox"
+                        class="w-4 h-4 rounded border-gray-300 tenant-focus"
+                        :style="session.individual_booking_requires_confirmation ? { accentColor: primaryColor } : {}"
+                      />
+                      <label :for="`require-confirm-${index}`" class="text-sm text-gray-600 cursor-pointer select-none">
+                        Bestätigung vor Buchung einfordern
+                      </label>
+                    </div>
+
+                    <!-- Custom confirmation text -->
+                    <div v-if="session.individual_booking_requires_confirmation" class="space-y-1">
+                      <label class="block text-xs text-gray-500">Bestätigungstext (vom Kunden zu lesen)</label>
+                      <textarea
+                        v-model="session.individual_booking_confirmation_text"
+                        rows="3"
+                        :placeholder="`Hiermit bestätige ich, dass ich die anderen Kursteile besucht habe und die dort geübten Themen vollumfänglich im Griff habe.`"
+                        class="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg text-gray-900 session-input focus:outline-none resize-none"
+                      />
+                      <p class="text-xs text-gray-400">Leer lassen für Standardtext</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -5328,6 +5357,8 @@ const createCourse = async () => {
               external_instructor_phone: s.external_instructor_phone || null,
               allow_individual_booking: s.allow_individual_booking ?? false,
               individual_price: s.individual_price ?? (s.individual_price_rappen ? s.individual_price_rappen / 100 : 0),
+              individual_booking_requires_confirmation: s.individual_booking_requires_confirmation ?? true,
+              individual_booking_confirmation_text: s.individual_booking_confirmation_text || null,
             })),
           },
         })
@@ -5482,6 +5513,8 @@ const addSession = () => {
     external_instructor_phone: prev?.external_instructor_phone ?? null,
     allow_individual_booking: false,
     individual_price: 0,
+    individual_booking_requires_confirmation: true,
+    individual_booking_confirmation_text: '',
   })
 }
 

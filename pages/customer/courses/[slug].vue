@@ -263,7 +263,7 @@
                 </p>
                 <button
                   v-if="session.allowIndividualBooking && session.individualPriceRappen && course.free_slots > 0"
-                  @click.stop="openIndividualConfirm(course)"
+                  @click.stop="session.requiresConfirmation ? openIndividualConfirm(course, session.confirmationText) : openEnrollmentModal(course)"
                   class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border transition-opacity hover:opacity-80"
                   :style="{
                     color: tenantBranding?.primary_color || '#10B981',
@@ -388,11 +388,8 @@
                 </svg>
               </div>
               <h3 class="text-lg font-semibold text-slate-800">Einzelbuchung bestätigen</h3>
-              <p class="mt-2 text-sm text-slate-500 leading-relaxed">
-                Diese Session kann nur einzeln gebucht werden, wenn du die übrigen Kursteile bereits absolviert hast oder anderweitig nachweisen kannst.
-              </p>
-              <p class="mt-3 text-sm font-medium text-slate-700">
-                Bestätigst du, dass du die anderen Kursteile bereits besucht hast?
+              <p class="mt-3 text-sm text-slate-700 leading-relaxed text-left bg-slate-50 rounded-xl px-4 py-3 border border-slate-200">
+                {{ individualConfirmText || DEFAULT_CONFIRMATION_TEXT }}
               </p>
             </div>
 
@@ -510,6 +507,9 @@ const showEnrollmentModal = ref(false)
 const showIndividualConfirm = ref(false)
 const enrollWithIndividualMode = ref(false)
 const pendingIndividualCourse = ref<any>(null)
+const individualConfirmText = ref<string | null>(null)
+
+const DEFAULT_CONFIRMATION_TEXT = 'Hiermit bestätige ich, dass ich die anderen Kursteile besucht habe und die dort geübten Themen vollumfänglich im Griff habe.'
 
 // My registrations (authenticated users)
 const myRegistrations = ref<any[]>([])
@@ -728,6 +728,8 @@ const getGroupedSessions = (course: any) => {
     parts: number
     allowIndividualBooking: boolean
     individualPriceRappen: number | null
+    requiresConfirmation: boolean
+    confirmationText: string | null
   }
   
   const grouped: GroupedSession[] = []
@@ -748,7 +750,9 @@ const getGroupedSessions = (course: any) => {
         endTime: session.end_time,
         parts: 1,
         allowIndividualBooking: !!session.allow_individual_booking,
-        individualPriceRappen: session.individual_price_rappen ?? null
+        individualPriceRappen: session.individual_price_rappen ?? null,
+        requiresConfirmation: session.individual_booking_requires_confirmation ?? true,
+        confirmationText: session.individual_booking_confirmation_text ?? null
       }
     } else {
       if (currentGroup) {
@@ -758,6 +762,8 @@ const getGroupedSessions = (course: any) => {
         if (session.allow_individual_booking) {
           currentGroup.allowIndividualBooking = true
           currentGroup.individualPriceRappen = session.individual_price_rappen ?? currentGroup.individualPriceRappen
+          currentGroup.requiresConfirmation = session.individual_booking_requires_confirmation ?? true
+          currentGroup.confirmationText = session.individual_booking_confirmation_text ?? currentGroup.confirmationText
         }
       }
     }
@@ -773,7 +779,9 @@ const getGroupedSessions = (course: any) => {
     timeRange: `${formatTime(g.startTime)} - ${formatTime(g.endTime)}`,
     parts: g.parts,
     allowIndividualBooking: g.allowIndividualBooking,
-    individualPriceRappen: g.individualPriceRappen
+    individualPriceRappen: g.individualPriceRappen,
+    requiresConfirmation: g.requiresConfirmation,
+    confirmationText: g.confirmationText
   }))
 }
 
@@ -823,8 +831,9 @@ const openEnrollmentModal = (course: any) => {
   showEnrollmentModal.value = true
 }
 
-const openIndividualConfirm = (course: any) => {
+const openIndividualConfirm = (course: any, confirmationText?: string | null) => {
   pendingIndividualCourse.value = course
+  individualConfirmText.value = confirmationText || null
   showIndividualConfirm.value = true
 }
 
