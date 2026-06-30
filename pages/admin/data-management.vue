@@ -112,7 +112,7 @@
             <input
               ref="fileInputRef"
               type="file"
-              accept=".csv,.tsv,text/csv,text/tab-separated-values"
+              accept=".csv,.tsv,.xlsx,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               @change="handleFileChange"
               class="hidden"
             />
@@ -132,11 +132,23 @@
               <p class="text-sm text-gray-500">
                 {{ fileMeta.name 
                   ? `${formatBytes(fileMeta.size)} · ${rows.length.toLocaleString()} Zeilen · ${columns.length} Spalten`
-                  : 'CSV/TSV-Dateien werden automatisch erkannt'
+                  : 'CSV, TSV oder Excel (.xlsx) — Trennzeichen wird automatisch erkannt'
                 }}
               </p>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- File format error -->
+      <div v-if="fileError" class="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+        <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+        </svg>
+        <div>
+          <p class="text-sm font-medium text-red-800">Dateiformat nicht unterstützt</p>
+          <p class="text-sm text-red-700 mt-0.5">{{ fileError }}</p>
+          <p class="text-xs text-red-600 mt-1">Unterstützte Formate: <strong>.csv</strong>, <strong>.tsv</strong>, <strong>.xlsx</strong></p>
         </div>
       </div>
 
@@ -344,8 +356,22 @@
               <svg v-else class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
               </svg>
-              {{ importing ? 'Importiere...' : 'Daten importieren' }}
+              {{ importing ? `Importiere... (${importProgress.current.toLocaleString()} / ${importProgress.total.toLocaleString()})` : 'Daten importieren' }}
             </button>
+          </div>
+
+          <!-- Progress bar -->
+          <div v-if="importing && importProgress.total > 0" class="mt-4">
+            <div class="flex justify-between text-xs text-gray-500 mb-1">
+              <span>{{ importProgress.current.toLocaleString() }} von {{ importProgress.total.toLocaleString() }} Zeilen</span>
+              <span>{{ Math.round((importProgress.current / importProgress.total) * 100) }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div
+                class="h-2 rounded-full transition-all duration-300"
+                :style="{ width: `${(importProgress.current / importProgress.total) * 100}%`, background: primaryColor }"
+              ></div>
+            </div>
           </div>
         </div>
       </div>
@@ -784,6 +810,28 @@ import { definePageMeta, useHead } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { formatDateTime } from '~/utils/dateUtils'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import * as XLSX from 'xlsx'
+
+const ACCEPTED_EXTENSIONS = ['.csv', '.tsv', '.xlsx']
+const ACCEPTED_MIME_TYPES = [
+  'text/csv',
+  'text/tab-separated-values',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/octet-stream', // some OS send xlsx with this mime
+]
+
+const fileError = ref('')
+
+function getFileExtension(name: string): string {
+  return name.slice(name.lastIndexOf('.')).toLowerCase()
+}
+
+function validateFileType(file: File): string | null {
+  const ext = getFileExtension(file.name)
+  if (ACCEPTED_EXTENSIONS.includes(ext)) return null
+  if (ext === '.xls') return 'Das alte Excel-Format (.xls) wird nicht unterstützt. Bitte speichere die Datei als .xlsx.'
+  return `Dateiformat "${ext}" wird nicht unterstützt. Bitte lade eine CSV-, TSV- oder Excel-Datei (.xlsx) hoch.`
+}
 
 const { primaryColor } = useTenantBranding()
 
@@ -818,6 +866,7 @@ const validationResult = ref<null | {
 }>(null)
 
 const importing = ref(false)
+const importProgress = reactive({ current: 0, total: 0 })
 const importSettings = reactive({
   source: '',
   note: '',
@@ -866,11 +915,9 @@ const handleFileChange = async (e: Event) => {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
-  fileMeta.name = file.name
-  fileMeta.size = file.size
-  const text = await file.text()
-  rawText.value = text
-  parseCsv(text)
+  await loadFile(file)
+  // Reset input value so the same file can be re-selected after reset
+  input.value = ''
 }
 
 function onDragOver() { isDragging.value = true }
@@ -879,11 +926,58 @@ async function onDrop(e: DragEvent) {
   isDragging.value = false
   const file = e.dataTransfer?.files?.[0]
   if (!file) return
+  await loadFile(file)
+}
+
+async function loadFile(file: File) {
+  fileError.value = ''
+  const validationError = validateFileType(file)
+  if (validationError) {
+    fileError.value = validationError
+    return
+  }
+
   fileMeta.name = file.name
   fileMeta.size = file.size
-  const text = await file.text()
-  rawText.value = text
-  parseCsv(text)
+  validationResult.value = null
+
+  const ext = getFileExtension(file.name)
+  if (ext === '.xlsx') {
+    await parseXlsx(file)
+  } else {
+    const text = await file.text()
+    rawText.value = text
+    parseCsv(text)
+  }
+}
+
+async function parseXlsx(file: File) {
+  const buffer = await file.arrayBuffer()
+  const workbook = XLSX.read(buffer, { type: 'array' })
+  const sheetName = workbook.SheetNames[0]
+  const worksheet = workbook.Sheets[sheetName]
+  const data: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
+
+  if (data.length === 0) {
+    fileError.value = 'Die Excel-Datei ist leer.'
+    return
+  }
+
+  const header = (data[0] as any[]).map(c => String(c ?? '').trim())
+  columns.value = header
+  rows.value = []
+  for (let i = 1; i < data.length; i++) {
+    const rowArr = data[i] as any[]
+    // Skip completely empty rows
+    if (rowArr.every(cell => cell === '' || cell == null)) continue
+    const row: Row = {}
+    for (let c = 0; c < header.length; c++) {
+      row[header[c]] = rowArr[c] ?? ''
+    }
+    rows.value.push(row)
+  }
+  Object.keys(visibleColumnsMap).forEach(k => delete visibleColumnsMap[k])
+  for (const col of columns.value) visibleColumnsMap[col] = true
 }
 
 function parseCsv(text: string) {
@@ -947,6 +1041,7 @@ function resetAll() {
   validationResult.value = null
   fileMeta.name = ''
   fileMeta.size = 0
+  fileError.value = ''
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
@@ -965,19 +1060,62 @@ function formatBytes(bytes: number) {
 }
 
 const validating = ref(false)
-async function runValidation() {
+function runValidation() {
   if (!rows.value.length) return
   validating.value = true
   try {
-    const res = await $fetch('/api/imports/validate', {
-      method: 'POST',
-      body: {
-        columns: columns.value,
-        rows: rows.value,
+    const cols = columns.value
+    const maxColumns = 200
+    const issues: Array<{ index: number; message: string }> = []
+
+    if (cols.length === 0) {
+      issues.push({ index: -1, message: 'Keine Spalten gefunden' })
+    }
+    if (cols.length > maxColumns) {
+      issues.push({ index: -1, message: `Zu viele Spalten (${cols.length} > ${maxColumns})` })
+    }
+
+    // Duplicate column detection
+    const lower = cols.map(c => (c || '').toString().trim().toLowerCase())
+    const dupes = new Set<string>()
+    const seen = new Set<string>()
+    for (const c of lower) {
+      if (seen.has(c)) dupes.add(c)
+      seen.add(c)
+    }
+    if (dupes.size) {
+      issues.push({ index: -1, message: `Doppelte Spalten: ${Array.from(dupes).join(', ')}` })
+    }
+
+    // Heuristic column-name suggestions
+    const likelyEmail = cols.find(c => /email/i.test(c))
+    const likelyPhone = cols.find(c => /(phone|telefon|mobile|handy)/i.test(c))
+    const likelyDate = cols.find(c => /(birth|geburt|date|datum)/i.test(c))
+
+    const suggestions: string[] = []
+    if (!likelyEmail) suggestions.push('Kein offensichtliches E-Mail-Feld erkannt')
+    if (!likelyPhone) suggestions.push('Kein offensichtliches Telefonfeld erkannt')
+    if (!likelyDate) suggestions.push('Kein offensichtliches Datumsfeld erkannt')
+
+    // Sample first 50 rows (first 8 cols) for preview
+    const sampleCount = Math.min(50, rows.value.length)
+    const samples: any[] = []
+    for (let i = 0; i < sampleCount; i++) {
+      const r = rows.value[i]
+      const small: Record<string, any> = {}
+      for (let c = 0; c < Math.min(cols.length, 8); c++) {
+        const key = cols[c]
+        small[key] = r[key]
       }
-    })
-    validationResult.value = res as any
-    logger.debug('Validation result saved:', validationResult.value)
+      samples.push({ index: i, row: small })
+    }
+
+    validationResult.value = {
+      totalRows: rows.value.length,
+      errors: issues.length,
+      warnings: suggestions.length,
+      samples,
+    }
   } catch (err: any) {
     console.error('Validation failed', err)
     alert(err?.message ?? 'Validierung fehlgeschlagen')
@@ -988,10 +1126,34 @@ async function runValidation() {
 
 // Removed pagination functions for import preview
 
+const CHUNK_SIZE = 500
+
+function mapRow(row: Row): any {
+  const mapped: any = { raw_json: { ...row } }
+  Object.keys(row).forEach(key => {
+    const lowerKey = key.toLowerCase()
+    if (lowerKey.includes('email')) mapped.email = row[key]
+    else if (lowerKey.includes('vorname') || lowerKey.includes('firstname') || lowerKey.includes('first_name')) mapped.first_name = row[key]
+    else if (lowerKey.includes('nachname') || lowerKey.includes('lastname') || lowerKey.includes('last_name')) mapped.last_name = row[key]
+    else if (lowerKey.includes('telefon') || lowerKey.includes('phone')) mapped.phone = row[key]
+    else if (lowerKey.includes('geburt') || lowerKey.includes('birth')) mapped.birthdate = row[key]
+    else if (lowerKey.includes('adresse') || lowerKey.includes('address')) mapped.address = row[key]
+    else if (lowerKey.includes('stadt') || lowerKey.includes('city')) mapped.city = row[key]
+    else if (lowerKey.includes('plz') || lowerKey.includes('postal')) mapped.postal_code = row[key]
+    else if (lowerKey.includes('land') || lowerKey.includes('country')) mapped.country = row[key]
+    else if (lowerKey.includes('kundennummer') || lowerKey.includes('customer_number')) mapped.customer_number = row[key]
+    else if (lowerKey.includes('id') && !mapped.legacy_id) mapped.legacy_id = row[key]
+  })
+  return mapped
+}
+
 async function importData() {
   if (!rows.value.length || !validationResult.value) return
   
   importing.value = true
+  importProgress.current = 0
+  importProgress.total = rows.value.length
+
   try {
     const authStore = useAuthStore()
     const tenantId = authStore.userProfile?.tenant_id
@@ -1013,62 +1175,41 @@ async function importData() {
     })
 
     const batchId = batchResponse.batchId
+    const mappedData = rows.value.map(mapRow)
 
-    const mappedData = rows.value.map(row => {
-      const rawJson = { ...row }
-      const mapped: any = { raw_json: rawJson }
+    // Split into chunks to stay within serverless payload limits
+    const endpoint = importSettings.dataType === 'customers'
+      ? '/api/imports/import-customers'
+      : '/api/imports/import-invoices'
+    const payloadKey = importSettings.dataType === 'customers' ? 'customers' : 'invoices'
 
-      Object.keys(row).forEach(key => {
-        const lowerKey = key.toLowerCase()
-        if (lowerKey.includes('email')) mapped.email = row[key]
-        else if (lowerKey.includes('vorname') || lowerKey.includes('firstname') || lowerKey.includes('first_name')) mapped.first_name = row[key]
-        else if (lowerKey.includes('nachname') || lowerKey.includes('lastname') || lowerKey.includes('last_name')) mapped.last_name = row[key]
-        else if (lowerKey.includes('telefon') || lowerKey.includes('phone')) mapped.phone = row[key]
-        else if (lowerKey.includes('geburt') || lowerKey.includes('birth')) mapped.birthdate = row[key]
-        else if (lowerKey.includes('adresse') || lowerKey.includes('address')) mapped.address = row[key]
-        else if (lowerKey.includes('stadt') || lowerKey.includes('city')) mapped.city = row[key]
-        else if (lowerKey.includes('plz') || lowerKey.includes('postal')) mapped.postal_code = row[key]
-        else if (lowerKey.includes('land') || lowerKey.includes('country')) mapped.country = row[key]
-        else if (lowerKey.includes('kundennummer') || lowerKey.includes('customer_number')) mapped.customer_number = row[key]
-        else if (lowerKey.includes('id') && !mapped.legacy_id) mapped.legacy_id = row[key]
-      })
-
-      return mapped
-    })
-
-    if (importSettings.dataType === 'customers') {
-      await $fetch('/api/imports/import-customers', {
+    for (let i = 0; i < mappedData.length; i += CHUNK_SIZE) {
+      const chunk = mappedData.slice(i, i + CHUNK_SIZE)
+      await $fetch(endpoint, {
         method: 'POST',
         body: {
           tenantId,
           batchId,
-          customers: mappedData,
+          [payloadKey]: chunk,
           createdBy: userId
         }
       })
-    } else {
-      await $fetch('/api/imports/import-invoices', {
-        method: 'POST',
-        body: {
-          tenantId,
-          batchId,
-          invoices: mappedData,
-          createdBy: userId
-        }
-      })
+      importProgress.current = Math.min(i + CHUNK_SIZE, mappedData.length)
     }
 
     alert(`Erfolgreich ${mappedData.length} ${importSettings.dataType === 'customers' ? 'Kunden' : 'Rechnungen'} importiert!`)
     
     resetAll()
-    await loadBatches() // Refresh batches after import
-    activeTab.value = 'view' // Switch to view tab
+    await loadBatches()
+    activeTab.value = 'view'
     
   } catch (error: any) {
     console.error('Import failed:', error)
     alert(`Import fehlgeschlagen: ${error.message || 'Unbekannter Fehler'}`)
   } finally {
     importing.value = false
+    importProgress.current = 0
+    importProgress.total = 0
   }
 }
 
