@@ -1431,22 +1431,19 @@
                       Nur diese Session einzeln buchbar machen
                     </label>
                   </div>
-                  <div v-if="session.allow_individual_booking" class="mt-3 flex items-center gap-3">
-                    <div class="flex items-center gap-2 max-w-xs">
-                      <label class="block text-sm font-medium text-gray-700 whitespace-nowrap">Preis (CHF)</label>
-                      <div class="relative">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">CHF</span>
-                        <input
-                          v-model.number="session.individual_price"
-                          type="number"
-                          min="0"
-                          step="0.05"
-                          placeholder="0.00"
-                          class="w-36 pl-12 pr-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input tenant-focus focus:outline-none focus:ring-2"
-                        />
-                      </div>
+                  <div v-if="session.allow_individual_booking" class="mt-3 flex items-center gap-3 flex-wrap">
+                    <div class="flex items-center gap-1.5 bg-white border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-offset-0 focus-within:border-transparent" :style="{ '--tw-ring-color': primaryColor }">
+                      <span class="pl-3 text-sm text-gray-500 select-none">CHF</span>
+                      <input
+                        v-model.number="session.individual_price"
+                        type="number"
+                        min="0"
+                        step="0.05"
+                        placeholder="0.00"
+                        class="w-24 pr-3 py-2 bg-transparent text-gray-900 session-input focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      />
                     </div>
-                    <p class="text-xs text-gray-500">Kunden können sich nur für diese Session anmelden (z.B. A1-Inhaber)</p>
+                    <p class="text-xs text-gray-500">Einzelbuchung für diese Session (z.B. A1-Inhaber)</p>
                   </div>
                 </div>
               </div>
