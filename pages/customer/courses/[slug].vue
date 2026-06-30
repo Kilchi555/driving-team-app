@@ -219,7 +219,15 @@
         >
           <!-- Course Header -->
           <div class="p-5 border-b border-slate-100">
-            <h3 class="font-semibold text-lg text-slate-800 mb-1">{{ removeDateFromTitle(course.name) }}</h3>
+            <div class="flex items-start justify-between gap-2 mb-1">
+              <h3 class="font-semibold text-lg text-slate-800">{{ removeDateFromTitle(course.name) }}</h3>
+              <span
+                v-if="course._partiallyStarted"
+                class="shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200"
+              >
+                Einzellektion
+              </span>
+            </div>
             <p class="text-sm text-slate-500">{{ course.description || 'Standort wird noch bekannt gegeben' }}</p>
           </div>
           
@@ -278,7 +286,9 @@
               <div class="grid grid-cols-2 gap-4">
                 <div>
                   <p class="text-sm text-slate-500">Preis</p>
-                  <p class="font-bold text-lg text-slate-800">CHF {{ formatPrice(course.price_per_participant_rappen) }}</p>
+                  <p class="font-bold text-lg text-slate-800">
+                    CHF {{ formatPrice(course._individualPrice ?? course.price_per_participant_rappen) }}
+                  </p>
                 </div>
                 <div class="text-right">
                   <p class="text-sm text-slate-500">Freie Plätze</p>
@@ -534,20 +544,51 @@ const loadData = async () => {
       logo_url: response.tenant.logo_wide_url || response.tenant.logo_url || null,
     }
     
-    // Filter courses where ALL sessions are in the future, OR it's a waitlist course
     const now = new Date().toISOString()
+
     const futureCourses = (response.courses || []).filter((course: any) => {
       if (course.status === 'waitlist') return true
       if (!course.course_sessions || course.course_sessions.length === 0) return false
-      return course.course_sessions.every((s: any) => s.start_time > now)
+
+      const allFuture = course.course_sessions.every((s: any) => s.start_time > now)
+
+      if (!allFuture) {
+        // Some sessions already started: only show if there are individually bookable future sessions
+        return course.course_sessions.some(
+          (s: any) => s.start_time > now && s.allow_individual_booking
+        )
+      }
+
+      // Partial-only courses (e.g. SARI-synced "Teil 3"): only show if individually bookable
+      if (course.is_partial_only) {
+        return course.course_sessions.some((s: any) => s.allow_individual_booking)
+      }
+
+      return true
     })
-    
+
     // Calculate free slots; normalise category from course_category.name if the plain text field is empty
-    courses.value = futureCourses.map((course: any) => ({
-      ...course,
-      category: course.category || course.course_category?.name || null,
-      free_slots: (course.max_participants || 0) - (course.current_participants || 0)
-    }))
+    courses.value = futureCourses.map((course: any) => {
+      const allFuture = course.course_sessions?.every((s: any) => s.start_time > now) ?? true
+      // For partially-started courses: keep only future individually-bookable sessions
+      const visibleSessions = allFuture
+        ? course.course_sessions
+        : (course.course_sessions || []).filter((s: any) => s.start_time > now && s.allow_individual_booking)
+
+      // Determine display price: use individual_price_rappen if partially started
+      const individualPrice = !allFuture && visibleSessions.length > 0
+        ? visibleSessions[0].individual_price_rappen ?? null
+        : null
+
+      return {
+        ...course,
+        course_sessions: visibleSessions,
+        category: course.category || course.course_category?.name || null,
+        free_slots: (course.max_participants || 0) - (course.current_participants || 0),
+        _partiallyStarted: !allFuture,
+        _individualPrice: individualPrice,
+      }
+    })
     
     logger.debug(`Loaded ${courses.value.length} future courses`)
 
