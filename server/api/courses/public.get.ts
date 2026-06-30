@@ -147,7 +147,9 @@ export default defineEventHandler(async (event) => {
           session_number,
           sari_session_id,
           allow_individual_booking,
-          individual_price_rappen
+          individual_price_rappen,
+          individual_booking_requires_confirmation,
+          individual_booking_confirmation_text
         )
       `)
       .eq('tenant_id', tenant.id)
