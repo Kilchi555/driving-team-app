@@ -77,15 +77,14 @@ jobs:
         run: npm ci
 
       - name: Nuxt static build
-        timeout-minutes: 10
         env:
           CLIENT: ${{ matrix.client }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           NODE_ENV: production
         run: |
-          npx nuxt generate || true
-          ls .output/public/index.html
+          timeout 300 npx nuxt generate || true
+          ls .output/public/index.html || (echo "❌ Build output missing" && exit 1)
           echo "✅ Nuxt build complete"
 
       - name: Generate Capacitor config for client
