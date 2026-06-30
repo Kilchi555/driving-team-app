@@ -19,7 +19,8 @@ export default defineEventHandler(async (event) => {
       .select(`
         *,
         imported_customers(count),
-        imported_invoices(count)
+        imported_invoices(count),
+        imported_records(count)
       `)
       .eq('tenant_id', tenantId)
       .is('deleted_at', null)
