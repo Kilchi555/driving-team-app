@@ -2455,11 +2455,19 @@ const loadLessons = async () => {
     logger.debug('📚 Loading lessons for student:', props.selectedStudent.id)
     
     // Use secure backend API instead of direct DB queries
-    const response = await $fetch('/api/staff/get-student-lessons', {
-      query: {
-        studentId: props.selectedStudent.id
-      }
-    }) as any
+    // AbortController provides a hard timeout so the loading spinner never hangs forever.
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30_000)
+
+    let response: any
+    try {
+      response = await $fetch('/api/staff/get-student-lessons', {
+        query: { studentId: props.selectedStudent.id },
+        signal: controller.signal,
+      })
+    } finally {
+      clearTimeout(timeoutId)
+    }
 
     if (!response?.success || !response?.data) {
       throw new Error('Failed to load lessons from API')
