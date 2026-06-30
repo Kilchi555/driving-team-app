@@ -135,9 +135,11 @@ jobs:
             KEYSTORE_B64=$(base64 -w 0 client.keystore)
 
             # Merge into KEYSTORES_JSON and update secret
-            NEW_JSON=$(echo "${KEYSTORES_JSON:-{}}" | jq \
+            EXISTING_JSON=$(echo "$KEYSTORES_JSON" | jq . 2>/dev/null || echo '{}')
+            NEW_JSON=$(jq -n \
+              --argjson existing "$EXISTING_JSON" \
               --arg c "$CLIENT_ID" --arg b "$KEYSTORE_B64" --arg p "$KEYSTORE_PASS" \
-              '.[$c] = {b64: $b, pass: $p}')
+              '$existing | .[$c] = {b64: $b, pass: $p}')
             gh secret set KEYSTORES_JSON --body "$NEW_JSON" --repo "$REPO"
             echo "✅ Keystore generated and saved to KEYSTORES_JSON"
           else
