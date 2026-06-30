@@ -196,7 +196,7 @@
             <!-- PDF Export -->
             <div class="ml-auto pb-1">
               <button
-                v-if="totalEvaluations > 0"
+                v-if="hasAnyEvaluations"
                 @click="exportEvaluationPdf"
                 :disabled="isExportingEvalPdf"
                 class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -1757,6 +1757,12 @@ const isLoadingExamResults = ref(false)
 
 // ── Evaluation PDF Export ─────────────────────────────────
 const isExportingEvalPdf = ref(false)
+
+// True wenn der Student mindestens eine bewertete Lektion hat.
+// Benutzt "lessons" (hat .allEvaluations) statt progressData (hat nur evaluationsCount).
+const hasAnyEvaluations = computed(() =>
+  lessons.value.some((l: any) => l.allEvaluations && l.allEvaluations.length > 0)
+)
 
 async function exportEvaluationPdf() {
   if (isExportingEvalPdf.value || !selectedStudent.value?.id) return
