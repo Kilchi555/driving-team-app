@@ -251,16 +251,31 @@
               class="flex items-center gap-3 text-sm"
             >
               <div 
-                class="w-8 h-8 rounded-full flex items-center justify-center font-medium text-white"
+                class="w-8 h-8 shrink-0 rounded-full flex items-center justify-center font-medium text-white"
                 :style="{'backgroundColor': tenantBranding?.primary_color || '#10B981'}"
               >
                 {{ idx + 1 }}
               </div>
-              <div>
-                <p class="font-medium text-slate-700">
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+                <p class="font-medium text-slate-700 whitespace-nowrap">
                   {{ formatSessionDate(session.date) }} 
                   <span class="font-normal text-slate-600">{{ session.timeRange }}</span>
                 </p>
+                <button
+                  v-if="session.allowIndividualBooking && session.individualPriceRappen && course.free_slots > 0"
+                  @click.stop="openEnrollmentModal(course)"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border transition-opacity hover:opacity-80"
+                  :style="{
+                    color: tenantBranding?.primary_color || '#10B981',
+                    borderColor: `${tenantBranding?.primary_color || '#10B981'}40`,
+                    backgroundColor: `${tenantBranding?.primary_color || '#10B981'}0f`
+                  }"
+                >
+                  <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Einzeln · CHF {{ formatPrice(session.individualPriceRappen) }}
+                </button>
               </div>
             </div>
           </div>
@@ -647,6 +662,8 @@ const getGroupedSessions = (course: any) => {
     startTime: string
     endTime: string
     parts: number
+    allowIndividualBooking: boolean
+    individualPriceRappen: number | null
   }
   
   const grouped: GroupedSession[] = []
@@ -665,12 +682,19 @@ const getGroupedSessions = (course: any) => {
         date,
         startTime: session.start_time,
         endTime: session.end_time,
-        parts: 1
+        parts: 1,
+        allowIndividualBooking: !!session.allow_individual_booking,
+        individualPriceRappen: session.individual_price_rappen ?? null
       }
     } else {
       if (currentGroup) {
         currentGroup.endTime = session.end_time
         currentGroup.parts++
+        // Propagate individual booking flag if any session in the group has it
+        if (session.allow_individual_booking) {
+          currentGroup.allowIndividualBooking = true
+          currentGroup.individualPriceRappen = session.individual_price_rappen ?? currentGroup.individualPriceRappen
+        }
       }
     }
   }
@@ -683,7 +707,9 @@ const getGroupedSessions = (course: any) => {
   return grouped.map(g => ({
     date: g.date,
     timeRange: `${formatTime(g.startTime)} - ${formatTime(g.endTime)}`,
-    parts: g.parts
+    parts: g.parts,
+    allowIndividualBooking: g.allowIndividualBooking,
+    individualPriceRappen: g.individualPriceRappen
   }))
 }
 
