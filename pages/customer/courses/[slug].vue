@@ -373,6 +373,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAsyncData } from '#app'
 import { logger } from '~/utils/logger'
 import { useUIStore } from '~/stores/ui'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 import CourseEnrollmentModal from '~/components/customer/CourseEnrollmentModal.vue'
 
 definePageMeta({
@@ -389,8 +390,20 @@ const isLoading = ref(false)
 const isInitializing = ref(true)
 const error = ref<string | null>(null)
 const tenant = ref<any>(null)
-const tenantBranding = ref<any>(null)
 const tenantWalleeEnabled = ref<boolean>(false)
+
+// Initialise branding immediately from the already-loaded store so the header
+// colour and spinner are correct during the loading phase (before loadData()).
+const { currentTenantBranding } = useTenantBranding()
+const brandingFromStore = currentTenantBranding.value
+const tenantBranding = ref<any>(
+  brandingFromStore ? {
+    primary_color: brandingFromStore.colors?.primary || '#10B981',
+    secondary_color: brandingFromStore.colors?.secondary,
+    accent_color: brandingFromStore.colors?.accent,
+    logo_url: brandingFromStore.logos?.wide || brandingFromStore.logos?.standard || null,
+  } : null
+)
 
 useHead(computed(() => ({
   title: tenant.value?.name ? `Kurse – ${tenant.value.name}` : 'Kursangebot',
