@@ -11,14 +11,32 @@
           <h3 class="text-2xl font-bold text-white">
             Meine Bewertungen
           </h3>
-          <button 
-            @click="$emit('close')" 
-            class="text-white rounded-full p-2 transition-all duration-200 hover:scale-110 hover:bg-white/10"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div class="flex items-center gap-2">
+            <!-- PDF Export Button -->
+            <button
+              v-if="allEvaluations.length > 0"
+              @click="exportPdf"
+              :disabled="isExportingPdf"
+              class="flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white text-sm font-medium rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+              title="Als PDF exportieren"
+            >
+              <svg v-if="!isExportingPdf" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <svg v-else class="w-4 h-4 flex-shrink-0 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span class="hidden sm:inline">{{ isExportingPdf ? 'Wird erstellt…' : 'PDF' }}</span>
+            </button>
+            <button 
+              @click="$emit('close')" 
+              class="text-white rounded-full p-2 transition-all duration-200 hover:scale-110 hover:bg-white/10"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -184,6 +202,43 @@ const sortBy = ref('date') // 'date' oder 'rating'
 const sortOrder = ref('desc') // 'asc' oder 'desc' 
 const filterCategory = ref('all') // Filter nach Bewertungskategorie
 const filterDrivingCategory = ref('all') // Filter nach Fahrerkategorie (appointment.type)
+
+// PDF Export
+const isExportingPdf = ref(false)
+
+async function exportPdf() {
+  if (isExportingPdf.value) return
+  isExportingPdf.value = true
+  try {
+    const response = await fetch('/api/evaluations/export-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      throw new Error(err?.statusMessage || err?.message || 'PDF-Generierung fehlgeschlagen')
+    }
+
+    const blob = await response.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = `Meine_Bewertungen_${new Date().toISOString().split('T')[0]}.pdf`
+    a.rel = 'noopener'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 15_000)
+  } catch (err: any) {
+    console.error('❌ PDF export failed:', err)
+    alert(`PDF konnte nicht erstellt werden: ${err.message}`)
+  } finally {
+    isExportingPdf.value = false
+  }
+}
 
 // Helper functions
 const formatLessonDate = (dateString: string) => {

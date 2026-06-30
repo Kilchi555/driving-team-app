@@ -162,7 +162,7 @@
         <div v-if="activeTab === 'progress'" class="px-2"
 >
           <!-- Sub-Tab Navigation -->
-          <div class="flex gap-2 mb-4 border-b border-gray-200">
+          <div class="flex items-center gap-2 mb-4 border-b border-gray-200">
             <button
               @click="progressSubTab = 'lektionen'"
               :class="[
@@ -193,6 +193,25 @@
             >
               Prüfungen
             </button>
+            <!-- PDF Export -->
+            <div class="ml-auto pb-1">
+              <button
+                v-if="totalEvaluations > 0"
+                @click="exportEvaluationPdf"
+                :disabled="isExportingEvalPdf"
+                class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                :style="{ background: primaryColor }"
+                title="Bewertungen als PDF exportieren"
+              >
+                <svg v-if="!isExportingEvalPdf" class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <svg v-else class="w-3.5 h-3.5 flex-shrink-0 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {{ isExportingEvalPdf ? 'PDF…' : 'PDF' }}
+              </button>
+            </div>
           </div>
 
           <!-- Lektionen Sub-Tab -->
@@ -1735,6 +1754,45 @@ const studentAvailableBalance = computed(() => {
 const userBillingAddresses = ref<any[]>([]) // ✅ NEU: Firmen-Rechnungsadressen für diesen User
 const isLoadingLessons = ref(false)
 const isLoadingExamResults = ref(false)
+
+// ── Evaluation PDF Export ─────────────────────────────────
+const isExportingEvalPdf = ref(false)
+
+async function exportEvaluationPdf() {
+  if (isExportingEvalPdf.value || !selectedStudent.value?.id) return
+  isExportingEvalPdf.value = true
+  try {
+    const response = await fetch('/api/evaluations/export-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ student_id: selectedStudent.value.id }),
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      throw new Error(err?.statusMessage || err?.message || 'PDF-Generierung fehlgeschlagen')
+    }
+
+    const blob = await response.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    const firstName = selectedStudent.value?.first_name || ''
+    const lastName = selectedStudent.value?.last_name || ''
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = `Bewertungen_${firstName}_${lastName}_${new Date().toISOString().split('T')[0]}.pdf`
+    a.rel = 'noopener'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 15_000)
+  } catch (err: any) {
+    console.error('❌ Evaluation PDF export failed:', err)
+    alert(`PDF konnte nicht erstellt werden: ${err.message}`)
+  } finally {
+    isExportingEvalPdf.value = false
+  }
+}
 
 // ── Cash Deposit ──────────────────────────────────────────
 const showCashDepositModal = ref(false)
