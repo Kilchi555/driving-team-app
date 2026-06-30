@@ -98,6 +98,8 @@ export default defineEventHandler(async (event) => {
         external_instructor_name:   newType === 'external' ? (session.external_instructor_name || null) : null,
         external_instructor_email:  newType === 'external' ? (session.external_instructor_email || null) : null,
         external_instructor_phone:  newType === 'external' ? (session.external_instructor_phone || null) : null,
+        allow_individual_booking:   session.allow_individual_booking ?? false,
+        individual_price_rappen:    session.allow_individual_booking ? Math.round((session.individual_price ?? 0) * 100) : 0,
         // Reset notification flag when staff changes so they get re-notified
         ...(staffChanged || typeChanged ? { staff_notified_at: null, external_instructor_notified_at: null } : {}),
       })

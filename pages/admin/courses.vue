@@ -5329,6 +5329,8 @@ const createCourse = async () => {
               external_instructor_name: s.external_instructor_name || null,
               external_instructor_email: s.external_instructor_email || null,
               external_instructor_phone: s.external_instructor_phone || null,
+              allow_individual_booking: s.allow_individual_booking ?? false,
+              individual_price: s.individual_price ?? (s.individual_price_rappen ? s.individual_price_rappen / 100 : 0),
             })),
           },
         })
