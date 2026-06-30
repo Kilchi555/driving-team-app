@@ -37,7 +37,7 @@
           v-if="tenantBranding && (tenant?.logo_wide_url || tenant?.logo_url || tenantBranding.logo_url)"
           :src="tenant?.logo_wide_url || tenant?.logo_url || tenantBranding.logo_url"
           alt="Logo"
-          class="h-16 object-contain drop-shadow-md"
+          class="h-10 max-w-[180px] object-contain drop-shadow-md"
         />
         <div
           v-else-if="tenantBranding"
