@@ -551,13 +551,16 @@ export class SARISyncEngine {
       }
     }
 
-    // Remove sessions that are no longer in SARI (e.g. cancelled sessions)
+    // Remove future sessions that are no longer in SARI (e.g. cancelled upcoming sessions).
+    // Past sessions are intentionally kept for historical records and so the frontend can
+    // correctly detect that a course has already started (via start_time comparisons).
     if (sariSessionIds.length > 0) {
       await this.supabase
         .from('course_sessions')
         .delete()
         .eq('course_id', courseId)
         .not('sari_session_id', 'in', `(${sariSessionIds.join(',')})`)
+        .gt('start_time', new Date().toISOString())
     }
 
     const sessionsCreated = sessionsUpserted
