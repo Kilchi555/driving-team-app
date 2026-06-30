@@ -454,7 +454,7 @@ if (initData.value?.success && initData.value?.tenant) {
     primary_color: initData.value.tenant.primary_color || '#10B981',
     secondary_color: initData.value.tenant.secondary_color,
     accent_color: initData.value.tenant.accent_color,
-    logo_url: initData.value.tenant.logo_wide_url || initData.value.tenant.logo_url || null,
+    logo_url: initData.value.tenant.logo_wide_url || initData.value.tenant.logo_url || initData.value.tenant.logo_square_url || initData.value.tenant.logo_dark_url || tenantBranding.value?.logo_url || null,
   }
 }
 
@@ -559,12 +559,18 @@ const loadData = async () => {
     tenant.value = response.tenant
     tenantWalleeEnabled.value = response.tenant.wallee_enabled ?? false
     
-    // Load branding
+    // Load branding – prefer wide logo, fall back through available fields,
+    // then keep whatever the store already loaded (never overwrite with null)
     tenantBranding.value = {
       primary_color: response.tenant.primary_color || '#10B981',
       secondary_color: response.tenant.secondary_color,
       accent_color: response.tenant.accent_color,
-      logo_url: response.tenant.logo_wide_url || response.tenant.logo_url || null,
+      logo_url: response.tenant.logo_wide_url
+        || response.tenant.logo_url
+        || response.tenant.logo_square_url
+        || response.tenant.logo_dark_url
+        || tenantBranding.value?.logo_url
+        || null,
     }
     
     const now = new Date().toISOString()
