@@ -1,3 +1,8 @@
+# Debug/diagnostic scripts (must never be committed)
+test-*.js
+diag-*.js
+debug-*.js
+
 # Nuxt dev/build outputs
 .output
 .data
