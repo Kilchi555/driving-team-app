@@ -631,7 +631,7 @@
             <!-- Zahlungen Liste -->
             <div class="space-y-3">
               <div 
-                v-for="payment in payments" 
+                v-for="payment in sortedPayments" 
                 :key="payment.id"
                 @click="handlePaymentCardClick(payment)"
                 :class="[
@@ -1745,6 +1745,14 @@ const examResults = ref<any[]>([])
 const cancellationPolicies = ref<any[]>([])
 const studentBalance = ref<number | undefined>(undefined) // ✅ NEU: Student credit balance (raw)
 const studentPendingWithdrawalRappen = ref(0) // Ausstehende Auszahlungen
+
+const sortedPayments = computed(() => {
+  return [...payments.value].sort((a, b) => {
+    const dateA = new Date(a.appointment?.start_time || a.created_at || 0).getTime()
+    const dateB = new Date(b.appointment?.start_time || b.created_at || 0).getTime()
+    return dateB - dateA
+  })
+})
 
 const studentAvailableBalance = computed(() => {
   if (studentBalance.value === undefined) return undefined
@@ -3104,6 +3112,7 @@ function getCreditTransactionLabel(tx: any): string {
     withdrawal_pending: 'Auszahlung (ausstehend)',
     withdrawal_completed: 'Auszahlung abgeschlossen',
     affiliate_reward: 'Weiterempfehlung',
+    adjustment: 'Guthabenkorrektur',
   }
   return typeMap[tx.transaction_type] || tx.transaction_type || 'Transaktion'
 }

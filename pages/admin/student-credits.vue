@@ -858,7 +858,8 @@ const getTransactionTypeText = (type: string) => {
     withdrawal: 'Auszahlung',
     appointment_payment: 'Termin-Bezahlung',
     refund: 'Rückerstattung',
-    cancellation: 'Stornierung'
+    cancellation: 'Stornierung',
+    adjustment: 'Guthabenkorrektur',
   }
   return typeMap[type] || type
 }
