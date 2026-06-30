@@ -12,20 +12,22 @@ import { sendCapiRefundEvent, sha256Hex } from '~/server/utils/meta-capi'
 import { processWalleeRefund } from '~/server/utils/wallee-refund'
 
 export default defineEventHandler(async (event) => {
+  // ── INTERNAL-ONLY GUARD ────────────────────────────────────────────────
+  // This route must never be called directly from a browser or external client.
+  // Only server-side $fetch calls (cancel-staff, cancel-customer) may reach it,
+  // and they must supply the pre-shared secret set in NUXT_INTERNAL_CANCELLATION_SECRET.
+  // Guard is intentionally OUTSIDE the try/catch so a 403 propagates as HTTP 403,
+  // not silently as { success: false }.
+  const config = useRuntimeConfig()
+  const expectedSecret = (config.internalCancellationSecret as string | undefined)?.trim()
+  const providedSecret = getHeader(event, 'x-internal-secret')?.trim()
+
+  if (!expectedSecret || !providedSecret || providedSecret !== expectedSecret) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   try {
-    // ── INTERNAL-ONLY GUARD ────────────────────────────────────────────────
-    // This route must never be called directly from a browser or external client.
-    // Only server-side $fetch calls (cancel-staff, cancel-customer) may reach it,
-    // and they must supply the pre-shared secret set in NUXT_INTERNAL_CANCELLATION_SECRET.
-    const config = useRuntimeConfig()
-    const expectedSecret = config.internalCancellationSecret
-    const providedSecret = getHeader(event, 'x-internal-secret')
-
-    if (!expectedSecret || !providedSecret || providedSecret !== expectedSecret) {
-      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-    }
-    // ─────────────────────────────────────────────────────────────────────────
-
     const supabase = getSupabaseAdmin()
     const slotManager = createAvailabilitySlotManager(supabase)
     
