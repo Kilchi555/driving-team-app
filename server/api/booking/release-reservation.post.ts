@@ -13,8 +13,7 @@
  */
 
 import { defineEventHandler, readBody, createError, H3Event } from 'h3'
-import { getSupabase } from '~/server/utils/supabase'
-import { createSignedSessionJwt } from '~/server/utils/jwt'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
 interface ReleaseReservationRequest {
@@ -34,14 +33,13 @@ export default defineEventHandler(async (event: H3Event) => {
       })
     }
 
-    const sessionJwt = createSignedSessionJwt(session_id)
-    const supabase = getSupabase(event, sessionJwt)
+    const supabase = getSupabaseAdmin()
     const now = new Date().toISOString()
 
     logger.debug('🔓 Release reservation request:', { slot_id, session_id })
 
     // ============ STEP 1: Try to release the primary slot directly ============
-    // We don't SELECT first because the slot is reserved and may not pass the SELECT RLS policy
+    // Admin client bypasses RLS; session_id filter provides the equivalent ownership check
     const { error: releaseError } = await supabase
       .from('availability_slots')
       .update({
@@ -51,21 +49,20 @@ export default defineEventHandler(async (event: H3Event) => {
         updated_at: now
       })
       .eq('id', slot_id)
+      .eq('reserved_by_session', session_id)
 
     if (releaseError) {
       logger.error('❌ Error releasing slot:', releaseError)
       throw createError({
-        statusCode: releaseError.code === '42501' ? 403 : 500,
-        statusMessage: releaseError.code === '42501' ? 'Unauthorized to release this reservation' : 'Failed to release reservation'
+        statusCode: 500,
+        statusMessage: 'Failed to release reservation'
       })
     }
 
     logger.debug('✅ Primary slot released')
 
     // ============ STEP 2: Get the slot details to find overlapping slots ============
-    // Use the internal SELECT policy which allows reading all slots
-    const supabaseInternal = getSupabase(event)
-    const { data: slot, error: slotError } = await supabaseInternal
+    const { data: slot, error: slotError } = await supabase
       .from('availability_slots')
       .select('tenant_id, staff_id, location_id, start_time, end_time')
       .eq('id', slot_id)
@@ -73,7 +70,6 @@ export default defineEventHandler(async (event: H3Event) => {
 
     if (slotError || !slot) {
       logger.warn('⚠️ Could not fetch slot details:', slotError)
-      // Return success anyway - the primary slot was already released
       return {
         success: true,
         released_count: 1,
@@ -125,6 +121,7 @@ export default defineEventHandler(async (event: H3Event) => {
         updated_at: now
       })
       .in('id', slotIdsToRelease)
+      .eq('reserved_by_session', session_id)
 
     if (overlapReleaseError) {
       logger.error('❌ Error releasing overlapping slots:', overlapReleaseError)
