@@ -392,18 +392,28 @@ const error = ref<string | null>(null)
 const tenant = ref<any>(null)
 const tenantWalleeEnabled = ref<boolean>(false)
 
-// Initialise branding immediately from the already-loaded store so the header
-// colour and spinner are correct during the loading phase (before loadData()).
+// Branding: initialised from the store the moment it's available so the header
+// colour, spinner and logo are correct before loadData() returns.
+// Uses watch+immediate so it works whether the plugin finishes before or after
+// this component's setup runs.
 const { currentTenantBranding } = useTenantBranding()
-const brandingFromStore = currentTenantBranding.value
-const tenantBranding = ref<any>(
-  brandingFromStore ? {
-    primary_color: brandingFromStore.colors?.primary || '#10B981',
-    secondary_color: brandingFromStore.colors?.secondary,
-    accent_color: brandingFromStore.colors?.accent,
-    logo_url: brandingFromStore.logos?.wide || brandingFromStore.logos?.standard || null,
-  } : null
-)
+const tenantBranding = ref<any>(null)
+
+const applyStoreBranding = (branding: typeof currentTenantBranding.value) => {
+  if (!branding) return
+  // Only overwrite while tenant API data hasn't arrived yet
+  if (!tenant.value) {
+    tenantBranding.value = {
+      primary_color: branding.colors?.primary || '#10B981',
+      secondary_color: branding.colors?.secondary,
+      accent_color: branding.colors?.accent,
+      logo_url: branding.logos?.wide || branding.logos?.standard || null,
+    }
+  }
+}
+
+// immediate:true → runs synchronously if already loaded, reactively otherwise
+watch(currentTenantBranding, applyStoreBranding, { immediate: true })
 
 useHead(computed(() => ({
   title: tenant.value?.name ? `Kurse – ${tenant.value.name}` : 'Kursangebot',
