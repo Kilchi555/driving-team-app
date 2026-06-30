@@ -5,6 +5,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 const STORAGE_BUCKET = 'tenant-assets'
 
@@ -103,6 +104,6 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error) {
     logger.error('Error in tenant/delete-asset.delete:', error)
-    throw error
+    throw mapSupabaseError(error)
   }
 })

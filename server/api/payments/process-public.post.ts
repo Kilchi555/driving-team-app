@@ -22,6 +22,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { Wallee } from 'wallee'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { z } from 'zod'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 const ProcessPublicPaymentSchema = z.object({
   enrollmentId:  z.string().uuid().optional(),
@@ -489,7 +490,7 @@ export default defineEventHandler(async (event) => {
     
     // Return H3 errors as-is, wrap others
     if (error.statusCode || error.statusMessage) {
-      throw error
+      throw mapSupabaseError(error)
     }
     
     throw createError({

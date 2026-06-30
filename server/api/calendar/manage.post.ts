@@ -9,6 +9,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 export default defineEventHandler(async (event) => {
   let action: string | undefined
@@ -74,7 +75,7 @@ export default defineEventHandler(async (event) => {
         .eq('tenant_id', tenant_id)
         .eq('staff_id', staff_id)
 
-      if (error) throw error
+      if (error) throw mapSupabaseError(error, 'get-staff-meetings')
 
       return {
         success: true,
@@ -98,7 +99,7 @@ export default defineEventHandler(async (event) => {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) throw mapSupabaseError(error, 'create-appointment')
 
       logger.info('📅 Appointment created', { appointmentId: appointment.id })
 
@@ -153,7 +154,7 @@ export default defineEventHandler(async (event) => {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) throw mapSupabaseError(error, 'update-appointment-status')
 
       logger.info('📅 Appointment updated', { appointmentId: appointment_data.id })
 
@@ -217,7 +218,7 @@ export default defineEventHandler(async (event) => {
 
       if (error) {
         logger.error('❌ Error fetching appointments:', error)
-        throw error
+        throw mapSupabaseError(error, 'get-existing-appointments')
       }
 
       logger.debug('✅ Appointments fetched:', appointments?.length || 0)
@@ -244,7 +245,7 @@ export default defineEventHandler(async (event) => {
       if (end_date)   query = query.lte('start_time', end_date)
 
       const { data: cancelled, error: cancelledError } = await query
-      if (cancelledError) throw cancelledError
+      if (cancelledError) throw mapSupabaseError(cancelledError, 'get-cancelled-appointments')
 
       return { success: true, data: cancelled || [] }
     }
@@ -275,7 +276,7 @@ export default defineEventHandler(async (event) => {
 
       if (error) {
         logger.error('❌ Error fetching pricing rules:', error)
-        throw error
+        throw mapSupabaseError(error, 'get-pricing-rules')
       }
 
       logger.debug('✅ Pricing rules fetched:', rules?.length || 0)
@@ -314,7 +315,7 @@ export default defineEventHandler(async (event) => {
         .eq('id', user_id)
         .single()
 
-      if (error) throw error
+      if (error) throw mapSupabaseError(error, 'get-user-data')
 
       return {
         success: true,
@@ -352,7 +353,7 @@ export default defineEventHandler(async (event) => {
         .eq('role', 'staff')
         .single()
 
-      if (error) throw error
+      if (error) throw mapSupabaseError(error, 'get-staff-data')
 
       return {
         success: true,
@@ -376,7 +377,7 @@ export default defineEventHandler(async (event) => {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) throw mapSupabaseError(error, 'create-payment')
 
       logger.info('💳 Payment created', { paymentId: payment.id })
 
@@ -449,7 +450,7 @@ export default defineEventHandler(async (event) => {
         .eq('id', tenant_id)
         .single()
 
-      if (error) throw error
+      if (error) throw mapSupabaseError(error, 'get-tenant-data')
 
       return {
         success: true,

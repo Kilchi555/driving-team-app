@@ -3,6 +3,7 @@ import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -250,7 +251,7 @@ export default defineEventHandler(async (event) => {
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
 
     if (error.statusCode) {
-      throw error
+      throw mapSupabaseError(error)
     }
 
     throw createError({

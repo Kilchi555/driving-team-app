@@ -1,6 +1,7 @@
 // api/auth/manage.post.ts
 import { defineEventHandler, readBody } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -66,7 +67,7 @@ async function signInWithPassword(body: AuthRequest) {
     password
   })
 
-  if (error) throw error
+  if (error) throw mapSupabaseError(error)
 
   return {
     success: true,
@@ -90,7 +91,7 @@ async function signUp(body: AuthRequest) {
     options
   })
 
-  if (error) throw error
+  if (error) throw mapSupabaseError(error)
 
   return {
     success: true,
@@ -112,7 +113,7 @@ async function resetPasswordForEmail(body: AuthRequest) {
     redirectTo: redirectTo || `${process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/reset-password`
   })
 
-  if (error) throw error
+  if (error) throw mapSupabaseError(error)
 
   return {
     success: true,
@@ -130,7 +131,7 @@ async function getSession(body: AuthRequest) {
 
   const { data, error } = await supabase.auth.getUser(access_token)
 
-  if (error) throw error
+  if (error) throw mapSupabaseError(error)
 
   return {
     success: true,
@@ -152,7 +153,7 @@ async function setSession(body: AuthRequest) {
     refresh_token
   })
 
-  if (error) throw error
+  if (error) throw mapSupabaseError(error)
 
   return {
     success: true,
@@ -172,7 +173,7 @@ async function updateUser(body: AuthRequest, userId: string) {
 
   const { data, error } = await supabase.auth.updateUser(attributes)
 
-  if (error) throw error
+  if (error) throw mapSupabaseError(error)
 
   return {
     success: true,

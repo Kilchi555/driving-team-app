@@ -10,6 +10,7 @@ import {
   throwIfInvalid,
   throwValidationError
 } from '~/server/utils/validators'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -528,7 +529,7 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error: any) {
     logger.error('❌ Appointment save error:', error)
-    throw error
+    throw mapSupabaseError(error)
   }
 })
 

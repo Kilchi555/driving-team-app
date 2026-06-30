@@ -4,6 +4,7 @@ import { getSupabaseServerWithSession } from '~/utils/supabase'
 import { encryptSecret } from '~/server/utils/encryption'
 import { logAudit } from '~/server/utils/audit'
 import { logger } from '~/utils/logger'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 /**
  * POST /api/sari/save-settings
@@ -165,7 +166,7 @@ export default defineEventHandler(async (event) => {
     logger.error('Failed to save SARI settings', { error: error.message })
 
     if (error.statusCode) {
-      throw error
+      throw mapSupabaseError(error)
     }
 
     throw createError({

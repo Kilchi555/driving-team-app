@@ -1,5 +1,6 @@
 import { defineEventHandler, getQuery, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
@@ -27,7 +28,7 @@ export default defineEventHandler(async (event) => {
       .select('status, payment_status, total_amount_rappen, due_date')
       .eq('tenant_id', userProfile.tenant_id)
 
-    if (error) throw error
+    if (error) throw mapSupabaseError(error)
 
     const summary = {
       total_invoices: invoices?.length || 0,

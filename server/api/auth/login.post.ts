@@ -5,6 +5,7 @@ import { checkProgressiveRateLimitWithHistory } from '~/server/utils/progressive
 import { logger } from '~/utils/logger'
 import { validateEmail, throwValidationError } from '~/server/utils/validators'
 import { setAuthCookies } from '~/server/utils/cookies'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 // Helper function to extract device name from User-Agent
 function getDeviceNameFromUserAgent(userAgent: string): string {
@@ -814,7 +815,7 @@ Diese E-Mail ist eine automatische Sicherheitsmitteilung von ${tenantName}.
     
     // Return error response (createError handles the rest)
     if (error.statusCode) {
-      throw error
+      throw mapSupabaseError(error)
     }
 
     throw createError({

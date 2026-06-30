@@ -5,6 +5,7 @@ import { defineEventHandler, readMultipartFormData, createError, setHeader } fro
 import { getSupabaseAdmin, getSupabaseServiceRole } from '~/utils/supabase'
 import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 interface UploadLogoRequest {
   tenantId: string
@@ -203,6 +204,6 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error) {
     logger.error('Error in tenant/upload-logo.post:', error)
-    throw error
+    throw mapSupabaseError(error)
   }
 })
