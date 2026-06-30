@@ -278,20 +278,47 @@
               <p class="mt-1 text-xs text-gray-500">Bezeichnung für diesen Import-Batch</p>
             </div>
             
-            <div>
+            <div class="relative">
               <label class="block text-sm font-medium text-gray-700 mb-2">
                 Datentyp <span class="text-red-500">*</span>
               </label>
-              <select
-                v-model="importSettings.dataType"
+              <input
+                v-model="dataTypeInput"
+                type="text"
+                placeholder="z.B. Termine, Kundendaten, Leads..."
+                autocomplete="off"
                 required
+                @input="onDataTypeInput"
+                @focus="showDataTypeSuggestions = true"
+                @blur="onDataTypeBlur"
                 class="tenant-focus w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
+              />
+              <!-- Suggestions dropdown -->
+              <ul
+                v-if="showDataTypeSuggestions && filteredDataTypes.length"
+                class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
               >
-                <option value="">-- Bitte wählen --</option>
-                <option value="customers">Kundendaten</option>
-                <option value="invoices">Rechnungsdaten</option>
-              </select>
-              <p class="mt-1 text-xs text-gray-500">Art der zu importierenden Daten</p>
+                <li
+                  v-for="type in filteredDataTypes"
+                  :key="type.value"
+                  @mousedown.prevent="selectDataType(type.value, type.label)"
+                  class="px-4 py-2.5 text-sm cursor-pointer hover:bg-gray-50 flex items-center justify-between"
+                >
+                  <span>{{ type.label }}</span>
+                  <span class="text-xs text-gray-400 font-mono">{{ type.value }}</span>
+                </li>
+                <li
+                  v-if="dataTypeInput.trim() && !filteredDataTypes.find(t => t.label === dataTypeInput)"
+                  @mousedown.prevent="selectDataType(dataTypeInput.trim().toLowerCase().replace(/\s+/g, '_'), dataTypeInput.trim())"
+                  class="px-4 py-2.5 text-sm cursor-pointer hover:bg-gray-50 border-t border-gray-100 text-gray-600"
+                >
+                  <span class="font-medium" :style="{ color: primaryColor }">+ Eigener Typ: </span>
+                  "{{ dataTypeInput.trim() }}"
+                </li>
+              </ul>
+              <p class="mt-1 text-xs text-gray-500">
+                Wähle einen Typ oder gib einen eigenen ein (z.B. "Termine", "Leads")
+              </p>
             </div>
             
             <div class="md:col-span-2">
@@ -336,7 +363,7 @@
             <div>
               <h3 class="text-lg font-medium text-gray-900">Bereit zum Importieren</h3>
               <p class="text-sm text-gray-600 mt-1">
-                {{ rows.length.toLocaleString() }} Zeilen werden als {{ importSettings.dataType === 'customers' ? 'Kundendaten' : 'Rechnungsdaten' }} importiert
+                {{ rows.length.toLocaleString() }} Zeilen werden als "{{ dataTypeInput || importSettings.dataType }}" importiert
               </p>
             </div>
             <button
@@ -501,10 +528,13 @@
           >
             <div class="flex items-center justify-between">
               <div class="flex-1">
-                <div class="flex items-center space-x-3">
+                <div class="flex items-center gap-2 flex-wrap">
                   <h3 class="text-lg font-medium text-gray-900">{{ batch.source }}</h3>
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :style="{ background: `${primaryColor}1f`, color: primaryColor }">
                     {{ batch.total_rows.toLocaleString() }} Zeilen
+                  </span>
+                  <span v-if="batch.data_type" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                    {{ batch.data_type }}
                   </span>
                 </div>
                 <p class="mt-1 text-sm text-gray-600">{{ batch.note || 'Keine Notiz' }}</p>
@@ -516,12 +546,18 @@
                 </p>
               </div>
               <div class="flex items-center space-x-6">
-                <div class="text-right">
-                  <div class="text-sm text-gray-600">
-                    <span class="font-medium text-green-600">{{ batch.imported_customers?.[0]?.count || 0 }}</span> Kunden
+                <div class="text-right space-y-0.5">
+                  <div v-if="batch.imported_customers?.[0]?.count" class="text-sm text-gray-600">
+                    <span class="font-medium text-green-600">{{ batch.imported_customers[0].count }}</span> Kunden
                   </div>
-                  <div class="text-sm text-gray-600">
-                    <span class="font-medium text-purple-600">{{ batch.imported_invoices?.[0]?.count || 0 }}</span> Rechnungen
+                  <div v-if="batch.imported_invoices?.[0]?.count" class="text-sm text-gray-600">
+                    <span class="font-medium text-purple-600">{{ batch.imported_invoices[0].count }}</span> Rechnungen
+                  </div>
+                  <div v-if="batch.imported_records?.[0]?.count" class="text-sm text-gray-600">
+                    <span class="font-medium" :style="{ color: primaryColor }">{{ batch.imported_records[0].count }}</span> Einträge
+                  </div>
+                  <div v-if="!batch.imported_customers?.[0]?.count && !batch.imported_invoices?.[0]?.count && !batch.imported_records?.[0]?.count" class="text-sm text-gray-400">
+                    –
                   </div>
                 </div>
                 <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -714,6 +750,40 @@
           </div>
         </div>
         
+        <!-- Generic Records Table -->
+        <div v-if="genericRecords.length > 0" class="bg-white rounded-xl shadow border border-gray-200">
+          <div class="p-4 border-b">
+            <h3 class="text-lg font-semibold text-gray-900">
+              {{ selectedBatch?.data_type || 'Einträge' }} ({{ genericRecords.length }})
+            </h3>
+            <p class="text-sm text-gray-600">Batch: {{ selectedBatch?.source }}</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Importiert</th>
+                  <th
+                    v-for="column in getDynamicColumns(genericRecords)"
+                    :key="column"
+                    class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                  >{{ column }}</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-for="record in genericRecords" :key="record.id" class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-gray-500">{{ formatDateTime(record.created_at) }}</td>
+                  <td
+                    v-for="column in getDynamicColumns(genericRecords)"
+                    :key="column"
+                    class="px-4 py-3 text-gray-900 max-w-xs truncate"
+                  >{{ getRawValue(record, column) || '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Pagination -->
         <div v-if="showPagination" class="bg-white rounded-xl shadow border border-gray-200 p-4">
           <div class="flex items-center justify-between">
@@ -870,14 +940,63 @@ const importProgress = reactive({ current: 0, total: 0 })
 const importSettings = reactive({
   source: '',
   note: '',
-  dataType: '' as 'customers' | 'invoices' | ''
+  dataType: '' as string,
 })
+
+// Predefined data types — users can also type their own
+const PREDEFINED_DATA_TYPES = [
+  { value: 'customers', label: 'Kundendaten' },
+  { value: 'invoices', label: 'Rechnungsdaten' },
+  { value: 'appointments', label: 'Termine' },
+  { value: 'leads', label: 'Leads' },
+  { value: 'products', label: 'Produkte' },
+]
+
+const dataTypeInput = ref('')
+const showDataTypeSuggestions = ref(false)
+
+const filteredDataTypes = computed(() => {
+  const q = dataTypeInput.value.toLowerCase()
+  return PREDEFINED_DATA_TYPES.filter(t =>
+    t.label.toLowerCase().includes(q) || t.value.toLowerCase().includes(q)
+  )
+})
+
+function selectDataType(value: string, label: string) {
+  importSettings.dataType = value
+  dataTypeInput.value = label
+  showDataTypeSuggestions.value = false
+}
+
+function onDataTypeBlur() {
+  setTimeout(() => { showDataTypeSuggestions.value = false }, 150)
+  // If user typed something custom, use it as data type
+  if (dataTypeInput.value.trim() && !importSettings.dataType) {
+    importSettings.dataType = dataTypeInput.value.trim().toLowerCase().replace(/\s+/g, '_')
+  }
+}
+
+function onDataTypeInput() {
+  showDataTypeSuggestions.value = true
+  // Reset selection when user types
+  const match = PREDEFINED_DATA_TYPES.find(t => t.label === dataTypeInput.value)
+  if (match) {
+    importSettings.dataType = match.value
+  } else {
+    importSettings.dataType = dataTypeInput.value.trim().toLowerCase().replace(/\s+/g, '_')
+  }
+}
+
+// Is the selected data type one of the structured ones (customers/invoices)?
+const isStructuredType = computed(() =>
+  importSettings.dataType === 'customers' || importSettings.dataType === 'invoices'
+)
 
 // Computed property to check if import is allowed
 const canImport = computed(() => {
   return validationResult.value && 
          importSettings.source.trim() !== '' && 
-         importSettings.dataType !== ''
+         importSettings.dataType.trim() !== ''
 })
 
 // View functionality (from imported-data.vue)
@@ -886,6 +1005,7 @@ const batches = ref<any[]>([])
 const selectedBatch = ref<any>(null)
 const customers = ref<any[]>([])
 const invoices = ref<any[]>([])
+const genericRecords = ref<any[]>([])
 
 // Sorting and filtering
 const sortColumn = ref('')
@@ -1042,6 +1162,10 @@ function resetAll() {
   fileMeta.name = ''
   fileMeta.size = 0
   fileError.value = ''
+  importSettings.dataType = ''
+  importSettings.source = ''
+  importSettings.note = ''
+  dataTypeInput.value = ''
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
@@ -1170,34 +1294,44 @@ async function importData() {
         source: importSettings.source,
         note: importSettings.note,
         totalRows: rows.value.length,
-        createdBy: userId
+        createdBy: userId,
+        dataType: importSettings.dataType
       }
     })
 
     const batchId = batchResponse.batchId
-    const mappedData = rows.value.map(mapRow)
 
-    // Split into chunks to stay within serverless payload limits
-    const endpoint = importSettings.dataType === 'customers'
-      ? '/api/imports/import-customers'
-      : '/api/imports/import-invoices'
-    const payloadKey = importSettings.dataType === 'customers' ? 'customers' : 'invoices'
+    if (isStructuredType.value) {
+      // Structured types: column mapping + dedicated tables
+      const mappedData = rows.value.map(mapRow)
+      const endpoint = importSettings.dataType === 'customers'
+        ? '/api/imports/import-customers'
+        : '/api/imports/import-invoices'
+      const payloadKey = importSettings.dataType === 'customers' ? 'customers' : 'invoices'
 
-    for (let i = 0; i < mappedData.length; i += CHUNK_SIZE) {
-      const chunk = mappedData.slice(i, i + CHUNK_SIZE)
-      await $fetch(endpoint, {
-        method: 'POST',
-        body: {
-          tenantId,
-          batchId,
-          [payloadKey]: chunk,
-          createdBy: userId
-        }
-      })
-      importProgress.current = Math.min(i + CHUNK_SIZE, mappedData.length)
+      for (let i = 0; i < mappedData.length; i += CHUNK_SIZE) {
+        const chunk = mappedData.slice(i, i + CHUNK_SIZE)
+        await $fetch(endpoint, {
+          method: 'POST',
+          body: { tenantId, batchId, [payloadKey]: chunk, createdBy: userId }
+        })
+        importProgress.current = Math.min(i + CHUNK_SIZE, mappedData.length)
+      }
+    } else {
+      // Generic type: store raw JSON as-is
+      const genericData = rows.value.map(row => ({ raw_json: { ...row } }))
+
+      for (let i = 0; i < genericData.length; i += CHUNK_SIZE) {
+        const chunk = genericData.slice(i, i + CHUNK_SIZE)
+        await $fetch('/api/imports/import-records', {
+          method: 'POST',
+          body: { tenantId, batchId, dataType: importSettings.dataType, records: chunk, createdBy: userId }
+        })
+        importProgress.current = Math.min(i + CHUNK_SIZE, genericData.length)
+      }
     }
 
-    alert(`Erfolgreich ${mappedData.length} ${importSettings.dataType === 'customers' ? 'Kunden' : 'Rechnungen'} importiert!`)
+    alert(`Erfolgreich ${rows.value.length.toLocaleString()} Einträge als "${dataTypeInput.value || importSettings.dataType}" importiert!`)
     
     resetAll()
     await loadBatches()
@@ -1236,6 +1370,7 @@ async function viewBatch(batchId: string) {
   // Reset filters and pagination when switching batches
   generalSearch.value = ''
   currentPage.value = 1
+  genericRecords.value = []
   
   // Load available columns for this batch
   await loadAvailableColumns()
@@ -1326,9 +1461,18 @@ async function loadBatchData() {
     
     customers.value = customersResponse.customers || []
     invoices.value = invoicesResponse.invoices || []
-    
-    // Update total count (use the total from the response)
-    totalItems.value = (customersResponse.total || 0) + (invoicesResponse.total || 0)
+
+    // Load generic records if this batch has a non-structured type
+    const batchDataType = selectedBatch.value?.data_type
+    const isStructured = batchDataType === 'customers' || batchDataType === 'invoices' || !batchDataType
+    if (!isStructured) {
+      const recordsResponse = await $fetch('/api/imports/records', { query: queryParams })
+      genericRecords.value = (recordsResponse as any).records || []
+      totalItems.value = (recordsResponse as any).total || 0
+    } else {
+      genericRecords.value = []
+      totalItems.value = (customersResponse.total || 0) + (invoicesResponse.total || 0)
+    }
     
   } catch (error) {
     console.error('Failed to load batch data:', error)

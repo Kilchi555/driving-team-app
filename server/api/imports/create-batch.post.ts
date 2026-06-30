@@ -2,7 +2,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const { tenantId, source, note, totalRows, createdBy } = body
+  const { tenantId, source, note, totalRows, createdBy, dataType } = body
 
   if (!tenantId || !source) {
     throw createError({
@@ -21,7 +21,8 @@ export default defineEventHandler(async (event) => {
         source,
         note,
         total_rows: totalRows,
-        created_by: createdBy
+        created_by: createdBy,
+        data_type: dataType ?? null
       })
       .select()
       .single()
