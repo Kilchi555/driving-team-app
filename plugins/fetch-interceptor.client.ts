@@ -14,6 +14,9 @@ import { logger } from '~/utils/logger'
 let isRedirecting = false
 
 export default defineNuxtPlugin((nuxtApp) => {
+  // Lazily-loaded Supabase client reference (populated on first onRequest call).
+  let _getSupabase: (() => import('@supabase/supabase-js').SupabaseClient) | null = null
+
   // Create intercepted fetch instance with cookies enabled
   // CRITICAL: ofetch will use this instance for all API calls
   const interceptedFetch = $fetch.create({
@@ -21,6 +24,29 @@ export default defineNuxtPlugin((nuxtApp) => {
     // This is critical for httpOnly cookie authentication
     fetchOptions: {
       credentials: 'include' as const // Send cookies with every request
+    },
+    // Inject Authorization: Bearer from the active Supabase session so that
+    // authenticated API calls work even before HTTP-only cookies are synced
+    // (e.g. on cold-start of the Capacitor native app).
+    onRequest: async ({ options }) => {
+      try {
+        const rawHeaders = (options as any).headers
+        const headers: Record<string, string> = rawHeaders
+          ? (typeof (rawHeaders as any).get === 'function'
+            ? Object.fromEntries((rawHeaders as Headers).entries())
+            : { ...(rawHeaders as object) })
+          : {}
+        if (!('Authorization' in headers) && !('authorization' in headers)) {
+          if (!_getSupabase) {
+            const mod = await import('~/utils/supabase')
+            _getSupabase = mod.getSupabase
+          }
+          const { data: { session } } = await _getSupabase().auth.getSession()
+          if (session?.access_token) {
+            ;(options as any).headers = { ...headers, Authorization: `Bearer ${session.access_token}` }
+          }
+        }
+      } catch { /* non-fatal — fall back to cookie-based auth */ }
     },
     onResponseError: async ({ response, error, request }) => {
       const status = response?.status

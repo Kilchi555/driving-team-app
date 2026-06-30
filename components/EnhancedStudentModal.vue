@@ -1383,7 +1383,7 @@
 
 <script setup lang="ts">
 
-import { ref, computed, toRefs, watch } from 'vue'
+import { ref, computed, toRefs, watch, onUnmounted } from 'vue'
 import { logger } from '~/utils/logger'
 import { openPdf } from '~/utils/openPdf'
 import { getSupabase } from '~/utils/supabase'
@@ -2444,30 +2444,35 @@ const getRatingLabel = (rating: number): string | null => {
   return ratingPointsMap.value[rating]?.label || null
 }
 
+// Tracks the currently active lesson-fetch AbortController so we can cancel
+// a stale request when a newer one starts or the component unmounts.
+let _lessonsFetchController: AbortController | null = null
+
 // Load functions
 const loadLessons = async () => {
   if (!props.selectedStudent) return
-  
+
+  // Cancel any in-flight request from a previous call so it doesn't race with this one.
+  _lessonsFetchController?.abort()
+  _lessonsFetchController = new AbortController()
+  const controller = _lessonsFetchController
+
   isLoadingLessons.value = true
   lessonsError.value = null
-  
+
+  // Hard 15-second timeout — abort if the server doesn't respond in time.
+  const timeoutId = setTimeout(() => controller.abort(), 15_000)
+
   try {
     logger.debug('📚 Loading lessons for student:', props.selectedStudent.id)
-    
-    // Use secure backend API instead of direct DB queries
-    // AbortController provides a hard timeout so the loading spinner never hangs forever.
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30_000)
 
-    let response: any
-    try {
-      response = await $fetch('/api/staff/get-student-lessons', {
-        query: { studentId: props.selectedStudent.id },
-        signal: controller.signal,
-      })
-    } finally {
-      clearTimeout(timeoutId)
-    }
+    const response = await $fetch<{ success: boolean; data: any[] }>('/api/staff/get-student-lessons', {
+      query: { studentId: props.selectedStudent.id },
+      signal: controller.signal,
+    })
+
+    // A newer loadLessons() call already cancelled this one — discard stale results.
+    if (controller.signal.aborted) return
 
     if (!response?.success || !response?.data) {
       throw new Error('Failed to load lessons from API')
@@ -2476,30 +2481,27 @@ const loadLessons = async () => {
     const appointmentsData = response.data
     
     // Build evaluations map from API response (evaluations already loaded in API)
-    let evaluationsMap: Record<string, any[]> = {}
+    const evaluationsMap: Record<string, any[]> = {}
     appointmentsData.forEach((apt: any) => {
       evaluationsMap[apt.id] = apt.evaluations || []
     })
     
-    logger.debug('🎯 Frontend received evaluations:', evaluationsMap) // DEBUG
-    
     // Füge Evaluationen zu Appointments hinzu
     const lessonsWithEvaluations = (appointmentsData || []).map((apt: any, index: number) => {
-      const aptEvaluations = (evaluationsMap[apt.id] || []).filter(n => n.evaluation_criteria_id)
-      logger.debug('🎯 Apt evaluations for', apt.id?.slice(0, 8), ':', aptEvaluations) // DEBUG
+      const aptEvaluations = (evaluationsMap[apt.id] || []).filter((n: any) => n.evaluation_criteria_id)
       
       // Filter to show only new or changed evaluations
       let displayEvaluations = aptEvaluations
       
       if (index > 0) {
         const previousApt = appointmentsData[index - 1]
-        const previousEvals = (evaluationsMap[previousApt?.id] || []).filter(n => n.evaluation_criteria_id && n.criteria_rating) || []
+        const previousEvals = (evaluationsMap[previousApt?.id] || []).filter((n: any) => n.evaluation_criteria_id && n.criteria_rating)
         const prevEvalsMap: Record<string, any> = {}
-        previousEvals.forEach(e => {
+        previousEvals.forEach((e: any) => {
           prevEvalsMap[e.evaluation_criteria_id] = e
         })
         
-        displayEvaluations = aptEvaluations.filter(currentEval => {
+        displayEvaluations = aptEvaluations.filter((currentEval: any) => {
           const prevEval = prevEvalsMap[currentEval.evaluation_criteria_id]
           return !prevEval || prevEval.criteria_rating !== currentEval.criteria_rating
         })
@@ -2526,12 +2528,21 @@ const loadLessons = async () => {
     }))
     
     logger.debug('✅ Loaded', lessons.value.length, 'lessons with evaluations')
-    
+
   } catch (error: any) {
+    // If this call was aborted (by a newer call or unmount), stay silent — no error to show.
+    if (controller.signal.aborted) return
     console.error('Error loading lessons:', error)
-    lessonsError.value = error.message || 'Fehler beim Laden der Lektionen'
+    const isTimeout = error?.name === 'AbortError'
+    lessonsError.value = isTimeout
+      ? 'Zeitüberschreitung. Bitte erneut versuchen.'
+      : (error.message || 'Fehler beim Laden der Lektionen')
   } finally {
-    isLoadingLessons.value = false
+    clearTimeout(timeoutId)
+    // Only clear the loading flag for the call that is still "current".
+    if (!controller.signal.aborted) {
+      isLoadingLessons.value = false
+    }
   }
 }
 
@@ -2735,6 +2746,11 @@ const uploadCurrentFile = async (file: File) => {
   }
 }
 
+// Cancel all in-flight lesson requests when the modal is closed / unmounted.
+onUnmounted(() => {
+  _lessonsFetchController?.abort()
+})
+
 // Watch for student changes
 watch(() => props.selectedStudent, (newStudent) => {
   if (newStudent) {
@@ -2755,7 +2771,8 @@ watch(() => props.selectedStudent, (newStudent) => {
   }
 }, { immediate: true })
 
-// Watch for tab changes
+// Watch for tab changes — the AbortController in loadLessons handles any overlap
+// with the initial load triggered by the student-change watch above.
 watch(() => activeTab.value, (newTab) => {
   if ((newTab === 'progress' || newTab === 'payments') && props.selectedStudent) {
     if (newTab === 'progress') {
