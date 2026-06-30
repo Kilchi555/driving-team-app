@@ -201,7 +201,112 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // ============ PHASE 2: Cancel abandoned checkouts ============
+    // ============ PHASE 2: Recover stuck 'processing' payments ============
+    // Payments in 'processing' are held by an optimistic lock set in process.post.ts
+    // when the user is redirected to Wallee. If the Wallee webhook for FAILED/DECLINE
+    // never arrives, the payment stays in 'processing' forever and blocks the pay button.
+    // We mirror the webhook handler: FAILED/DECLINE/CANCELED/VOIDED on a 'processing'
+    // payment → reset to 'pending' so the customer can retry.
+    let processingReleased = 0
+    try {
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+
+      const { data: stuckPayments, error: stuckError } = await supabase
+        .from('payments')
+        .select('id, user_id, tenant_id, wallee_transaction_id, payment_status, created_at, updated_at')
+        .eq('payment_status', 'processing')
+        .eq('payment_method', 'wallee')
+        .not('wallee_transaction_id', 'is', null)
+        .lt('created_at', tenMinutesAgo)
+        .lt('updated_at', tenMinutesAgo)
+
+      if (!stuckError && stuckPayments && stuckPayments.length > 0) {
+        logger.info(`🔍 Found ${stuckPayments.length} stuck 'processing' payment(s) to check`)
+
+        for (const payment of stuckPayments) {
+          try {
+            const walleeConfig = await getWalleeConfigForTenant(payment.tenant_id)
+            const config = getWalleeSDKConfig(walleeConfig.spaceId, walleeConfig.userId, walleeConfig.apiSecret)
+            const transactionService = new Wallee.api.TransactionService(config)
+
+            const response = await transactionService.read(walleeConfig.spaceId, parseInt(payment.wallee_transaction_id))
+            const transaction = response?.body || response
+            const walleeState = transaction?.state
+
+            if (!walleeState) {
+              logger.warn(`⚠️ No Wallee state for processing payment ${payment.id}, skipping`)
+              continue
+            }
+
+            const mappedStatus = STATUS_MAPPING[walleeState] || 'pending'
+            logger.debug(`📊 Processing payment ${payment.id}: Wallee=${walleeState} → ${mappedStatus}`)
+
+            const isTerminalFailure = mappedStatus === 'failed' || mappedStatus === 'cancelled'
+
+            if (isTerminalFailure) {
+              // Wallee says it failed — release the optimistic lock back to pending so the customer can retry
+              logger.info(`🔓 Releasing processing lock for payment ${payment.id} (Wallee: ${walleeState}) → pending`)
+              const { error: releaseErr } = await supabase
+                .from('payments')
+                .update({ payment_status: 'pending', updated_at: new Date().toISOString() })
+                .eq('id', payment.id)
+                .eq('payment_status', 'processing')
+
+              if (releaseErr) {
+                logger.error(`❌ Error releasing lock for payment ${payment.id}:`, releaseErr)
+              } else {
+                processingReleased++
+                await supabase.from('webhook_logs').insert({
+                  transaction_id: payment.wallee_transaction_id,
+                  payment_id: payment.id,
+                  wallee_state: walleeState,
+                  payment_status_before: 'processing',
+                  payment_status_after: 'pending',
+                  success: true,
+                  error_message: 'Processing lock released via cron (Wallee reported failure, webhook missed)',
+                  raw_payload: { recovery: true, wallee_state: walleeState, phase: 'processing_release' }
+                }).catch(() => {})
+              }
+            } else if (mappedStatus === 'completed' || mappedStatus === 'authorized') {
+              // Wallee says it succeeded — update normally (webhook was likely missed)
+              logger.info(`✅ Completing stuck processing payment ${payment.id} (Wallee: ${walleeState}) → ${mappedStatus}`)
+              const updateData: any = { payment_status: mappedStatus, updated_at: new Date().toISOString() }
+              if (mappedStatus === 'completed') updateData.paid_at = new Date().toISOString()
+
+              const { error: completeErr } = await supabase
+                .from('payments')
+                .update(updateData)
+                .eq('id', payment.id)
+                .eq('payment_status', 'processing')
+
+              if (completeErr) {
+                logger.error(`❌ Error completing payment ${payment.id}:`, completeErr)
+              } else {
+                recovered++
+                await supabase.from('webhook_logs').insert({
+                  transaction_id: payment.wallee_transaction_id,
+                  payment_id: payment.id,
+                  wallee_state: walleeState,
+                  payment_status_before: 'processing',
+                  payment_status_after: mappedStatus,
+                  success: true,
+                  error_message: 'Recovered stuck processing payment via cron (webhook missed)',
+                  raw_payload: { recovery: true, wallee_state: walleeState, phase: 'processing_complete' }
+                }).catch(() => {})
+              }
+            }
+            // If Wallee state is still CONFIRMED/PROCESSING/PENDING, the transaction is
+            // still in flight — leave it alone and check again next cycle.
+          } catch (stuckErr: any) {
+            logger.error(`❌ Error checking stuck processing payment ${payment.id}:`, stuckErr.message)
+          }
+        }
+      }
+    } catch (phase2Err: any) {
+      logger.warn('⚠️ Phase 2 (processing lock release) failed:', phase2Err.message)
+    }
+
+    // ============ PHASE 3: Cancel abandoned checkouts ============
     // Pending payments with no user_id older than 3 hours = abandoned checkout.
     // The user started the Wallee checkout page but never completed it.
     // We mark them as cancelled so they don't pollute the dashboard stats.
@@ -240,7 +345,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const duration = Date.now() - startTime
-    logger.info(`✅ Recovery cron completed: ${recovered} recovered, ${failed} failed, ${abandoned} abandoned cancelled in ${duration}ms`)
+    logger.info(`✅ Recovery cron completed: ${recovered} recovered, ${processingReleased} processing locks released, ${failed} failed, ${abandoned} abandoned cancelled in ${duration}ms`)
 
     return {
       success: true,
@@ -248,6 +353,7 @@ export default defineEventHandler(async (event) => {
       summary: {
         checked: pendingPayments.length,
         recovered,
+        processing_locks_released: processingReleased,
         failed,
         abandoned_cancelled: abandoned,
         errors: errors.length > 0 ? errors : undefined

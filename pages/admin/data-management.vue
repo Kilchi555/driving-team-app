@@ -33,6 +33,16 @@
               </svg>
               Übersicht
             </button>
+            <button
+              @click="activeTab = 'search'"
+              :class="['flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors', activeTab === 'search' ? 'text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100']"
+              :style="activeTab === 'search' ? { background: primaryColor } : {}"
+            >
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              Suche
+            </button>
           </div>
         </div>
       </div>
@@ -359,7 +369,7 @@
       <!-- Import Button -->
       <div v-if="validationResult" class="bg-white rounded-lg shadow-sm border">
         <div class="p-6">
-          <div class="flex items-center justify-between">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 class="text-lg font-medium text-gray-900">Bereit zum Importieren</h3>
               <p class="text-sm text-gray-600 mt-1">
@@ -371,7 +381,7 @@
               :disabled="!canImport || importing"
               @click="importData"
               :class="[
-                'px-6 py-3 rounded-lg text-sm font-medium transition-colors',
+                'w-full sm:w-auto px-6 py-3 rounded-lg text-sm font-medium transition-colors',
                 canImport && !importing
                   ? 'bg-green-600 text-white hover:bg-green-700 shadow-sm'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -403,6 +413,163 @@
         </div>
       </div>
     </div>
+    </div>
+
+    <!-- Search Tab -->
+    <div v-if="activeTab === 'search'" class="space-y-6">
+      <!-- Search bar -->
+      <div class="bg-white rounded-lg shadow-sm border p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Import-Daten durchsuchen</h2>
+        <form @submit.prevent="runSearch" class="flex gap-3">
+          <div class="relative flex-1">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Name, E-Mail, Auftragsnummer, …"
+              class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:border-transparent outline-none"
+              :style="{ '--tw-ring-color': primaryColor }"
+              autofocus
+            />
+          </div>
+          <button
+            type="submit"
+            :disabled="searchLoading || searchQuery.trim().length < 2"
+            class="px-5 py-2.5 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            :style="{ background: primaryColor }"
+          >
+            <svg v-if="searchLoading" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            <span v-else>Suchen</span>
+          </button>
+        </form>
+        <p v-if="searchError" class="mt-2 text-sm text-red-600">{{ searchError }}</p>
+      </div>
+
+      <!-- Results -->
+      <template v-if="searchResults">
+        <!-- Summary bar -->
+        <div class="flex flex-wrap gap-3">
+          <div class="bg-white rounded-lg shadow-sm border px-4 py-3 flex items-center gap-2">
+            <span class="text-2xl font-bold text-gray-900">{{ searchResults.totals.customers }}</span>
+            <span class="text-sm text-gray-500">Kunden</span>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm border px-4 py-3 flex items-center gap-2">
+            <span class="text-2xl font-bold text-gray-900">{{ searchResults.totals.invoices }}</span>
+            <span class="text-sm text-gray-500">Rechnungen</span>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm border px-4 py-3 flex items-center gap-2">
+            <span class="text-2xl font-bold text-gray-900">{{ searchResults.totals.records }}</span>
+            <span class="text-sm text-gray-500">Weitere Einträge</span>
+          </div>
+          <!-- Lesson summary badge -->
+          <div v-if="searchResults.lessonSummary" class="bg-white rounded-lg shadow-sm border px-4 py-3 flex items-center gap-2" :style="{ borderLeftWidth: '3px', borderLeftColor: primaryColor }">
+            <span class="text-2xl font-bold" :style="{ color: primaryColor }">{{ searchResults.lessonSummary.lektionen45 }}</span>
+            <div class="text-sm text-gray-500 leading-tight">
+              <div>Lektionen à 45 min</div>
+              <div class="text-xs text-gray-400">{{ searchResults.lessonSummary.count }} Termine · {{ searchResults.lessonSummary.totalMinutes }} min</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- No results -->
+        <div v-if="searchResults.totals.customers === 0 && searchResults.totals.invoices === 0 && searchResults.totals.records === 0" class="bg-white rounded-lg shadow-sm border p-12 text-center">
+          <svg class="w-10 h-10 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <p class="text-gray-500">Keine Treffer für „{{ searchResults.query }}"</p>
+        </div>
+
+        <!-- Customers -->
+        <div v-if="searchResults.customers.length > 0" class="bg-white rounded-lg shadow-sm border overflow-hidden">
+          <div class="px-6 py-4 border-b bg-gray-50 flex items-center gap-2">
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <h3 class="font-medium text-gray-900">Kunden ({{ searchResults.customers.length }})</h3>
+          </div>
+          <div class="divide-y">
+            <div v-for="c in searchResults.customers" :key="c.id" class="px-6 py-3 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6 text-sm">
+              <span class="font-medium text-gray-900 min-w-[180px]">{{ c.name ?? '–' }}</span>
+              <span class="text-gray-500">{{ c.email ?? '–' }}</span>
+              <span class="text-gray-500">{{ c.phone ?? '–' }}</span>
+              <span class="text-gray-400 text-xs">{{ c.city }} {{ c.postalCode }}</span>
+              <span v-if="c.type" class="ml-auto text-xs px-2 py-0.5 bg-gray-100 rounded-full text-gray-600">{{ c.type }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Invoices -->
+        <div v-if="searchResults.invoices.length > 0" class="bg-white rounded-lg shadow-sm border overflow-hidden">
+          <div class="px-6 py-4 border-b bg-gray-50 flex items-center gap-2">
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <h3 class="font-medium text-gray-900">Rechnungen ({{ searchResults.invoices.length }})</h3>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+                <tr>
+                  <th class="px-6 py-2 text-left">Auftragsnr.</th>
+                  <th class="px-6 py-2 text-left">Schüler/in</th>
+                  <th class="px-6 py-2 text-left">Datum</th>
+                  <th class="px-6 py-2 text-left">Status</th>
+                  <th class="px-6 py-2 text-right">Total</th>
+                  <th class="px-6 py-2 text-right">Ausstehend</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y">
+                <tr v-for="inv in searchResults.invoices" :key="inv.id" class="hover:bg-gray-50">
+                  <td class="px-6 py-2 font-mono text-gray-700">{{ inv.orderNumber ?? '–' }}</td>
+                  <td class="px-6 py-2 text-gray-900">{{ inv.student ?? '–' }}</td>
+                  <td class="px-6 py-2 text-gray-500">{{ inv.date ?? '–' }}</td>
+                  <td class="px-6 py-2">
+                    <span :class="['px-2 py-0.5 rounded-full text-xs font-medium', inv.status === 'Bezahlt' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700']">
+                      {{ inv.status ?? '–' }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-2 text-right font-medium text-gray-900">{{ inv.total ? `CHF ${inv.total}` : '–' }}</td>
+                  <td class="px-6 py-2 text-right" :class="inv.outstanding === '0.00' ? 'text-green-600' : 'text-red-600'">
+                    {{ inv.outstanding ? `CHF ${inv.outstanding}` : '–' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Generic records grouped by type -->
+        <template v-for="(recs, type) in searchResults.recordsByType" :key="type">
+          <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <div class="px-6 py-4 border-b bg-gray-50 flex items-center gap-2">
+              <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <h3 class="font-medium text-gray-900 capitalize">{{ type }} ({{ recs.length }})</h3>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+                  <tr>
+                    <th v-for="col in Object.keys(recs[0]?.data ?? {})" :key="col" class="px-4 py-2 text-left whitespace-nowrap">{{ col }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y">
+                  <tr v-for="rec in recs" :key="rec.id" class="hover:bg-gray-50">
+                    <td v-for="col in Object.keys(rec.data ?? {})" :key="col" class="px-4 py-2 text-gray-700 whitespace-nowrap">
+                      {{ rec.data[col] ?? '–' }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </template>
+      </template>
     </div>
 
     <!-- View Tab -->
@@ -915,6 +1082,33 @@ type Row = Record<string, any>
 
 // Tab state
 const activeTab = ref('view')
+
+// ── Search ────────────────────────────────────────────────────────────────────
+const searchQuery = ref('')
+const searchLoading = ref(false)
+const searchError = ref<string | null>(null)
+const searchResults = ref<any | null>(null)
+
+async function runSearch() {
+  const q = searchQuery.value.trim()
+  if (q.length < 2) return
+  const authStore = useAuthStore()
+  const tenantId = authStore.userProfile?.tenant_id
+  if (!tenantId) return
+
+  searchLoading.value = true
+  searchError.value = null
+  searchResults.value = null
+  try {
+    searchResults.value = await $fetch('/api/imports/search', {
+      query: { q, tenantId }
+    })
+  } catch (err: any) {
+    searchError.value = err?.data?.statusMessage || err?.message || 'Suche fehlgeschlagen'
+  } finally {
+    searchLoading.value = false
+  }
+}
 
 // Import functionality (from data-import.vue)
 const fileInputRef = ref<HTMLInputElement | null>(null)
