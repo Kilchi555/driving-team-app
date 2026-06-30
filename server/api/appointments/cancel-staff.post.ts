@@ -198,10 +198,18 @@ export default defineEventHandler(async (event) => {
     // Call handle-cancellation.post.ts with all necessary data.
     // The X-Internal-Secret header proves this is a trusted server-side call.
     const { internalCancellationSecret } = useRuntimeConfig()
+
+    if (!internalCancellationSecret) {
+      throw createError({
+        statusCode: 500,
+        message: 'Server misconfiguration: NUXT_INTERNAL_CANCELLATION_SECRET is not set'
+      })
+    }
+
     const cancellationResult = await $fetch('/api/appointments/handle-cancellation', {
       method: 'POST',
       headers: {
-        'x-internal-secret': internalCancellationSecret as string,
+        'x-internal-secret': internalCancellationSecret,
       },
       body: {
         appointmentId,
@@ -216,6 +224,13 @@ export default defineEventHandler(async (event) => {
         refundDestination: refundDestination || 'wallet',
       }
     }) as any
+
+    if (!cancellationResult?.success) {
+      throw createError({
+        statusCode: 500,
+        message: cancellationResult?.error || 'Cancellation handler returned failure'
+      })
+    }
 
     // ============ LAYER 9: AUDIT LOGGING ============
     await logAudit({
