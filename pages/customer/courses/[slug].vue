@@ -263,7 +263,7 @@
                 </p>
                 <button
                   v-if="session.allowIndividualBooking && session.individualPriceRappen && course.free_slots > 0"
-                  @click.stop="openEnrollmentModal(course)"
+                  @click.stop="openIndividualConfirm(course)"
                   class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border transition-opacity hover:opacity-80"
                   :style="{
                     color: tenantBranding?.primary_color || '#10B981',
@@ -368,6 +368,55 @@
 
     </div><!-- end scrollable content -->
 
+    <!-- Individual Session Confirmation Modal -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showIndividualConfirm"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          @click.self="showIndividualConfirm = false"
+        >
+          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <!-- Icon header -->
+            <div class="px-6 pt-6 pb-4 text-center">
+              <div
+                class="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+                :style="{ backgroundColor: `${tenantBranding?.primary_color || '#10B981'}15` }"
+              >
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" :style="{ color: tenantBranding?.primary_color || '#10B981' }">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-slate-800">Einzelbuchung bestätigen</h3>
+              <p class="mt-2 text-sm text-slate-500 leading-relaxed">
+                Diese Session kann nur einzeln gebucht werden, wenn du die übrigen Kursteile bereits absolviert hast oder anderweitig nachweisen kannst.
+              </p>
+              <p class="mt-3 text-sm font-medium text-slate-700">
+                Bestätigst du, dass du die anderen Kursteile bereits besucht hast?
+              </p>
+            </div>
+
+            <!-- Actions -->
+            <div class="px-6 pb-6 flex flex-col gap-2">
+              <button
+                @click="confirmIndividualBooking"
+                class="w-full py-2.5 rounded-xl text-white font-medium transition-opacity hover:opacity-90"
+                :style="{ backgroundColor: tenantBranding?.primary_color || '#10B981' }"
+              >
+                Ja, ich bestätige
+              </button>
+              <button
+                @click="showIndividualConfirm = false"
+                class="w-full py-2.5 rounded-xl font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
     <!-- Enrollment Modal -->
     <CourseEnrollmentModal
       v-if="selectedCourse"
@@ -376,11 +425,23 @@
       :tenant-id="tenantId"
       :tenant-slug="slug"
       :wallee-enabled-override="tenantWalleeEnabled"
+      :initial-individual-mode="enrollWithIndividualMode"
       @close="closeEnrollmentModal"
       @enrolled="handleEnrolled"
     />
   </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
@@ -446,6 +507,9 @@ const selectedCategory = ref('')
 const selectedLocation = ref('')
 const selectedCourse = ref<any>(null)
 const showEnrollmentModal = ref(false)
+const showIndividualConfirm = ref(false)
+const enrollWithIndividualMode = ref(false)
+const pendingIndividualCourse = ref<any>(null)
 
 // My registrations (authenticated users)
 const myRegistrations = ref<any[]>([])
@@ -754,13 +818,28 @@ const removeDateFromTitle = (title: string): string => {
 }
 
 const openEnrollmentModal = (course: any) => {
+  enrollWithIndividualMode.value = false
   selectedCourse.value = course
   showEnrollmentModal.value = true
+}
+
+const openIndividualConfirm = (course: any) => {
+  pendingIndividualCourse.value = course
+  showIndividualConfirm.value = true
+}
+
+const confirmIndividualBooking = () => {
+  showIndividualConfirm.value = false
+  enrollWithIndividualMode.value = true
+  selectedCourse.value = pendingIndividualCourse.value
+  showEnrollmentModal.value = true
+  pendingIndividualCourse.value = null
 }
 
 const closeEnrollmentModal = () => {
   showEnrollmentModal.value = false
   selectedCourse.value = null
+  enrollWithIndividualMode.value = false
 }
 
 const handleEnrolled = () => {

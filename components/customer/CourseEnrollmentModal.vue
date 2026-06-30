@@ -615,6 +615,7 @@ interface Props {
   tenantId: string
   tenantSlug: string
   walleeEnabledOverride?: boolean  // Pass from public pages to avoid auth-required API call
+  initialIndividualMode?: boolean  // Pre-activate individual session mode
 }
 
 const props = defineProps<Props>()
@@ -768,7 +769,7 @@ const isPartialMode = ref(false)
 const partialConfirmed = ref(false)
 
 // Session-level individual booking (per-session override of category config)
-const isIndividualSessionMode = ref(false)
+const isIndividualSessionMode = ref(props.initialIndividualMode ?? false)
 
 // Sessions that have allow_individual_booking = true, sorted by session_number
 const individualBookableSessions = computed(() =>
@@ -1364,6 +1365,8 @@ watch(() => props.isOpen, (isOpen) => {
   if (isOpen) {
     step.value = isSariCourse.value ? 'lookup' : 'contact'
     showSessionCustomizer.value = false
+    isIndividualSessionMode.value = props.initialIndividualMode ?? false
+    if (isIndividualSessionMode.value) partialConfirmed.value = true
   } else {
     step.value = isSariCourse.value ? 'lookup' : 'contact'
     lookupError.value = null
@@ -1378,6 +1381,7 @@ watch(() => props.isOpen, (isOpen) => {
     formData.value = { faberid: '', birthdate: '', email: '', phone: '', firstName: '', lastName: '', street: '', streetNr: '', zip: '', city: '', licenseNumber: '', birthdateNonSari: '' }
     appliedDiscount.value = null
     isPartialMode.value = false
+    isIndividualSessionMode.value = false
     partialConfirmed.value = false
   }
 })
