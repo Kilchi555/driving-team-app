@@ -158,7 +158,7 @@ export default defineEventHandler(async (event): Promise<TenantBrandingResponse>
 
     if (tenantError) {
       logger.error('❌ Error fetching tenant:', tenantError)
-      throw tenantError
+      throw createError({ statusCode: 503, statusMessage: 'Database unavailable' })
     }
 
     if (!tenant) {
