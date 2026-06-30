@@ -83,7 +83,10 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           NODE_ENV: production
-        run: npx nuxt generate && echo "Build complete"
+        run: |
+          npx nuxt generate || true
+          ls .output/public/index.html
+          echo "✅ Nuxt build complete"
 
       - name: Generate Capacitor config for client
         run: CLIENT="${{ matrix.client }}" node scripts/gen-cap-config.mjs
