@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -82,7 +83,7 @@ export default defineEventHandler(async (event) => {
     console.error('Get MFA methods error:', error)
     
     if (error.statusCode) {
-      throw error
+      throw mapSupabaseError(error)
     }
 
     throw createError({

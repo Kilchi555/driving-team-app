@@ -120,21 +120,40 @@ export const getSupabaseAdmin = (): SupabaseClient => {
   }
   if (!supabaseAdminInstance) {
     const supabaseUrl = process.env.SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    // SUPABASE_SECRET_KEY is the v2 key format (sb_secret_...), SUPABASE_SERVICE_ROLE_KEY is the legacy fallback
+    const serviceKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!supabaseUrl) {
       console.error('❌ Missing SUPABASE_URL for admin client')
       throw new Error('Missing SUPABASE_URL')
     }
     if (!serviceKey) {
-      console.error('❌ Missing SUPABASE_SERVICE_ROLE_KEY for admin client')
-      throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY')
+      console.error('❌ Missing SUPABASE_SECRET_KEY for admin client')
+      throw new Error('Missing SUPABASE_SECRET_KEY')
     }
+    // New-format keys (sb_secret_...) must NOT be sent in Authorization: Bearer.
+    // They are validated via the apikey header only. Override global fetch to strip
+    // the Bearer header when using new-format keys so PostgREST doesn't reject them.
+    const isNewKeyFormat = serviceKey.startsWith('sb_secret_') || serviceKey.startsWith('sb_publishable_')
     supabaseAdminInstance = createClient(supabaseUrl, serviceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
         detectSessionInUrl: false
-      }
+      },
+      global: isNewKeyFormat ? {
+        fetch: (url: RequestInfo | URL, options?: RequestInit) => {
+          if (options?.headers) {
+            const headers = new Headers(options.headers as HeadersInit)
+            // Strip Bearer when it contains a non-JWT (new key format)
+            const auth = headers.get('Authorization') || ''
+            if (auth.startsWith('Bearer sb_')) {
+              headers.delete('Authorization')
+              options = { ...options, headers }
+            }
+          }
+          return fetch(url, options)
+        }
+      } : undefined
     })
   }
   return supabaseAdminInstance

@@ -8,6 +8,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 const TIMEZONE = 'Europe/Zurich'
 
@@ -155,6 +156,6 @@ export default defineEventHandler(async (event) => {
     return { success: true, created: inserted?.length ?? 0, days: workingDays }
   } catch (error: any) {
     logger.error('❌ Error in create-vacation-range:', error.message)
-    throw error
+    throw mapSupabaseError(error)
   }
 })

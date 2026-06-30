@@ -1,5 +1,6 @@
 import { defineEventHandler, getQuery, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
@@ -36,7 +37,7 @@ export default defineEventHandler(async (event) => {
       .eq('tenant_id', userProfile.tenant_id)
       .single()
 
-    if (error) throw error
+    if (error) throw mapSupabaseError(error)
     if (!invoice) throw new Error('Invoice not found')
 
     return { success: true, data: invoice }

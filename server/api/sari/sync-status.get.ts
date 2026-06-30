@@ -6,6 +6,7 @@
 import { getSupabaseServerWithSession } from '~/utils/supabase'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -83,7 +84,7 @@ export default defineEventHandler(async (event) => {
     logger.error('Failed to fetch SARI sync status', { error: error.message })
 
     if (error.statusCode) {
-      throw error
+      throw mapSupabaseError(error)
     }
 
     throw createError({

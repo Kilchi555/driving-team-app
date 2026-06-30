@@ -2,6 +2,7 @@ import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { logger } from '~/utils/logger'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 /**
  * Generic secure database query endpoint
@@ -397,7 +398,7 @@ export default defineEventHandler(async (event) => {
     logger.error('❌ Query endpoint error:', error.message)
 
     if (error.statusCode) {
-      throw error
+      throw mapSupabaseError(error)
     }
 
     throw createError({

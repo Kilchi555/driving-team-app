@@ -1,5 +1,6 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
@@ -35,7 +36,7 @@ export default defineEventHandler(async (event) => {
       .eq('id', invoice_id)
       .eq('tenant_id', userProfile.tenant_id)
 
-    if (error) throw error
+    if (error) throw mapSupabaseError(error)
 
     return { success: true }
   } catch (err: any) {

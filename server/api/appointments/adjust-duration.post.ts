@@ -3,6 +3,7 @@
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -165,7 +166,7 @@ async function handlePriceIncrease(
     }
   } catch (error: any) {
     console.error('❌ Error in handlePriceIncrease:', error)
-    throw error
+    throw mapSupabaseError(error)
   }
 }
 
@@ -328,7 +329,7 @@ async function handlePriceDecrease(
     }
   } catch (error: any) {
     console.error('❌ Error in handlePriceDecrease:', error)
-    throw error
+    throw mapSupabaseError(error)
   }
 }
 
@@ -383,7 +384,7 @@ async function updatePendingPayment(
     }
   } catch (error: any) {
     console.error('❌ Error in updatePendingPayment:', error)
-    throw error
+    throw mapSupabaseError(error)
   }
 }
 

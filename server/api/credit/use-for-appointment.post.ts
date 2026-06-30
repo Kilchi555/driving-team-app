@@ -6,6 +6,7 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateUUID, throwValidationError } from '~/server/utils/validators'
 import { logAudit } from '~/server/utils/audit'
 import { getClientIP } from '~/server/utils/ip-utils'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -280,7 +281,7 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    throw error
+    throw mapSupabaseError(error, 'use-credit-for-appointment')
   }
 })
 

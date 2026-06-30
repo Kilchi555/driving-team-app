@@ -9,6 +9,7 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateUUID } from '~/server/utils/validators'
 import { generateCustomerCancelledAdminEmail } from '~/server/utils/email'
 import { processWalleeRefund } from '~/server/utils/wallee-refund'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -714,7 +715,7 @@ export default defineEventHandler(async (event) => {
       }
     })
     
-    throw error
+    throw mapSupabaseError(error)
   }
 })
 

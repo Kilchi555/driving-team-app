@@ -19,6 +19,7 @@ import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { logger } from '~/utils/logger'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -342,7 +343,7 @@ export default defineEventHandler(async (event) => {
 
     // Don't leak implementation details
     if (error.statusCode && error.statusMessage) {
-      throw error
+      throw mapSupabaseError(error)
     }
 
     throw createError({

@@ -10,6 +10,7 @@ import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-
 import { uploadConversionAdjustment } from '~/server/utils/google-ads-conversion'
 import { sendCapiRefundEvent, sha256Hex } from '~/server/utils/meta-capi'
 import { processWalleeRefund } from '~/server/utils/wallee-refund'
+import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 export default defineEventHandler(async (event) => {
   // ── INTERNAL-ONLY GUARD ────────────────────────────────────────────────
@@ -906,7 +907,7 @@ async function processRefund(
     }
   } catch (error: any) {
     console.error('❌ Error in processRefund:', error)
-    throw error
+    throw mapSupabaseError(error)
   }
 }
 

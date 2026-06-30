@@ -221,6 +221,8 @@ export default defineNuxtConfig({
   supabase: {
     url: process.env.SUPABASE_URL,
     key: process.env.SUPABASE_ANON_KEY,
+    // v2: secret key replaces service_role for SSR server-side queries
+    secretKey: process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
     redirect: false,  // DISABLE automatic redirects - we handle auth manually
     cookieOptions: {
       maxAge: 60 * 60 * 8, // 8h session lifetime
