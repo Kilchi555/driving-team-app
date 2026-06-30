@@ -6,13 +6,12 @@ import { loadRotationLog, loadCredentialConfig, DEFAULT_INTERVALS } from '~/serv
 const CREDENTIAL_META: Record<string, { service: string; description: string; steps: string[] }> = {
   SUPABASE_SERVICE_ROLE_KEY: {
     service: 'Supabase',
-    description: 'Server-seitiger DB-Zugriff',
+    description: 'Server-seitiger DB-Zugriff (neues sb_secret_ Format)',
     steps: [
-      'Supabase Dashboard öffnen → Settings → API → JWT Settings',
-      '"Generate a new secret" klicken (rotiert JWT Secret + alle abgeleiteten Keys)',
-      'Neuen SERVICE_ROLE_KEY unter Settings → API → Service Role Key kopieren',
+      'Supabase Dashboard → Settings → API Keys → "Publishable and secret API keys"',
+      '"New secret key" klicken → neuen Key kopieren',
       'In Vercel Env Var SUPABASE_SERVICE_ROLE_KEY aktualisieren',
-      'Gleichzeitig SUPABASE_ANON_KEY und SUPABASE_JWT_SECRET aktualisieren',
+      'Alten Key in Supabase widerrufen',
       'Vercel Redeploy auslösen',
     ],
   },
@@ -20,20 +19,9 @@ const CREDENTIAL_META: Record<string, { service: string; description: string; st
     service: 'Supabase',
     description: 'Öffentlicher Client-Key',
     steps: [
-      'Wird automatisch mit SUPABASE_JWT_SECRET rotiert',
-      'Settings → API → Anon Key → neuen Wert kopieren',
-      'In Vercel Env Var SUPABASE_ANON_KEY aktualisieren',
-    ],
-  },
-  SUPABASE_JWT_SECRET: {
-    service: 'Supabase',
-    description: 'Signiert alle JWTs — Rotation loggt alle User aus',
-    steps: [
-      '⚠️ WARNUNG: Alle aktiven Benutzer-Sessions werden invalidiert!',
-      'Am besten ausserhalb der Geschäftszeiten durchführen',
-      'Settings → API → JWT Settings → "Generate a new secret"',
-      'Danach SERVICE_ROLE_KEY und ANON_KEY ebenfalls aktualisieren',
-      'Alle drei Werte in Vercel updaten + Redeploy',
+      'Supabase Dashboard → Settings → API Keys → "Publishable and secret API keys"',
+      'Neuen publishable Key erstellen → in Vercel SUPABASE_ANON_KEY aktualisieren',
+      'Alten Key widerrufen',
     ],
   },
   SUPABASE_DB_URL: {
