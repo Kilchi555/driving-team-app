@@ -193,6 +193,7 @@ export default defineEventHandler(async (event) => {
       title,
       duration_minutes,
       status,
+      staff:users!staff_id (first_name, last_name),
       notes (
         id,
         evaluation_criteria_id,
@@ -247,6 +248,9 @@ export default defineEventHandler(async (event) => {
       date: formatDate(apt.start_time),
       durationMinutes: apt.duration_minutes || 0,
       type: apt.type || apt.title || 'Fahrstunde',
+      staffName: apt.staff
+        ? `${apt.staff.first_name || ''} ${apt.staff.last_name || ''}`.trim() || null
+        : null,
       staffNote,
       criteria,
     })
