@@ -8,7 +8,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getTenantBrandingExtended } from '~/server/utils/tenant-branding'
 import { generateEvaluationPdfHtml } from '~/server/utils/evaluation-pdf'
-import type { EvaluationPdfData, EvaluationCategoryPdf } from '~/server/utils/evaluation-pdf'
+import type { EvaluationPdfData, EvaluationLessonPdf } from '~/server/utils/evaluation-pdf'
 import { logger } from '~/utils/logger'
 
 // Lazy-load Puppeteer to avoid spawn issues on server start
@@ -213,10 +213,7 @@ export default defineEventHandler(async (event) => {
   const categoryById: Record<string, { name: string; color: string }> = {}
   ;(categoriesRaw || []).forEach((c: any) => { categoryById[c.id] = { name: c.name, color: c.color || '#6b7280' } })
 
-  // ── Aggregate ratings per criterion (take latest per lesson group) ─────────
-  // Map: criteriaId → { rating, note }
-  const bestRatingByCriteria: Record<string, { rating: number; note: string | null }> = {}
-  // Lesson summary for history section
+  // ── Build per-lesson data with criteria ─────────────────────────────────
   const lessonHistory: EvaluationPdfData['lessons'] = []
 
   let totalLessons = 0
@@ -227,77 +224,33 @@ export default defineEventHandler(async (event) => {
     const staffNote = (apt.notes || []).find((n: any) => !n.evaluation_criteria_id && n.staff_note)?.staff_note || null
 
     totalLessons++
-    if (criteriaEvals.length === 0) return
-    evaluatedLessons++
 
-    // Lesson avg
-    const lessonAvg = criteriaEvals.reduce((s: number, n: any) => s + n.criteria_rating, 0) / criteriaEvals.length
+    const criteria: EvaluationLessonPdf['criteria'] = criteriaEvals
+      .map((n: any) => {
+        const criteriaInfo = criteriaById[n.evaluation_criteria_id]
+        if (!criteriaInfo) return null
+        const categoryInfo = categoryById[criteriaInfo.category_id]
+        return {
+          name: criteriaInfo.name,
+          categoryName: categoryInfo?.name || 'Sonstige',
+          rating: n.criteria_rating,
+          ratingLabel: ratingLabel[n.criteria_rating] || `${n.criteria_rating}/6`,
+          ratingColor: ratingColor[n.criteria_rating] || '#6b7280',
+          note: n.criteria_note || null,
+        }
+      })
+      .filter(Boolean) as EvaluationLessonPdf['criteria']
+
+    if (criteria.length > 0) evaluatedLessons++
 
     lessonHistory.push({
       date: formatDate(apt.start_time),
+      durationMinutes: apt.duration_minutes || 0,
       type: apt.type || apt.title || 'Fahrstunde',
-      averageRating: lessonAvg,
       staffNote,
-      evaluationCount: criteriaEvals.length,
-    })
-
-    criteriaEvals.forEach((n: any) => {
-      const existing = bestRatingByCriteria[n.evaluation_criteria_id]
-      // Store latest rating (appointments are ordered by start_time asc, so this overwrites with latest)
-      bestRatingByCriteria[n.evaluation_criteria_id] = { rating: n.criteria_rating, note: n.criteria_note || null }
-      void existing
+      criteria,
     })
   })
-
-  // ── Build category blocks with criteria ──────────────────────────────────
-  const categoryMap: Record<string, EvaluationCategoryPdf> = {}
-  ;(categoriesRaw || []).forEach((cat: any) => {
-    categoryMap[cat.id] = {
-      name: cat.name,
-      color: cat.color || '#6b7280',
-      averageRating: 0,
-      criteria: [],
-    }
-  })
-
-  let totalRatings = 0
-  let ratingSum = 0
-  let excellentCount = 0
-
-  Object.entries(bestRatingByCriteria).forEach(([criteriaId, { rating, note }]) => {
-    const criteriaInfo = criteriaById[criteriaId]
-    if (!criteriaInfo) return
-
-    const categoryInfo = categoryById[criteriaInfo.category_id]
-    if (!categoryMap[criteriaInfo.category_id]) {
-      categoryMap[criteriaInfo.category_id] = {
-        name: categoryInfo?.name || 'Sonstige',
-        color: categoryInfo?.color || '#6b7280',
-        averageRating: 0,
-        criteria: [],
-      }
-    }
-
-    categoryMap[criteriaInfo.category_id].criteria.push({
-      name: criteriaInfo.name,
-      rating,
-      ratingLabel: ratingLabel[rating] || `${rating}/6`,
-      ratingColor: ratingColor[rating] || '#6b7280',
-      note,
-    })
-
-    totalRatings++
-    ratingSum += rating
-    if (rating >= 5) excellentCount++
-  })
-
-  // Compute category averages and filter out empty categories
-  const categories: EvaluationCategoryPdf[] = Object.values(categoryMap)
-    .filter(cat => cat.criteria.length > 0)
-    .map(cat => {
-      const avg = cat.criteria.reduce((s, c) => s + c.rating, 0) / cat.criteria.length
-      return { ...cat, averageRating: avg }
-    })
 
   // ── Assemble PDF data ─────────────────────────────────────────────────────
   const pdfData: EvaluationPdfData = {
@@ -314,11 +267,7 @@ export default defineEventHandler(async (event) => {
     summary: {
       totalLessons,
       evaluatedLessons,
-      totalRatings,
-      averageRating: totalRatings > 0 ? ratingSum / totalRatings : 0,
-      excellentCount,
     },
-    categories,
     lessons: lessonHistory,
   }
 
@@ -386,9 +335,26 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Evaluation PDF generated successfully for student:', studentUserId, 'size:', pdfBuffer?.length)
 
-    setHeader(event, 'Content-Type', 'application/pdf')
-    setHeader(event, 'Content-Disposition', `attachment; filename="${filename}"`)
-    return send(event, pdfBuffer)
+    // Upload to Supabase Storage and return a URL (same pattern as receipts)
+    // so that native app clients can open it via Browser.open()
+    const year = new Date().getFullYear()
+    const month = String(new Date().getMonth() + 1).padStart(2, '0')
+    const filepath = `evaluations/${year}/${month}/${filename}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('receipts')
+      .upload(filepath, pdfBuffer, { contentType: 'application/pdf', upsert: true })
+
+    if (uploadError) {
+      logger.error('❌ Evaluation PDF upload to storage failed:', uploadError)
+      throw createError({ statusCode: 500, statusMessage: `PDF upload failed: ${uploadError.message}` })
+    }
+
+    const { data: publicData } = supabase.storage
+      .from('receipts')
+      .getPublicUrl(filepath)
+
+    return { success: true, pdfUrl: publicData?.publicUrl, filename }
   } catch (err: any) {
     if (browser) {
       try { await browser.close() } catch { /* ignore */ }

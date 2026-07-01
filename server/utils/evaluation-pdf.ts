@@ -5,25 +5,19 @@ import type { ExtendedTenantBranding } from './tenant-branding'
 
 export interface EvaluationCriterionPdf {
   name: string
+  categoryName: string
   rating: number
   ratingLabel: string
   ratingColor: string
   note?: string | null
 }
 
-export interface EvaluationCategoryPdf {
-  name: string
-  color: string
-  averageRating: number
-  criteria: EvaluationCriterionPdf[]
-}
-
 export interface EvaluationLessonPdf {
   date: string
+  durationMinutes: number
   type: string
-  averageRating: number | null
   staffNote?: string | null
-  evaluationCount: number
+  criteria: EvaluationCriterionPdf[]
 }
 
 export interface EvaluationPdfData {
@@ -35,11 +29,7 @@ export interface EvaluationPdfData {
   summary: {
     totalLessons: number
     evaluatedLessons: number
-    totalRatings: number
-    averageRating: number
-    excellentCount: number // rating >= 5
   }
-  categories: EvaluationCategoryPdf[]
   lessons: EvaluationLessonPdf[]
 }
 
@@ -61,10 +51,6 @@ function darken(hex: string, amount = 30): string {
   return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')
 }
 
-function ratingBarWidth(rating: number, max = 6): string {
-  return `${Math.round((rating / max) * 100)}%`
-}
-
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -80,73 +66,11 @@ export function generateEvaluationPdfHtml(
   logoDataUrl: string | null
 ): string {
   const primary = branding.primaryColor
-  const secondary = branding.secondaryColor
-  const primaryRgb = hexToRgb(primary)
   const primaryDark = darken(primary, 40)
+  const primaryRgb = hexToRgb(primary)
 
   const studentName = `${escapeHtml(data.student.firstName)} ${escapeHtml(data.student.lastName)}`
   const tenantName = escapeHtml(branding.tenantName)
-
-  // --- Category rows ---
-  const categoryRows = data.categories.map(cat => {
-    const avg = cat.averageRating.toFixed(1)
-    const barWidth = ratingBarWidth(cat.averageRating)
-    const catColor = cat.color || primary
-    return `
-      <div class="category-row">
-        <div class="category-dot" style="background:${escapeHtml(catColor)}"></div>
-        <div class="category-name">${escapeHtml(cat.name)}</div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width:${barWidth};background:${escapeHtml(catColor)}"></div>
-        </div>
-        <div class="category-score">${avg} / 6</div>
-      </div>`
-  }).join('')
-
-  // --- Criteria detail sections ---
-  const criteriaDetail = data.categories.map(cat => {
-    const catColor = cat.color || primary
-    const rows = cat.criteria.map(c => {
-      const badgeBg = c.ratingColor || primary
-      return `
-        <tr class="criteria-row">
-          <td class="criteria-name">${escapeHtml(c.name)}</td>
-          <td class="criteria-note">${c.note ? escapeHtml(c.note) : ''}</td>
-          <td class="criteria-badge-cell">
-            <span class="criteria-badge" style="background:${escapeHtml(badgeBg)}">${c.rating} – ${escapeHtml(c.ratingLabel)}</span>
-          </td>
-        </tr>`
-    }).join('')
-
-    return `
-      <div class="criteria-section">
-        <div class="criteria-section-header" style="border-left-color:${escapeHtml(catColor)}">
-          <span class="criteria-section-dot" style="background:${escapeHtml(catColor)}"></span>
-          ${escapeHtml(cat.name)}
-        </div>
-        <table class="criteria-table">
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`
-  }).join('')
-
-  // --- Lesson history rows ---
-  const lessonRows = data.lessons.map((l, i) => {
-    const avgCell = l.averageRating !== null
-      ? `<span class="lesson-avg">${l.averageRating.toFixed(1)}</span>`
-      : `<span class="lesson-no-eval">–</span>`
-    const noteCell = l.staffNote
-      ? `<div class="lesson-note">"${escapeHtml(l.staffNote)}"</div>`
-      : ''
-    const rowClass = i % 2 === 0 ? 'lesson-row even' : 'lesson-row odd'
-    return `
-      <tr class="${rowClass}">
-        <td class="lesson-date">${escapeHtml(l.date)}</td>
-        <td class="lesson-type">${escapeHtml(l.type)}</td>
-        <td class="lesson-count">${l.evaluationCount}</td>
-        <td class="lesson-avg-cell">${avgCell}${noteCell}</td>
-      </tr>`
-  }).join('')
 
   const logoHtml = logoDataUrl
     ? `<img src="${logoDataUrl}" alt="${tenantName}" class="header-logo" />`
@@ -156,12 +80,58 @@ export function generateEvaluationPdfHtml(
     ? `<div class="header-tagline">${escapeHtml(branding.brandTagline)}</div>`
     : ''
 
-  const contactLine = [branding.contactEmail, branding.contactPhone, branding.websiteUrl]
-    .filter(Boolean)
-    .join(' · ')
+  // Build lesson blocks – one card per lesson that has criteria
+  const evaluatedLessons = data.lessons.filter(l => l.criteria.length > 0)
 
-  const noCategories = data.categories.length === 0
-  const noLessons = data.lessons.length === 0
+  const lessonBlocks = evaluatedLessons.map((lesson, idx) => {
+    const durationLabel = lesson.durationMinutes ? `${lesson.durationMinutes} Min.` : ''
+    const typeLabel = lesson.type !== 'Fahrstunde' ? escapeHtml(lesson.type) : ''
+    const metaLine = [durationLabel, typeLabel].filter(Boolean).join(' · ')
+
+    const staffNoteHtml = lesson.staffNote
+      ? `<div class="lesson-staff-note">"${escapeHtml(lesson.staffNote)}"</div>`
+      : ''
+
+    const criteriaRows = lesson.criteria.map(c => {
+      const badgeBg = c.ratingColor || primary
+      return `
+        <tr class="criteria-row">
+          <td class="criteria-name-cell">${escapeHtml(c.name)}</td>
+          <td class="criteria-cat-cell">${escapeHtml(c.categoryName)}</td>
+          <td class="criteria-note-cell">${c.note ? escapeHtml(c.note) : ''}</td>
+          <td class="criteria-badge-cell">
+            <span class="criteria-badge" style="background:${escapeHtml(badgeBg)}">${escapeHtml(c.ratingLabel)}</span>
+          </td>
+        </tr>`
+    }).join('')
+
+    const divider = idx < evaluatedLessons.length - 1 ? '<div class="lesson-divider"></div>' : ''
+
+    return `
+      <div class="lesson-block">
+        <div class="lesson-header">
+          <div class="lesson-date-badge">${escapeHtml(lesson.date)}</div>
+          ${metaLine ? `<div class="lesson-meta">${metaLine}</div>` : ''}
+        </div>
+        ${staffNoteHtml}
+        <table class="criteria-table">
+          <thead>
+            <tr>
+              <th class="th-topic">Thema</th>
+              <th class="th-cat">Kategorie</th>
+              <th class="th-note">Notiz</th>
+              <th class="th-rating">Bewertung</th>
+            </tr>
+          </thead>
+          <tbody>${criteriaRows}</tbody>
+        </table>
+      </div>
+      ${divider}`
+  }).join('')
+
+  const emptyState = evaluatedLessons.length === 0
+    ? `<div class="empty-state">Noch keine bewerteten Lektionen vorhanden</div>`
+    : ''
 
   return `<!DOCTYPE html>
 <html lang="de">
@@ -183,33 +153,29 @@ export function generateEvaluationPdfHtml(
     print-color-adjust: exact;
   }
 
-  .page {
-    width: 210mm;
-    padding: 0;
-    background: #fff;
-  }
+  .page { width: 210mm; background: #fff; }
 
   /* ── Header ── */
   .header {
     background: linear-gradient(135deg, ${primary} 0%, ${primaryDark} 100%);
-    padding: 24px 32px 20px;
+    padding: 22px 32px 18px;
     display: flex;
     align-items: center;
     gap: 20px;
   }
   .header-logo {
-    height: 44px;
-    max-width: 140px;
+    height: 40px;
+    max-width: 130px;
     object-fit: contain;
     filter: brightness(0) invert(1);
   }
   .header-logo-fallback {
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     border-radius: 10px;
     background: rgba(255,255,255,0.25);
     color: #fff;
-    font-size: 18pt;
+    font-size: 17pt;
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -218,7 +184,7 @@ export function generateEvaluationPdfHtml(
   }
   .header-info { flex: 1; }
   .header-title {
-    font-size: 16pt;
+    font-size: 15pt;
     font-weight: 800;
     color: #fff;
     letter-spacing: -0.3px;
@@ -228,153 +194,138 @@ export function generateEvaluationPdfHtml(
     color: rgba(255,255,255,0.75);
     margin-top: 2px;
   }
-  .header-right {
-    text-align: right;
-  }
+  .header-right { text-align: right; }
   .header-student {
-    font-size: 14pt;
+    font-size: 13pt;
     font-weight: 700;
     color: #fff;
   }
   .header-date {
-    font-size: 8pt;
+    font-size: 7.5pt;
     color: rgba(255,255,255,0.75);
     margin-top: 3px;
   }
 
   /* ── Body ── */
-  .body { padding: 24px 32px 32px; }
+  .body { padding: 22px 32px 32px; }
 
-  /* ── Section headings ── */
-  .section-title {
-    font-size: 8pt;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #64748b;
-    margin-bottom: 10px;
-    margin-top: 22px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid #e2e8f0;
-  }
-  .section-title:first-child { margin-top: 0; }
-
-  /* ── Summary tiles ── */
-  .summary-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+  /* ── Summary strip ── */
+  .summary-strip {
+    display: flex;
     gap: 12px;
-    margin-bottom: 4px;
+    margin-bottom: 20px;
   }
   .summary-tile {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
-    padding: 14px 16px;
-    text-align: center;
+    padding: 12px 20px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
   }
   .summary-value {
-    font-size: 22pt;
+    font-size: 20pt;
     font-weight: 800;
     color: ${primary};
     line-height: 1;
   }
   .summary-label {
-    font-size: 7.5pt;
+    font-size: 8pt;
     color: #64748b;
-    margin-top: 4px;
     font-weight: 500;
   }
 
-  /* ── Category bars ── */
-  .categories-list { display: flex; flex-direction: column; gap: 8px; }
-  .category-row {
+  /* ── Section heading ── */
+  .section-title {
+    font-size: 7.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #64748b;
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  /* ── Lesson block ── */
+  .lesson-block { margin-bottom: 0; }
+  .lesson-divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 16px 0;
+  }
+
+  .lesson-header {
     display: flex;
     align-items: center;
     gap: 10px;
+    margin-bottom: 8px;
   }
-  .category-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .category-name {
-    width: 130px;
-    font-size: 9pt;
-    font-weight: 600;
-    color: #334155;
-    flex-shrink: 0;
-  }
-  .bar-track {
-    flex: 1;
-    height: 10px;
-    background: #e2e8f0;
-    border-radius: 999px;
-    overflow: hidden;
-  }
-  .bar-fill {
-    height: 100%;
-    border-radius: 999px;
-    transition: width 0s;
-  }
-  .category-score {
-    width: 50px;
-    text-align: right;
-    font-size: 9pt;
-    font-weight: 700;
-    color: #334155;
-    flex-shrink: 0;
-  }
-
-  /* ── Criteria detail ── */
-  .criteria-section { margin-bottom: 14px; }
-  .criteria-section-header {
-    font-size: 9pt;
+  .lesson-date-badge {
+    font-size: 9.5pt;
     font-weight: 700;
     color: #1e293b;
-    padding: 6px 10px;
+    background: rgba(${primaryRgb}, 0.08);
     border-left: 3px solid ${primary};
-    background: #f8fafc;
+    padding: 4px 10px;
     border-radius: 0 6px 6px 0;
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 7px;
   }
-  .criteria-section-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
+  .lesson-meta {
+    font-size: 8pt;
+    color: #64748b;
+    font-weight: 500;
   }
-  .criteria-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  .criteria-row td {
-    padding: 5px 8px;
-    border-bottom: 1px solid #f1f5f9;
-    vertical-align: top;
-  }
-  .criteria-row:last-child td { border-bottom: none; }
-  .criteria-name {
-    font-size: 8.5pt;
-    font-weight: 600;
-    color: #334155;
-    width: 45%;
-  }
-  .criteria-note {
+  .lesson-staff-note {
     font-size: 8pt;
     color: #64748b;
     font-style: italic;
-    width: 40%;
+    margin-bottom: 8px;
+    padding-left: 4px;
   }
-  .criteria-badge-cell {
-    text-align: right;
-    width: 15%;
-    white-space: nowrap;
+
+  /* ── Criteria table ── */
+  .criteria-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5pt;
   }
+  .criteria-table thead th {
+    text-align: left;
+    font-weight: 600;
+    color: #94a3b8;
+    font-size: 7pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 4px 8px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .th-topic { width: 35%; }
+  .th-cat   { width: 22%; }
+  .th-note  { width: 28%; }
+  .th-rating { width: 15%; text-align: right; }
+
+  .criteria-row td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+  }
+  .criteria-row:last-child td { border-bottom: none; }
+
+  .criteria-name-cell {
+    font-weight: 600;
+    color: #334155;
+  }
+  .criteria-cat-cell {
+    color: #64748b;
+    font-size: 8pt;
+  }
+  .criteria-note-cell {
+    color: #64748b;
+    font-style: italic;
+    font-size: 8pt;
+  }
+  .criteria-badge-cell { text-align: right; white-space: nowrap; }
   .criteria-badge {
     display: inline-block;
     padding: 2px 8px;
@@ -384,50 +335,6 @@ export function generateEvaluationPdfHtml(
     color: #fff;
     white-space: nowrap;
   }
-
-  /* ── Lesson history ── */
-  .lesson-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 8.5pt;
-  }
-  .lesson-table th {
-    text-align: left;
-    font-weight: 600;
-    color: #64748b;
-    font-size: 7.5pt;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 6px 8px;
-    border-bottom: 2px solid #e2e8f0;
-  }
-  .lesson-row.even td { background: #f8fafc; }
-  .lesson-row.odd td { background: #fff; }
-  .lesson-row td {
-    padding: 6px 8px;
-    border-bottom: 1px solid #f1f5f9;
-    vertical-align: top;
-  }
-  .lesson-date { color: #334155; font-weight: 600; white-space: nowrap; }
-  .lesson-type { color: #64748b; }
-  .lesson-count { color: #64748b; text-align: center; }
-  .lesson-avg {
-    display: inline-block;
-    background: rgba(${primaryRgb}, 0.12);
-    color: ${primary};
-    font-weight: 700;
-    padding: 1px 8px;
-    border-radius: 999px;
-    font-size: 8pt;
-  }
-  .lesson-no-eval { color: #94a3b8; }
-  .lesson-note {
-    font-size: 7.5pt;
-    color: #64748b;
-    font-style: italic;
-    margin-top: 2px;
-  }
-  .lesson-avg-cell { vertical-align: middle; }
 
   /* ── Footer ── */
   .footer {
@@ -442,7 +349,7 @@ export function generateEvaluationPdfHtml(
   }
   .footer-brand { font-weight: 600; color: #64748b; }
 
-  /* ── Empty states ── */
+  /* ── Empty state ── */
   .empty-state {
     text-align: center;
     padding: 20px;
@@ -474,56 +381,27 @@ export function generateEvaluationPdfHtml(
   <div class="body">
 
     <!-- Übersicht -->
-    <div class="section-title">Übersicht</div>
-    <div class="summary-grid">
+    <div class="summary-strip">
+      <div class="summary-tile">
+        <div class="summary-value">${data.summary.totalLessons}</div>
+        <div class="summary-label">Fahrstunden total</div>
+      </div>
       <div class="summary-tile">
         <div class="summary-value">${data.summary.evaluatedLessons}</div>
-        <div class="summary-label">Bewertete Lektionen</div>
-      </div>
-      <div class="summary-tile">
-        <div class="summary-value" style="color:${primary}">${data.summary.averageRating > 0 ? data.summary.averageRating.toFixed(1) : '–'}</div>
-        <div class="summary-label">Durchschnittsbewertung</div>
-      </div>
-      <div class="summary-tile">
-        <div class="summary-value">${data.summary.excellentCount}</div>
-        <div class="summary-label">Kriterien auf "Gut"-Niveau</div>
+        <div class="summary-label">davon bewertet</div>
       </div>
     </div>
 
-    <!-- Kategorien -->
-    ${data.categories.length > 0 ? `
-    <div class="section-title">Kategorien</div>
-    <div class="categories-list">
-      ${categoryRows}
-    </div>` : ''}
+    <!-- Lektionen -->
+    <div class="section-title">Lektionen chronologisch</div>
 
-    <!-- Kriterien Detail -->
-    ${data.categories.length > 0 ? `
-    <div class="section-title">Bewertungsdetails</div>
-    ${noCategories ? `<div class="empty-state">Noch keine Bewertungen vorhanden</div>` : criteriaDetail}
-    ` : ''}
-
-    <!-- Lektionen-Verlauf -->
-    ${data.lessons.length > 0 ? `
-    <div class="section-title">Lektionen-Verlauf</div>
-    ${noLessons ? `<div class="empty-state">Noch keine Lektionen vorhanden</div>` : `
-    <table class="lesson-table">
-      <thead>
-        <tr>
-          <th>Datum</th>
-          <th>Lektionstyp</th>
-          <th style="text-align:center">Bewert.</th>
-          <th>Durchschnitt</th>
-        </tr>
-      </thead>
-      <tbody>${lessonRows}</tbody>
-    </table>`}
-    ` : ''}
+    ${emptyState}
+    ${lessonBlocks}
 
     <!-- Footer -->
     <div class="footer">
       <span class="footer-brand">${tenantName}${branding.contactEmail ? ` · ${escapeHtml(branding.contactEmail)}` : ''}${branding.contactPhone ? ` · ${escapeHtml(branding.contactPhone)}` : ''}</span>
-      <span>Dieses Dokument wurde automatisch generiert · ${escapeHtml(data.generatedAt)}</span>
+      <span>Automatisch generiert · ${escapeHtml(data.generatedAt)}</span>
     </div>
 
   </div>
