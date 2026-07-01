@@ -181,12 +181,14 @@ jobs:
           path: android/app/build/outputs/bundle/release/*.aab
           retention-days: 7
 
+      - name: Write service account key
+        run: echo '${{ secrets.GOOGLE_PLAY_JSON_KEY }}' > /tmp/service-account.json
+
       - name: Upload to Play Store
         uses: r0adkll/upload-google-play@v1.1.5
         with:
-          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+          serviceAccountJson: /tmp/service-account.json
           packageName: ${{ steps.config.outputs.bundle_id }}
           releaseFiles: android/app/build/outputs/bundle/release/*.aab
           tracks: ${{ github.event.inputs.track || 'internal' }}
-          status: completed
-          whatsNewDirectory: clients/${{ matrix.client }}/whatsnew/
+          status: draft
