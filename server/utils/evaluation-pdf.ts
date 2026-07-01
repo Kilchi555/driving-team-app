@@ -16,6 +16,7 @@ export interface EvaluationLessonPdf {
   date: string
   durationMinutes: number
   type: string
+  staffName?: string | null
   staffNote?: string | null
   criteria: EvaluationCriterionPdf[]
 }
@@ -85,8 +86,9 @@ export function generateEvaluationPdfHtml(
 
   const lessonBlocks = evaluatedLessons.map((lesson, idx) => {
     const durationLabel = lesson.durationMinutes ? `${lesson.durationMinutes} Min.` : ''
-    const typeLabel = lesson.type !== 'Fahrstunde' ? escapeHtml(lesson.type) : ''
-    const metaLine = [durationLabel, typeLabel].filter(Boolean).join(' · ')
+    const typeLabel = lesson.type ? `Kategorie ${escapeHtml(lesson.type)}` : ''
+    const staffLabel = lesson.staffName ? escapeHtml(lesson.staffName) : ''
+    const metaLine = [durationLabel, typeLabel, staffLabel].filter(Boolean).join(' · ')
 
     const staffNoteHtml = lesson.staffNote
       ? `<div class="lesson-staff-note">"${escapeHtml(lesson.staffNote)}"</div>`
