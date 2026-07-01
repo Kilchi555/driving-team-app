@@ -70,10 +70,11 @@ async function loadLogoDataUrl(logoUrl: string | null, supabase: any): Promise<s
 function formatDate(dateStr: string): string {
   try {
     const d = new Date(dateStr)
-    // Convert UTC → Europe/Zurich for display
     const localStr = d.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
     const local = new Date(localStr)
-    return local.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const datePart = local.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const timePart = local.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+    return `${datePart}, ${timePart} Uhr`
   } catch {
     return dateStr
   }
