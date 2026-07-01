@@ -180,6 +180,6 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
           packageName: ${{ steps.config.outputs.bundle_id }}
           releaseFiles: android/app/build/outputs/bundle/release/*.aab
-          track: ${{ github.event.inputs.track || 'internal' }}
+          tracks: ${{ github.event.inputs.track || 'internal' }}
           status: completed
           whatsNewDirectory: clients/${{ matrix.client }}/whatsnew/
