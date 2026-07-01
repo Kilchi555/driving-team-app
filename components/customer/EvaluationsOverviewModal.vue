@@ -222,16 +222,10 @@ async function exportPdf() {
       throw new Error(err?.statusMessage || err?.message || 'PDF-Generierung fehlgeschlagen')
     }
 
-    const blob = await response.blob()
-    const blobUrl = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = blobUrl
-    a.download = `Meine_Bewertungen_${new Date().toISOString().split('T')[0]}.pdf`
-    a.rel = 'noopener'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 15_000)
+    const data = await response.json()
+    if (!data?.pdfUrl) throw new Error('Keine PDF-URL erhalten')
+    const { openPdf } = await import('~/utils/openPdf')
+    await openPdf(data.pdfUrl, data.filename || 'Meine_Bewertungen.pdf')
   } catch (err: any) {
     console.error('❌ PDF export failed:', err)
     alert(`PDF konnte nicht erstellt werden: ${err.message}`)
