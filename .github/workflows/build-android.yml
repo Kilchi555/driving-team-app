@@ -175,7 +175,7 @@ jobs:
           ./gradlew bundleRelease
 
       - name: Upload to Play Store
-        uses: r0adkll/upload-google-play@v1
+        uses: r0adkll/upload-google-play@v1.1.5
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
           packageName: ${{ steps.config.outputs.bundle_id }}
