@@ -28,7 +28,7 @@ export interface EvaluationPdfData {
   }
   generatedAt: string
   summary: {
-    totalLessons: number
+    totalDurationMinutes: number
     evaluatedLessons: number
   }
   lessons: EvaluationLessonPdf[]
@@ -81,7 +81,12 @@ export function generateEvaluationPdfHtml(
     ? `<div class="header-tagline">${escapeHtml(branding.brandTagline)}</div>`
     : ''
 
-  // Build lesson blocks – one card per lesson that has criteria
+  // 45 min as the standard lesson unit (Swiss driving school norm)
+  const STANDARD_LESSON_MIN = 45
+  const lessonEquivalent = data.summary.totalDurationMinutes / STANDARD_LESSON_MIN
+  const lessonEquivalentDisplay = Number.isInteger(lessonEquivalent)
+    ? lessonEquivalent.toString()
+    : lessonEquivalent.toFixed(1)
   const evaluatedLessons = data.lessons.filter(l => l.criteria.length > 0)
 
   const lessonBlocks = evaluatedLessons.map((lesson, idx) => {
@@ -385,12 +390,8 @@ export function generateEvaluationPdfHtml(
     <!-- Übersicht -->
     <div class="summary-strip">
       <div class="summary-tile">
-        <div class="summary-value">${data.summary.totalLessons}</div>
-        <div class="summary-label">Fahrstunden total</div>
-      </div>
-      <div class="summary-tile">
-        <div class="summary-value">${data.summary.evaluatedLessons}</div>
-        <div class="summary-label">davon bewertet</div>
+        <div class="summary-value">${lessonEquivalentDisplay}</div>
+        <div class="summary-label">Fahrstunden (à 45 Min.)</div>
       </div>
     </div>
 
