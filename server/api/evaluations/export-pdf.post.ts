@@ -218,14 +218,14 @@ export default defineEventHandler(async (event) => {
   // ── Build per-lesson data with criteria ─────────────────────────────────
   const lessonHistory: EvaluationPdfData['lessons'] = []
 
-  let totalLessons = 0
+  let totalDurationMinutes = 0
   let evaluatedLessons = 0
 
   ;(appointmentsRaw || []).forEach((apt: any) => {
     const criteriaEvals = (apt.notes || []).filter((n: any) => n.evaluation_criteria_id && n.criteria_rating)
     const staffNote = (apt.notes || []).find((n: any) => !n.evaluation_criteria_id && n.staff_note)?.staff_note || null
 
-    totalLessons++
+    totalDurationMinutes += apt.duration_minutes || 0
 
     const criteria: EvaluationLessonPdf['criteria'] = criteriaEvals
       .map((n: any) => {
@@ -270,7 +270,7 @@ export default defineEventHandler(async (event) => {
       timeZone: 'Europe/Zurich',
     }),
     summary: {
-      totalLessons,
+      totalDurationMinutes,
       evaluatedLessons,
     },
     lessons: lessonHistory,
