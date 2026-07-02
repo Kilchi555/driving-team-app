@@ -181,14 +181,66 @@ jobs:
           path: android/app/build/outputs/bundle/release/*.aab
           retention-days: 7
 
-      - name: Write service account key
-        run: echo '${{ secrets.GOOGLE_PLAY_JSON_KEY }}' > /tmp/service-account.json
-
       - name: Upload to Play Store
-        uses: r0adkll/upload-google-play@v1.1.5
-        with:
-          serviceAccountJson: /tmp/service-account.json
-          packageName: ${{ steps.config.outputs.bundle_id }}
-          releaseFiles: android/app/build/outputs/bundle/release/*.aab
-          tracks: ${{ github.event.inputs.track || 'internal' }}
-          status: draft
+        env:
+          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+          PACKAGE_NAME: ${{ steps.config.outputs.bundle_id }}
+          TRACK: ${{ github.event.inputs.track || 'internal' }}
+          WHATS_NEW_DIR: clients/${{ matrix.client }}/whatsnew
+        run: |
+          npm install --no-save googleapis glob
+          node << 'EOF'
+          const { google } = require('googleapis');
+          const fs = require('fs');
+          const path = require('path');
+          const { glob } = require('glob');
+
+          async function main() {
+            const keyJson = JSON.parse(process.env.GOOGLE_PLAY_JSON_KEY);
+            const auth = new google.auth.GoogleAuth({
+              credentials: keyJson,
+              scopes: ['https://www.googleapis.com/auth/androidpublisher'],
+            });
+
+            const publisher = google.androidpublisher({ version: 'v3', auth });
+            const packageName = process.env.PACKAGE_NAME;
+            const track = process.env.TRACK;
+
+            console.log(`Creating edit for ${packageName}...`);
+            const editRes = await publisher.edits.insert({ packageName });
+            const editId = editRes.data.id;
+            console.log(`Edit created: ${editId}`);
+
+            const aabFiles = await glob('android/app/build/outputs/bundle/release/*.aab');
+            if (!aabFiles.length) throw new Error('No AAB file found');
+            const aabPath = aabFiles[0];
+            console.log(`Uploading ${aabPath}...`);
+
+            const bundleRes = await publisher.edits.bundles.upload({
+              packageName, editId,
+              media: { mimeType: 'application/octet-stream', body: fs.createReadStream(aabPath) },
+            });
+            const versionCode = bundleRes.data.versionCode;
+            console.log(`Bundle uploaded, versionCode: ${versionCode}`);
+
+            const releaseBody = { status: 'completed', versionCodes: [String(versionCode)] };
+            const whatsNewDir = process.env.WHATS_NEW_DIR;
+            if (fs.existsSync(whatsNewDir)) {
+              releaseBody.releaseNotes = fs.readdirSync(whatsNewDir).map(f => ({
+                language: f.replace('whatsnew-', ''),
+                text: fs.readFileSync(path.join(whatsNewDir, f), 'utf8').trim(),
+              }));
+            }
+
+            await publisher.edits.tracks.update({
+              packageName, editId, track,
+              requestBody: { releases: [releaseBody] },
+            });
+            console.log(`Track ${track} updated`);
+
+            await publisher.edits.commit({ packageName, editId });
+            console.log('Release committed successfully!');
+          }
+
+          main().catch(e => { console.error('Error:', e.message || e); process.exit(1); });
+          EOF
