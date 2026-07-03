@@ -23,61 +23,75 @@
     </div>
 
     <template v-else>
-      <!-- ── Section 1: Pflichtfelder ── -->
+      <!-- ── Section 1: Felder ── -->
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-50">
-          <h2 class="text-sm font-semibold text-gray-800">Pflichtfelder bei Schüler-Erstellung</h2>
-          <p class="text-xs text-gray-400 mt-0.5">Welche Felder muss der Staff beim Erfassen eines neuen Schülers ausfüllen?</p>
+          <h2 class="text-sm font-semibold text-gray-800">Felder bei Schüler-Erstellung</h2>
+          <p class="text-xs text-gray-400 mt-0.5">Klicke ein Feld mehrfach, um zwischen «aus», «optional» und «Pflicht» zu wechseln.</p>
         </div>
+
+        <!-- Legend -->
+        <div class="px-5 pt-3 flex items-center gap-4">
+          <span class="flex items-center gap-1.5 text-xs text-gray-400">
+            <span class="w-4 h-4 rounded border-2 border-gray-200 bg-white inline-block"></span> Aus
+          </span>
+          <span class="flex items-center gap-1.5 text-xs text-gray-500">
+            <span class="w-4 h-4 rounded border-2 border-gray-400 bg-white inline-block flex items-center justify-center">
+              <span class="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block"></span>
+            </span> Optional
+          </span>
+          <span class="flex items-center gap-1.5 text-xs text-gray-700 font-medium">
+            <span class="w-4 h-4 rounded border-2 border-transparent inline-block" :style="primaryBg"></span> Pflicht
+          </span>
+        </div>
+
         <div class="px-5 py-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <label
+          <button
             v-for="field in availableFields"
             :key="field.key"
-            class="flex items-center gap-2.5 cursor-pointer select-none"
-            :class="field.locked ? 'opacity-50 cursor-not-allowed' : ''"
+            type="button"
+            @click="cycleField(field.key)"
+            class="flex items-center gap-2.5 text-left select-none rounded-xl px-2 py-1.5 transition-colors hover:bg-gray-50"
           >
-            <div class="relative flex-shrink-0">
-              <input
-                type="checkbox"
-                class="sr-only"
-                :checked="policy.student_required_fields.includes(field.key)"
-                :disabled="field.locked"
-                @change="toggleField(field.key)"
-              />
-              <div
-                class="w-4 h-4 rounded border-2 flex items-center justify-center transition-colors"
-                :class="policy.student_required_fields.includes(field.key)
-                  ? 'border-transparent'
-                  : 'border-gray-300 bg-white'"
-                :style="policy.student_required_fields.includes(field.key) ? primaryBg : {}"
-              >
-                <svg v-if="policy.student_required_fields.includes(field.key)" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                </svg>
-              </div>
+            <!-- State indicator -->
+            <div class="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+              :class="fieldState(field.key) === 'hidden' ? 'border-gray-200 bg-white' : ''"
+              :style="fieldState(field.key) === 'required'
+                ? primaryBg
+                : fieldState(field.key) === 'optional'
+                  ? { borderColor: '#9ca3af', background: 'white' }
+                  : {}"
+            >
+              <!-- Pflicht: checkmark -->
+              <svg v-if="fieldState(field.key) === 'required'" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+              </svg>
+              <!-- Optional: dot -->
+              <span v-else-if="fieldState(field.key) === 'optional'" class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
             </div>
-            <span class="text-sm text-gray-700">
+            <span class="text-sm" :class="fieldState(field.key) === 'hidden' ? 'text-gray-400' : 'text-gray-700'">
               {{ field.label }}
-              <span v-if="field.locked" class="text-xs text-gray-400">(immer)</span>
+              <span v-if="fieldState(field.key) === 'optional'" class="text-xs text-gray-400 ml-0.5">(opt.)</span>
+              <span v-else-if="fieldState(field.key) === 'required'" class="text-xs text-red-400 ml-0.5">*</span>
             </span>
-          </label>
+          </button>
         </div>
         <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 rounded-b-2xl">
-          <p class="text-xs text-gray-400">Mindestens Vor- oder Nachname ist immer erforderlich.</p>
+          <p class="text-xs text-gray-400">Mindestens ein Name ist immer erforderlich. Telefon ist nur nötig wenn Onboarding-SMS aktiv ist.</p>
         </div>
       </div>
 
       <!-- ── Section 2: Bestätigungs-E-Mail ── -->
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+        <div class="px-5 py-4 flex items-center justify-between">
           <div>
-            <h2 class="text-sm font-semibold text-gray-800">Bestätigungs-E-Mail</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Schüler erhalten nach jedem gebuchten Termin eine Bestätigung per E-Mail.</p>
+            <h2 class="text-sm font-semibold text-gray-800">Terminbestätigungen versenden</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Schüler erhalten nach jedem gebuchten Termin eine Bestätigungs-E-Mail — sofern eine E-Mail-Adresse bekannt ist.</p>
           </div>
           <button
             type="button"
             @click="policy.confirmation_email_enabled = !policy.confirmation_email_enabled"
-            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ml-4"
             :style="policy.confirmation_email_enabled ? primaryBg : { background: '#e5e7eb' }"
           >
             <span
@@ -85,63 +99,6 @@
               :class="policy.confirmation_email_enabled ? 'translate-x-6' : 'translate-x-1'"
             />
           </button>
-        </div>
-
-        <div v-if="policy.confirmation_email_enabled" class="px-5 py-4 space-y-3">
-          <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Zeitpunkt</p>
-          <label
-            v-for="mode in emailModes"
-            :key="mode.value"
-            class="flex items-start gap-3 cursor-pointer rounded-xl border p-3.5 transition-colors"
-            :class="policy.confirmation_email_mode === mode.value
-              ? 'border-transparent shadow-sm'
-              : 'border-gray-100 hover:border-gray-200'"
-            :style="policy.confirmation_email_mode === mode.value ? { ...primaryBgLight, borderColor: primaryColorValue } : {}"
-          >
-            <div class="relative mt-0.5 flex-shrink-0">
-              <input type="radio" class="sr-only" :value="mode.value" v-model="policy.confirmation_email_mode" />
-              <div
-                class="w-4 h-4 rounded-full border-2 flex items-center justify-center"
-                :class="policy.confirmation_email_mode === mode.value ? 'border-transparent' : 'border-gray-300'"
-                :style="policy.confirmation_email_mode === mode.value ? primaryBg : {}"
-              >
-                <div v-if="policy.confirmation_email_mode === mode.value" class="w-1.5 h-1.5 rounded-full bg-white" />
-              </div>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-gray-800">{{ mode.label }}</p>
-              <p class="text-xs text-gray-400 mt-0.5">{{ mode.description }}</p>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <!-- ── Section 3: Registrierung ── -->
-      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
-          <div>
-            <h2 class="text-sm font-semibold text-gray-800">Registrierung erforderlich</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Schüler müssen ein Login-Profil erstellen, um auf ihr Kundenkonto zuzugreifen.</p>
-          </div>
-          <button
-            type="button"
-            @click="policy.registration_required = !policy.registration_required"
-            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
-            :style="policy.registration_required ? primaryBg : { background: '#e5e7eb' }"
-          >
-            <span
-              class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
-              :class="policy.registration_required ? 'translate-x-6' : 'translate-x-1'"
-            />
-          </button>
-        </div>
-        <div class="px-5 py-4">
-          <div class="flex items-start gap-2 text-xs px-3 py-2.5 rounded-xl bg-amber-50 text-amber-700">
-            <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <span>Wenn deaktiviert, kann der Staff alle Daten eingeben und der Schüler muss sich nicht registrieren. Bestätigungs-E-Mails werden trotzdem versandt, falls eine E-Mail-Adresse erfasst wurde.</span>
-          </div>
         </div>
       </div>
 
@@ -281,14 +238,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { usePrimaryColor } from '~/composables/usePrimaryColor'
 import { useUIStore } from '~/stores/ui'
 
 definePageMeta({ layout: 'admin' })
 
-const { primaryBg, primaryText, primaryBgLight, primaryColor } = usePrimaryColor()
-const primaryColorValue = computed(() => primaryColor.value || '#3B82F6')
+const { primaryBg, primaryText, primaryBgLight } = usePrimaryColor()
 const uiStore = useUIStore()
 
 const isLoading = ref(true)
@@ -297,9 +253,8 @@ const saveSuccess = ref(false)
 
 const policy = ref({
   student_required_fields: ['first_name', 'last_name', 'phone'] as string[],
+  student_optional_fields: [] as string[],
   confirmation_email_enabled: true,
-  confirmation_email_mode: 'always' as 'always' | 'after_registration' | 'never',
-  registration_required: false,
   registration_reminder_enabled: false,
   registration_reminder_days: 7,
   registration_reminder_email_enabled: true,
@@ -320,26 +275,26 @@ const availableFields = [
   { key: 'profession', label: 'Beruf', locked: false },
 ]
 
-const emailModes = [
-  {
-    value: 'always',
-    label: 'Sofort senden',
-    description: 'E-Mail wird direkt nach Terminerstellung versandt, sobald eine E-Mail-Adresse bekannt ist.',
-  },
-  {
-    value: 'after_registration',
-    label: 'Erst nach Registrierung',
-    description: 'E-Mail wird erst versandt, nachdem der Schüler sein Profil vollständig erstellt hat.',
-  },
-]
 
-const toggleField = (key: string) => {
-  const idx = policy.value.student_required_fields.indexOf(key)
-  if (idx >= 0) {
-    policy.value.student_required_fields = policy.value.student_required_fields.filter(f => f !== key)
-  } else {
+// Returns 'hidden' | 'optional' | 'required'
+const fieldState = (key: string): 'hidden' | 'optional' | 'required' => {
+  if (policy.value.student_required_fields.includes(key)) return 'required'
+  if (policy.value.student_optional_fields.includes(key)) return 'optional'
+  return 'hidden'
+}
+
+// Cycle: hidden → optional → required → hidden
+const cycleField = (key: string) => {
+  const state = fieldState(key)
+  policy.value.student_required_fields = policy.value.student_required_fields.filter(f => f !== key)
+  policy.value.student_optional_fields = policy.value.student_optional_fields.filter(f => f !== key)
+
+  if (state === 'hidden') {
+    policy.value.student_optional_fields = [...policy.value.student_optional_fields, key]
+  } else if (state === 'optional') {
     policy.value.student_required_fields = [...policy.value.student_required_fields, key]
   }
+  // required → hidden: already removed above
 }
 
 const loadPolicy = async () => {
