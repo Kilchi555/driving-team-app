@@ -294,9 +294,40 @@ export default defineEventHandler(async (event) => {
                   raw_payload: { recovery: true, wallee_state: walleeState, phase: 'processing_complete' }
                 }).catch(() => {})
               }
+            } else if (mappedStatus === 'processing' || mappedStatus === 'pending') {
+              // Wallee is still in CONFIRMED/PROCESSING/PENDING — normally in-flight.
+              // BUT: if the payment has been stuck for more than 2 hours, it's safe to
+              // assume Wallee will never complete it (their session expired, user abandoned).
+              // Release the lock back to pending so the customer can retry.
+              const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+              const isLongStuck = payment.created_at < twoHoursAgo
+
+              if (isLongStuck) {
+                logger.info(`⏰ Payment ${payment.id} stuck in processing/Wallee-${walleeState} for >2h — releasing to pending`)
+                const { error: timeoutReleaseErr } = await supabase
+                  .from('payments')
+                  .update({ payment_status: 'pending', updated_at: new Date().toISOString() })
+                  .eq('id', payment.id)
+                  .eq('payment_status', 'processing')
+
+                if (timeoutReleaseErr) {
+                  logger.error(`❌ Error releasing timeout lock for payment ${payment.id}:`, timeoutReleaseErr)
+                } else {
+                  processingReleased++
+                  await supabase.from('webhook_logs').insert({
+                    transaction_id: payment.wallee_transaction_id,
+                    payment_id: payment.id,
+                    wallee_state: walleeState,
+                    payment_status_before: 'processing',
+                    payment_status_after: 'pending',
+                    success: true,
+                    error_message: `Processing lock released via cron after 2h timeout (Wallee still ${walleeState})`,
+                    raw_payload: { recovery: true, wallee_state: walleeState, phase: 'processing_timeout_release' }
+                  }).catch(() => {})
+                }
+              }
+              // If not yet 2 hours old, leave alone and check again next cycle.
             }
-            // If Wallee state is still CONFIRMED/PROCESSING/PENDING, the transaction is
-            // still in flight — leave it alone and check again next cycle.
           } catch (stuckErr: any) {
             logger.error(`❌ Error checking stuck processing payment ${payment.id}:`, stuckErr.message)
           }

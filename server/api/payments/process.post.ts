@@ -601,6 +601,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
         .from('payments')
         .update({
           wallee_transaction_id: transactionId.toString(),
+          wallee_space_id: spaceId.toString(),
           updated_at: now
         })
         .eq('id', payment.id)
@@ -683,16 +684,20 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     const errorMessage = error.statusMessage || error.message || 'Internal server error'
     const statusCode = error.statusCode || 500
 
-    // If we claimed the processing lock but Wallee/downstream failed,
-    // reset to pending so the customer can retry.
-    if (auditDetails.claimed_lock && userData?.id) {
+    // If we claimed the processing lock OR were retrying an already-processing payment
+    // and Wallee/downstream failed, reset to pending so the customer can retry.
+    // claimedLock covers the normal "pending → processing" path.
+    // We also reset for the "already processing" retry path (claimedLock = false) to avoid
+    // permanently stuck payments when an error occurs mid-retry.
+    const shouldReleaseLock = auditDetails.claimed_lock || payment?.payment_status === 'processing'
+    if (shouldReleaseLock && body?.paymentId) {
       try {
         await getSupabaseAdmin()
           .from('payments')
           .update({ payment_status: 'pending', updated_at: new Date().toISOString() })
-          .eq('id', body?.paymentId)
+          .eq('id', body.paymentId)
           .eq('payment_status', 'processing')
-        logger.info('🔓 Payment lock released back to pending after error:', body?.paymentId)
+        logger.info('🔓 Payment lock released back to pending after error:', body.paymentId)
       } catch (resetErr) {
         logger.error('⚠️ Could not reset payment lock to pending:', resetErr)
       }
