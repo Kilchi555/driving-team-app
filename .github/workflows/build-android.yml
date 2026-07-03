@@ -158,8 +158,12 @@ jobs:
         env:
           KEYSTORE_ALIAS: ${{ steps.config.outputs.keystore_alias }}
           KEYSTORE_PASSWORD: ${{ steps.keystore.outputs.keystore_password }}
+          VERSION_CODE: ${{ github.run_number }}
         run: |
           cd android
+          # Patch versionCode using run number (starts at 1, always increments)
+          VERSION_CODE=$((github_run_number + 1))
+          sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/" app/build.gradle
           cat >> app/build.gradle << 'EOF'
 
           android.signingConfigs {
