@@ -139,6 +139,8 @@
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Verwaltung</p>
             <NuxtLink v-if="shouldShowNavLink('courses_enabled')" to="/admin/courses" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/courses') ? 'drawer-active' : ''">Kurse</NuxtLink>
+            <NuxtLink to="/admin/vehicle-rentals" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/vehicle-rentals') ? 'drawer-active' : ''">Fahrzeugvermietung</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('cash_management_enabled')" to="/admin/cash-management" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/cash-management') ? 'drawer-active' : ''">Kassen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('cancellation_management_enabled')" to="/admin/cancellation-management" @click="showMobileMenu = false"
@@ -149,6 +151,8 @@
               class="drawer-link" :class="isActive('/admin/staff-hours') ? 'drawer-active' : ''">Stunden</NuxtLink>
             <NuxtLink to="/admin/payment-reminders" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/payment-reminders') ? 'drawer-active' : ''">Erinnerungen</NuxtLink>
+            <NuxtLink to="/admin/booking-policy" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/booking-policy') ? 'drawer-active' : ''">Buchung & Onboarding</NuxtLink>
 
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Weitere</p>
             <NuxtLink to="/admin/marketing" @click="showMobileMenu = false"
@@ -160,7 +164,7 @@
             <NuxtLink v-if="shouldShowNavLink('discounts_enabled')" to="/admin/discounts" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/discounts') ? 'drawer-active' : ''">Rabatte</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('categories_enabled')" to="/admin/categories" @click="showMobileMenu = false"
-              class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">Kategorien</NuxtLink>
+              class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">Kategorien & Preise</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('examiners_enabled')" to="/admin/examiners" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/examiners') ? 'drawer-active' : ''">Experten</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('evaluations_enabled')" to="/admin/evaluation-system" @click="showMobileMenu = false"
@@ -169,8 +173,6 @@
               class="drawer-link" :class="isActive('/admin/exam-statistics') ? 'drawer-active' : ''">Prüfungen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('affiliate_enabled')" to="/admin/affiliate" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/affiliate') ? 'drawer-active' : ''">Affiliate</NuxtLink>
-            <NuxtLink to="/admin/pricing" @click="showMobileMenu = false"
-              class="drawer-link" :class="isActive('/admin/pricing') ? 'drawer-active' : ''">Preise</NuxtLink>
 
             <!-- Super Admin only -->
             <template v-if="currentUser?.role === 'super_admin'">
@@ -237,6 +239,8 @@
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Verwaltung</p>
             <NuxtLink v-if="shouldShowNavLink('courses_enabled')" to="/admin/courses"
               class="drawer-link" :class="isActive('/admin/courses') ? 'drawer-active' : ''">Kurse</NuxtLink>
+            <NuxtLink to="/admin/vehicle-rentals"
+              class="drawer-link" :class="isActive('/admin/vehicle-rentals') ? 'drawer-active' : ''">Fahrzeugvermietung</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('cash_management_enabled')" to="/admin/cash-management"
               class="drawer-link" :class="isActive('/admin/cash-management') ? 'drawer-active' : ''">Kassen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('cancellation_management_enabled')" to="/admin/cancellation-management"
@@ -247,6 +251,8 @@
               class="drawer-link" :class="isActive('/admin/staff-hours') ? 'drawer-active' : ''">Stunden</NuxtLink>
             <NuxtLink to="/admin/payment-reminders"
               class="drawer-link" :class="isActive('/admin/payment-reminders') ? 'drawer-active' : ''">Erinnerungen</NuxtLink>
+            <NuxtLink to="/admin/booking-policy"
+              class="drawer-link" :class="isActive('/admin/booking-policy') ? 'drawer-active' : ''">Buchung & Onboarding</NuxtLink>
 
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Weitere</p>
             <NuxtLink to="/admin/marketing"
@@ -258,7 +264,7 @@
             <NuxtLink v-if="shouldShowNavLink('discounts_enabled')" to="/admin/discounts"
               class="drawer-link" :class="isActive('/admin/discounts') ? 'drawer-active' : ''">Rabatte</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('categories_enabled')" to="/admin/categories"
-              class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">Kategorien</NuxtLink>
+              class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">Kategorien & Preise</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('examiners_enabled')" to="/admin/examiners"
               class="drawer-link" :class="isActive('/admin/examiners') ? 'drawer-active' : ''">Experten</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('evaluations_enabled')" to="/admin/evaluation-system"
@@ -267,8 +273,6 @@
               class="drawer-link" :class="isActive('/admin/exam-statistics') ? 'drawer-active' : ''">Prüfungen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('affiliate_enabled')" to="/admin/affiliate"
               class="drawer-link" :class="isActive('/admin/affiliate') ? 'drawer-active' : ''">Affiliate</NuxtLink>
-            <NuxtLink to="/admin/pricing"
-              class="drawer-link" :class="isActive('/admin/pricing') ? 'drawer-active' : ''">Preise</NuxtLink>
 
             <!-- Super Admin only -->
             <template v-if="currentUser?.role === 'super_admin'">
