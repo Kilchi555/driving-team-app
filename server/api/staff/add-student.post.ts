@@ -24,7 +24,7 @@ import { v4 as uuidv4 } from 'uuid'
 interface StudentData {
   first_name?: string
   last_name?: string
-  phone: string
+  phone?: string
   email?: string
   birthdate?: string
   street?: string
@@ -34,6 +34,7 @@ interface StudentData {
   profession?: string
   category?: string
   assigned_staff_id?: string
+  skip_sms?: boolean
 }
 
 export default defineEventHandler(async (event) => {
@@ -66,14 +67,22 @@ export default defineEventHandler(async (event) => {
 
     // 3. INPUT VALIDATION
     const body = await readBody<StudentData>(event)
-    
-    if (!body.phone?.trim()) {
-      throw createError({ statusCode: 400, message: 'Phone number required' })
-    }
 
     const hasName = (body.first_name?.trim() || body.last_name?.trim())
     if (!hasName) {
       throw createError({ statusCode: 400, message: 'First or last name required' })
+    }
+
+    const skipSms = body.skip_sms === true
+
+    // Phone is required when SMS onboarding is active
+    if (!skipSms && !body.phone?.trim()) {
+      throw createError({ statusCode: 400, message: 'Phone number required for SMS onboarding' })
+    }
+
+    // Need at least phone or email to contact the student
+    if (!body.phone?.trim() && !body.email?.trim()) {
+      throw createError({ statusCode: 400, message: 'Phone or email required' })
     }
 
     logger.debug('📝 Creating student:', {
@@ -83,12 +92,12 @@ export default defineEventHandler(async (event) => {
     })
 
     // 4. CHECK FOR DUPLICATES
-    const { data: existingByPhone } = await supabase
+    const { data: existingByPhone } = body.phone?.trim() ? await supabase
       .from('users')
       .select('id, first_name, last_name, onboarding_status, is_active, auth_user_id')
       .eq('phone', body.phone.trim())
       .eq('tenant_id', userProfile.tenant_id)
-      .single()
+      .single() : { data: null }
 
     if (existingByPhone) {
       const error: any = new Error('DUPLICATE_PHONE')
@@ -111,7 +120,7 @@ export default defineEventHandler(async (event) => {
         id: newStudentId,
         first_name: body.first_name?.trim() || '',
         last_name: body.last_name?.trim() || '',
-        phone: body.phone.trim(),
+        phone: body.phone?.trim() || null,
         email: body.email?.trim() || null,
         birthdate: body.birthdate || null,
         street: body.street?.trim() || null,
@@ -168,8 +177,8 @@ export default defineEventHandler(async (event) => {
     let onboardingLink = `https://app.simy.ch/onboarding/${onboardingToken}`
     let loginLink = `https://app.simy.ch/${tenantSlug}`
 
-    // Send SMS if phone exists
-    if (body.phone) {
+    // Send SMS if phone exists and not skipped by policy
+    if (body.phone && !skipSms) {
       try {
         logger.debug('📱 Sending onboarding SMS to:', body.phone)
         

@@ -50,14 +50,10 @@ export default defineEventHandler(async (event) => {
       .eq('id', tenantId)
       .maybeSingle()
 
-    const DEFAULT_POLICY = {
-      confirmation_email_enabled: true,
-      confirmation_email_mode: 'always' as 'always' | 'after_registration' | 'never',
-    }
-    const bookingPolicy = { ...DEFAULT_POLICY, ...(tenantForPolicy?.booking_policy ?? {}) }
+    const confirmationEmailEnabled = (tenantForPolicy?.booking_policy as any)?.confirmation_email_enabled !== false
 
     // 2a. Admin disabled confirmation emails entirely
-    if (!bookingPolicy.confirmation_email_enabled) {
+    if (!confirmationEmailEnabled) {
       logger.debug('⏭️ Confirmation emails disabled by tenant policy')
       return { success: true, skipped: true, reason: 'policy_disabled', message: 'Confirmation emails disabled by admin' }
     }
@@ -73,19 +69,15 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 3. Check onboarding status vs. policy mode
+    // 3. Check if user is still in onboarding (no email captured by staff yet)
     if (user.onboarding_status === 'pending') {
-      if (bookingPolicy.confirmation_email_mode === 'after_registration') {
-        logger.debug('⏭️ Mode=after_registration: skipping until onboarding complete')
-        return {
-          success: true,
-          skipped: true,
-          reason: 'user_onboarding_pending',
-          message: 'User onboarding pending, will send after completion'
-        }
+      logger.debug('⏭️ User is still in onboarding, skipping appointment confirmation')
+      return {
+        success: true,
+        skipped: true,
+        reason: 'user_onboarding_pending',
+        message: 'User onboarding pending, will send after completion'
       }
-      // mode=always → send immediately even if pending (email was captured by staff)
-      logger.debug('✅ Mode=always: sending confirmation despite pending onboarding status')
     }
 
     // 4. Get appointment data with payment

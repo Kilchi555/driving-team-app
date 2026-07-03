@@ -113,7 +113,8 @@
             </svg>
             <span>
               Mindestens Vor- oder Nachname erforderlich.
-              <template v-if="!bookingPolicy.onboarding_sms_enabled"> Onboarding-SMS ist deaktiviert.</template>
+              <template v-if="bookingPolicy.onboarding_sms_enabled"> Telefonnummer für Onboarding-SMS erforderlich.</template>
+              <template v-else> Onboarding-SMS deaktiviert – keine Telefonnummer nötig.</template>
             </span>
           </div>
 
@@ -166,7 +167,7 @@
           </div>
 
           <!-- E-Mail -->
-          <div v-if="isFieldRequired('email') || bookingPolicy.confirmation_email_enabled">
+          <div v-if="isFieldVisible('email') || bookingPolicy.confirmation_email_enabled">
             <label for="email" class="block text-xs font-medium text-gray-500 mb-1">
               E-Mail<span v-if="isFieldRequired('email')" class="text-red-400 ml-0.5">*</span>
               <span v-else class="text-gray-400 font-normal ml-1">(für Terminbestätigung)</span>
@@ -183,7 +184,7 @@
           </div>
 
           <!-- Geburtsdatum -->
-          <div v-if="isFieldRequired('birthdate')">
+          <div v-if="isFieldVisible('birthdate')">
             <label for="birthdate" class="block text-xs font-medium text-gray-500 mb-1">
               Geburtsdatum<span class="text-red-400 ml-0.5">*</span>
             </label>
@@ -197,8 +198,8 @@
             <p v-if="errors.birthdate" class="text-red-500 text-xs mt-1">{{ errors.birthdate }}</p>
           </div>
 
-          <!-- Adresse (nur wenn mind. ein Adressfeld required) -->
-          <template v-if="isFieldRequired('street') || isFieldRequired('zip') || isFieldRequired('city')">
+          <!-- Adresse -->
+          <template v-if="isFieldVisible('street') || isFieldVisible('zip') || isFieldVisible('city')">
             <div class="grid grid-cols-3 gap-3">
               <div class="col-span-2">
                 <label class="block text-xs font-medium text-gray-500 mb-1">
@@ -255,7 +256,7 @@
           </template>
 
           <!-- Beruf -->
-          <div v-if="isFieldRequired('profession')">
+          <div v-if="isFieldVisible('profession')">
             <label class="block text-xs font-medium text-gray-500 mb-1">
               Beruf<span class="text-red-400 ml-0.5">*</span>
             </label>
@@ -341,11 +342,15 @@ const router = useRouter()
 // ── Booking policy ──────────────────────────────────────────────────────────
 const bookingPolicy = ref({
   student_required_fields: ['first_name', 'last_name', 'phone'] as string[],
+  student_optional_fields: [] as string[],
   onboarding_sms_enabled: true,
   confirmation_email_enabled: true,
 })
 
 const isFieldRequired = (key: string) => bookingPolicy.value.student_required_fields.includes(key)
+const isFieldVisible = (key: string) =>
+  bookingPolicy.value.student_required_fields.includes(key) ||
+  bookingPolicy.value.student_optional_fields.includes(key)
 
 onMounted(async () => {
   try {
@@ -462,9 +467,18 @@ const errors = ref<Record<string, string>>({})
 
 const isFormValid = computed(() => {
   const required = bookingPolicy.value.student_required_fields
+  const smsEnabled = bookingPolicy.value.onboarding_sms_enabled
+
   const hasName = form.value.first_name.trim() || form.value.last_name.trim()
   if (!hasName) return false
 
+  // Phone required when SMS is enabled
+  if (smsEnabled && (!form.value.phone.trim() || form.value.phone.trim().length < 10)) return false
+
+  // Without SMS: need at least phone or email
+  if (!smsEnabled && !form.value.phone.trim() && !form.value.email.trim()) return false
+
+  // Honour additional required fields from admin policy
   if (required.includes('phone') && (!form.value.phone.trim() || form.value.phone.trim().length < 10)) return false
   if (required.includes('email') && !form.value.email.trim()) return false
   if (required.includes('birthdate') && !form.value.birthdate) return false
@@ -508,15 +522,23 @@ const formatPhoneNumber = (phone: string) => {
 const validateForm = () => {
   errors.value = {}
   const required = bookingPolicy.value.student_required_fields
+  const smsEnabled = bookingPolicy.value.onboarding_sms_enabled
 
   const hasName = form.value.first_name.trim() || form.value.last_name.trim()
   if (!hasName) {
     errors.value.first_name = 'Mindestens Vor- oder Nachname erforderlich'
   }
 
-  if (required.includes('phone')) {
+  if (smsEnabled || required.includes('phone')) {
     const hasPhone = form.value.phone.trim() && form.value.phone.trim().length >= 10
-    if (!hasPhone) errors.value.phone = 'Gültige Telefonnummer erforderlich'
+    if (!hasPhone) errors.value.phone = smsEnabled
+      ? 'Telefonnummer erforderlich (wird für Onboarding-SMS benötigt)'
+      : 'Gültige Telefonnummer erforderlich'
+  }
+
+  // Without SMS: need at least phone or email
+  if (!smsEnabled && !form.value.phone.trim() && !form.value.email.trim()) {
+    errors.value.email = 'Telefon oder E-Mail erforderlich'
   }
 
   if (required.includes('email') && !form.value.email.trim()) {
