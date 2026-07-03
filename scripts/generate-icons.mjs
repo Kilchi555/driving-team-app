@@ -145,11 +145,16 @@ async function generateAndroidIcons() {
       .toFile(join(outDir, 'ic_launcher_round.png'))
   }
 
+  // Adaptive foreground: shrink icon to 72% with transparent padding
+  // so Android's circular mask shows the full icon without double-circle effect
   for (const { dir, size } of ANDROID_ADAPTIVE_FOREGROUND) {
     const outDir = join(androidResDir, dir)
     mkdirSync(outDir, { recursive: true })
+    const innerSize = Math.round(size * 0.72)
+    const padding = Math.round((size - innerSize) / 2)
     await sharp(iconSrc)
-      .resize(size, size)
+      .resize(innerSize, innerSize)
+      .extend({ top: padding, bottom: padding, left: padding, right: padding, background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .toFile(join(outDir, 'ic_launcher_foreground.png'))
   }
   console.log(`  ✅ ${ANDROID_ICONS.length} Android icon densities generated`)
