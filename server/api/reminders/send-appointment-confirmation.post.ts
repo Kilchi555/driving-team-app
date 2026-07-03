@@ -43,7 +43,26 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 2. Check if user has email
+    // 2. Load booking policy for this tenant
+    const { data: tenantForPolicy } = await supabase
+      .from('tenants')
+      .select('booking_policy')
+      .eq('id', tenantId)
+      .maybeSingle()
+
+    const DEFAULT_POLICY = {
+      confirmation_email_enabled: true,
+      confirmation_email_mode: 'always' as 'always' | 'after_registration' | 'never',
+    }
+    const bookingPolicy = { ...DEFAULT_POLICY, ...(tenantForPolicy?.booking_policy ?? {}) }
+
+    // 2a. Admin disabled confirmation emails entirely
+    if (!bookingPolicy.confirmation_email_enabled) {
+      logger.debug('⏭️ Confirmation emails disabled by tenant policy')
+      return { success: true, skipped: true, reason: 'policy_disabled', message: 'Confirmation emails disabled by admin' }
+    }
+
+    // 2b. Check if user has email
     if (!user.email || user.email.trim() === '') {
       logger.debug('⏭️ User has no email yet, skipping appointment confirmation')
       return {
@@ -54,15 +73,19 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 3. Check if user is still in onboarding
+    // 3. Check onboarding status vs. policy mode
     if (user.onboarding_status === 'pending') {
-      logger.debug('⏭️ User is still in onboarding, skipping appointment confirmation')
-      return {
-        success: true,
-        skipped: true,
-        reason: 'user_onboarding_pending',
-        message: 'User onboarding pending, will send after completion'
+      if (bookingPolicy.confirmation_email_mode === 'after_registration') {
+        logger.debug('⏭️ Mode=after_registration: skipping until onboarding complete')
+        return {
+          success: true,
+          skipped: true,
+          reason: 'user_onboarding_pending',
+          message: 'User onboarding pending, will send after completion'
+        }
       }
+      // mode=always → send immediately even if pending (email was captured by staff)
+      logger.debug('✅ Mode=always: sending confirmation despite pending onboarding status')
     }
 
     // 4. Get appointment data with payment

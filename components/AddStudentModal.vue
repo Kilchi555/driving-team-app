@@ -111,13 +111,18 @@
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            Mindestens Vor- oder Nachname + Telefonnummer erforderlich
+            <span>
+              Mindestens Vor- oder Nachname erforderlich.
+              <template v-if="!bookingPolicy.onboarding_sms_enabled"> Onboarding-SMS ist deaktiviert.</template>
+            </span>
           </div>
 
           <!-- Vorname / Nachname -->
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label for="firstName" class="block text-xs font-medium text-gray-500 mb-1">Vorname</label>
+              <label for="firstName" class="block text-xs font-medium text-gray-500 mb-1">
+                Vorname<span v-if="isFieldRequired('first_name')" class="text-red-400 ml-0.5">*</span>
+              </label>
               <input
                 id="firstName"
                 v-model="form.first_name"
@@ -129,7 +134,9 @@
               <p v-if="errors.first_name" class="text-red-500 text-xs mt-1">{{ errors.first_name }}</p>
             </div>
             <div>
-              <label for="lastName" class="block text-xs font-medium text-gray-500 mb-1">Nachname</label>
+              <label for="lastName" class="block text-xs font-medium text-gray-500 mb-1">
+                Nachname<span v-if="isFieldRequired('last_name')" class="text-red-400 ml-0.5">*</span>
+              </label>
               <input
                 id="lastName"
                 v-model="form.last_name"
@@ -143,8 +150,10 @@
           </div>
 
           <!-- Telefon -->
-          <div>
-            <label for="phone" class="block text-xs font-medium text-gray-500 mb-1">Telefonnummer *</label>
+          <div v-if="isFieldRequired('phone') || true">
+            <label for="phone" class="block text-xs font-medium text-gray-500 mb-1">
+              Telefonnummer<span v-if="isFieldRequired('phone')" class="text-red-400 ml-0.5">*</span>
+            </label>
             <input
               id="phone"
               v-model="form.phone"
@@ -154,6 +163,108 @@
               :class="errors.phone ? 'border-red-300' : 'border-gray-200'"
             >
             <p v-if="errors.phone" class="text-red-500 text-xs mt-1">{{ errors.phone }}</p>
+          </div>
+
+          <!-- E-Mail -->
+          <div v-if="isFieldRequired('email') || bookingPolicy.confirmation_email_enabled">
+            <label for="email" class="block text-xs font-medium text-gray-500 mb-1">
+              E-Mail<span v-if="isFieldRequired('email')" class="text-red-400 ml-0.5">*</span>
+              <span v-else class="text-gray-400 font-normal ml-1">(für Terminbestätigung)</span>
+            </label>
+            <input
+              id="email"
+              v-model="form.email"
+              type="email"
+              placeholder="max@beispiel.ch"
+              class="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
+              :class="errors.email ? 'border-red-300' : 'border-gray-200'"
+            >
+            <p v-if="errors.email" class="text-red-500 text-xs mt-1">{{ errors.email }}</p>
+          </div>
+
+          <!-- Geburtsdatum -->
+          <div v-if="isFieldRequired('birthdate')">
+            <label for="birthdate" class="block text-xs font-medium text-gray-500 mb-1">
+              Geburtsdatum<span class="text-red-400 ml-0.5">*</span>
+            </label>
+            <input
+              id="birthdate"
+              v-model="form.birthdate"
+              type="date"
+              class="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
+              :class="errors.birthdate ? 'border-red-300' : 'border-gray-200'"
+            >
+            <p v-if="errors.birthdate" class="text-red-500 text-xs mt-1">{{ errors.birthdate }}</p>
+          </div>
+
+          <!-- Adresse (nur wenn mind. ein Adressfeld required) -->
+          <template v-if="isFieldRequired('street') || isFieldRequired('zip') || isFieldRequired('city')">
+            <div class="grid grid-cols-3 gap-3">
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-500 mb-1">
+                  Strasse<span v-if="isFieldRequired('street')" class="text-red-400 ml-0.5">*</span>
+                </label>
+                <input
+                  v-model="form.street"
+                  type="text"
+                  placeholder="Hauptstrasse"
+                  class="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
+                  :class="errors.street ? 'border-red-300' : 'border-gray-200'"
+                >
+                <p v-if="errors.street" class="text-red-500 text-xs mt-1">{{ errors.street }}</p>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Nr.</label>
+                <input
+                  v-model="form.street_nr"
+                  type="text"
+                  placeholder="12"
+                  class="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900 border-gray-200"
+                >
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">
+                  PLZ<span v-if="isFieldRequired('zip')" class="text-red-400 ml-0.5">*</span>
+                </label>
+                <input
+                  v-model="form.zip"
+                  type="text"
+                  placeholder="8000"
+                  maxlength="4"
+                  class="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
+                  :class="errors.zip ? 'border-red-300' : 'border-gray-200'"
+                >
+                <p v-if="errors.zip" class="text-red-500 text-xs mt-1">{{ errors.zip }}</p>
+              </div>
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-500 mb-1">
+                  Ort<span v-if="isFieldRequired('city')" class="text-red-400 ml-0.5">*</span>
+                </label>
+                <input
+                  v-model="form.city"
+                  type="text"
+                  placeholder="Zürich"
+                  class="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
+                  :class="errors.city ? 'border-red-300' : 'border-gray-200'"
+                >
+                <p v-if="errors.city" class="text-red-500 text-xs mt-1">{{ errors.city }}</p>
+              </div>
+            </div>
+          </template>
+
+          <!-- Beruf -->
+          <div v-if="isFieldRequired('profession')">
+            <label class="block text-xs font-medium text-gray-500 mb-1">
+              Beruf<span class="text-red-400 ml-0.5">*</span>
+            </label>
+            <input
+              v-model="form.profession"
+              type="text"
+              placeholder="Kaufmann/Kauffrau"
+              class="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900 border-gray-200"
+            >
           </div>
         </div>
 
@@ -205,7 +316,7 @@
                   <span class="opacity-0" style="animation: dot-bounce 1.2s ease-in-out infinite 400ms">.</span>
                 </span>
               </span>
-              <span v-else key="idle">Einladen &amp; Speichern</span>
+              <span v-else key="idle">{{ bookingPolicy.onboarding_sms_enabled ? 'Einladen & Speichern' : 'Schüler erstellen' }}</span>
             </transition>
           </button>
         </div>
@@ -226,6 +337,22 @@ import Toast from '~/components/Toast.vue'
 
 const uiStore = useUIStore()
 const router = useRouter()
+
+// ── Booking policy ──────────────────────────────────────────────────────────
+const bookingPolicy = ref({
+  student_required_fields: ['first_name', 'last_name', 'phone'] as string[],
+  onboarding_sms_enabled: true,
+  confirmation_email_enabled: true,
+})
+
+const isFieldRequired = (key: string) => bookingPolicy.value.student_required_fields.includes(key)
+
+onMounted(async () => {
+  try {
+    const res = await $fetch<{ policy: typeof bookingPolicy.value }>('/api/admin/booking-policy')
+    if (res?.policy) bookingPolicy.value = { ...bookingPolicy.value, ...res.policy }
+  } catch { /* non-critical, use defaults */ }
+})
 
 // ✅ NEU: Toast State
 const showToast = ref(false)
@@ -319,6 +446,7 @@ const form = ref({
   first_name: '',
   last_name: '',
   phone: '',
+  email: '',
   birthdate: '',
   street: '',
   street_nr: '',
@@ -333,13 +461,18 @@ const form = ref({
 const errors = ref<Record<string, string>>({})
 
 const isFormValid = computed(() => {
-  // Mindestens ein Name (Vor- ODER Nachname)
+  const required = bookingPolicy.value.student_required_fields
   const hasName = form.value.first_name.trim() || form.value.last_name.trim()
-  
-  // Telefon ist erforderlich (nur SMS now)
-  const hasPhone = form.value.phone.trim() && form.value.phone.trim().length >= 12
-  
-  return hasName && hasPhone
+  if (!hasName) return false
+
+  if (required.includes('phone') && (!form.value.phone.trim() || form.value.phone.trim().length < 10)) return false
+  if (required.includes('email') && !form.value.email.trim()) return false
+  if (required.includes('birthdate') && !form.value.birthdate) return false
+  if (required.includes('street') && !form.value.street.trim()) return false
+  if (required.includes('zip') && !form.value.zip.trim()) return false
+  if (required.includes('city') && !form.value.city.trim()) return false
+
+  return true
 })
 
 // Methods
@@ -374,17 +507,35 @@ const formatPhoneNumber = (phone: string) => {
 
 const validateForm = () => {
   errors.value = {}
+  const required = bookingPolicy.value.student_required_fields
 
-  // Mindestens ein Name erforderlich
   const hasName = form.value.first_name.trim() || form.value.last_name.trim()
   if (!hasName) {
     errors.value.first_name = 'Mindestens Vor- oder Nachname erforderlich'
   }
 
-  // Telefon ist erforderlich (nur SMS)
-  const hasPhone = form.value.phone.trim() && form.value.phone.trim().length >= 12
-  if (!hasPhone) {
-    errors.value.phone = 'Gültige Telefonnummer erforderlich'
+  if (required.includes('phone')) {
+    const hasPhone = form.value.phone.trim() && form.value.phone.trim().length >= 10
+    if (!hasPhone) errors.value.phone = 'Gültige Telefonnummer erforderlich'
+  }
+
+  if (required.includes('email') && !form.value.email.trim()) {
+    errors.value.email = 'E-Mail-Adresse erforderlich'
+  } else if (form.value.email.trim() && !isValidEmail(form.value.email)) {
+    errors.value.email = 'Ungültige E-Mail-Adresse'
+  }
+
+  if (required.includes('birthdate') && !form.value.birthdate) {
+    errors.value.birthdate = 'Geburtsdatum erforderlich'
+  }
+  if (required.includes('street') && !form.value.street.trim()) {
+    errors.value.street = 'Strasse erforderlich'
+  }
+  if (required.includes('zip') && !form.value.zip.trim()) {
+    errors.value.zip = 'PLZ erforderlich'
+  }
+  if (required.includes('city') && !form.value.city.trim()) {
+    errors.value.city = 'Ort erforderlich'
   }
 
   return Object.keys(errors.value).length === 0
@@ -395,6 +546,7 @@ const resetForm = () => {
     first_name: '',
     last_name: '',
     phone: '',
+    email: '',
     birthdate: '',
     street: '',
     street_nr: '',
@@ -415,14 +567,16 @@ const submitForm = async () => {
   logger.debug('🚀🚀🚀 Starting form submission...')
 
   try {
-    // Prepare form data - ensure at least empty strings for required DB fields
+    // Prepare form data
     const studentData: any = {
       first_name: form.value.first_name.trim() || '',
       last_name: form.value.last_name.trim() || '',
-      phone: form.value.phone.trim() || ''
+      phone: form.value.phone.trim() || '',
+      skip_sms: !bookingPolicy.value.onboarding_sms_enabled,
     }
-    
-    // Add optional fields only if they have values
+
+    // Optional fields — send only when filled
+    if (form.value.email.trim()) studentData.email = form.value.email.trim().toLowerCase()
     if (form.value.birthdate) studentData.birthdate = form.value.birthdate
     if (form.value.street) studentData.street = form.value.street.trim()
     if (form.value.street_nr) studentData.street_nr = form.value.street_nr.trim()
@@ -430,8 +584,6 @@ const submitForm = async () => {
     if (form.value.city) studentData.city = form.value.city.trim()
     if (form.value.profession) studentData.profession = form.value.profession.trim()
     if (form.value.category) studentData.category = form.value.category
-    // ✅ NOTE: assigned_staff_id is now automatically set by the API based on authenticated user
-    // No need to pass it from frontend anymore
 
     logger.debug('📝 Calling new /api/staff/add-student API with:', studentData)
     
@@ -451,17 +603,16 @@ const submitForm = async () => {
     logger.debug('📧 Email Success:', newStudent?.emailSuccess)
     logger.debug('🔗 Onboarding Link:', newStudent?.onboardingLink)
     
-    // ✅ Benachrichtigung via globales UI Toast (bessere UX, länger sichtbar)
-    const contactInfo = form.value.phone
-    const contactType = 'SMS'
-    
-    logger.debug('✅ Schüler erstellt und Einladung versendet via:', contactType)
-    
-    // Use global UI toast for better UX and longer visibility
+    const smsEnabled = bookingPolicy.value.onboarding_sms_enabled
+    const hasEmail = !!form.value.email.trim()
+    let inviteMsg = 'Schüler wurde erfasst.'
+    if (smsEnabled && form.value.phone) inviteMsg = `Onboarding-SMS wurde an ${form.value.phone} gesendet.`
+    else if (hasEmail) inviteMsg = `Schüler wurde erfasst. Bestätigungs-E-Mail folgt nach Terminerstellung.`
+
     uiStore.addNotification({
       type: 'success',
       title: 'Schüler erstellt!',
-      message: `Onboarding-Link wurde via ${contactType} an ${contactInfo} gesendet.`
+      message: inviteMsg,
     })
     
     logger.debug('🚀 Resetting form after notification')
