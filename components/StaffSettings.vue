@@ -16,7 +16,7 @@
       <!-- Profile Header -->
       <div class="px-5 pt-2 pb-4 flex items-center justify-between flex-shrink-0">
         <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0" :style="{ background: primaryColor }">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0 bg-blue-700" :style="primaryColor ? { background: primaryColor } : {}">
             {{ localUser.first_name?.charAt(0) || '?' }}{{ localUser.last_name?.charAt(0) || '' }}
           </div>
           <div>
@@ -1947,6 +1947,12 @@ const handleSessionError = (err: any): boolean => {
 // ── Edit Profile ──────────────────────────────────────────────────────────────
 // Local copy of user data so the header updates immediately after save
 const localUser = ref({ ...props.currentUser })
+
+watch(() => props.currentUser, (newUser) => {
+  if (newUser) {
+    Object.assign(localUser.value, newUser)
+  }
+}, { deep: true })
 
 const showEditProfile = ref(false)
 const isSavingProfile = ref(false)
