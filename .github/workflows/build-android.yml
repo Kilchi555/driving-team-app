@@ -95,6 +95,23 @@ jobs:
           CLIENT="${{ matrix.client }}" npx cap add android 2>/dev/null || true
           CLIENT="${{ matrix.client }}" npx cap sync android
 
+      - name: Write google-services.json
+        env:
+          FIREBASE_CONFIGS: ${{ secrets.FIREBASE_CONFIGS }}
+          CLIENT_ID: ${{ matrix.client }}
+        run: |
+          if [ -n "$FIREBASE_CONFIGS" ]; then
+            B64=$(echo "$FIREBASE_CONFIGS" | jq -r --arg c "$CLIENT_ID" '.[$c] // empty')
+            if [ -n "$B64" ]; then
+              echo "$B64" | base64 --decode > android/app/google-services.json
+              echo "✅ google-services.json written for $CLIENT_ID"
+            else
+              echo "⚠️  No Firebase config found for $CLIENT_ID in FIREBASE_CONFIGS — Push Notifications may not work"
+            fi
+          else
+            echo "⚠️  FIREBASE_CONFIGS secret not set — Push Notifications may not work"
+          fi
+
       - name: Generate app icons
         env:
           CLIENT: ${{ matrix.client }}
