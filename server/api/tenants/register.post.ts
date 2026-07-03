@@ -374,7 +374,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       const selectedIds = data.selected_category_ids
         ? data.selected_category_ids.split(',').map(id => id.trim()).filter(Boolean)
         : undefined
-      await copyDefaultDataToTenant(tenantId, data.business_type, selectedIds)
+      await copyDefaultDataToTenant(tenantId, data.business_type, selectedIds, data.pricing_json)
       logger.debug('✅ Default data copied to tenant')
 
       // Set all feature flags explicitly for trial plan
@@ -889,7 +889,8 @@ async function generateCustomerNumber(supabase: any): Promise<string> {
 async function copyDefaultDataToTenant(
   tenantId: string,
   businessType = 'driving_school',
-  selectedCategoryIds?: string[]
+  selectedCategoryIds?: string[],
+  pricingJson?: string
 ): Promise<void> {
   const supabase = getSupabaseAdmin()
   const now = new Date().toISOString()
@@ -1012,7 +1013,6 @@ async function copyDefaultDataToTenant(
       .from('event_types')
       .select('*')
       .is('tenant_id', null)
-      .or(`business_type.eq.${businessType},business_type.is.null`)
 
     if (!etErr && etTemplates?.length) {
       // Determine if the tenant explicitly enabled the "theory" pricing row.
@@ -1020,8 +1020,8 @@ async function copyDefaultDataToTenant(
       // clutter the calendar for schools that don't offer theory lessons.
       let theoryEnabled = false
       try {
-        if (data.pricing_json?.trim()) {
-          const pricingItems = JSON.parse(data.pricing_json)
+        if (pricingJson?.trim()) {
+          const pricingItems = JSON.parse(pricingJson)
           theoryEnabled = Array.isArray(pricingItems) && pricingItems.some((p: any) => p.rule_type === 'theory')
         }
       } catch { /* non-critical — default to inactive */ }
