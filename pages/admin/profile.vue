@@ -56,81 +56,67 @@
       </button>
     </div>
 
-    <!-- Main Content with Tabs -->
-    <div v-else class="max-w-6xl mx-auto">
-      
-      <!-- Tab Navigation -->
-      <div class="border-b border-gray-200 mb-6">
-        <!-- Desktop: Horizontal Tabs -->
-        <nav class="hidden md:flex -mb-px space-x-8">
+    <!-- Main Content with Sidebar Navigation -->
+    <div v-else class="max-w-7xl mx-auto">
+
+      <!-- Mobile: Scrollable pill nav -->
+      <div class="md:hidden mb-5 -mx-4 px-4">
+        <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
           <button
             v-for="tab in tabs"
             :key="tab.id"
             @click="selectTab(tab.id)"
-            :class="[
-              'py-2 px-1 border-b-2 font-medium text-sm transition-colors',
-              activeTab === tab.id
-                ? ''
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            ]"
-            :style="activeTab === tab.id ? { borderColor: primaryColor, color: primaryColor } : {}"
+            class="flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all"
+            :class="activeTab === tab.id
+              ? 'text-white shadow-sm'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+            :style="activeTab === tab.id ? { background: primaryColor } : {}"
           >
-            <span class="flex items-center">
-              <component :is="tab.icon" class="w-5 h-5 mr-2" />
-              {{ tab.name }}
-            </span>
+            <component :is="tab.icon" class="w-3.5 h-3.5" />
+            {{ tab.name }}
           </button>
-        </nav>
-
-        <!-- Mobile: Dropdown Menu -->
-        <div class="md:hidden">
-          <div class="relative tab-dropdown-container">
-            <button
-              @click="showTabDropdown = !showTabDropdown"
-              class="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
-            >
-              <span class="flex items-center">
-                <component :is="getCurrentTabIcon()" class="w-5 h-5 mr-2" />
-                {{ getCurrentTabName() }}
-              </span>
-              <svg 
-                class="w-4 h-4 transition-transform" 
-                :class="{ 'rotate-180': showTabDropdown }"
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-              </svg>
-            </button>
-            
-            <!-- Dropdown Content -->
-            <div
-              v-show="showTabDropdown"
-              class="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-64 overflow-y-auto"
-            >
-              <div class="py-2">
-                <button
-                  v-for="tab in tabs"
-                  :key="tab.id"
-                  @click="selectTab(tab.id)"
-                  :class="[
-                    'w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors',
-                    activeTab === tab.id ? '' : ''
-                  ]"
-                  :style="activeTab === tab.id ? { background: `${primaryColor}10`, color: primaryColor } : {}"
-                >
-                  <component :is="tab.icon" class="w-5 h-5 mr-3" />
-                  {{ tab.name }}
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
-      <!-- Tab Content -->
-      <div class="space-y-6">
+      <!-- Desktop: Sidebar + Content -->
+      <div class="flex gap-8 items-start">
+
+        <!-- Sticky Sidebar -->
+        <aside class="hidden md:block w-52 xl:w-56 shrink-0 sticky top-6 self-start">
+          <nav class="space-y-5">
+            <div v-for="group in tabGroups" :key="group.label">
+              <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1 px-3">{{ group.label }}</p>
+              <div class="space-y-0.5">
+                <button
+                  v-for="tab in group.tabs"
+                  :key="tab.id"
+                  @click="selectTab(tab.id)"
+                  class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left"
+                  :class="activeTab === tab.id
+                    ? 'shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+                  :style="activeTab === tab.id
+                    ? { background: `${primaryColor}12`, color: primaryColor }
+                    : {}"
+                >
+                  <component
+                    :is="tab.icon"
+                    class="w-4 h-4 shrink-0"
+                  />
+                  <span class="truncate">{{ tab.name }}</span>
+                  <span
+                    v-if="activeTab === tab.id"
+                    class="ml-auto w-1.5 h-1.5 rounded-full shrink-0"
+                    :style="{ background: primaryColor }"
+                  />
+                </button>
+              </div>
+            </div>
+          </nav>
+        </aside>
+
+        <!-- Tab Content -->
+        <div class="flex-1 min-w-0 space-y-6">
         
         <!-- Design Tab -->
         <div v-show="activeTab === 'design'" class="space-y-6">
@@ -498,18 +484,42 @@
                 <span class="ml-2 text-sm sm:text-base text-gray-600">Lade Funktionen...</span>
               </div>
               
-              <div v-if="!isLoadingFeatures" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+              <div v-if="!isLoadingFeatures" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 overflow-visible">
                 <!-- Dynamic Features -->
                 <div 
                   v-for="feature in featureDefinitions" 
                   :key="feature.key"
-                  class="bg-gray-50 rounded-lg border p-3 sm:p-4 hover:shadow-md transition-shadow flex flex-col"
+                  class="relative bg-gray-50 rounded-lg border p-3 sm:p-4 hover:shadow-md transition-shadow flex flex-col"
                 >
+                  <!-- Info tooltip trigger (only for features with extra hints) -->
+                  <div
+                    v-if="feature.key === 'customer_plz_travel_check_enabled'"
+                    class="group absolute top-2.5 right-2.5"
+                  >
+                    <button
+                      type="button"
+                      class="w-5 h-5 rounded-full flex items-center justify-center text-amber-600 bg-amber-100 hover:bg-amber-200 transition-colors focus:outline-none"
+                      aria-label="Hinweis anzeigen"
+                    >
+                      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                      </svg>
+                    </button>
+                    <!-- Tooltip -->
+                    <div class="pointer-events-none absolute right-0 top-7 z-20 w-64 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                      <div class="bg-amber-50 border border-amber-200 rounded-lg shadow-lg p-3">
+                        <p class="font-semibold text-xs text-amber-800 mb-1">Zusätzliche Konfiguration erforderlich</p>
+                        <p class="text-xs text-amber-700 leading-relaxed">Damit Kunden den Fahrzeit-Check beim Buchen sehen, muss <strong>pro Standort</strong> festgelegt werden, für welche <strong>Fahrzeugkategorien</strong> der Pickup-Service angeboten wird.</p>
+                        <p class="text-xs text-amber-700 leading-relaxed mt-1.5">Admin → Mitarbeiter → Standort → <strong>Kategorien</strong> (Pickup aktivieren).</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="flex flex-col h-full">
                     <div class="flex-1 mb-3">
                       <h3 class="font-semibold text-gray-900 text-sm sm:text-base mb-2 flex items-center">
                         <span class="text-base sm:text-lg mr-2">{{ feature.icon }}</span>
-                        <span class="truncate">{{ feature.displayName }}</span>
+                        <span class="truncate pr-5">{{ feature.displayName }}</span>
                       </h3>
                       <p class="text-xs sm:text-sm text-gray-600 leading-relaxed">{{ feature.description }}</p>
                     </div>
@@ -522,169 +532,27 @@
                       </label>
                     </div>
                   </div>
-
-                  <!-- Hinweis für Fahrzeit-Check bei Pickup -->
-                  <div
-                    v-if="feature.key === 'customer_plz_travel_check_enabled' && feature.isEnabled"
-                    class="mt-3 pt-3 border-t border-amber-200 bg-amber-50 -mx-3 -mb-3 sm:-mx-4 sm:-mb-4 px-3 sm:px-4 pb-3 sm:pb-4 rounded-b-lg"
-                  >
-                    <div class="flex gap-2">
-                      <svg class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                      </svg>
-                      <div class="text-xs text-amber-800 leading-relaxed">
-                        <p class="font-semibold mb-1">Zusätzliche Konfiguration erforderlich</p>
-                        <p>Damit Kunden den Fahrzeit-Check beim Buchen sehen, muss <strong>pro Standort</strong> noch festgelegt werden, für welche <strong>Fahrzeugkategorien</strong> der Pickup-Service angeboten wird.</p>
-                        <p class="mt-1">Dies machst du unter <strong>Admin → Mitarbeiter → Standort auswählen → Kategorien</strong> (Pickup aktivieren).</p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
                 
               </div>
             </div>
           </div>
 
-        </div>
-        <!-- Kontakt Tab -->
-        <div v-show="activeTab === 'contact'" class="space-y-6">
-          <div class="bg-white rounded-lg shadow-sm border p-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-4">Kontaktinformationen</h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <!-- Email -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">E-Mail</label>
-                <input 
-                  v-model="brandingForm.contact.email"
-                  @blur="autoSaveBranding"
-                  type="email"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
-                  placeholder="info@ihre-firma.ch"
-                >
-              </div>
-              
-              <!-- Phone -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Telefon</label>
-                <input 
-                  v-model="brandingForm.contact.phone"
-                  @blur="autoSaveBranding"
-                  type="tel"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
-                  placeholder="+41 44 123 45 67"
-                >
-              </div>
-              
-              <!-- Address -->
-              <div class="md:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Adresse</label>
-                <textarea 
-                  v-model="brandingForm.contact.address"
-                  @blur="autoSaveBranding"
-                  rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
-                  placeholder="Musterstrasse 123, 8000 Zürich"
-                ></textarea>
-              </div>
-
-              <!-- SMS Absender -->
-              <div class="md:col-span-2 border-t border-gray-100 pt-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">SMS Absender</label>
-                <p class="text-xs text-gray-400 mb-2">
-                  Name der bei SMS-Nachrichten erscheint.
-                  <span class="text-amber-600 font-medium">Max. 11 Zeichen</span> (Limit des SMS-Protokolls – gilt weltweit).
-                  Leer lassen = Fahrschulname wird automatisch verwendet.
-                </p>
-                <!-- Suggestions -->
-                <div v-if="brandingForm.meta.brandName" class="flex flex-wrap gap-1.5 mb-2">
-                  <button v-for="s in smsSenderSuggestionsAdmin" :key="s" type="button"
-                    @click="brandingForm.contact.smsSender = s; autoSaveBranding()"
-                    class="px-2.5 py-1 rounded-lg text-xs font-medium border transition-all"
-                    :class="brandingForm.contact.smsSender === s
-                      ? 'border-blue-400 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'">
-                    {{ s }}
-                  </button>
-                </div>
-                <div class="relative w-full sm:w-72">
-                  <input
-                    v-model="brandingForm.contact.smsSender"
-                    @blur="autoSaveBranding"
-                    type="text"
-                    maxlength="11"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 pr-12"
-                    placeholder="Fahrschule"
-                  />
-                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono"
-                    :class="(brandingForm.contact.smsSender?.length || 0) >= 11 ? 'text-amber-500' : 'text-gray-400'">
-                    {{ brandingForm.contact.smsSender?.length || 0 }}/11
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Logos Tab -->
-        <div v-show="activeTab === 'logos'" class="space-y-6">
-          <div class="bg-white rounded-lg shadow-sm border p-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-4">Logo-Verwaltung</h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <!-- Square Logo -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Quadratisches Logo</label>
-                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <div v-if="brandingForm.logos.square" class="mb-4">
-                    <img :src="brandingForm.logos.square" class="w-16 h-16 mx-auto object-contain">
-                  </div>
-                  <input 
-                    type="file"
-                    accept="image/*"
-                    @change="handleLogoUpload($event, 'square')"
-                    class="tenant-file block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold"
-                  >
-                  <p class="text-xs text-gray-500 mt-1">Empfohlen: 1:1 Format, max. 2MB</p>
-                </div>
-              </div>
-              
-              <!-- Wide Logo -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Breites Logo</label>
-                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <div v-if="brandingForm.logos.wide" class="mb-4">
-                    <img :src="brandingForm.logos.wide" class="w-32 h-16 mx-auto object-contain">
-                  </div>
-                  <input 
-                    type="file"
-                    accept="image/*"
-                    @change="handleLogoUpload($event, 'wide')"
-                    class="tenant-file block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold"
-                  >
-                  <p class="text-xs text-gray-500 mt-1">Empfohlen: 3:1 oder 4:1 Format, max. 2MB</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sicherheit Tab -->
-        <div v-show="activeTab === 'security'" class="space-y-6">
-
-          <!-- Passkey / Biometric Login Manager (Phase 1: admin only) -->
-          <div class="bg-white rounded-lg shadow-sm border p-6">
-            <PasskeyManager :primary-color="primaryColor" />
-          </div>
-
           <!-- SARI Integration Settings -->
           <div class="bg-white rounded-lg shadow-sm border p-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-4">SARI Integration (Kursanmeldung)</h2>
-            <p class="text-sm text-gray-600 mb-6">
-              Synchronisieren Sie Kurse automatisch von Kyberna SARI. Kurse werden stündlich aktualisiert.
-            </p>
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-lg font-semibold text-gray-900">SARI Integration (Kursanmeldung)</h2>
+                <p class="text-sm text-gray-600">Synchronisieren Sie Kurse automatisch von Kyberna SARI. Kurse werden stündlich aktualisiert.</p>
+              </div>
+            </div>
             
-            <div class="space-y-6">
+            <div class="space-y-6 mt-6">
               <!-- Enable SARI -->
               <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div class="flex-1">
@@ -694,8 +562,8 @@
                 <label class="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    v-model="sariSettings.sari_enabled"
-                    @change="saveSARISettings"
+                    :checked="sariSettings.sari_enabled"
+                    @click.prevent="sariSettings.sari_enabled ? showSariDisableModal = true : showSariEnableModal = true"
                     class="sr-only peer"
                   />
                   <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
@@ -888,216 +756,274 @@
               </div>
             </div>
           </div>
+
         </div>
 
-          <!-- ──────────────────────────────────────────────────────── -->
-          <!-- SARI CZV / FL Integration (SOAP CoursesV3)              -->
-          <!-- ──────────────────────────────────────────────────────── -->
-          <div class="bg-white rounded-lg shadow-sm border p-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-1">SARI CZV & Fahrlehrerweiterbildung</h2>
-            <p class="text-sm text-gray-600 mb-6">
-              Melden Sie CZV- und FL-Kurse manuell an das ASA SARI-System (SOAP CoursesV3). Zugangsdaten erhalten Sie von Kyberna AG.
-            </p>
-
-            <div class="space-y-8">
-
-              <!-- ── CZV ── -->
-              <div class="border border-gray-200 rounded-lg p-4">
-                <div class="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 class="text-base font-semibold text-gray-900">CZV (Chauffeuren-Weiterbildung)</h3>
-                    <p class="text-sm text-gray-500">Kurstyp: CZV · Basis: sari.asa.ch SOAP</p>
+        <!-- SARI Enable Modal -->
+        <Teleport to="body">
+          <Transition
+            enter-active-class="transition-opacity duration-200"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition-opacity duration-150"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+          >
+            <div v-if="showSariEnableModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" @click.self="showSariEnableModal = false">
+              <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+                <div class="flex items-start gap-4 mb-5">
+                  <div class="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
                   </div>
-                  <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" v-model="czvSettings.sari_czv_enabled" @change="saveCZVSettings" class="sr-only peer" />
-                    <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                  </label>
+                  <div>
+                    <h3 class="text-lg font-semibold text-gray-900">SARI Integration aktivieren</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">Kyberna SARI Kurssynchronisierung</p>
+                  </div>
                 </div>
 
-                <div v-if="czvSettings.sari_czv_enabled" class="space-y-4 border-l-4 pl-4" :style="{ borderColor: primaryColor }">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Umgebung</label>
-                    <select v-model="czvSettings.sari_czv_environment" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                      <option value="test">Test</option>
-                      <option value="production">Production</option>
-                    </select>
+                <div class="space-y-3 mb-6">
+                  <p class="text-sm text-gray-700">
+                    Um die SARI Integration zu nutzen, benötigen Sie Zugangsdaten von <strong>Kyberna AG</strong>.
+                  </p>
+                  <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                    <p class="text-sm font-semibold text-blue-900">So erhalten Sie die Credentials:</p>
+                    <ol class="text-sm text-blue-800 space-y-1.5 list-decimal list-inside">
+                      <li>Kontaktieren Sie <strong>Kyberna AG</strong> unter <a href="https://www.kyberna.ch" target="_blank" class="underline hover:no-underline">kyberna.ch</a></li>
+                      <li>Fordern Sie Zugangsdaten für die <strong>SARI VKU/PGS API</strong> an</li>
+                      <li>Tragen Sie Client ID, Secret, Benutzername und Passwort in die Felder ein</li>
+                      <li>Testen Sie die Verbindung bevor Sie live gehen</li>
+                    </ol>
                   </div>
+                  <p class="text-xs text-gray-500">
+                    Nach der Aktivierung werden Kurse stündlich automatisch synchronisiert.
+                  </p>
+                </div>
 
-                  <!-- CZV Credentials toggle -->
-                  <button type="button" @click="showCzvCredentials = !showCzvCredentials" class="text-sm flex items-center gap-1 hover:opacity-70" :style="{ color: primaryColor }">
-                    {{ showCzvCredentials ? 'Zugangsdaten verbergen' : 'Zugangsdaten anzeigen' }}
+                <div class="flex gap-3">
+                  <button
+                    @click="showSariEnableModal = false"
+                    class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                  >
+                    Abbrechen
                   </button>
+                  <button
+                    @click="sariSettings.sari_enabled = true; saveSARISettings(); showSariEnableModal = false"
+                    class="flex-1 px-4 py-2.5 text-white rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
+                    :style="{ background: primaryColor }"
+                  >
+                    Aktivieren & Credentials eingeben
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Transition>
+        </Teleport>
 
-                  <div v-if="showCzvCredentials" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label class="block text-sm font-medium text-gray-700 mb-1">Client ID</label>
-                      <input v-model="czvSettings.sari_czv_client_id" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium text-gray-700 mb-1">Client Secret</label>
-                      <input v-model="czvSettings.sari_czv_client_secret" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium text-gray-700 mb-1">Benutzername</label>
-                      <input v-model="czvSettings.sari_czv_username" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium text-gray-700 mb-1">Passwort</label>
-                      <input v-model="czvSettings.sari_czv_password" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
-                    </div>
-                    <div class="md:col-span-2">
-                      <label class="block text-sm font-medium text-gray-700 mb-1">Registration ID <span class="text-gray-400 font-normal">(von Kyberna AG pro Kursveranstalter)</span></label>
-                      <input v-model="czvSettings.sari_czv_registration_id" type="password" placeholder="z.B. bernm" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
-                    </div>
+        <!-- SARI Disable Confirmation Modal -->
+        <Teleport to="body">
+          <Transition
+            enter-active-class="transition-opacity duration-200"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition-opacity duration-150"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+          >
+            <div v-if="showSariDisableModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" @click.self="showSariDisableModal = false">
+              <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+                <div class="flex items-start gap-4 mb-5">
+                  <div class="w-11 h-11 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
                   </div>
-
-                  <!-- Buttons -->
-                  <div class="flex flex-wrap gap-3">
-                    <button @click="saveCZVSettings" :disabled="czvIsSaving" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 text-sm font-medium transition-colors">
-                      {{ czvIsSaving ? 'Speichern...' : 'Speichern' }}
-                    </button>
-                    <button @click="testCZVConnection" :disabled="czvIsTesting" class="px-4 py-2 text-white rounded-lg hover:opacity-90 disabled:bg-gray-400 text-sm font-medium transition-colors flex items-center gap-2" :style="{ background: primaryColor }">
-                      <svg v-if="czvIsTesting" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                      {{ czvIsTesting ? 'Teste...' : 'Verbindung testen' }}
-                    </button>
-                    <button @click="loadCZVLecturers" :disabled="czvIsLoading" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 text-sm font-medium transition-colors">
-                      Moderatoren laden
-                    </button>
-                    <button @click="loadCZVCourseTypes" :disabled="czvIsLoading" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 text-sm font-medium transition-colors">
-                      Kurstypen laden
-                    </button>
+                  <div>
+                    <h3 class="text-lg font-semibold text-gray-900">SARI Integration deaktivieren?</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">Diese Aktion hat Auswirkungen</p>
                   </div>
+                </div>
 
-                  <!-- Status -->
-                  <div v-if="czvConnectionMessage" :class="['p-3 rounded-lg text-sm', czvConnectionSuccess ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800']">
-                    {{ czvConnectionMessage }}
-                  </div>
-
-                  <!-- Moderatoren Liste -->
-                  <div v-if="czvLecturers.length > 0" class="rounded-lg border border-gray-200 overflow-hidden">
-                    <div class="bg-gray-50 px-4 py-2 border-b">
-                      <p class="text-sm font-medium text-gray-700">Moderatoren/Instruktoren ({{ czvLecturers.length }})</p>
-                    </div>
-                    <div class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
-                      <div v-for="l in czvLecturers" :key="l.SariId" class="px-4 py-2 flex items-center justify-between text-sm">
-                        <span class="font-medium text-gray-900">{{ l.Prename }} {{ l.Name }}</span>
-                        <div class="flex gap-3 text-xs text-gray-500">
-                          <span>SARI-ID: <code class="bg-gray-100 px-1 rounded">{{ l.SariId }}</code></span>
-                          <span>FA-Nr: <code class="bg-gray-100 px-1 rounded">{{ l.FaberId }}</code></span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Kurstypen Liste -->
-                  <div v-if="czvCourseTypes.length > 0" class="rounded-lg border border-gray-200 overflow-hidden">
-                    <div class="bg-gray-50 px-4 py-2 border-b">
-                      <p class="text-sm font-medium text-gray-700">Verfügbare Kursdefinitionen ({{ czvCourseTypes.length }})</p>
-                    </div>
-                    <div class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
-                      <div v-for="ct in czvCourseTypes" :key="ct.Name" class="px-4 py-2 text-sm">
-                        <div class="flex items-center justify-between">
-                          <span class="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-800">{{ ct.Name }}</span>
-                          <span class="text-gray-500 text-xs">Max. {{ ct.MaxMembers }} TN</span>
-                        </div>
-                        <p class="text-gray-600 mt-0.5 text-xs">{{ ct.Description.DE }}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Info -->
-                  <div class="rounded-lg p-3 text-xs text-gray-600 bg-amber-50 border border-amber-200">
-                    <strong class="text-amber-800">Wichtige SARI-Regeln:</strong>
-                    <ul class="mt-1 space-y-0.5 list-disc list-inside text-amber-700">
-                      <li>Kurse müssen mind. 6 Wochen vor Kursbeginn gemeldet werden</li>
-                      <li>Löschung nur bis 4 Tage vor Kursbeginn möglich</li>
-                      <li>Für startImport wird die 12-stellige Führerausweisnummer benötigt</li>
-                      <li>Kursdefinition (Kurstyp z.B. "WB01234") von Kyberna AG erfragen</li>
+                <div class="space-y-3 mb-6">
+                  <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
+                    <p class="text-sm font-semibold text-amber-900">Folgendes wird gestoppt:</p>
+                    <ul class="text-sm text-amber-800 space-y-1.5">
+                      <li class="flex items-start gap-2">
+                        <svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                        Die stündliche <strong>Kurssynchronisierung</strong> von Kyberna SARI wird gestoppt
+                      </li>
+                      <li class="flex items-start gap-2">
+                        <svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                        Neue <strong>Kursanmeldungen</strong> können nicht mehr an SARI übermittelt werden
+                      </li>
+                      <li class="flex items-start gap-2">
+                        <svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                        Bestehende SARI-Kurse bleiben erhalten, werden aber <strong>nicht mehr aktualisiert</strong>
+                      </li>
                     </ul>
                   </div>
-                </div>
-              </div>
-
-              <!-- ── FL ── -->
-              <div class="border border-gray-200 rounded-lg p-4">
-                <div class="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 class="text-base font-semibold text-gray-900">FL (Fahrlehrerweiterbildung)</h3>
-                    <p class="text-sm text-gray-500">Kurstyp: FL · Basis: sari.asa.ch SOAP</p>
-                  </div>
-                  <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" v-model="czvSettings.sari_fl_enabled" @change="saveCZVSettings" class="sr-only peer" />
-                    <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                  </label>
+                  <p class="text-xs text-gray-500">
+                    Die Credentials bleiben gespeichert. Sie können die Integration jederzeit wieder aktivieren.
+                  </p>
                 </div>
 
-                <div v-if="czvSettings.sari_fl_enabled" class="space-y-4 border-l-4 pl-4" :style="{ borderColor: primaryColor }">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Umgebung</label>
-                    <select v-model="czvSettings.sari_fl_environment" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                      <option value="test">Test</option>
-                      <option value="production">Production</option>
-                    </select>
-                  </div>
-
-                  <button type="button" @click="showFlCredentials = !showFlCredentials" class="text-sm flex items-center gap-1 hover:opacity-70" :style="{ color: primaryColor }">
-                    {{ showFlCredentials ? 'Zugangsdaten verbergen' : 'Zugangsdaten anzeigen' }}
+                <div class="flex gap-3">
+                  <button
+                    @click="showSariDisableModal = false"
+                    class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                  >
+                    Abbrechen
                   </button>
-
-                  <div v-if="showFlCredentials" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label class="block text-sm font-medium text-gray-700 mb-1">Client ID</label>
-                      <input v-model="czvSettings.sari_fl_client_id" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium text-gray-700 mb-1">Client Secret</label>
-                      <input v-model="czvSettings.sari_fl_client_secret" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium text-gray-700 mb-1">Benutzername</label>
-                      <input v-model="czvSettings.sari_fl_username" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium text-gray-700 mb-1">Passwort</label>
-                      <input v-model="czvSettings.sari_fl_password" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
-                    </div>
-                    <div class="md:col-span-2">
-                      <label class="block text-sm font-medium text-gray-700 mb-1">Registration ID</label>
-                      <input v-model="czvSettings.sari_fl_registration_id" type="password" placeholder="Von Kyberna AG" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono" />
-                    </div>
-                  </div>
-
-                  <div class="flex flex-wrap gap-3">
-                    <button @click="saveCZVSettings" :disabled="czvIsSaving" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 text-sm font-medium transition-colors">
-                      {{ czvIsSaving ? 'Speichern...' : 'Speichern' }}
-                    </button>
-                    <button @click="testFLConnection" :disabled="czvIsTesting" class="px-4 py-2 text-white rounded-lg hover:opacity-90 disabled:bg-gray-400 text-sm font-medium transition-colors flex items-center gap-2" :style="{ background: primaryColor }">
-                      <svg v-if="czvIsTesting" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                      {{ czvIsTesting ? 'Teste...' : 'Verbindung testen' }}
-                    </button>
-                    <button @click="loadFLLecturers" :disabled="czvIsLoading" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 text-sm font-medium transition-colors">
-                      Moderatoren laden
-                    </button>
-                  </div>
-
-                  <div v-if="flLecturers.length > 0" class="rounded-lg border border-gray-200 overflow-hidden">
-                    <div class="bg-gray-50 px-4 py-2 border-b">
-                      <p class="text-sm font-medium text-gray-700">FL-Moderatoren ({{ flLecturers.length }})</p>
-                    </div>
-                    <div class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
-                      <div v-for="l in flLecturers" :key="l.SariId" class="px-4 py-2 flex items-center justify-between text-sm">
-                        <span class="font-medium text-gray-900">{{ l.Prename }} {{ l.Name }}</span>
-                        <div class="flex gap-3 text-xs text-gray-500">
-                          <span>SARI-ID: <code class="bg-gray-100 px-1 rounded">{{ l.SariId }}</code></span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <button
+                    @click="sariSettings.sari_enabled = false; saveSARISettings(); showSariDisableModal = false"
+                    class="flex-1 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors text-sm font-medium"
+                  >
+                    Ja, deaktivieren
+                  </button>
                 </div>
               </div>
+            </div>
+          </Transition>
+        </Teleport>
 
+        <!-- Kontakt Tab -->
+        <div v-show="activeTab === 'contact'" class="space-y-6">
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Kontaktinformationen</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Email -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">E-Mail</label>
+                <input 
+                  v-model="brandingForm.contact.email"
+                  @blur="autoSaveBranding"
+                  type="email"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
+                  placeholder="info@ihre-firma.ch"
+                >
+              </div>
+              
+              <!-- Phone -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Telefon</label>
+                <input 
+                  v-model="brandingForm.contact.phone"
+                  @blur="autoSaveBranding"
+                  type="tel"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
+                  placeholder="+41 44 123 45 67"
+                >
+              </div>
+              
+              <!-- Address -->
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Adresse</label>
+                <textarea 
+                  v-model="brandingForm.contact.address"
+                  @blur="autoSaveBranding"
+                  rows="3"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
+                  placeholder="Musterstrasse 123, 8000 Zürich"
+                ></textarea>
+              </div>
+
+              <!-- SMS Absender -->
+              <div class="md:col-span-2 border-t border-gray-100 pt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">SMS Absender</label>
+                <p class="text-xs text-gray-400 mb-2">
+                  Name der bei SMS-Nachrichten erscheint.
+                  <span class="text-amber-600 font-medium">Max. 11 Zeichen</span> (Limit des SMS-Protokolls – gilt weltweit).
+                  Leer lassen = Fahrschulname wird automatisch verwendet.
+                </p>
+                <!-- Suggestions -->
+                <div v-if="brandingForm.meta.brandName" class="flex flex-wrap gap-1.5 mb-2">
+                  <button v-for="s in smsSenderSuggestionsAdmin" :key="s" type="button"
+                    @click="brandingForm.contact.smsSender = s; autoSaveBranding()"
+                    class="px-2.5 py-1 rounded-lg text-xs font-medium border transition-all"
+                    :class="brandingForm.contact.smsSender === s
+                      ? 'border-blue-400 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'">
+                    {{ s }}
+                  </button>
+                </div>
+                <div class="relative w-full sm:w-72">
+                  <input
+                    v-model="brandingForm.contact.smsSender"
+                    @blur="autoSaveBranding"
+                    type="text"
+                    maxlength="11"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 pr-12"
+                    placeholder="Fahrschule"
+                  />
+                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono"
+                    :class="(brandingForm.contact.smsSender?.length || 0) >= 11 ? 'text-amber-500' : 'text-gray-400'">
+                    {{ brandingForm.contact.smsSender?.length || 0 }}/11
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
+
+        <!-- Logos Tab -->
+        <div v-show="activeTab === 'logos'" class="space-y-6">
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Logo-Verwaltung</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Square Logo -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Quadratisches Logo</label>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <div v-if="brandingForm.logos.square" class="mb-4">
+                    <img :src="brandingForm.logos.square" class="w-16 h-16 mx-auto object-contain">
+                  </div>
+                  <input 
+                    type="file"
+                    accept="image/*"
+                    @change="handleLogoUpload($event, 'square')"
+                    class="tenant-file block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold"
+                  >
+                  <p class="text-xs text-gray-500 mt-1">Empfohlen: 1:1 Format, max. 2MB</p>
+                </div>
+              </div>
+              
+              <!-- Wide Logo -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Breites Logo</label>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <div v-if="brandingForm.logos.wide" class="mb-4">
+                    <img :src="brandingForm.logos.wide" class="w-32 h-16 mx-auto object-contain">
+                  </div>
+                  <input 
+                    type="file"
+                    accept="image/*"
+                    @change="handleLogoUpload($event, 'wide')"
+                    class="tenant-file block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold"
+                  >
+                  <p class="text-xs text-gray-500 mt-1">Empfohlen: 3:1 oder 4:1 Format, max. 2MB</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sicherheit Tab -->
+        <div v-show="activeTab === 'security'" class="space-y-6">
+
+          <!-- Passkey / Biometric Login Manager (Phase 1: admin only) -->
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <PasskeyManager :primary-color="primaryColor" />
+          </div>
+        </div>
 
         <!-- Eventtypen Tab -->
         <div v-if="activeTab === 'eventtypes'" class="space-y-6">
@@ -1318,6 +1244,45 @@
 
         <!-- ═══ Online-Buchung Tab ═══ -->
         <div v-if="activeTab === 'booking'" class="space-y-6 max-w-2xl">
+
+          <!-- Portal-Links -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <div>
+              <h2 class="text-base font-semibold text-gray-900">Portal-Links</h2>
+              <p class="mt-1 text-sm text-gray-500">Diese Links können mit Kunden, Fahrlehrern und externen Partnern geteilt werden.</p>
+            </div>
+
+            <!-- Online-Buchung (existing) -->
+            <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-semibold text-gray-700 mb-1">Online-Buchung (Kunden)</p>
+                <code class="text-xs text-gray-500 break-all">{{ onlineBookingUrl }}</code>
+              </div>
+              <button @click="copyUrl(onlineBookingUrl, 'booking')"
+                class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-white flex-shrink-0">
+                {{ copiedUrl === 'booking' ? '✓ Kopiert' : 'Kopieren' }}
+              </button>
+            </div>
+
+            <!-- Fahrzeugvermietung portal -->
+            <div class="flex items-start gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-semibold text-blue-800 mb-1">Fahrzeugvermietung (externe Fahrlehrer)</p>
+                <code class="text-xs text-blue-600 break-all">{{ rentalPortalUrl }}</code>
+              </div>
+              <div class="flex gap-1.5 flex-shrink-0">
+                <button @click="copyUrl(rentalPortalUrl, 'rental')"
+                  class="text-xs px-3 py-1.5 border border-blue-200 bg-white rounded-lg hover:bg-blue-50">
+                  {{ copiedUrl === 'rental' ? '✓ Kopiert' : 'Kopieren' }}
+                </button>
+                <a :href="rentalPortalUrl" target="_blank"
+                  class="text-xs px-3 py-1.5 border border-blue-200 bg-white rounded-lg hover:bg-blue-50">
+                  Öffnen ↗
+                </a>
+              </div>
+            </div>
+          </div>
+
           <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
             <div>
               <h2 class="text-base font-semibold text-gray-900">Online-Buchung</h2>
@@ -1475,13 +1440,14 @@
         </div>
 
       </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted, markRaw, watch, onUnmounted } from 'vue'
+import { ref, computed, onMounted, markRaw, watch, onUnmounted, h } from 'vue'
 import { navigateTo, useRoute, useRouter } from '#app'
 import { logger } from '~/utils/logger'
 import { compressImage, validateImageFile, getFileSizeKB } from '~/utils/imageCompression'
@@ -1501,45 +1467,83 @@ import PasskeyManager from '~/components/auth/PasskeyManager.vue'
 
 // Icons for tabs
 const PaletteIcon = markRaw({
-  template: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5H9m12 0v6m0-6l-3.5 3.5M21 11H9"></path>
-  </svg>`
+  render() {
+    return h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5H9m12 0v6m0-6l-3.5 3.5M21 11H9' })
+    ])
+  }
 })
 
 const ContactIcon = markRaw({
-  template: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-  </svg>`
+  render() {
+    return h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' })
+    ])
+  }
 })
 
 const ImageIcon = markRaw({
-  template: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-  </svg>`
+  render() {
+    return h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' })
+    ])
+  }
 })
 
 const ShieldIcon = markRaw({
-  template: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-  </svg>`
+  render() {
+    return h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' })
+    ])
+  }
 })
 
 const PaymentIcon = markRaw({
-  template: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-  </svg>`
+  render() {
+    return h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' })
+    ])
+  }
 })
 
 const DocumentIcon = markRaw({
-  template: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-  </svg>`
+  render() {
+    return h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' })
+    ])
+  }
 })
 
 const ClockIcon = markRaw({
-  template: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-  </svg>`
+  render() {
+    return h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' })
+    ])
+  }
+})
+
+const PuzzleIcon = markRaw({
+  render() {
+    return h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z' })
+    ])
+  }
+})
+
+const TagIcon = markRaw({
+  render() {
+    return h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z' })
+    ])
+  }
+})
+
+const BuildingIcon = markRaw({
+  render() {
+    return h('svg', { class: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' })
+    ])
+  }
 })
 
 // Layout
@@ -1586,17 +1590,40 @@ const toggleFeature = async (key: string, value: boolean) => {
 
 // Tab configuration
 const tabs = ref([
-  { id: 'design', name: 'Design', icon: PaletteIcon },
-  { id: 'contact', name: 'Kontakt', icon: ContactIcon },
-  { id: 'logos', name: 'Logos', icon: ImageIcon },
-  { id: 'security', name: 'Sicherheit', icon: ShieldIcon },
-  { id: 'features', name: 'Funktionen', icon: ShieldIcon },
-  { id: 'eventtypes', name: 'Eventtypen', icon: ShieldIcon },
-  { id: 'payments', name: 'Zahlungen', icon: PaymentIcon },
-  { id: 'booking', name: 'Online-Buchung', icon: ClockIcon },
-  { id: 'email', name: 'E-Mail Domain', icon: ContactIcon },
-  { id: 'reglemente', name: 'Reglemente', icon: DocumentIcon },
-  { id: 'legal', name: 'Rechtsform & Steuern', icon: ShieldIcon }
+  { id: 'design',    name: 'Design',             icon: PaletteIcon  },
+  { id: 'contact',   name: 'Kontakt',             icon: ContactIcon  },
+  { id: 'logos',     name: 'Logos',               icon: ImageIcon    },
+  { id: 'security',  name: 'Sicherheit',          icon: ShieldIcon   },
+  { id: 'features',  name: 'Funktionen',          icon: PuzzleIcon   },
+  { id: 'eventtypes',name: 'Eventtypen',          icon: TagIcon      },
+  { id: 'payments',  name: 'Zahlungen',           icon: PaymentIcon  },
+  { id: 'booking',   name: 'Online-Buchung',      icon: ClockIcon    },
+  { id: 'email',     name: 'E-Mail Domain',       icon: ContactIcon  },
+  { id: 'reglemente',name: 'Reglemente',          icon: DocumentIcon },
+  { id: 'legal',     name: 'Rechtsform & Steuern',icon: BuildingIcon },
+])
+
+const tabGroups = computed(() => [
+  {
+    label: 'Erscheinungsbild',
+    tabs: tabs.value.filter(t => ['design', 'contact', 'logos'].includes(t.id))
+  },
+  {
+    label: 'Sicherheit',
+    tabs: tabs.value.filter(t => ['security'].includes(t.id))
+  },
+  {
+    label: 'Betrieb',
+    tabs: tabs.value.filter(t => ['features', 'eventtypes', 'payments', 'booking'].includes(t.id))
+  },
+  {
+    label: 'Kommunikation',
+    tabs: tabs.value.filter(t => ['email'].includes(t.id))
+  },
+  {
+    label: 'Dokumente',
+    tabs: tabs.value.filter(t => ['reglemente', 'legal'].includes(t.id))
+  },
 ])
 
 // Session Settings
@@ -1700,6 +1727,10 @@ const sariConnectionMessage = ref<string | null>(null)
 const sariConnectionSuccess = ref(false)
 const showSariCredentials = ref(false)
 const isSARISyncing = ref(false)
+
+// SARI toggle modals
+const showSariEnableModal = ref(false)
+const showSariDisableModal = ref(false)
 const syncingCourseType = ref<'VKU' | 'PGS' | null>(null)
 const sariSyncResult = ref<{ success: boolean; message: string } | null>(null)
 
@@ -1843,18 +1874,7 @@ const smsSenderSuggestionsAdmin = computed((): string[] => {
 // Methods
 const selectTab = (tabId: string) => {
   activeTab.value = tabId
-  showTabDropdown.value = false
   router.replace({ query: { ...route.query, tab: tabId } })
-}
-
-const getCurrentTabName = () => {
-  const currentTab = tabs.value.find(tab => tab.id === activeTab.value)
-  return currentTab?.name || 'Design'
-}
-
-const getCurrentTabIcon = () => {
-  const currentTab = tabs.value.find(tab => tab.id === activeTab.value)
-  return currentTab?.icon || PaletteIcon
 }
 
 const loadData = async () => {
@@ -2454,14 +2474,6 @@ const resetForm = () => {
 
 // Auth check (authStore already declared above)
 
-// Click outside handler for dropdown
-const handleClickOutside = (event: Event) => {
-  const target = event.target as HTMLElement
-  if (!target.closest('.tab-dropdown-container')) {
-    showTabDropdown.value = false
-  }
-}
-
 // SARI Integration Methods
 const testSARIConnection = async () => {
   try {
@@ -2647,6 +2659,33 @@ const LEGAL_FORM_LABELS: Record<string, string> = {
   ag: 'AG (Aktiengesellschaft)',
 }
 
+// ─── Portal Links ────────────────────────────────────────────────────────────
+const copiedUrl = ref<string | null>(null)
+const rentalPortalSlug = ref<string | null>(null)
+
+const onlineBookingUrl = computed(() => {
+  const slug = currentTenantBranding.value?.slug || ''
+  return typeof window !== 'undefined' ? `${window.location.origin}/booking/${slug}` : `/booking/${slug}`
+})
+
+const rentalPortalUrl = computed(() => {
+  const slug = rentalPortalSlug.value || currentTenantBranding.value?.slug || ''
+  return typeof window !== 'undefined' ? `${window.location.origin}/partners/${slug}` : `/partners/${slug}`
+})
+
+function copyUrl(url: string, key: string) {
+  navigator.clipboard.writeText(url)
+  copiedUrl.value = key
+  setTimeout(() => { copiedUrl.value = null }, 2500)
+}
+
+async function loadRentalPortalSlug() {
+  try {
+    const res: any = await $fetch('/api/admin/rental-settings')
+    rentalPortalSlug.value = res.rental_portal_slug || null
+  } catch {}
+}
+
 // ─── Booking Settings ───────────────────────────────────────────────────────
 const bookingSettings = ref({ minimum_booking_lead_time_hours: 12 })
 const bookingSaving = ref(false)
@@ -2678,8 +2717,6 @@ async function saveBookingSettings() {
 
 // Lifecycle
 onMounted(async () => {
-  // Add click outside listener
-  document.addEventListener('click', handleClickOutside)
   logger.debug('🔍 Profile page mounted, checking auth...')
   
   // Warte kurz auf Auth-Initialisierung
@@ -2714,6 +2751,7 @@ onMounted(async () => {
   await loadData()
   await loadLegalInfo()
   await loadBookingSettings()
+  loadRentalPortalSlug()
   
   // Allow auto-save after initial load
   setTimeout(() => {
@@ -2755,11 +2793,13 @@ watch(currentTemplate, () => {
 
 // Cleanup
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
 <style scoped>
+/* Hide scrollbar for mobile tab nav */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .tenant-focus:focus {
   --tw-ring-color: var(--color-primary, #1E40AF);
   border-color: var(--color-primary, #1E40AF);
