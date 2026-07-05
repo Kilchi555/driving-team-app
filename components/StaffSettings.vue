@@ -111,7 +111,7 @@
         </div>
 
         <!-- Accordion Sections -->
-        <div class="space-y-2 max-w-sm mx-auto">
+        <div class="grid grid-cols-1 min-[550px]:grid-cols-2 min-[1100px]:grid-cols-3 gap-2 max-w-5xl mx-auto items-start">
 
         <!-- Externe Kalender Einstellungen -->
         <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
