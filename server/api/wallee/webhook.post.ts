@@ -1819,8 +1819,9 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
           id,
           sari_managed,
           sari_course_id,
+          is_partial_only,
           tenant_id,
-          course_sessions(id, start_time, sari_session_id)
+          course_sessions(id, start_time, session_number, sari_session_id)
         )
       `)
       .eq('id', registrationId)
@@ -1885,10 +1886,11 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
       return
     }
 
-    // For partial enrollment, filter session IDs using payment metadata's partial_start_position
-    if (registration.is_partial_enrollment) {
-      // Use partial_start_position from course_category in DB — not from payment metadata
-      // (payment metadata originates from the client and must not be trusted for access control)
+    // For partial enrollment, filter session IDs to only those the customer booked.
+    // is_partial_only courses already contain only the relevant sessions in sari_course_id
+    // — no further filtering needed. Full courses with optional Teilbuchung need filtering.
+    if (registration.is_partial_enrollment && !course.is_partial_only) {
+      // Load partial_start_position from DB — never trust client metadata for access control
       const { data: categoryConfig } = await supabase
         .from('courses')
         .select('course_category:course_categories(partial_start_position)')
@@ -1906,9 +1908,13 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
         for (const s of sortedSessions) {
           const d = s.start_time.split('T')[0]
           if (d !== lastDate) { pos++; lastDate = d }
-          if (s.sari_session_id) sessionPosMap[s.sari_session_id] = pos
+          if (s.sari_session_id) sessionPosMap[String(s.sari_session_id)] = pos
         }
-        sariCourseIds = sariCourseIds.filter(id => (sessionPosMap[id] ?? pos) >= startPos)
+        // Only filter IDs that are mapped; unknown IDs are kept (safe fallback)
+        sariCourseIds = sariCourseIds.filter(id => {
+          const p = sessionPosMap[String(id)]
+          return p === undefined || p >= startPos
+        })
         logger.info(`🎯 Partial enrollment: SARI will receive ${sariCourseIds.length} session(s) from position ${startPos}`)
       }
     }

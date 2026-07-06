@@ -489,9 +489,30 @@ const handler = defineEventHandler(async (event) => {
     logger.info('✅ Confirmed enrollment created:', enrollment.id)
 
     // ── Vehicle bookings for each session (if vehicle selected) ──────────────
+    // For partial enrollments only create bookings for the sessions the customer booked.
     if (vehicleId && course.course_sessions?.length) {
       try {
-        const vBookings = course.course_sessions.map((s: any) => ({
+        const isPartialOrder = !!(isPartialEnrollment || course.is_partial_only)
+        let sessionsForVehicle = course.course_sessions
+
+        if (isPartialOrder && !course.is_partial_only) {
+          const dbStartPos: number = course.course_category?.partial_start_position ?? 3
+          if (dbStartPos > 1) {
+            const sortedAll = [...course.course_sessions].sort((a: any, b: any) =>
+              a.start_time.localeCompare(b.start_time)
+            )
+            let pos = 0; let lastDate = ''
+            const posMap = new Map<string, number>()
+            for (const s of sortedAll) {
+              const d = s.start_time.split('T')[0]
+              if (d !== lastDate) { pos++; lastDate = d }
+              posMap.set(s.id, pos)
+            }
+            sessionsForVehicle = course.course_sessions.filter((s: any) => (posMap.get(s.id) ?? 0) >= dbStartPos)
+          }
+        }
+
+        const vBookings = sessionsForVehicle.map((s: any) => ({
           vehicle_id: vehicleId,
           tenant_id: tenantId,
           course_id: courseId,
@@ -530,12 +551,17 @@ const handler = defineEventHandler(async (event) => {
 
     // 11. Send confirmation email
     try {
+      const isPartialOrder = !!(isPartialEnrollment || course.is_partial_only)
+      const partialPriceRappen: number = course.course_category?.partial_price_rappen ?? 0
+      const effectivePrice: number = (isPartialOrder && partialPriceRappen > 0)
+        ? partialPriceRappen
+        : course.price_per_participant_rappen
       await $fetch('/api/emails/send-course-enrollment-confirmation', {
         method: 'POST',
         body: {
           courseRegistrationId: enrollment.id,
           paymentMethod: 'cash',
-          totalAmount: course.price_per_participant_rappen / 100 // In CHF
+          totalAmount: effectivePrice / 100 // In CHF
         }
       })
       logger.info(`📧 Confirmation email sent to ${finalEmail}`)

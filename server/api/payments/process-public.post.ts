@@ -219,16 +219,34 @@ export default defineEventHandler(async (event) => {
         course_location: metadata?.course_location || null,
         course_start_date: typeof enrollment.courses?.course_start_date === 'string' 
           ? enrollment.courses.course_start_date 
-          : null, // Only store string date, not complex object
+          : null,
         sari_faberid: metadata?.sari_faberid || null,
         sari_birthdate: metadata?.sari_birthdate || null,
-        // ✅ ADDED: Customer data needed by webhook to create registration and guest user
+        // Customer identity — needed by webhook to create registration + guest user
         firstname: metadata?.firstname || firstName || '',
         lastname: metadata?.lastname || lastName || '',
         email: customerEmail,
         phone: metadata?.phone || '',
-        // ✅ ADDED: Custom sessions for flexible session selection
-        custom_sessions: metadata?.custom_sessions || null
+        // Address — needed by webhook for registration record
+        street: metadata?.street || null,
+        street_nr: metadata?.street_nr || null,
+        zip: metadata?.zip || null,
+        city: metadata?.city || null,
+        birthdate: metadata?.birthdate || metadata?.sari_birthdate || null,
+        license_number: metadata?.license_number || null,
+        // Session & enrollment config — needed by webhook for SARI enrollment + DB record
+        custom_sessions: metadata?.custom_sessions || null,
+        is_partial_enrollment: metadata?.is_partial_enrollment ? true : false,
+        partial_start_position: metadata?.partial_start_position ?? null,
+        // Discount — needed by webhook for discount record + registration
+        discount_code: metadata?.discount_code || null,
+        discount_amount_rappen: metadata?.discount_amount_rappen || 0,
+        original_price_rappen: metadata?.original_price_rappen || null,
+        // Attribution
+        referral_code: metadata?.referral_code || null,
+        marketing_session_id: metadata?.marketing_session_id || null,
+        // Resource assignment
+        vehicle_id: metadata?.vehicle_id || null,
       },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()

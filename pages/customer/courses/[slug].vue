@@ -667,9 +667,11 @@ const loadData = async () => {
         )
       }
 
-      // Partial-only courses (e.g. SARI-synced "Teil 3"): only show if individually bookable
+      // Partial-only courses (e.g. SARI-synced "Teil 3"): always show if their sessions
+      // are in the future. The allow_individual_booking flag is for per-session bookings
+      // and must not gate the display of is_partial_only courses.
       if (course.is_partial_only) {
-        return course.course_sessions.some((s: any) => s.allow_individual_booking)
+        return true
       }
 
       return true
