@@ -54,6 +54,7 @@ export default defineEventHandler(async (event) => {
       type: 'lesson',
       source_id: p.id,
       source_table: 'payments',
+      appointment_id: p.appointment_id || null,
       label: apt?.title || 'Fahrstunde',
       date: apt?.start_time || p.created_at,
       duration_minutes: apt?.duration_minutes,

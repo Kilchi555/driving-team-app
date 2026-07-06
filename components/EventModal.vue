@@ -3655,6 +3655,7 @@ const handleEventTypeSelected = (eventType: any) => {
   formData.value.selectedSpecialType = eventType.code
   // ✅ Use the actual event type code (vku, nothelfer, etc.) - these exist in event_types table
   formData.value.appointment_type = eventType.code // e.g., 'vku', 'nothelfer'
+  formData.value.eventType = eventType.code        // ✅ FIX: clears the 'other' state so EventTypeSelector hides
   formData.value.title = eventType.name
   formData.value.type = null as any // ✅ CRITICAL: No driving category for special events (VKU, Nothelfer, etc.)!
   formData.value.duration_minutes = eventType.default_duration_minutes || 60
@@ -6056,11 +6057,11 @@ const initializePastedAppointment = async () => {
       formData.value.appointment_type = props.eventData.appointment_type || 'lesson'
       
       // ✅ FIX: EventType aus appointment data bestimmen, nicht hardcoded
-      const otherEventTypes = ['meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other']
+      const otherEventTypes = ['meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'other', 'vku', 'nothelfer', 'vacation']
       const appointmentType = props.eventData.appointment_type || props.eventData.event_type_code || 'lesson'
       const isOtherEvent = otherEventTypes.includes(appointmentType.toLowerCase())
       
-      formData.value.eventType = isOtherEvent ? 'other' : 'lesson'
+      formData.value.eventType = isOtherEvent ? appointmentType.toLowerCase() : 'lesson'
       
       // ✅ FÜR OTHER EVENT TYPES: EventTypeSelector anzeigen beim Editieren
       if (isOtherEvent && props.mode === 'edit') {

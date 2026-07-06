@@ -34,6 +34,8 @@ interface AppointmentNotificationBody {
   showPrice?: boolean       // false for non-billable event types (theory, other, custom)
   // Optional: if provided, a push notification is sent alongside the email
   userId?: string
+  staffPhone?: string
+  isLessonType?: boolean  // false for meeting/vku/etc → hides "Zum Kundenkonto" button
 }
 
 // ========== TEMPLATES - Dynamic with tenant colors ==========
@@ -51,7 +53,7 @@ function buildDetailBox(data: AppointmentNotificationBody, primaryColor: string)
       ? `<p style="margin:5px 0;color:#374151"><strong>Art:</strong> ${data.eventTypeName}</p>`
       : '',
     data.staffName
-      ? `<p style="margin:5px 0;color:#374151"><strong>Fahrlehrer:</strong> ${data.staffName}</p>`
+      ? `<p style="margin:5px 0;color:#374151"><strong>Fahrlehrer:</strong> ${data.staffName}${data.staffPhone ? ` · <a href="tel:${data.staffPhone}" style="color:#374151;text-decoration:none">${data.staffPhone}</a>` : ''}</p>`
       : '',
     data.location
       ? `<p style="margin:5px 0;color:#374151"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px;color:#6b7280">${data.locationAddress}</span>` : ''}</p>`
@@ -68,7 +70,7 @@ function buildDetailBox(data: AppointmentNotificationBody, primaryColor: string)
 
 function logoRow(logoUrl: string | null, tenantName: string): string {
   if (!logoUrl) return ''
-  return `<tr><td style="background:#fff;text-align:center;padding:20px 30px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></td></tr>`
+  return `<tr><td style="background:#fff;text-align:center;padding:20px 30px 16px"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></td></tr>`
 }
 
 const TEMPLATES = {
@@ -105,9 +107,11 @@ const TEMPLATES = {
                    <div style="text-align: center; margin: 30px 0;">
                      <a href="${confirmUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">Jetzt bezahlen</a>
                    </div>`
-                : `<div style="text-align: center; margin: 30px 0;">
-                     <a href="${confirmUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">Zum Kundenkonto</a>
-                   </div>`
+                : (data.isLessonType !== false
+                  ? `<div style="text-align: center; margin: 30px 0;">
+                       <a href="${confirmUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">Zum Kundenkonto</a>
+                     </div>`
+                  : '')
               }
 
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || 'Driving Team'}</strong></p>

@@ -127,6 +127,7 @@ export interface InvoiceFormData {
   staff_id?: string
   product_sale_id?: string
   appointment_id?: string
+  company_id?: string
   
   // Rechnungsempfänger
   billing_type: 'individual' | 'company'
@@ -256,7 +257,7 @@ export const DEFAULT_INVOICE_VALUES: Partial<InvoiceFormData> = {
 
 export const DEFAULT_INVOICE_ITEM_VALUES: Partial<InvoiceItemFormData> = {
   quantity: 1,
-  vat_rate: 7.70,
+  vat_rate: 8.10,
   sort_order: 0,
   discount_percent: 0,
   total_price_rappen: 0,

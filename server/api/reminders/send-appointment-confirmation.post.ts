@@ -123,13 +123,14 @@ export default defineEventHandler(async (event) => {
     // 5. Get staff data
     const { data: staff, error: staffError } = await supabase
       .from('users')
-      .select('first_name, last_name, email')
+      .select('first_name, last_name, email, phone')
       .eq('id', appointment.staff_id)
       .single()
 
     const staffName = staff
       ? `${staff.first_name} ${staff.last_name}`
       : 'Ihr Fahrlehrer'
+    const staffPhone = (staff as any)?.phone || null
 
     // 6. Get tenant data
     const { data: tenant, error: tenantError } = await supabase
@@ -179,8 +180,11 @@ export default defineEventHandler(async (event) => {
 
     // Price is only relevant for standard billable event types
     const BILLABLE_TYPES = new Set(['lesson', 'exam', 'theory'])
+    const LESSON_TYPES = new Set(['lesson', 'exam', 'theory'])
     const showPrice = !appointment.event_type_code
       || BILLABLE_TYPES.has(appointment.event_type_code)
+    const isLessonType = !appointment.event_type_code
+      || LESSON_TYPES.has(appointment.event_type_code)
 
     // 8. Get payment data
     const payment = Array.isArray(appointment.payments)
@@ -221,6 +225,7 @@ export default defineEventHandler(async (event) => {
           appointmentTime: appointmentDateTime,
           type: 'appointment_confirmation',
           staffName,
+          staffPhone,
           location: locationDisplay,
           locationAddress: locationAddressDisplay,
           tenantName: tenant.name,
@@ -233,6 +238,7 @@ export default defineEventHandler(async (event) => {
           eventTypeName,
           durationMinutes,
           showPrice,
+          isLessonType,
         }
       })
 

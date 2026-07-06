@@ -266,6 +266,11 @@ export const useTenantBranding = () => {
         defaultTheme: data.default_theme || 'light',
         allowThemeSwitch: data.allow_theme_switch ?? true,
         business_type: data.business_type,
+        // Invoice settings
+        default_vat_rate: data.default_vat_rate ?? 7.70,
+        invoice_intro_text: data.invoice_intro_text ?? null,
+        invoice_payment_terms: data.invoice_payment_terms ?? null,
+        invoice_footer_text: data.invoice_footer_text ?? null,
       }
 
     // CSS-Variablen anwenden
@@ -531,9 +536,9 @@ export const useTenantBranding = () => {
       return color
     }),
     accentColor: computed(() => currentTenantBranding.value?.colors?.accent || '#3B82F6'),
-    defaultVatRate: computed(() => (currentTenantBranding.value as any)?.default_vat_rate ?? 7.70),
+    defaultVatRate: computed(() => parseFloat((currentTenantBranding.value as any)?.default_vat_rate) || 8.10),
     invoiceIntroText: computed(() => (currentTenantBranding.value as any)?.invoice_intro_text ?? ''),
-    invoicePaymentTerms: computed(() => (currentTenantBranding.value as any)?.invoice_payment_terms ?? 'Zahlbar innert 30 Tagen netto.'),
+    invoicePaymentTerms: computed(() => (currentTenantBranding.value as any)?.invoice_payment_terms ?? ''),
     invoiceFooterText: computed(() => (currentTenantBranding.value as any)?.invoice_footer_text ?? ''),
   }
 }

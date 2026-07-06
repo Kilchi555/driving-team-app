@@ -29,10 +29,44 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
+    // Generate invoice number (tenant prefix + year + sequential counter)
+    const { data: tenantData } = await supabaseAdmin
+      .from('tenants')
+      .select('invoice_number_prefix')
+      .eq('id', userProfile.tenant_id)
+      .single()
+
+    const prefix = tenantData?.invoice_number_prefix || 'RE'
+    const year = new Date().getFullYear()
+
+    const { count: existingCount } = await supabaseAdmin
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', userProfile.tenant_id)
+      .like('invoice_number', `${prefix}-${year}-%`)
+
+    const seq = String((existingCount || 0) + 1).padStart(4, '0')
+    const invoiceNumber = `${prefix}-${year}-${seq}`
+
+    // Compute totals server-side
+    const subtotalRappen: number = items.reduce((sum: number, item: any) => sum + (item.total_price_rappen || 0), 0)
+    const vatRappen: number = items.reduce((sum: number, item: any) => sum + (item.vat_amount_rappen || 0), 0)
+    const discountRappen: number = invoiceData.discount_amount_rappen || 0
+    const totalRappen: number = subtotalRappen + vatRappen - discountRappen
+
     // Create invoice
     const invoiceInsertData = {
       ...invoiceData,
-      tenant_id: userProfile.tenant_id
+      tenant_id: userProfile.tenant_id,
+      invoice_number: invoiceNumber,
+      subtotal_rappen: subtotalRappen,
+      vat_amount_rappen: vatRappen,
+      total_amount_rappen: totalRappen,
+      status: 'draft',
+      payment_status: 'pending',
+      // company invoices have no user_id — coerce empty string to null
+      user_id: invoiceData.user_id || null,
+      company_id: invoiceData.company_id || null,
     }
 
     const { data: invoice, error: invoiceError } = await supabaseAdmin
@@ -78,9 +112,19 @@ export default defineEventHandler(async (event) => {
     // Create invoice items
     if (items.length > 0) {
       const invoiceItems = items.map((item: any, index: number) => {
-        // Strip internal metadata before inserting
-        const { _open_item_id, _open_item_type, _open_item_source_table, ...cleanItem } = item
-        return { ...cleanItem, invoice_id: invoice.id, sort_order: item.sort_order || index }
+        // Strip internal metadata and computed-only fields before inserting
+        const {
+          _open_item_id, _open_item_type, _open_item_source_table,
+          payment_method, status,
+          ...cleanItem
+        } = item
+        return {
+          ...cleanItem,
+          invoice_id: invoice.id,
+          tenant_id: userProfile.tenant_id,
+          sort_order: item.sort_order ?? index,
+          discount_percent: item.discount_percent || 0,
+        }
       })
 
       const { error: itemsError } = await supabaseAdmin
