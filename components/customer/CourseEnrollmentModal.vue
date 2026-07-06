@@ -1461,9 +1461,11 @@ const submitEnrollment = async () => {
     
     if (response.success) {
       if (response.paymentUrl) {
-        // Keep loading state active during navigation — do NOT reset isLoading
-        // (finally block checks willRedirectToPayment and skips the reset)
+        // Keep loading state active during navigation — do NOT reset isLoading.
+        // Small delay gives Wallee time to activate the transaction before the
+        // browser hits the payment page (avoids "cannot connect" on first load).
         willRedirectToPayment = true
+        await new Promise(resolve => setTimeout(resolve, 800))
         window.location.href = response.paymentUrl
         return
       } else {
