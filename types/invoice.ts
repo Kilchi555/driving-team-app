@@ -162,9 +162,13 @@ export interface InvoiceItemFormData {
   appointment_duration_minutes?: number
   quantity: number
   unit_price_rappen: number
+  discount_percent?: number
   vat_rate: number
   sort_order: number
   notes?: string
+  // computed fields (not sent to server directly)
+  total_price_rappen?: number
+  vat_amount_rappen?: number
 }
 
 // API Response Types
@@ -254,6 +258,7 @@ export const DEFAULT_INVOICE_ITEM_VALUES: Partial<InvoiceItemFormData> = {
   quantity: 1,
   vat_rate: 7.70,
   sort_order: 0,
+  discount_percent: 0,
   total_price_rappen: 0,
   vat_amount_rappen: 0,
 }

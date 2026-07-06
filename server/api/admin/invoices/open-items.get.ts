@@ -38,15 +38,15 @@ export default defineEventHandler(async (event) => {
   const tenantId = profile.tenant_id
   const items: any[] = []
 
-  // ── 1. Unpaid payments (driving lessons) with payment_method = 'invoice' ────
+  // ── 1. Unpaid payments (driving lessons) — any payment method, not yet invoiced ─
   const { data: lessonPayments } = await supabase
     .from('payments')
-    .select('id, total_amount_rappen, created_at, payment_method, status, appointment_id, appointments(title, start_time, duration_minutes)')
+    .select('id, total_amount_rappen, created_at, payment_method, payment_status, appointment_id, appointments(title, start_time, duration_minutes)')
     .in('user_id', userIds)
     .eq('tenant_id', tenantId)
-    .eq('payment_method', 'invoice')
-    .in('status', ['pending', 'open', 'processing'])
+    .in('payment_status', ['pending', 'open', 'processing', 'failed'])
     .is('invoice_id', null)
+    .gt('total_amount_rappen', 0)
 
   for (const p of (lessonPayments || [])) {
     const apt = (p as any).appointments
@@ -59,17 +59,19 @@ export default defineEventHandler(async (event) => {
       duration_minutes: apt?.duration_minutes,
       amount_rappen: p.total_amount_rappen || 0,
       unit: 'Lektion',
+      payment_method: p.payment_method,
+      status: p.payment_status,
     })
   }
 
-  // ── 2. Uninvoiced course registrations ───────────────────────────────────────
+  // ── 2. Uninvoiced course registrations — any payment method, not yet invoiced ──
   const { data: courseRegs } = await supabase
     .from('course_registrations')
     .select('id, amount_paid_rappen, payment_status, payment_method, course_id, courses(name, price_per_participant_rappen)')
     .in('user_id', userIds)
     .eq('tenant_id', tenantId)
-    .eq('payment_method', 'invoice')
     .neq('status', 'cancelled')
+    .not('payment_status', 'eq', 'paid')
     .is('invoice_id', null)
 
   for (const r of (courseRegs || [])) {
