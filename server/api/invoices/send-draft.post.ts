@@ -281,6 +281,9 @@ export default defineEventHandler(async (event) => {
         qrIban: (draft as any).qr_iban || null,
         creditorName: (draft as any).creditor_name || tenantData.name,
         scorRef: (draft as any).scor_reference || null,
+        introText: (draft as any).notes || (tenantData as any).invoice_intro_text || null,
+        paymentTerms: (draft as any).payment_terms || (tenantData as any).invoice_payment_terms || null,
+        footerText: (draft as any).footer_text || (tenantData as any).invoice_footer_text || null,
       })
 
       // PDF generieren und als Anhang beifügen

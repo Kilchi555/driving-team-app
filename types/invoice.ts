@@ -148,6 +148,8 @@ export interface InvoiceFormData {
   // Metadaten
   notes?: string
   internal_notes?: string
+  payment_terms?: string
+  footer_text?: string
 }
 
 export interface InvoiceItemFormData {
@@ -251,5 +253,7 @@ export const DEFAULT_INVOICE_VALUES: Partial<InvoiceFormData> = {
 export const DEFAULT_INVOICE_ITEM_VALUES: Partial<InvoiceItemFormData> = {
   quantity: 1,
   vat_rate: 7.70,
-  sort_order: 0
+  sort_order: 0,
+  total_price_rappen: 0,
+  vat_amount_rappen: 0,
 }

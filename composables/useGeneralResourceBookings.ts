@@ -91,7 +91,7 @@ export function useGeneralResourceBookings() {
         .from('users')
         .select('tenant_id')
         .eq('auth_user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (!userProfile?.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
@@ -139,7 +139,7 @@ export function useGeneralResourceBookings() {
         .from('users')
         .select('id, tenant_id')
         .eq('auth_user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (!userProfile?.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
@@ -181,7 +181,7 @@ export function useGeneralResourceBookings() {
         .from('users')
         .select('tenant_id')
         .eq('auth_user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (!userProfile?.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
@@ -234,7 +234,7 @@ export function useGeneralResourceBookings() {
         .from('users')
         .select('tenant_id')
         .eq('auth_user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (!userProfile?.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
@@ -267,7 +267,7 @@ export function useGeneralResourceBookings() {
         .from('users')
         .select('tenant_id')
         .eq('auth_user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (!userProfile?.tenant_id) throw new Error('Kein Tenant zugewiesen')
 

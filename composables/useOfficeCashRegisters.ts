@@ -63,7 +63,7 @@ export const useOfficeCashRegisters = () => {
         .from('users')
         .select('tenant_id')
         .eq('auth_user_id', user.id)
-        .single()
+        .maybeSingle()
 
       return userProfile?.tenant_id || null
     } catch (err) {

@@ -1096,6 +1096,57 @@
                 />
                 <p class="text-xs text-gray-400 mt-1">Rechnungen werden z.B. als <span class="font-mono">{{ invoiceSettings.invoice_number_prefix || 'RE' }}-{{ new Date().getFullYear() }}-0001</span> nummeriert.</p>
               </div>
+
+              <!-- Default VAT Rate -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Standard MwSt-Satz (%)</label>
+                <input
+                  v-model.number="invoiceSettings.default_vat_rate"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  class="w-32 px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm"
+                />
+                <p class="text-xs text-gray-400 mt-1">Wird als Standardwert beim Erstellen neuer Rechnungspositionen verwendet. CH-Normalsatz: 8.1%, reduzierter Satz: 2.6%</p>
+              </div>
+
+              <!-- Rechnungstexte -->
+              <div class="col-span-2 border-t pt-4 mt-2">
+                <h5 class="text-sm font-semibold text-gray-700 mb-3">Rechnungstexte (Vorlagen)</h5>
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Einleitungstext</label>
+                    <textarea
+                      v-model="invoiceSettings.invoice_intro_text"
+                      rows="3"
+                      placeholder="z.B. Guten Tag&#10;&#10;Bitte entnehmen Sie der folgenden Aufstellung unsere Leistungen."
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm resize-none"
+                    />
+                    <p class="text-xs text-gray-400 mt-1">Erscheint oben auf der Rechnung, vor den Positionen.</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Zahlungsbedingungen</label>
+                    <textarea
+                      v-model="invoiceSettings.invoice_payment_terms"
+                      rows="2"
+                      placeholder="z.B. Zahlbar innert 30 Tagen netto."
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm resize-none"
+                    />
+                    <p class="text-xs text-gray-400 mt-1">Erscheint nach den Positionen / Totals auf der Rechnung.</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Abschlusstext / Dankestext</label>
+                    <textarea
+                      v-model="invoiceSettings.invoice_footer_text"
+                      rows="2"
+                      placeholder="z.B. Vielen Dank für Ihr Vertrauen. Wir freuen uns auf die weitere Zusammenarbeit."
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm resize-none"
+                    />
+                    <p class="text-xs text-gray-400 mt-1">Erscheint ganz unten auf der Rechnung.</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="mt-5 flex justify-end">
@@ -1650,6 +1701,10 @@ const invoiceSettings = ref({
   invoice_zip: '',
   invoice_city: '',
   invoice_number_prefix: 'RE',
+  default_vat_rate: 7.70,
+  invoice_intro_text: '',
+  invoice_payment_terms: '',
+  invoice_footer_text: '',
 })
 const isSavingInvoiceSettings = ref(false)
 
@@ -1664,6 +1719,10 @@ const loadInvoiceSettings = async (_tenantId: string) => {
         invoice_zip: data.invoice_zip || '',
         invoice_city: data.invoice_city || '',
         invoice_number_prefix: data.invoice_number_prefix || 'RE',
+        default_vat_rate: data.default_vat_rate ?? 7.70,
+        invoice_intro_text: data.invoice_intro_text || '',
+        invoice_payment_terms: data.invoice_payment_terms || '',
+        invoice_footer_text: data.invoice_footer_text || '',
       }
     }
   } catch (e) {

@@ -53,7 +53,7 @@ const loadEvaluationData = async (tenantId?: string) => {
         .from('users')
         .select('tenant_id')
         .eq('auth_user_id', user?.id)
-        .single()
+        .maybeSingle()
       
       tenantId = userProfile?.tenant_id
     }

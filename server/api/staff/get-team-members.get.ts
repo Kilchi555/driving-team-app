@@ -8,37 +8,28 @@
  * @returns {Array<Staff>} List of staff members with id, first_name, last_name, email, role, is_active
  */
 
-import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   try {
-    // ✅ 1. AUTHENTICATION
-    const user = await serverSupabaseUser(event)
-    if (!user) {
-      throw createError({
-        statusCode: 401,
-        message: 'Unauthorized'
-      })
+    // ✅ 1. AUTHENTICATION — use shared auth utility (same as all other endpoints)
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser?.id) {
+      throw createError({ statusCode: 401, message: 'Unauthorized' })
     }
 
-    // ✅ 2. GET SUPABASE CLIENT
-    const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-  )
+    const supabase = getSupabaseAdmin()
 
-    // ✅ 3. GET USER'S TENANT
+    // ✅ 2. GET USER'S TENANT
     const { data: userProfile, error: profileError } = await supabase
       .from('users')
       .select('tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
+      .eq('auth_user_id', authUser.id)
+      .maybeSingle()
 
     if (profileError || !userProfile?.tenant_id) {
-      throw createError({
-        statusCode: 403,
-        message: 'User has no tenant assigned'
-      })
+      throw createError({ statusCode: 403, message: 'User has no tenant assigned' })
     }
 
     const tenantId = userProfile.tenant_id
