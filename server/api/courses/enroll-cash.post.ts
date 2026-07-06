@@ -56,6 +56,7 @@ const handler = defineEventHandler(async (event) => {
       customSessions,
       isPartialEnrollment,
       partialStartPosition,
+      individualSessionNumber,  // Set when booking a single allow_individual_booking session
       marketingSessionId,   // Optional: analytics session ID from drivingteam.ch for attribution
       vehicleId,            // Optional: selected rental vehicle
     } = body
@@ -270,12 +271,26 @@ const handler = defineEventHandler(async (event) => {
       // For partial enrollment, only keep session IDs from partial_start_position onwards.
       // Session IDs are ordered, so we resolve position from course_sessions by date grouping.
       const isPartial = isPartialEnrollment || course.is_partial_only
+      const isIndividualSess = isPartial && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
 
       // Validate: partial enrollment is blocked only when a category IS linked and explicitly
       // disallows it. Courses without a category have no restriction.
-      if (isPartial && !course.is_partial_only && course.course_category && !course.course_category.allow_partial_enrollment) {
+      if (isPartial && !course.is_partial_only && !isIndividualSess && course.course_category && !course.course_category.allow_partial_enrollment) {
         throw createError({ statusCode: 400, statusMessage: 'Teilbuchung ist für diesen Kurs nicht erlaubt.' })
       }
+
+      if (isIndividualSess) {
+        // Individual session booking: only enroll in the specific session
+        const targetSess = (course.course_sessions || []).find(
+          (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
+        )
+        if (targetSess?.sari_session_id) {
+          sariSessionIds = [String(targetSess.sari_session_id)]
+        } else if (sariSessionIds.length >= individualSessionNumber) {
+          sariSessionIds = [sariSessionIds[individualSessionNumber - 1]]
+        }
+        logger.info(`🎯 Individual session ${individualSessionNumber}: enrolling in ${sariSessionIds.join(',')}`)
+      } else {
       const dbStartPos: number = course.course_category?.partial_start_position ?? 3
 
       if (isPartial && dbStartPos > 1 && course.course_sessions?.length > 0) {
@@ -292,9 +307,13 @@ const handler = defineEventHandler(async (event) => {
           if (d !== lastDate) { pos++; lastDate = d }
           if (s.sari_session_id) sessionPosMap[s.sari_session_id] = pos
         }
-        sariSessionIds = sariSessionIds.filter(id => (sessionPosMap[id] ?? pos) >= startPos)
+        sariSessionIds = sariSessionIds.filter(id => {
+          const p = sessionPosMap[id]
+          return p === undefined || p >= startPos
+        })
         logger.info(`🎯 Partial enrollment: keeping ${sariSessionIds.length} session(s) from position ${startPos}`)
       }
+      } // end else (not individual session)
       
       if (sariSessionIds.length === 0) {
         logger.error('❌ Invalid SARI course ID format:', course.sari_course_id)
@@ -489,13 +508,16 @@ const handler = defineEventHandler(async (event) => {
     logger.info('✅ Confirmed enrollment created:', enrollment.id)
 
     // ── Vehicle bookings for each session (if vehicle selected) ──────────────
-    // For partial enrollments only create bookings for the sessions the customer booked.
+    // For partial/individual enrollments only create bookings for the sessions the customer booked.
     if (vehicleId && course.course_sessions?.length) {
       try {
-        const isPartialOrder = !!(isPartialEnrollment || course.is_partial_only)
+        const isPartialOrd = !!(isPartialEnrollment || course.is_partial_only)
+        const isIndivSess = isPartialOrd && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
         let sessionsForVehicle = course.course_sessions
 
-        if (isPartialOrder && !course.is_partial_only) {
+        if (isIndivSess) {
+          sessionsForVehicle = course.course_sessions.filter((s: any) => s.session_number === individualSessionNumber)
+        } else if (isPartialOrd && !course.is_partial_only) {
           const dbStartPos: number = course.course_category?.partial_start_position ?? 3
           if (dbStartPos > 1) {
             const sortedAll = [...course.course_sessions].sort((a: any, b: any) =>
@@ -551,11 +573,20 @@ const handler = defineEventHandler(async (event) => {
 
     // 11. Send confirmation email
     try {
-      const isPartialOrder = !!(isPartialEnrollment || course.is_partial_only)
-      const partialPriceRappen: number = course.course_category?.partial_price_rappen ?? 0
-      const effectivePrice: number = (isPartialOrder && partialPriceRappen > 0)
-        ? partialPriceRappen
-        : course.price_per_participant_rappen
+      const isPartialOrd = !!(isPartialEnrollment || course.is_partial_only)
+      const isIndivSess = isPartialOrd && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
+      let effectivePrice: number
+      if (isIndivSess) {
+        const tgt = (course.course_sessions || []).find(
+          (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
+        )
+        effectivePrice = tgt?.individual_price_rappen ?? course.price_per_participant_rappen
+      } else {
+        const partialPriceRappen: number = course.course_category?.partial_price_rappen ?? 0
+        effectivePrice = (isPartialOrd && !course.is_partial_only && partialPriceRappen > 0)
+          ? partialPriceRappen
+          : course.price_per_participant_rappen
+      }
       await $fetch('/api/emails/send-course-enrollment-confirmation', {
         method: 'POST',
         body: {

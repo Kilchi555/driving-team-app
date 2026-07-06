@@ -1846,8 +1846,9 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
       return
     }
     
-    // 4. Get birthdate from payment metadata
+    // 4. Get birthdate + individual_session_number from payment metadata
     let birthdate: string | null = null
+    let individualSessionNum: number | null = null
     
     if (registration.payment_id) {
       const { data: payment } = await supabase
@@ -1859,6 +1860,10 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
       if (payment?.metadata?.sari_birthdate) {
         birthdate = payment.metadata.sari_birthdate
         logger.debug('✅ Got birthdate from payment metadata:', birthdate)
+      }
+      if (payment?.metadata?.individual_session_number) {
+        individualSessionNum = Number(payment.metadata.individual_session_number)
+        logger.debug('✅ Got individual_session_number from payment metadata:', individualSessionNum)
       }
     }
     
@@ -1888,34 +1893,46 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
 
     // For partial enrollment, filter session IDs to only those the customer booked.
     // is_partial_only courses already contain only the relevant sessions in sari_course_id
-    // — no further filtering needed. Full courses with optional Teilbuchung need filtering.
+    // — no further filtering needed.
     if (registration.is_partial_enrollment && !course.is_partial_only) {
-      // Load partial_start_position from DB — never trust client metadata for access control
-      const { data: categoryConfig } = await supabase
-        .from('courses')
-        .select('course_category:course_categories(partial_start_position)')
-        .eq('id', registration.course_id)
-        .maybeSingle()
-      const startPos: number = (categoryConfig as any)?.course_category?.partial_start_position ?? 3
-      const courseSessions: any[] = course.course_sessions || []
-      if (courseSessions.length > 0) {
-        const sortedSessions = [...courseSessions].sort((a: any, b: any) =>
-          a.start_time.localeCompare(b.start_time)
+      if (individualSessionNum !== null) {
+        // Individual session booking: enroll only in the specific session
+        const targetSess = (course.course_sessions || []).find(
+          (s: any) => s.session_number === individualSessionNum && s.allow_individual_booking
         )
-        let pos = 0
-        let lastDate = ''
-        const sessionPosMap: Record<string, number> = {}
-        for (const s of sortedSessions) {
-          const d = s.start_time.split('T')[0]
-          if (d !== lastDate) { pos++; lastDate = d }
-          if (s.sari_session_id) sessionPosMap[String(s.sari_session_id)] = pos
+        if (targetSess?.sari_session_id) {
+          sariCourseIds = [String(targetSess.sari_session_id)]
+        } else if (sariCourseIds.length >= individualSessionNum) {
+          sariCourseIds = [sariCourseIds[individualSessionNum - 1]]
         }
-        // Only filter IDs that are mapped; unknown IDs are kept (safe fallback)
-        sariCourseIds = sariCourseIds.filter(id => {
-          const p = sessionPosMap[String(id)]
-          return p === undefined || p >= startPos
-        })
-        logger.info(`🎯 Partial enrollment: SARI will receive ${sariCourseIds.length} session(s) from position ${startPos}`)
+        logger.info(`🎯 Individual session ${individualSessionNum}: enrolling in ${sariCourseIds.join(',')}`)
+      } else {
+        // Category-level partial booking: filter by partial_start_position from DB
+        const { data: categoryConfig } = await supabase
+          .from('courses')
+          .select('course_category:course_categories(partial_start_position)')
+          .eq('id', registration.course_id)
+          .maybeSingle()
+        const startPos: number = (categoryConfig as any)?.course_category?.partial_start_position ?? 3
+        const courseSessions: any[] = course.course_sessions || []
+        if (courseSessions.length > 0) {
+          const sortedSessions = [...courseSessions].sort((a: any, b: any) =>
+            a.start_time.localeCompare(b.start_time)
+          )
+          let pos = 0
+          let lastDate = ''
+          const sessionPosMap: Record<string, number> = {}
+          for (const s of sortedSessions) {
+            const d = s.start_time.split('T')[0]
+            if (d !== lastDate) { pos++; lastDate = d }
+            if (s.sari_session_id) sessionPosMap[String(s.sari_session_id)] = pos
+          }
+          sariCourseIds = sariCourseIds.filter(id => {
+            const p = sessionPosMap[String(id)]
+            return p === undefined || p >= startPos
+          })
+          logger.info(`🎯 Partial enrollment: SARI will receive ${sariCourseIds.length} session(s) from position ${startPos}`)
+        }
       }
     }
     

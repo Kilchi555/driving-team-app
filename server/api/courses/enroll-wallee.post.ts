@@ -56,8 +56,9 @@ const handler = defineEventHandler(async (event) => {
       referralCode,         // Optional: affiliate referral code
       discountCode,         // Optional: discount/voucher code
       discountAmountRappen, // Optional: client-computed discount (re-validated server-side)
-      isPartialEnrollment,  // True when customer books only Teil-3
-      partialStartPosition, // Which session position to start from (e.g. 3)
+      isPartialEnrollment,  // True when customer books only Teil-3 (partial mode OR individual session)
+      partialStartPosition, // Which session position to start from (e.g. 3) — category partial mode
+      individualSessionNumber, // Set when booking a single allow_individual_booking session
       marketingSessionId,   // Optional: analytics session ID from drivingteam.ch for attribution
       vehicleId,            // Optional: selected rental vehicle
     } = body
@@ -297,10 +298,22 @@ const handler = defineEventHandler(async (event) => {
         // ── Partial-enrollment session filtering ─────────────────────────────
         // For is_partial_only courses the sessions stored in sari_course_id ARE
         // already the partial subset — no further filtering needed.
+        // For individual session booking: only validate the specific session.
         // For full courses with optional partial booking we keep only sessions
         // from partial_start_position onward (same logic as cash/webhook).
         const isPartial = !!(isPartialEnrollment || course.is_partial_only)
-        if (isPartial && !course.is_partial_only && course.course_sessions?.length > 0) {
+        if (isIndividualSession) {
+          // Find the sari_session_id for the specific individual-bookable session
+          const targetSess = (course.course_sessions || []).find(
+            (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
+          )
+          if (targetSess?.sari_session_id) {
+            allSessionIds = [String(targetSess.sari_session_id)]
+          } else if (allSessionIds.length >= individualSessionNumber) {
+            allSessionIds = [allSessionIds[individualSessionNumber - 1]]
+          }
+          logger.info(`🎯 Individual session ${individualSessionNumber}: validating ${allSessionIds.join(',')}`)
+        } else if (isPartial && !course.is_partial_only && course.course_sessions?.length > 0) {
           const dbStartPos: number = course.course_category?.partial_start_position ?? 3
           if (dbStartPos > 1) {
             const sortedSessions = [...course.course_sessions].sort((a: any, b: any) =>
@@ -433,13 +446,32 @@ const handler = defineEventHandler(async (event) => {
     logger.info('ℹ️ Skipping enrollment creation - will be done by webhook after payment')
 
     // 8b. Re-validate discount code server-side (if provided)
-    // Effective price: use partial_price_rappen when this is a partial/partial-only enrollment,
-    // fall back to full price when no partial price is configured.
+    // Effective price depends on booking type:
+    //   1. Individual session (allow_individual_booking): use session.individual_price_rappen
+    //   2. Category partial (allow_partial_enrollment toggle): use course_category.partial_price_rappen
+    //   3. is_partial_only course: price_per_participant_rappen IS already the partial price
+    //   4. Full enrollment: full price
     const isPartialOrder = !!(isPartialEnrollment || course.is_partial_only)
-    const partialPriceRappen: number = course.course_category?.partial_price_rappen ?? 0
-    const effectiveBasePrice: number = (isPartialOrder && partialPriceRappen > 0)
-      ? partialPriceRappen
-      : course.price_per_participant_rappen
+    const isIndividualSession = isPartialOrder && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
+
+    let effectiveBasePrice: number
+    if (isIndividualSession) {
+      const targetSession = (course.course_sessions || []).find(
+        (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
+      )
+      effectiveBasePrice = targetSession?.individual_price_rappen
+        ? targetSession.individual_price_rappen
+        : course.price_per_participant_rappen
+      logger.info(`💰 Individual session ${individualSessionNumber}: price=${effectiveBasePrice} rappen (from session.individual_price_rappen)`)
+    } else if (isPartialOrder && !course.is_partial_only) {
+      const partialPriceRappen: number = course.course_category?.partial_price_rappen ?? 0
+      effectiveBasePrice = partialPriceRappen > 0
+        ? partialPriceRappen
+        : course.price_per_participant_rappen
+      logger.info(`💰 Partial enrollment: price=${effectiveBasePrice} rappen (category partial)`)
+    } else {
+      effectiveBasePrice = course.price_per_participant_rappen
+    }
 
     let validatedDiscountAmount = 0
     let validatedDiscountCode: string | null = null
@@ -541,8 +573,17 @@ const handler = defineEventHandler(async (event) => {
           const sariCourseIdParts = String(course.sari_course_id || '').split('_')
           let creditSariSessionIds = sariCourseIdParts.slice(1).filter((id: string) => id && !isNaN(parseInt(id)))
 
-          // Apply same partial filtering as main path
-          if (isPartialOrder && !course.is_partial_only && course.course_sessions?.length > 0) {
+          // Apply same filtering as main path
+          if (isIndividualSession) {
+            const targetSess = (course.course_sessions || []).find(
+              (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
+            )
+            if (targetSess?.sari_session_id) {
+              creditSariSessionIds = [String(targetSess.sari_session_id)]
+            } else if (creditSariSessionIds.length >= individualSessionNumber) {
+              creditSariSessionIds = [creditSariSessionIds[individualSessionNumber - 1]]
+            }
+          } else if (isPartialOrder && !course.is_partial_only && course.course_sessions?.length > 0) {
             const dbStartPos: number = course.course_category?.partial_start_position ?? 3
             if (dbStartPos > 1) {
               const sortedSessions = [...course.course_sessions].sort((a: any, b: any) =>
@@ -666,6 +707,7 @@ const handler = defineEventHandler(async (event) => {
             referral_code: referralCode || null,
             is_partial_enrollment: isPartialOrder,
             partial_start_position: course.course_category?.partial_start_position ?? 3,
+            individual_session_number: isIndividualSession ? individualSessionNumber : null,
             discount_code: validatedDiscountCode,
             discount_amount_rappen: validatedDiscountAmount,
             original_price_rappen: course.price_per_participant_rappen,
