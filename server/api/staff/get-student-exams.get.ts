@@ -87,7 +87,7 @@ export default defineEventHandler(async (event) => {
       ])
     )
 
-    // 3. Exam results for those appointments
+    // 3a. Exam results for those appointments
     let examResultsData: any[] = []
 
     if (appointmentIds.length > 0) {
@@ -103,6 +103,22 @@ export default defineEventHandler(async (event) => {
         examResultsData = resultsData || []
       }
     }
+
+    // 3b. Manual exam results (without appointment)
+    const { data: manualResultsData } = await supabaseAdmin
+      .from('exam_results')
+      .select('*')
+      .eq('user_id', studentId)
+      .eq('is_manual', true)
+      .order('exam_date', { ascending: false })
+
+    const manualResults = (manualResultsData || []).map(r => ({
+      ...r,
+      appointments: null,
+      isPlanned: false,
+      isUnrated: false,
+      isManual: true,
+    }))
 
     // 4. Build combined list
     const appointmentIdsWithResult = new Set(examResultsData.map(r => r.appointment_id))
@@ -132,7 +148,7 @@ export default defineEventHandler(async (event) => {
         isUnrated: new Date(apt.start_time) < now,
       }))
 
-    const combined = [...plannedExams, ...completedResults]
+    const combined = [...plannedExams, ...completedResults, ...manualResults]
       .sort((a, b) => new Date(b.exam_date).getTime() - new Date(a.exam_date).getTime())
 
     logger.debug('✅ Loaded', combined.length, 'exam entries for student:', studentId)

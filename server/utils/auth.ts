@@ -239,10 +239,14 @@ export async function requireAdminProfile(
   const dbUserId: string = authUser.db_user_id || authUser.profile?.id || ''
 
   if (!allowedRoles.includes(role)) {
+    const url = event.node.req.url
+    console.warn(`🚫 403 insufficient role: ${role} not in [${allowedRoles.join(',')}] on ${url}`)
     throw createError({ statusCode: 403, statusMessage: 'Forbidden – insufficient role' })
   }
 
   if (!tenantId) {
+    const url = event.node.req.url
+    console.warn(`🚫 403 no tenant assigned for role=${role} on ${url}`)
     throw createError({ statusCode: 403, statusMessage: 'Forbidden – no tenant assigned' })
   }
 

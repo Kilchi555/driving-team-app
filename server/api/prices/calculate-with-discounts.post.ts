@@ -45,7 +45,9 @@ export default defineEventHandler(async (event) => {
       discountAmountRappen,
       couponCode,
       durationMinutes,
-      categoryCode
+      categoryCode,
+      // Vehicle: positive = surcharge (school), negative = discount (own vehicle)
+      vehicleCostRappen,
     } = body
 
     const errors: any = {}
@@ -64,6 +66,9 @@ export default defineEventHandler(async (event) => {
     if (Object.keys(errors).length > 0) {
       throwValidationError(errors)
     }
+
+    // Normalise vehicle cost: positive = surcharge, negative = discount (own vehicle)
+    const normalizedVehicleCostRappen = typeof vehicleCostRappen === 'number' ? vehicleCostRappen : 0
 
     const supabaseAdmin = getSupabaseAdmin()
 
@@ -200,7 +205,8 @@ export default defineEventHandler(async (event) => {
     }
 
     // ============ LAYER 6: CALCULATE FINAL PRICE ============
-    const subtotal = basePriceRappen + adminFeeRappen + productsPriceRappen
+    // vehicleCost is positive for school (surcharge) and negative for own vehicle (discount)
+    const subtotal = basePriceRappen + adminFeeRappen + productsPriceRappen + normalizedVehicleCostRappen
     
     // ✅ IMPORTANT: Apply discounts in order
     // 1. Voucher discount (server-validated)
@@ -240,6 +246,7 @@ export default defineEventHandler(async (event) => {
       basePriceRappen,
       adminFeeRappen,
       productsPriceRappen,
+      vehicleCostRappen: normalizedVehicleCostRappen,
       manualDiscountRappen: discountAmountRappen,
       voucherDiscountRappen: voucherDiscount,
       totalDiscountRappen: totalDiscount,
@@ -276,6 +283,7 @@ export default defineEventHandler(async (event) => {
           basePriceRappen,
           adminFeeRappen,
           productsPriceRappen,
+          vehicleCostRappen: normalizedVehicleCostRappen,
           discountAmountRappen,
           voucherDiscountRappen: voucherDiscount,
           totalDiscountRappen: totalDiscount,

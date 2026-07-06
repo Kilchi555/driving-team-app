@@ -201,68 +201,59 @@
               ]"
             >
 
-              <!-- Mobile-First Layout -->
-              <div class="flex items-center justify-between">
-                <!-- Left: Main Info -->
-                <div class="flex-1 min-w-0"> <!-- min-w-0 für text truncation -->
-                  <!-- Name (always full line) -->
-                  <div class="flex items-center gap-2 mb-1">
-                    <h3 :class="[
-                      'font-semibold truncate',
-                      student.auth_user_id ? 'text-gray-900' : 'text-gray-600'
-                    ]">
-                      {{ student.first_name }} {{ student.last_name }}
-                    </h3>
-                  </div>
-                  <!-- Category Badges - own line so name is never pushed away -->
-                  <div v-if="student.category && student.category.length > 0" class="flex flex-wrap gap-1 mb-1">
-                    <span 
-                      v-for="cat in student.category" 
-                      :key="cat"
-                      class="text-xs px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5"
-                      :style="isCategoryPassed(student, cat)
-                        ? { background: `${primaryColor}22`, color: primaryColor, outline: `1.5px solid ${primaryColor}55` }
-                        : { background: `${primaryColor}12`, color: primaryColor }"
-                      :title="isCategoryPassed(student, cat) ? `Prüfung ${cat} bestanden` : `Kategorie ${cat}`"
-                    >
-                      <span v-if="isCategoryPassed(student, cat)">✓</span>
-                      {{ cat }}
-                    </span>
-                  </div>
-                  
-                  <!-- Contact Info - compact -->
-                  <div class="space-y-0.5">
-                    <p v-if="student.phone" class="text-sm text-gray-600 flex items-center gap-1">
-                      <span class="text-xs">📱</span>
-                      <a :href="`tel:${student.phone}`" class="hover:underline" :style="{ color: primaryColor }" @click.stop>
-                        {{ formatPhone(student.phone) }}
-                      </a>                    
-                    </p>
-                  </div>
-                </div>
-                
-                <!-- Right: Status & Actions -->
-                <div class="flex flex-col items-end gap-2 ml-3">
-                  <!-- Status Badge -->
-                  <span :class="[
-                    'text-xs px-2 py-1 rounded-full font-medium',
-                    !student.auth_user_id 
-                      ? 'bg-orange-100 text-orange-700'
-                      : student.is_active 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-red-100 text-red-700'
-                  ]">
-                    {{ !student.auth_user_id ? 'Pending' : student.is_active ? 'Aktiv' : 'Inaktiv' }}
+              <!-- Row 1: Name + Status Badge + Details -->
+              <div class="flex items-center justify-between gap-2 mb-1">
+                <h3 :class="[
+                  'font-semibold truncate flex-1 min-w-0',
+                  student.auth_user_id ? 'text-gray-900' : 'text-gray-600'
+                ]">
+                  {{ student.first_name }} {{ student.last_name }}
+                </h3>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <!-- Status Badge: nur bei Pending oder Inaktiv -->
+                  <span
+                    v-if="!student.auth_user_id || !student.is_active"
+                    :class="[
+                      'text-xs px-2 py-0.5 rounded-full font-medium',
+                      !student.auth_user_id ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
+                    ]"
+                  >
+                    {{ !student.auth_user_id ? 'Pending' : 'Inaktiv' }}
                   </span>
-                  
-                  <!-- Quick Action Button (für alle) -->
-                  <button 
+                  <button
                     @click.stop="quickAction(student)"
-                    class="text-xs font-medium py-1 px-2 rounded transition-colors hover:opacity-80"
+                    class="text-xs font-medium py-0.5 px-2 rounded transition-colors hover:opacity-80"
                     :style="{ color: primaryColor, background: `${primaryColor}15` }"
                   >
                     Details →
                   </button>
+                </div>
+              </div>
+
+              <!-- Row 2: Telefon + Category Badges rechtsbündig -->
+              <div class="flex items-center justify-between gap-2">
+                <p v-if="student.phone" class="text-sm text-gray-600 flex items-center gap-1 min-w-0">
+                  <span class="text-xs flex-shrink-0">📱</span>
+                  <a :href="`tel:${student.phone}`" class="hover:underline truncate" :style="{ color: primaryColor }" @click.stop>
+                    {{ formatPhone(student.phone) }}
+                  </a>
+                </p>
+                <div v-else class="flex-1"></div>
+
+                <!-- Category Badges -->
+                <div v-if="student.category && student.category.length > 0" class="flex flex-wrap gap-1 justify-end flex-shrink-0">
+                  <span
+                    v-for="cat in student.category"
+                    :key="cat"
+                    class="text-xs px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5"
+                    :style="isCategoryPassed(student, cat)
+                      ? { background: `${primaryColor}22`, color: primaryColor, outline: `1.5px solid ${primaryColor}55` }
+                      : { background: `${primaryColor}12`, color: primaryColor }"
+                    :title="isCategoryPassed(student, cat) ? `Prüfung ${cat} bestanden` : `Kategorie ${cat}`"
+                  >
+                    <span v-if="isCategoryPassed(student, cat)">✓</span>
+                    {{ cat }}
+                  </span>
                 </div>
               </div>
             </div>

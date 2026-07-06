@@ -71,7 +71,7 @@
 
           <button
             @click="openCashControl"
-            class="shrink-0 bg-white rounded-2xl px-2 py-2 flex items-center gap-1.5 active:opacity-60 transition-opacity shadow-sm"
+            class="shrink-0 min-[550px]:flex-1 bg-white rounded-2xl px-2 py-2 flex items-center justify-center gap-1.5 active:opacity-60 transition-opacity shadow-sm"
           >
             <div class="w-6 h-6 bg-green-100 rounded-md flex items-center justify-center flex-shrink-0">
               <svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">

@@ -128,6 +128,20 @@
           </div>
         </div>
         
+        <!-- Ressourcen-Aufschläge (Raum / Fahrzeug) -->
+        <div v-if="(props.resourceSurcharges || []).length > 0" class="py-2 border-t border-black/10">
+          <div class="space-y-1.5">
+            <div class="text-sm font-medium" :style="primaryText">Ressourcen</div>
+            <div v-for="surcharge in props.resourceSurcharges" :key="surcharge.label"
+              class="flex justify-between items-center">
+              <span class="text-sm text-gray-700">{{ surcharge.label }}</span>
+              <span class="text-sm font-semibold text-gray-700">
+                {{ surcharge.rappen > 0 ? `CHF ${(surcharge.rappen / 100).toFixed(2)}` : 'Inklusive' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
         <div class="border-t pt-2">
           <!-- Preis vor Guthaben (nur anzeigen wenn Guthaben vorhanden) -->
           <div v-if="props.studentCredit && props.studentCredit.balance_rappen > 0" class="flex justify-between text-sm text-gray-500 mb-1">
@@ -390,6 +404,7 @@
             </button>
 
             <button
+              v-if="cashVisible"
               type="button"
               @click="selectPaymentMethod('cash')"
               class="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200"
@@ -646,6 +661,7 @@ import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { watch } from 'vue'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
+import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 import { roundToNearest5Rappen as roundToNearestFranken } from '~/utils/rounding'
 
 // Erweiterte Props
@@ -671,6 +687,7 @@ interface Props {
   studentCredit?: any // ✅ NEU: Student credit information
   isLoadingCredit?: boolean // ✅ NEU: Loading state for credit
   isCalculatingPrice?: boolean
+  resourceSurcharges?: { label: string; rappen: number }[] // Raum- / Fahrzeugkosten
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -688,7 +705,8 @@ const props = withDefaults(defineProps<Props>(), {
   appointmentId: undefined,
   studentCredit: undefined,
   isLoadingCredit: false,
-  isCalculatingPrice: false
+  isCalculatingPrice: false,
+  resourceSurcharges: () => [],
 })
 
 // Emits
@@ -711,6 +729,7 @@ const { createBillingAddress } = useBillingAddresses()
 const authStore = useAuthStore()
 const supabase = getSupabase()
 const { walleeEnabled, loadWalleeStatus } = useWalleeStatus()
+const { cashVisible } = useCashPaymentSettings('staff')
 
 // Computed Properties
 const isStaffUser = computed(() => {
@@ -939,6 +958,13 @@ watch(cashAlreadyPaid, (val) => {
 })
 watch(selectedPaymentMethod, (method) => {
   if (method !== 'cash') cashAlreadyPaid.value = false
+})
+
+// If cash becomes invisible while selected, fall back to invoice
+watch(cashVisible, (visible) => {
+  if (!visible && selectedPaymentMethod.value === 'cash') {
+    selectPaymentMethod('invoice')
+  }
 })
 
 // ✅ NEU: Watcher für Student-Änderung - lädt automatisch Billing Address
@@ -1303,11 +1329,12 @@ const calculateTotalPrice = computed(() => {
     return total + getProductPrice(product)
   }, 0)
   const adminFeeAmount = getAdminFee()
+  const resourceTotal = (props.resourceSurcharges || []).reduce((sum, s) => sum + s.rappen / 100, 0)
   const creditUsed = usedCredit.value // Use computed value
   
-  const totalBeforeCredit = basePrice - discountAmount + productsTotal + adminFeeAmount
+  const totalBeforeCredit = basePrice - discountAmount + productsTotal + adminFeeAmount + resourceTotal
   
-  logger.debug('💰 calculateTotalPrice:', { basePrice, discountAmount, productsTotal, adminFeeAmount, creditUsed, totalBeforeCredit, final: Math.max(0, totalBeforeCredit - creditUsed) })
+  logger.debug('💰 calculateTotalPrice:', { basePrice, discountAmount, productsTotal, adminFeeAmount, resourceTotal, creditUsed, totalBeforeCredit, final: Math.max(0, totalBeforeCredit - creditUsed) })
   
   // Guthaben abziehen (entweder aus Payment-Tabelle oder aktuelles Guthaben)
   return Math.max(0, totalBeforeCredit - creditUsed)
@@ -1320,8 +1347,9 @@ const calculatePriceBeforeCredit = () => {
     return total + getProductPrice(product)
   }, 0)
   const adminFeeAmount = getAdminFee()
+  const resourceTotal = (props.resourceSurcharges || []).reduce((sum, s) => sum + s.rappen / 100, 0)
   
-  return basePrice - discountAmount + productsTotal + adminFeeAmount
+  return basePrice - discountAmount + productsTotal + adminFeeAmount + resourceTotal
 }
 
 const addProduct = (product: any) => {

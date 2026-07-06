@@ -46,31 +46,15 @@ export const useRoomReservations = () => {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
-  // Load available rooms for the current tenant
-  const loadRooms = async (forceTenantId?: string) => {
+  // Load available rooms via the admin API (own + optionally public rooms from other tenants)
+  const loadRooms = async (_forceTenantId?: string, includePublic = true) => {
     logger.debug('🔄 loadRooms called')
-
-    const tenantId = forceTenantId || currentUser.value?.tenant_id
-    if (!tenantId) {
-      logger.debug('⚠️ loadRooms: no tenant_id yet, skipping')
-      return
-    }
-
     isLoading.value = true
     error.value = null
-
     try {
-      const { data, error: roomsError } = await supabase
-        .from('rooms')
-        .select('*')
-        .eq('is_active', true)
-        .eq('tenant_id', tenantId)
-        .order('location', { ascending: true })
-
-      if (roomsError) throw roomsError
-
-      logger.debug('✅ Rooms loaded for tenant:', tenantId, 'count:', data?.length ?? 0)
-      rooms.value = data || []
+      const res: any = await $fetch(`/api/admin/resources/rooms?include_public=${includePublic}`)
+      rooms.value = res.rooms || []
+      logger.debug('✅ Rooms loaded, count:', rooms.value.length)
     } catch (err: any) {
       console.error('❌ Error loading rooms:', err)
       error.value = 'Fehler beim Laden der Räume'

@@ -67,6 +67,23 @@ export default defineEventHandler(async (event) => {
     transports: (cred.transports || []) as any[]
   }))
 
+  // Hard cap: prevent unbounded passkey accumulation per user
+  const MAX_PASSKEYS = 20
+  if (excludeCredentials.length >= MAX_PASSKEYS) {
+    await logPasskeyEvent({
+      userId: dbUserId,
+      eventType: 'register_fail',
+      success: false,
+      errorCode: 'max_passkeys_reached',
+      ipAddress: ctx.ipAddress,
+      userAgent: ctx.userAgent
+    })
+    throw createError({
+      statusCode: 422,
+      statusMessage: `Maximum of ${MAX_PASSKEYS} passkeys per account reached. Remove unused devices first.`
+    })
+  }
+
   const { rpID, rpName } = getPasskeyConfig()
 
   // userID must be a Uint8Array (SimpleWebAuthn v13 requirement).

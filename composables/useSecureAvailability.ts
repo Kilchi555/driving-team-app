@@ -44,6 +44,10 @@ interface FetchSlotsOptions {
   end_date: string // YYYY-MM-DD
   duration_minutes?: number
   category_code?: string
+  /** Option key from vehicle settings — passed for logging/filtering */
+  vehicle_mode?: string | null
+  /** When true, filter out slots where no school vehicle is available at the location */
+  requires_school_vehicle?: boolean
 }
 
 interface ReserveSlotOptions {
@@ -63,6 +67,8 @@ interface CreateAppointmentOptions {
   customer_pickup_plz?: string | null
   /** Full formatted pickup address (e.g. "Musterstrasse 12, 8048 Zürich") */
   customer_pickup_address?: string | null
+  /** Vehicle option key chosen by student (e.g. 'school_all', 'own_trailer', …) */
+  vehicle_mode?: string | null
   /** Cross-domain marketing session ID (from drivingteam.ch). */
   marketing_session_id?: string
   /** Decoded marketing attribution blob — used for server-side Google Ads conversion. */
@@ -102,6 +108,8 @@ export const useSecureAvailability = () => {
       if (options.location_id) params.append('location_id', options.location_id)
       if (options.duration_minutes) params.append('duration_minutes', options.duration_minutes.toString())
       if (options.category_code) params.append('category_code', options.category_code)
+      if (options.vehicle_mode) params.append('vehicle_mode', options.vehicle_mode)
+      if (options.requires_school_vehicle) params.append('requires_school_vehicle', '1')
 
       const response = await $fetch<{ success: boolean; slots: AvailableSlot[]; count: number }>(
         `/api/booking/get-available-slots?${params.toString()}`
@@ -182,6 +190,7 @@ export const useSecureAvailability = () => {
           discount_amount_rappen: options.discount_amount_rappen ?? 0,
           customer_pickup_plz: options.customer_pickup_plz ?? null,
           customer_pickup_address: options.customer_pickup_address ?? null,
+          vehicle_mode: options.vehicle_mode ?? null,
           marketing_session_id: options.marketing_session_id,
           marketing_attribution: options.marketing_attribution,
         }

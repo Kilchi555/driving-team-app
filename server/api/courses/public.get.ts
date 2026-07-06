@@ -133,6 +133,7 @@ export default defineEventHandler(async (event) => {
         status,
         is_partial_only,
         sari_managed,
+        requires_vehicle,
         course_category:course_categories (
           id,
           name,

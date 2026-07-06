@@ -22,6 +22,48 @@
       </button>
     </div>
 
+    <!-- ── System Alerts ──────────────────────────────────────────────── -->
+    <div v-if="systemAlerts.length > 0" class="border-b border-gray-100">
+      <div class="px-4 py-2 bg-amber-50 border-b border-amber-100 flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+        </svg>
+        <span class="text-xs font-semibold text-amber-700">System-Meldungen</span>
+      </div>
+      <div class="divide-y divide-gray-50">
+        <NuxtLink
+          v-for="alert in systemAlerts"
+          :key="alert.type"
+          :to="alert.link"
+          class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors group"
+        >
+          <!-- Priority dot -->
+          <span class="w-2 h-2 rounded-full flex-shrink-0"
+            :class="{
+              'bg-red-500': alert.priority === 'critical',
+              'bg-orange-400': alert.priority === 'high',
+              'bg-yellow-400': alert.priority === 'medium',
+              'bg-blue-400': alert.priority === 'low',
+            }"
+          />
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-medium text-gray-700 truncate">{{ alert.label }}</p>
+            <p v-if="alert.items.length > 0" class="text-[11px] text-gray-400 truncate">
+              {{ alert.items[0].text }}{{ alert.items.length > 1 ? ` +${alert.items.length - 1} weitere` : '' }}
+            </p>
+          </div>
+          <span class="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+            :class="{
+              'bg-red-100 text-red-700': alert.priority === 'critical',
+              'bg-orange-100 text-orange-700': alert.priority === 'high',
+              'bg-yellow-100 text-yellow-700': alert.priority === 'medium',
+              'bg-blue-100 text-blue-700': alert.priority === 'low',
+            }"
+          >{{ alert.count }}</span>
+        </NuxtLink>
+      </div>
+    </div>
+
     <!-- Stats row -->
     <div class="grid grid-cols-4 divide-x divide-gray-100 border-b border-gray-100">
       <button
@@ -209,6 +251,7 @@ const showNewModal = ref(false)
 const showEditModal = ref(false)
 const selectedStatus = ref<string | null>(null)
 const editingPendency = ref<Pendency | null>(null)
+const systemAlerts = ref<any[]>([])
 
 const totalCount = computed(() => pendencies.value.length)
 
@@ -239,6 +282,10 @@ onMounted(async () => {
   if (currentUser.value?.tenant_id) {
     await loadPendencies(currentUser.value.tenant_id)
   }
+  // Load system alerts (non-blocking)
+  $fetch<any>('/api/admin/system-alerts').then(res => {
+    systemAlerts.value = res?.alerts ?? []
+  }).catch(() => {})
 })
 
 const getStatusLabel = (status: string) => {

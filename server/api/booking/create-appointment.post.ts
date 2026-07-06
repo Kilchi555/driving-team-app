@@ -38,6 +38,7 @@ import { toLocalTimeString } from '~/utils/dateUtils'
 import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
 import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
 import { calculateAdminFee } from '~/server/utils/admin-fee'
+import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -78,6 +79,10 @@ interface CreateAppointmentRequest {
   customer_pickup_plz?: string | null
   /** Full formatted pickup address (e.g. "Musterstrasse 12, 8048 Zürich") */
   customer_pickup_address?: string | null
+  /** Vehicle mode chosen by student: 'school' = rent school vehicle, 'own' = bring own vehicle */
+  vehicle_mode?: 'school' | 'own' | null
+  /** Room selected by client in step 5.5 */
+  room_id?: string | null
 }
 
 export default defineEventHandler(async (event: H3Event) => {
@@ -347,7 +352,7 @@ export default defineEventHandler(async (event: H3Event) => {
       tenant_id: tenantId
     })
 
-    const [pricingRuleRes, adminFeeRuleRes] = await Promise.all([
+    const [pricingRuleRes, adminFeeRuleRes, locationVehicleRes, categoryVehicleRes] = await Promise.all([
       supabase
         .from('pricing_rules')
         .select('price_per_minute_rappen, base_duration_minutes, duration_multiplier, weekend_multiplier, evening_multiplier')
@@ -366,11 +371,29 @@ export default defineEventHandler(async (event: H3Event) => {
         .eq('is_active', true)
         .limit(1)
         .maybeSingle(),
+      supabase
+        .from('locations')
+        .select('category_vehicle_settings')
+        .eq('id', slot.location_id)
+        .maybeSingle(),
+      supabase
+        .from('categories')
+        .select('vehicle_settings')
+        .eq('code', body.category_code)
+        .eq('tenant_id', tenantId)
+        .maybeSingle(),
     ])
 
     const pricingRule = pricingRuleRes.data
     const pricingError = pricingRuleRes.error
     const adminFeeRuleRappen = Number(adminFeeRuleRes.data?.admin_fee_rappen || 0)
+
+    // Resolve vehicle settings for this location + category
+    const vehicleSettings = resolveVehicleSettings(
+      locationVehicleRes.data?.category_vehicle_settings,
+      categoryVehicleRes.data?.vehicle_settings,
+      body.category_code
+    )
 
     let totalAmountRappen = 0
     if (pricingRule) {
@@ -398,10 +421,15 @@ export default defineEventHandler(async (event: H3Event) => {
       }
 
       totalAmountRappen = Math.round(price)
-
       totalAmountRappen = roundToNearest5Rappen(totalAmountRappen)
 
-      logger.debug('💰 Price calculated:', { totalAmountRappen, pricingRule })
+      // Apply vehicle option cost (positive = surcharge, negative = discount)
+      if (body.vehicle_mode) {
+        const vehicleCost = calculateVehicleCost(vehicleSettings, body.vehicle_mode, slot.duration_minutes)
+        totalAmountRappen = Math.max(0, totalAmountRappen + vehicleCost)
+      }
+
+      logger.debug('💰 Price calculated:', { totalAmountRappen, vehicle_mode: body.vehicle_mode, pricingRule })
     } else {
       logger.warn('⚠️ No pricing rule found for category, defaulting to 0', { category_code: body.category_code, tenant_id: tenantId })
     }
@@ -488,6 +516,8 @@ export default defineEventHandler(async (event: H3Event) => {
         utm_term: marketingAttr?.utm_term ?? null,
         customer_pickup_plz: body.customer_pickup_plz?.trim() || null,
         customer_pickup_address: body.customer_pickup_address?.trim() || null,
+        vehicle_mode: body.vehicle_mode ?? null,
+        room_id: body.room_id ?? null,
       })
       .select()
       .single()
@@ -504,6 +534,67 @@ export default defineEventHandler(async (event: H3Event) => {
 
     auditDetails.appointment_id = newAppointment.id
     logger.debug('✅ Appointment created successfully:', newAppointment.id)
+
+    // Create vehicle_bookings placeholder when the chosen option requires a school vehicle.
+    // vehicle_id is null (no specific vehicle assigned yet — staff does that later).
+    // This row acts as a capacity blocker for future availability checks.
+    const chosenOption = vehicleSettings.options?.find(o => o.key === body.vehicle_mode)
+    if (body.vehicle_mode && chosenOption?.requires_school_vehicle) {
+      const { error: vbErr } = await supabase
+        .from('vehicle_bookings')
+        .insert({
+          vehicle_id: null,
+          tenant_id: tenantId,
+          location_id: slot.location_id,
+          category_code: body.category_code,
+          start_time: slot.start_time,
+          end_time: slot.end_time,
+          purpose: 'lesson',
+          appointment_id: newAppointment.id,
+          booked_by: userData.id,
+          status: 'confirmed',
+        })
+      if (vbErr) {
+        logger.warn('⚠️ vehicle_bookings placeholder creation failed (non-fatal):', vbErr.message)
+      } else {
+        logger.debug('✅ vehicle_bookings placeholder created for school vehicle lesson')
+      }
+    }
+
+    // Create room_booking if client selected a room in step 5.5
+    if (body.room_id) {
+      // Server-side conflict check
+      const { data: roomConflicts } = await supabase
+        .from('room_bookings')
+        .select('id')
+        .eq('room_id', body.room_id)
+        .neq('status', 'cancelled')
+        .lt('start_time', slot.end_time)
+        .gt('end_time', slot.start_time)
+        .limit(1)
+
+      if ((roomConflicts?.length ?? 0) > 0) {
+        logger.warn('⚠️ Room conflict detected on booking — skipping room_bookings insert:', body.room_id)
+      } else {
+        const { error: rbErr } = await supabase
+          .from('room_bookings')
+          .insert({
+            room_id: body.room_id,
+            tenant_id: tenantId,
+            start_time: slot.start_time,
+            end_time: slot.end_time,
+            purpose: 'lesson',
+            appointment_id: newAppointment.id,
+            booked_by: userData.id,
+            status: 'confirmed',
+          })
+        if (rbErr) {
+          logger.warn('⚠️ room_bookings creation failed (non-fatal):', rbErr.message)
+        } else {
+          logger.debug('✅ room_bookings entry created for room:', body.room_id)
+        }
+      }
+    }
 
     // ============ LAYER 7b: VALIDATE DISCOUNT (manual code or auto-apply) ============
     let validatedDiscountAmount = 0

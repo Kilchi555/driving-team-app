@@ -406,8 +406,27 @@ export default defineEventHandler(async (event) => {
         logger.debug('✅ Found anonymous sale:', anonymousSale.id)
         return await processAnonymousSale(anonymousSale, paymentStatus)
       }
-      
-      logger.info('❌ No payment found for transaction:', transactionId)
+
+      // ⚠️ FULFILL with no payment record — alert loudly so admins can investigate
+      if (walleeState === 'FULFILL') {
+        logger.error('🚨 FULFILL webhook received but NO payment record found!', {
+          transactionId,
+          spaceId,
+          timestamp: body.timestamp,
+          action: 'Check Wallee dashboard for transaction details and create payment record manually if needed.'
+        })
+        // Update webhook log to flag this as requiring manual review
+        if (webhookLogId) {
+          await supabase.from('webhook_logs').update({
+            success: false,
+            error_message: `FULFILL webhook: no matching payment record found for transaction ${transactionId}. Manual review required.`,
+            processing_duration_ms: Date.now() - startTime
+          }).eq('id', webhookLogId)
+        }
+      } else {
+        logger.info('ℹ️ No payment found for non-FULFILL state, ignoring:', { transactionId, walleeState })
+      }
+
       // Return 200 to prevent Wallee from retrying
       return { 
         success: false, 
@@ -685,6 +704,7 @@ export default defineEventHandler(async (event) => {
                     is_partial_enrollment: !!(payment.metadata?.is_partial_enrollment),
                     sari_synced: paymentStatus === 'completed',
                     sari_synced_at: paymentStatus === 'completed' ? new Date().toISOString() : null,
+                    vehicle_id: payment.metadata?.vehicle_id || null,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                   })
@@ -710,6 +730,41 @@ export default defineEventHandler(async (event) => {
             if (!insertError && newRegs) {
               logger.info(`✅ Created ${newRegs.length} new course registration(s)`)
               updatedRegistrations = [...updatedRegistrations, ...newRegs]
+
+              // ── Create vehicle_bookings per session (non-fatal) ────────────
+              ;(async () => {
+                try {
+                  for (let i = 0; i < registrationsToCreate.length && i < newRegs.length; i++) {
+                    const regData = registrationsToCreate[i]
+                    const vehicleId = regData.vehicle_id
+                    if (!vehicleId) continue
+
+                    // Load course sessions
+                    const { data: sessions } = await supabase
+                      .from('course_sessions')
+                      .select('id, start_time, end_time')
+                      .eq('course_id', regData.course_id)
+                    if (!sessions?.length) continue
+
+                    const vBookings = sessions.map((s: any) => ({
+                      vehicle_id: vehicleId,
+                      tenant_id: regData.tenant_id,
+                      course_id: regData.course_id,
+                      course_session_id: s.id,
+                      start_time: s.start_time,
+                      end_time: s.end_time,
+                      purpose: 'course',
+                      status: 'confirmed',
+                      booked_by: regData.user_id || null,
+                    }))
+                    const { error: vErr } = await supabase.from('vehicle_bookings').insert(vBookings)
+                    if (vErr) logger.warn('⚠️ vehicle_bookings insert failed (webhook, non-fatal):', vErr.message)
+                    else logger.info(`✅ ${vBookings.length} vehicle_bookings created via webhook for course ${regData.course_id}`)
+                  }
+                } catch (vE: any) {
+                  logger.warn('⚠️ vehicle_bookings creation failed in webhook (non-fatal):', vE.message)
+                }
+              })()
 
               // Increment discount usage_count for any discount codes used
               ;(async () => {
@@ -1190,8 +1245,7 @@ async function fetchWalleeTransaction(transactionId: string, webhookSpaceId?: nu
       }
     }
 
-    // 2. Fallback: resolve tenant directly from the incoming spaceId
-    //    Check both wallee_space_id (production) and wallee_test_mode tenants
+    // 2. Fallback: resolve tenant directly from the incoming spaceId (tenants.wallee_space_id)
     if (!walleeCredentials && webhookSpaceId) {
       try {
         const { data: tenantBySpace } = await supabase
@@ -1206,6 +1260,27 @@ async function fetchWalleeTransaction(transactionId: string, webhookSpaceId?: nu
         }
       } catch (e: any) {
         logger.warn(`⚠️ [webhook] Could not resolve tenant for space ${webhookSpaceId}: ${e.message}`)
+      }
+    }
+
+    // 3. Last-resort: resolve tenant via payments.wallee_space_id (handles stale tenants.wallee_space_id)
+    if (!walleeCredentials && webhookSpaceId) {
+      try {
+        const { data: paymentBySpace } = await supabase
+          .from('payments')
+          .select('tenant_id')
+          .eq('wallee_space_id', webhookSpaceId)
+          .not('tenant_id', 'is', null)
+          .limit(1)
+          .maybeSingle()
+
+        if (paymentBySpace?.tenant_id) {
+          logger.info(`🔍 [webhook] Resolved tenant ${paymentBySpace.tenant_id} via payments.wallee_space_id=${webhookSpaceId}`)
+          walleeCredentials = await getWalleeConfigBySpace(paymentBySpace.tenant_id, webhookSpaceId)
+          spaceId = webhookSpaceId
+        }
+      } catch (e: any) {
+        logger.warn(`⚠️ [webhook] Last-resort tenant lookup failed for space ${webhookSpaceId}: ${e.message}`)
       }
     }
 

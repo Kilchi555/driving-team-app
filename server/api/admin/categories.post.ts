@@ -21,7 +21,9 @@ export default defineEventHandler(async (event) => {
     lesson_duration_minutes, exam_duration_minutes,
     price_per_lesson_chf, admin_fee_chf, admin_fee_applies_from,
     theory_enabled, theory_price_chf, theory_duration_minutes,
-    consultation_enabled, consultation_price_chf, consultation_duration_minutes
+    consultation_enabled, consultation_price_chf, consultation_duration_minutes,
+    vehicle_settings,
+    room_settings,
   } = body
 
   if (!code || !name) {
@@ -34,7 +36,9 @@ export default defineEventHandler(async (event) => {
     description: description ?? '',
     color: color ?? '#3B82F6',
     lesson_duration_minutes: lesson_duration_minutes ?? [45],
-    exam_duration_minutes: exam_duration_minutes ?? 45
+    exam_duration_minutes: exam_duration_minutes ?? 45,
+    vehicle_settings: vehicle_settings ?? null,
+    room_settings: room_settings ?? null,
   }
 
   if (id) {

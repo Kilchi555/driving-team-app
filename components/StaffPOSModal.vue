@@ -171,6 +171,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 
@@ -192,12 +193,13 @@ const props = withDefaults(defineProps<Props>(), { isVisible: false })
 const emit = defineEmits<{ 'close': []; 'sale-created': [saleId: string] }>()
 
 const { primaryColor } = useTenantBranding()
+const { cashVisible } = useCashPaymentSettings('staff')
 
-const paymentMethods = [
-  { key: 'cash' as const,    icon: '💵', label: 'Bar' },
+const paymentMethods = computed(() => [
+  ...(cashVisible.value ? [{ key: 'cash' as const, icon: '💵', label: 'Bar' }] : []),
   { key: 'invoice' as const, icon: '📄', label: 'Rechnung' },
-  { key: 'online' as const,  icon: '📧', label: 'E-Mail Link' }
-]
+  { key: 'online' as const,  icon: '📧', label: 'E-Mail Link' },
+])
 
 // State
 const availableProducts = ref<Product[]>([])
@@ -211,7 +213,7 @@ const successWarning = ref('')
 const form = ref({
   customerName: '',
   customerEmail: '',
-  paymentMethod: 'cash' as 'cash' | 'invoice' | 'online',
+  paymentMethod: 'invoice' as 'cash' | 'invoice' | 'online',
   notes: ''
 })
 
@@ -230,7 +232,7 @@ watch(() => props.isVisible, (visible) => {
     errorMessage.value = ''
     successState.value = null
     successWarning.value = ''
-    form.value.paymentMethod = 'cash'
+    form.value.paymentMethod = cashVisible.value ? 'cash' : 'invoice'
     form.value.notes = ''
     if (!props.preselectedStudent) {
       form.value.customerName = ''

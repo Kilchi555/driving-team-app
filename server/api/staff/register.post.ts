@@ -285,16 +285,24 @@ export default defineEventHandler(async (event) => {
 
     // 6. Assign standard locations (Treffpunkte)
     if (Array.isArray(selectedLocationIds) && selectedLocationIds.length > 0) {
+      const staffCategories: string[] = Array.isArray(selectedCategories) ? selectedCategories : []
       for (const locId of selectedLocationIds) {
         try {
           const { data: loc } = await serviceSupabase
-            .from('locations').select('staff_ids').eq('id', locId).single()
+            .from('locations').select('staff_ids, available_categories').eq('id', locId).single()
           if (loc) {
             const current: string[] = Array.isArray(loc.staff_ids) ? loc.staff_ids : []
+            const currentCategories: string[] = Array.isArray(loc.available_categories) ? loc.available_categories : []
+            const mergedCategories = Array.from(new Set([...currentCategories, ...staffCategories]))
+            const updates: Record<string, any> = {}
             if (!current.includes(newUser.id)) {
-              await serviceSupabase.from('locations')
-                .update({ staff_ids: [...current, newUser.id] })
-                .eq('id', locId)
+              updates.staff_ids = [...current, newUser.id]
+            }
+            if (staffCategories.some((cat: string) => !currentCategories.includes(cat))) {
+              updates.available_categories = mergedCategories
+            }
+            if (Object.keys(updates).length > 0) {
+              await serviceSupabase.from('locations').update(updates).eq('id', locId)
             }
           }
         } catch (locErr) {
@@ -323,16 +331,18 @@ export default defineEventHandler(async (event) => {
     // 7a. Create new meetup locations added by staff
     if (Array.isArray(newLocations) && newLocations.length > 0) {
       try {
+        const staffCategories: string[] = Array.isArray(selectedCategories) ? selectedCategories : []
         const locationRows = newLocations
           .filter((l: any) => l.name?.trim() && l.address?.trim())
           .map((l: any) => ({
-            name:          l.name.trim(),
-            address:       l.address.trim(),
-            canton:        l.canton?.trim().toUpperCase() || null,
-            tenant_id:     invitation.tenant_id,
-            staff_ids:     [newUser.id],
-            location_type: 'standard',
-            is_active:     true,
+            name:                l.name.trim(),
+            address:             l.address.trim(),
+            canton:              l.canton?.trim().toUpperCase() || null,
+            tenant_id:           invitation.tenant_id,
+            staff_ids:           [newUser.id],
+            available_categories: staffCategories,
+            location_type:       'standard',
+            is_active:           true,
           }))
         if (locationRows.length > 0) {
           const { data: insertedLocs } = await serviceSupabase

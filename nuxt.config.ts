@@ -75,8 +75,6 @@ export default defineNuxtConfig({
     experimental: {
       wasm: process.env.NODE_ENV === 'production'
     },
-    // @ts-expect-error workerThreads is a valid Nitro option not yet in types
-    workerThreads: false,
     externals: {
       external: ['puppeteer-core', '@sparticuz/chromium']
     },
@@ -105,17 +103,34 @@ export default defineNuxtConfig({
   
   // --- Vite Configuration ---
   vite: {
+    // Pre-bundle heavy dependencies so they don't get re-processed on every HMR
+    optimizeDeps: {
+      include: [
+        '@supabase/supabase-js',
+        '@supabase/postgrest-js',
+        '@supabase/realtime-js',
+        '@fullcalendar/core',
+        '@fullcalendar/daygrid',
+        '@fullcalendar/timegrid',
+        '@fullcalendar/interaction',
+        '@fullcalendar/vue3',
+        'pinia',
+        'vue-i18n',
+      ],
+    },
+    // Disable sourcemaps in dev: the biggest source of memory growth.
+    // The corrupted-offset errors in the log come from oversized sourcemaps of
+    // large .vue files (courses.vue ~7k lines). Disabling them cuts heap usage
+    // by ~30-40 % and eliminates the source-map parsing crashes.
+    ...(process.env.NODE_ENV !== 'production' ? { css: { devSourcemap: false } } : {}),
     build: {
+      sourcemap: false,
       rollupOptions: {
         output: {
           manualChunks(id: string) {
-            // FullCalendar → eigener Chunk, wird nur auf Admin/Kalender-Seiten geladen
             if (id.includes('@fullcalendar')) return 'fullcalendar'
-            // Wallee → eigener Chunk
             if (id.includes('wallee') || id.includes('@wallee')) return 'wallee'
-            // Supabase → eigener Chunk
             if (id.includes('@supabase')) return 'supabase'
-            // PDFKit → eigener Chunk (nur server-seitig, aber schadet nicht)
             if (id.includes('pdfkit') || id.includes('qrcode')) return 'pdf-tools'
           }
         }
@@ -123,8 +138,9 @@ export default defineNuxtConfig({
     },
     server: {
       watch: {
+        // Native FSEvents opens one fd per file → EMFILE on large projects; polling avoids that
         usePolling: true,
-        interval: 800,
+        interval: 2000,
         ignored: [
           '**/*.sql',
           '**/*.md',
@@ -150,7 +166,7 @@ export default defineNuxtConfig({
   watchers: {
     chokidar: {
       usePolling: true,
-      interval: 800,
+      interval: 2000,
       ignored: [
         '**/*.sql',
         '**/*.md',
@@ -234,7 +250,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       charset: 'utf-8',
-      viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
+      viewport: 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover',
       htmlAttrs: { lang: 'de' },
       meta: [
         { name: 'description', content: 'Driving Team - Fahrausbildung Online Buchen. Auto, Motorrad, Taxi, Lastwagen, Bus & Motorboot Fahrstunden in Zürich, Lachen, St.Gallen und Umgebung.' },

@@ -371,13 +371,108 @@
               </button>
             </div>
 
-            <div v-else-if="examResults.length === 0" class="text-center py-12">
+            <!-- Manuell erfassen Button -->
+            <div class="flex justify-end mb-3">
+              <button
+                @click="showManualExamForm = !showManualExamForm"
+                class="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                :style="{ color: primaryColor, background: `${primaryColor}15` }"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Prüfung manuell erfassen
+              </button>
+            </div>
+
+            <!-- Manuelles Prüfungsformular -->
+            <div v-if="showManualExamForm" class="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Manuelle Prüfungseingabe</p>
+
+              <div class="grid grid-cols-2 gap-3">
+                <!-- Kategorie -->
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Kategorie</label>
+                  <select
+                    v-model="manualExam.category"
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white"
+                  >
+                    <option value="">Bitte wählen</option>
+                    <option v-for="cat in (selectedStudent?.category || [])" :key="cat" :value="cat">{{ cat }}</option>
+                  </select>
+                </div>
+
+                <!-- Datum -->
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Datum</label>
+                  <input
+                    v-model="manualExam.exam_date"
+                    type="date"
+                    :max="todayDate"
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white"
+                  />
+                </div>
+              </div>
+
+              <!-- Ergebnis -->
+              <div class="flex gap-2">
+                <button
+                  @click="manualExam.passed = true"
+                  class="flex-1 py-2 rounded-lg text-sm font-semibold border-2 transition-colors"
+                  :class="manualExam.passed === true
+                    ? 'bg-green-500 text-white border-green-500'
+                    : 'border-gray-200 text-gray-500 hover:border-green-300'"
+                >
+                  ✓ Bestanden
+                </button>
+                <button
+                  @click="manualExam.passed = false"
+                  class="flex-1 py-2 rounded-lg text-sm font-semibold border-2 transition-colors"
+                  :class="manualExam.passed === false
+                    ? 'bg-red-500 text-white border-red-500'
+                    : 'border-gray-200 text-gray-500 hover:border-red-300'"
+                >
+                  ✗ Nicht bestanden
+                </button>
+              </div>
+
+              <!-- Notiz -->
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Notiz (optional)</label>
+                <input
+                  v-model="manualExam.notes"
+                  type="text"
+                  placeholder="z.B. Extern mit anderem Fahrlehrer"
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white"
+                />
+              </div>
+
+              <!-- Aktionen -->
+              <div class="flex items-center justify-end gap-2 pt-1">
+                <button
+                  @click="showManualExamForm = false; resetManualExam()"
+                  class="text-sm text-gray-400 hover:text-gray-600"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  @click="saveManualExamResult"
+                  :disabled="!manualExam.category || manualExam.passed === null || isSavingManualExam"
+                  class="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-40"
+                  :style="{ background: primaryColor }"
+                >
+                  {{ isSavingManualExam ? 'Speichert…' : 'Speichern' }}
+                </button>
+              </div>
+            </div>
+
+            <div v-if="!isLoadingExamResults && examResults.length === 0 && !showManualExamForm" class="text-center py-12">
               <div class="text-6xl mb-4">🎓</div>
               <h4 class="font-semibold text-gray-900 mb-2 text-lg">Keine Prüfungsergebnisse gefunden</h4>
               <p class="text-gray-600">Für diesen {{ t.client }} wurden noch keine Prüfungen erfasst.</p>
             </div>
 
-            <div v-else class="space-y-3">
+            <div v-else class="space-y-3 pb-4">
               <div 
                 v-for="result in examResults" 
                 :key="result.id"
@@ -393,10 +488,11 @@
                 <div class="flex justify-between items-start mb-3">
                   <div>
                     <h5 class="font-semibold text-gray-900 text-lg">
-                      {{ result.appointments?.event_types?.name || result.appointments?.event_type_code || result.appointments?.type || 'Prüfung' }}
+                      {{ result.category || result.appointments?.event_types?.name || result.appointments?.event_type_code || result.appointments?.type || 'Prüfung' }}
                       <span v-if="result.appointments?.instructor" class="font-normal text-gray-600">
                         mit {{ result.appointments.instructor.first_name }}
                       </span>
+                      <span v-if="result.isManual" class="ml-2 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">manuell</span>
                     </h5>
                     <p class="text-sm text-gray-600">
                       {{ formatLocalDate(result.exam_date) }} um {{ formatLocalTime(result.exam_date) }}
@@ -414,10 +510,23 @@
                   </span>
                 </div>
                 
-                <div v-if="result.examiner_behavior_rating" class="mt-2">
+                <div v-if="result.notes" class="mt-2 text-sm text-gray-600 italic">
+                  {{ result.notes }}
+                </div>
+
+                <div v-if="!result.isManual && result.examiner_behavior_rating" class="mt-2">
                   <div class="flex items-center gap-2">
                     <span class="text-sm text-gray-600">Verhalten des Prüfers:</span>
-                    <span class="font-medium">{{ result.examiner_behavior_rating }}/6</span>
+                    <div class="flex gap-0.5">
+                      <span
+                        v-for="n in 6"
+                        :key="n"
+                        class="w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold"
+                        :class="n <= result.examiner_behavior_rating
+                          ? 'bg-indigo-500 text-white'
+                          : 'bg-gray-100 text-gray-300'"
+                      >{{ n }}</span>
+                    </div>
                   </div>
                 </div>
                 
@@ -602,7 +711,7 @@
               <!-- Zeile 2: Buttons -->
               <div class="flex gap-2">
                 <button
-                  v-if="selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p && !isInvoicedPayment(p) })"
+                  v-if="cashVisible && selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p && !isInvoicedPayment(p) })"
                   class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md"
                   :style="{ backgroundColor: secondaryColor || '#22C55E' }"
                   @click="handleBulkPayment('cash')"
@@ -724,6 +833,18 @@
                           {{ formatLocalDate(payment.refunded_at) }} {{ formatLocalTime(payment.refunded_at) }}
                         </span>
                       </div>
+
+                      <!-- Refund Button (nur wenn completed + wallee + Permission vorhanden) -->
+                      <button
+                        v-if="payment.payment_status === 'completed' && payment.payment_method === 'wallee' && canSeeRefundButton"
+                        @click.stop="openRefundModal(payment)"
+                        class="mt-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors"
+                        :class="isAdminRole
+                          ? 'border-red-200 text-red-600 hover:bg-red-50'
+                          : 'border-gray-200 text-gray-500 hover:bg-gray-50'"
+                      >
+                        {{ isAdminRole || bookingPolicy?.staff_refund_permission === 'allowed' ? '↩ Rückerstattung' : '↩ Antrag stellen' }}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1215,6 +1336,68 @@
       @cancel="onCancelAppointment"
     />
 
+    <!-- ── Refund Modal ─────────────────────────────────────────────────── -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showRefundModal" class="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4" @click.self="showRefundModal = false">
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <h3 class="text-base font-bold text-gray-900">
+              {{ isAdminRole || bookingPolicy?.staff_refund_permission === 'allowed' ? 'Rückerstattung auslösen' : 'Rückerstattung beantragen' }}
+            </h3>
+
+            <div v-if="refundSuccess" class="flex items-center gap-2 text-green-700 bg-green-50 rounded-xl p-3 text-sm">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              {{ isAdminRole || bookingPolicy?.staff_refund_permission === 'allowed' ? 'Rückerstattung erfolgreich ausgelöst.' : 'Antrag erfolgreich eingereicht. Der Admin wird informiert.' }}
+            </div>
+
+            <template v-else>
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Betrag (CHF)</label>
+                <input
+                  v-model="refundAmount"
+                  type="number"
+                  step="0.05"
+                  min="0.05"
+                  :max="refundPayment ? ((refundPayment.total_amount_rappen - (refundPayment.credit_used_rappen || 0)) / 100).toFixed(2) : ''"
+                  class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
+                <p class="text-xs text-gray-400 mt-1">Max: CHF {{ refundPayment ? ((refundPayment.total_amount_rappen - (refundPayment.credit_used_rappen || 0)) / 100).toFixed(2) : '—' }}</p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Grund (optional)</label>
+                <input
+                  v-model="refundReason"
+                  type="text"
+                  placeholder="z.B. Kulanz, Preisfehler…"
+                  class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
+              </div>
+
+              <div class="flex gap-2 pt-1">
+                <button
+                  @click="showRefundModal = false"
+                  class="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  @click="submitRefund"
+                  :disabled="!refundAmount || isSubmittingRefund"
+                  class="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition-colors"
+                  :style="{ background: 'var(--color-primary, #3B82F6)' }"
+                >
+                  {{ isSubmittingRefund ? 'Wird verarbeitet…' : (isAdminRole || bookingPolicy?.staff_refund_permission === 'allowed' ? 'Rückerstattung auslösen' : 'Antrag senden') }}
+                </button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
     <ExamResultModal
       v-if="showExamResultModal && selectedAppointmentForExamResult"
       :is-visible="showExamResultModal"
@@ -1389,6 +1572,7 @@ import { openPdf } from '~/utils/openPdf'
 import { getSupabase } from '~/utils/supabase'
 import { useUserDocuments, type UserDocument } from '~/composables/useUserDocuments'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 import { useTerminology } from '~/composables/useTerminology'
 
 const { t } = useTerminology()
@@ -1451,6 +1635,7 @@ const { selectedStudent } = toRefs(props)
 
 // Tenant Branding
 const { primaryColor, secondaryColor } = useTenantBranding()
+const { cashVisible } = useCashPaymentSettings('staff')
 
 function adjustBrightness(hex: string, amount: number): string {
   const clean = hex.replace('#', '')
@@ -1831,6 +2016,97 @@ const ratingPointsMap = ref<Record<number, { color: string; label: string }>>({}
 const showEvaluationModal = ref(false)
 const selectedAppointmentForEvaluation = ref<any>(null)
 const showExamResultModal = ref(false)
+
+// ── Refund ────────────────────────────────────────────────────────────────
+const showRefundModal = ref(false)
+const refundPayment = ref<any>(null)
+const refundAmount = ref('')
+const refundReason = ref('')
+const isSubmittingRefund = ref(false)
+const refundSuccess = ref(false)
+
+const bookingPolicy = ref<{ staff_refund_permission?: 'hidden' | 'request' | 'allowed' } | null>(null)
+const isAdminRole = computed(() => ['admin', 'superadmin'].includes(props.currentUser?.role ?? ''))
+const canSeeRefundButton = computed(() => {
+  if (isAdminRole.value) return true
+  const perm = bookingPolicy.value?.staff_refund_permission
+  return perm === 'request' || perm === 'allowed'
+})
+
+const openRefundModal = (payment: any) => {
+  refundPayment.value = payment
+  const maxChf = ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2)
+  refundAmount.value = maxChf
+  refundReason.value = ''
+  refundSuccess.value = false
+  showRefundModal.value = true
+}
+
+const submitRefund = async () => {
+  if (!refundPayment.value || !refundAmount.value) return
+  isSubmittingRefund.value = true
+  try {
+    const amountRappen = Math.round(parseFloat(refundAmount.value) * 100)
+    await $fetch('/api/payments/refund-request', {
+      method: 'POST',
+      body: {
+        payment_id: refundPayment.value.id,
+        amount_rappen: amountRappen,
+        reason: refundReason.value || null,
+      },
+    })
+    refundSuccess.value = true
+    await loadPayments()
+    setTimeout(() => { showRefundModal.value = false }, 1500)
+  } catch (err: any) {
+    console.error('❌ Refund error:', err)
+  } finally {
+    isSubmittingRefund.value = false
+  }
+}
+
+// ── Manuelle Prüfungseingabe ───────────────────────────────────────────────
+const showManualExamForm = ref(false)
+const isSavingManualExam = ref(false)
+const todayDate = new Date().toISOString().split('T')[0]
+
+const manualExam = ref<{ category: string; passed: boolean | null; exam_date: string; notes: string }>({
+  category: '',
+  passed: null,
+  exam_date: todayDate,
+  notes: '',
+})
+
+const resetManualExam = () => {
+  manualExam.value = { category: '', passed: null, exam_date: todayDate, notes: '' }
+}
+
+const saveManualExamResult = async () => {
+  if (!manualExam.value.category || manualExam.value.passed === null) return
+  isSavingManualExam.value = true
+  try {
+    await $fetch('/api/exams/manual-result', {
+      method: 'POST',
+      body: {
+        user_id: props.selectedStudent?.id,
+        category: manualExam.value.category,
+        passed: manualExam.value.passed,
+        exam_date: manualExam.value.exam_date
+          ? new Date(manualExam.value.exam_date).toISOString()
+          : new Date().toISOString(),
+        notes: manualExam.value.notes || null,
+      },
+    })
+    showManualExamForm.value = false
+    resetManualExam()
+    await loadExamResults()
+    emit('studentUpdated', { id: props.selectedStudent?.id ?? '' })
+  } catch (err: any) {
+    console.error('❌ Manual exam save failed:', err)
+  } finally {
+    isSavingManualExam.value = false
+  }
+}
 const selectedAppointmentForExamResult = ref<any>(null)
 const showCancellationReasonModal = ref(false)
 const cancellationAppointment = ref<any>(null)
@@ -2626,6 +2902,13 @@ const loadPayments = async () => {
   
   isLoadingPayments.value = true
   paymentsError.value = null
+
+  // Load booking policy for refund permission (non-blocking)
+  if (!bookingPolicy.value) {
+    $fetch('/api/admin/booking-policy').then((res: any) => {
+      bookingPolicy.value = res?.policy ?? null
+    }).catch(() => {})
+  }
   
   try {
     logger.debug('💰 Loading payments for student:', props.selectedStudent.id)

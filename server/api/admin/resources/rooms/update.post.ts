@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     if (!rateLimitResult.allowed) throw createError({ statusCode: 429, statusMessage: 'Too many requests' })
 
     const body = await readBody(event)
-    const { roomId, name, location, capacity, description, equipment, is_public, hourly_rate_rappen } = body
+    const { roomId, name, location, capacity, description, equipment, is_public, visibility, hourly_rate_rappen, pricing_tiers } = body
 
     if (!roomId) throw createError({ statusCode: 400, statusMessage: 'Missing roomId' })
 
@@ -27,8 +27,10 @@ export default defineEventHandler(async (event) => {
         capacity: capacity || null,
         description: description || null,
         equipment: equipment ? { description: equipment } : null,
-        is_public: is_public ?? true,
+        is_public: is_public ?? false,
+        visibility: visibility ?? 'private',
         hourly_rate_rappen: hourly_rate_rappen || 0,
+        pricing_tiers: pricing_tiers ?? [],
         updated_at: new Date().toISOString(),
       })
       .eq('id', roomId)

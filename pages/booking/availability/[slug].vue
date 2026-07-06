@@ -526,7 +526,48 @@
           </div>
         </div>
 
-        <!-- Step 4: Instructor Selection -->
+        <!-- Step 4.5: Vehicle Option Selection (shown after location, before instructor) -->
+        <div v-if="currentStep === 4.5" class="space-y-4">
+          <div class="bg-white shadow rounded-lg p-4 sm:p-6">
+            <div class="text-center mb-6">
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Welches Fahrzeug?</h2>
+              <p class="text-sm text-gray-500">Wähle die passende Fahrzeugkombination für deine Lektion.</p>
+            </div>
+
+            <div :class="`grid grid-cols-1 ${(effectiveVehicleSettings?.options?.length ?? 0) > 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-' + (effectiveVehicleSettings?.options?.length ?? 1)} gap-4`">
+              <div
+                v-for="option in effectiveVehicleSettings?.options"
+                :key="option.key"
+                @click="selectVehicleMode(option.key)"
+                class="group cursor-pointer rounded-2xl p-5 sm:p-6 transition-all duration-200 transform active:translate-y-0.5 border-2"
+                :style="getInteractiveCardStyle(
+                  selectedVehicleMode === option.key || hoveredVehicleMode === option.key,
+                  hoveredVehicleMode === option.key
+                )"
+                @mouseenter="hoveredVehicleMode = option.key"
+                @mouseleave="hoveredVehicleMode = null"
+              >
+                <div class="flex flex-col gap-2">
+                  <p class="font-bold text-gray-900">{{ option.label }}</p>
+                  <p v-if="option.description" class="text-sm text-gray-500">{{ option.description }}</p>
+
+                  <!-- Cost badge -->
+                  <div class="mt-1">
+                    <span v-if="vehicleOptionCost(option.key) > 0" class="text-sm font-semibold" :style="{ color: primaryColor }">
+                      + CHF {{ (vehicleOptionCost(option.key) / 100).toFixed(2) }}
+                    </span>
+                    <span v-else-if="vehicleOptionCost(option.key) < 0" class="text-sm font-semibold text-green-600">
+                      − CHF {{ (Math.abs(vehicleOptionCost(option.key)) / 100).toFixed(2) }} Rabatt
+                    </span>
+                    <span v-else class="text-sm text-gray-400">Kein Aufpreis</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5: Instructor Selection -->
         <div v-if="currentStep === 5" class="space-y-4">
           <!-- Instructor Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
@@ -553,6 +594,73 @@
               </h3>
             </div>
           </div>
+          </div>
+        </div>
+
+        <!-- Step 5.5: Room Selection (auto-skip when category has no rooms) -->
+        <div v-if="currentStep === 5.5" class="space-y-4">
+          <div class="bg-white shadow rounded-lg p-4 sm:p-6">
+            <div class="text-center mb-6">
+              <p class="text-xs uppercase tracking-wide text-gray-400 mb-1">Optional</p>
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Raum reservieren?</h2>
+              <p class="text-sm sm:text-base text-gray-600">Möchtest du für deine Fahrstunde einen Raum reservieren?</p>
+            </div>
+
+            <div v-if="isLoadingRooms" class="text-center py-8 text-gray-400">Wird geladen…</div>
+
+            <div v-else class="space-y-3 max-w-sm mx-auto">
+              <!-- No room option -->
+              <button
+                @click="selectedRoomId = null"
+                class="w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all"
+                :class="selectedRoomId === null ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'"
+              >
+                <span class="text-sm font-medium text-gray-700">Kein Raum</span>
+                <span v-if="selectedRoomId === null" class="text-blue-500">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm-1 14.5l-4-4 1.41-1.41L11 13.67l6.59-6.58L19 8.5l-8 8z"/></svg>
+                </span>
+              </button>
+
+              <!-- Room options -->
+              <button
+                v-for="room in bookingRooms"
+                :key="room.id"
+                @click="room.is_available ? (selectedRoomId = room.id) : null"
+                :disabled="!room.is_available"
+                class="w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all"
+                :class="[
+                  selectedRoomId === room.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white',
+                  room.is_available ? 'hover:border-gray-300 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                ]"
+              >
+                <div class="text-left">
+                  <p class="text-sm font-medium text-gray-800">{{ room.name }}</p>
+                  <p v-if="!room.is_available" class="text-xs text-red-500 mt-0.5">Nicht verfügbar</p>
+                  <p v-else class="text-xs text-green-600 mt-0.5">Verfügbar</p>
+                </div>
+                <span v-if="selectedRoomId === room.id" class="text-blue-500">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm-1 14.5l-4-4 1.41-1.41L11 13.67l6.59-6.58L19 8.5l-8 8z"/></svg>
+                </span>
+              </button>
+            </div>
+
+            <div class="mt-6 flex justify-center gap-3">
+              <button
+                v-if="categoryRoomMode !== 'required'"
+                @click="selectedRoomId = null; currentStep = 6; generateTimeSlotsForSpecificCombination()"
+                class="px-5 py-2.5 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50"
+              >
+                Überspringen
+              </button>
+              <button
+                @click="currentStep = 6; generateTimeSlotsForSpecificCombination()"
+                :disabled="categoryRoomMode === 'required' && selectedRoomId === null"
+                class="px-6 py-2.5 text-sm font-medium text-white rounded-xl disabled:opacity-50"
+                :style="{ background: getBrandPrimary() }"
+              >
+                Weiter
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1593,6 +1701,12 @@ const selectedInstructor = ref<any>(null)
 // Resolved UUID for ?staff=<handle> – populated on mount, never exposed in URL
 const lockedStaffId = ref<string | undefined>(undefined)
 const lockedStaffName = ref<string | undefined>(undefined)
+
+// ── Room selection (step 5.5) ──────────────────────────────────────────────
+const bookingRooms = ref<Array<{ id: string; name: string; is_available: boolean }>>([])
+const selectedRoomId = ref<string | null>(null)
+const categoryRoomMode = ref<'none' | 'optional' | 'required'>('none')
+const isLoadingRooms = ref(false)
 const availableLocations = ref<any[]>([])
 const availableInstructors = ref<any[]>([])
 const availableTimeSlots = ref<any[]>([])
@@ -1603,6 +1717,45 @@ const categoryAdminFeeRappen = ref(0)
 const categoryAdminFeeAppliesFrom = ref(2)
 const currentWeek = ref(1)
 const maxWeek = ref(4)
+
+// Vehicle selection state
+const selectedVehicleMode = ref<string | null>(null)
+const hoveredVehicleMode = ref<string | null>(null)
+
+/** Resolved vehicle settings for the current location + category combination */
+const effectiveVehicleSettings = computed(() => {
+  if (!selectedLocation.value || !selectedCategory.value) return null
+  const locSettings = selectedLocation.value?.category_vehicle_settings
+  const catSettings = selectedCategory.value?.vehicle_settings
+  const catCode = selectedCategory.value?.code
+  if (!catCode) return null
+  const locSetting = locSettings?.[catCode]
+  if (locSetting?.mode === 'options' && locSetting.options?.length) return locSetting
+  if (locSetting?.mode === 'none') return null
+  if (catSettings?.mode === 'options' && catSettings.options?.length) return catSettings
+  return null
+})
+
+/** Whether the vehicle choice step should be shown (only when >1 option exists) */
+const showVehicleStep = computed(() => {
+  const s = effectiveVehicleSettings.value
+  return !!s && s.mode === 'options' && (s.options?.length ?? 0) > 1
+})
+
+/** Compute the signed cost for a given option key and current duration */
+const vehicleOptionCost = (optionKey: string): number => {
+  const s = effectiveVehicleSettings.value
+  if (!s?.options) return 0
+  const option = s.options.find((o: any) => o.key === optionKey)
+  if (!option || option.cost_type === 'none') return 0
+  const duration = Array.isArray(filters.value?.duration_minutes)
+    ? (filters.value.duration_minutes[0] ?? 45)
+    : (filters.value?.duration_minutes ?? 45)
+  const rappen = option.per_minute
+    ? Math.round(option.cost_rappen * duration)
+    : option.cost_rappen
+  return option.cost_type === 'discount' ? -rappen : rappen
+}
 
 // Hover states for interactive cards
 const hoveredCategoryId = ref<string | null>(null)
@@ -2714,6 +2867,31 @@ const selectSubcategory = async (category: any) => {
   }
   logger.debug('✅ Prices and staff loaded')
 
+  // Load room settings for this category (non-blocking)
+  const roomSettings = category?.room_settings
+  categoryRoomMode.value = roomSettings?.mode ?? 'none'
+  bookingRooms.value = []
+  selectedRoomId.value = null
+  if (categoryRoomMode.value !== 'none') {
+    const allowedIds: string[] = roomSettings?.allowed_room_ids ?? []
+    if (allowedIds.length > 0) {
+      isLoadingRooms.value = true
+      try {
+        // Fetch only availability boolean per room — no auth needed
+        bookingRooms.value = allowedIds.map((id: string) => ({ id, name: id, is_available: true }))
+        // Try to get names from public API — best effort
+        await Promise.all(allowedIds.map(async (roomId: string) => {
+          try {
+            const av: any = await $fetch(`/api/booking/room-availability?room_id=${roomId}&start_time=${new Date().toISOString()}&end_time=${new Date().toISOString()}`)
+            // Room name is not available from this endpoint; we'll use ID as fallback
+          } catch { /* silent */ }
+        }))
+      } catch { /* silent */ } finally {
+        isLoadingRooms.value = false
+      }
+    }
+  }
+
   // Get unique locations from staff
   // Build unique locations from all staff, avoiding duplicates
   // ONLY include locations that support the selected category
@@ -2942,7 +3120,8 @@ const selectPickupOption = async () => {
 
 const selectLocation = async (location: any) => {
   selectedLocation.value = location
-  
+  selectedVehicleMode.value = null
+
   // Get instructors available at this location
   availableInstructors.value = location.available_staff || []
 
@@ -2955,6 +3134,28 @@ const selectLocation = async (location: any) => {
     }
   }
 
+  await waitForPressEffect()
+
+  // Vehicle step: show when multiple options are available; auto-select when only one
+  const vs = effectiveVehicleSettings.value
+  if (vs?.mode === 'options' && vs.options?.length) {
+    const defaultOpt = vs.options.find((o: any) => o.is_default) ?? vs.options[0]
+    selectedVehicleMode.value = defaultOpt.key
+    if (vs.options.length > 1) {
+      currentStep.value = 4.5
+    } else {
+      // Only one option — auto-select silently and continue
+      currentStep.value = 5
+    }
+  } else {
+    selectedVehicleMode.value = null
+    currentStep.value = 5
+  }
+  saveBookingPrefs()
+}
+
+const selectVehicleMode = async (optionKey: string) => {
+  selectedVehicleMode.value = optionKey
   await waitForPressEffect()
   currentStep.value = 5
   saveBookingPrefs()
@@ -2969,6 +3170,14 @@ const selectInstructor = async (instructor: any) => {
   if (selectedServiceType.value === 'theorie' || selectedServiceType.value === 'beratung') {
     showProposalFormManually.value = true
     currentStep.value = 6
+    saveBookingPrefs()
+    return
+  }
+
+  // Check if this category has a room step configured
+  if (categoryRoomMode.value !== 'none' && bookingRooms.value.length > 0) {
+    // Check room availability for all rooms (no specific time yet — just show the list)
+    currentStep.value = 5.5
     saveBookingPrefs()
     return
   }
@@ -3035,7 +3244,13 @@ const generateTimeSlotsForSpecificCombination = async () => {
           category_code: selectedCategory.value.code,
           duration_minutes: duration,
           start_date: startDate.toISOString().split('T')[0],
-          end_date: endDate.toISOString().split('T')[0]
+          end_date: endDate.toISOString().split('T')[0],
+          vehicle_mode: selectedVehicleMode.value ?? undefined,
+          requires_school_vehicle: selectedVehicleMode.value
+            ? !!(effectiveVehicleSettings.value?.options?.find(
+                (o: any) => o.key === selectedVehicleMode.value
+              )?.requires_school_vehicle)
+            : false,
         })
 
     // ✅ Run conflict check and slot fetch in parallel
@@ -3595,6 +3810,8 @@ const confirmBooking = async () => {
       notes: bookingNotes.value || undefined,
       discount_code: bookingDiscount.value?.code,
       discount_amount_rappen: bookingDiscount.value?.discountAmountRappen ?? 0,
+      // Room selected by client in step 5.5
+      room_id: selectedRoomId.value ?? null,
       // Store customer pickup PLZ and address on the appointment when booking a pickup lesson
       customer_pickup_plz: selectedLocation.value?.isPickup ? (pickupPLZ.value || null) : null,
       customer_pickup_address: selectedLocation.value?.isPickup ? (pickupAddressDetails.value?.formatted || pickupAddress.value || null) : null,
@@ -3714,6 +3931,7 @@ const createAppointmentSecure = async (userData: any) => {
         notes: userData.notes || undefined,
         customer_pickup_plz: userData.customer_pickup_plz ?? null,
         customer_pickup_address: userData.customer_pickup_address ?? null,
+        vehicle_mode: selectedVehicleMode.value ?? null,
         marketing_session_id: userData.marketing_session_id,
         marketing_attribution: userData.marketing_attribution,
       }

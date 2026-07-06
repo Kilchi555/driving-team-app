@@ -7,6 +7,16 @@ interface AdminRequest {
   [key: string]: any
 }
 
+/**
+ * When both tenant-specific and global (tenant_id=null) entries exist for the
+ * same rating value, prefer the tenant-specific one and drop the global.
+ */
+function deduplicateByRating(items: any[], tenantId: string): any[] {
+  const tenantItems = items.filter(i => i.tenant_id === tenantId)
+  if (tenantItems.length > 0) return tenantItems
+  return items.filter(i => i.tenant_id === null)
+}
+
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
   const supabase = getSupabaseAdmin()
@@ -63,7 +73,7 @@ export default defineEventHandler(async (event) => {
         categories: categories || [],
         evaluationCategories: (evalCategories || []).map(cat => ({ ...cat, is_theory: cat.is_theory ?? false })),
         criteria: criteria || [],
-        scale: scale || [],
+        scale: deduplicateByRating(scale || [], tenantId),
         tenant,
         drivingCategories: categories || [],
         tenantId,

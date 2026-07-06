@@ -30,8 +30,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: 'User profile not found' })
   }
 
-  // Only admins/staff can deactivate users
-  if (!['admin', 'staff'].includes(userProfile.role)) {
+  // Only admins can deactivate users
+  if (!['admin', 'superadmin'].includes(userProfile.role)) {
     throw createError({ statusCode: 403, message: 'Insufficient permissions' })
   }
 

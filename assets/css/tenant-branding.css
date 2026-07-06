@@ -1,6 +1,12 @@
 /* assets/css/tenant-branding.css */
 /* CSS Custom Properties für Tenant-Branding System */
 
+/* Prevent horizontal overflow that causes WebView zoom-out on mobile */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 :root {
   /* === TENANT BRANDING VARIABLES === */
   /* Diese Variablen werden dynamisch durch das Branding-System gesetzt */

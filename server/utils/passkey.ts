@@ -186,6 +186,61 @@ export async function storeChallenge(params: {
   return data.id
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// DB-based rate limiting (works serverless / multi-instance)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Check whether a given IP has exceeded the allowed number of failed passkey
+ * events within the rolling window. Queries webauthn_audit_log — no in-memory
+ * state required, so it works correctly across Vercel serverless instances.
+ *
+ * Returns true when the caller is allowed to proceed, false when rate-limited.
+ */
+export async function checkPasskeyRateLimit(params: {
+  ipAddress: string | null
+  eventTypePrefix: string    // e.g. 'login_fail' or 'backup_code'
+  maxFailures: number        // max allowed failures in the window
+  windowMinutes: number      // rolling window in minutes
+}): Promise<boolean> {
+  if (!params.ipAddress) return true  // no IP = can't rate-limit, allow through
+
+  try {
+    const supabase = getSupabaseAdmin()
+    const since = new Date(Date.now() - params.windowMinutes * 60 * 1000).toISOString()
+
+    const { count } = await supabase
+      .from('webauthn_audit_log')
+      .select('id', { count: 'exact', head: true })
+      .eq('ip_address', params.ipAddress)
+      .eq('success', false)
+      .ilike('event_type', `${params.eventTypePrefix}%`)
+      .gte('created_at', since)
+
+    return (count ?? 0) < params.maxFailures
+  } catch {
+    // Never block legitimate traffic because of a rate-limit query failure
+    return true
+  }
+}
+
+/**
+ * Delete expired and consumed challenges older than 1 hour to keep the table
+ * from growing indefinitely. Called opportunistically at the end of verify flows.
+ */
+export async function pruneExpiredChallenges(): Promise<void> {
+  try {
+    const supabase = getSupabaseAdmin()
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+    await supabase
+      .from('webauthn_challenges')
+      .delete()
+      .lt('expires_at', oneHourAgo)
+  } catch {
+    // Non-fatal
+  }
+}
+
 /**
  * Atomically consume a challenge: returns it if valid + unconsumed + unexpired,
  * otherwise returns null. Marks it consumed in the same transaction.

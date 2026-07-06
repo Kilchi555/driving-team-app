@@ -48,7 +48,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         }
       } catch { /* non-fatal — fall back to cookie-based auth */ }
     },
-    onResponseError: async ({ response, error, request }) => {
+    onResponseError: async ({ response, error, request, options }) => {
       const status = response?.status
       // request can be a string (URL) or a Request object — normalize to string
       const url = (typeof request === 'string' ? request : (request as any)?.url || '').toLowerCase()
@@ -293,8 +293,11 @@ export default defineNuxtPlugin((nuxtApp) => {
       }
 
       // Handle 403 - Forbidden (user doesn't have permission)
-      if (status === 403) {
-        console.warn('⚠️ Access denied (403)')
+      // Callers can suppress the toast by setting the X-Silent-Error: true request header
+      const reqHeaders = (options as any)?.headers as Record<string, string> | undefined
+      const isSilent = reqHeaders?.['x-silent-error'] === 'true' || reqHeaders?.['X-Silent-Error'] === 'true'
+      if (status === 403 && !isSilent) {
+        console.warn('⚠️ Access denied (403) on:', typeof request === 'string' ? request : (request as any)?.url)
         try {
           const uiStore = useUIStore()
           uiStore.addNotification({

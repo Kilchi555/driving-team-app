@@ -5,16 +5,31 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center py-6">
           <div>
-            <h1 class="text-3xl font-bold text-gray-900">Kategorien verwalten</h1>
-            <p class="mt-1 text-sm text-gray-600">Verwalten Sie Ihre Kategorien oder laden Sie Standard-Templates</p>
+            <h1 class="text-3xl font-bold text-gray-900">Preise</h1>
+            <p class="mt-1 text-sm text-gray-600">Lektionspreise nach Kategorie und Fahrzeugmietpreise</p>
           </div>
+        </div>
+        <!-- Tab navigation -->
+        <div class="flex gap-1 -mb-px">
+          <button
+            v-for="tab in priceTabs"
+            :key="tab.key"
+            @click="priceTab = tab.key"
+            class="px-5 py-3 text-sm font-medium border-b-2 transition-colors"
+            :class="priceTab === tab.key
+              ? 'border-current text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'"
+          >{{ tab.label }}</button>
         </div>
       </div>
     </div>
 
     <!-- Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      
+
+      <!-- ═══ TAB: Kategorien ═══ -->
+      <template v-if="priceTab === 'kategorien'">
+
       <!-- Actions -->
       <div class="bg-white shadow rounded-lg mb-6">
         <div class="px-6 py-4 border-b border-gray-200">
@@ -90,15 +105,6 @@
                     Name
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    LFA
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    FAK
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Modus
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Lektionsdauern (Min)
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -152,59 +158,6 @@
                         ({{ categories.find(c => c.id === category.parent_category_id)?.name ?? 'Unterkategorie' }})
                       </span>
                     </div>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <label class="relative inline-flex items-center cursor-pointer" @click.stop>
-                      <input
-                        type="checkbox"
-                        class="sr-only peer"
-                        :checked="isLFARequired(category)"
-                        :disabled="isSaving(category.id)"
-                        @click.stop
-                        @mousedown.stop
-                        @change="toggleLFA(category, ($event.target as HTMLInputElement).checked)"
-                      />
-                      <div class="w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:bg-green-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-4"></div>
-                    </label>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <label class="relative inline-flex items-center cursor-pointer" @click.stop>
-                      <input
-                        type="checkbox"
-                        class="sr-only peer"
-                        :checked="isFAKEnabled(category)"
-                        :disabled="isSaving(category.id)"
-                        @click.stop
-                        @mousedown.stop
-                        @change="toggleFAK(category, ($event.target as HTMLInputElement).checked)"
-                      />
-                      <div class="tenant-toggle w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 rounded-full peer after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-4"></div>
-                    </label>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <template v-if="isModeDisabled(category)">
-                      <select
-                        class="px-2 py-1 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
-                        disabled
-                        @click.stop
-                        @mousedown.stop
-                      >
-                        <option>{{ getDisabledModeText(category) }}</option>
-                      </select>
-                    </template>
-                    <template v-else>
-                      <select
-                        class="px-2 py-1 border border-gray-300 rounded-md text-sm"
-                        :value="getLfaFakMode(category)"
-                        :disabled="isSaving(category.id)"
-                        @click.stop
-                        @mousedown.stop
-                        @change="setLfaFakMode(category, ($event.target as HTMLSelectElement).value)"
-                      >
-                        <option value="both">Beides erforderlich</option>
-                        <option value="either">Entweder/Oder</option>
-                      </select>
-                    </template>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div class="flex flex-wrap gap-1">
@@ -322,6 +275,22 @@
           </div>
         </div>
       </div>
+
+      </template>
+      <!-- ═══ END TAB: Kategorien ═══ -->
+
+      <!-- ═══ TAB: Fahrzeugvermietung ═══ -->
+      <template v-if="priceTab === 'vermietung'">
+        <VehicleRentalsAdmin />
+      </template>
+      <!-- ═══ END TAB: Fahrzeugvermietung ═══ -->
+
+      <!-- ═══ TAB: Räume ═══ -->
+      <template v-if="priceTab === 'raeume'">
+        <RoomsAdmin />
+      </template>
+      <!-- ═══ END TAB: Räume ═══ -->
+
     </div>
 
     <!-- Category Modal -->
@@ -605,8 +574,170 @@
                 </div>
               </div>
             </div>
-            
+
+            <!-- ─── Raum-Konfiguration ─── -->
+            <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h5 class="text-md font-medium text-blue-900 mb-3">Raum-Zuordnung</h5>
+              <p class="text-xs text-blue-700 mb-3">Lege fest ob für diese Kategorie Räume reserviert werden können.</p>
+
+              <div class="mb-3">
+                <label class="block text-xs font-medium text-gray-700 mb-2">Modus</label>
+                <div class="flex gap-3 flex-wrap">
+                  <label v-for="opt in [{ value: 'none', label: 'Deaktiviert' }, { value: 'optional', label: 'Optional' }, { value: 'required', label: 'Pflicht' }]"
+                    :key="opt.value" class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="radio" v-model="categoryForm.room_mode" :value="opt.value" class="text-blue-500" />
+                    <span class="text-sm text-gray-700">{{ opt.label }}</span>
+                  </label>
+                </div>
+              </div>
+
+              <div v-if="categoryForm.room_mode !== 'none'" class="space-y-2">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Verfügbare Räume</label>
+                <p v-if="availableRooms.length === 0" class="text-xs text-gray-400">Keine Räume konfiguriert. Füge zuerst Räume im Räume-Tab hinzu.</p>
+                <div v-else class="space-y-1 max-h-40 overflow-y-auto">
+                  <label v-for="room in availableRooms" :key="room.id"
+                    class="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-100 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      :value="room.id"
+                      :checked="categoryForm.room_allowed_ids.includes(room.id)"
+                      @change="(e) => { const v = (e.target as HTMLInputElement).checked; categoryForm.room_allowed_ids = v ? [...categoryForm.room_allowed_ids, room.id] : categoryForm.room_allowed_ids.filter(id => id !== room.id) }"
+                      class="rounded text-blue-500"
+                    />
+                    <span class="text-sm text-gray-800">{{ room.name }}</span>
+                    <span v-if="room.location" class="text-xs text-gray-400">— {{ room.location }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- ─── Fahrzeug-Zuordnung ─── -->
+            <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <h5 class="text-md font-medium text-amber-900 mb-1">Fahrzeug-Zuordnung</h5>
+              <p class="text-xs text-amber-700 mb-3">Wähle welche Schulfahrzeuge für diese Kategorie eingesetzt werden können.</p>
+              <p v-if="availableVehicles.length === 0" class="text-xs text-gray-400">Keine Fahrzeuge konfiguriert. Füge zuerst Fahrzeuge im Fahrzeuge-Tab hinzu.</p>
+              <div v-else class="space-y-1 max-h-40 overflow-y-auto">
+                <label v-for="vehicle in availableVehicles" :key="vehicle.id"
+                  class="flex items-center gap-2 p-2 rounded-lg hover:bg-amber-100 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    :checked="vehicleCategoryChecked.has(vehicle.id)"
+                    @change="toggleVehicleCategoryAssignment(vehicle.id)"
+                    class="rounded text-amber-500"
+                  />
+                  <span class="text-sm text-gray-800">{{ vehicle.name }}</span>
+                  <span v-if="(vehicle.category_codes || []).length" class="text-xs text-gray-400">
+                    ({{ vehicle.category_codes.join(', ') }})
+                  </span>
+                </label>
+              </div>
+            </div>
+
             <div class="flex justify-end space-x-3 pt-4">
+              <!-- Fahrzeug-Optionen (Fallback-Default) -->
+              <div class="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <div class="flex items-center justify-between mb-2">
+                  <h5 class="text-md font-medium text-orange-900">Fahrzeug-Optionen (Fallback-Default)</h5>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input v-model="categoryForm.vehicle_enabled" type="checkbox" class="sr-only peer" />
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-300 rounded-full peer peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                    <span class="ml-3 text-sm font-medium text-gray-700">{{ categoryForm.vehicle_enabled ? 'Aktiviert' : 'Deaktiviert' }}</span>
+                  </label>
+                </div>
+                <p class="text-xs text-orange-700 mb-3">Gilt wenn eine Location keine eigene Fahrzeug-Konfiguration hat. Definiere beliebig viele Kombinationen (z.B. Schulauto + Eigenanhänger).</p>
+
+                <div v-if="categoryForm.vehicle_enabled" class="space-y-3">
+                  <!-- Option list -->
+                  <div
+                    v-for="(opt, idx) in categoryForm.vehicle_options"
+                    :key="idx"
+                    class="bg-white border border-orange-200 rounded-lg p-3 space-y-2"
+                  >
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="flex-1 min-w-0">
+                        <input
+                          v-model="opt.label"
+                          type="text"
+                          placeholder="Label (z.B. Schulauto + Eigenanhänger)"
+                          class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400"
+                        />
+                      </div>
+                      <div class="flex items-center gap-2 flex-shrink-0">
+                        <label class="text-xs text-gray-500 whitespace-nowrap">Standard</label>
+                        <input
+                          type="radio"
+                          :name="`vehicle-default-${editingCategory?.id || 'new'}`"
+                          :checked="opt.is_default"
+                          @change="setVehicleDefault(idx)"
+                          class="text-orange-500"
+                        />
+                        <button
+                          type="button"
+                          @click="removeVehicleOption(idx)"
+                          class="text-red-400 hover:text-red-600 p-1"
+                          title="Option entfernen"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      v-model="opt.description"
+                      type="text"
+                      placeholder="Beschreibung (optional, z.B. Bitte Anhänger mitbringen)"
+                      class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400"
+                    />
+                    <div class="grid grid-cols-3 gap-2">
+                      <div>
+                        <label class="block text-xs text-gray-500 mb-1">Preiseffekt</label>
+                        <select v-model="opt.cost_type" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md">
+                          <option value="none">Kein</option>
+                          <option value="surcharge">Aufpreis</option>
+                          <option value="discount">Rabatt</option>
+                        </select>
+                      </div>
+                      <div v-if="opt.cost_type !== 'none'">
+                        <label class="block text-xs text-gray-500 mb-1">Betrag (CHF)</label>
+                        <input
+                          v-model.number="opt.cost_chf"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400"
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div v-if="opt.cost_type !== 'none'">
+                        <label class="block text-xs text-gray-500 mb-1">Typ</label>
+                        <select v-model="opt.per_minute" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md">
+                          <option :value="false">Pauschal</option>
+                          <option :value="true">Pro Minute</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <input
+                        v-model="opt.requires_school_vehicle"
+                        type="checkbox"
+                        :id="`rsv-${idx}`"
+                        class="rounded text-orange-500"
+                      />
+                      <label :for="`rsv-${idx}`" class="text-xs text-gray-600">Schulfahrzeug nötig (Kapazitätsprüfung aktivieren)</label>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    @click="addVehicleOption"
+                    class="w-full py-2 border-2 border-dashed border-orange-300 rounded-lg text-sm text-orange-600 hover:bg-orange-50 transition-colors"
+                  >
+                    + Option hinzufügen
+                  </button>
+                </div>
+              </div>
+
               <button
                 type="button"
                 @click="closeModal"
@@ -758,7 +889,9 @@
 
 <script setup lang="ts">
 
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
+import VehicleRentalsAdmin from '~/components/admin/VehicleRentalsAdmin.vue'
+import RoomsAdmin from '~/components/admin/RoomsAdmin.vue'
 import { logger } from '~/utils/logger'
 import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
@@ -793,6 +926,15 @@ interface Category {
 }
 
 
+// ── Price Tabs ──────────────────────────────────────────────────────────────
+const priceTabs = [
+  { key: 'kategorien', label: 'Kategorien' },
+  { key: 'vermietung', label: 'Fahrzeuge' },
+  { key: 'raeume',     label: 'Räume' },
+]
+const priceTab = ref('kategorien')
+
+// ── Categories ──────────────────────────────────────────────────────────────
 // State
 const categories = ref<Category[]>([])
 const isLoading = ref(false)
@@ -800,12 +942,22 @@ const error = ref<string | null>(null)
 
 // Show all categories; mark subcategories with their parent name for context
 const displayedCategories = computed(() => {
-  return [...categories.value].sort((a, b) => {
-    // Parents first, then children grouped under their parent
+  const all = categories.value
+  const subs = all.filter(c => !!c.parent_category_id)
+  const mainIdsWithSubs = new Set(subs.map(s => s.parent_category_id))
+
+  // If a main has subs → show only the subs (pricing lives at sub level).
+  // If a main has no subs → show the main directly.
+  const filtered = all.filter(c =>
+    c.parent_category_id
+      ? true                         // always show sub-categories
+      : !mainIdsWithSubs.has(c.id)   // only show mains without subs
+  )
+
+  return [...filtered].sort((a, b) => {
     const aParent = a.parent_category_id ?? a.id
     const bParent = b.parent_category_id ?? b.id
     if (aParent !== bParent) return aParent - bParent
-    // Within same group: parent before children
     if (a.parent_category_id === null && b.parent_category_id !== null) return -1
     if (a.parent_category_id !== null && b.parent_category_id === null) return 1
     return (a.code ?? '').localeCompare(b.code ?? '')
@@ -839,15 +991,75 @@ const categoryForm = ref({
   admin_fee_chf: 0,
   admin_fee_applies_from: 2,
   theory_enabled: false,
+  vehicle_enabled: false,
+  vehicle_options: [] as Array<{
+    key: string; label: string; description: string;
+    cost_type: 'none' | 'surcharge' | 'discount'; cost_chf: number;
+    per_minute: boolean; is_default: boolean; requires_school_vehicle: boolean;
+  }>,
   theory_price_chf: 0,
   theory_duration_minutes: 45,
   consultation_enabled: false,
   consultation_price_chf: 0,
-  consultation_duration_minutes: 60
+  consultation_duration_minutes: 60,
+  room_mode: 'none' as 'none' | 'optional' | 'required',
+  room_allowed_ids: [] as string[],
 })
 
 // New lesson duration input
 const newLessonDuration = ref('')
+
+// Available rooms for the room_settings multi-select
+const availableRooms = ref<Array<{ id: string; name: string; location?: string }>>([])
+const loadAvailableRooms = async () => {
+  try {
+    const res: any = await $fetch('/api/admin/resources/rooms')
+    availableRooms.value = res.rooms || []
+  } catch { /* silent */ }
+}
+
+// Available vehicles for category_codes assignment
+const availableVehicles = ref<Array<{ id: string; name: string; category_codes: string[] }>>([])
+const vehicleCategoryChecked = ref<Set<string>>(new Set())
+
+const loadAvailableVehicles = async () => {
+  try {
+    const res: any = await $fetch('/api/admin/rental-vehicles')
+    availableVehicles.value = (res.vehicles || []).filter((v: any) => v.is_active !== false)
+  } catch { /* silent */ }
+}
+
+const initVehicleCategoryChecked = (categoryCode: string) => {
+  vehicleCategoryChecked.value = new Set(
+    availableVehicles.value
+      .filter(v => (v.category_codes || []).includes(categoryCode))
+      .map(v => v.id)
+  )
+}
+
+const toggleVehicleCategoryAssignment = (vehicleId: string) => {
+  const s = new Set(vehicleCategoryChecked.value)
+  if (s.has(vehicleId)) s.delete(vehicleId)
+  else s.add(vehicleId)
+  vehicleCategoryChecked.value = s
+}
+
+const saveVehicleCategoryAssignments = async (categoryCode: string) => {
+  const updates: Promise<any>[] = []
+  for (const vehicle of availableVehicles.value) {
+    const currentlyHas = (vehicle.category_codes || []).includes(categoryCode)
+    const shouldHave = vehicleCategoryChecked.value.has(vehicle.id)
+    if (currentlyHas === shouldHave) continue
+    const newCodes = shouldHave
+      ? [...(vehicle.category_codes || []), categoryCode]
+      : (vehicle.category_codes || []).filter((c: string) => c !== categoryCode)
+    updates.push($fetch('/api/admin/rental-vehicles', {
+      method: 'POST',
+      body: { action: 'update', id: vehicle.id, category_codes: newCodes },
+    }).catch(() => {}))
+  }
+  await Promise.all(updates)
+}
 
 // Methods
 const loadCategories = async () => {
@@ -1078,11 +1290,16 @@ const closeSelectStandardsModal = () => {
 
 const openCreateModal = () => {
   editingCategory.value = null
+  vehicleCategoryChecked.value = new Set()
+  loadAvailableRooms()
+  loadAvailableVehicles()
   showModal.value = true
 }
 
 const openEditModal = async (category: Category) => {
   editingCategory.value = { ...category }
+  const vs = (category as any).vehicle_settings
+  const rs = (category as any).room_settings
   categoryForm.value = {
     code: category.code,
     name: category.name,
@@ -1098,11 +1315,28 @@ const openEditModal = async (category: Category) => {
     theory_duration_minutes: 45,
     consultation_enabled: false,
     consultation_price_chf: 0,
-    consultation_duration_minutes: 60
+    consultation_duration_minutes: 60,
+    vehicle_enabled: vs?.mode === 'options' && !!vs?.options?.length,
+    vehicle_options: (vs?.options ?? []).map((o: any) => ({
+      key: o.key,
+      label: o.label ?? '',
+      description: o.description ?? '',
+      cost_type: o.cost_type ?? 'none',
+      cost_chf: (o.cost_rappen ?? 0) / 100,
+      per_minute: !!o.per_minute,
+      is_default: !!o.is_default,
+      requires_school_vehicle: !!o.requires_school_vehicle,
+    })),
+    room_mode: rs?.mode ?? 'none',
+    room_allowed_ids: (rs?.allowed_room_ids ?? []).map(String),
   }
   
-  // Load current pricing data
-  await loadCategoryPricing(category.code)
+  // Load current pricing data and available rooms in parallel
+  await Promise.all([
+    loadCategoryPricing(category.code),
+    loadAvailableRooms(),
+    loadAvailableVehicles().then(() => initVehicleCategoryChecked(category.code)),
+  ])
   
   showModal.value = true
 }
@@ -1125,7 +1359,11 @@ const closeModal = () => {
     theory_duration_minutes: 45,
     consultation_enabled: false,
     consultation_price_chf: 0,
-    consultation_duration_minutes: 60
+    consultation_duration_minutes: 60,
+    vehicle_enabled: false,
+    vehicle_options: [],
+    room_mode: 'none',
+    room_allowed_ids: [],
   }
   newLessonDuration.value = ''
 }
@@ -1135,8 +1373,66 @@ const onCategorySaved = async () => {
   await loadCategories()
 }
 
+// ── Vehicle option helpers ─────────────────────────────────────────────────
+
+const slugify = (label: string): string =>
+  label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || `option_${Date.now()}`
+
+const addVehicleOption = () => {
+  const isFirst = categoryForm.value.vehicle_options.length === 0
+  categoryForm.value.vehicle_options.push({
+    key: '',
+    label: '',
+    description: '',
+    cost_type: 'none',
+    cost_chf: 0,
+    per_minute: false,
+    is_default: isFirst,
+    requires_school_vehicle: false,
+  })
+}
+
+const removeVehicleOption = (idx: number) => {
+  const wasDefault = categoryForm.value.vehicle_options[idx]?.is_default
+  categoryForm.value.vehicle_options.splice(idx, 1)
+  if (wasDefault && categoryForm.value.vehicle_options.length > 0) {
+    categoryForm.value.vehicle_options[0].is_default = true
+  }
+}
+
+const setVehicleDefault = (idx: number) => {
+  categoryForm.value.vehicle_options.forEach((o, i) => {
+    o.is_default = i === idx
+  })
+}
+
 const saveCategory = async () => {
   try {
+    // Build vehicle_settings JSONB — options-based model
+    const vehicleSettings = categoryForm.value.vehicle_enabled && categoryForm.value.vehicle_options.length > 0
+      ? {
+          mode: 'options',
+          options: categoryForm.value.vehicle_options.map(o => ({
+            key: o.key || slugify(o.label),
+            label: o.label,
+            description: o.description || undefined,
+            cost_type: o.cost_type,
+            cost_rappen: Math.round((o.cost_chf ?? 0) * 100),
+            per_minute: o.per_minute,
+            is_default: o.is_default,
+            requires_school_vehicle: o.requires_school_vehicle,
+          })),
+        }
+      : null
+
+    // Build room_settings JSONB
+    const roomSettings = categoryForm.value.room_mode !== 'none'
+      ? {
+          mode: categoryForm.value.room_mode,
+          allowed_room_ids: categoryForm.value.room_allowed_ids,
+        }
+      : null
+
     await $fetch('/api/admin/categories', {
       method: 'POST',
       body: {
@@ -1155,11 +1451,14 @@ const saveCategory = async () => {
         theory_duration_minutes: categoryForm.value.theory_duration_minutes,
         consultation_enabled: categoryForm.value.consultation_enabled,
         consultation_price_chf: categoryForm.value.consultation_price_chf,
-        consultation_duration_minutes: categoryForm.value.consultation_duration_minutes
+        consultation_duration_minutes: categoryForm.value.consultation_duration_minutes,
+        vehicle_settings: vehicleSettings,
+        room_settings: roomSettings,
       }
     })
 
     logger.debug('✅ Category saved:', categoryForm.value.code)
+    await saveVehicleCategoryAssignments(categoryForm.value.code)
     await loadCategories()
     closeModal()
   } catch (err: any) {

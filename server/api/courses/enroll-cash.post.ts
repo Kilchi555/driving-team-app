@@ -56,7 +56,8 @@ const handler = defineEventHandler(async (event) => {
       customSessions,
       isPartialEnrollment,
       partialStartPosition,
-      marketingSessionId    // Optional: analytics session ID from drivingteam.ch for attribution
+      marketingSessionId,   // Optional: analytics session ID from drivingteam.ch for attribution
+      vehicleId,            // Optional: selected rental vehicle
     } = body
 
     logger.debug('💵 Cash enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions, isPartialEnrollment })
@@ -454,7 +455,8 @@ const handler = defineEventHandler(async (event) => {
         is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
         sari_synced: course.sari_managed ? true : null,
         sari_synced_at: course.sari_managed ? new Date().toISOString() : null,
-        notes: marketingSessionId ? `marketing_session_id:${marketingSessionId}` : null
+        notes: marketingSessionId ? `marketing_session_id:${marketingSessionId}` : null,
+        vehicle_id: vehicleId || null,
       })
       .select('id')
       .single()
@@ -485,6 +487,28 @@ const handler = defineEventHandler(async (event) => {
     }
 
     logger.info('✅ Confirmed enrollment created:', enrollment.id)
+
+    // ── Vehicle bookings for each session (if vehicle selected) ──────────────
+    if (vehicleId && course.course_sessions?.length) {
+      try {
+        const vBookings = course.course_sessions.map((s: any) => ({
+          vehicle_id: vehicleId,
+          tenant_id: tenantId,
+          course_id: courseId,
+          course_session_id: s.id,
+          start_time: s.start_time,
+          end_time: s.end_time,
+          purpose: 'course',
+          status: 'confirmed',
+          booked_by: guestUserId || null,
+        }))
+        const { error: vErr } = await supabase.from('vehicle_bookings').insert(vBookings)
+        if (vErr) logger.warn('⚠️ vehicle_bookings insert failed (non-fatal):', vErr.message)
+        else logger.info(`✅ ${vBookings.length} vehicle_bookings created for course`)
+      } catch (vE: any) {
+        logger.warn('⚠️ vehicle_bookings creation failed (non-fatal):', vE.message)
+      }
+    }
 
     // ✅ AFFILIATE REWARD HOOK – trigger for cash course enrollment
     if (guestUserId) {

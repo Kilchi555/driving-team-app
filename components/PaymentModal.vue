@@ -299,6 +299,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { formatDateTime } from '~/utils/dateUtils'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
+import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 import { roundToNearest5Rappen as roundToNearestFranken } from '~/utils/rounding'
 
 
@@ -368,6 +369,7 @@ const isPaymentApiResponse = (result: unknown): result is PaymentApiResponse => 
 
 // State
 const { walleeEnabled, loadWalleeStatus } = useWalleeStatus()
+const { cashVisible } = useCashPaymentSettings('staff')
 
 const selectedPaymentMethod = ref<string>('')
 const _allPaymentMethods = ref<PaymentMethod[]>([
@@ -401,7 +403,11 @@ const _allPaymentMethods = ref<PaymentMethod[]>([
 ])
 
 const availablePaymentMethods = computed(() =>
-  _allPaymentMethods.value.filter(m => m.method_code !== 'wallee' || walleeEnabled.value)
+  _allPaymentMethods.value.filter(m => {
+    if (m.method_code === 'wallee') return walleeEnabled.value
+    if (m.method_code === 'cash') return cashVisible.value
+    return true
+  })
 )
 
 const showPaymentModal = ref(false)

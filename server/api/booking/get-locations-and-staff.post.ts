@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
       // 2. All standard locations for tenant (full fields – avoids a 2nd query later)
       supabase
         .from('locations')
-        .select('id, name, address, available_categories, is_active, tenant_id, category_pickup_settings, time_windows, pickup_enabled, pickup_radius_minutes, postal_code, city, canton, location_type, staff_ids')
+        .select('id, name, address, available_categories, is_active, tenant_id, category_pickup_settings, category_vehicle_settings, time_windows, pickup_enabled, pickup_radius_minutes, postal_code, city, canton, location_type, staff_ids')
         .eq('tenant_id', tenant_id)
         .eq('is_active', true)
         .eq('location_type', 'standard'),

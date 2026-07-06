@@ -13,7 +13,7 @@ import { scryptSync, timingSafeEqual } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { setAuthCookies } from '~/server/utils/cookies'
-import { logPasskeyEvent, getRequestContext } from '~/server/utils/passkey'
+import { logPasskeyEvent, getRequestContext, checkPasskeyRateLimit, pruneExpiredChallenges } from '~/server/utils/passkey'
 
 function verifyCode(code: string, storedHash: string): boolean {
   // Format: scrypt$<cost>$<salt-base64>$<hash-base64>
@@ -40,6 +40,17 @@ export default defineEventHandler(async (event) => {
 
   if (!email || !code) {
     throw createError({ statusCode: 400, statusMessage: 'email and code are required' })
+  }
+
+  // Rate-limit: max 10 backup-code failures per IP in 15 minutes
+  const allowed = await checkPasskeyRateLimit({
+    ipAddress: ctx.ipAddress,
+    eventTypePrefix: 'backup_code',
+    maxFailures: 10,
+    windowMinutes: 15
+  })
+  if (!allowed) {
+    throw createError({ statusCode: 429, statusMessage: 'Too many attempts. Please try again later.' })
   }
 
   const supabase = getSupabaseAdmin()
@@ -137,6 +148,9 @@ export default defineEventHandler(async (event) => {
     ipAddress: ctx.ipAddress,
     userAgent: ctx.userAgent
   })
+
+  // Opportunistic cleanup of expired challenges
+  pruneExpiredChallenges().catch(() => {})
 
   // Count remaining codes so the UI can warn if running low
   const { count: remaining } = await supabase
