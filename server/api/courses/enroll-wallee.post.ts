@@ -284,6 +284,11 @@ const handler = defineEventHandler(async (event) => {
       logger.info('✅ Custom sessions order validated')
     }
 
+    // Compute partial/individual enrollment flags once — used in SARI validation (step 6)
+    // and in pricing (step 8b). Declared here to avoid Temporal Dead Zone.
+    const isPartialOrder = !!(isPartialEnrollment || course.is_partial_only)
+    const isIndividualSession = isPartialOrder && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
+
     // 6. Validate SARI enrollment is possible (before payment!)
     // This does a TEST enrollment to check for deadline violations, course full, etc.
     // For partial enrollments we only validate the sessions the customer will actually attend.
@@ -301,7 +306,6 @@ const handler = defineEventHandler(async (event) => {
         // For individual session booking: only validate the specific session.
         // For full courses with optional partial booking we keep only sessions
         // from partial_start_position onward (same logic as cash/webhook).
-        const isPartial = !!(isPartialEnrollment || course.is_partial_only)
         if (isIndividualSession) {
           // Find the sari_session_id for the specific individual-bookable session
           const targetSess = (course.course_sessions || []).find(
@@ -451,8 +455,6 @@ const handler = defineEventHandler(async (event) => {
     //   2. Category partial (allow_partial_enrollment toggle): use course_category.partial_price_rappen
     //   3. is_partial_only course: price_per_participant_rappen IS already the partial price
     //   4. Full enrollment: full price
-    const isPartialOrder = !!(isPartialEnrollment || course.is_partial_only)
-    const isIndividualSession = isPartialOrder && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
 
     let effectiveBasePrice: number
     if (isIndividualSession) {
