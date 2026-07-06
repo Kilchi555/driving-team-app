@@ -1785,7 +1785,9 @@ async function sendCourseEnrollmentEmails(payments: any[]) {
           method: 'POST',
           body: {
             courseRegistrationId,
-            paymentMethod: 'wallee'
+            paymentMethod: 'wallee',
+            // Pass actual paid amount so email shows correct price for partial/individual bookings
+            totalAmount: payment.total_amount_rappen ? payment.total_amount_rappen / 100 : undefined
           }
         })
         logger.info('✅ Course enrollment confirmation email triggered for:', courseRegistrationId)

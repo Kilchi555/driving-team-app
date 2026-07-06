@@ -56,6 +56,9 @@ export default defineEventHandler(async (event) => {
         last_name,
         user_id,
         course_id,
+        amount_paid_rappen,
+        discount_applied_rappen,
+        is_partial_enrollment,
         custom_sessions,
         courses!inner(
           id,
@@ -109,6 +112,20 @@ export default defineEventHandler(async (event) => {
 
     const course = enrollment.courses as any
     const tenant = enrollment.tenants as any
+
+    // Resolve the effective price to display:
+    //  1. totalAmount passed by caller (already correct for partial/individual)
+    //  2. amount_paid_rappen from the registration (set by webhook / credit path)
+    //  3. Full course price as last fallback
+    const enrollmentAmountRappen = (enrollment as any).amount_paid_rappen ?? 0
+    const effectivePriceRappen: number =
+      totalAmount != null
+        ? Math.round(totalAmount * 100)
+        : enrollmentAmountRappen > 0
+          ? enrollmentAmountRappen
+          : (course?.price_per_participant_rappen ?? 0)
+    const price = (effectivePriceRappen / 100).toFixed(2)
+    const isPartial = !!(enrollment as any).is_partial_enrollment
     
     // Fetch course category to get email_important_notice
     let courseCategory: any = null
@@ -168,9 +185,7 @@ export default defineEventHandler(async (event) => {
     
     const formattedSessions = formatSessionsForEmail(sessions)
 
-    const price = course?.price_per_participant_rappen 
-      ? (course.price_per_participant_rappen / 100).toFixed(2)
-      : '0.00'
+    // price and isPartial are already computed above
 
     // 3. Build email content based on payment method
     let paymentMethodNotice = ''
@@ -316,7 +331,7 @@ export default defineEventHandler(async (event) => {
                             <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Kurs:</strong> ${course?.name?.split(' - ')[0]}${courseCategory?.name ? ` – ${courseCategory.name}` : ''}</p>
                             ${courseCategory?.description ? `<p style="margin: 0 0 8px 0; font-size: 13px; color: #6b7280;">${courseCategory.description}</p>` : ''}
                             <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Standort:</strong> ${course?.description}</p>
-                            <p style="margin: 0 0 12px 0; font-size: 13px;"><strong>Kurskosten:</strong> CHF ${price}</p>
+                            <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Kurskosten:</strong> CHF ${price}${isPartial ? ' <span style="color:#d97706;font-size:11px;font-weight:600;">(Teilbuchung)</span>' : ''}</p>
                             
                             <p style="margin: 0 0 6px 0; font-size: 13px;"><strong>Termine:</strong></p>
                             <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #374151;">
@@ -380,9 +395,7 @@ export default defineEventHandler(async (event) => {
               weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Zurich'
             })
           : undefined
-        const price = course?.price_per_participant_rappen
-          ? (course.price_per_participant_rappen / 100).toFixed(2)
-          : undefined
+        const adminPrice = price + (isPartial ? ' (Teilbuchung)' : '')
         const { subject: adminSubject, html: adminHtml } = generateAdminEnrollmentNotificationEmail({
           participantFirstName: enrollment.first_name || '',
           participantLastName: enrollment.last_name || '',
@@ -391,7 +404,7 @@ export default defineEventHandler(async (event) => {
           courseDate,
           courseLocation: course?.description || undefined,
           paymentMethod: paymentMethod === 'cash' ? 'Barzahlung' : 'Online (Wallee)',
-          paymentAmount: price,
+          paymentAmount: adminPrice,
           tenantName: tenant.name
         })
         resend.emails.send({
