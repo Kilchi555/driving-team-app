@@ -36,10 +36,10 @@ export const useDurationManager = () => {
         .from('users')
         .select('tenant_id')
         .eq('auth_user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-      if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+      if (!userProfile?.tenant_id) throw new Error('Kein Tenant zugewiesen')
 
       // ✅ TENANT-GEFILTERTE Staff Settings laden
       logger.debug('📋 Querying staff_settings with tenant filter...')
@@ -126,10 +126,10 @@ export const useDurationManager = () => {
         .from('users')
         .select('tenant_id')
         .eq('auth_user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-      if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+      if (!userProfile?.tenant_id) throw new Error('Kein Tenant zugewiesen')
       
       // Als JSON Array speichern um konsistent mit bestehenden Daten zu sein
       const durationsString = JSON.stringify(newDurations.sort((a: number, b: number) => a - b))
@@ -195,10 +195,10 @@ export const useDurationManager = () => {
         .from('users')
         .select('tenant_id')
         .eq('auth_user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (profileError) throw new Error('Fehler beim Laden der Benutzerinformationen')
-      if (!userProfile.tenant_id) throw new Error('Kein Tenant zugewiesen')
+      if (!userProfile?.tenant_id) throw new Error('Kein Tenant zugewiesen')
       
       const { data, error } = await supabase
         .from('staff_settings')

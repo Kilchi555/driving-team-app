@@ -32,6 +32,10 @@ export default defineEventHandler(async (event) => {
       invoice_street_nr: body.invoice_street_nr?.trim() || null,
       invoice_zip: body.invoice_zip?.trim() || null,
       invoice_city: body.invoice_city?.trim() || null,
+      default_vat_rate: body.default_vat_rate != null ? parseFloat(body.default_vat_rate) : 7.70,
+      invoice_intro_text: body.invoice_intro_text?.trim() || null,
+      invoice_payment_terms: body.invoice_payment_terms?.trim() || null,
+      invoice_footer_text: body.invoice_footer_text?.trim() || null,
     })
     .eq('id', staffUser.tenant_id)
 

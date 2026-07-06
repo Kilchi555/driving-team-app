@@ -103,7 +103,7 @@ export const useStudents = () => {
         .from('users')
         .select('tenant_id')
         .eq('auth_user_id', authUser?.id)
-        .single()
+        .maybeSingle()
       const tenantId = userProfile?.tenant_id
       
       if (!tenantId) {

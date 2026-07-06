@@ -400,6 +400,8 @@ export default defineEventHandler(async (event) => {
                 tenantName: tenantData?.name || '',
                 staffName: `${profile.first_name} ${profile.last_name}`.trim(),
                 primaryColor: tenantData?.primary_color || null,
+                paymentTerms: (tenantData as any)?.invoice_payment_terms || null,
+                footerText: (tenantData as any)?.invoice_footer_text || null,
               })
 
               // Generate PDF (non-fatal if it fails)

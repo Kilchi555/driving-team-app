@@ -1,8 +1,8 @@
 import { defineEventHandler, createError, getHeader } from 'h3'
-import { getSupabaseAdmin } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 // Safe columns returned to staff/admin — no auth tokens, no onboarding secrets, no PII beyond what staff needs
-const SAFE_COLUMNS = 'id, first_name, last_name, email, phone, role, is_active, category, tenant_id, created_at, updated_at'
+const SAFE_COLUMNS = 'id, first_name, last_name, email, phone, role, is_active, category, tenant_id, created_at'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     .from('users')
     .select('id, tenant_id, role')
     .eq('auth_user_id', authUser.id)
-    .single()
+    .maybeSingle()
 
   if (!userProfile) {
     throw createError({ statusCode: 403, message: 'User profile not found' })

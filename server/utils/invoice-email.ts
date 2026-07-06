@@ -50,6 +50,8 @@ export interface InvoiceEmailData {
   items: InvoiceEmailItem[]
   subtotalRappen: number
   discountRappen?: number
+  vatRappen?: number
+  vatRate?: number
   totalRappen: number
   tenantName: string
   staffName: string
@@ -58,6 +60,9 @@ export interface InvoiceEmailData {
   qrIban?: string | null
   creditorName?: string
   scorRef?: string | null
+  introText?: string | null
+  paymentTerms?: string | null
+  footerText?: string | null
 }
 
 export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
@@ -213,7 +218,10 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
   <!-- Body -->
   <tr><td class="body-wrap">
     <p style="margin:0 0 6px;color:#64748b;font-size:15px;">Hallo <strong style="color:#1e293b;">${data.customerName}</strong>,</p>
-    <p style="margin:0 0 24px;color:#64748b;font-size:14px;line-height:1.6;">anbei erhalten Sie Ihre Rechnung für die absolvierten Fahrstunden. Bitte überweisen Sie den Betrag fristgerecht.</p>
+    ${data.introText
+      ? `<p style="margin:0 0 24px;color:#64748b;font-size:14px;line-height:1.6;white-space:pre-line;">${data.introText}</p>`
+      : `<p style="margin:0 0 24px;color:#64748b;font-size:14px;line-height:1.6;">anbei erhalten Sie Ihre Rechnung. Bitte überweisen Sie den Betrag fristgerecht.</p>`
+    }
 
     <!-- Items -->
     <table class="inv-table" cellpadding="0" cellspacing="0">
@@ -234,16 +242,21 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
       </tfoot>
     </table>
 
-    <!-- Zahlungshinweis -->
+    <!-- Zahlungshinweis / Zahlungsbedingungen -->
     <div style="margin:20px 0 0;background:${brandLight};border-left:4px solid ${brand};border-radius:0 8px 8px 0;padding:14px 16px;">
       <p style="margin:0 0 3px;font-weight:700;font-size:13px;color:#1e293b;">Zahlungsinformationen</p>
       <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">
         Bitte überweise den Betrag bis zum <strong>${formatDateEmail(data.dueDate)}</strong> unter Angabe der Rechnungsnummer <strong style="font-family:monospace;">${data.invoiceNumber}</strong>.
       </p>
+      ${data.paymentTerms ? `<p style="margin:6px 0 0;font-size:13px;color:#475569;line-height:1.5;">${data.paymentTerms}</p>` : ''}
     </div>
 
     ${qrSection}
 
+    ${data.footerText
+      ? `<p style="margin:20px 0 0;font-size:13px;color:#64748b;line-height:1.6;white-space:pre-line;">${data.footerText}</p>`
+      : ''
+    }
     <p style="margin:24px 0 0;font-size:13px;color:#94a3b8;">Freundliche Grüsse,<br><strong style="color:#475569;">${data.staffName}</strong><br>${data.tenantName}</p>
   </td></tr>
 

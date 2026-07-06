@@ -122,10 +122,10 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       }
     }
 
-    // Ensure tenantTrialInfo is always loaded — regardless of which restore path was taken.
-    // Covers: session-persist sets the user early → auth-restore skips the API call → info stays null.
-    if (authStore.user && authStore.userProfile?.tenant_id && !authStore.tenantTrialInfo) {
-      logger.debug('🔒 tenantTrialInfo missing — loading via dedicated endpoint...')
+    // Always refresh tenantTrialInfo from the server on app startup — never trust the
+    // localStorage cache alone, because current_period_end may have changed server-side.
+    if (authStore.user && authStore.userProfile?.tenant_id) {
+      logger.debug('🔒 Refreshing tenantTrialInfo from server...')
       await authStore.loadTenantTrialInfo()
     }
     

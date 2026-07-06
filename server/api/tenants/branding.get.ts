@@ -130,7 +130,8 @@ export default defineEventHandler(async (event): Promise<TenantBrandingResponse>
         brand_name, brand_tagline, brand_description, meta_description, meta_keywords,
         custom_css, custom_js, default_theme, allow_theme_switch,
         wallee_enabled,
-        business_type, twilio_from_sender
+        business_type, twilio_from_sender, default_vat_rate,
+        invoice_intro_text, invoice_payment_terms, invoice_footer_text
       `)
       .eq('is_active', true)
 

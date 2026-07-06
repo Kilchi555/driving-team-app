@@ -531,5 +531,9 @@ export const useTenantBranding = () => {
       return color
     }),
     accentColor: computed(() => currentTenantBranding.value?.colors?.accent || '#3B82F6'),
+    defaultVatRate: computed(() => (currentTenantBranding.value as any)?.default_vat_rate ?? 7.70),
+    invoiceIntroText: computed(() => (currentTenantBranding.value as any)?.invoice_intro_text ?? ''),
+    invoicePaymentTerms: computed(() => (currentTenantBranding.value as any)?.invoice_payment_terms ?? 'Zahlbar innert 30 Tagen netto.'),
+    invoiceFooterText: computed(() => (currentTenantBranding.value as any)?.invoice_footer_text ?? ''),
   }
 }

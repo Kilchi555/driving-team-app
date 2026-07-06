@@ -13,60 +13,65 @@
       </div>
 
       <form class="space-y-6" @submit.prevent="createInvoice">
-        <!-- Kunde und Staff auswählen -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Kunde *
-            </label>
-            <UserSelector
-              v-model="formData.user_id"
-              :placeholder="'Kunde auswählen...'"
-              @selected="onCustomerSelected"
-            />
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Staff (optional)
-            </label>
-            <StaffSelector
-              v-model="formData.staff_id"
-              :placeholder="'Staff auswählen...'"
-            />
-          </div>
-        </div>
+        <!-- Kunde suchen -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Kunde *</label>
 
-        <!-- Verknüpfungen -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Produktverkauf (optional)
-            </label>
-            <select
-              v-model="formData.product_sale_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Keine Verknüpfung</option>
-              <option v-for="sale in availableProductSales" :key="sale.id" :value="sale.id">
-                {{ sale.id }} - CHF {{ formatCurrency(sale.total_amount_rappen) }}
-              </option>
-            </select>
+          <!-- Selected pill -->
+          <div v-if="selectedCustomerLabel"
+            class="flex items-center justify-between px-3 py-2.5 bg-green-50 border border-green-200 rounded-xl text-sm">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                :style="{ background: selectedCompanyId ? '#f97316' : primaryColor }">
+                {{ selectedCompanyId ? '🏢' : selectedCustomerLabel.charAt(0).toUpperCase() }}
+              </span>
+              <span class="font-medium text-gray-900 truncate">{{ selectedCustomerLabel }}</span>
+              <span class="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 font-medium"
+                :class="selectedCompanyId ? 'bg-orange-100 text-orange-700' : 'bg-indigo-50 text-indigo-600'">
+                {{ selectedCompanyId ? 'Firma' : 'Kunde' }}
+              </span>
+            </div>
+            <button type="button" @click="clearCustomer" class="p-1.5 rounded-lg hover:bg-green-100 text-green-600 flex-shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
           </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Termin (optional)
-            </label>
-            <select
-              v-model="formData.appointment_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Keine Verknüpfung</option>
-              <option v-for="appointment in availableAppointments" :key="appointment.id" :value="appointment.id">
-                {{ appointment.title }} - {{ formatDate(appointment.start_time) }}
-              </option>
-            </select>
+
+          <!-- Search field -->
+          <div v-else class="relative">
+            <input v-model="customerSearch" type="search"
+              placeholder="🔍  Kunde oder Firma suchen…"
+              @input="searchCustomers"
+              class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+            <!-- Results dropdown -->
+            <div v-if="customerResults.length > 0"
+              class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto">
+              <button v-for="r in customerResults" :key="r.id + r.type" type="button"
+                @click="applyCustomer(r)"
+                class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left border-b border-gray-100 last:border-0">
+                <span class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                  :style="{ background: r.type === 'company' ? '#f97316' : primaryColor }">
+                  <template v-if="r.type === 'company'">🏢</template>
+                  <template v-else-if="r.name">{{ r.name.charAt(0).toUpperCase() }}</template>
+                  <template v-else>
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                    </svg>
+                  </template>
+                </span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-900 truncate">{{ r.name }}</p>
+                  <p class="text-xs text-gray-400 truncate">{{ r.subtitle }}</p>
+                </div>
+                <span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium"
+                  :class="r.type === 'company' ? 'bg-orange-100 text-orange-700' : 'bg-indigo-50 text-indigo-600'">
+                  {{ r.type === 'company' ? 'Firma' : 'Kunde' }}
+                </span>
+              </button>
+            </div>
+            <p v-else-if="customerSearch.length >= 1 && !isSearchingCustomers"
+              class="text-xs text-gray-400 mt-1.5 pl-1">Keine Ergebnisse</p>
           </div>
         </div>
 
@@ -101,120 +106,94 @@
         </div>
 
         <!-- Rechnungsempfänger -->
-        <div class="border-t pt-6">
-          <h4 class="text-md font-medium text-gray-900 mb-4">Rechnungsempfänger</h4>
-          
-          <div class="mb-4">
-            <label class="flex items-center">
-              <input
-                v-model="formData.billing_type"
-                type="radio"
-                value="individual"
-                class="mr-2"
-              >
-              Privatperson
-            </label>
-            <label class="flex items-center ml-6">
-              <input
-                v-model="formData.billing_type"
-                type="radio"
-                value="company"
-                class="mr-2"
-              >
-              Firma
-            </label>
+        <div class="border-t pt-5">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-sm font-semibold text-gray-800">Rechnungsempfänger</h4>
+            <button v-if="selectedCustomerLabel" type="button"
+              @click="showBillingEdit = !showBillingEdit"
+              class="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2">
+              {{ showBillingEdit ? 'Schliessen' : 'Bearbeiten' }}
+            </button>
           </div>
 
-          <!-- Firmenfelder -->
-          <div v-if="formData.billing_type === 'company'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Firmenname *</label>
-              <input
-                v-model="formData.billing_company_name"
-                type="text"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Ansprechpartner</label>
-              <input
-                v-model="formData.billing_contact_person"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail *</label>
-              <input
-                v-model="formData.billing_email"
-                type="email"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">MWST-Nummer</label>
-              <input
-                v-model="formData.billing_vat_number"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-            </div>
+          <!-- Summary (wenn Kunde gewählt und nicht im Edit-Modus) -->
+          <div v-if="selectedCustomerLabel && !showBillingEdit"
+            class="bg-gray-50 rounded-xl p-4 space-y-1 text-sm">
+            <p class="font-semibold text-gray-900">
+              {{ formData.billing_company_name || formData.billing_contact_person || selectedCustomerLabel.split(' — ')[0] }}
+            </p>
+            <p v-if="formData.billing_company_name && formData.billing_contact_person" class="text-gray-500">{{ formData.billing_contact_person }}</p>
+            <p v-if="formData.billing_email" class="text-gray-500">{{ formData.billing_email }}</p>
+            <p v-if="formData.billing_street" class="text-gray-400 text-xs">
+              {{ formData.billing_street }} {{ formData.billing_street_number }}, {{ formData.billing_zip }} {{ formData.billing_city }}
+            </p>
+            <p v-if="!formData.billing_email && !formData.billing_street" class="text-gray-400 text-xs italic">Keine Adresse hinterlegt</p>
           </div>
 
-          <!-- Adressfelder -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Straße</label>
-              <input
-                v-model="formData.billing_street"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
+          <!-- Edit fields (default wenn kein Kunde, oder aufgeklappt) -->
+          <div v-if="!selectedCustomerLabel || showBillingEdit" class="space-y-3">
+
+            <!-- Typ -->
+            <div class="flex gap-4">
+              <label class="flex items-center gap-1.5 text-sm cursor-pointer">
+                <input v-model="formData.billing_type" type="radio" value="individual" class="accent-blue-500" />
+                Privatperson
+              </label>
+              <label class="flex items-center gap-1.5 text-sm cursor-pointer">
+                <input v-model="formData.billing_type" type="radio" value="company" class="accent-blue-500" />
+                Firma
+              </label>
             </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Hausnummer</label>
-              <input
-                v-model="formData.billing_street_number"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
+
+            <!-- Firmenfelder -->
+            <div v-if="formData.billing_type === 'company'" class="grid grid-cols-2 gap-3">
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Firmenname *</label>
+                <input v-model="formData.billing_company_name" type="text" required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              </div>
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Ansprechpartner</label>
+                <input v-model="formData.billing_contact_person" type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              </div>
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-700 mb-1">MWST-Nummer</label>
+                <input v-model="formData.billing_vat_number" type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              </div>
             </div>
-            
+
+            <!-- E-Mail -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">PLZ</label>
-              <input
-                v-model="formData.billing_zip"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
+              <label class="block text-xs font-medium text-gray-700 mb-1">E-Mail *</label>
+              <input v-model="formData.billing_email" type="email" required
+                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                placeholder="kunde@beispiel.ch" />
             </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Ort</label>
-              <input
-                v-model="formData.billing_city"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Land</label>
-              <select
-                v-model="formData.billing_country"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="CH">Schweiz</option>
-                <option value="DE">Deutschland</option>
-                <option value="AT">Österreich</option>
-                <option value="LI">Liechtenstein</option>
-              </select>
+
+            <!-- Adresse -->
+            <div class="grid grid-cols-3 gap-3">
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Strasse</label>
+                <input v-model="formData.billing_street" type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Nr.</label>
+                <input v-model="formData.billing_street_number" type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">PLZ</label>
+                <input v-model="formData.billing_zip" type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              </div>
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Ort</label>
+                <input v-model="formData.billing_city" type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              </div>
             </div>
           </div>
         </div>
@@ -270,13 +249,13 @@
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Einzelpreis (CHF)</label>
                   <input
-                    v-model.number="item.unit_price_rappen"
+                    :value="item.unit_price_rappen / 100"
+                    @input="(e: any) => { item.unit_price_rappen = Math.round(parseFloat(e.target.value || 0) * 100); calculateItemTotal(item) }"
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="0.05"
                     required
                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    @input="calculateItemTotal(item)"
                   >
                 </div>
                 
@@ -339,30 +318,62 @@
           </div>
         </div>
 
-        <!-- Notizen -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Notizen (für Kunde)
-            </label>
-            <textarea
-              v-model="formData.notes"
-              rows="3"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Optionale Notizen für den Kunden..."
-            />
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Interne Notizen
-            </label>
-            <textarea
-              v-model="formData.internal_notes"
-              rows="3"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Interne Notizen (nur für Staff sichtbar)..."
-            />
+        <!-- Texte & Notizen -->
+        <div class="space-y-4">
+          <h4 class="text-sm font-semibold text-gray-800">Texte & Notizen</h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Einleitungstext
+                <span class="text-xs font-normal text-gray-400 ml-1">(für Kunden sichtbar)</span>
+              </label>
+              <textarea
+                v-model="formData.notes"
+                rows="3"
+                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                placeholder="z.B. Guten Tag, anbei Ihre Rechnung..."
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Zahlungsbedingungen
+                <span class="text-xs font-normal text-gray-400 ml-1">(für Kunden sichtbar)</span>
+              </label>
+              <textarea
+                v-model="formData.payment_terms"
+                rows="3"
+                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                placeholder="z.B. Zahlbar innert 30 Tagen netto."
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Abschlusstext
+                <span class="text-xs font-normal text-gray-400 ml-1">(für Kunden sichtbar)</span>
+              </label>
+              <textarea
+                v-model="formData.footer_text"
+                rows="2"
+                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                placeholder="z.B. Vielen Dank für Ihr Vertrauen."
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Interne Notizen
+                <span class="text-xs font-normal text-gray-400 ml-1">(nur für Staff)</span>
+              </label>
+              <textarea
+                v-model="formData.internal_notes"
+                rows="2"
+                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                placeholder="Interne Notizen..."
+              />
+            </div>
           </div>
         </div>
 
@@ -391,10 +402,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useInvoices } from '~/composables/useInvoices'
-import { useUsers } from '~/composables/useUsers'
 import { useProducts } from '~/composables/useProducts'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 import type { InvoiceFormData, InvoiceItemFormData } from '~/types/invoice'
 import { DEFAULT_INVOICE_VALUES, DEFAULT_INVOICE_ITEM_VALUES } from '~/types/invoice'
 import {
@@ -411,13 +422,103 @@ const emit = defineEmits<{
 
 // Composables
 const { createInvoice } = useInvoices()
-const { users, fetchUsers } = useUsers()
-const { products, fetchProducts } = useProducts()
+const { loadProducts: fetchProducts } = useProducts()
+const { primaryColor, defaultVatRate, invoiceIntroText, invoicePaymentTerms, invoiceFooterText } = useTenantBranding()
+
+// Customer search
+const customerSearch = ref('')
+const customerResults = ref<any[]>([])
+const selectedCustomerLabel = ref('')
+const selectedCompanyId = ref('')
+const isSearchingCustomers = ref(false)
+let customerSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+function searchCustomers() {
+  if (customerSearchTimer) clearTimeout(customerSearchTimer)
+  if (customerSearch.value.length < 1) { customerResults.value = []; return }
+  isSearchingCustomers.value = true
+  customerSearchTimer = setTimeout(async () => {
+    const q = customerSearch.value
+    const [usersRes, companiesRes]: any[] = await Promise.allSettled([
+      $fetch('/api/admin/users/search', { query: { q } }),
+      $fetch('/api/admin/companies', { query: { search: q } }),
+    ])
+    const userList = (Array.isArray(usersRes.value) ? usersRes.value : []).map((u: any) => ({
+      id: u.id, type: 'user',
+      name: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+      subtitle: u.email || '',
+      email: u.email || '',
+      phone: u.phone || '',
+      street: u.street || '',
+      street_nr: u.street_nr || '',
+      zip: u.zip || '',
+      city: u.city || '',
+    }))
+    const companyList = (companiesRes.value?.companies || []).map((c: any) => ({
+      id: c.id, type: 'company',
+      name: c.name,
+      subtitle: c.contact_person ? `${c.contact_person} · ${c.email || ''}` : (c.email || ''),
+      email: c.email || '',
+      phone: c.phone || '',
+      contact_person: c.contact_person || '',
+      street: c.street || '',
+      zip: c.zip || '',
+      city: c.city || '',
+    }))
+    customerResults.value = [...userList, ...companyList].slice(0, 10)
+    isSearchingCustomers.value = false
+  }, 280)
+}
+
+function applyCustomer(r: any) {
+  customerResults.value = []
+  customerSearch.value = ''
+  if (r.type === 'company') {
+    formData.value.user_id = ''
+    selectedCompanyId.value = r.id
+    selectedCustomerLabel.value = r.name
+    formData.value.billing_type = 'company'
+    formData.value.billing_company_name = r.name
+    formData.value.billing_contact_person = r.contact_person || ''
+    formData.value.billing_email = r.email || ''
+    formData.value.billing_street = r.street || ''
+    formData.value.billing_zip = r.zip || ''
+    formData.value.billing_city = r.city || ''
+  } else {
+    formData.value.user_id = r.id
+    selectedCompanyId.value = ''
+    selectedCustomerLabel.value = `${r.name} — ${r.email}`
+    formData.value.billing_type = 'individual'
+    formData.value.billing_company_name = ''
+    formData.value.billing_contact_person = r.name
+    formData.value.billing_email = r.email || ''
+    formData.value.billing_street = r.street || ''
+    formData.value.billing_street_number = r.street_nr || ''
+    formData.value.billing_zip = r.zip || ''
+    formData.value.billing_city = r.city || ''
+    onCustomerSelected(r)
+  }
+  selectedOpenItemIds.value = new Set()
+  openItems.value = []
+  loadOpenItems()
+}
+
+function clearCustomer() {
+  selectedCustomerLabel.value = ''
+  selectedCompanyId.value = ''
+  showBillingEdit.value = false
+  formData.value.user_id = ''
+  formData.value.billing_type = 'individual'
+  formData.value.billing_company_name = ''
+  formData.value.billing_contact_person = ''
+  formData.value.billing_email = ''
+  openItems.value = []
+  selectedOpenItemIds.value = new Set()
+}
 
 // State
 const isSubmitting = ref(false)
-const availableProductSales = ref<any[]>([])
-const availableAppointments = ref<any[]>([])
+const showBillingEdit = ref(false)
 
 // Form data
 const formData = ref<InvoiceFormData>({
@@ -439,12 +540,14 @@ const formData = ref<InvoiceFormData>({
   vat_rate: 7.70,
   discount_amount_rappen: 0,
   notes: '',
-  internal_notes: ''
+  internal_notes: '',
+  payment_terms: '',
+  footer_text: '',
 })
 
-// Invoice items
+// Invoice items — initialized with tenant default VAT
 const invoiceItems = ref<InvoiceItemFormData[]>([
-  { ...DEFAULT_INVOICE_ITEM_VALUES, product_name: '', unit_price_rappen: 0, vat_rate: 7.70 }
+  { ...DEFAULT_INVOICE_ITEM_VALUES, product_name: '', unit_price_rappen: 0, vat_rate: defaultVatRate.value } as InvoiceItemFormData
 ])
 
 // Computed
@@ -481,10 +584,15 @@ const isLoadingOpenItems = ref(false)
 const selectedOpenItemIds = ref<Set<string>>(new Set())
 
 async function loadOpenItems() {
-  if (!formData.value.user_id) return
+  const userId = formData.value.user_id
+  const companyId = selectedCompanyId.value
+  if (!userId && !companyId) return
   isLoadingOpenItems.value = true
   try {
-    const res: any = await $fetch('/api/admin/invoices/open-items', { query: { user_id: formData.value.user_id } })
+    const query: any = {}
+    if (userId) query.user_id = userId
+    if (companyId) query.company_id = companyId
+    const res: any = await $fetch('/api/admin/invoices/open-items', { query })
     openItems.value = res.items || []
   } catch {
     openItems.value = []
@@ -546,7 +654,7 @@ const addInvoiceItem = () => {
     ...DEFAULT_INVOICE_ITEM_VALUES,
     product_name: '',
     unit_price_rappen: 0,
-    vat_rate: 7.70,
+    vat_rate: defaultVatRate.value,
     sort_order: invoiceItems.value.length
   })
 }
@@ -606,11 +714,15 @@ const formatDate = (dateString: string) => {
 
 // Lifecycle
 onMounted(async () => {
-  await Promise.all([
-    fetchUsers(),
-    fetchProducts()
-  ])
-  
-  // TODO: Verfügbare Produktverkäufe und Termine laden
+  // Pre-fill invoice texts from tenant defaults (may already be loaded)
+  if (invoiceIntroText.value) formData.value.notes = invoiceIntroText.value
+  if (invoicePaymentTerms.value) formData.value.payment_terms = invoicePaymentTerms.value
+  if (invoiceFooterText.value) formData.value.footer_text = invoiceFooterText.value
+  await fetchProducts()
 })
+
+// If branding loads after mount, fill texts once
+watch(invoiceIntroText, (val) => { if (val && !formData.value.notes) formData.value.notes = val }, { once: true })
+watch(invoicePaymentTerms, (val) => { if (val && !formData.value.payment_terms) formData.value.payment_terms = val }, { once: true })
+watch(invoiceFooterText, (val) => { if (val && !formData.value.footer_text) formData.value.footer_text = val }, { once: true })
 </script>
