@@ -285,13 +285,43 @@ const handler = defineEventHandler(async (event) => {
 
     // 6. Validate SARI enrollment is possible (before payment!)
     // This does a TEST enrollment to check for deadline violations, course full, etc.
+    // For partial enrollments we only validate the sessions the customer will actually attend.
     if (course.sari_managed && course.sari_course_id) {
       try {
         logger.info(`🔍 Validating SARI enrollment possibility for course ${course.sari_course_id}`)
         
-        // Build the list of ALL session IDs to validate (original + custom swaps)
+        // Build the base list of session IDs
         const sariCourseIdParts = course.sari_course_id.split('_')
         let allSessionIds = sariCourseIdParts.slice(1).filter((id: string) => id && !isNaN(parseInt(id)))
+
+        // ── Partial-enrollment session filtering ─────────────────────────────
+        // For is_partial_only courses the sessions stored in sari_course_id ARE
+        // already the partial subset — no further filtering needed.
+        // For full courses with optional partial booking we keep only sessions
+        // from partial_start_position onward (same logic as cash/webhook).
+        const isPartial = !!(isPartialEnrollment || course.is_partial_only)
+        if (isPartial && !course.is_partial_only && course.course_sessions?.length > 0) {
+          const dbStartPos: number = course.course_category?.partial_start_position ?? 3
+          if (dbStartPos > 1) {
+            const sortedSessions = [...course.course_sessions].sort((a: any, b: any) =>
+              a.start_time.localeCompare(b.start_time)
+            )
+            let pos = 0
+            let lastDate = ''
+            const sessionPosMap: Record<string, number> = {}
+            for (const s of sortedSessions) {
+              const d = s.start_time.split('T')[0]
+              if (d !== lastDate) { pos++; lastDate = d }
+              if (s.sari_session_id) sessionPosMap[String(s.sari_session_id)] = pos
+            }
+            // Only filter IDs that are mapped; unknown IDs are left in (safe fallback)
+            allSessionIds = allSessionIds.filter(id => {
+              const p = sessionPosMap[String(id)]
+              return p === undefined || p >= dbStartPos
+            })
+            logger.info(`🎯 Partial validation: keeping ${allSessionIds.length} session(s) from position ${dbStartPos}`)
+          }
+        }
         
         // Apply custom session swaps if any
         if (customSessions && typeof customSessions === 'object') {
@@ -303,15 +333,11 @@ const handler = defineEventHandler(async (event) => {
             const newIds = custom?.sariSessionIds || (custom?.sariSessionId ? [custom.sariSessionId] : [])
             
             if (originalIds.length > 0 && newIds.length > 0) {
-              // Replace original IDs with new IDs
               for (let i = 0; i < originalIds.length && i < newIds.length; i++) {
                 const idx = allSessionIds.findIndex((id: string) => id === originalIds[i] || id === originalIds[i].toString())
-                if (idx >= 0) {
-                  allSessionIds[idx] = newIds[i]
-                }
+                if (idx >= 0) allSessionIds[idx] = newIds[i]
               }
             } else if (newIds.length > 0) {
-              // Legacy: position-based replacement
               const posNum = parseInt(position)
               if (posNum > 0 && posNum <= allSessionIds.length) {
                 allSessionIds[posNum - 1] = newIds[0]
@@ -322,7 +348,6 @@ const handler = defineEventHandler(async (event) => {
         
         logger.info(`🎯 Validating ${allSessionIds.length} sessions: ${allSessionIds.join(', ')}`)
         
-        // Do TEST enrollment for ALL sessions to catch deadline violations
         const validationResult = await sari.validateAllSessions(allSessionIds, faberidClean, birthdate)
         
         if (!validationResult.canEnroll) {
@@ -332,7 +357,7 @@ const handler = defineEventHandler(async (event) => {
           })
         }
         
-        logger.info(`✅ SARI enrollment validation passed for all ${allSessionIds.length} sessions`)
+        logger.info(`✅ SARI enrollment validation passed for ${allSessionIds.length} sessions`)
       } catch (error: any) {
         if (error.statusCode) throw error
         logger.error('❌ SARI enrollment check failed:', error.message)
@@ -408,6 +433,14 @@ const handler = defineEventHandler(async (event) => {
     logger.info('ℹ️ Skipping enrollment creation - will be done by webhook after payment')
 
     // 8b. Re-validate discount code server-side (if provided)
+    // Effective price: use partial_price_rappen when this is a partial/partial-only enrollment,
+    // fall back to full price when no partial price is configured.
+    const isPartialOrder = !!(isPartialEnrollment || course.is_partial_only)
+    const partialPriceRappen: number = course.course_category?.partial_price_rappen ?? 0
+    const effectiveBasePrice: number = (isPartialOrder && partialPriceRappen > 0)
+      ? partialPriceRappen
+      : course.price_per_participant_rappen
+
     let validatedDiscountAmount = 0
     let validatedDiscountCode: string | null = null
 
@@ -451,16 +484,15 @@ const handler = defineEventHandler(async (event) => {
           const now = new Date()
           const validUntil = discountRow.valid_until ? new Date(discountRow.valid_until) : null
           if (!validUntil || now <= validUntil) {
-            const baseAmount = course.price_per_participant_rappen
             if (discountRow.discount_type === 'percentage') {
-              validatedDiscountAmount = Math.round((baseAmount * discountRow.discount_value) / 100)
+              validatedDiscountAmount = Math.round((effectiveBasePrice * discountRow.discount_value) / 100)
               if (discountRow.max_discount_rappen) {
                 validatedDiscountAmount = Math.min(validatedDiscountAmount, discountRow.max_discount_rappen)
               }
             } else if (discountRow.discount_type === 'fixed') {
               validatedDiscountAmount = discountRow.discount_value || 0
             }
-            validatedDiscountAmount = Math.min(validatedDiscountAmount, baseAmount)
+            validatedDiscountAmount = Math.min(validatedDiscountAmount, effectiveBasePrice)
             validatedDiscountCode = discountCode
           }
         }
@@ -470,7 +502,7 @@ const handler = defineEventHandler(async (event) => {
     }
 
     // 9. Check if logged-in user has enough credit to bypass Wallee entirely
-    const finalAmount = Math.max(0, course.price_per_participant_rappen - validatedDiscountAmount)
+    const finalAmount = Math.max(0, effectiveBasePrice - validatedDiscountAmount)
 
     if (guestUserId && finalAmount > 0) {
       const { data: creditData } = await supabase
@@ -504,45 +536,79 @@ const handler = defineEventHandler(async (event) => {
           created_at: new Date().toISOString()
         })
 
-        // Enroll in SARI
+        // Enroll in SARI (per-session, partial-subset aware)
         try {
-          await sari.enrollInCourse(faberidClean, course.sari_course_id || course.id)
-          logger.info('✅ SARI enrollment confirmed (credit path)')
+          const sariCourseIdParts = String(course.sari_course_id || '').split('_')
+          let creditSariSessionIds = sariCourseIdParts.slice(1).filter((id: string) => id && !isNaN(parseInt(id)))
+
+          // Apply same partial filtering as main path
+          if (isPartialOrder && !course.is_partial_only && course.course_sessions?.length > 0) {
+            const dbStartPos: number = course.course_category?.partial_start_position ?? 3
+            if (dbStartPos > 1) {
+              const sortedSessions = [...course.course_sessions].sort((a: any, b: any) =>
+                a.start_time.localeCompare(b.start_time)
+              )
+              let pos = 0; let lastDate = ''
+              const sessionPosMap: Record<string, number> = {}
+              for (const s of sortedSessions) {
+                const d = s.start_time.split('T')[0]
+                if (d !== lastDate) { pos++; lastDate = d }
+                if (s.sari_session_id) sessionPosMap[String(s.sari_session_id)] = pos
+              }
+              creditSariSessionIds = creditSariSessionIds.filter(id => {
+                const p = sessionPosMap[String(id)]
+                return p === undefined || p >= dbStartPos
+              })
+            }
+          }
+
+          for (const sessionId of creditSariSessionIds) {
+            try {
+              await sari.enrollStudent(parseInt(sessionId), faberidClean, birthdate)
+              logger.debug(`✅ SARI session ${sessionId} enrolled (credit path)`)
+            } catch (sErr: any) {
+              if (sErr.message?.includes('ALREADY_ENROLLED') || sErr.message?.includes('PERSON_ALREADY_ADDED')) {
+                logger.debug(`⏭️ Session ${sessionId}: Already enrolled (OK)`)
+              } else {
+                logger.warn(`⚠️ SARI session ${sessionId} failed (credit path, non-fatal):`, sErr.message)
+              }
+            }
+          }
+          logger.info(`✅ SARI enrollment done (credit path, ${creditSariSessionIds.length} sessions)`)
         } catch (sariErr: any) {
           logger.warn('⚠️ SARI enrollment failed (credit path, non-fatal):', sariErr.message)
         }
 
         // Create confirmed registration directly
-        const sessionInserts = (course.course_sessions || []).map((s: any) => ({
-          course_id: courseId,
-          session_id: s.id,
-          start_time: s.start_time,
-          end_time: s.end_time
-        }))
-
         await supabase.from('course_registrations').insert({
           course_id: courseId,
           tenant_id: tenantId,
           user_id: guestUserId,
+          first_name: customerData.firstname,
+          last_name: customerData.lastname,
           sari_faberid: faberidClean || null,
-          price_paid_rappen: finalAmount,
-          original_price_rappen: course.price_per_participant_rappen,
-          discount_amount_rappen: validatedDiscountAmount,
+          amount_paid_rappen: finalAmount,
+          discount_applied_rappen: validatedDiscountAmount,
           discount_code: validatedDiscountCode,
           email: finalEmail,
           phone: finalPhone,
-          firstname: customerData.firstname,
-          lastname: customerData.lastname,
           street: customerData.street || customerData.address || null,
           street_nr: customerData.streetNr || null,
           zip: customerData.zip || null,
           city: customerData.city || null,
           birthdate: customerData.birthdate || birthdate || null,
           license_number: customerData.licenseNumber || null,
+          status: 'confirmed',
+          payment_status: 'paid',
+          payment_method: 'credit',
           custom_sessions: customSessions || null,
-          is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
-          created_at: new Date().toISOString(),
+          is_partial_enrollment: isPartialOrder,
+          registration_date: new Date().toISOString(),
+          registered_at: new Date().toISOString(),
+          sari_synced: course.sari_managed ? true : null,
+          sari_synced_at: course.sari_managed ? new Date().toISOString() : null,
           vehicle_id: vehicleId || null,
+          created_at: new Date().toISOString(),
         })
 
         logger.info('✅ Course registration created (credit payment)')
@@ -565,7 +631,8 @@ const handler = defineEventHandler(async (event) => {
     }
 
     // 10. Call payment processor (WITH VALIDATION DATA, NOT ENROLLMENT ID)
-    const priceChf = course.price_per_participant_rappen / 100
+    // finalAmount already reflects partial pricing and discounts.
+    const priceChf = finalAmount / 100
     
     try {
       const paymentResponse = await $fetch('/api/payments/process-public', {
@@ -597,7 +664,7 @@ const handler = defineEventHandler(async (event) => {
             phone: finalPhone,
             custom_sessions: customSessions || null,
             referral_code: referralCode || null,
-            is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
+            is_partial_enrollment: isPartialOrder,
             partial_start_position: course.course_category?.partial_start_position ?? 3,
             discount_code: validatedDiscountCode,
             discount_amount_rappen: validatedDiscountAmount,
