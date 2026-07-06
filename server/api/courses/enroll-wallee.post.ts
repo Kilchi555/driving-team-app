@@ -140,10 +140,10 @@ const handler = defineEventHandler(async (event) => {
     // Wallee payment is actually required. Users whose credit balance covers
     // the full enrollment must be allowed to proceed even when Wallee is off.
 
-    // 2b. Validate partial enrollment: only allowed if category explicitly enables it.
-    // Always use partial_start_position from DB — never trust client-provided value.
-    if ((isPartialEnrollment || course.is_partial_only) && !course.is_partial_only) {
-      if (!course.course_category?.allow_partial_enrollment) {
+    // 2b. Validate partial enrollment: blocked only if a category is linked AND that category
+    // explicitly disables partial enrollment. Courses without a category have no restriction.
+    if (isPartialEnrollment && !course.is_partial_only) {
+      if (course.course_category && !course.course_category.allow_partial_enrollment) {
         throw createError({ statusCode: 400, statusMessage: 'Teilbuchung ist für diesen Kurs nicht erlaubt.' })
       }
     }
