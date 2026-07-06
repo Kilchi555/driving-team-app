@@ -271,7 +271,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 
-definePageMeta({ layout: 'admin', middleware: 'admin-auth' })
+definePageMeta({ layout: 'admin', middleware: 'admin' })
 useHead({ title: 'Firmenkunden' })
 
 const { currentTenantBranding } = useTenantBranding()

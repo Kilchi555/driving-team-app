@@ -325,7 +325,26 @@
                     :class="(item.discount_percent || 0) > 0 ? 'border-amber-400 bg-amber-50' : ''"
                   >
                 </div>
-                <div class="col-span-4 md:col-span-1 flex items-end justify-end pb-0.5">
+                <div class="col-span-4 md:col-span-1 flex items-end justify-end gap-1 pb-0.5">
+                  <!-- Move up/down -->
+                  <button
+                    v-if="index > 0"
+                    type="button"
+                    @click="moveInvoiceItem(index, -1)"
+                    class="text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Nach oben"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+                  </button>
+                  <button
+                    v-if="index < invoiceItems.length - 1"
+                    type="button"
+                    @click="moveInvoiceItem(index, 1)"
+                    class="text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Nach unten"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                  </button>
                   <button
                     type="button"
                     class="text-red-400 hover:text-red-600 transition-colors"
@@ -337,8 +356,13 @@
                 </div>
               </div>
 
-              <!-- Row 2: Totals -->
-              <div class="mt-2.5 flex items-center gap-4 text-xs text-gray-500">
+              <!-- Row 2: Date (if appointment) + Totals -->
+              <div class="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+                <span v-if="item.appointment_date" class="inline-flex items-center gap-1 text-blue-600 font-medium">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  {{ formatDate(item.appointment_date) }}
+                  <span v-if="item.appointment_duration_minutes" class="text-gray-400 font-normal">· {{ item.appointment_duration_minutes }} Min</span>
+                </span>
                 <span>Gesamt: <strong class="text-gray-800">CHF {{ formatCurrency(item.total_price_rappen) }}</strong></span>
                 <span v-if="(item.discount_percent || 0) > 0" class="text-amber-600 font-medium">
                   −{{ item.discount_percent }}% Rabatt angewendet
@@ -549,6 +573,7 @@ function applyCustomer(r: any) {
   customerSearch.value = ''
   if (r.type === 'company') {
     formData.value.user_id = ''
+    formData.value.company_id = r.id
     selectedCompanyId.value = r.id
     selectedCustomerLabel.value = r.name
     formData.value.billing_type = 'company'
@@ -560,6 +585,7 @@ function applyCustomer(r: any) {
     formData.value.billing_city = r.city || ''
   } else {
     formData.value.user_id = r.id
+    formData.value.company_id = ''
     selectedCompanyId.value = ''
     selectedCustomerLabel.value = `${r.name} — ${r.email}`
     formData.value.billing_type = 'individual'
@@ -582,6 +608,7 @@ function clearCustomer() {
   selectedCompanyId.value = ''
   showBillingEdit.value = false
   formData.value.user_id = ''
+  formData.value.company_id = ''
   formData.value.billing_type = 'individual'
   formData.value.billing_company_name = ''
   formData.value.billing_contact_person = ''
@@ -602,6 +629,7 @@ const formData = ref<InvoiceFormData>({
   staff_id: '',
   product_sale_id: '',
   appointment_id: '',
+  company_id: '',
   billing_type: 'individual',
   billing_company_name: '',
   billing_contact_person: '',
@@ -628,12 +656,13 @@ const invoiceItems = ref<InvoiceItemFormData[]>([
 
 // Computed
 const canSubmit = computed(() => {
-  return formData.value.user_id && 
+  const hasCustomer = !!(formData.value.user_id || selectedCompanyId.value)
+  return hasCustomer &&
          invoiceItems.value.length > 0 && 
          invoiceItems.value.every(item => 
            item.product_name && 
            item.quantity > 0 && 
-           item.unit_price_rappen > 0
+           item.unit_price_rappen >= 0
          )
 })
 
@@ -700,6 +729,11 @@ function toggleOpenItem(item: any) {
       vat_rate: 0,
       vat_amount_rappen: 0,
       sort_order: invoiceItems.value.length,
+      // Appointment details for date/time display on invoice
+      appointment_id: item.appointment_id || null,
+      appointment_title: item.label,
+      appointment_date: item.date || null,
+      appointment_duration_minutes: item.duration_minutes || null,
       _open_item_id: item.source_id,
       _open_item_type: item.type,
       _open_item_source_table: item.source_table,
@@ -748,6 +782,14 @@ const addItemFromTemplate = (product: any) => {
   calculateItemTotal(item)
   invoiceItems.value.push(item)
   showTemplateMenu.value = false
+}
+
+const moveInvoiceItem = (index: number, direction: -1 | 1) => {
+  const newIndex = index + direction
+  if (newIndex < 0 || newIndex >= invoiceItems.value.length) return
+  const items = invoiceItems.value
+  ;[items[index], items[newIndex]] = [items[newIndex], items[index]]
+  items.forEach((item, idx) => { item.sort_order = idx })
 }
 
 const removeInvoiceItem = (index: number) => {
@@ -802,7 +844,14 @@ const formatCurrency = (rappen: number) => {
 }
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('de-CH')
+  try {
+    const d = new Date(dateString)
+    const date = d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const time = d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
+    return `${date}, ${time}`
+  } catch {
+    return dateString
+  }
 }
 
 // Lifecycle
@@ -827,10 +876,10 @@ watch(invoiceIntroText, (val) => { if (val && !formData.value.notes) formData.va
 watch(invoicePaymentTerms, (val) => { if (val && !formData.value.payment_terms) formData.value.payment_terms = val }, { once: true })
 watch(invoiceFooterText, (val) => { if (val && !formData.value.footer_text) formData.value.footer_text = val }, { once: true })
 
-// When default VAT loads, apply to any items that still have the hardcoded 7.7 default
+// When default VAT loads, apply to any items that still have the hardcoded default
 watch(defaultVatRate, (val) => {
   invoiceItems.value.forEach(item => {
-    if (item.vat_rate === 7.70) item.vat_rate = val
+    if (item.vat_rate === 8.10 || item.vat_rate === 7.70) item.vat_rate = val
   })
 }, { once: true })
 </script>

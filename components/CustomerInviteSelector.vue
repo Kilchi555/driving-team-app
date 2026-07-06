@@ -65,7 +65,7 @@
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            Mindestens Vor- oder Nachname + Telefonnummer erforderlich
+            Mindestens Vor- oder Nachname + Telefon oder E-Mail erforderlich
           </div>
 
           <!-- Vorname / Nachname -->
@@ -94,18 +94,66 @@
             </div>
           </div>
 
-          <!-- Telefon -->
+          <!-- Telefon + E-Mail -->
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1">Telefonnummer</label>
+              <input
+                v-model="newCustomer.phone"
+                type="tel"
+                placeholder="+41 79 123 45 67"
+                :disabled="disabled"
+                class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900 disabled:bg-gray-50"
+                @keydown.enter="addCustomer"
+              />
+              <p class="text-xs text-gray-400 mt-1 px-0.5">SMS-Einladung</p>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1">E-Mail</label>
+              <input
+                v-model="newCustomer.email"
+                type="email"
+                placeholder="max@beispiel.ch"
+                :disabled="disabled"
+                class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900 disabled:bg-gray-50"
+                @keydown.enter="addCustomer"
+              />
+              <p class="text-xs text-gray-400 mt-1 px-0.5">E-Mail-Einladung</p>
+            </div>
+          </div>
+
+          <!-- Treffpunkt-Art -->
           <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1">Telefonnummer *</label>
+            <label class="block text-xs font-medium text-gray-500 mb-1.5">Treffpunkt / Durchführungsart</label>
+            <div class="flex gap-2">
+              <button
+                v-for="opt in [{ value: 'in_person', label: '📍 Vor Ort' }, { value: 'phone', label: '📞 Telefonat' }, { value: 'online', label: '💻 Online' }]"
+                :key="opt.value"
+                type="button"
+                :disabled="disabled"
+                @click="newCustomer.meeting_type = opt.value as any"
+                class="flex-1 px-3 py-2 text-xs font-medium rounded-xl border transition-all"
+                :class="newCustomer.meeting_type === opt.value
+                  ? 'border-transparent text-white'
+                  : 'border-gray-200 text-gray-600 bg-white hover:bg-gray-50'"
+                :style="newCustomer.meeting_type === opt.value ? primaryBg : {}"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Online Meeting Link (optional) -->
+          <div v-if="newCustomer.meeting_type === 'online'">
+            <label class="block text-xs font-medium text-gray-500 mb-1">Meeting-Link <span class="text-gray-400 font-normal">(optional)</span></label>
             <input
-              v-model="newCustomer.phone"
-              type="tel"
-              placeholder="+41 79 123 45 67"
+              v-model="newCustomer.meeting_link"
+              type="url"
+              placeholder="https://meet.google.com/xxx oder https://zoom.us/j/xxx"
               :disabled="disabled"
               class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900 disabled:bg-gray-50"
               @keydown.enter="addCustomer"
             />
-            <p class="text-xs text-gray-400 mt-1 px-1">Der Kunde erhält eine SMS-Einladung an diese Nummer</p>
           </div>
 
           <!-- Button -->
@@ -142,7 +190,16 @@
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-sm font-medium text-gray-900">{{ customer.first_name }} {{ customer.last_name }}</span>
                 <span v-if="customer.phone" class="text-xs px-2 py-0.5 bg-white border border-gray-200 text-gray-600 rounded-lg">
-                  {{ customer.phone }}
+                  📱 {{ customer.phone }}
+                </span>
+                <span v-if="customer.email" class="text-xs px-2 py-0.5 bg-white border border-gray-200 text-gray-600 rounded-lg">
+                  ✉️ {{ customer.email }}
+                </span>
+                <span v-if="customer.meeting_type && customer.meeting_type !== 'in_person'" class="text-xs px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-600 rounded-lg">
+                  {{ customer.meeting_type === 'phone' ? '📞 Telefonat' : '💻 Online' }}
+                </span>
+                <span v-if="customer.meeting_link" class="text-xs px-2 py-0.5 bg-green-50 border border-green-100 text-green-600 rounded-lg truncate max-w-[180px]" :title="customer.meeting_link">
+                  🔗 Link
                 </span>
               </div>
               <div v-if="customer.phone && smsStatus[customer.phone]" class="mt-0.5 text-xs">
@@ -234,12 +291,15 @@ import { useSmsService } from '~/composables/useSmsService'
 import { usePrimaryColor } from '~/composables/usePrimaryColor'
 const { primaryBg, primaryText, primaryBgLight, primaryBorder } = usePrimaryColor()
 
-// Customer Interface - simplified for phone-only invitations
+// Customer Interface
 interface NewCustomer {
   first_name?: string
   last_name?: string
   phone?: string
+  email?: string
   notes?: string
+  meeting_type?: 'in_person' | 'phone' | 'online'
+  meeting_link?: string
 }
 
 // Props
@@ -273,6 +333,9 @@ const newCustomer = ref<NewCustomer>({
   first_name: '',
   last_name: '',
   phone: '',
+  email: '',
+  meeting_type: 'in_person',
+  meeting_link: '',
   notes: ''
 })
 
@@ -287,8 +350,9 @@ const invitedCustomers = computed({
 const isNewCustomerValid = computed(() => {
   const hasName = newCustomer.value.first_name?.trim() || newCustomer.value.last_name?.trim()
   const hasPhone = newCustomer.value.phone?.trim() && isValidPhone(newCustomer.value.phone)
-  
-  return hasPhone && hasName
+  const hasEmail = newCustomer.value.email?.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCustomer.value.email)
+  const hasContact = hasPhone || hasEmail
+  return !!(hasName && hasContact)
 })
 
 // Computed für SMS Status Display:
@@ -356,15 +420,28 @@ const createInvitationSmsMessage = (customer: NewCustomer, appointmentData?: any
     
     message += `Dein Termin ist am ${appointmentDate} um ${appointmentTime} Uhr bestätigt.\n\n`
     
-    // Staff-Name mit Telefonnummer
-    if (staffPhone) {
-      message += `${staffName} (${staffPhone}) wird dich gerne hier erwarten: ${locationName}`
+    // Meeting type
+    if ((customer as any).meeting_type === 'online') {
+      message += `Der Termin findet online statt.`
+      if ((customer as any).meeting_link) {
+        message += `\nLink: ${(customer as any).meeting_link}`
+      }
+    } else if ((customer as any).meeting_type === 'phone') {
+      if (staffPhone) {
+        message += `${staffName} ruft dich unter deiner Nummer an.`
+      } else {
+        message += `Der Termin findet telefonisch statt.`
+      }
     } else {
-      message += `${staffName} wird dich gerne hier erwarten: ${locationName}`
-    }
-    
-    if (locationAddress) {
-      message += ` (${locationAddress})`
+      // In person
+      if (staffPhone) {
+        message += `${staffName} (${staffPhone}) wird dich gerne hier erwarten: ${locationName}`
+      } else {
+        message += `${staffName} wird dich gerne hier erwarten: ${locationName}`
+      }
+      if (locationAddress) {
+        message += ` (${locationAddress})`
+      }
     }
     
     message += `.\n\n`
@@ -382,16 +459,18 @@ const toggleExpanded = () => {
 
 const addCustomer = async () => {
   if (!isNewCustomerValid.value) {
-    // Specific error message
     const hasName = newCustomer.value.first_name?.trim() || newCustomer.value.last_name?.trim()
     const hasPhone = newCustomer.value.phone?.trim() && isValidPhone(newCustomer.value.phone)
-    
-    if (!hasName && !hasPhone) {
-      error.value = 'Bitte geben Sie mindestens Vor- oder Nachname und eine Telefonnummer an'
-    } else if (!hasName) {
+    const hasEmail = newCustomer.value.email?.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCustomer.value.email || '')
+
+    if (!hasName) {
       error.value = 'Bitte geben Sie mindestens den Vor- oder Nachnamen an'
-    } else if (!hasPhone) {
-      error.value = 'Bitte geben Sie eine gültige Telefonnummer an'
+    } else if (!hasPhone && !hasEmail) {
+      error.value = 'Bitte geben Sie eine Telefonnummer oder E-Mail-Adresse an'
+    } else if (newCustomer.value.phone && !isValidPhone(newCustomer.value.phone)) {
+      error.value = 'Bitte geben Sie eine gültige Telefonnummer an (mit Ländervorwahl)'
+    } else if (newCustomer.value.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCustomer.value.email)) {
+      error.value = 'Bitte geben Sie eine gültige E-Mail-Adresse an'
     } else {
       error.value = 'Bitte füllen Sie alle Pflichtfelder korrekt aus'
     }
@@ -399,12 +478,19 @@ const addCustomer = async () => {
   }
 
   // Check for duplicates
-  const phoneExists = invitedCustomers.value.some(c => 
-    formatPhone(c.phone) === formatPhone(newCustomer.value.phone)
+  const phoneExists = newCustomer.value.phone && invitedCustomers.value.some(c =>
+    c.phone && formatPhone(c.phone) === formatPhone(newCustomer.value.phone!)
   )
-  
+  const emailExists = newCustomer.value.email && invitedCustomers.value.some(c =>
+    c.email?.toLowerCase() === newCustomer.value.email?.toLowerCase()
+  )
+
   if (phoneExists) {
     error.value = 'Ein Kunde mit dieser Telefonnummer wurde bereits hinzugefügt'
+    return
+  }
+  if (emailExists) {
+    error.value = 'Ein Kunde mit dieser E-Mail-Adresse wurde bereits hinzugefügt'
     return
   }
 
@@ -448,6 +534,9 @@ const addCustomer = async () => {
       first_name: '',
       last_name: '',
       phone: '',
+      email: '',
+      meeting_type: newCustomer.value.meeting_type || 'in_person', // keep meeting type
+      meeting_link: newCustomer.value.meeting_type === 'online' ? newCustomer.value.meeting_link : '',
       notes: ''
     }
 
@@ -512,8 +601,11 @@ const createInvitedCustomers = async (appointmentData: any) => {
         phone: customer.phone || null,
         email: customer.email || null,
         notes: customer.notes || null,
+        meeting_type: customer.meeting_type || 'in_person',
+        meeting_link: customer.meeting_link || null,
+        contact_method: customer.phone ? (customer.email ? 'both' : 'sms') : 'email',
         invited_by_staff_id: props.currentUser?.id,
-        appointment_id: appointmentData.id, // ← Verknüpfung zum Termin
+        appointment_id: appointmentData.id,
         status: 'pending',
         expires_at: toLocalTimeString(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // 30 Tage        
         updated_at: toLocalTimeString(new Date())
@@ -534,67 +626,56 @@ const createInvitedCustomers = async (appointmentData: any) => {
 
       logger.debug('✅ Invitation upserted with ID:', invite.id)
 
-      // 2. Send SMS invitation (only SMS now)
+      // 2. Send SMS if phone number provided
       try {
         if (customer.phone) {
-          // Send SMS invitation
           const smsMessage = createInvitationSmsMessage(customer, appointmentData)
           logger.debug('📱 Sending SMS to:', customer.phone)
-          logger.debug('📄 Message:', smsMessage)
 
           const smsResult = await sendSms(customer.phone, smsMessage, tenantSenderName.value)
 
           if (smsResult.success) {
             logger.debug('✅ SMS sent successfully:', smsResult.data?.sid)
-            
-            // Update SMS status tracking
-            smsStatus.value[customer.phone] = {
-              sent: true,
-              sid: smsResult.data?.sid
-            }
-
-            // Update invitation record with SMS status
-            await supabase
-              .from('invited_customers')
-              .update({
-                invitation_sent_at: toLocalTimeString(new Date()),
-                metadata: {
-                  sms_sent: true,
-                  sms_sid: smsResult.data?.sid,
-                  sms_sent_at: toLocalTimeString(new Date())
-                }
-              })
-              .eq('id', invite.id)
-
+            smsStatus.value[customer.phone] = { sent: true, sid: smsResult.data?.sid }
+            await supabase.from('invited_customers').update({
+              invitation_sent_at: toLocalTimeString(new Date()),
+              metadata: { sms_sent: true, sms_sid: smsResult.data?.sid, sms_sent_at: toLocalTimeString(new Date()) }
+            }).eq('id', invite.id)
           } else {
             console.error('❌ SMS failed:', smsResult.error)
-            smsStatus.value[customer.phone] = {
-              sent: false,
-              error: smsResult.error
-            }
-
-            // Update invitation record with SMS failure
-            await supabase
-              .from('invited_customers')
-              .update({
-                invitation_sent_at: toLocalTimeString(new Date()),
-                metadata: {
-                  sms_sent: false,
-                  sms_error: smsResult.error,
-                  sms_sent_at: toLocalTimeString(new Date())
-                }
-              })
-              .eq('id', invite.id)
+            smsStatus.value[customer.phone] = { sent: false, error: smsResult.error }
+            await supabase.from('invited_customers').update({
+              invitation_sent_at: toLocalTimeString(new Date()),
+              metadata: { sms_sent: false, sms_error: smsResult.error, sms_sent_at: toLocalTimeString(new Date()) }
+            }).eq('id', invite.id)
           }
         }
-
       } catch (smsError: any) {
         console.error('❌ SMS sending error:', smsError)
         if (customer.phone) {
-          smsStatus.value[customer.phone] = {
-            sent: false,
-            error: smsError.message || 'SMS Fehler'
-          }
+          smsStatus.value[customer.phone] = { sent: false, error: smsError.message || 'SMS Fehler' }
+        }
+      }
+
+      // 3. Send email invitation if email provided
+      if (customer.email) {
+        try {
+          const meetingInfo = customer.meeting_type === 'online' && customer.meeting_link
+            ? `\n\nMeeting-Link: ${customer.meeting_link}`
+            : customer.meeting_type === 'phone' ? '\n\nDer Termin findet telefonisch statt.' : ''
+          const smsMsg = createInvitationSmsMessage(customer, appointmentData)
+          await $fetch('/api/send-invite-email', {
+            method: 'POST',
+            body: {
+              to: customer.email,
+              name: `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
+              message: smsMsg + meetingInfo,
+              appointment_id: appointmentData.id,
+              meeting_link: customer.meeting_link || null,
+            }
+          }).catch(e => logger.debug('ℹ️ Email invite endpoint not yet available:', e.message))
+        } catch (emailErr: any) {
+          logger.debug('ℹ️ Email invite skipped:', emailErr.message)
         }
       }
 
