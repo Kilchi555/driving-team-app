@@ -1995,6 +1995,9 @@ const {
   isLoading: isLoadingDurations 
 } = useStaffCategoryDurations()
 
+// Declared here (before useEventModalForm) to avoid TDZ — synced via watchEffect below
+const resourceSurcharges = ref<{ label: string; rappen: number; type: 'vehicle' | 'room' }[]>([])
+
 // ✅ Temporäre Lösung: Verwende useEventModalForm direkt ohne Zwischenspeicherung
 const modalForm = useEventModalForm(props.currentUser, {
   customerInviteSelectorRef,
@@ -2234,7 +2237,8 @@ function calcResourceCost(item: ResourceItem | undefined, durationMinutes: numbe
   return 0
 }
 
-const resourceSurcharges = computed<{ label: string; rappen: number; type: 'vehicle' | 'room' }[]>(() => {
+// resourceSurcharges is declared above useEventModalForm as a ref; synced reactively here
+watchEffect(() => {
   const duration = formData.value.duration_minutes || 45
   const surcharges: { label: string; rappen: number; type: 'vehicle' | 'room' }[] = []
 
@@ -2252,7 +2256,7 @@ const resourceSurcharges = computed<{ label: string; rappen: number; type: 'vehi
       surcharges.push({ label: r.name, rappen: cost, type: 'room' })
     }
   }
-  return surcharges
+  resourceSurcharges.value = surcharges
 })
 
 async function loadCategoryResources(categoryCode: string | null) {
