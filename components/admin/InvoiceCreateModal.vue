@@ -96,6 +96,9 @@
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-gray-900">{{ item.label }}</p>
                 <p v-if="item.date" class="text-xs text-gray-500">{{ formatDate(item.date) }}</p>
+                <p v-if="item.payment_method && item.payment_method !== 'invoice'" class="text-xs text-amber-600">
+                  bisherige Methode: {{ item.payment_method }}
+                </p>
               </div>
               <span class="text-sm font-semibold text-gray-700">CHF {{ (item.amount_rappen / 100).toFixed(2) }}</span>
             </label>
@@ -201,53 +204,91 @@
         <!-- Rechnungspositionen -->
         <div class="border-t pt-6">
           <div class="flex items-center justify-between mb-4">
-            <h4 class="text-md font-medium text-gray-900">Rechnungspositionen</h4>
-            <button
-              type="button"
-              class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              @click="addInvoiceItem"
-            >
-              <PlusIcon class="h-4 w-4 mr-1" />
-              Position hinzufügen
-            </button>
+            <h4 class="text-sm font-semibold text-gray-800">Rechnungspositionen</h4>
+            <div class="flex items-center gap-2">
+              <!-- Vorlage-Button -->
+              <div class="relative" ref="templateMenuRef">
+                <button
+                  type="button"
+                  @click="showTemplateMenu = !showTemplateMenu"
+                  class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                  Vorlage
+                </button>
+                <div
+                  v-if="showTemplateMenu"
+                  class="absolute right-0 top-full mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-30 overflow-hidden"
+                >
+                  <div class="px-3 py-2 border-b border-gray-100">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Produkte / Vorlagen</p>
+                  </div>
+                  <div v-if="products.length === 0" class="px-3 py-3 text-xs text-gray-400">Keine Produkte verfügbar</div>
+                  <div class="max-h-64 overflow-y-auto">
+                    <button
+                      v-for="p in products"
+                      :key="p.id"
+                      type="button"
+                      @click="addItemFromTemplate(p)"
+                      class="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0"
+                    >
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-800 truncate">{{ p.name }}</p>
+                        <p v-if="p.description" class="text-xs text-gray-400 truncate">{{ p.description }}</p>
+                      </div>
+                      <span class="text-xs font-semibold text-gray-600 ml-2 shrink-0">CHF {{ (p.price_rappen / 100).toFixed(2) }}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors"
+                @click="addInvoiceItem"
+              >
+                <PlusIcon class="h-3.5 w-3.5" />
+                Position hinzufügen
+              </button>
+            </div>
           </div>
 
           <div v-if="invoiceItems.length === 0" class="text-center py-8 text-gray-500">
             Keine Positionen hinzugefügt. Fügen Sie mindestens eine Position hinzu.
           </div>
 
-          <div v-else class="space-y-4">
+          <div v-else class="space-y-3">
             <div
               v-for="(item, index) in invoiceItems"
               :key="index"
-              class="border rounded-lg p-4 bg-gray-50"
+              class="border border-gray-200 rounded-xl p-4 bg-gray-50"
             >
-              <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung *</label>
+              <!-- Row 1: Beschreibung + Menge + Preis + MwSt -->
+              <div class="grid grid-cols-12 gap-3 items-end">
+                <div class="col-span-12 md:col-span-5">
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Beschreibung *</label>
                   <input
                     v-model="item.product_name"
                     type="text"
                     required
                     placeholder="z.B. Fahrstunde, Theorieunterricht"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                   >
                 </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Menge</label>
+                <div class="col-span-4 md:col-span-2">
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Menge</label>
                   <input
                     v-model.number="item.quantity"
                     type="number"
                     min="0.01"
                     step="0.01"
                     required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    @input="calculateItemTotal(item)"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                   >
                 </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Einzelpreis (CHF)</label>
+                <div class="col-span-4 md:col-span-2">
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Einzelpreis (CHF)</label>
                   <input
                     :value="item.unit_price_rappen / 100"
                     @input="(e: any) => { item.unit_price_rappen = Math.round(parseFloat(e.target.value || 0) * 100); calculateItemTotal(item) }"
@@ -255,38 +296,71 @@
                     min="0"
                     step="0.05"
                     required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                   >
                 </div>
-                
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">MWST (%)</label>
+                <div class="col-span-4 md:col-span-1">
+                  <label class="block text-xs font-medium text-gray-500 mb-1">MwSt (%)</label>
                   <input
                     v-model.number="item.vat_rate"
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="0.1"
                     required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     @input="calculateItemTotal(item)"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                   >
                 </div>
-              </div>
-              
-              <div class="mt-2 flex items-center justify-between">
-                <div class="text-sm text-gray-600">
-                  Gesamt: CHF {{ formatCurrency(item.total_price_rappen) }}
-                  (MWST: CHF {{ formatCurrency(item.vat_amount_rappen) }})
+                <div class="col-span-4 md:col-span-1">
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Rabatt (%)</label>
+                  <input
+                    v-model.number="item.discount_percent"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    placeholder="0"
+                    @input="calculateItemTotal(item)"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    :class="(item.discount_percent || 0) > 0 ? 'border-amber-400 bg-amber-50' : ''"
+                  >
                 </div>
-                
-                <button
-                  type="button"
-                  class="text-red-600 hover:text-red-800 text-sm"
-                  @click="removeInvoiceItem(index)"
-                >
-                  Entfernen
-                </button>
+                <div class="col-span-4 md:col-span-1 flex items-end justify-end pb-0.5">
+                  <button
+                    type="button"
+                    class="text-red-400 hover:text-red-600 transition-colors"
+                    title="Position entfernen"
+                    @click="removeInvoiceItem(index)"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  </button>
+                </div>
               </div>
+
+              <!-- Row 2: Totals -->
+              <div class="mt-2.5 flex items-center gap-4 text-xs text-gray-500">
+                <span>Gesamt: <strong class="text-gray-800">CHF {{ formatCurrency(item.total_price_rappen) }}</strong></span>
+                <span v-if="(item.discount_percent || 0) > 0" class="text-amber-600 font-medium">
+                  −{{ item.discount_percent }}% Rabatt angewendet
+                </span>
+                <span class="text-gray-400">(MwSt: CHF {{ formatCurrency(item.vat_amount_rappen) }})</span>
+              </div>
+
+              <!-- Optional description -->
+              <div v-if="item.product_description !== undefined" class="mt-2">
+                <input
+                  v-model="item.product_description"
+                  type="text"
+                  placeholder="Zusatztext / Beschreibung (optional)"
+                  class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-300"
+                >
+              </div>
+              <button
+                v-else
+                type="button"
+                @click="item.product_description = ''"
+                class="mt-1.5 text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
+              >+ Beschreibung hinzufügen</button>
             </div>
           </div>
         </div>
@@ -402,7 +476,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useInvoices } from '~/composables/useInvoices'
 import { useProducts } from '~/composables/useProducts'
 import { useTenantBranding } from '~/composables/useTenantBranding'
@@ -519,6 +593,8 @@ function clearCustomer() {
 // State
 const isSubmitting = ref(false)
 const showBillingEdit = ref(false)
+const showTemplateMenu = ref(false)
+const templateMenuRef = ref<HTMLElement | null>(null)
 
 // Form data
 const formData = ref<InvoiceFormData>({
@@ -656,7 +732,22 @@ const addInvoiceItem = () => {
     unit_price_rappen: 0,
     vat_rate: defaultVatRate.value,
     sort_order: invoiceItems.value.length
-  })
+  } as InvoiceItemFormData)
+}
+
+const addItemFromTemplate = (product: any) => {
+  const item: InvoiceItemFormData = {
+    ...DEFAULT_INVOICE_ITEM_VALUES,
+    product_id: product.id,
+    product_name: product.name,
+    product_description: product.description || undefined,
+    unit_price_rappen: product.price_rappen || 0,
+    vat_rate: defaultVatRate.value,
+    sort_order: invoiceItems.value.length,
+  } as InvoiceItemFormData
+  calculateItemTotal(item)
+  invoiceItems.value.push(item)
+  showTemplateMenu.value = false
 }
 
 const removeInvoiceItem = (index: number) => {
@@ -670,7 +761,9 @@ const removeInvoiceItem = (index: number) => {
 }
 
 const calculateItemTotal = (item: InvoiceItemFormData) => {
-  item.total_price_rappen = Math.round(item.quantity * item.unit_price_rappen)
+  const gross = Math.round(item.quantity * item.unit_price_rappen)
+  const discountFactor = 1 - ((item.discount_percent || 0) / 100)
+  item.total_price_rappen = Math.round(gross * discountFactor)
   item.vat_amount_rappen = Math.round(item.total_price_rappen * item.vat_rate / 100)
 }
 
@@ -719,10 +812,25 @@ onMounted(async () => {
   if (invoicePaymentTerms.value) formData.value.payment_terms = invoicePaymentTerms.value
   if (invoiceFooterText.value) formData.value.footer_text = invoiceFooterText.value
   await fetchProducts()
+
+  const closeMenu = (e: MouseEvent) => {
+    if (templateMenuRef.value && !templateMenuRef.value.contains(e.target as Node)) {
+      showTemplateMenu.value = false
+    }
+  }
+  document.addEventListener('click', closeMenu)
+  onBeforeUnmount(() => document.removeEventListener('click', closeMenu))
 })
 
 // If branding loads after mount, fill texts once
 watch(invoiceIntroText, (val) => { if (val && !formData.value.notes) formData.value.notes = val }, { once: true })
 watch(invoicePaymentTerms, (val) => { if (val && !formData.value.payment_terms) formData.value.payment_terms = val }, { once: true })
 watch(invoiceFooterText, (val) => { if (val && !formData.value.footer_text) formData.value.footer_text = val }, { once: true })
+
+// When default VAT loads, apply to any items that still have the hardcoded 7.7 default
+watch(defaultVatRate, (val) => {
+  invoiceItems.value.forEach(item => {
+    if (item.vat_rate === 7.70) item.vat_rate = val
+  })
+}, { once: true })
 </script>

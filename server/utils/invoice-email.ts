@@ -104,11 +104,14 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
       durationStr,
     ].filter(Boolean)
     const metaLine = metaParts.length > 0 ? `<br><span style="color:#94a3b8;font-size:11px;">${metaParts.join(' · ')}</span>` : ''
+    const discountLine = (item as any).discount_percent > 0
+      ? `<br><span style="color:#d97706;font-size:11px;font-weight:600;">−${(item as any).discount_percent}% Rabatt</span>`
+      : ''
     return `
     <tr>
       <td class="col-desc" style="padding:12px 12px ${pb};border-bottom:${border};">
         <strong style="color:#1e293b;font-size:14px;">${item.product_name}</strong>
-        ${metaLine}
+        ${metaLine}${discountLine}
       </td>
       <td class="col-anz" style="padding:12px 8px ${pb};border-bottom:${border};text-align:center;color:#94a3b8;font-size:13px;">${item.quantity}</td>
       <td class="col-ep" style="padding:12px 8px ${pb};border-bottom:${border};text-align:right;color:#64748b;font-size:13px;">${formatChfEmail(item.unit_price_rappen)}</td>
