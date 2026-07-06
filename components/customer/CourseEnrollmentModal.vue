@@ -1406,6 +1406,7 @@ const lookupSARI = async () => {
 const submitEnrollment = async () => {
   isLoading.value = true
   enrollmentError.value = null
+  let willRedirectToPayment = false
   
   try {
     const faberidClean = formData.value.faberid.replace(/\./g, '')
@@ -1460,7 +1461,9 @@ const submitEnrollment = async () => {
     
     if (response.success) {
       if (response.paymentUrl) {
-        // Keep loading state active until Wallee page loads
+        // Keep loading state active during navigation — do NOT reset isLoading
+        // (finally block checks willRedirectToPayment and skips the reset)
+        willRedirectToPayment = true
         window.location.href = response.paymentUrl
         return
       } else {
@@ -1474,7 +1477,11 @@ const submitEnrollment = async () => {
     logger.error('Enrollment error:', error)
     enrollmentError.value = getGermanErrorMessage(error)
   } finally {
-    isLoading.value = false
+    // Don't reset loading state when navigating to Wallee — button stays
+    // disabled with spinner until the browser actually leaves the page.
+    if (!willRedirectToPayment) {
+      isLoading.value = false
+    }
   }
 }
 
