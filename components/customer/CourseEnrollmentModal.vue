@@ -576,7 +576,7 @@
               </button>
               <button 
                 v-if="requiresVehicle && availableVehicles.length === 0 && !isLoadingVehicles"
-                @click="loadAvailableVehicles().then(() => { if (availableVehicles.length > 0) step = 'vehicle' else submitEnrollment() })"
+                @click="loadAvailableVehicles().then(() => availableVehicles.length > 0 ? step = 'vehicle' : submitEnrollment())"
                 :disabled="!canSubmit || isLoading"
                 class="flex-1 py-3 text-white font-medium rounded-lg hover:opacity-90 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
                 :style="{ backgroundColor: getTenantPrimaryColor() }"
