@@ -271,9 +271,9 @@ const handler = defineEventHandler(async (event) => {
       // Session IDs are ordered, so we resolve position from course_sessions by date grouping.
       const isPartial = isPartialEnrollment || course.is_partial_only
 
-      // Validate: partial enrollment must be explicitly allowed by the category.
-      // Always use partial_start_position from the DB — never trust the client value.
-      if (isPartial && !course.is_partial_only && !course.course_category?.allow_partial_enrollment) {
+      // Validate: partial enrollment is blocked only when a category IS linked and explicitly
+      // disallows it. Courses without a category have no restriction.
+      if (isPartial && !course.is_partial_only && course.course_category && !course.course_category.allow_partial_enrollment) {
         throw createError({ statusCode: 400, statusMessage: 'Teilbuchung ist für diesen Kurs nicht erlaubt.' })
       }
       const dbStartPos: number = course.course_category?.partial_start_position ?? 3
