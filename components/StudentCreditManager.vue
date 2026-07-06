@@ -86,7 +86,7 @@
               required
             >
               <option value="">Bitte wählen</option>
-              <option value="cash">Bar</option>
+              <option v-if="cashVisible" value="cash">Bar</option>
               <option value="online">Online (Karte/TWINT)</option>
               <option value="invoice">Rechnung</option>
             </select>
@@ -296,6 +296,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useStudentCredits } from '~/composables/useStudentCredits'
+import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 import type { StudentCredit, CreditTransactionWithDetails } from '~/types/studentCredits'
 
 interface Props {
@@ -322,6 +323,7 @@ const {
 } = useStudentCredits()
 
 // State
+const { cashVisible } = useCashPaymentSettings('staff')
 const activeTab = ref('deposit')
 const currentCredit = ref<StudentCredit | null>(null)
 const transactions = ref<CreditTransactionWithDetails[]>([])

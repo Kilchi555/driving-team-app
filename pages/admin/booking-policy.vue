@@ -212,6 +212,41 @@
         </div>
       </div>
 
+      <!-- ── Section 6: Staff Rückerstattungen ── -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-50">
+          <h2 class="text-sm font-semibold text-gray-800">Rückerstattungen durch Staff</h2>
+          <p class="text-xs text-gray-400 mt-0.5">Definiere, ob Staff Rückerstattungen für abgeschlossene Wallee-Zahlungen auslösen darf.</p>
+        </div>
+        <div class="px-5 py-4 space-y-2">
+          <label
+            v-for="option in refundPermissionOptions"
+            :key="option.value"
+            class="flex items-start gap-3 px-3.5 py-3 rounded-xl border cursor-pointer transition-colors"
+            :class="policy.staff_refund_permission === option.value
+              ? 'border-transparent'
+              : 'border-gray-100 hover:border-gray-200'"
+            :style="policy.staff_refund_permission === option.value ? { borderColor: 'var(--color-primary, #3B82F6)', background: 'var(--color-primary-bg, #EFF6FF)' } : {}"
+            @click="policy.staff_refund_permission = option.value"
+          >
+            <span class="mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors"
+              :style="policy.staff_refund_permission === option.value
+                ? { borderColor: 'var(--color-primary, #3B82F6)' }
+                : { borderColor: '#d1d5db' }"
+            >
+              <span v-if="policy.staff_refund_permission === option.value"
+                class="w-2 h-2 rounded-full"
+                :style="{ background: 'var(--color-primary, #3B82F6)' }"
+              />
+            </span>
+            <div>
+              <p class="text-sm font-medium text-gray-800">{{ option.label }}</p>
+              <p class="text-xs text-gray-400 mt-0.5">{{ option.description }}</p>
+            </div>
+          </label>
+        </div>
+      </div>
+
       <!-- Save Button -->
       <div class="flex items-center justify-end gap-3 pt-1">
         <p v-if="saveSuccess" class="text-sm text-green-600 font-medium flex items-center gap-1.5">
@@ -260,7 +295,26 @@ const policy = ref({
   registration_reminder_email_enabled: true,
   registration_reminder_sms_enabled: true,
   onboarding_sms_enabled: true,
+  staff_refund_permission: 'hidden' as 'hidden' | 'request' | 'allowed',
 })
+
+const refundPermissionOptions = [
+  {
+    value: 'hidden',
+    label: 'Nicht sichtbar',
+    description: 'Staff sieht keine Rückerstattungs-Option. Nur Admins können Rückerstattungen auslösen.',
+  },
+  {
+    value: 'request',
+    label: 'Antrag stellen',
+    description: 'Staff kann einen Antrag stellen. Der Admin wird benachrichtigt und muss genehmigen.',
+  },
+  {
+    value: 'allowed',
+    label: 'Direkt erstatten',
+    description: 'Staff kann Rückerstattungen direkt und ohne Admin-Genehmigung auslösen.',
+  },
+]
 
 const availableFields = [
   { key: 'first_name', label: 'Vorname', locked: false },

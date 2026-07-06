@@ -16,7 +16,9 @@ import {
   getPasskeyConfig,
   consumeChallenge,
   logPasskeyEvent,
-  getRequestContext
+  getRequestContext,
+  checkPasskeyRateLimit,
+  pruneExpiredChallenges
 } from '~/server/utils/passkey'
 
 export default defineEventHandler(async (event) => {
@@ -27,6 +29,17 @@ export default defineEventHandler(async (event) => {
 
   if (!challengeId || !response?.id) {
     throw createError({ statusCode: 400, statusMessage: 'challengeId and response are required' })
+  }
+
+  // Rate-limit: max 15 login failures per IP in 10 minutes
+  const allowed = await checkPasskeyRateLimit({
+    ipAddress: ctx.ipAddress,
+    eventTypePrefix: 'login_fail',
+    maxFailures: 15,
+    windowMinutes: 10
+  })
+  if (!allowed) {
+    throw createError({ statusCode: 429, statusMessage: 'Too many attempts. Please try again later.' })
   }
 
   const supabase = getSupabaseAdmin()
@@ -227,6 +240,9 @@ export default defineEventHandler(async (event) => {
     ipAddress: ctx.ipAddress,
     userAgent: ctx.userAgent
   })
+
+  // Opportunistic cleanup of expired challenges
+  pruneExpiredChallenges().catch(() => {})
 
   return {
     success: true,

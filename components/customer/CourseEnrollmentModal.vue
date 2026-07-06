@@ -575,6 +575,32 @@
                 Zurück
               </button>
               <button 
+                v-if="requiresVehicle && availableVehicles.length === 0 && !isLoadingVehicles"
+                @click="loadAvailableVehicles().then(() => { if (availableVehicles.length > 0) step = 'vehicle' else submitEnrollment() })"
+                :disabled="!canSubmit || isLoading"
+                class="flex-1 py-3 text-white font-medium rounded-lg hover:opacity-90 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                :style="{ backgroundColor: getTenantPrimaryColor() }"
+              >
+                Weiter
+              </button>
+              <button 
+                v-else-if="requiresVehicle && (availableVehicles.length > 0 || isLoadingVehicles)"
+                @click="step = 'vehicle'"
+                :disabled="!canSubmit || isLoading || isLoadingVehicles"
+                class="flex-1 py-3 text-white font-medium rounded-lg hover:opacity-90 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                :style="{ backgroundColor: getTenantPrimaryColor() }"
+              >
+                <span v-if="isLoadingVehicles" class="flex items-center justify-center gap-2">
+                  <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  Fahrzeuge laden…
+                </span>
+                <span v-else>Fahrzeug wählen →</span>
+              </button>
+              <button 
+                v-else
                 @click="submitEnrollment"
                 :disabled="!canSubmit || isLoading || (paymentMethod === 'WALLEE' && !walleeEnabled && effectivePriceAfterCredit > 0)"
                 class="flex-1 py-3 text-white font-medium rounded-lg hover:opacity-90 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
@@ -594,6 +620,74 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ─── Vehicle Selection Step ──────────────────────────────────── -->
+    <div v-else-if="step === 'vehicle'" class="p-6 space-y-5">
+      <div>
+        <h3 class="text-lg font-bold text-slate-900">Fahrzeug wählen</h3>
+        <p class="text-sm text-slate-500 mt-1">Wähle dein Mietfahrzeug für den Kurs.</p>
+      </div>
+
+      <div v-if="isLoadingVehicles" class="py-8 text-center text-slate-400">Lädt…</div>
+      <div v-else-if="availableVehicles.length === 0" class="py-8 text-center text-slate-500">
+        <p class="font-medium">Keine Fahrzeuge verfügbar</p>
+        <p class="text-xs mt-1">Bitte kontaktiere uns direkt.</p>
+      </div>
+      <div v-else class="space-y-3">
+        <label
+          v-for="v in availableVehicles"
+          :key="v.id"
+          class="flex items-start gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all"
+          :class="selectedVehicleId === v.id
+            ? 'border-current bg-opacity-5'
+            : 'border-slate-200 hover:border-slate-300'"
+          :style="selectedVehicleId === v.id ? { borderColor: getTenantPrimaryColor(), backgroundColor: getTenantPrimaryColor() + '10' } : {}"
+        >
+          <input type="radio" :value="v.id" v-model="selectedVehicleId" class="mt-1 accent-current" :style="{ accentColor: getTenantPrimaryColor() }" />
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="font-semibold text-slate-900">{{ v.display_name }}</p>
+              <span v-if="!v.is_available" class="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full">Ausgebucht</span>
+              <span v-else-if="v.blocked_sessions > 0" class="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">{{ v.total_sessions - v.blocked_sessions }}/{{ v.total_sessions }} Termine frei</span>
+            </div>
+            <div class="flex gap-3 mt-1 text-xs text-slate-500 flex-wrap">
+              <span v-if="v.farbe">{{ v.farbe }}</span>
+              <span v-if="v.getriebe">{{ v.getriebe }}</span>
+              <span v-if="v.location_address">📍 {{ v.location_address }}</span>
+            </div>
+            <div v-if="v.pricing_tiers?.lesson || v.hourly_rate_rappen" class="mt-1.5 text-sm font-semibold" :style="{ color: getTenantPrimaryColor() }">
+              <span v-if="v.pricing_tiers?.lesson">CHF {{ (v.pricing_tiers.lesson / 100).toFixed(2) }} pro Lektion</span>
+              <span v-else-if="v.hourly_rate_rappen">CHF {{ (v.hourly_rate_rappen / 100).toFixed(2) }}/h</span>
+            </div>
+          </div>
+        </label>
+      </div>
+
+      <div v-if="enrollmentError" class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+        {{ enrollmentError }}
+      </div>
+
+      <div class="flex gap-3">
+        <button @click="step = 'contact'" class="flex-1 py-3 border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors">
+          Zurück
+        </button>
+        <button
+          @click="submitEnrollment"
+          :disabled="isLoading || (!selectedVehicleId && availableVehicles.some(v => v.is_available))"
+          class="flex-1 py-3 text-white font-medium rounded-lg hover:opacity-90 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+          :style="{ backgroundColor: getTenantPrimaryColor() }"
+        >
+          <span v-if="isLoading" class="flex items-center justify-center gap-2">
+            <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            Lädt…
+          </span>
+          <span v-else>{{ paymentMethod === 'WALLEE' ? 'Zur Zahlung' : 'Verbindlich anmelden' }}</span>
+        </button>
       </div>
     </div>
   </Teleport>
@@ -655,13 +749,33 @@ const getTextColor = () => {
 // State
 const isSariCourse = computed(() => !!props.course?.sari_managed)
 
-const step = ref<'lookup' | 'contact'>(props.course?.sari_managed ? 'lookup' : 'contact')
+const step = ref<'lookup' | 'contact' | 'vehicle'>(props.course?.sari_managed ? 'lookup' : 'contact')
 const isLoading = ref(false)
 const lookupError = ref<string | null>(null)
 const enrollmentError = ref<string | null>(null)
 const sariData = ref<any>(null)
 const isFaberIdFocused = ref(false)
 const isPhoneFocused = ref(false)
+
+// ── Vehicle selection ─────────────────────────────────────────────────────
+const availableVehicles = ref<any[]>([])
+const selectedVehicleId = ref<string | null>(null)
+const isLoadingVehicles = ref(false)
+
+const requiresVehicle = computed(() => !!props.course?.requires_vehicle)
+
+async function loadAvailableVehicles() {
+  if (!requiresVehicle.value || !props.course?.id) return
+  isLoadingVehicles.value = true
+  try {
+    const res: any = await $fetch(`/api/courses/${props.course.id}/available-vehicles`)
+    availableVehicles.value = res.vehicles || []
+  } catch {
+    availableVehicles.value = []
+  } finally {
+    isLoadingVehicles.value = false
+  }
+}
 
 const formData = ref({
   faberid: '',
@@ -740,6 +854,9 @@ const loggedInUserId = ref<string | null>(null)
 const effectivePriceAfterCredit = computed(() => Math.max(0, effectivePrice.value - userCreditRappen.value))
 
 onMounted(async () => {
+  // Pre-load vehicles if course requires them
+  if (requiresVehicle.value) loadAvailableVehicles()
+
   try {
     const supabase = getSupabase()
     const { data: { session } } = await supabase.auth.getSession()
@@ -1337,6 +1454,7 @@ const submitEnrollment = async () => {
         isPartialEnrollment: (isPartial || isIndividual) || undefined,
         individualSessionNumber: isIndividual ? individualSessionNumber.value : undefined,
         marketingSessionId,
+        vehicleId: selectedVehicleId.value || undefined,
       }
     }) as any
     

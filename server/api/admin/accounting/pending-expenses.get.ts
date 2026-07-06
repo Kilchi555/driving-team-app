@@ -3,7 +3,7 @@ import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
-  const profile = await requireAdminProfile(event, ['admin', 'superadmin'])
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'superadmin'])
   const supabase = getSupabaseAdmin()
 
   const { data, error } = await supabase

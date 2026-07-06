@@ -509,6 +509,96 @@ export default defineEventHandler(async (event) => {
       ].filter(Boolean))
     }
 
+    // ============ RESOURCE BOOKING SYNC ============
+    // After saving appointment, sync vehicle_bookings and room_bookings atomically.
+    // Runs for both create and edit modes.
+    const appointmentId = result.id
+    const vehicle_id = appointmentData.vehicle_id ?? null
+    const room_id = appointmentData.room_id ?? null
+    const resourceStart = appointmentData.start_time
+    const resourceEnd = appointmentData.end_time
+    const tenantId = appointmentData.tenant_id
+
+    // Resource cost breakdown sent from EventModal
+    const resourceSurcharges: { label: string; rappen: number }[] = body.resourceSurcharges || []
+
+    if (appointmentId && (vehicle_id !== undefined || room_id !== undefined)) {
+      try {
+        // ── Vehicle bookings ──────────────────────────────────────────────
+        // Server-side conflict re-check (prevent race conditions)
+        if (vehicle_id) {
+          const { data: vConflicts } = await supabase
+            .from('vehicle_bookings')
+            .select('id')
+            .eq('vehicle_id', vehicle_id)
+            .neq('status', 'cancelled')
+            .lt('start_time', resourceEnd)
+            .gt('end_time', resourceStart)
+            .neq('appointment_id', appointmentId)
+            .limit(1)
+
+          const { data: vrConflicts } = await supabase
+            .from('vehicle_rentals')
+            .select('id')
+            .eq('vehicle_id', vehicle_id)
+            .neq('status', 'cancelled')
+            .lt('start_time', resourceEnd)
+            .gt('end_time', resourceStart)
+            .limit(1)
+
+          const hasConflict = (vConflicts?.length ?? 0) > 0 || (vrConflicts?.length ?? 0) > 0
+          if (hasConflict && !body.force_resource_override) {
+            // Non-blocking warning — staff can override by sending force_resource_override: true
+            logger.warn('⚠️ Vehicle conflict detected on save (not blocking — staff override required):', vehicle_id)
+          }
+        }
+
+        // Delete old vehicle_booking for this appointment, then insert new
+        await supabase.from('vehicle_bookings')
+          .delete()
+          .eq('appointment_id', appointmentId)
+          .eq('purpose', 'lesson')
+
+        if (vehicle_id) {
+          const vehicleCost = resourceSurcharges.find((s: any) => s.type === 'vehicle')?.rappen ?? 0
+          await supabase.from('vehicle_bookings').insert({
+            vehicle_id,
+            appointment_id: appointmentId,
+            tenant_id: tenantId,
+            start_time: resourceStart,
+            end_time: resourceEnd,
+            purpose: 'lesson',
+            status: 'confirmed',
+            cost_rappen: vehicleCost,
+          })
+        }
+
+        // ── Room bookings ─────────────────────────────────────────────────
+        await supabase.from('room_bookings')
+          .delete()
+          .eq('appointment_id', appointmentId)
+          .eq('purpose', 'lesson')
+
+        if (room_id) {
+          const roomCost = resourceSurcharges.find((s: any) => s.type === 'room')?.rappen ?? 0
+          await supabase.from('room_bookings').insert({
+            room_id,
+            appointment_id: appointmentId,
+            tenant_id: tenantId,
+            start_time: resourceStart,
+            end_time: resourceEnd,
+            purpose: 'lesson',
+            status: 'confirmed',
+            room_cost_rappen: roomCost,
+          })
+        }
+
+        logger.debug('✅ Resource bookings synced for appointment:', appointmentId)
+      } catch (resourceErr: any) {
+        logger.warn('⚠️ Resource booking sync failed (non-critical):', resourceErr.message)
+      }
+    }
+
     // Fire-and-forget: email + queue recalc for edits (non-blocking)
     if (mode === 'create') {
       Promise.resolve().then(async () => {

@@ -9,11 +9,12 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { roundToNearest5Rappen } from '~/utils/rounding'
 import { calculateAdminFee } from '~/server/utils/admin-fee'
+import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { slot_id, category_code, tenant_id, user_id } = body
+    const { slot_id, category_code, tenant_id, user_id, vehicle_mode, location_id } = body
 
     if (!slot_id || !category_code || !tenant_id) {
       throw createError({ statusCode: 400, statusMessage: 'slot_id, category_code and tenant_id are required' })
@@ -24,7 +25,7 @@ export default defineEventHandler(async (event) => {
     // Fetch the slot to get duration and start_time
     const { data: slot, error: slotError } = await supabase
       .from('availability_slots')
-      .select('duration_minutes, start_time')
+      .select('duration_minutes, start_time, location_id')
       .eq('id', slot_id)
       .single()
 
@@ -32,8 +33,9 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: 'Slot not found' })
     }
 
-    // Fetch base_price + admin_fee rules in parallel
-    const [basePriceRuleRes, adminFeeRuleRes] = await Promise.all([
+    // Fetch base_price + admin_fee rules + vehicle settings in parallel
+    const effectiveLocationId = location_id || slot.location_id
+    const [basePriceRuleRes, adminFeeRuleRes, locationRes, categoryRes] = await Promise.all([
       supabase
         .from('pricing_rules')
         .select('price_per_minute_rappen, base_duration_minutes, duration_multiplier, weekend_multiplier, evening_multiplier')
@@ -52,10 +54,26 @@ export default defineEventHandler(async (event) => {
         .eq('is_active', true)
         .limit(1)
         .maybeSingle(),
+      effectiveLocationId ? supabase
+        .from('locations')
+        .select('category_vehicle_settings')
+        .eq('id', effectiveLocationId)
+        .maybeSingle() : Promise.resolve({ data: null }),
+      supabase
+        .from('categories')
+        .select('vehicle_settings')
+        .eq('code', category_code)
+        .eq('tenant_id', tenant_id)
+        .maybeSingle(),
     ])
 
     const pricingRule = basePriceRuleRes.data
     const adminFeeRule = adminFeeRuleRes.data
+    const vehicleSettings = resolveVehicleSettings(
+      locationRes.data?.category_vehicle_settings,
+      categoryRes.data?.vehicle_settings,
+      category_code
+    )
 
     if (!pricingRule) {
       return {
@@ -87,6 +105,19 @@ export default defineEventHandler(async (event) => {
 
     lessonPrice = roundToNearest5Rappen(lessonPrice)
 
+    // ── Vehicle surcharge / discount ───────────────────────────────────────
+    // vehicle_mode is now the option key (e.g. 'school_all', 'own_trailer', …)
+    // calculateVehicleCost returns a signed integer: positive = surcharge, negative = discount
+    const rawVehicleCost = vehicle_mode
+      ? calculateVehicleCost(vehicleSettings, vehicle_mode, slot.duration_minutes)
+      : 0
+    const vehicleCostRappen = Math.abs(rawVehicleCost)
+    const vehicleCostType: 'surcharge' | 'discount' | null = rawVehicleCost > 0
+      ? 'surcharge'
+      : rawVehicleCost < 0
+        ? 'discount'
+        : null
+
     // ── Admin fee (only when user_id known and rule exists) ────────────────
     const adminFeeResult = await calculateAdminFee({
       supabase,
@@ -96,23 +127,25 @@ export default defineEventHandler(async (event) => {
       adminFeeRappenFromRule: adminFeeRule?.admin_fee_rappen,
     })
 
-    const totalRappen = lessonPrice + adminFeeResult.adminFeeRappen
+    const lessonPlusVehicle = Math.max(0, lessonPrice + rawVehicleCost)
+    const totalRappen = lessonPlusVehicle + adminFeeResult.adminFeeRappen
 
     logger.debug('💰 Preview price calculated:', {
       slot_id,
       category_code,
       lessonPrice,
+      vehicle_mode,
+      rawVehicleCost,
       adminFee: adminFeeResult.adminFeeRappen,
       total: totalRappen,
-      adminFeeReason: adminFeeResult.reason,
-      appointmentNumber: adminFeeResult.appointmentNumber,
     })
 
     return {
       success: true,
-      // Backwards-compat: existing callers read price_rappen for the lesson
-      // price only; new callers should use total_rappen for the full price.
       price_rappen: lessonPrice,
+      vehicle_cost_rappen: vehicleCostRappen,
+      vehicle_cost_type: vehicleCostType,
+      vehicle_settings: vehicleSettings,
       admin_fee_rappen: adminFeeResult.adminFeeRappen,
       total_rappen: totalRappen,
       admin_fee_applies: adminFeeResult.applies,

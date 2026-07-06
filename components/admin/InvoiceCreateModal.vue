@@ -70,6 +70,36 @@
           </div>
         </div>
 
+        <!-- Offene Positionen (Kurse, Räume, Fahrzeuge) -->
+        <div v-if="formData.user_id" class="border-t pt-4">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-sm font-semibold text-gray-800">Offene Positionen</h4>
+            <button type="button" @click="loadOpenItems" class="text-xs text-blue-600 hover:underline">
+              {{ isLoadingOpenItems ? 'Lädt…' : 'Aktualisieren' }}
+            </button>
+          </div>
+          <div v-if="isLoadingOpenItems" class="text-xs text-gray-400 py-2">Lädt offene Positionen…</div>
+          <div v-else-if="openItems.length === 0" class="text-xs text-gray-400 py-2">Keine offenen Positionen für diesen Kunden.</div>
+          <div v-else class="space-y-1.5">
+            <label v-for="item in openItems" :key="item.source_id"
+              class="flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all"
+              :class="selectedOpenItemIds.has(item.source_id) ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300'">
+              <input type="checkbox" :value="item.source_id"
+                :checked="selectedOpenItemIds.has(item.source_id)"
+                @change="toggleOpenItem(item)"
+                class="rounded" />
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-900">{{ item.label }}</p>
+                <p v-if="item.date" class="text-xs text-gray-500">{{ formatDate(item.date) }}</p>
+              </div>
+              <span class="text-sm font-semibold text-gray-700">CHF {{ (item.amount_rappen / 100).toFixed(2) }}</span>
+            </label>
+          </div>
+          <div v-if="selectedOpenItemIds.size > 0" class="mt-2 text-xs text-blue-700 font-medium">
+            {{ selectedOpenItemIds.size }} Position(en) ausgewählt — werden automatisch als Rechnungsposten hinzugefügt.
+          </div>
+        </div>
+
         <!-- Rechnungsempfänger -->
         <div class="border-t pt-6">
           <h4 class="text-md font-medium text-gray-900 mb-4">Rechnungsempfänger</h4>
@@ -445,6 +475,56 @@ const averageVatRate = computed(() => {
   return ((totalVat.value / subtotal.value) * 100).toFixed(2)
 })
 
+// ── Open items (courses, rooms, vehicles) ─────────────────────────────────
+const openItems = ref<any[]>([])
+const isLoadingOpenItems = ref(false)
+const selectedOpenItemIds = ref<Set<string>>(new Set())
+
+async function loadOpenItems() {
+  if (!formData.value.user_id) return
+  isLoadingOpenItems.value = true
+  try {
+    const res: any = await $fetch('/api/admin/invoices/open-items', { query: { user_id: formData.value.user_id } })
+    openItems.value = res.items || []
+  } catch {
+    openItems.value = []
+  } finally {
+    isLoadingOpenItems.value = false
+  }
+}
+
+function toggleOpenItem(item: any) {
+  const ids = new Set(selectedOpenItemIds.value)
+  if (ids.has(item.source_id)) {
+    ids.delete(item.source_id)
+    // Remove from invoiceItems
+    const idx = invoiceItems.value.findIndex(i => (i as any)._open_item_id === item.source_id)
+    if (idx !== -1) invoiceItems.value.splice(idx, 1)
+    if (invoiceItems.value.length === 0) addInvoiceItem()
+  } else {
+    ids.add(item.source_id)
+    // Add as invoice item, remove the empty placeholder if present
+    const hasEmpty = invoiceItems.value.length === 1 && !invoiceItems.value[0].product_name
+    if (hasEmpty) invoiceItems.value.splice(0, 1)
+    const newItem: any = {
+      ...DEFAULT_INVOICE_ITEM_VALUES,
+      product_name: item.label,
+      product_description: item.unit,
+      quantity: 1,
+      unit_price_rappen: item.amount_rappen,
+      total_price_rappen: item.amount_rappen,
+      vat_rate: 0,
+      vat_amount_rappen: 0,
+      sort_order: invoiceItems.value.length,
+      _open_item_id: item.source_id,
+      _open_item_type: item.type,
+      _open_item_source_table: item.source_table,
+    }
+    invoiceItems.value.push(newItem)
+  }
+  selectedOpenItemIds.value = ids
+}
+
 // Methods
 const onCustomerSelected = (user: any) => {
   if (user) {
@@ -454,6 +534,10 @@ const onCustomerSelected = (user: any) => {
     formData.value.billing_street_number = user.street_nr || ''
     formData.value.billing_zip = user.zip || ''
     formData.value.billing_city = user.city || ''
+    // Load open items for new user
+    selectedOpenItemIds.value = new Set()
+    openItems.value = []
+    loadOpenItems()
   }
 }
 

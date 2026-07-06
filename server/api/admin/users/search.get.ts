@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
     .from('users')
     .select('id, first_name, last_name, email, phone, role')
     .eq('tenant_id', profile.tenant_id)
-    .eq('role', 'student')
+    .in('role', ['student', 'client'])
     .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%`)
     .limit(10)
 

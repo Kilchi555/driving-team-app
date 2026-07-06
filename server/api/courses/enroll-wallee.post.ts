@@ -58,7 +58,8 @@ const handler = defineEventHandler(async (event) => {
       discountAmountRappen, // Optional: client-computed discount (re-validated server-side)
       isPartialEnrollment,  // True when customer books only Teil-3
       partialStartPosition, // Which session position to start from (e.g. 3)
-      marketingSessionId    // Optional: analytics session ID from drivingteam.ch for attribution
+      marketingSessionId,   // Optional: analytics session ID from drivingteam.ch for attribution
+      vehicleId,            // Optional: selected rental vehicle
     } = body
 
     logger.debug('📝 Wallee enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions, isPartialEnrollment })
@@ -540,7 +541,8 @@ const handler = defineEventHandler(async (event) => {
           license_number: customerData.licenseNumber || null,
           custom_sessions: customSessions || null,
           is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          vehicle_id: vehicleId || null,
         })
 
         logger.info('✅ Course registration created (credit payment)')
@@ -601,6 +603,7 @@ const handler = defineEventHandler(async (event) => {
             discount_amount_rappen: validatedDiscountAmount,
             original_price_rappen: course.price_per_participant_rappen,
             marketing_session_id: marketingSessionId || null,
+            vehicle_id: vehicleId || null,
             ...(course.sari_managed && faberidClean ? {
               sari_validation_data: {
                 license: customerData.license,

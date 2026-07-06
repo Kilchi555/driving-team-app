@@ -11,6 +11,7 @@ export interface BookingPolicy {
   registration_reminder_email_enabled: boolean
   registration_reminder_sms_enabled: boolean
   onboarding_sms_enabled: boolean
+  staff_refund_permission: 'hidden' | 'request' | 'allowed'
 }
 
 export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
@@ -23,6 +24,7 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   registration_reminder_email_enabled: true,
   registration_reminder_sms_enabled: true,
   onboarding_sms_enabled: true,
+  staff_refund_permission: 'hidden',
 }
 
 export default defineEventHandler(async (event) => {
@@ -36,7 +38,7 @@ export default defineEventHandler(async (event) => {
     .eq('auth_user_id', authUser.id)
     .single()
 
-  if (!dbUser || !['admin', 'superadmin'].includes(dbUser.role)) {
+  if (!dbUser || !['admin', 'superadmin', 'staff'].includes(dbUser.role)) {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 

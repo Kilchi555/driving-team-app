@@ -137,7 +137,7 @@
               💳 Zahlungsmethode
             </label>
             <div class="space-y-2">
-              <label class="flex items-center">
+              <label v-if="cashVisible" class="flex items-center">
                 <input
                   v-model="paymentMethod"
                   type="radio"
@@ -223,6 +223,7 @@ import { ref, computed, watch } from 'vue'
 // import { getSupabase } from '~/utils/supabase'
 import { useProductSales } from '~/composables/useProductSales'
 import { useProductSale } from '~/composables/useProductSale'
+import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 
 // Components
 import StudentSelector from '~/components/StudentSelector.vue'
@@ -251,7 +252,8 @@ const selectedStudent = ref<any>(null)
 const discountAmount = ref(0)
 const discountType = ref<'fixed' | 'percentage'>('fixed')
 const discountReason = ref('')
-const paymentMethod = ref('cash')
+const { cashVisible } = useCashPaymentSettings('staff')
+const paymentMethod = ref('invoice')
 
 // Computed
 const totalPrice = computed(() => {
@@ -328,7 +330,7 @@ watch(() => props.isVisible, (isVisible) => {
     discountAmount.value = 0
     discountType.value = 'fixed'
     discountReason.value = ''
-    paymentMethod.value = 'cash'
+    paymentMethod.value = cashVisible.value ? 'cash' : 'invoice'
   }
 })
 </script>

@@ -36,6 +36,9 @@ interface AppointmentData {
   custom_location_name?: string
   google_place_id?: string
   _mode?: string
+  // Resource assignment
+  vehicle_id?: string | null
+  room_id?: string | null
 }
 
 interface Student {
@@ -65,6 +68,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   dynamicPricing?: any, // ✅ Dynamic pricing for admin fee
   savedCompanyBillingAddressId?: any, // ✅ Company Billing Address ID from EventModal
   cashAlreadyPaid?: any, // ✅ Bar bereits bezahlt Toggle
+  resourceSurcharges?: any, // Resource surcharges (room + vehicle costs)
 }) => {
   
   // ============ STATE ============
@@ -84,7 +88,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
     // ✅ Additional missing fields
     custom_location_address: undefined,
     custom_location_name: undefined,
-    google_place_id: undefined
+    google_place_id: undefined,
+    vehicle_id: null,
+    room_id: null,
   })
 
   const selectedStudent = ref<Student | null>(null)
@@ -295,7 +301,10 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // ✅ Additional missing fields
       custom_location_address: appointment.custom_location_address || appointment.extendedProps?.custom_location_address || null,
       custom_location_name: appointment.custom_location_name || appointment.extendedProps?.custom_location_name || null,
-      google_place_id: appointment.google_place_id || appointment.extendedProps?.google_place_id || null
+      google_place_id: appointment.google_place_id || appointment.extendedProps?.google_place_id || null,
+      vehicle_mode: appointment.vehicle_mode || appointment.extendedProps?.vehicle_mode || null,
+      vehicle_id: appointment.vehicle_id || appointment.extendedProps?.vehicle_id || null,
+      room_id: appointment.room_id || appointment.extendedProps?.room_id || null,
     }
     
     logger.debug('🔍 DEBUG: Form populated with duration:', {
@@ -909,8 +918,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
           productsPriceRappen = calculatedProductsPriceRappen // ✅ Use calculated value instead of formData
           discountAmountRappen = Math.round((formData.value.discount || 0) * 100)
           
+          // ✅ Resource surcharges (room + vehicle)
+          const resourceSurchargesRappen = (refs?.resourceSurcharges?.value || [])
+            .reduce((sum: number, s: { rappen: number }) => sum + s.rappen, 0)
+          
           totalAmountRappenForPayment = Math.max(0, 
-            basePriceRappen + adminFeeRappen + productsPriceRappen - discountAmountRappen
+            basePriceRappen + adminFeeRappen + productsPriceRappen + resourceSurchargesRappen - discountAmountRappen
           )
           
           logger.debug('💰 Payment amount calculated:', {
@@ -959,6 +972,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
         event_type_code: eventTypeCode,
         custom_location_address: formData.value.custom_location_address || undefined,
         custom_location_name: formData.value.custom_location_name || undefined,
+        vehicle_mode: formData.value.vehicle_mode ?? null,
+        vehicle_id: formData.value.vehicle_id ?? null,
+        room_id: formData.value.room_id ?? null,
         google_place_id: formData.value.google_place_id || undefined,
         confirmation_token: confirmationToken || undefined,
         // ✅ Add tenant_id for availability checking
@@ -992,7 +1008,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
             // ✅ Send company billing address ID for invoice payments
             companyBillingAddressId: refs?.savedCompanyBillingAddressId?.value || null,
             // ✅ Send cash already paid flag
-            cashAlreadyPaid: refs?.cashAlreadyPaid?.value === true
+            cashAlreadyPaid: refs?.cashAlreadyPaid?.value === true,
+            // ✅ Resource surcharge breakdown for booking cost storage
+            resourceSurcharges: (refs?.resourceSurcharges?.value || [])
           }
         })
       } catch (fetchError: any) {

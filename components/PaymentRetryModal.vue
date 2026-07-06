@@ -103,6 +103,7 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, watch } from 'vue'
+import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 // import { getSupabase } from '~/utils/supabase'
 
 // Props
@@ -119,14 +120,16 @@ const emit = defineEmits<{
   'payment-error': [error: string]
 }>()
 
+const { cashVisible } = useCashPaymentSettings('staff')
+
 // State
 const isProcessing = ref(false)
 const selectedPaymentMethod = ref('wallee')
 const failedPayment = ref<any>(null)
 const appointment = ref<any>(null)
 
-// Available payment methods
-const availablePaymentMethods = ref([
+// Available payment methods (cash gated by settings)
+const availablePaymentMethods = computed(() => [
   {
     method_code: 'wallee',
     display_name: 'Online-Zahlung',
@@ -135,14 +138,14 @@ const availablePaymentMethods = ref([
     is_active: true,
     is_online: true
   },
-  {
+  ...(cashVisible.value ? [{
     method_code: 'cash',
     display_name: 'Barzahlung',
     description: 'Zahlung beim Fahrlehrer',
     icon_name: 'Banknotes',
     is_active: true,
     is_online: false
-  },
+  }] : []),
   {
     method_code: 'invoice',
     display_name: 'Rechnung',

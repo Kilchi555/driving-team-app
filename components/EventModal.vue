@@ -352,6 +352,112 @@
 
 
 
+          <!-- Vehicle Mode Section — shown for lesson type when appointment has a vehicle_mode set -->
+          <div v-if="isLessonType(formData.eventType) && (formData.vehicle_mode || null)" class="py-2">
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 17a2 2 0 100-4 2 2 0 000 4zm8 0a2 2 0 100-4 2 2 0 000 4zM3 9l1.5-5h15L21 9M3 9h18M3 9l-1 5h20l-1-5"/>
+                  </svg>
+                  <span class="text-sm font-medium text-amber-900">Fahrzeug</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-amber-700">
+                    {{ formData.vehicle_mode === 'school' ? 'Schulfahrzeug' : formData.vehicle_mode === 'own' ? 'Eigenfahrzeug' : 'Nicht angegeben' }}
+                  </span>
+                  <select
+                    v-model="formData.vehicle_mode"
+                    class="text-xs border border-amber-300 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
+                  >
+                    <option :value="null">Nicht angegeben</option>
+                    <option value="school">Schulfahrzeug</option>
+                    <option value="own">Eigenfahrzeug</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resource Picker Section — shown for lesson types when vehicles/rooms are configured -->
+          <div v-if="isLessonType(formData.eventType) && (resourceVehicles.length > 0 || resourceRooms.length > 0)" class="py-2">
+            <div class="border border-gray-200 rounded-xl overflow-hidden">
+              <!-- Vehicles -->
+              <div v-if="resourceVehicles.length > 0" class="p-3">
+                <div class="flex items-center gap-2 mb-2">
+                  <svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 17a2 2 0 100-4 2 2 0 000 4zm8 0a2 2 0 100-4 2 2 0 000 4zM3 9l1.5-5h15L21 9M3 9h18M3 9l-1 5h20l-1-5"/>
+                  </svg>
+                  <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Fahrzeug</span>
+                  <span v-if="isCheckingAvailability" class="ml-auto">
+                    <svg class="w-3.5 h-3.5 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                  </span>
+                </div>
+                <div class="space-y-1.5">
+                  <!-- Auto option -->
+                  <label class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input type="radio" :value="null" v-model="formData.vehicle_id" class="text-blue-500" />
+                    <span class="text-sm text-gray-600">Automatisch (nächstes freies Fahrzeug)</span>
+                  </label>
+                  <!-- Specific vehicles -->
+                  <label v-for="v in resourceVehicles" :key="v.id"
+                    class="flex items-center justify-between gap-2.5 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+                    :class="{ 'opacity-50': !v.is_available && formData.vehicle_id !== v.id }">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <input type="radio" :value="v.id" v-model="formData.vehicle_id" class="text-blue-500 flex-shrink-0" />
+                      <span class="text-sm text-gray-800 truncate">{{ v.name }}</span>
+                    </div>
+                    <span v-if="v.is_available" class="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex-shrink-0">frei</span>
+                    <span v-else class="text-xs font-medium text-red-500 bg-red-50 px-2 py-0.5 rounded-full flex-shrink-0">
+                      {{ v.conflicts[0] ? formatConflict(v.conflicts[0]) : 'belegt' }}
+                    </span>
+                  </label>
+                </div>
+                <!-- Conflict warning for selected vehicle -->
+                <div v-if="selectedVehicleConflict" class="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                  ⚠️ Dieses Fahrzeug ist im gewählten Zeitfenster bereits vergeben. Trotzdem speichern?
+                </div>
+              </div>
+
+              <!-- Divider -->
+              <div v-if="resourceVehicles.length > 0 && resourceRooms.length > 0" class="border-t border-gray-100" />
+
+              <!-- Rooms -->
+              <div v-if="resourceRooms.length > 0" class="p-3">
+                <div class="flex items-center gap-2 mb-2">
+                  <svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                  </svg>
+                  <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Raum</span>
+                </div>
+                <div class="space-y-1.5">
+                  <label class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input type="radio" :value="null" v-model="formData.room_id" class="text-blue-500" />
+                    <span class="text-sm text-gray-600">Kein Raum</span>
+                  </label>
+                  <label v-for="r in resourceRooms" :key="r.id"
+                    class="flex items-center justify-between gap-2.5 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+                    :class="{ 'opacity-50': !r.is_available && formData.room_id !== r.id }">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <input type="radio" :value="r.id" v-model="formData.room_id" class="text-blue-500 flex-shrink-0" />
+                      <span class="text-sm text-gray-800 truncate">{{ r.name }}</span>
+                    </div>
+                    <span v-if="r.is_available" class="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex-shrink-0">frei</span>
+                    <span v-else class="text-xs font-medium text-red-500 bg-red-50 px-2 py-0.5 rounded-full flex-shrink-0">
+                      {{ r.conflicts[0] ? formatConflict(r.conflicts[0]) : 'belegt' }}
+                    </span>
+                  </label>
+                </div>
+                <div v-if="selectedRoomConflict" class="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                  ⚠️ Dieser Raum ist im gewählten Zeitfenster bereits reserviert. Trotzdem speichern?
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Price Display - nur für Fahrstunden wenn Schüler ausgewählt -->
           <div v-if="isLessonType(formData.eventType) && selectedStudent" class="py-2">
             <PriceDisplay
@@ -376,6 +482,7 @@
               :student-credit="studentCredit"
               :is-loading-credit="isLoadingStudentCredit"
               :is-calculating-price="dynamicPricing.isLoading"
+              :resource-surcharges="resourceSurcharges"
               @discount-changed="handleDiscountChanged"
               @product-removed="handleProductRemoved"
               @product-added="handleProductAdded"
@@ -1759,6 +1866,7 @@ const handleSaveAppointment = async () => {
     const bgFormData = { ...formData.value }
     const bgSelectedProducts = selectedProducts.value
     const bgDynamicPricing = dynamicPricing.value
+    const bgResourceSurchargesRappen = resourceSurcharges.value.reduce((sum, s) => sum + s.rappen, 0)
     
     if (props.mode === 'create' && bgSelectedStudent && bgStudentCredit && bgStudentCredit.balance_rappen > 0) {
       Promise.resolve().then(async () => {
@@ -1772,7 +1880,7 @@ const handleSaveAppointment = async () => {
           }
           const adminFee = bgSavedAppointment?.admin_fee_rappen || 0
           const discountTotal = (bgFormData.discount || 0) * 100
-          const totalPrice = Math.max(0, lessonPrice + productsPrice + adminFee - discountTotal)
+          const totalPrice = Math.max(0, lessonPrice + productsPrice + adminFee + bgResourceSurchargesRappen - discountTotal)
           const creditToUse = Math.min(bgStudentCredit.balance_rappen, totalPrice)
           
           if (creditToUse > 0 && bgSavedAppointment?.id) {
@@ -1902,6 +2010,7 @@ const modalForm = useEventModalForm(props.currentUser, {
   dynamicPricing,        // ✅ Dynamic Pricing für Admin-Fee übergeben
   savedCompanyBillingAddressId, // ✅ Company Billing Address ID übergeben
   cashAlreadyPaid,       // ✅ Bar bereits bezahlt Toggle
+  resourceSurcharges,    // ✅ Ressourcenkosten (Raum + Fahrzeug)
 })
 
 const {
@@ -2078,6 +2187,173 @@ const isLessonType = (eventType: string) => {
   const lessonTypes = ['lesson', 'exam', 'theory']
   return lessonTypes.includes(eventType)
 }
+
+// ──────────────────────────────────────────────────────────────
+// Resource picker: vehicle and room assignment with availability
+// ──────────────────────────────────────────────────────────────
+interface ResourceConflict { start: string; end: string; source: string; label: string }
+interface ResourceItem {
+  id: string
+  name: string
+  is_available: boolean
+  conflicts: ResourceConflict[]
+  hourly_rate_rappen?: number
+  pricing_tiers?: any   // { lesson?: number, halbtags?: number, ganztags?: number } in Rappen
+}
+
+const resourceVehicles = ref<ResourceItem[]>([])
+const resourceRooms = ref<ResourceItem[]>([])
+const isCheckingAvailability = ref(false)
+let availabilityDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+const formatConflict = (c: ResourceConflict) => {
+  const fmt = (iso: string) => new Date(iso).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+  return `${fmt(c.start)}–${fmt(c.end)}`
+}
+
+const selectedVehicleConflict = computed(() => {
+  if (!formData.value.vehicle_id) return null
+  const v = resourceVehicles.value.find(x => x.id === formData.value.vehicle_id)
+  return v && !v.is_available ? v.conflicts[0] : null
+})
+
+const selectedRoomConflict = computed(() => {
+  if (!formData.value.room_id) return null
+  const r = resourceRooms.value.find(x => x.id === formData.value.room_id)
+  return r && !r.is_available ? r.conflicts[0] : null
+})
+
+// ── Resource cost calculation ─────────────────────────────────────────────
+function calcResourceCost(item: ResourceItem | undefined, durationMinutes: number): number {
+  if (!item) return 0
+  // Prefer "lesson" tier if available
+  if (item.pricing_tiers?.lesson != null) return item.pricing_tiers.lesson
+  if (item.hourly_rate_rappen != null && item.hourly_rate_rappen > 0) {
+    return Math.round(item.hourly_rate_rappen * durationMinutes / 60)
+  }
+  return 0
+}
+
+const resourceSurcharges = computed<{ label: string; rappen: number; type: 'vehicle' | 'room' }[]>(() => {
+  const duration = formData.value.duration_minutes || 45
+  const surcharges: { label: string; rappen: number; type: 'vehicle' | 'room' }[] = []
+
+  if (formData.value.vehicle_id) {
+    const v = resourceVehicles.value.find(x => x.id === formData.value.vehicle_id)
+    if (v) {
+      const cost = calcResourceCost(v, duration)
+      surcharges.push({ label: v.name, rappen: cost, type: 'vehicle' })
+    }
+  }
+  if (formData.value.room_id) {
+    const r = resourceRooms.value.find(x => x.id === formData.value.room_id)
+    if (r) {
+      const cost = calcResourceCost(r, duration)
+      surcharges.push({ label: r.name, rappen: cost, type: 'room' })
+    }
+  }
+  return surcharges
+})
+
+async function loadCategoryResources(categoryCode: string | null) {
+  if (!categoryCode || !isLessonType(formData.value.eventType)) {
+    resourceVehicles.value = []
+    resourceRooms.value = []
+    return
+  }
+  try {
+    // Load vehicles for this category
+    const vehiclesRes: any = await $fetch('/api/admin/rental-vehicles')
+    const categoryVehicles = (vehiclesRes.vehicles || []).filter((v: any) =>
+      v.is_active !== false && (v.category_codes || []).includes(categoryCode)
+    )
+    resourceVehicles.value = categoryVehicles.map((v: any) => ({
+      id: v.id,
+      name: v.name || `${v.marke ?? ''} ${v.modell ?? ''}`.trim(),
+      is_available: true,
+      conflicts: [],
+      hourly_rate_rappen: v.hourly_rate_rappen ?? null,
+      pricing_tiers: v.pricing_tiers ?? null,
+    }))
+
+    // Load rooms for this category from category settings
+    // We load them from the categories API — the category should have room_settings
+    resourceRooms.value = [] // Will be populated after category load
+    try {
+      const catRes: any = await $fetch('/api/admin/categories')
+      const cat = (catRes.categories || []).find((c: any) => c.code === categoryCode)
+      if (cat?.room_settings?.mode && cat.room_settings.mode !== 'none') {
+        const allowedRoomIds: string[] = cat.room_settings.allowed_room_ids || []
+        if (allowedRoomIds.length > 0) {
+          const roomsRes: any = await $fetch('/api/admin/resources/rooms')
+          const allowedRooms = (roomsRes.rooms || []).filter((r: any) => allowedRoomIds.includes(r.id))
+          resourceRooms.value = allowedRooms.map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            is_available: true,
+            conflicts: [],
+            hourly_rate_rappen: r.hourly_rate_rappen ?? null,
+            pricing_tiers: null,
+          }))
+        }
+      }
+    } catch { /* silent */ }
+  } catch { /* silent */ }
+
+  // Check availability if we have time info
+  checkResourceAvailability()
+}
+
+async function checkResourceAvailability() {
+  const startDate = formData.value.startDate
+  const startTime = formData.value.startTime
+  const endTime = formData.value.endTime
+  if (!startDate || !startTime || !endTime) return
+  if (resourceVehicles.value.length === 0 && resourceRooms.value.length === 0) return
+
+  if (availabilityDebounceTimer) clearTimeout(availabilityDebounceTimer)
+  availabilityDebounceTimer = setTimeout(async () => {
+    isCheckingAvailability.value = true
+    try {
+      const startISO = new Date(`${startDate}T${startTime}`).toISOString()
+      const endISO = new Date(`${startDate}T${endTime}`).toISOString()
+
+      const params = new URLSearchParams({ start_time: startISO, end_time: endISO })
+      if (resourceVehicles.value.length > 0) params.set('vehicle_ids', resourceVehicles.value.map(v => v.id).join(','))
+      if (resourceRooms.value.length > 0) params.set('room_ids', resourceRooms.value.map(r => r.id).join(','))
+      const existingAppId = formData.value.id || (props.eventData as any)?.id
+      if (existingAppId) params.set('exclude_appointment_id', existingAppId)
+
+      const avail: any = await $fetch(`/api/admin/resources/availability?${params.toString()}`)
+      if (avail.vehicles) {
+        resourceVehicles.value = resourceVehicles.value.map(v => {
+          const a = avail.vehicles.find((x: any) => x.id === v.id)
+          return a ? { ...v, is_available: a.is_available, conflicts: a.conflicts } : v
+        })
+      }
+      if (avail.rooms) {
+        resourceRooms.value = resourceRooms.value.map(r => {
+          const a = avail.rooms.find((x: any) => x.id === r.id)
+          return a ? { ...r, is_available: a.is_available, conflicts: a.conflicts } : r
+        })
+      }
+    } catch { /* silent */ } finally {
+      isCheckingAvailability.value = false
+    }
+  }, 300)
+}
+
+// Watch time changes to refresh availability
+watch(
+  [() => formData.value.startDate, () => formData.value.startTime, () => formData.value.endTime],
+  () => { checkResourceAvailability() },
+)
+
+// Watch category change to reload vehicles/rooms
+watch(
+  () => formData.value.type,
+  (newCode) => { loadCategoryResources(newCode) },
+)
 
 // ✅ NEU: Hilfsfunktion zur Übersetzung von event_type_code
 const translateEventTypeCode = (code: string): string => {
@@ -6360,6 +6636,11 @@ onMounted(async () => {
   // ✅ NEU: Lade Kategorien sofort beim ersten Öffnen
   if (formData.value.eventType === 'lesson') {
     await loadCategoriesForEventModal()
+  }
+
+  // ✅ Load resources for the current category (vehicles + rooms)
+  if (isLessonType(formData.value.eventType) && formData.value.type) {
+    await loadCategoryResources(formData.value.type)
   }
 })
 

@@ -1,7 +1,13 @@
+<template>
+  <div></div>
+</template>
+
 <script setup>
 definePageMeta({
   middleware: 'admin',
   layout: 'admin'
 })
-await navigateTo('/admin/products', { replace: true })
+import { onMounted } from 'vue'
+import { navigateTo } from '#imports'
+onMounted(() => navigateTo('/admin/categories', { replace: true }))
 </script>

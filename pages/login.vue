@@ -249,6 +249,55 @@
               <span>Mit Passkey anmelden</span>
             </button>
             <p v-if="passkeyError" class="text-xs text-red-600 text-center">{{ passkeyError }}</p>
+
+            <!-- Backup-Code Fallback — only visible after a passkey failure -->
+            <div v-if="passkeyError && !showBackupCodeForm" class="text-center">
+              <button
+                type="button"
+                @click="showBackupCodeForm = true"
+                class="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
+              >
+                Kein Zugriff auf Gerät? Backup-Code verwenden
+              </button>
+            </div>
+
+            <!-- Backup-Code Login Form -->
+            <div v-if="showBackupCodeForm" class="space-y-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <div class="flex items-center justify-between">
+                <p class="text-sm font-semibold text-amber-900">Mit Backup-Code anmelden</p>
+                <button type="button" @click="showBackupCodeForm = false; backupCodeError = null" class="text-gray-400 hover:text-gray-600">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+              <input
+                v-model="backupCodeEmail"
+                type="email"
+                placeholder="E-Mail-Adresse"
+                autocomplete="email"
+                class="w-full px-3 py-2 text-sm border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+              />
+              <input
+                v-model="backupCodeValue"
+                type="text"
+                placeholder="XXXX-XXXX"
+                autocomplete="off"
+                maxlength="9"
+                class="w-full px-3 py-2 text-sm border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white font-mono tracking-widest uppercase"
+                @input="backupCodeValue = backupCodeValue.toUpperCase()"
+              />
+              <p v-if="backupCodeError" class="text-xs text-red-600">{{ backupCodeError }}</p>
+              <button
+                type="button"
+                @click="handleBackupCodeLogin"
+                :disabled="isLoading || !backupCodeEmail || backupCodeValue.length < 9"
+                class="w-full py-2 px-4 text-sm font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 transition-colors"
+              >
+                <span v-if="isLoading">Bitte warten…</span>
+                <span v-else>Anmelden</span>
+              </button>
+            </div>
           </template>
         </form>
 
@@ -653,6 +702,12 @@ const passkeyError = ref<string | null>(null)
 const passkeyRequiredBanner = ref(false)
 const { loginWithPasskey, fetchStatus, isSupported: passkeyBrowserSupported } = usePasskey()
 
+// Backup-Code login state
+const showBackupCodeForm = ref(false)
+const backupCodeEmail = ref('')
+const backupCodeValue = ref('')
+const backupCodeError = ref<string | null>(null)
+
 const checkPasskeyAvailability = async () => {
   if (process.server) return
   // Hide on native (iOS/Android) — Passkeys require apple-app-site-association /
@@ -699,6 +754,39 @@ const handlePasskeyLogin = async () => {
     }
   } catch (err: any) {
     passkeyError.value = err?.data?.statusMessage || err?.message || 'Passkey-Anmeldung fehlgeschlagen.'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const handleBackupCodeLogin = async () => {
+  if (isLoading.value) return
+  backupCodeError.value = null
+  isLoading.value = true
+  try {
+    const result = await $fetch('/api/auth/passkey/backup-codes/verify', {
+      method: 'POST',
+      body: {
+        email: backupCodeEmail.value.trim().toLowerCase(),
+        code: backupCodeValue.value.trim().toUpperCase()
+      }
+    }) as any
+    if (result?.success && result?.user) {
+      const role = result.user.role
+      let redirectPath = '/'
+      if (role === 'admin' || role === 'tenant_admin' || role === 'superadmin') {
+        redirectPath = '/admin/dashboard'
+      } else if (role === 'staff') {
+        redirectPath = '/staff/dashboard'
+      } else if (role === 'client') {
+        redirectPath = '/customer-dashboard'
+      }
+      window.location.href = redirectPath
+    } else {
+      backupCodeError.value = 'Ungültiger Code.'
+    }
+  } catch (err: any) {
+    backupCodeError.value = err?.data?.statusMessage || 'Ungültige E-Mail oder Backup-Code.'
   } finally {
     isLoading.value = false
   }

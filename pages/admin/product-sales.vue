@@ -328,7 +328,7 @@
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Zahlungsart</label>
               <div class="space-y-2">
-                <label class="flex items-center">
+                <label v-if="cashVisible" class="flex items-center">
                   <input
                     v-model="anonymousPaymentMethod"
                     type="radio"
@@ -430,9 +430,11 @@ import { navigateTo } from '#app'
 import { formatDateTime } from '~/utils/dateUtils'
 import { useAuthStore } from '~/stores/auth'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 import ProductSaleModal from '~/components/ProductSaleModal.vue'
 
 const { primaryColor } = useTenantBranding()
+const { cashVisible } = useCashPaymentSettings('staff')
 
 definePageMeta({
   layout: 'admin',
@@ -466,7 +468,7 @@ const showProductSaleModal = ref(false)
 const showAnonymousSaleModal = ref(false)
 const anonymousCustomerName = ref('')
 const anonymousCustomerNotes = ref('')
-const anonymousPaymentMethod = ref('cash') // Added for anonymous sale payment method
+const anonymousPaymentMethod = ref('card')
 const currentTenant = ref<any>(null)
 
 // Computed

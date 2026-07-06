@@ -21,6 +21,7 @@ import { getSupabase } from '~/server/utils/supabase'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
+import { isSchoolVehicleAvailable } from '~/server/utils/vehicle-availability'
 
 interface AvailableSlot {
   id: string
@@ -43,6 +44,9 @@ interface GetAvailableSlotsQuery {
   end_date?: string // YYYY-MM-DD
   duration_minutes?: string
   category_code?: string
+  vehicle_mode?: string // option key — passed through to vehicle_bookings check
+  /** '1' or 'true' — tells the API that this option requires a school vehicle (capacity check) */
+  requires_school_vehicle?: string
 }
 
 export default defineEventHandler(async (event: H3Event) => {
@@ -188,7 +192,7 @@ export default defineEventHandler(async (event: H3Event) => {
     const locationMap = new Map(locationData.map((l: any) => [l.id, l.name]))
 
     // Build nested map for quick is_online_bookable lookup: staff_id -> location_id -> boolean
-    let staffLocationsMap = new Map<string, Map<string, boolean>>()
+    const staffLocationsMap = new Map<string, Map<string, boolean>>()
     for (const sl of staffLocationsData as any[]) {
       if (!staffLocationsMap.has(sl.staff_id)) {
         staffLocationsMap.set(sl.staff_id, new Map())
@@ -202,22 +206,71 @@ export default defineEventHandler(async (event: H3Event) => {
       staff_locations: (staffLocationsData as any[]).length
     })
 
-    // Enrich slots with names
-    // Filter out slots where is_online_bookable = false
+    // ============ LAYER 5: FILTER BY VEHICLE AVAILABILITY ============
+    // When vehicle_mode=school, filter out slots where no school vehicle is available.
+    // Checks are parallelised across unique location+category combinations.
+    const requiresSchoolVehicle =
+      query.requires_school_vehicle === '1' || query.requires_school_vehicle === 'true'
+    let vehicleUnavailableSlotIds = new Set<string>()
+
+    if (requiresSchoolVehicle && slots && slots.length > 0 && query.category_code) {
+      // Collect unique location+time combinations to minimise DB queries
+      const uniqueLocationTimes = new Map<string, { locationId: string; startTime: string; endTime: string; slotIds: string[] }>()
+      for (const slot of slots) {
+        const key = `${slot.location_id}:${slot.start_time}:${slot.end_time}`
+        if (!uniqueLocationTimes.has(key)) {
+          uniqueLocationTimes.set(key, {
+            locationId: slot.location_id,
+            startTime: slot.start_time,
+            endTime: slot.end_time,
+            slotIds: [],
+          })
+        }
+        uniqueLocationTimes.get(key)!.slotIds.push(slot.id)
+      }
+
+      const vehicleChecks = await Promise.all(
+        Array.from(uniqueLocationTimes.values()).map(async ({ locationId, startTime, endTime, slotIds }) => {
+          const available = await isSchoolVehicleAvailable(supabase, {
+            tenantId: query.tenant_id!,
+            locationId,
+            categoryCode: query.category_code!,
+            startTime,
+            endTime,
+          })
+          return { available, slotIds }
+        })
+      )
+
+      for (const { available, slotIds } of vehicleChecks) {
+        if (!available) {
+          for (const id of slotIds) vehicleUnavailableSlotIds.add(id)
+        }
+      }
+
+      logger.debug('🚗 Vehicle availability check:', {
+        vehicle_mode: 'school',
+        total_slots: slots.length,
+        unavailable_due_to_fleet: vehicleUnavailableSlotIds.size,
+      })
+    }
+
+    // Enrich slots with names and apply all filters
     const enrichedSlots = (slots || [])
       .filter(slot => {
-        // Check if this staff/location combination is online bookable
+        // Filter: vehicle fleet capacity
+        if (vehicleUnavailableSlotIds.has(slot.id)) {
+          logger.debug(`🔍 FILTERED OUT slot (no school vehicle): ${slot.id}`)
+          return false
+        }
+        // Filter: is_online_bookable
         const locationBookableMap = staffLocationsMap.get(slot.staff_id)
         if (locationBookableMap) {
           const isOnlineBookable = locationBookableMap.get(slot.location_id)
-          // If explicitly set to false, filter out
           if (isOnlineBookable === false) {
             logger.debug(`🔍 FILTERED OUT slot: staff=${slot.staff_id}, location=${slot.location_id}, is_online_bookable=false`)
             return false
           }
-          logger.debug(`✅ KEEPING slot: staff=${slot.staff_id}, location=${slot.location_id}, is_online_bookable=${isOnlineBookable}`)
-        } else {
-          logger.debug(`✅ KEEPING slot (no staff_locations entry): staff=${slot.staff_id}, location=${slot.location_id}`)
         }
         return true
       })
@@ -234,7 +287,7 @@ export default defineEventHandler(async (event: H3Event) => {
         is_available: slot.is_available,
         reserved_by_session: slot.reserved_by_session,
         reserved_until: slot.reserved_until,
-        status: 'available'
+        status: 'available',
       }))
 
     const duration = Date.now() - startTime

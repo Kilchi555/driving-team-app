@@ -77,17 +77,29 @@ export default defineEventHandler(async (event) => {
 
     // Create invoice items
     if (items.length > 0) {
-      const invoiceItems = items.map((item: any, index: number) => ({
-        ...item,
-        invoice_id: invoice.id,
-        sort_order: item.sort_order || index
-      }))
+      const invoiceItems = items.map((item: any, index: number) => {
+        // Strip internal metadata before inserting
+        const { _open_item_id, _open_item_type, _open_item_source_table, ...cleanItem } = item
+        return { ...cleanItem, invoice_id: invoice.id, sort_order: item.sort_order || index }
+      })
 
       const { error: itemsError } = await supabaseAdmin
         .from('invoice_items')
         .insert(invoiceItems)
 
       if (itemsError) throw itemsError
+
+      // Stamp invoice_id back on source rows (courses, rooms, vehicles)
+      for (const item of items) {
+        if (!item._open_item_id || !item._open_item_source_table) continue
+        const table = item._open_item_source_table as string
+        if (!['course_registrations', 'room_bookings', 'vehicle_bookings'].includes(table)) continue
+        const { error: stampErr } = await supabaseAdmin
+          .from(table)
+          .update({ invoice_id: invoice.id })
+          .eq('id', item._open_item_id)
+        if (stampErr) console.warn(`[invoice/create] Could not stamp invoice_id on ${table}:`, stampErr)
+      }
     }
 
     // Fetch full invoice with details

@@ -10,7 +10,7 @@ import { defineEventHandler, createError } from 'h3'
 import { randomBytes, scryptSync } from 'crypto'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { logPasskeyEvent, getRequestContext } from '~/server/utils/passkey'
+import { logPasskeyEvent, getRequestContext, isPasskeyEnabledForRole } from '~/server/utils/passkey'
 
 const SCRYPT_KEYLEN = 64
 const SCRYPT_COST = 16384 // 2^14 — same default as Node's recommended
@@ -41,8 +41,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
   const dbUserId: string | undefined = authUser.db_user_id || authUser.profile?.id
+  const role: string | undefined = authUser.role || authUser.profile?.role
   if (!dbUserId) {
     throw createError({ statusCode: 404, statusMessage: 'User profile not found' })
+  }
+  if (!isPasskeyEnabledForRole(role)) {
+    throw createError({ statusCode: 403, statusMessage: 'Backup codes are only available for accounts with passkey access.' })
   }
 
   const supabase = getSupabaseAdmin()
