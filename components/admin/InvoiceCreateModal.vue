@@ -94,17 +94,32 @@
                 @change="toggleOpenItem(item)"
                 class="rounded" />
               <div class="flex-1 min-w-0">
+                <!-- Title row -->
                 <div class="flex items-center gap-2 flex-wrap">
                   <p class="text-sm font-medium text-gray-900">{{ item.label }}</p>
                   <span v-if="item.user_name && selectedCompanyId"
-                    class="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
+                    class="text-xs px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">
                     {{ item.user_name }}
                   </span>
                 </div>
-                <p v-if="item.date" class="text-xs text-gray-500">{{ formatDate(item.date) }}</p>
-                <p v-if="item.payment_method && item.payment_method !== 'invoice'" class="text-xs text-amber-600">
-                  bisherige Methode: {{ item.payment_method }}
-                </p>
+                <!-- Detail pills -->
+                <div class="flex flex-wrap gap-1.5 mt-1">
+                  <span v-if="item.date" class="text-xs text-gray-500">
+                    {{ formatDate(item.date) }}
+                  </span>
+                  <span v-if="item.duration_minutes" class="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                    {{ item.duration_minutes }} Min.
+                  </span>
+                  <span v-if="item.appointment_type" class="text-xs px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium capitalize">
+                    {{ item.appointment_type }}
+                  </span>
+                  <span v-if="item.staff_name" class="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                    mit {{ item.staff_name }}
+                  </span>
+                  <span v-if="item.payment_method && item.payment_method !== 'invoice'" class="text-xs px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">
+                    {{ item.payment_method }}
+                  </span>
+                </div>
               </div>
               <span class="text-sm font-semibold text-gray-700">CHF {{ (item.amount_rappen / 100).toFixed(2) }}</span>
             </label>
