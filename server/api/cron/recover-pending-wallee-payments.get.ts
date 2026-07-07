@@ -1,4 +1,4 @@
-// server/api/cron/recover-pending-wallee-payments.post.ts
+// server/api/cron/recover-pending-wallee-payments.get.ts
 // Cron job: Check old pending Wallee payments and sync with Wallee API
 // Run this every 10 minutes to catch failed webhooks
 
@@ -25,11 +25,17 @@ export default defineEventHandler(async (event) => {
   const startTime = Date.now()
   
   try {
-    // ✅ SECURITY: Verify cron secret
-    const cronSecret = getHeader(event, 'x-cron-secret')
-    if (cronSecret !== process.env.CRON_SECRET) {
-      logger.warn('❌ Invalid cron secret')
-      throw createError({ statusCode: 401, statusMessage: 'Invalid cron secret' })
+    // ✅ SECURITY: Verify cron secret (Vercel sends Authorization: Bearer <secret>)
+    const secret = process.env.CRON_SECRET
+    if (secret && secret.trim() !== '') {
+      const authHeader = getHeader(event, 'authorization')
+      const vercelCronHeader = getHeader(event, 'x-vercel-cron')
+      const isValidSecret = authHeader === `Bearer ${secret}`
+      const isVercelCron = vercelCronHeader === '1'
+      if (!isValidSecret && !isVercelCron) {
+        logger.warn('❌ Invalid cron secret')
+        throw createError({ statusCode: 401, statusMessage: 'Invalid cron secret' })
+      }
     }
 
     logger.info('🔄 Starting Wallee payment recovery cron...')
@@ -93,6 +99,13 @@ export default defineEventHandler(async (event) => {
 
           if (!transaction) {
             logger.warn(`⚠️ Phase 1: no transaction found for ID ${payment.wallee_transaction_id} (payment ${payment.id})`)
+          }
+
+          // When Wallee reports FAILED/CANCELLED for a still-pending payment,
+          // keep it as pending so the customer can create a new transaction and retry.
+          if ((mappedStatus === 'failed' || mappedStatus === 'cancelled') && payment.payment_status === 'pending') {
+            logger.info(`🔄 Phase 1: Wallee ${walleeState} for pending payment ${payment.id} — keeping as pending (retryable)`)
+            mappedStatus = 'pending'
           }
 
           logger.info(`📊 Phase 1 payment ${payment.id}: Wallee tx=${payment.wallee_transaction_id} state=${walleeState} → ${mappedStatus}`)
@@ -243,15 +256,17 @@ export default defineEventHandler(async (event) => {
 
             if (!walleeState) {
               logger.warn(`⚠️ No Wallee state for processing payment ${payment.id}, skipping`)
-              await supabase.from('webhook_logs').insert({
-                transaction_id: payment.wallee_transaction_id,
-                payment_id: payment.id,
-                wallee_state: 'UNKNOWN',
-                payment_status_before: 'processing',
-                success: false,
-                error_message: 'Cron Phase 2: Wallee returned no state for transaction',
-                raw_payload: { recovery: true, phase: 'processing_no_state' }
-              }).catch(() => {})
+              try {
+                await supabase.from('webhook_logs').insert({
+                  transaction_id: payment.wallee_transaction_id,
+                  payment_id: payment.id,
+                  wallee_state: 'UNKNOWN',
+                  payment_status_before: 'processing',
+                  success: false,
+                  error_message: 'Cron Phase 2: Wallee returned no state for transaction',
+                  raw_payload: { recovery: true, phase: 'processing_no_state' }
+                })
+              } catch {}
               continue
             }
 
@@ -273,16 +288,18 @@ export default defineEventHandler(async (event) => {
                 logger.error(`❌ Error releasing lock for payment ${payment.id}:`, releaseErr)
               } else {
                 processingReleased++
-                await supabase.from('webhook_logs').insert({
-                  transaction_id: payment.wallee_transaction_id,
-                  payment_id: payment.id,
-                  wallee_state: walleeState,
-                  payment_status_before: 'processing',
-                  payment_status_after: 'pending',
-                  success: true,
-                  error_message: 'Processing lock released via cron (Wallee reported failure, webhook missed)',
-                  raw_payload: { recovery: true, wallee_state: walleeState, phase: 'processing_release' }
-                }).catch(() => {})
+                try {
+                  await supabase.from('webhook_logs').insert({
+                    transaction_id: payment.wallee_transaction_id,
+                    payment_id: payment.id,
+                    wallee_state: walleeState,
+                    payment_status_before: 'processing',
+                    payment_status_after: 'pending',
+                    success: true,
+                    error_message: 'Processing lock released via cron (Wallee reported failure, webhook missed)',
+                    raw_payload: { recovery: true, wallee_state: walleeState, phase: 'processing_release' }
+                  })
+                } catch {}
               }
             } else if (mappedStatus === 'completed' || mappedStatus === 'authorized') {
               // Wallee says it succeeded — update normally (webhook was likely missed)
@@ -300,16 +317,18 @@ export default defineEventHandler(async (event) => {
                 logger.error(`❌ Error completing payment ${payment.id}:`, completeErr)
               } else {
                 recovered++
-                await supabase.from('webhook_logs').insert({
-                  transaction_id: payment.wallee_transaction_id,
-                  payment_id: payment.id,
-                  wallee_state: walleeState,
-                  payment_status_before: 'processing',
-                  payment_status_after: mappedStatus,
-                  success: true,
-                  error_message: 'Recovered stuck processing payment via cron (webhook missed)',
-                  raw_payload: { recovery: true, wallee_state: walleeState, phase: 'processing_complete' }
-                }).catch(() => {})
+                try {
+                  await supabase.from('webhook_logs').insert({
+                    transaction_id: payment.wallee_transaction_id,
+                    payment_id: payment.id,
+                    wallee_state: walleeState,
+                    payment_status_before: 'processing',
+                    payment_status_after: mappedStatus,
+                    success: true,
+                    error_message: 'Recovered stuck processing payment via cron (webhook missed)',
+                    raw_payload: { recovery: true, wallee_state: walleeState, phase: 'processing_complete' }
+                  })
+                } catch {}
               }
             } else if (mappedStatus === 'processing' || mappedStatus === 'pending') {
               // Wallee is still in CONFIRMED/PROCESSING/PENDING — normally in-flight.
@@ -337,16 +356,18 @@ export default defineEventHandler(async (event) => {
                   logger.error(`❌ Error releasing timeout lock for payment ${payment.id}:`, timeoutReleaseErr)
                 } else {
                   processingReleased++
-                  await supabase.from('webhook_logs').insert({
-                    transaction_id: payment.wallee_transaction_id,
-                    payment_id: payment.id,
-                    wallee_state: walleeState,
-                    payment_status_before: 'processing',
-                    payment_status_after: 'pending',
-                    success: true,
-                    error_message: `Processing lock released via cron after 2h timeout (Wallee still ${walleeState}, updated_at: ${payment.updated_at})`,
-                    raw_payload: { recovery: true, wallee_state: walleeState, phase: 'processing_timeout_release' }
-                  }).catch(() => {})
+                  try {
+                    await supabase.from('webhook_logs').insert({
+                      transaction_id: payment.wallee_transaction_id,
+                      payment_id: payment.id,
+                      wallee_state: walleeState,
+                      payment_status_before: 'processing',
+                      payment_status_after: 'pending',
+                      success: true,
+                      error_message: `Processing lock released via cron after 2h timeout (Wallee still ${walleeState}, updated_at: ${payment.updated_at})`,
+                      raw_payload: { recovery: true, wallee_state: walleeState, phase: 'processing_timeout_release' }
+                    })
+                  } catch {}
                 }
               } else {
                 logger.debug(`⏳ Payment ${payment.id} still in-flight (Wallee: ${walleeState}), updated_at: ${payment.updated_at} — waiting for 2h timeout`)
@@ -355,16 +376,17 @@ export default defineEventHandler(async (event) => {
             }
           } catch (stuckErr: any) {
             logger.error(`❌ Error checking stuck processing payment ${payment.id}:`, stuckErr.message)
-            // Always log errors to webhook_logs so failures are visible in the admin UI
-            await supabase.from('webhook_logs').insert({
-              transaction_id: payment.wallee_transaction_id,
-              payment_id: payment.id,
-              wallee_state: walleeState ?? 'ERROR',
-              payment_status_before: 'processing',
-              success: false,
-              error_message: `Cron Phase 2 error: ${stuckErr.message}`,
-              raw_payload: { recovery: true, phase: 'processing_error', error: stuckErr.message }
-            }).catch(() => {})
+            try {
+              await supabase.from('webhook_logs').insert({
+                transaction_id: payment.wallee_transaction_id,
+                payment_id: payment.id,
+                wallee_state: walleeState ?? 'ERROR',
+                payment_status_before: 'processing',
+                success: false,
+                error_message: `Cron Phase 2 error: ${stuckErr.message}`,
+                raw_payload: { recovery: true, phase: 'processing_error', error: stuckErr.message }
+              })
+            } catch {}
           }
         }
       }
