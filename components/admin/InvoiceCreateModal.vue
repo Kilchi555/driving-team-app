@@ -930,10 +930,10 @@ watch(invoiceIntroText, (val) => { if (val && !formData.value.notes) formData.va
 watch(invoicePaymentTerms, (val) => { if (val && !formData.value.payment_terms) formData.value.payment_terms = val }, { once: true })
 watch(invoiceFooterText, (val) => { if (val && !formData.value.footer_text) formData.value.footer_text = val }, { once: true })
 
-// When default VAT loads, apply to any items that still have the hardcoded default
+// When default VAT rate loads from branding, update any items still using a fallback default
 watch(defaultVatRate, (val) => {
   invoiceItems.value.forEach(item => {
-    if (item.vat_rate === 8.10 || item.vat_rate === 7.70) item.vat_rate = val
+    if (item.vat_rate === 8.10 || item.vat_rate === 7.70 || item.vat_rate === 0) item.vat_rate = val
   })
 }, { once: true })
 </script>

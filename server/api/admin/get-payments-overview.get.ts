@@ -93,6 +93,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
     const query = getQuery(event)
     const limit = Math.min(parseInt(query.limit as string) || 1000, 1000)
     const offset = Math.max(parseInt(query.offset as string) || 0, 0)
+    const includeDeleted = query.include_deleted === 'true'
 
     logger.debug(`🔍 [get-payments-overview] User ${userId} requesting payments overview for tenant ${tenantId}`)
 
@@ -174,12 +175,17 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
       )
 
       // Find open payments and their appointment start_times (from joined data)
-      const openPayments = userPayments.filter(p =>
-        p.payment_status === 'pending' ||
-        p.payment_status === 'failed' ||
-        p.payment_status === 'invoiced' ||
-        p.payment_status === 'invoice'
-      )
+      // Exclude payments linked to soft-deleted appointments (unless include_deleted is set)
+      const openPayments = userPayments.filter(p => {
+        const apt = (p as any).appointments
+        if (!includeDeleted && apt?.deleted_at) return false
+        return (
+          p.payment_status === 'pending' ||
+          p.payment_status === 'failed' ||
+          p.payment_status === 'invoiced' ||
+          p.payment_status === 'invoice'
+        )
+      })
 
       // Find oldest open appointment date using the joined appointment data
       let oldestOpenDate: string | null = null
@@ -200,14 +206,14 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
 
       // Count different payment statuses
       // Note: 'invoice' (without 'd') is a legacy status that means the same as 'invoiced'
-      const invoicedCount = userPayments.filter(p => p.payment_status === 'invoiced' || p.payment_status === 'invoice').length
+      const invoicedCount = userPayments.filter(p => (p.payment_status === 'invoiced' || p.payment_status === 'invoice') && (includeDeleted || !(p as any).appointments?.deleted_at)).length
       const completedCount = userPayments.filter(p => p.payment_status === 'completed').length
       const paidCount = userPayments.filter(p => p.payment_status === 'paid').length
       const cancelledCount = userPayments.filter(p => 
         p.payment_status === 'canceled' || p.payment_status === 'cancelled' || p.payment_status === 'refunded'
       ).length
       const pendingFailedCount = userPayments.filter(p => 
-        p.payment_status === 'pending' || p.payment_status === 'failed'
+        (p.payment_status === 'pending' || p.payment_status === 'failed') && (includeDeleted || !(p as any).appointments?.deleted_at)
       ).length
 
       logger.debug(`🔍 Payment status counts for user ${user.id}:`, {
@@ -221,13 +227,18 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
       })
 
       // Calculate total unpaid amount: pending/failed (not yet paid) + invoiced (billed but not received)
+      // Exclude payments linked to soft-deleted appointments (unless include_deleted is set)
       const totalUnpaidAmount = userPayments
-        .filter(p => 
-          p.payment_status === 'pending' || 
-          p.payment_status === 'failed' ||
-          p.payment_status === 'invoiced' ||
-          p.payment_status === 'invoice'
-        )
+        .filter(p => {
+          const apt = (p as any).appointments
+          if (!includeDeleted && apt?.deleted_at) return false
+          return (
+            p.payment_status === 'pending' ||
+            p.payment_status === 'failed' ||
+            p.payment_status === 'invoiced' ||
+            p.payment_status === 'invoice'
+          )
+        })
         .reduce((sum, payment) => {
           return sum + ((payment.total_amount_rappen || 0) / 100)
         }, 0)

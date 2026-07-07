@@ -148,8 +148,8 @@
                 v-model="sortBy"
                 class="tenant-focus p-2 block w-full border-gray-300 rounded-md"
               >
-                <option value="name">Name</option>
                 <option value="balance">Guthaben (hoch)</option>
+                <option value="name">Name</option>
                 <option value="balance_low">Guthaben (niedrig)</option>
                 <option value="last_activity">Letzte Aktivität</option>
               </select>
@@ -597,7 +597,7 @@ const statistics = ref({
 
 const searchQuery = ref('')
 const balanceFilter = ref('')
-const sortBy = ref('name')
+const sortBy = ref('balance')
 const activeTab = ref<'students' | 'withdrawals'>('students')
 const pendingWithdrawals = ref<any[]>([])
 const isLoadingWithdrawals = ref(false)

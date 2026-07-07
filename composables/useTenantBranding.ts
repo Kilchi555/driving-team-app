@@ -536,7 +536,12 @@ export const useTenantBranding = () => {
       return color
     }),
     accentColor: computed(() => currentTenantBranding.value?.colors?.accent || '#3B82F6'),
-    defaultVatRate: computed(() => parseFloat((currentTenantBranding.value as any)?.default_vat_rate) || 8.10),
+    defaultVatRate: computed(() => {
+      const raw = (currentTenantBranding.value as any)?.default_vat_rate
+      if (raw == null) return 8.10
+      const parsed = parseFloat(raw)
+      return !isNaN(parsed) && parsed > 0 ? parsed : 8.10
+    }),
     invoiceIntroText: computed(() => (currentTenantBranding.value as any)?.invoice_intro_text ?? ''),
     invoicePaymentTerms: computed(() => (currentTenantBranding.value as any)?.invoice_payment_terms ?? ''),
     invoiceFooterText: computed(() => (currentTenantBranding.value as any)?.invoice_footer_text ?? ''),

@@ -1737,6 +1737,9 @@ const saveInvoiceSettings = async () => {
       method: 'POST',
       body: invoiceSettings.value,
     })
+    // Refresh branding so defaultVatRate is updated across all components (e.g. InvoiceCreateModal)
+    const tenantId = currentTenantBranding.value?.id
+    if (tenantId) await loadTenantBrandingById(tenantId)
     showAutoSaveSuccess('Rechnungseinstellungen gespeichert')
   } catch (e: any) {
     showAutoSaveError('Fehler: ' + (e?.data?.statusMessage || e.message))

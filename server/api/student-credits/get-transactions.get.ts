@@ -1,57 +1,43 @@
-import { defineEventHandler, getQuery, createError, getHeader } from 'h3'
-import { getSupabaseAdmin } from '~/utils/supabase'
+import { defineEventHandler, getQuery, createError } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser?.id) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
+
   const supabase = getSupabaseAdmin()
 
-  // Get auth token from headers
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, message: 'Missing or invalid authorization header' })
-  }
-
-  const token = authHeader.replace('Bearer ', '')
-
-  // Get current user
-  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !authUser) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
-  }
-
-  // Get user profile
+  // Get caller's profile for tenant isolation
   const { data: userProfile } = await supabase
     .from('users')
-    .select('id, tenant_id')
+    .select('id, role, tenant_id')
     .eq('auth_user_id', authUser.id)
     .single()
 
   if (!userProfile) {
-    throw createError({ statusCode: 403, message: 'User profile not found' })
+    throw createError({ statusCode: 403, statusMessage: 'User profile not found' })
   }
 
-  // Get query parameters
+  if (userProfile.role !== 'admin' && userProfile.role !== 'staff') {
+    throw createError({ statusCode: 403, statusMessage: 'Admin or staff role required' })
+  }
+
   const query = getQuery(event)
   const { user_id, limit = '50' } = query
 
   if (!user_id) {
-    throw createError({
-      statusCode: 400,
-      message: 'Missing required parameter: user_id'
-    })
+    throw createError({ statusCode: 400, statusMessage: 'Missing required parameter: user_id' })
   }
 
   const limitNum = Math.min(parseInt(limit as string) || 50, 500)
 
-  // Fetch credit transactions with tenant isolation
   const { data: transactions, error } = await supabase
     .from('credit_transactions')
     .select(`
       *,
-      user:users!credit_transactions_user_id_fkey (
-        first_name,
-        last_name,
-        email
-      ),
       created_by_user:users!credit_transactions_created_by_fkey (
         first_name,
         last_name
@@ -64,10 +50,7 @@ export default defineEventHandler(async (event) => {
 
   if (error) {
     console.error('Error fetching credit transactions:', error)
-    throw createError({
-      statusCode: 500,
-      message: 'Failed to fetch credit transactions'
-    })
+    throw createError({ statusCode: 500, statusMessage: 'Failed to fetch credit transactions' })
   }
 
   return {

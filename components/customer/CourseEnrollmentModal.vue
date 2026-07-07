@@ -522,6 +522,30 @@
               <p class="text-slate-600">{{ paymentMethodLabel }}</p>
             </div>
 
+            <!-- Cash payment info (only if admin enabled customer visibility) -->
+            <div
+              v-if="cashVisibleForCustomer && paymentMethod === 'CASH_ON_SITE'"
+              class="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg"
+            >
+              <svg class="w-4 h-4 mt-0.5 shrink-0 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <p class="text-sm text-green-800">
+                <strong>Barzahlung vor Ort</strong> — du bezahlst direkt beim Kurs. Es ist keine Vorauszahlung nötig.
+              </p>
+            </div>
+            <div
+              v-else-if="cashVisibleForCustomer && paymentMethod === 'WALLEE' && effectivePriceAfterCredit > 0"
+              class="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg"
+            >
+              <svg class="w-4 h-4 mt-0.5 shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p class="text-sm text-blue-800">
+                <strong>Hinweis:</strong> Für diesen Kurs ist Online-Zahlung vorgesehen. Barzahlung ist nach Absprache mit der Fahrschule möglich.
+              </p>
+            </div>
+
             <div v-if="enrollmentError" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               {{ enrollmentError }}
             </div>
@@ -700,6 +724,7 @@ import { getCoursePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLoc
 import { useTenant } from '~/composables/useTenant'
 import { useAffiliateRef } from '~/composables/useAffiliateRef'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
+import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
 import { getSupabase } from '~/utils/supabase'
 
@@ -718,6 +743,7 @@ const emit = defineEmits(['close', 'enrolled'])
 // Tenant hooks
 const { tenantPrimaryColor } = useTenant()
 const { walleeEnabled: walleeEnabledFromStore, loadWalleeStatus } = useWalleeStatus()
+const { cashVisible: cashVisibleForCustomer } = useCashPaymentSettings('customer')
 
 // Prefer the prop value (from public API) over the store value to avoid an auth-required
 // API call that would redirect unauthenticated public users.

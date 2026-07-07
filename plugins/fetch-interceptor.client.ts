@@ -123,6 +123,9 @@ export default defineNuxtPlugin((nuxtApp) => {
       // Handle 401 - Session expired or invalid token (for non-auth and non-booking endpoints)
       // DON'T redirect for booking flow - let component show modal
       if (status === 401 && !isRedirecting && !isBookingFlow && !onAffiliateDashboard) {
+        // Guard immediately so parallel 401s don't each trigger their own toast/redirect
+        isRedirecting = true
+
         // Before triggering a logout, check if the auth store still considers the user logged in.
         // If yes, the HTTP-only cookies may simply be out of sync with the client-side Supabase
         // session (e.g. expired cookie while localStorage session is still valid).
@@ -197,9 +200,6 @@ export default defineNuxtPlugin((nuxtApp) => {
           if (e?.statusCode === 401) throw e
         }
 
-        isRedirecting = true
-        console.warn('⚠️ Session expired (401) - Redirecting to tenant login', { url })
-
         try {
           const authStore = useAuthStore()
 
@@ -258,15 +258,20 @@ export default defineNuxtPlugin((nuxtApp) => {
           // Clear auth state
           authStore.clearAuthState()
 
-          // Show user-friendly message
+          // Show user-friendly message — but suppress it if the user just logged in
+          // (a 401 right after login means cookie sync is still in progress, not a real expiry)
           try {
-            const uiStore = useUIStore()
-            uiStore.addNotification({
-              type: 'warning',
-              title: 'Sitzung abgelaufen',
-              message: 'Bitte melden Sie sich erneut an.',
-              duration: 5000
-            })
+            const justLoggedIn = parseInt(sessionStorage.getItem('just_logged_in_at') || '0', 10)
+            const isRightAfterLogin = Date.now() - justLoggedIn < 15_000
+            if (!isRightAfterLogin) {
+              const uiStore = useUIStore()
+              uiStore.addNotification({
+                type: 'warning',
+                title: 'Sitzung abgelaufen',
+                message: 'Bitte melden Sie sich erneut an.',
+                duration: 5000
+              })
+            }
           } catch {
             // UI store might not be available
           }

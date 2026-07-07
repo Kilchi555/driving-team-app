@@ -1,33 +1,20 @@
-import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { getSupabaseAdmin } from '~/utils/supabase'
+import { defineEventHandler, readBody, createError } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser?.id) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+
   const supabase = getSupabaseAdmin()
 
-  // Get auth token from headers
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, message: 'Missing or invalid authorization header' })
-  }
-
-  const token = authHeader.replace('Bearer ', '')
-
-  // Get current user (note: this may be the student themselves)
-  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !authUser) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
-  }
-
-  // Get user profile
   const { data: userProfile } = await supabase
     .from('users')
     .select('id, tenant_id')
     .eq('auth_user_id', authUser.id)
     .single()
 
-  if (!userProfile) {
-    throw createError({ statusCode: 403, message: 'User profile not found' })
-  }
+  if (!userProfile) throw createError({ statusCode: 403, statusMessage: 'User profile not found' })
 
   // Read and validate body
   const body = await readBody(event)

@@ -35,30 +35,25 @@
       </div>
     </div>
 
-    <!-- ═══ KPI CARDS ═══ -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Gesamt</p>
-        <p class="text-2xl font-bold text-gray-900">{{ summary.total_invoices || 0 }}</p>
-        <p class="text-xs text-gray-400 mt-1">Rechnungen</p>
-      </div>
-      <div class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-sm p-5">
-        <p class="text-xs font-semibold text-emerald-100 uppercase tracking-widest mb-2">Bezahlt</p>
-        <p class="text-2xl font-bold text-white">{{ formatCurrency(summary.paid_amount) }}</p>
-        <p class="text-xs text-emerald-200 mt-1">Eingegangen</p>
-      </div>
-      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Ausstehend</p>
-        <p class="text-2xl font-bold text-amber-600">{{ formatCurrency(summary.pending_amount) }}</p>
-        <p class="text-xs text-gray-400 mt-1">Offen</p>
-      </div>
-      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Überfällig</p>
-        <p class="text-2xl font-bold" :class="(summary.overdue_amount || 0) > 0 ? 'text-red-600' : 'text-gray-400'">
-          {{ formatCurrency(summary.overdue_amount) }}
-        </p>
-        <p class="text-xs text-gray-400 mt-1">Fällig</p>
-      </div>
+    <!-- ═══ KPI STRIP ═══ -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-1.5 text-sm">
+      <span class="text-gray-400 text-xs font-semibold uppercase tracking-widest">{{ summary.total_invoices || 0 }} Rechnungen</span>
+      <span class="w-px h-4 bg-gray-200 hidden sm:block"/>
+      <span class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+        <span class="text-gray-500 text-xs">Bezahlt</span>
+        <span class="font-semibold text-gray-900">{{ formatCurrency(summary.paid_amount) }}</span>
+      </span>
+      <span class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
+        <span class="text-gray-500 text-xs">Ausstehend</span>
+        <span class="font-semibold text-amber-600">{{ formatCurrency(summary.pending_amount) }}</span>
+      </span>
+      <span class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full inline-block" :class="(summary.overdue_amount || 0) > 0 ? 'bg-red-500' : 'bg-gray-200'"></span>
+        <span class="text-gray-500 text-xs">Überfällig</span>
+        <span class="font-semibold" :class="(summary.overdue_amount || 0) > 0 ? 'text-red-600' : 'text-gray-400'">{{ formatCurrency(summary.overdue_amount) }}</span>
+      </span>
     </div>
 
     <!-- ═══ FILTER BAR ═══ -->
@@ -204,6 +199,9 @@
               <td class="px-5 py-3.5 text-right">
                 <p class="text-sm font-bold text-gray-900">{{ formatCurrency(invoice.total_amount_rappen) }}</p>
                 <p v-if="invoice.discount_amount_rappen > 0" class="text-xs text-emerald-600 mt-0.5">-{{ formatCurrency(invoice.discount_amount_rappen) }}</p>
+                <p v-if="invoice.paid_amount_rappen > 0 && invoice.paid_amount_rappen < invoice.total_amount_rappen" class="text-xs text-amber-600 mt-0.5 font-medium">
+                  {{ formatCurrency(invoice.paid_amount_rappen) }} bezahlt
+                </p>
               </td>
               <td class="px-5 py-3.5">
                 <div class="flex flex-wrap gap-1">
@@ -527,16 +525,14 @@ const handleSendInvoice = async (id: string) => {
   try {
     logger.debug('📤 Send invoice requested:', id)
     
-    // Verwende die Funktion aus dem useInvoices Composable
     const result = await sendInvoice(id)
     
-    if (result && 'success' in result && result.success) {
+    if (result && !result.error) {
       logger.debug('✅ Invoice sent successfully')
-      // Modal schließen und Daten neu laden
       showDetailModal.value = false
       await refreshData()
     } else {
-      console.error('❌ Failed to send invoice:', result)
+      console.error('❌ Failed to send invoice:', result?.error)
     }
   } catch (error) {
     console.error('Fehler beim Versenden der Rechnung:', error)
@@ -565,16 +561,14 @@ const handleCancelInvoice = async (id: string) => {
   try {
     logger.debug('❌ Cancel invoice requested:', id)
     
-    // Verwende die Funktion aus dem useInvoices Composable
     const result = await cancelInvoice(id)
     
-    if (result && 'success' in result && result.success) {
+    if (result && !result.error) {
       logger.debug('✅ Invoice cancelled successfully')
-      // Modal schließen und Daten neu laden
       showDetailModal.value = false
       await refreshData()
     } else {
-      console.error('❌ Failed to cancel invoice:', result)
+      console.error('❌ Failed to cancel invoice:', result?.error)
     }
   } catch (error) {
     console.error('Fehler beim Stornieren der Rechnung:', error)

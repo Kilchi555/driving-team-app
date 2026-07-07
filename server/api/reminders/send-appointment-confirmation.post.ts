@@ -186,6 +186,22 @@ export default defineEventHandler(async (event) => {
     const isLessonType = !appointment.event_type_code
       || LESSON_TYPES.has(appointment.event_type_code)
 
+    // 7c. Look up meeting_type from invited_customers (for non-lesson types like meetings)
+    let meeting_type: 'in_person' | 'phone' | 'online' | undefined
+    let meeting_link: string | undefined
+    if (!isLessonType && user.email) {
+      const { data: invite } = await supabase
+        .from('invited_customers')
+        .select('meeting_type, meeting_link')
+        .eq('appointment_id', appointmentId)
+        .ilike('email', user.email)
+        .maybeSingle()
+      if (invite) {
+        meeting_type = (invite as any).meeting_type || undefined
+        meeting_link = (invite as any).meeting_link || undefined
+      }
+    }
+
     // 8. Get payment data
     const payment = Array.isArray(appointment.payments)
       ? appointment.payments[0]
@@ -226,8 +242,8 @@ export default defineEventHandler(async (event) => {
           type: 'appointment_confirmation',
           staffName,
           staffPhone,
-          location: locationDisplay,
-          locationAddress: locationAddressDisplay,
+          location: meeting_type === 'phone' || meeting_type === 'online' ? undefined : locationDisplay,
+          locationAddress: meeting_type === 'phone' || meeting_type === 'online' ? undefined : locationAddressDisplay,
           tenantName: tenant.name,
           tenantId,
           tenantSlug: tenant.slug,
@@ -239,6 +255,8 @@ export default defineEventHandler(async (event) => {
           durationMinutes,
           showPrice,
           isLessonType,
+          meeting_type,
+          meeting_link,
         }
       })
 
