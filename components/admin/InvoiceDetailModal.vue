@@ -145,6 +145,20 @@
                     <dt class="text-sm text-gray-500 flex-shrink-0">Zahlung</dt>
                     <dd><PaymentStatusBadge :status="invoice.payment_status" /></dd>
                   </div>
+                  <template v-if="invoice.paid_amount_rappen">
+                    <div class="flex items-center justify-between gap-2">
+                      <dt class="text-sm text-gray-500 flex-shrink-0">Bezahlt</dt>
+                      <dd class="text-sm font-medium text-green-600">{{ formatCurrency(invoice.paid_amount_rappen) }}</dd>
+                    </div>
+                    <div v-if="invoice.payment_status === 'partial'" class="flex items-center justify-between gap-2">
+                      <dt class="text-sm text-gray-500 flex-shrink-0">Ausstehend</dt>
+                      <dd class="text-sm font-medium text-amber-600">{{ formatCurrency(invoice.total_amount_rappen - invoice.paid_amount_rappen) }}</dd>
+                    </div>
+                    <div v-if="invoice.paid_at" class="flex items-center justify-between gap-2">
+                      <dt class="text-sm text-gray-500 flex-shrink-0">Bezahlt am</dt>
+                      <dd class="text-sm text-gray-900">{{ formatDate(invoice.paid_at) }}</dd>
+                    </div>
+                  </template>
                   <div class="flex items-center justify-between gap-2">
                     <dt class="text-sm text-gray-500 flex-shrink-0">Erstellt</dt>
                     <dd class="text-sm text-gray-900">{{ formatDate(invoice.created_at) }}</dd>
@@ -545,6 +559,8 @@ interface Invoice {
   total_amount_rappen: number
   notes?: string
   internal_notes?: string
+  paid_amount_rappen?: number
+  paid_at?: string
   billing_company_name?: string
   billing_contact_person?: string
   billing_street?: string
@@ -649,7 +665,8 @@ const confirmMarkAsPaid = async () => {
       },
     })
     showMarkPaidDialog.value = false
-    emit('markAsPaid', props.invoice.id)
+    // Use 'updated' so the parent only refreshes — avoids a second overwriting write via handleMarkAsPaid
+    emit('updated', props.invoice.id)
   } catch (e) {
     console.error('Mark as paid failed:', e)
   } finally {
