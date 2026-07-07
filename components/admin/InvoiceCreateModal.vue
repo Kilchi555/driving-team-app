@@ -12,7 +12,7 @@
         </button>
       </div>
 
-      <form class="space-y-6" @submit.prevent="createInvoice">
+      <form class="space-y-6" @submit.prevent="createInvoiceHandler">
         <!-- Kunde suchen -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Kunde *</label>
