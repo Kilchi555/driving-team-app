@@ -536,7 +536,7 @@ const emit = defineEmits<{
 
 // Composables
 const { createInvoice } = useInvoices()
-const { loadProducts: fetchProducts } = useProducts()
+const { loadProducts: fetchProducts, products } = useProducts()
 const { primaryColor, defaultVatRate, invoiceIntroText, invoicePaymentTerms, invoiceFooterText } = useTenantBranding()
 
 // Customer search
@@ -876,6 +876,16 @@ onMounted(async () => {
   if (invoiceIntroText.value) formData.value.notes = invoiceIntroText.value
   if (invoicePaymentTerms.value) formData.value.payment_terms = invoicePaymentTerms.value
   if (invoiceFooterText.value) formData.value.footer_text = invoiceFooterText.value
+
+  // Register click-outside handler BEFORE any await (lifecycle APIs can't be used after await)
+  const closeMenu = (e: MouseEvent) => {
+    if (templateMenuRef.value && !templateMenuRef.value.contains(e.target as Node)) {
+      showTemplateMenu.value = false
+    }
+  }
+  document.addEventListener('click', closeMenu)
+  onBeforeUnmount(() => document.removeEventListener('click', closeMenu))
+
   await fetchProducts()
 
   // Pre-select company if passed in (e.g. opened from company detail modal)
@@ -892,14 +902,6 @@ onMounted(async () => {
       city: props.initialCompany.city || '',
     })
   }
-
-  const closeMenu = (e: MouseEvent) => {
-    if (templateMenuRef.value && !templateMenuRef.value.contains(e.target as Node)) {
-      showTemplateMenu.value = false
-    }
-  }
-  document.addEventListener('click', closeMenu)
-  onBeforeUnmount(() => document.removeEventListener('click', closeMenu))
 })
 
 // If branding loads after mount, fill texts once
