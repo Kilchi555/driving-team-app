@@ -24,14 +24,19 @@ export default defineEventHandler(async (event) => {
 
   if (!user_id && !company_id) throw createError({ statusCode: 400, statusMessage: 'user_id or company_id required' })
 
-  // Resolve user IDs
+  // Resolve user IDs (and names for company context)
   let userIds: string[] = []
+  const userNameMap: Record<string, string> = {}
+
   if (user_id) {
     userIds = [user_id]
   } else if (company_id) {
     const { data: companyUsers } = await supabase
-      .from('users').select('id').eq('company_id', company_id).eq('tenant_id', profile.tenant_id)
+      .from('users').select('id, first_name, last_name').eq('company_id', company_id).eq('tenant_id', profile.tenant_id)
     userIds = (companyUsers || []).map((u: any) => u.id)
+    for (const u of (companyUsers || [])) {
+      userNameMap[u.id] = `${u.first_name || ''} ${u.last_name || ''}`.trim()
+    }
     if (userIds.length === 0) return { success: true, items: [] }
   }
 
@@ -62,6 +67,8 @@ export default defineEventHandler(async (event) => {
       unit: 'Lektion',
       payment_method: p.payment_method,
       status: p.payment_status,
+      user_id: p.user_id,
+      user_name: userNameMap[p.user_id] || null,
     })
   }
 
@@ -85,6 +92,8 @@ export default defineEventHandler(async (event) => {
       date: null,
       amount_rappen: course?.price_per_participant_rappen || r.amount_paid_rappen || 0,
       unit: 'Kurs',
+      user_id: r.user_id,
+      user_name: userNameMap[r.user_id] || null,
     })
   }
 
@@ -109,6 +118,8 @@ export default defineEventHandler(async (event) => {
       date: r.start_time,
       amount_rappen: r.room_cost_rappen || 0,
       unit: 'Reservierung',
+      user_id: r.booked_by,
+      user_name: userNameMap[r.booked_by] || null,
     })
   }
 
@@ -134,6 +145,8 @@ export default defineEventHandler(async (event) => {
       date: v.start_time,
       amount_rappen: v.cost_rappen || 0,
       unit: 'Reservierung',
+      user_id: v.booked_by,
+      user_name: userNameMap[v.booked_by] || null,
     })
   }
 

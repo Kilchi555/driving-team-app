@@ -76,7 +76,7 @@
         </div>
 
         <!-- Offene Positionen (Kurse, Räume, Fahrzeuge) -->
-        <div v-if="formData.user_id" class="border-t pt-4">
+        <div v-if="formData.user_id || selectedCompanyId" class="border-t pt-4">
           <div class="flex items-center justify-between mb-3">
             <h4 class="text-sm font-semibold text-gray-800">Offene Positionen</h4>
             <button type="button" @click="loadOpenItems" class="text-xs text-blue-600 hover:underline">
@@ -94,7 +94,13 @@
                 @change="toggleOpenItem(item)"
                 class="rounded" />
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-gray-900">{{ item.label }}</p>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <p class="text-sm font-medium text-gray-900">{{ item.label }}</p>
+                  <span v-if="item.user_name && selectedCompanyId"
+                    class="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
+                    {{ item.user_name }}
+                  </span>
+                </div>
                 <p v-if="item.date" class="text-xs text-gray-500">{{ formatDate(item.date) }}</p>
                 <p v-if="item.payment_method && item.payment_method !== 'invoice'" class="text-xs text-amber-600">
                   bisherige Methode: {{ item.payment_method }}
