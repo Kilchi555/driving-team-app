@@ -133,7 +133,7 @@ export default defineEventHandler(async (event) => {
             <!-- Header -->
             <div class="header">
               <h1>💰 Deine Kostenberechnung</h1>
-              <p style="margin: 10px 0 0 0; color: #666;">Fahrschule Driving Team</p>
+              <p style="margin: 10px 0 0 0; color: #666;">Ihre Fahrschule</p>
             </div>
 
             <!-- Main Content -->
@@ -185,7 +185,7 @@ export default defineEventHandler(async (event) => {
                   <p style="margin: 5px 0 0 0;"><a href="mailto:info@drivingteam.ch" style="color: #0066cc; text-decoration: none;">info@drivingteam.ch</a></p>
                 </div>
               </div>
-              <p style="margin-top: 20px; color: #999;">Fahrschule Driving Team | Zürich & Lachen</p>
+              <p style="margin-top: 20px; color: #999;">Ihre Fahrschule | Zürich & Lachen</p>
             </div>
           </div>
         </body>
@@ -195,7 +195,7 @@ export default defineEventHandler(async (event) => {
     const response = await resend.emails.send({
       from: 'noreply@drivingteam.ch',
       to: body.email,
-      subject: `💰 Deine Kostenberechnung - ${body.category} - Fahrschule Driving Team`,
+      subject: `💰 Deine Kostenberechnung - ${body.category} - Ihre Fahrschule`,
       html: htmlContent,
     })
 

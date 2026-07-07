@@ -283,7 +283,7 @@ export default defineEventHandler(async (event) => {
         courseName: course?.name   || '',
         courseDate,
         location:   course?.description || undefined,
-        tenantName: tenant?.name        || 'Driving Team',
+        tenantName: tenant?.name        || 'Ihre Fahrschule',
         tenantEmail: tenant?.contact_email || undefined,
         reason:     reason || undefined,
         primaryColor: tenant?.primary_color || undefined,

@@ -302,7 +302,7 @@ export default defineEventHandler(async (event) => {
         const { Resend } = await import('resend')
         const resend = new Resend(resendApiKey)
 
-        const displayName = tenantName || 'Driving Team'
+        const displayName = tenantName || 'Ihre Fahrschule'
         const greeting = user.first_name ? `Hallo ${user.first_name}` : `Hallo`
         const logoImgTag = tenantLogoUrl
           ? `<img src="${tenantLogoUrl}" alt="${displayName}" style="height:40px;max-width:200px;object-fit:contain;display:block;margin:0 auto;">`

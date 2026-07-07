@@ -85,7 +85,7 @@ export default defineEventHandler(async (event) => {
     .eq('id', tenantId)
     .single()
 
-  const tenantName   = tenant?.name || 'Driving Team'
+  const tenantName   = tenant?.name || 'Ihre Fahrschule'
   const primaryColor = tenant?.primary_color || '#2563eb'
   const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
   const dashboardLink = tenant?.slug ? `https://app.simy.ch/${tenant.slug}/customer` : 'https://app.simy.ch'

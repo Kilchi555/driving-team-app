@@ -811,7 +811,7 @@ export function generateCategoryWaitlistNotificationEmail(data: {
     firstName,
     categoryName,
     bookingUrl,
-    tenantName = 'Driving Team',
+    tenantName = 'Ihre Fahrschule',
     primaryColor = '#1d4ed8',
     logoUrl = null,
   } = data

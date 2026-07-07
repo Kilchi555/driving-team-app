@@ -31,7 +31,7 @@ function baseLayout(title: string, body: string): string {
         </tr>
         <tr>
           <td style="background-color:#f9fafb;padding:20px 30px;border-top:1px solid #e5e7eb;text-align:center;">
-            <p style="color:#6b7280;font-size:12px;margin:0;">Driving Team Zürich GmbH · Vulkanstrasse 130b · 8048 Zürich</p>
+            <p style="color:#6b7280;font-size:12px;margin:0;">Ihre Fahrschule</p>
           </td>
         </tr>
       </table>

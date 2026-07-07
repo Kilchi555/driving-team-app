@@ -218,7 +218,7 @@ export default defineEventHandler(async (event) => {
     const dedupKey = `${item.id}:${session.id}`
     if (!testRegistrationId && alreadyQueuedParticipant.has(dedupKey)) { skipped++; continue }
 
-    const tenantName   = tenant?.name || 'Driving Team'
+    const tenantName   = tenant?.name || 'Ihre Fahrschule'
     const primaryColor = tenant?.primary_color || '#2563eb'
     const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
     const dashboardLink = tenant?.slug ? `https://app.simy.ch/${tenant.slug}/customer` : 'https://app.simy.ch'
@@ -250,7 +250,7 @@ export default defineEventHandler(async (event) => {
 
     const tenantId = session.tenant_id
     const tenant = tenantMap.get(tenantId)
-    const tenantName   = tenant?.name || 'Driving Team'
+    const tenantName   = tenant?.name || 'Ihre Fahrschule'
     const primaryColor = tenant?.primary_color || '#2563eb'
     const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
 

@@ -254,7 +254,7 @@ export default defineEventHandler(async (event) => {
       .eq('id', userProfile.tenant_id)
       .single()
 
-    const tenantName = tenant?.name || 'Driving Team'
+    const tenantName = tenant?.name || 'Ihre Fahrschule'
     const smsSenderName = tenant?.twilio_from_sender || tenantName
     const loginLink = tenant?.slug ? `${baseUrl}/${tenant.slug}` : baseUrl
 

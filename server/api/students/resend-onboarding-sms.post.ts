@@ -201,8 +201,8 @@ export default defineEventHandler(async (event: H3Event) => {
       .eq('id', tenantId)
       .single()
 
-    const senderName = tenant?.twilio_from_sender || tenant?.name || 'Driving Team'
-    const tenantName = tenant?.name || 'Driving Team'
+    const senderName = tenant?.twilio_from_sender || tenant?.name || 'Ihre Fahrschule'
+    const tenantName = tenant?.name || 'Ihre Fahrschule'
     const tenantSlug = tenant?.slug || ''
     const loginLink = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : 'https://app.simy.ch/login'
 

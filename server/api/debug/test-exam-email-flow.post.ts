@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
     Array.isArray((tenant as any).google_review_places) ? (tenant as any).google_review_places : []
 
   const primaryColor = (tenant as any).primary_color || '#2563eb'
-  const tenantName   = (tenant as any).name || 'Driving Team'
+  const tenantName   = (tenant as any).name || 'Ihre Fahrschule'
   const tenantSlug   = (tenant as any).slug || ''
   const affiliateUrl = tenantSlug
     ? `https://app.simy.ch/affiliate-dashboard?tenant=${tenantSlug}`
