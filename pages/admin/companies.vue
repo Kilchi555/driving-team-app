@@ -264,12 +264,21 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Invoice Create Modal (opened from company Rechnungen tab) -->
+    <InvoiceCreateModal
+      v-if="showInvoiceCreateModal"
+      :initial-company="editingCompany"
+      @close="showInvoiceCreateModal = false"
+      @created="onInvoiceCreated"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import InvoiceCreateModal from '~/components/admin/InvoiceCreateModal.vue'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useHead({ title: 'Firmenkunden' })
@@ -401,6 +410,7 @@ async function removeUser(user: any) {
 
 // ── Rechnungen ───────────────────────────────────────────────────────────────
 const companyInvoices = ref<any[]>([])
+const showInvoiceCreateModal = ref(false)
 
 async function loadCompanyInvoices() {
   if (!editingCompany.value?.id) return
@@ -413,8 +423,12 @@ async function loadCompanyInvoices() {
 }
 
 function createInvoiceForCompany() {
-  // Navigate to invoices page with company pre-selected
-  navigateTo(`/admin/invoices?company_id=${editingCompany.value?.id}`)
+  showInvoiceCreateModal.value = true
+}
+
+function onInvoiceCreated() {
+  showInvoiceCreateModal.value = false
+  loadCompanyInvoices()
 }
 
 onMounted(load)
