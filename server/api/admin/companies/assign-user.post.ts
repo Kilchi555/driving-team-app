@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
 
   const { error } = await supabase
     .from('users')
-    .update({ company_id: company_id || null, updated_at: new Date().toISOString() })
+    .update({ company_id: company_id || null })
     .eq('id', user_id)
     .eq('tenant_id', profile.tenant_id)
 
