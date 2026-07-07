@@ -189,6 +189,7 @@ export default defineEventHandler(async (event) => {
     tenantLogoBase64,
     tenantLogoFormat,
     customerName,
+    billingCompanyName: (invoice as any).billing_company_name || '',
     billingStreet: invoice.billing_street || '',
     billingZip: invoice.billing_zip || '',
     billingCity: invoice.billing_city || '',

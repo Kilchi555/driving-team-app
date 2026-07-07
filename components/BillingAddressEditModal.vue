@@ -3,7 +3,7 @@
     <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
       <div class="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         <!-- Header -->
-        <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-5 flex items-center justify-between flex-shrink-0">
+        <div class="px-6 py-5 flex items-center justify-between flex-shrink-0" :style="{ background: primaryColor }">
           <div class="flex items-center gap-3">
             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
@@ -35,26 +35,25 @@
             <input
               v-model="form.company_name"
               type="text"
-              class="w-full px-4 py-2.5 border rounded-lg text-sm transition focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              class="w-full px-4 py-2.5 border rounded-lg text-sm transition focus:ring-2 focus:border-transparent"
               :class="showErrors && !form.company_name ? 'border-red-300 bg-red-50' : 'border-gray-300'"
               placeholder="Muster AG"
             />
             <p v-if="showErrors && !form.company_name" class="text-xs text-red-500">Pflichtfeld</p>
           </div>
 
-          <!-- Kontaktperson -->
+          <!-- Kontaktperson (optional) -->
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-gray-900">
-              Kontaktperson <span class="text-red-500">*</span>
+              Kontaktperson
+              <span class="text-xs font-normal text-gray-400 ml-1">(optional, nur als Referenz)</span>
             </label>
             <input
               v-model="form.contact_person"
               type="text"
-              class="w-full px-4 py-2.5 border rounded-lg text-sm transition focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              :class="showErrors && !form.contact_person ? 'border-red-300 bg-red-50' : 'border-gray-300'"
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm transition focus:ring-2 focus:border-transparent"
               placeholder="Max Muster"
             />
-            <p v-if="showErrors && !form.contact_person" class="text-xs text-red-500">Pflichtfeld</p>
           </div>
 
           <!-- E-Mail -->
@@ -65,7 +64,7 @@
             <input
               v-model="form.email"
               type="email"
-              class="w-full px-4 py-2.5 border rounded-lg text-sm transition focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              class="w-full px-4 py-2.5 border rounded-lg text-sm transition focus:ring-2 focus:border-transparent"
               :class="showErrors && !form.email ? 'border-red-300 bg-red-50' : 'border-gray-300'"
               placeholder="info@muster.ch"
             />
@@ -78,7 +77,7 @@
             <input
               v-model="form.phone"
               type="tel"
-              class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm transition focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm transition focus:ring-2 focus:border-transparent"
               placeholder="+41 44 123 45 67"
             />
           </div>
@@ -93,7 +92,7 @@
                 <input
                   v-model="form.street"
                   type="text"
-                  class="w-full px-4 py-2.5 border rounded-lg text-sm transition focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  class="w-full px-4 py-2.5 border rounded-lg text-sm transition focus:ring-2 focus:border-transparent"
                   :class="showErrors && !form.street ? 'border-red-300 bg-red-50' : 'border-gray-300'"
                   placeholder="Hauptstrasse"
                 />
@@ -102,7 +101,7 @@
                 <input
                   v-model="form.street_number"
                   type="text"
-                  class="w-full px-4 py-2.5 border rounded-lg text-sm transition focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  class="w-full px-4 py-2.5 border rounded-lg text-sm transition focus:ring-2 focus:border-transparent"
                   :class="showErrors && !form.street_number ? 'border-red-300 bg-red-50' : 'border-gray-300'"
                   placeholder="Nr."
                 />
@@ -111,7 +110,7 @@
                 <input
                   v-model="form.zip"
                   type="text"
-                  class="w-full px-4 py-2.5 border rounded-lg text-sm transition focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  class="w-full px-4 py-2.5 border rounded-lg text-sm transition focus:ring-2 focus:border-transparent"
                   :class="showErrors && !form.zip ? 'border-red-300 bg-red-50' : 'border-gray-300'"
                   placeholder="PLZ"
                 />
@@ -120,7 +119,7 @@
                 <input
                   v-model="form.city"
                   type="text"
-                  class="w-full px-4 py-2.5 border rounded-lg text-sm transition focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  class="w-full px-4 py-2.5 border rounded-lg text-sm transition focus:ring-2 focus:border-transparent"
                   :class="showErrors && !form.city ? 'border-red-300 bg-red-50' : 'border-gray-300'"
                   placeholder="Stadt"
                 />
@@ -132,9 +131,13 @@
           <!-- Vollständigkeit Indikator -->
           <div class="flex items-center gap-2 pt-1">
             <div class="flex gap-1">
-              <div v-for="n in 6" :key="n" class="w-6 h-1.5 rounded-full transition-colors" :class="n <= completedFields ? 'bg-indigo-500' : 'bg-gray-200'"></div>
+              <div
+                v-for="n in 5" :key="n"
+                class="w-6 h-1.5 rounded-full transition-colors"
+                :style="n <= completedFields ? { background: primaryColor } : { background: '#e5e7eb' }"
+              ></div>
             </div>
-            <span class="text-xs text-gray-500">{{ completedFields }}/6 Pflichtfelder ausgefüllt</span>
+            <span class="text-xs text-gray-500">{{ completedFields }}/5 Pflichtfelder ausgefüllt</span>
           </div>
         </div>
 
@@ -150,7 +153,7 @@
             @click="trySave"
             :disabled="isSaving"
             class="flex-1 px-4 py-2.5 text-white rounded-lg transition-all font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            :class="isComplete ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700' : 'bg-gray-300 cursor-not-allowed'"
+            :style="isComplete ? { background: primaryColor } : { background: '#d1d5db' }"
           >
             <svg v-if="isSaving" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -167,6 +170,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { logger } from '~/utils/logger'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 interface Props {
   isOpen: boolean
@@ -179,6 +183,8 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'saved'): void
 }>()
+
+const { primaryColor } = useTenantBranding()
 
 const isSaving = ref(false)
 const saveError = ref<string | null>(null)
@@ -232,7 +238,6 @@ watch(
 const completedFields = computed(() => {
   return [
     form.value.company_name,
-    form.value.contact_person,
     form.value.email,
     form.value.street,
     form.value.street_number,
@@ -243,7 +248,6 @@ const completedFields = computed(() => {
 const isComplete = computed(() => {
   return !!(
     form.value.company_name &&
-    form.value.contact_person &&
     form.value.email &&
     form.value.street &&
     form.value.street_number &&

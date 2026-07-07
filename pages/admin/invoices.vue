@@ -279,6 +279,9 @@ import InvoiceCreateModal from '~/components/admin/InvoiceCreateModal.vue'
 import InvoiceDetailModal from '~/components/admin/InvoiceDetailModal.vue'
 import CamtImportModal from '~/components/admin/CamtImportModal.vue'
 import type { InvoiceStatus, PaymentStatus, InvoiceFilters } from '~/types/invoice'
+import { useUIStore } from '~/stores/ui'
+
+const uiStore = useUIStore()
 
 definePageMeta({
   layout: 'admin',
@@ -492,13 +495,16 @@ const changePage = async (page: number) => {
 }
 
 const viewInvoice = async (id: string) => {
-  // Reset den Flag für den Bearbeitungsmodus
   shouldStartInEditMode.value = false
-  
+  selectedInvoiceWithItems.value = null  // alte Daten löschen
   selectedInvoiceId.value = id
+  showDetailModal.value = true  // Modal sofort öffnen (mit Basisdaten aus der Liste)
+
+  // Items im Hintergrund nachladen und modal aktualisieren
   const invoiceWithItems = await fetchInvoiceWithItems(id)
-  selectedInvoiceWithItems.value = invoiceWithItems
-  showDetailModal.value = true
+  if (invoiceWithItems && showDetailModal.value) {
+    selectedInvoiceWithItems.value = invoiceWithItems
+  }
 }
 
 const handleEditInvoice = async (id: string) => {
@@ -524,18 +530,42 @@ const handleEditInvoice = async (id: string) => {
 const handleSendInvoice = async (id: string) => {
   try {
     logger.debug('📤 Send invoice requested:', id)
-    
-    const result = await sendInvoice(id)
-    
-    if (result && !result.error) {
-      logger.debug('✅ Invoice sent successfully')
+
+    // E-Mail mit PDF-Anhang versenden
+    const resendResult = await $fetch<any>('/api/invoices/resend', {
+      method: 'POST',
+      body: { invoiceId: id }
+    })
+
+    if (resendResult?.success) {
+      // Status in DB auf 'sent' setzen
+      await sendInvoice(id)
+      logger.debug('✅ Invoice sent successfully to:', resendResult.sentTo)
+      uiStore.addNotification({
+        type: 'success',
+        title: 'Rechnung versendet',
+        message: `Rechnung ${resendResult.invoiceNumber} wurde an ${resendResult.sentTo} versendet.`,
+        duration: 5000
+      })
       showDetailModal.value = false
       await refreshData()
     } else {
-      console.error('❌ Failed to send invoice:', result?.error)
+      console.error('❌ Failed to send invoice:', resendResult?.error)
+      uiStore.addNotification({
+        type: 'error',
+        title: 'Fehler beim Versenden',
+        message: resendResult?.error || 'Die Rechnung konnte nicht versendet werden.',
+        duration: 6000
+      })
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Fehler beim Versenden der Rechnung:', error)
+    uiStore.addNotification({
+      type: 'error',
+      title: 'Fehler beim Versenden',
+      message: error?.data?.statusMessage || error?.message || 'Die Rechnung konnte nicht versendet werden.',
+      duration: 6000
+    })
   }
 }
 
@@ -581,9 +611,10 @@ const onInvoiceCreated = async () => {
 }
 
 const handleModalClose = () => {
-  // Reset den Flag für den Bearbeitungsmodus
   shouldStartInEditMode.value = false
   showDetailModal.value = false
+  selectedInvoiceWithItems.value = null
+  selectedInvoiceId.value = ''
 }
 
 const onInvoiceUpdated = async () => {

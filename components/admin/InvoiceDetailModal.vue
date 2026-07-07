@@ -66,7 +66,7 @@
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span class="hidden sm:inline">Als bezahlt markieren</span>
+                <span class="hidden sm:inline">Zahlung erfassen</span>
               </button>
               <!-- Cancel invoice -->
               <button
@@ -201,6 +201,27 @@
                     </dd>
                   </div>
                 </dl>
+
+                <!-- Versandhistorie -->
+                <div v-if="(invoice as any).sent_at || invoice.created_at" class="pt-2 mt-2 border-t border-gray-200 space-y-1.5">
+                  <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Versandhistorie</p>
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-2 text-xs text-gray-500">
+                      <span class="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0"></span>
+                      <span>Erstellt</span>
+                      <span class="ml-auto text-gray-700">{{ formatDate(invoice.created_at) }}</span>
+                    </div>
+                    <div v-if="(invoice as any).sent_at" class="flex items-center gap-2 text-xs text-gray-500">
+                      <span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
+                      <span>Versendet</span>
+                      <span class="ml-auto text-gray-700">{{ formatDateTime((invoice as any).sent_at) }}</span>
+                    </div>
+                    <div v-else class="flex items-center gap-2 text-xs text-gray-400 italic">
+                      <span class="w-1.5 h-1.5 rounded-full bg-gray-200 flex-shrink-0"></span>
+                      <span>Noch nicht versendet</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- Rechnungsadresse -->
@@ -307,6 +328,41 @@
               </div>
             </div>
 
+            <!-- ── Zahlungshistorie ── -->
+            <div v-if="invoicePaymentsHistory.length > 0" class="bg-gray-50 rounded-xl p-4">
+              <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Zahlungshistorie</h4>
+              <div class="space-y-2">
+                <div
+                  v-for="(payment, index) in invoicePaymentsHistory"
+                  :key="payment.id"
+                  class="flex items-center justify-between gap-3 bg-white rounded-lg px-3 py-2.5 border border-gray-100"
+                >
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="w-5 h-5 rounded-full bg-green-100 text-green-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                      {{ index + 1 }}
+                    </span>
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium text-gray-900">{{ formatCurrency(payment.amount_rappen) }}</p>
+                      <p class="text-xs text-gray-400">
+                        {{ formatDate(payment.payment_date) }}
+                        <span v-if="payment.payment_method && payment.payment_method !== 'manual'" class="ml-1">· {{ payment.payment_method }}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 flex-shrink-0">
+                    Bezahlt
+                  </span>
+                </div>
+                <!-- Summe -->
+                <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 mt-1 pt-2">
+                  <span class="text-xs font-semibold text-gray-500">Total bezahlt</span>
+                  <span class="text-sm font-bold text-green-600">
+                    {{ formatCurrency(invoicePaymentsHistory.reduce((sum, p) => sum + p.amount_rappen, 0)) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <!-- ── Rechnungsübersicht ── -->
             <div class="bg-gray-50 rounded-xl p-4">
               <div class="flex items-center justify-between mb-4">
@@ -406,7 +462,7 @@
                 <div class="w-full sm:w-64 space-y-1.5 border-t border-gray-200 pt-3">
                   <div v-if="invoice.discount_amount_rappen > 0" class="flex justify-between text-sm text-gray-600">
                     <span>Zwischentotal</span>
-                    <span>{{ formatCurrency(invoice.subtotal_rappen + invoice.discount_amount_rappen) }}</span>
+                    <span>{{ formatCurrency(invoice.subtotal_rappen) }}</span>
                   </div>
                   <div v-if="invoice.discount_amount_rappen > 0" class="flex justify-between text-sm text-emerald-600">
                     <span>Rabatt</span>
@@ -500,7 +556,7 @@
               />
             </div>
             <div>
-              <label class="block text-xs font-medium text-gray-600 mb-1">Notiz (optional)</label>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Zahlungsart</label>
               <input
                 v-model="paidNote"
                 type="text" placeholder="z.B. TWINT, Bar, Banküberweisung…"
@@ -667,6 +723,21 @@ const paidAtDate = ref(new Date().toISOString().slice(0, 10))
 const paidNote = ref('')
 const isMarkingPaid = ref(false)
 
+// Zahlungshistorie
+const invoicePaymentsHistory = ref<any[]>([])
+
+const loadInvoicePaymentsHistory = async () => {
+  if (!props.invoice?.id) return
+  try {
+    const res = await $fetch<any>('/api/invoices/get-invoice-payments', {
+      query: { invoice_id: props.invoice.id }
+    })
+    invoicePaymentsHistory.value = res?.data ?? []
+  } catch (e) {
+    console.error('Failed to load invoice payments history:', e)
+  }
+}
+
 const openMarkPaidDialog = () => {
   if (props.invoice) {
     const alreadyPaid = props.invoice.paid_amount_rappen || 0
@@ -692,10 +763,12 @@ const confirmMarkAsPaid = async () => {
         paid_amount_rappen: paidRappen,
         paid_at: new Date(paidAtDate.value).toISOString(),
         note: paidNote.value || undefined,
+        payment_method: paidNote.value || 'manual',
       },
     })
     showMarkPaidDialog.value = false
-    // Use 'updated' so the parent only refreshes — avoids a second overwriting write via handleMarkAsPaid
+    // Zahlungshistorie sofort aktualisieren
+    await loadInvoicePaymentsHistory()
     emit('updated', props.invoice.id)
   } catch (e) {
     console.error('Mark as paid failed:', e)
@@ -778,6 +851,7 @@ const loadDetailedData = async () => {
   try {
     // ✅ Lade alle Payments für diese Rechnung
     await loadInvoicePayments();
+    await loadInvoicePaymentsHistory();
     
     // ✅ Lade detaillierte Daten via API
     if (props.invoice.user_id) {
@@ -840,10 +914,9 @@ watch(() => props.show, (newShow) => {
   }
 });
 
-// Watch für invoice prop um Daten zu laden wenn sich die Rechnung ändert
-watch(() => props.invoice, (newInvoice) => {
-  if (newInvoice && props.show) {
-    // Kurze Verzögerung um sicherzustellen, dass das Modal vollständig geladen ist
+// Watch für invoice prop: nur neu laden wenn sich die Rechnungs-ID ändert (nicht wenn Items nachgeladen werden)
+watch(() => props.invoice?.id, (newId, oldId) => {
+  if (newId && newId !== oldId && props.show) {
     setTimeout(() => {
       loadDetailedData();
     }, 100);
@@ -911,7 +984,15 @@ const formatCurrency = (rappen: number): string => {
 }
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('de-CH')
+  return new Date(dateString).toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich' })
+}
+
+const formatDateTime = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('de-CH', {
+    timeZone: 'Europe/Zurich',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  })
 }
 
 const formatTime = (dateString: string) => {

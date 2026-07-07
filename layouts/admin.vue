@@ -330,11 +330,14 @@
         </div>
       </div>
     </footer>
+    <!-- Global toast notifications -->
+    <GlobalNotifications />
   </div>
 </template>
 
 <script setup>
 import { ref, watch, watchEffect, nextTick } from 'vue'
+import GlobalNotifications from '~/components/GlobalNotifications.vue'
 import { useRoute } from '#app'
 import { useStatusBar } from '~/composables/useStatusBar'
 import { useTerminology } from '~/composables/useTerminology'

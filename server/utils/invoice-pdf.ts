@@ -71,6 +71,7 @@ export interface InvoicePdfData {
   tenantLogoBase64?: string | null   // base64 PNG/JPEG ohne data:-Prefix
   tenantLogoFormat?: 'png' | 'jpeg'
   customerName: string
+  billingCompanyName?: string
   billingStreet?: string
   billingZip?: string
   billingCity?: string
@@ -194,13 +195,17 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     doc.fontSize(7).fillColor('#94a3b8').font('Helvetica')
       .text(senderParts.join(' · '), margin, addrTop, { width: 300 })
 
-    // Recipient block
+    // Recipient block (nur Adresse, KEINE Kontaktperson)
     doc.rect(margin, addrTop + 12, 210, 78).fill('#f8fafc').stroke('#e2e8f0')
-    doc.fontSize(11).fillColor('#1e293b').font('Helvetica-Bold')
-      .text(data.customerName, margin + 12, addrTop + 22, { width: 186 })
-    doc.font('Helvetica').fontSize(9).fillColor('#64748b')
 
-    let addrY = addrTop + 36
+    let addrY = addrTop + 22
+    // Firmenname oder (falls keine Firma) Kontaktperson als Hauptzeile
+    const addrMainName = data.billingCompanyName || data.customerName
+    doc.fontSize(11).fillColor('#1e293b').font('Helvetica-Bold')
+      .text(addrMainName, margin + 12, addrY, { width: 186 })
+    addrY += 14
+
+    doc.font('Helvetica').fontSize(9).fillColor('#64748b')
     if (data.billingStreet) {
       doc.text(data.billingStreet, margin + 12, addrY, { width: 186 })
       addrY += 13
@@ -211,6 +216,16 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     }
     if (data.billingEmail) {
       doc.fillColor('#64748b').text(data.billingEmail, margin + 12, addrY, { width: 186 })
+    }
+
+    // Kontaktperson als separate Referenzzeile rechts vom Adressblock
+    if (data.billingCompanyName && data.customerName && data.customerName !== data.billingCompanyName) {
+      const refX = margin + 230
+      const refW = W - margin - refX
+      doc.fontSize(7).fillColor('#94a3b8').font('Helvetica')
+        .text('KONTAKTPERSON', refX, addrTop + 22, { width: refW, characterSpacing: 0.4 })
+      doc.fontSize(9).fillColor('#1e293b').font('Helvetica')
+        .text(data.customerName, refX, addrTop + 33, { width: refW })
     }
 
     // ── Items table ──────────────────────────────────────────────────────────
@@ -442,11 +457,12 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
           iy += mm(5)
         }
 
-        // Zahlbar durch (Debtor)
-        if (data.customerName) {
+        // Zahlbar durch (Debtor) — Firmenname hat Vorrang, Kontaktperson nur als Referenz
+        const debtorName = data.billingCompanyName || data.customerName
+        if (debtorName) {
           doc.fontSize(6).font('Helvetica-Bold').fillColor('#000').text('Zahlbar durch', infoX, iy)
           iy += mm(3)
-          doc.fontSize(7).font('Helvetica').text(data.customerName, infoX, iy, { width: infoW })
+          doc.fontSize(7).font('Helvetica').text(debtorName, infoX, iy, { width: infoW })
           iy += mm(3.5)
           if (data.billingStreet) { doc.text(data.billingStreet, infoX, iy, { width: infoW }); iy += mm(3.5) }
           if (data.billingZip || data.billingCity) {
