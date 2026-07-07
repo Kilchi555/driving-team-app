@@ -46,7 +46,13 @@ export default defineEventHandler(async (event) => {
   // ── 1. Unpaid payments (driving lessons) — any payment method, not yet invoiced ─
   const { data: lessonPayments } = await supabase
     .from('payments')
-    .select('id, total_amount_rappen, created_at, payment_method, payment_status, appointment_id, appointments(title, start_time, duration_minutes)')
+    .select(`
+      id, total_amount_rappen, created_at, payment_method, payment_status, user_id, appointment_id,
+      appointments(
+        title, start_time, duration_minutes, type,
+        staff:staff_id(first_name, last_name)
+      )
+    `)
     .in('user_id', userIds)
     .eq('tenant_id', tenantId)
     .in('payment_status', ['pending', 'open', 'processing', 'failed'])
@@ -55,14 +61,18 @@ export default defineEventHandler(async (event) => {
 
   for (const p of (lessonPayments || [])) {
     const apt = (p as any).appointments
+    const staff = apt?.staff
+    const staffName = staff ? `${staff.first_name || ''} ${staff.last_name || ''}`.trim() : null
     items.push({
       type: 'lesson',
       source_id: p.id,
       source_table: 'payments',
       appointment_id: p.appointment_id || null,
       label: apt?.title || 'Fahrstunde',
+      appointment_type: apt?.type || null,
       date: apt?.start_time || p.created_at,
-      duration_minutes: apt?.duration_minutes,
+      duration_minutes: apt?.duration_minutes || null,
+      staff_name: staffName,
       amount_rappen: p.total_amount_rappen || 0,
       unit: 'Lektion',
       payment_method: p.payment_method,
@@ -75,7 +85,7 @@ export default defineEventHandler(async (event) => {
   // ── 2. Uninvoiced course registrations — any payment method, not yet invoiced ──
   const { data: courseRegs } = await supabase
     .from('course_registrations')
-    .select('id, amount_paid_rappen, payment_status, payment_method, course_id, courses(name, price_per_participant_rappen)')
+    .select('id, user_id, amount_paid_rappen, payment_status, payment_method, course_id, courses(name, price_per_participant_rappen, start_date, category)')
     .in('user_id', userIds)
     .eq('tenant_id', tenantId)
     .neq('status', 'cancelled')
@@ -89,7 +99,8 @@ export default defineEventHandler(async (event) => {
       source_id: r.id,
       source_table: 'course_registrations',
       label: course?.name || 'Kursanmeldung',
-      date: null,
+      appointment_type: course?.category || null,
+      date: course?.start_date || null,
       amount_rappen: course?.price_per_participant_rappen || r.amount_paid_rappen || 0,
       unit: 'Kurs',
       user_id: r.user_id,
