@@ -73,12 +73,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: 'First or last name required' })
     }
 
-    const skipSms = body.skip_sms === true
-
-    // Phone is required when SMS onboarding is active
-    if (!skipSms && !body.phone?.trim()) {
-      throw createError({ statusCode: 400, message: 'Phone number required for SMS onboarding' })
-    }
+    // skip_sms vom Client wird später durch die serverseitige Policy überschrieben
 
     // Need at least phone or email to contact the student
     if (!body.phone?.trim() && !body.email?.trim()) {
@@ -161,15 +156,20 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Student created successfully:', newStudentId)
 
-    // 6. LOAD TENANT DATA FOR SMS SENDER NAME
+    // 6. LOAD TENANT DATA (inkl. booking_policy für SMS-Entscheid)
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, slug, twilio_from_sender')
+      .select('name, slug, twilio_from_sender, booking_policy')
       .eq('id', userProfile.tenant_id)
       .single()
 
     let tenantName = tenant?.twilio_from_sender || tenant?.name || 'Ihre Fahrschule'
     let tenantSlug = tenant?.slug || 'driving-team'
+
+    // Serverseitige Policy: onboarding_sms_enabled (Standard: true)
+    const onboardingSmsEnabled = (tenant?.booking_policy as any)?.onboarding_sms_enabled !== false
+    // SMS überspringen wenn Policy deaktiviert ODER kein Telefon vorhanden
+    const skipSms = !onboardingSmsEnabled || body.skip_sms === true
 
     // 7. SEND ONBOARDING INVITATION
     let smsSuccess = false
@@ -177,7 +177,7 @@ export default defineEventHandler(async (event) => {
     let onboardingLink = `https://app.simy.ch/onboarding/${onboardingToken}`
     let loginLink = `https://app.simy.ch/${tenantSlug}`
 
-    // Send SMS if phone exists and not skipped by policy
+    // Send SMS if phone exists and policy allows it
     if (body.phone && !skipSms) {
       try {
         logger.debug('📱 Sending onboarding SMS to:', body.phone)

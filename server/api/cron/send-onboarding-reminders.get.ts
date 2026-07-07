@@ -86,11 +86,11 @@ export default defineEventHandler(async (event) => {
 
   logger.debug(`📋 Found ${students.length} eligible pending student(s)`)
 
-  // ── 2. Load tenant data ──────────────────────────────────────
+  // ── 2. Load tenant data (inkl. booking_policy für Reminder-Einstellungen) ──
   const tenantIds = [...new Set(students.map((s: any) => s.tenant_id))]
   const { data: tenants } = await supabase
     .from('tenants')
-    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url, twilio_from_sender')
+    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url, twilio_from_sender, booking_policy')
     .in('id', tenantIds)
 
   const tenantMap = new Map((tenants || []).map((t: any) => [t.id, t]))
@@ -129,6 +129,17 @@ export default defineEventHandler(async (event) => {
     const reminderDays = getReminderDays(createdAt)
 
     const tenant = tenantMap.get(student.tenant_id)
+    const policy = (tenant?.booking_policy as any) ?? {}
+
+    // Booking-Policy: Reminder gesamt deaktiviert?
+    if (policy.registration_reminder_enabled === false) {
+      logger.debug(`⏭️ Reminders disabled by policy for tenant ${student.tenant_id}, skipping student ${student.id}`)
+      continue
+    }
+
+    const reminderEmailEnabled = policy.registration_reminder_email_enabled !== false  // Standard: true
+    const reminderSmsEnabled   = policy.registration_reminder_sms_enabled   !== false  // Standard: true
+
     const tenantName = tenant?.name || 'Ihre Fahrschule'
     const tenantSlug = tenant?.slug || ''
     const loginLink = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : 'https://app.simy.ch'
@@ -159,7 +170,7 @@ export default defineEventHandler(async (event) => {
 
       const isLastReminder = reminderDay === reminderDays[reminderDays.length - 1]
 
-      if (student.email) {
+      if (student.email && reminderEmailEnabled) {
         // ── EMAIL (primary) ──────────────────────────────────
 
         const subject = reminderNumber === 1
@@ -223,7 +234,7 @@ export default defineEventHandler(async (event) => {
           send_at:         now.toISOString(),
           context_data:    contextData,
         })
-      } else if (student.phone) {
+      } else if (student.phone && reminderSmsEnabled) {
         // ── SMS fallback (no email) ──────────────────────────
         const smsBody = reminderNumber === 1
           ? `Hallo ${student.first_name}, bitte vervollständige deine Registrierung bei ${tenantName}:\n\n${onboardingUrl}\n\nNach der Registrierung: ${loginLink}`
