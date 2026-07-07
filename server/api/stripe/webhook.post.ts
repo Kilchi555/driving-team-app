@@ -97,6 +97,13 @@ export default defineEventHandler(async (event) => {
                 setting_key: 'subscription_status',
                 setting_value: JSON.stringify({ status: 'active' }),
               }, { onConflict: 'tenant_id,setting_key' })
+
+            // Only send a confirmation for real charges (skip $0 trial invoices)
+            if (invoice.amount_paid > 0) {
+              await sendPaymentConfirmationEmail(supabase, invoice, tenantId).catch(
+                e => console.error('⚠️ Payment confirmation email failed (non-fatal):', e.message)
+              )
+            }
           }
         }
         break
@@ -435,6 +442,98 @@ function parseAddonSeats(sub: Stripe.Subscription): number {
     if (item) return item.quantity ?? 0
   }
   return 0
+}
+
+async function sendPaymentConfirmationEmail(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  invoice: Stripe.Invoice,
+  tenantId: string
+) {
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('name, contact_email, subscription_plan, current_period_end, addon_seats')
+    .eq('id', tenantId)
+    .single()
+
+  if (!tenant?.contact_email) return
+
+  const amountCHF = (invoice.amount_paid / 100).toFixed(2)
+  const tenantName = tenant.name || tenantId
+  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
+
+  const nextBillingDate = tenant.current_period_end
+    ? new Date(tenant.current_period_end).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : null
+
+  const planLabel: Record<string, string> = {
+    starter: 'Starter',
+    professional: 'Professional',
+    enterprise: 'Enterprise',
+  }
+  const plan = planLabel[tenant.subscription_plan ?? ''] ?? tenant.subscription_plan ?? '–'
+  const seats = tenant.addon_seats ?? 0
+
+  await sendEmail({
+    to: tenant.contact_email,
+    senderName: 'Simy',
+    subject: `✅ Zahlung bestätigt – CHF ${amountCHF}`,
+    html: `<!DOCTYPE html>
+<html lang="de"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px">
+        <tr><td style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08)">
+          <div style="background:linear-gradient(135deg,#16a34a,#15803d);padding:32px;border-radius:12px 12px 0 0;text-align:center">
+            <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700">Zahlung erfolgreich</h1>
+            <p style="margin:8px 0 0;color:rgba(255,255,255,.85);font-size:22px;font-weight:700">CHF ${amountCHF}</p>
+          </div>
+          <div style="padding:32px">
+            <p style="color:#111827;font-size:15px;margin:0 0 16px">Hallo <strong>${tenantName}</strong>,</p>
+            <p style="color:#4b5563;font-size:15px;line-height:1.6;margin:0 0 24px">
+              deine Simy-Abonnementzahlung von <strong>CHF ${amountCHF}</strong> wurde erfolgreich verarbeitet. Danke!
+            </p>
+            <table cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:0 0 24px">
+              <tr style="background:#f9fafb">
+                <td style="padding:10px 16px;font-size:13px;font-weight:600;color:#6b7280;border-bottom:1px solid #e5e7eb" colspan="2">ZAHLUNGSDETAILS</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 16px;font-size:14px;color:#6b7280;border-bottom:1px solid #f3f4f6">Betrag</td>
+                <td style="padding:10px 16px;font-size:14px;color:#111827;font-weight:600;border-bottom:1px solid #f3f4f6">CHF ${amountCHF}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 16px;font-size:14px;color:#6b7280;border-bottom:1px solid #f3f4f6">Plan</td>
+                <td style="padding:10px 16px;font-size:14px;color:#111827;border-bottom:1px solid #f3f4f6">${plan}${seats > 0 ? ` + ${seats} zusätzliche Accounts` : ''}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 16px;font-size:14px;color:#6b7280;border-bottom:1px solid #f3f4f6">Rechnungs-ID</td>
+                <td style="padding:10px 16px;font-size:14px;color:#111827;border-bottom:1px solid #f3f4f6">${invoice.id}</td>
+              </tr>
+              ${nextBillingDate ? `<tr>
+                <td style="padding:10px 16px;font-size:14px;color:#6b7280">Nächste Abrechnung</td>
+                <td style="padding:10px 16px;font-size:14px;color:#111827">${nextBillingDate}</td>
+              </tr>` : ''}
+            </table>
+            <table width="100%" cellpadding="0" cellspacing="0"><tr>
+              <td align="center" style="padding:8px 0 24px">
+                <a href="${baseUrl}/admin/billing"
+                   style="display:inline-block;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;text-decoration:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600">
+                  Abonnement verwalten →
+                </a>
+              </td>
+            </tr></table>
+            <p style="color:#6b7280;font-size:13px;margin:0">Fragen? <a href="mailto:support@simy.ch" style="color:#6000BD">support@simy.ch</a></p>
+          </div>
+          <div style="background:#f9fafb;padding:14px 28px;text-align:center;border-top:1px solid #e5e7eb">
+            <p style="margin:0;font-size:12px;color:#9ca3af">Simy.ch · support@simy.ch</p>
+          </div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`,
+  })
+  console.log(`📧 Payment confirmation email sent to ${tenant.contact_email} (tenant ${tenantId}, CHF ${amountCHF})`)
 }
 
 async function handleWalleeWelcomeEmail(
