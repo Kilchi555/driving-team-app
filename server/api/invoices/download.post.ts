@@ -156,11 +156,23 @@ export default defineEventHandler(async (event) => {
   let tenantLogoBase64: string | null = null
   let tenantLogoFormat: 'png' | 'jpeg' = 'png'
   if (logoDataUrl?.startsWith('data:image/')) {
+    // Already a base64 data URL
     const match = logoDataUrl.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/)
     if (match) {
       tenantLogoFormat = match[1] === 'jpg' ? 'jpeg' : match[1] as 'png' | 'jpeg'
       tenantLogoBase64 = match[2]
     }
+  } else if (logoDataUrl?.startsWith('http')) {
+    // Remote URL (e.g. Supabase Storage) — fetch and convert to base64
+    try {
+      const logoRes = await fetch(logoDataUrl)
+      if (logoRes.ok) {
+        const contentType = logoRes.headers.get('content-type') || 'image/png'
+        tenantLogoFormat = contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpeg' : 'png'
+        const arrayBuffer = await logoRes.arrayBuffer()
+        tenantLogoBase64 = Buffer.from(arrayBuffer).toString('base64')
+      }
+    } catch { /* Logo optional */ }
   }
 
   const tenantStreet = [(tenant as any)?.invoice_street?.trim(), (tenant as any)?.invoice_street_nr?.trim()].filter(Boolean).join(' ')
