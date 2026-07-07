@@ -512,6 +512,22 @@ import {
   ArrowPathIcon
 } from '@heroicons/vue/24/outline'
 
+// Props
+const props = defineProps<{
+  initialCompany?: {
+    id: string
+    name: string
+    contact_person?: string
+    email?: string
+    phone?: string
+    street?: string
+    street_nr?: string
+    zip?: string
+    city?: string
+    vat_number?: string
+  } | null
+}>()
+
 // Emits
 const emit = defineEmits<{
   close: []
@@ -861,6 +877,21 @@ onMounted(async () => {
   if (invoicePaymentTerms.value) formData.value.payment_terms = invoicePaymentTerms.value
   if (invoiceFooterText.value) formData.value.footer_text = invoiceFooterText.value
   await fetchProducts()
+
+  // Pre-select company if passed in (e.g. opened from company detail modal)
+  if (props.initialCompany) {
+    applyCustomer({
+      id: props.initialCompany.id,
+      type: 'company',
+      name: props.initialCompany.name,
+      contact_person: props.initialCompany.contact_person || '',
+      email: props.initialCompany.email || '',
+      phone: props.initialCompany.phone || '',
+      street: props.initialCompany.street || '',
+      zip: props.initialCompany.zip || '',
+      city: props.initialCompany.city || '',
+    })
+  }
 
   const closeMenu = (e: MouseEvent) => {
     if (templateMenuRef.value && !templateMenuRef.value.contains(e.target as Node)) {
