@@ -125,11 +125,13 @@ export default defineEventHandler(async (event) => {
 
   // QR-Code generieren
   let qrCodeDataUrl: string | null = null
+  let generatedPaymentRef: string | null = null
   const qrIban = (tenant as any)?.qr_iban || null
   if (qrIban) {
     try {
       const { generateSwissQRBase64, generateReference } = await import('~/server/utils/swiss-qr')
       const { ref: paymentRef } = generateReference(invoice.invoice_number, qrIban)
+      generatedPaymentRef = paymentRef
       qrCodeDataUrl = await generateSwissQRBase64({
         qr_iban: qrIban,
         creditor_name: (tenant as any)?.legal_company_name || (tenant as any)?.name || '',
@@ -200,7 +202,7 @@ export default defineEventHandler(async (event) => {
     totalRappen: invoice.total_amount_rappen,
     qrCodeDataUrl,
     qrIban,
-    scorRef: (invoice as any).payment_reference || null,
+    scorRef: generatedPaymentRef || (invoice as any).payment_reference || null,
     creditorName: (tenant as any)?.legal_company_name || (tenant as any)?.name || '',
     primaryColor: (tenant as any)?.primary_color || '#1E40AF',
     secondaryColor: (tenant as any)?.secondary_color || '#64748B',
