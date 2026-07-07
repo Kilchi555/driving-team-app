@@ -732,7 +732,7 @@ ${extLogoHtml}
             .eq('id', profile.tenant_id)
             .single()
 
-          const tenantName = tenant?.name || 'Driving Team'
+          const tenantName = tenant?.name || 'Ihre Fahrschule'
           const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
           const primaryColor = tenant?.primary_color || '#1d4ed8'
           const simyUrl = `https://app.simy.ch/customer/courses/driving-team/?category=${category.code}`

@@ -73,7 +73,7 @@ export default defineEventHandler(async (event) => {
       .single()
 
     const tenantColor = tenant?.primary_color || PRIMARY_COLOR
-    const tenantName = tenant?.name || 'Driving Team'
+    const tenantName = tenant?.name || 'Ihre Fahrschule'
 
     const { data, error } = await supabase
       .from('course_participants')

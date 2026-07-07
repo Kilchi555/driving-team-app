@@ -187,7 +187,7 @@ export default defineEventHandler(async (event) => {
               : []
 
           const primaryColor = tenant?.primary_color || '#2563eb'
-          const tenantName   = tenant?.name || 'Driving Team'
+          const tenantName   = tenant?.name || 'Ihre Fahrschule'
           const tenantSlug   = (tenant as any)?.slug || ''
           const affiliateUrl = tenantSlug
             ? `https://app.simy.ch/affiliate-dashboard?tenant=${tenantSlug}`

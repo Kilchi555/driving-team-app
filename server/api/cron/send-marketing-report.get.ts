@@ -500,7 +500,7 @@ async function sendReport(supabase: any, tenant: { id: string; slug: string; nam
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div>
         <p style="margin:0 0 4px;font-size:11px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.08em">Wöchentlicher Marketing Report</p>
-        <h1 style="margin:0 0 4px;font-size:22px;font-weight:800;color:#fff">${tenant.name ?? 'Driving Team'}</h1>
+        <h1 style="margin:0 0 4px;font-size:22px;font-weight:800;color:#fff">${tenant.name ?? 'Ihre Fahrschule'}</h1>
         <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.6)">Woche ${getISOWeek(lastMonday)}/${lastMonday.getFullYear()} · ${weekRange}</p>
       </div>
       <div style="text-align:right">
@@ -714,7 +714,7 @@ async function sendReport(supabase: any, tenant: { id: string; slug: string; nam
   <!-- Footer -->
   <tr><td style="background:#f8fafc;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 14px 14px;padding:16px 24px;text-align:center">
     <p style="margin:0;font-size:11px;color:#9ca3af">
-      ${tenant.name ?? 'Driving Team'} · KW ${getISOWeek(lastMonday)}/${lastMonday.getFullYear()} · Automatisch generiert am ${reportDate} · 
+      ${tenant.name ?? 'Ihre Fahrschule'} · KW ${getISOWeek(lastMonday)}/${lastMonday.getFullYear()} · Automatisch generiert am ${reportDate} · 
       <a href="https://app.simy.ch/admin/marketing" style="color:#2563eb;text-decoration:none">Marketing Dashboard →</a>
     </p>
   </td></tr>

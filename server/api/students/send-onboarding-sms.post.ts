@@ -211,7 +211,7 @@ export default defineEventHandler(async (event) => {
       .eq('id', tenantId)
       .single()
 
-    let tenantName = tenant?.twilio_from_sender || tenant?.name || 'Driving Team'
+    let tenantName = tenant?.twilio_from_sender || tenant?.name || 'Ihre Fahrschule'
     let tenantSlug = tenant?.slug || ''
 
     // SMS Message with onboarding link and login link

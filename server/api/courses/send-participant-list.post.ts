@@ -64,7 +64,7 @@ export default defineEventHandler(async (event) => {
     .select('id, name, primary_color, logo_wide_url, logo_url, logo_square_url')
     .eq('id', me.tenant_id)
     .single()
-  const tenantName   = tenant?.name || 'Driving Team'
+  const tenantName   = tenant?.name || 'Ihre Fahrschule'
   const primaryColor = tenant?.primary_color || '#2563eb'
   const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
 

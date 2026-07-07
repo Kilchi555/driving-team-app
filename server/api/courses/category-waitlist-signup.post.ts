@@ -107,7 +107,7 @@ export default defineEventHandler(async (event) => {
     .eq('id', tenant_id)
     .single()
 
-  const tenantName = tenant?.name || 'Driving Team'
+  const tenantName = tenant?.name || 'Ihre Fahrschule'
   const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
   const now = new Date().toISOString()
   const toQueue: any[] = []

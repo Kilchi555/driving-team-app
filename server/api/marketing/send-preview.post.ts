@@ -95,6 +95,6 @@ export default defineEventHandler(async (event) => {
   // Mode A: raw HTML
   if (!subject || !html) throw createError({ statusCode: 400, statusMessage: 'subject and html are required for raw mode' })
 
-  const result = await sendEmail({ to, subject, html, fromName: 'Fahrschule Driving Team' })
+  const result = await sendEmail({ to, subject, html, fromName: 'Ihre Fahrschule' })
   return { success: true, messageId: result.messageId }
 })

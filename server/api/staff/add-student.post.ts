@@ -168,7 +168,7 @@ export default defineEventHandler(async (event) => {
       .eq('id', userProfile.tenant_id)
       .single()
 
-    let tenantName = tenant?.twilio_from_sender || tenant?.name || 'Driving Team'
+    let tenantName = tenant?.twilio_from_sender || tenant?.name || 'Ihre Fahrschule'
     let tenantSlug = tenant?.slug || 'driving-team'
 
     // 7. SEND ONBOARDING INVITATION

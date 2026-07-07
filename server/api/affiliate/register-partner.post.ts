@@ -241,7 +241,7 @@ export default defineEventHandler(async (event) => {
   try {
     await sendEmail({
       to: emailLower,
-      subject: `Dein Affiliate-Zugang – ${tenant.name || 'Driving Team'}`,
+      subject: `Dein Affiliate-Zugang – ${tenant.name || 'Ihre Fahrschule'}`,
       senderName: tenant.name || undefined,
       html: `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">

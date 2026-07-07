@@ -36,6 +36,8 @@ interface AppointmentNotificationBody {
   userId?: string
   staffPhone?: string
   isLessonType?: boolean  // false for meeting/vku/etc → hides "Zum Kundenkonto" button
+  meeting_type?: 'in_person' | 'phone' | 'online'
+  meeting_link?: string
 }
 
 // ========== TEMPLATES - Dynamic with tenant colors ==========
@@ -44,6 +46,15 @@ interface AppointmentNotificationBody {
 function buildDetailBox(data: AppointmentNotificationBody, primaryColor: string): string {
   const showPrice = data.showPrice !== false  // default true for backward compat
   const durationStr = data.durationMinutes ? ` (${data.durationMinutes} Min.)` : ''
+  const isPhoneOrOnline = data.meeting_type === 'phone' || data.meeting_type === 'online'
+
+  const meetingTypeLabel = data.meeting_type === 'phone'
+    ? '📞 Telefonat'
+    : data.meeting_type === 'online'
+      ? '💻 Online'
+      : data.meeting_type === 'in_person'
+        ? '📍 Vor Ort'
+        : null
 
   const rows = [
     data.appointmentTime
@@ -52,10 +63,16 @@ function buildDetailBox(data: AppointmentNotificationBody, primaryColor: string)
     data.eventTypeName
       ? `<p style="margin:5px 0;color:#374151"><strong>Art:</strong> ${data.eventTypeName}</p>`
       : '',
+    meetingTypeLabel
+      ? `<p style="margin:5px 0;color:#374151"><strong>Durchführung:</strong> ${meetingTypeLabel}</p>`
+      : '',
+    data.meeting_type === 'online' && data.meeting_link
+      ? `<p style="margin:5px 0;color:#374151"><strong>Meeting-Link:</strong> <a href="${data.meeting_link}" style="color:${primaryColor}">${data.meeting_link}</a></p>`
+      : '',
     data.staffName
       ? `<p style="margin:5px 0;color:#374151"><strong>Fahrlehrer:</strong> ${data.staffName}${data.staffPhone ? ` · <a href="tel:${data.staffPhone}" style="color:#374151;text-decoration:none">${data.staffPhone}</a>` : ''}</p>`
       : '',
-    data.location
+    (!isPhoneOrOnline && data.location)
       ? `<p style="margin:5px 0;color:#374151"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px;color:#6b7280">${data.locationAddress}</span>` : ''}</p>`
       : '',
     (showPrice && data.amount)
@@ -114,7 +131,7 @@ const TEMPLATES = {
                   : '')
               }
 
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || 'Driving Team'}</strong></p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || 'Ihre Fahrschule'}</strong></p>
             </td>
           </tr>
           <tr>
@@ -161,7 +178,7 @@ const TEMPLATES = {
               <div style="text-align: center; margin: 30px 0;">
                 <a href="${dashboardUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">Zum Kundenkonto</a>
               </div>
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || 'Driving Team'}</strong></p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || 'Ihre Fahrschule'}</strong></p>
             </td>
           </tr>
           <tr>
@@ -236,7 +253,7 @@ const TEMPLATES = {
                 </a>
               </div>
               
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Beste Grüsse,<br><strong>${data.tenantName || 'Driving Team'}</strong></p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Beste Grüsse,<br><strong>${data.tenantName || 'Ihre Fahrschule'}</strong></p>
             </td>
           </tr>
           <tr>
@@ -310,7 +327,7 @@ const TEMPLATES = {
                 </a>
               </div>
               
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || 'Driving Team'}</strong></p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || 'Ihre Fahrschule'}</strong></p>
             </td>
           </tr>
           <tr>

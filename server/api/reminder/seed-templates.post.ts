@@ -20,7 +20,7 @@ Standort: {{location}}
 Preis: {{price}} CHF
 
 Mit freundlichen Grüssen
-Ihr Driving Team`
+Ihre Fahrschule`
       },
       {
         tenant_id: null,
@@ -54,7 +54,7 @@ Preis: {{price}} CHF
 Bitte bestätigen Sie den Termin hier: {{confirmation_link}}
 
 Mit freundlichen Grüßen
-Ihr Driving Team`
+Ihre Fahrschule`
       },
       {
         tenant_id: null,
@@ -88,7 +88,7 @@ Preis: {{price}} CHF
 Bitte bestätigen Sie den Termin JETZT: {{confirmation_link}}
 
 Mit freundlichen Grüßen
-Ihr Driving Team`
+Ihre Fahrschule`
       },
       {
         tenant_id: null,
