@@ -24,7 +24,7 @@ import logger from '~/utils/logger'
  */
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf']
+const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif', 'application/pdf']
 
 export default defineEventHandler(async (event) => {
   try {
@@ -164,7 +164,7 @@ export default defineEventHandler(async (event) => {
       .from('user-documents')
       .upload(fileName, file.data, {
         contentType: file.type,
-        upsert: false // Don't overwrite existing files
+        upsert: true // Overwrite if path collision (same ms timestamp)
       })
 
     if (uploadError) {

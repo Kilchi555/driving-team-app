@@ -317,7 +317,7 @@ const handler = defineEventHandler(async (event) => {
             allSessionIds = [allSessionIds[individualSessionNumber - 1]]
           }
           logger.info(`🎯 Individual session ${individualSessionNumber}: validating ${allSessionIds.join(',')}`)
-        } else if (isPartial && !course.is_partial_only && course.course_sessions?.length > 0) {
+        } else if (isPartialOrder && !course.is_partial_only && course.course_sessions?.length > 0) {
           const dbStartPos: number = course.course_category?.partial_start_position ?? 3
           if (dbStartPos > 1) {
             const sortedSessions = [...course.course_sessions].sort((a: any, b: any) =>
