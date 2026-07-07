@@ -231,9 +231,9 @@ export default defineEventHandler(async (event) => {
 
       await verifyAppointment(appointment_id)
 
-      const now = new Date().toISOString()
-      await supabase.from('payments').update({ deleted_at: now, deleted_by: callerUser.id, deletion_reason: 'Permanent deletion from admin panel' }).eq('appointment_id', appointment_id)
-      const { error } = await supabase.from('appointments').update({ deleted_at: now, deleted_by: callerUser.id, deletion_reason: 'Permanent deletion from admin panel' }).eq('id', appointment_id)
+      // Hard delete: remove payments first (FK), then the appointment row
+      await supabase.from('payments').delete().eq('appointment_id', appointment_id)
+      const { error } = await supabase.from('appointments').delete().eq('id', appointment_id)
       if (error) throw error
 
       await logAudit({ user_id: authUser.id, action: 'hard_delete_appointment', resource_type: 'appointment', resource_id: appointment_id, status: 'success', ip_address: clientIP })
@@ -254,9 +254,9 @@ export default defineEventHandler(async (event) => {
         await verifyAppointment(aptId)
       }
 
-      const now = new Date().toISOString()
-      await supabase.from('payments').update({ deleted_at: now, deleted_by: callerUser.id, deletion_reason: 'Bulk deletion from admin panel' }).in('appointment_id', appointment_ids)
-      const { error } = await supabase.from('appointments').update({ deleted_at: now, deleted_by: callerUser.id, deletion_reason: 'Bulk deletion from admin panel' }).in('id', appointment_ids)
+      // Hard delete: remove payments first (FK), then the appointment rows
+      await supabase.from('payments').delete().in('appointment_id', appointment_ids)
+      const { error } = await supabase.from('appointments').delete().in('id', appointment_ids)
       if (error) throw error
 
       await logAudit({ user_id: authUser.id, action: 'bulk_hard_delete_appointments', resource_type: 'appointment', resource_id: appointment_ids.join(','), status: 'success', ip_address: clientIP, details: { count: appointment_ids.length } })

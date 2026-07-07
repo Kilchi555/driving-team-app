@@ -669,9 +669,10 @@ const createInvitedCustomers = async (appointmentData: any) => {
             body: {
               to: customer.email,
               name: `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
-              message: smsMsg + meetingInfo,
               appointment_id: appointmentData.id,
+              meeting_type: customer.meeting_type || 'in_person',
               meeting_link: customer.meeting_link || null,
+              tenant_id: appointmentData.tenant_id || null,
             }
           }).catch(e => logger.debug('ℹ️ Email invite endpoint not yet available:', e.message))
         } catch (emailErr: any) {

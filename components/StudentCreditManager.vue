@@ -229,47 +229,50 @@
           </p>
         </div>
 
-        <div v-else class="space-y-3">
+        <div v-else class="divide-y divide-gray-100 -mx-1">
           <div
             v-for="transaction in transactions"
             :key="transaction.id"
-            class="bg-gray-50 rounded-lg p-4 border border-gray-200"
+            class="flex items-start gap-3 px-1 py-3"
           >
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-3">
-                <span
-                  :class="[
-                    'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                    getTransactionTypeClass(transaction.transaction_type)
-                  ]"
-                >
-                  {{ getTransactionTypeText(transaction.transaction_type) }}
-                </span>
-                <span class="text-sm text-gray-500">
-                  {{ formatDate(transaction.created_at) }}
-                </span>
-              </div>
-              <div class="text-right">
-                <div
-                  :class="[
-                    'text-lg font-semibold',
-                    transaction.amount_rappen >= 0 ? 'text-green-600' : 'text-red-600'
-                  ]"
-                >
-                  {{ transaction.amount_rappen >= 0 ? '+' : '' }}{{ formatCreditAmount(transaction.amount_rappen) }}
-                </div>
-                <div class="text-sm text-gray-500">
-                  Guthaben: {{ formatCreditAmount(transaction.balance_after_rappen) }}
-                </div>
-              </div>
+            <!-- Icon -->
+            <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
+                 :class="{
+                   'bg-green-100 text-green-700': transaction.transaction_type === 'deposit' || transaction.transaction_type === 'refund',
+                   'bg-red-100 text-red-700': transaction.transaction_type === 'withdrawal' || transaction.transaction_type === 'appointment_payment',
+                   'bg-blue-100 text-blue-700': transaction.transaction_type === 'cancellation',
+                   'bg-gray-100 text-gray-600': transaction.transaction_type === 'adjustment',
+                 }">
+              <svg v-if="transaction.transaction_type === 'deposit'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <svg v-else-if="transaction.transaction_type === 'withdrawal'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+              <svg v-else-if="transaction.transaction_type === 'appointment_payment'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <svg v-else-if="transaction.transaction_type === 'refund'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
             </div>
-            
-            <div v-if="transaction.notes" class="mt-2 text-sm text-gray-600">
-              {{ transaction.notes }}
-            </div>
-            
-            <div v-if="transaction.payment_method" class="mt-2 text-xs text-gray-500">
-              Zahlungsmethode: {{ getPaymentMethodText(transaction.payment_method) }}
+
+            <!-- Body -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-sm font-medium text-gray-900">{{ getTransactionTypeText(transaction.transaction_type) }}</span>
+                  <span v-if="transaction.payment_method" class="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{{ getPaymentMethodText(transaction.payment_method) }}</span>
+                </div>
+                <div class="text-right flex-shrink-0">
+                  <span class="text-sm font-semibold" :class="transaction.amount_rappen >= 0 ? 'text-green-600' : 'text-red-600'">
+                    {{ transaction.amount_rappen >= 0 ? '+' : '' }}{{ formatCreditAmount(transaction.amount_rappen) }}
+                  </span>
+                </div>
+              </div>
+              <div class="flex items-center justify-between mt-0.5">
+                <div class="text-xs text-gray-400 flex items-center gap-2 flex-wrap">
+                  <span>{{ formatDate(transaction.created_at) }}</span>
+                  <span v-if="transaction.created_by_user">
+                    · {{ transaction.created_by_user.first_name }} {{ transaction.created_by_user.last_name }}
+                  </span>
+                </div>
+                <span class="text-xs text-gray-400 flex-shrink-0">∑ {{ formatCreditAmount(transaction.balance_after_rappen) }}</span>
+              </div>
+              <p v-if="transaction.notes" class="mt-1 text-xs text-gray-500 italic">{{ transaction.notes }}</p>
             </div>
           </div>
         </div>
@@ -324,7 +327,7 @@ const {
 
 // State
 const { cashVisible } = useCashPaymentSettings('staff')
-const activeTab = ref('deposit')
+const activeTab = ref('transactions')
 const currentCredit = ref<StudentCredit | null>(null)
 const transactions = ref<CreditTransactionWithDetails[]>([])
 
@@ -448,7 +451,8 @@ const getTransactionTypeClass = (type: string) => {
     withdrawal: 'text-red-600 bg-red-100',
     appointment_payment: 'text-blue-600 bg-blue-100',
     refund: 'text-orange-600 bg-orange-100',
-    cancellation: 'text-gray-600 bg-gray-100'
+    cancellation: 'text-gray-600 bg-gray-100',
+    adjustment: 'text-gray-600 bg-gray-100',
   }
   return classMap[type] || 'text-gray-600 bg-gray-100'
 }

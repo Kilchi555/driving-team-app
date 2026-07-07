@@ -247,6 +247,15 @@ const isAdmin = computed(() => {
           } catch (e) {
             logger.warn('⚠️ Could not persist tenant slug to localStorage:', e)
           }
+
+          // Clear the cookie-sync reload guard so the fetch-interceptor can resync
+          // cookies if needed right after login (without this, a stale guard value from
+          // the previous session expiry could block the sync and show "Sitzung abgelaufen"
+          // even though the user just logged in successfully).
+          try {
+            sessionStorage.removeItem('cookie_sync_reload_at')
+            sessionStorage.setItem('just_logged_in_at', Date.now().toString())
+          } catch { /* non-fatal */ }
         }
         
         // 🔐 DEBUG: Log what we got from backend

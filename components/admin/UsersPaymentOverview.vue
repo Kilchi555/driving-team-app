@@ -117,6 +117,16 @@
               <option value="newest">Neueste zuerst</option>
             </select>
           </div>
+
+          <!-- Include deleted toggle -->
+          <label class="flex items-center gap-2 cursor-pointer select-none text-sm text-gray-600 whitespace-nowrap">
+            <span class="relative inline-flex items-center">
+              <input type="checkbox" v-model="includeDeleted" class="sr-only peer" />
+              <div class="w-9 h-5 bg-gray-200 peer-checked:bg-blue-500 rounded-full transition-colors peer-focus:ring-2 peer-focus:ring-blue-300"></div>
+              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4"></div>
+            </span>
+            Gelöschte einschliessen
+          </label>
         </div>
       </div>
 
@@ -275,6 +285,7 @@ const error = ref<string | null>(null)
 const searchTerm = ref('')
 const selectedFilter = ref('all')
 const sortOrder = ref<'newest' | 'oldest'>('oldest')
+const includeDeleted = ref(false)
 
 // Computed properties
 const totalUsers = computed(() => users.value.length)
@@ -357,7 +368,8 @@ const fetchUsersSummary = async () => {
     
     // ✅ Use new secure API instead of direct DB queries
     const response = await $fetch('/api/admin/get-payments-overview', {
-      method: 'GET'
+      method: 'GET',
+      query: includeDeleted.value ? { include_deleted: 'true' } : {}
     }) as any
 
     if (!response.success) {
@@ -456,4 +468,7 @@ watch([selectedFilter, searchTerm, sortOrder], ([newFilter, newSearch, newSort])
   localStorage.setItem('paymentOverviewSearch', newSearch)
   localStorage.setItem('paymentOverviewSort', newSort)
 })
+
+// Re-fetch from API when include_deleted toggle changes
+watch(includeDeleted, () => fetchUsersSummary())
 </script>

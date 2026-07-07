@@ -1143,6 +1143,19 @@
             />
           </div>
 
+          <!-- Cash payment info (only shown if admin enabled customer visibility) -->
+          <div
+            v-if="cashVisibleForCustomer && effectiveBookingTotal > 0"
+            class="mt-4 flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg"
+          >
+            <svg class="w-4 h-4 mt-0.5 shrink-0 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <p class="text-sm text-green-800">
+              <strong>Barzahlung möglich</strong> — du kannst auch direkt bei der Fahrschule bar bezahlen. Die Rechnung erhältst du nach dem Termin.
+            </p>
+          </div>
+
           <!-- Navigation -->
           <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <button
@@ -1297,8 +1310,10 @@ import AppointmentPreferencesForm from '~/components/booking/AppointmentPreferen
 import { parseTimeWindows } from '~/utils/travelTimeValidation'
 import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 
 const { primaryColor } = useTenantBranding()
+const { cashVisible: cashVisibleForCustomer } = useCashPaymentSettings('customer')
 
 // Page Meta
 // @ts-ignore - definePageMeta is a Nuxt compiler macro

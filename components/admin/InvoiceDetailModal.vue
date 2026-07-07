@@ -148,11 +148,16 @@
                   <template v-if="invoice.paid_amount_rappen">
                     <div class="flex items-center justify-between gap-2">
                       <dt class="text-sm text-gray-500 flex-shrink-0">Bezahlt</dt>
-                      <dd class="text-sm font-medium text-green-600">{{ formatCurrency(invoice.paid_amount_rappen) }}</dd>
+                      <dd class="text-sm font-semibold text-green-600">{{ formatCurrency(invoice.paid_amount_rappen) }}</dd>
                     </div>
-                    <div v-if="invoice.payment_status === 'partial'" class="flex items-center justify-between gap-2">
+                    <div v-if="invoice.paid_amount_rappen < invoice.total_amount_rappen" class="flex items-center justify-between gap-2">
                       <dt class="text-sm text-gray-500 flex-shrink-0">Ausstehend</dt>
-                      <dd class="text-sm font-medium text-amber-600">{{ formatCurrency(invoice.total_amount_rappen - invoice.paid_amount_rappen) }}</dd>
+                      <dd class="text-sm font-semibold text-amber-600">{{ formatCurrency(invoice.total_amount_rappen - invoice.paid_amount_rappen) }}</dd>
+                    </div>
+                    <div v-if="invoice.paid_amount_rappen < invoice.total_amount_rappen" class="col-span-2 mt-1">
+                      <div class="w-full bg-gray-200 rounded-full h-1.5">
+                        <div class="bg-green-500 h-1.5 rounded-full" :style="{ width: Math.min(100, (invoice.paid_amount_rappen / invoice.total_amount_rappen) * 100) + '%' }"></div>
+                      </div>
                     </div>
                     <div v-if="invoice.paid_at" class="flex items-center justify-between gap-2">
                       <dt class="text-sm text-gray-500 flex-shrink-0">Bezahlt am</dt>
@@ -454,6 +459,25 @@
         <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
           <h4 class="text-base font-semibold text-gray-900">Zahlung erfassen</h4>
 
+          <!-- Bereits bezahlter Betrag -->
+          <div v-if="invoice && invoice.paid_amount_rappen > 0" class="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 space-y-1.5">
+            <div class="flex justify-between text-xs text-gray-600">
+              <span>Rechnungsbetrag</span>
+              <span class="font-medium text-gray-900">{{ formatCurrency(invoice.total_amount_rappen) }}</span>
+            </div>
+            <div class="flex justify-between text-xs text-gray-600">
+              <span>Bereits bezahlt</span>
+              <span class="font-medium text-green-600">{{ formatCurrency(invoice.paid_amount_rappen) }}</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-1.5 my-0.5">
+              <div class="bg-green-500 h-1.5 rounded-full" :style="{ width: Math.min(100, (invoice.paid_amount_rappen / invoice.total_amount_rappen) * 100) + '%' }"></div>
+            </div>
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="text-amber-700">Noch ausstehend</span>
+              <span class="text-amber-700">{{ formatCurrency(invoice.total_amount_rappen - invoice.paid_amount_rappen) }}</span>
+            </div>
+          </div>
+
           <div class="space-y-3">
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Betrag (CHF)</label>
@@ -644,7 +668,13 @@ const paidNote = ref('')
 const isMarkingPaid = ref(false)
 
 const openMarkPaidDialog = () => {
-  partialAmountChf.value = props.invoice ? props.invoice.total_amount_rappen / 100 : 0
+  if (props.invoice) {
+    const alreadyPaid = props.invoice.paid_amount_rappen || 0
+    const remaining = props.invoice.total_amount_rappen - alreadyPaid
+    partialAmountChf.value = remaining > 0 ? remaining / 100 : props.invoice.total_amount_rappen / 100
+  } else {
+    partialAmountChf.value = 0
+  }
   paidAtDate.value = new Date().toISOString().slice(0, 10)
   paidNote.value = ''
   showMarkPaidDialog.value = true

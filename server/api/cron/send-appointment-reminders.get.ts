@@ -21,11 +21,15 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getQuery } from 'h3'
 
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  lesson:  'Fahrstunde',
-  exam:    'Prüfung',
-  theory:  'Theorie',
-  other:   'Termin',
+const FALLBACK_EVENT_TYPE_LABELS: Record<string, string> = {
+  lesson:     'Fahrstunde',
+  exam:       'Prüfung',
+  theory:     'Theorie',
+  other:      'Termin',
+  vku:        'VKU',
+  nothelfer:  'Nothelferkurs',
+  meeting:    'Meeting',
+  vacation:   'Abwesenheit',
 }
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -139,12 +143,43 @@ export default defineEventHandler(async (event) => {
       paymentMap.set(p.appointment_id, p)
     }
   }
+
+  // ── 2c. Load invited_customers meeting_type per appointment ──
+  const LESSON_TYPES = new Set(['lesson', 'exam', 'theory'])
+  const nonLessonAptIds = (appointments as any[])
+    .filter((a: any) => a.event_type_code && !LESSON_TYPES.has(a.event_type_code))
+    .map((a: any) => a.id)
+
+  const inviteMap = new Map<string, { meeting_type?: string; meeting_link?: string }>()
+  if (nonLessonAptIds.length > 0) {
+    const { data: invites } = await supabase
+      .from('invited_customers')
+      .select('appointment_id, meeting_type, meeting_link, email')
+      .in('appointment_id', nonLessonAptIds)
+    for (const inv of (invites || []) as any[]) {
+      if (!inviteMap.has(inv.appointment_id)) {
+        inviteMap.set(inv.appointment_id, { meeting_type: inv.meeting_type, meeting_link: inv.meeting_link })
+      }
+    }
+  }
   const { data: tenants } = await supabase
     .from('tenants')
     .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url')
     .in('id', tenantIds)
 
   const tenantMap = new Map((tenants || []).map((t: any) => [t.id, t]))
+
+  // ── 2d. Load event types from DB for all tenants (dynamic labels) ──
+  const { data: eventTypeRows } = await supabase
+    .from('event_types')
+    .select('tenant_id, code, name')
+    .in('tenant_id', tenantIds)
+
+  // Map: `${tenant_id}::${code}` → display name
+  const eventTypeMap = new Map<string, string>()
+  for (const et of (eventTypeRows || []) as any[]) {
+    eventTypeMap.set(`${et.tenant_id}::${et.code}`, et.name)
+  }
 
   // ── 3. Check which appointments already have a queued reminder
   // Use a broader time window (past 48h) to catch any already-queued entries
@@ -188,25 +223,35 @@ export default defineEventHandler(async (event) => {
     const dateStr = aptDate.toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Zurich' })
     const timeStr = aptDate.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
     const durationStr = apt.duration_minutes ? `${apt.duration_minutes} Min.` : ''
-    const eventLabel  = EVENT_TYPE_LABELS[apt.event_type_code || 'lesson']
+    const eventLabel  = eventTypeMap.get(`${apt.tenant_id}::${apt.event_type_code}`)
+      || FALLBACK_EVENT_TYPE_LABELS[apt.event_type_code || '']
+      || apt.title
+      || 'Termin'
     const categoryStr = apt.type || ''
     const staffName   = apt.staff ? `${apt.staff.first_name} ${apt.staff.last_name}` : null
     const staffPhone  = apt.staff?.phone || null
 
-    // Meeting point — pickup address takes priority over standard location
+    // Meeting type from invited_customers (for non-lesson appointments)
+    const inviteData = inviteMap.get(apt.id)
+    const meetingType = inviteData?.meeting_type as 'in_person' | 'phone' | 'online' | undefined
+    const meetingLink = inviteData?.meeting_link
+
+    // Meeting point — hidden for phone/online; pickup address takes priority over standard location
     let meetingPoint = ''
-    if ((apt as any).customer_pickup_address) {
-      meetingPoint = (apt as any).customer_pickup_address
-    } else {
-      const loc = apt.location_id ? locationMap.get(apt.location_id) : null
-      if (loc?.name) {
-        meetingPoint = loc.name
-        if (loc.address) meetingPoint += `, ${loc.address}`
-        // Only append city if not already contained in name or address
-        if (loc.city && !meetingPoint.includes(loc.city)) meetingPoint += ` ${loc.city}`
-      } else if (apt.custom_location_name) {
-        meetingPoint = apt.custom_location_name
-        if (apt.custom_location_address) meetingPoint += `, ${apt.custom_location_address}`
+    const isPhoneOrOnline = meetingType === 'phone' || meetingType === 'online'
+    if (!isPhoneOrOnline) {
+      if ((apt as any).customer_pickup_address) {
+        meetingPoint = (apt as any).customer_pickup_address
+      } else {
+        const loc = apt.location_id ? locationMap.get(apt.location_id) : null
+        if (loc?.name) {
+          meetingPoint = loc.name
+          if (loc.address) meetingPoint += `, ${loc.address}`
+          if (loc.city && !meetingPoint.includes(loc.city)) meetingPoint += ` ${loc.city}`
+        } else if (apt.custom_location_name) {
+          meetingPoint = apt.custom_location_name
+          if (apt.custom_location_address) meetingPoint += `, ${apt.custom_location_address}`
+        }
       }
     }
 
@@ -226,6 +271,8 @@ export default defineEventHandler(async (event) => {
       staffName,
       staffPhone,
       meetingPoint,
+      meetingType,
+      meetingLink,
       tenantName,
       primaryColor,
       logoUrl,
@@ -319,6 +366,8 @@ interface EmailData {
   staffName: string | null
   staffPhone: string | null
   meetingPoint: string
+  meetingType?: 'in_person' | 'phone' | 'online'
+  meetingLink?: string
   tenantName: string
   primaryColor: string
   logoUrl: string | null
@@ -330,12 +379,24 @@ function buildEmailHtml(d: EmailData): string {
     ? `<div style="margin-bottom:20px;text-align:center"><img src="${d.logoUrl}" alt="${d.tenantName}" style="height:40px;max-width:200px;object-fit:contain;display:block;margin:0 auto"></div>`
     : `<div style="margin-bottom:20px;text-align:center"><div style="width:40px;height:40px;border-radius:10px;background:${d.primaryColor};color:white;font-size:20px;font-weight:700;line-height:40px;text-align:center;margin:0 auto">${d.tenantName.charAt(0).toUpperCase()}</div></div>`
 
+  const meetingTypeLabel = d.meetingType === 'phone'
+    ? '📞 Telefonat'
+    : d.meetingType === 'online'
+      ? '💻 Online'
+      : d.meetingType === 'in_person'
+        ? '📍 Vor Ort'
+        : null
+
   const rows = [
     ['Datum',       d.dateStr],
     ['Zeit',        `${d.timeStr} Uhr${d.durationStr ? ` (${d.durationStr})` : ''}`],
     ['Art',         [d.eventLabel, d.categoryStr].filter(Boolean).join(' · ')],
-    d.staffName   ? ['Fahrlehrer',  d.staffName + (d.staffPhone ? ` · ${d.staffPhone}` : '')] : null,
-    d.meetingPoint ? ['Treffpunkt', d.meetingPoint] : null,
+    d.staffName     ? ['Fahrlehrer',    d.staffName + (d.staffPhone ? ` · ${d.staffPhone}` : '')] : null,
+    meetingTypeLabel ? ['Durchführung', meetingTypeLabel] : null,
+    d.meetingType === 'online' && d.meetingLink
+      ? ['Meeting-Link', `<a href="${d.meetingLink}" style="color:${d.primaryColor}">${d.meetingLink}</a>`]
+      : null,
+    d.meetingPoint  ? ['Treffpunkt',   d.meetingPoint] : null,
   ].filter(Boolean) as [string, string][]
 
   const rowsHtml = rows.map(([label, value]) => `
