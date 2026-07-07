@@ -25,6 +25,19 @@
           <div class="flex items-center gap-1.5 flex-shrink-0">
             <!-- View mode buttons -->
             <template v-if="!isEditing">
+              <!-- PDF Download -->
+              <button
+                :disabled="isDownloadingPdf"
+                class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50"
+                @click="downloadPdf"
+                title="PDF öffnen"
+              >
+                <svg class="w-4 h-4 flex-shrink-0" :class="{ 'animate-spin': isDownloadingPdf }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path v-if="!isDownloadingPdf" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2zM12 3v6h6M9 13h6m-6 4h4" />
+                  <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span class="hidden sm:inline">PDF</span>
+              </button>
               <!-- Edit – icon only on mobile -->
               <button
                 class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -45,10 +58,10 @@
                 </svg>
                 <span class="hidden sm:inline">Versenden</span>
               </button>
-              <!-- Mark paid -->
+              <!-- Mark paid → opens dialog -->
               <button
                 class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-transparent rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                @click="emit('markAsPaid', invoice?.id || '')"
+                @click="openMarkPaidDialog"
               >
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -419,6 +432,63 @@
         </div>
       </div>
     </div>
+
+    <!-- ── Mark as Paid Dialog ── -->
+    <Teleport to="body">
+      <div v-if="showMarkPaidDialog" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-gray-900/60" @click="showMarkPaidDialog = false" />
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+          <h4 class="text-base font-semibold text-gray-900">Zahlung erfassen</h4>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Betrag (CHF)</label>
+              <input
+                v-model="partialAmountChf"
+                type="number" step="0.05" min="0.05"
+                class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-300 bg-gray-50 focus:bg-white"
+              />
+              <p v-if="invoice && partialAmountChf < invoice.total_amount_rappen / 100"
+                class="mt-1 text-xs text-amber-600">
+                Teilzahlung — Rechnungsbetrag: {{ formatCurrency(invoice.total_amount_rappen) }}
+              </p>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Datum</label>
+              <input
+                v-model="paidAtDate"
+                type="date"
+                class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-300 bg-gray-50 focus:bg-white"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Notiz (optional)</label>
+              <input
+                v-model="paidNote"
+                type="text" placeholder="z.B. TWINT, Bar, Banküberweisung…"
+                class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-300 bg-gray-50 focus:bg-white"
+              />
+            </div>
+          </div>
+
+          <div class="flex gap-2 pt-1">
+            <button
+              type="button"
+              @click="showMarkPaidDialog = false"
+              class="flex-1 px-4 py-2.5 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50"
+            >Abbrechen</button>
+            <button
+              type="button"
+              :disabled="isMarkingPaid || !partialAmountChf"
+              @click="confirmMarkAsPaid"
+              class="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-xl disabled:opacity-50"
+            >
+              {{ isMarkingPaid ? 'Speichern…' : 'Bestätigen' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 
 </template>
@@ -526,6 +596,66 @@ const props = defineProps<{
   invoice: Invoice | null
   startInEditMode?: boolean
 }>()
+
+// PDF download
+const isDownloadingPdf = ref(false)
+const downloadPdf = async () => {
+  if (!props.invoice?.id || isDownloadingPdf.value) return
+  isDownloadingPdf.value = true
+  try {
+    const res: any = await $fetch('/api/invoices/download', {
+      method: 'POST',
+      body: { invoiceId: props.invoice.id },
+    })
+    if (res?.pdfUrl) {
+      const link = document.createElement('a')
+      link.href = res.pdfUrl
+      link.download = `${props.invoice.invoice_number}.pdf`
+      link.click()
+    }
+  } catch (e) {
+    console.error('PDF download failed:', e)
+  } finally {
+    isDownloadingPdf.value = false
+  }
+}
+
+// Mark as paid dialog
+const showMarkPaidDialog = ref(false)
+const partialAmountChf = ref(0)
+const paidAtDate = ref(new Date().toISOString().slice(0, 10))
+const paidNote = ref('')
+const isMarkingPaid = ref(false)
+
+const openMarkPaidDialog = () => {
+  partialAmountChf.value = props.invoice ? props.invoice.total_amount_rappen / 100 : 0
+  paidAtDate.value = new Date().toISOString().slice(0, 10)
+  paidNote.value = ''
+  showMarkPaidDialog.value = true
+}
+
+const confirmMarkAsPaid = async () => {
+  if (!props.invoice?.id || isMarkingPaid.value) return
+  isMarkingPaid.value = true
+  try {
+    const paidRappen = Math.round(partialAmountChf.value * 100)
+    await $fetch('/api/invoices/mark-invoice-paid', {
+      method: 'POST',
+      body: {
+        invoice_id: props.invoice.id,
+        paid_amount_rappen: paidRappen,
+        paid_at: new Date(paidAtDate.value).toISOString(),
+        note: paidNote.value || undefined,
+      },
+    })
+    showMarkPaidDialog.value = false
+    emit('markAsPaid', props.invoice.id)
+  } catch (e) {
+    console.error('Mark as paid failed:', e)
+  } finally {
+    isMarkingPaid.value = false
+  }
+}
 
 // Reactive state für detaillierte Zahlungsdaten
 const isLoadingDetails = ref(false)

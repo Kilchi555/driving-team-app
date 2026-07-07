@@ -37,16 +37,19 @@ export default defineEventHandler(async (event) => {
   if (!invoice) throw createError({ statusCode: 404, statusMessage: 'Rechnung nicht gefunden' })
 
   const amount = paid_amount_rappen || invoice.total_amount_rappen
+  const isPartial = amount < invoice.total_amount_rappen
+  const paymentStatus = isPartial ? 'partial' : 'paid'
+  const invoiceStatus = isPartial ? 'sent' : 'paid'   // partial keeps invoice open
 
-  // Rechnung als bezahlt markieren
+  // Rechnung als bezahlt (oder Teilzahlung) markieren
   const { error } = await supabase
     .from('invoices')
     .update({
-      payment_status: 'paid',
-      status: 'paid',
+      payment_status: paymentStatus,
+      status: invoiceStatus,
       paid_at: paidAt,
       paid_amount_rappen: amount,
-      ...(note ? { notes: note } : {}),
+      ...(note ? { internal_notes: note } : {}),
       updated_at: now,
     })
     .eq('id', invoice_id)
