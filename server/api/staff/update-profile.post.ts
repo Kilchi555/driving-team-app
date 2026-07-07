@@ -6,7 +6,7 @@ import { logger } from '~/utils/logger'
 const ALLOWED_FIELDS = ['first_name', 'last_name', 'email', 'phone', 'street', 'street_nr', 'zip', 'city'] as const
 
 export default defineEventHandler(async (event) => {
-  const profile = await requireAdminProfile(event, ['admin', 'staff', 'superadmin'])
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'superadmin', 'super_admin'])
 
   const body = await readBody<Partial<Record<typeof ALLOWED_FIELDS[number], string>> & { category?: string[] }>(event)
 
