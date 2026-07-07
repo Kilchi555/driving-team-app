@@ -939,11 +939,12 @@
                   </div>
                 </div>
 
-                <!-- Upload progress -->
+                <!-- Upload progress / error -->
                 <div v-if="isUploadingLicense" class="flex items-center gap-2 text-sm text-gray-500 py-1">
                   <svg class="w-4 h-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                   Wird hochgeladen…
                 </div>
+                <p v-else-if="licenseUploadError" class="text-xs text-red-500 py-1">{{ licenseUploadError }}</p>
 
                 <div v-if="isLoadingDocuments" class="flex gap-2">
                   <div class="w-24 h-16 bg-gray-100 rounded-xl animate-pulse"/>
@@ -1977,6 +1978,7 @@ const allCategories = ref<{ id: string; code: string; name: string }[]>([])
 const licUploadFront = ref<HTMLInputElement | null>(null)
 const licUploadBack = ref<HTMLInputElement | null>(null)
 const isUploadingLicense = ref(false)
+const licenseUploadError = ref<string | null>(null)
 // Guard against iOS spurious backdrop-click after returning from camera/file picker
 const filePickerOpenedAt = ref(0)
 
@@ -1998,19 +2000,21 @@ const uploadLicense = async (event: Event, side: 'front' | 'back') => {
   if (!file) return
 
   isUploadingLicense.value = true
+  licenseUploadError.value = null
   try {
     const fd = new FormData()
-    fd.append('userId', props.currentUser.id)
+    fd.append('userId', props.currentUser?.id ?? '')
     if (side === 'front') fd.append('frontFile', file)
     else fd.append('backFile', file)
 
     await $fetch('/api/admin/upload-license', { method: 'POST', body: fd })
     await loadStaffDocuments()
   } catch (err: any) {
-    logger.warn('⚠️ License upload failed:', err?.message)
+    const msg = err?.data?.statusMessage || err?.message || 'Upload fehlgeschlagen'
+    licenseUploadError.value = msg
+    logger.warn('⚠️ License upload failed:', msg)
   } finally {
     isUploadingLicense.value = false
-    // Reset input so the same file can be re-selected
     if (side === 'front' && licUploadFront.value) licUploadFront.value.value = ''
     if (side === 'back' && licUploadBack.value) licUploadBack.value.value = ''
   }

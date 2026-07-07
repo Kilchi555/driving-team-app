@@ -1,5 +1,5 @@
 import { defineEventHandler, createError, getQuery } from 'h3'
-import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { createClient } from '@supabase/supabase-js'
 import logger from '~/utils/logger'
 
@@ -19,8 +19,8 @@ import logger from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    // ✅ LAYER 1: AUTHENTICATION
-    const authUser = await getAuthUserFromRequest(event)
+    // ✅ LAYER 1: AUTHENTICATION (with token-refresh fallback)
+    const authUser = await getAuthenticatedUser(event)
     if (!authUser) {
       throw createError({
         statusCode: 401,
@@ -35,20 +35,26 @@ export default defineEventHandler(async (event) => {
       { auth: { persistSession: false } }
     )
 
-    const { data: userProfile, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('id, tenant_id, role, is_active')
-      .eq('auth_user_id', authUser.id)
-      .single()
+    // getAuthenticatedUser already resolves the db user — use its profile if available.
+    // If not (edge case: auth user found but DB profile lookup failed), do it here.
+    let tenantId: string = authUser.tenant_id || ''
 
-    if (userError || !userProfile) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'User profile not found'
-      })
+    if (!tenantId) {
+      const { data: userProfile, error: userError } = await supabaseAdmin
+        .from('users')
+        .select('id, tenant_id')
+        .eq('auth_user_id', authUser.id)
+        .single()
+
+      if (userError || !userProfile) {
+        throw createError({ statusCode: 403, statusMessage: 'User profile not found' })
+      }
+      tenantId = userProfile.tenant_id
     }
 
-    const tenantId = userProfile.tenant_id
+    if (!tenantId) {
+      throw createError({ statusCode: 403, statusMessage: 'User has no tenant assigned' })
+    }
 
     // ✅ LAYER 3: INPUT VALIDATION
     const query = getQuery(event)
@@ -99,7 +105,6 @@ export default defineEventHandler(async (event) => {
 
     // ✅ LAYER 6: AUDIT LOGGING
     logger.debug('✅ User fetched:', {
-      userId: userProfile.id,
       tenantId,
       targetUserId: userId
     })

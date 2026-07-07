@@ -5,7 +5,7 @@ import { requireAdminProfile } from '~/server/utils/auth'
 const SIGNED_URL_EXPIRY = 60 * 60 // 1 hour
 
 export default defineEventHandler(async (event) => {
-  const profile = await requireAdminProfile(event, ['admin', 'staff', 'superadmin'])
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'superadmin', 'super_admin'])
   const supabase = getSupabaseAdmin()
 
   const { data: docs, error } = await supabase
