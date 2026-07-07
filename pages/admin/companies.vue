@@ -377,13 +377,13 @@ const userSearchResults = ref<any[]>([])
 
 async function loadCompanyUsers() {
   if (!editingCompany.value?.id) return
-  const res: any = await $fetch('/api/admin/users', { query: { company_id: editingCompany.value.id } }).catch(() => ({ users: [] }))
+  const res: any = await $fetch('/api/admin/users/search', { query: { company_id: editingCompany.value.id } }).catch(() => ({ users: [] }))
   companyUsers.value = res.users || []
 }
 
 async function searchUsers() {
   if (userSearchQuery.value.length < 2) { userSearchResults.value = []; return }
-  const res: any = await $fetch('/api/admin/users', { query: { search: userSearchQuery.value, limit: 8 } }).catch(() => ({ users: [] }))
+  const res: any = await $fetch('/api/admin/users/search', { query: { q: userSearchQuery.value } }).catch(() => ({ users: [] }))
   userSearchResults.value = (res.users || []).filter((u: any) => u.company_id !== editingCompany.value?.id)
 }
 
