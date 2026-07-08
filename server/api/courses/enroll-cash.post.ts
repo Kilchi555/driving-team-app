@@ -472,6 +472,8 @@ const handler = defineEventHandler(async (event) => {
         registered_at: new Date().toISOString(),
         custom_sessions: customSessions || null,
         is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
+        individual_session_number: (typeof individualSessionNumber === 'number' && individualSessionNumber > 0) ? individualSessionNumber : null,
+        partial_start_session: (!isIndividualSess && (isPartialEnrollment || course.is_partial_only)) ? (course.course_category?.partial_start_position ?? 3) : null,
         sari_synced: course.sari_managed ? true : null,
         sari_synced_at: course.sari_managed ? new Date().toISOString() : null,
         notes: marketingSessionId ? `marketing_session_id:${marketingSessionId}` : null,

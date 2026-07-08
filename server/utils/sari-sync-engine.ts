@@ -735,18 +735,29 @@ export class SARISyncEngine {
 
       const { data: registrations } = await this.supabase
         .from('course_registrations')
-        .select('id, custom_sessions')
+        .select('id, custom_sessions, individual_session_number, partial_start_session')
         .eq('course_id', courseId)
         .in('status', ['confirmed', 'enrolled'])
 
       const allRegs = registrations || []
 
       for (const session of courseSessions) {
-        const sNum = String(session.session_number)
-        const count = allRegs.filter(reg => {
-          if (!reg.custom_sessions) return true
-          const override = (reg.custom_sessions as Record<string, any>)[sNum]
-          return !override
+        const sNum = session.session_number
+        const count = allRegs.filter((reg: any) => {
+          // Individual session booking: only count for that specific session
+          if (reg.individual_session_number != null) {
+            return reg.individual_session_number === sNum
+          }
+          // Partial enrollment (Teil X onwards): only count from partial_start_session
+          if (reg.partial_start_session != null) {
+            if (sNum < reg.partial_start_session) return false
+          }
+          // Custom session swap: if this session was swapped out, don't count
+          if (reg.custom_sessions) {
+            const override = (reg.custom_sessions as Record<string, any>)[String(sNum)]
+            if (override) return false
+          }
+          return true
         }).length
 
         const { error } = await this.supabase

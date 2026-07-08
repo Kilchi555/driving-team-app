@@ -372,16 +372,7 @@
               </svg>
               Erstellen
             </button>
-            <!-- Fallback: Später/Schliessen wenn kein Erstellen-Button angezeigt wird -->
-            <button
-              v-else
-              @click="close"
-              :disabled="isSending"
-              class="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              {{ hasSent ? 'Schliessen' : 'Später' }}
-            </button>
-            <!-- Erneut senden (nur im view-Modus) -->
+            <!-- Senden (nur im view-Modus) -->
             <button
               v-if="props.mode === 'view'"
               @click="resendInvoice"
@@ -394,9 +385,9 @@
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
               <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
-              {{ isResending ? 'Wird gesendet…' : 'Erneut senden' }}
+              {{ isResending ? 'Wird gesendet…' : 'Senden' }}
             </button>
             <!-- Nach dem Erstellen: Rechnung anzeigen + Versenden -->
             <template v-if="props.mode !== 'view' && hasSent">
@@ -425,7 +416,7 @@
                 <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
-                {{ isSendingEmail ? 'Wird versendet…' : 'Versenden' }}
+                {{ isSendingEmail ? 'Wird gesendet…' : 'Senden' }}
               </button>
             </template>
           </div>

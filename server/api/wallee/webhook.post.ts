@@ -2200,47 +2200,50 @@ async function handleWalleeRefundWebhook(
 // ============ UPDATE SESSION PARTICIPANT COUNTS ============
 async function updateSessionParticipantCounts(supabase: any, courseId: string) {
   try {
-    // Get all sessions for this course
+    // Get all sessions for this course with their session_number
     const { data: sessions, error: sessionsError } = await supabase
       .from('course_sessions')
-      .select('id, sari_session_id')
+      .select('id, session_number')
       .eq('course_id', courseId)
     
     if (sessionsError || !sessions) {
       logger.warn(`⚠️ Could not fetch sessions for course ${courseId}`)
       return
     }
-    
-    // For each session, count participants
-    // This includes:
-    // 1. Regular registrations for this course
-    // 2. Custom swaps FROM other courses TO this session
-    // And excludes:
-    // 3. Custom swaps FROM this course TO other courses
-    
+
+    // Get all confirmed registrations for this course
+    const { data: registrations } = await supabase
+      .from('course_registrations')
+      .select('id, custom_sessions, is_partial_enrollment, individual_session_number, partial_start_session')
+      .eq('course_id', courseId)
+      .eq('status', 'confirmed')
+
+    const allRegs = registrations || []
+
     for (const session of sessions) {
-      // Count regular participants (not swapped away)
-      const { count: regularCount } = await supabase
-        .from('course_registrations')
-        .select('*', { count: 'exact', head: true })
-        .eq('course_id', courseId)
-        .eq('status', 'confirmed')
-        .or(`custom_sessions.is.null,custom_sessions.not.cs.{"courseId":"${session.id}"}`)
-      
-      // For simplicity, use the course-level count for now
-      // TODO: Implement proper per-session counting with custom_sessions
-      const { count: totalCount } = await supabase
-        .from('course_registrations')
-        .select('*', { count: 'exact', head: true })
-        .eq('course_id', courseId)
-        .eq('status', 'confirmed')
-      
-      const participantCount = totalCount || 0
-      
+      const sNum = session.session_number
+
+      const count = allRegs.filter((reg: any) => {
+        // Individual session booking: only count for that specific session
+        if (reg.individual_session_number != null) {
+          return reg.individual_session_number === sNum
+        }
+        // Partial enrollment (Teil X onwards): only count from partial_start_session
+        if (reg.partial_start_session != null) {
+          if (sNum < reg.partial_start_session) return false
+        }
+        // Custom session swap: if this session was swapped out, don't count
+        if (reg.custom_sessions) {
+          const override = (reg.custom_sessions as Record<string, any>)[String(sNum)]
+          if (override) return false
+        }
+        return true
+      }).length
+
       const { error: updateError } = await supabase
         .from('course_sessions')
         .update({ 
-          current_participants: participantCount,
+          current_participants: count,
           updated_at: new Date().toISOString()
         })
         .eq('id', session.id)
@@ -2248,7 +2251,7 @@ async function updateSessionParticipantCounts(supabase: any, courseId: string) {
       if (updateError) {
         logger.warn(`⚠️ Error updating session ${session.id}:`, updateError)
       } else {
-        logger.debug(`✅ Updated session ${session.id} participants: ${participantCount}`)
+        logger.debug(`✅ Updated session ${session.id} (session_number=${sNum}) participants: ${count}`)
       }
     }
   } catch (error: any) {
