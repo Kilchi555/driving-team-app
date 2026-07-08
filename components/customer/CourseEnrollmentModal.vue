@@ -1090,21 +1090,23 @@ const sessionGroups = computed(() => {
     // Check if this session has been customized
     const customSession = customSessions.value[position.toString()]
     
-    // Calculate per-session free slots (min across all sessions in group)
-    const courseFreeSlots = (props.course.max_participants || 0) - (props.course.current_participants || 0)
-    let groupFreeSlots = courseFreeSlots
+    // Calculate per-session free slots.
+    // When session-level current_participants is available, use it directly
+    // (don't mix with course-level which aggregates across all sessions).
+    const courseMaxParticipants = props.course.max_participants || 0
+    const courseFreeSlots = courseMaxParticipants - (props.course.current_participants || 0)
+    let hasSessionData = false
+    let sessionMinFreeSlots = Infinity
     for (const s of sessions) {
-      let sf: number
       if (s.max_participants != null) {
-        sf = s.max_participants - (s.current_participants || 0)
+        sessionMinFreeSlots = Math.min(sessionMinFreeSlots, s.max_participants - (s.current_participants || 0))
+        hasSessionData = true
       } else if (s.current_participants != null) {
-        sf = (props.course.max_participants || 0) - s.current_participants
-      } else {
-        sf = courseFreeSlots
+        sessionMinFreeSlots = Math.min(sessionMinFreeSlots, courseMaxParticipants - s.current_participants)
+        hasSessionData = true
       }
-      groupFreeSlots = Math.min(groupFreeSlots, sf)
     }
-    const freeSlots = Math.max(0, groupFreeSlots)
+    const freeSlots = Math.max(0, hasSessionData ? sessionMinFreeSlots : courseFreeSlots)
 
     groups.push({
       position,

@@ -564,30 +564,30 @@
           </Transition>
 
           <!-- Student Credit Balance Card -->
-          <div v-if="studentAvailableBalance !== undefined" :class="[
+          <div v-if="studentBalance !== undefined" :class="[
             'mb-4 rounded-xl border shadow-sm p-4',
-            (studentAvailableBalance ?? 0) < 0 
+            (studentBalance ?? 0) < 0 
               ? 'bg-gradient-to-r from-red-50 to-rose-50 border-red-200' 
               : 'border-gray-200'
           ]"
-          :style="(studentAvailableBalance ?? 0) >= 0 ? { background: `linear-gradient(to right, ${primaryColor}10, ${primaryColor}18)`, borderColor: `${primaryColor}40` } : {}">
+          :style="(studentBalance ?? 0) >= 0 ? { background: `linear-gradient(to right, ${primaryColor}10, ${primaryColor}18)`, borderColor: `${primaryColor}40` } : {}">
             <div class="flex items-start justify-between gap-4">
               <div class="flex-1">
                 <p :class="[
                   'text-sm font-medium mb-1',
-                  (studentAvailableBalance ?? 0) < 0 ? 'text-red-700' : ''
+                  (studentBalance ?? 0) < 0 ? 'text-red-700' : ''
                 ]"
-                :style="(studentAvailableBalance ?? 0) >= 0 ? { color: primaryColor } : {}">
-                  {{ (studentAvailableBalance ?? 0) < 0 ? '⚠️ Offener Betrag' : 'Verfügbares Guthaben' }}
+                :style="(studentBalance ?? 0) >= 0 ? { color: primaryColor } : {}">
+                  {{ (studentBalance ?? 0) < 0 ? '⚠️ Offener Betrag' : 'Guthaben' }}
                 </p>
                 <p :class="[
                   'text-2xl font-bold',
-                  (studentAvailableBalance ?? 0) < 0 ? 'text-red-900' : ''
+                  (studentBalance ?? 0) < 0 ? 'text-red-900' : ''
                 ]"
-                :style="(studentAvailableBalance ?? 0) >= 0 ? { color: primaryColor } : {}">
-                  CHF {{ (Math.abs(studentAvailableBalance ?? 0) / 100).toFixed(2) }}
+                :style="(studentBalance ?? 0) >= 0 ? { color: primaryColor } : {}">
+                  CHF {{ (Math.abs(studentBalance ?? 0) / 100).toFixed(2) }}
                 </p>
-                <p v-if="(studentAvailableBalance ?? 0) < 0" class="text-xs text-red-600 mt-1">
+                <p v-if="(studentBalance ?? 0) < 0" class="text-xs text-red-600 mt-1">
                   Wird bei nächster Zahlung verrechnet
                 </p>
                 <p v-if="studentPendingWithdrawalRappen > 0" class="text-xs text-yellow-700 mt-1">
@@ -725,7 +725,7 @@
                   v-if="cashVisible && selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p && !isInvoicedPayment(p) })"
                   class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md"
                   :style="{ backgroundColor: secondaryColor || '#22C55E' }"
-                  @click="handleBulkPayment('cash')"
+                  @click="openCashPaymentDialog('cash')"
                 >
                   Bar bezahlen
                 </button>
@@ -785,14 +785,35 @@
                     <!-- Left column: amount + description (narrower) -->
                     <div class="flex-1 min-w-0">
                       <!-- Amount -->
-                      <div class="flex items-baseline gap-1.5 mb-0.5">
-                        <span :class="[
-                          'text-xl font-bold leading-none',
-                          payment.appointment?.status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'
-                        ]">
-                          {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
-                        </span>
-                        <span class="text-xs font-semibold text-gray-500">CHF</span>
+                      <div class="flex items-baseline gap-1.5 mb-0.5 flex-wrap">
+                        <template v-if="payment.payment_status === 'partial'">
+                          <template v-if="payment.amount_paid_rappen != null">
+                            <!-- Remaining balance -->
+                            <span class="text-xl font-bold leading-none text-yellow-700">
+                              {{ (((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) - payment.amount_paid_rappen) / 100).toFixed(2) }}
+                            </span>
+                            <span class="text-xs font-semibold text-yellow-600">CHF offen</span>
+                            <span class="text-xs text-gray-400 ml-1">
+                              (CHF {{ (payment.amount_paid_rappen / 100).toFixed(2) }} bezahlt)
+                            </span>
+                          </template>
+                          <template v-else>
+                            <!-- Fallback: full amount with partial indicator -->
+                            <span class="text-xl font-bold leading-none text-yellow-700">
+                              {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
+                            </span>
+                            <span class="text-xs font-semibold text-yellow-600">CHF Teilzahlung</span>
+                          </template>
+                        </template>
+                        <template v-else>
+                          <span :class="[
+                            'text-xl font-bold leading-none',
+                            payment.appointment?.status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'
+                          ]">
+                            {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
+                          </span>
+                          <span class="text-xs font-semibold text-gray-500">CHF</span>
+                        </template>
                       </div>
 
                       <!-- Line 1: Service type + category -->
@@ -817,6 +838,7 @@
                         payment.appointment?.status === 'cancelled' && payment.payment_status === 'completed' ? 'bg-gray-100 text-gray-700' :
                         payment.appointment?.status === 'cancelled' && payment.payment_status === 'pending' ? 'bg-orange-100 text-orange-700' :
                         payment.payment_status === 'completed' ? 'bg-green-100 text-green-700' :
+                        payment.payment_status === 'partial' ? 'bg-yellow-100 text-yellow-700' :
                         isInvoicedPayment(payment) ? 'bg-blue-100 text-blue-700' :
                         payment.payment_status === 'pending' && payment.payment_method === 'invoice' ? 'bg-orange-100 text-orange-700' :
                         payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
@@ -830,6 +852,7 @@
                              payment.appointment?.status === 'cancelled' && payment.payment_status === 'pending' ? 'Abgesagt · Unbezahlt' :
                              payment.appointment?.status === 'cancelled' && payment.payment_status === 'failed' ? 'Abgesagt · Fehlgeschlagen' :
                              payment.payment_status === 'completed' ? 'Bezahlt' :
+                             payment.payment_status === 'partial' ? 'Teilzahlung' :
                              isInvoicedPayment(payment) ? 'Verrechnet' :
                              payment.payment_status === 'pending' && payment.payment_method === 'invoice' ? 'Offen' :
                              payment.payment_status === 'pending' ? 'Unbezahlt' :
@@ -989,6 +1012,22 @@
                   </span>
                 </div>
                 
+                <!-- Partial payment history (for completed payments paid via partial steps) -->
+                <div
+                  v-if="(payment.payment_status === 'completed' || payment.payment_status === 'partial') && payment.metadata?.partial_payments?.length"
+                  class="px-4 py-2 bg-yellow-50 border-t border-yellow-100 text-xs space-y-1"
+                >
+                  <p class="text-yellow-700 font-semibold mb-1">Teilzahlungen</p>
+                  <div
+                    v-for="(entry, i) in payment.metadata.partial_payments"
+                    :key="i"
+                    class="flex justify-between text-yellow-800"
+                  >
+                    <span>{{ (i as number) + 1 }}. Zahlung · {{ new Date(entry.paid_at).toLocaleDateString('de-CH') }}</span>
+                    <span>CHF {{ (entry.amount_rappen / 100).toFixed(2) }}</span>
+                  </div>
+                </div>
+
                 <!-- Payment Method -->
                 <div class="px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm flex items-center justify-between gap-2">
                   <div>
@@ -1572,6 +1611,122 @@
       @close="showBillingAddressModal = false"
       @saved="handleBillingAddressSaved"
     />
+
+    <!-- Partial / Cash Payment Dialog -->
+    <Transition name="fade">
+      <div
+        v-if="showPartialPaymentDialog"
+        class="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4"
+        @click.self="showPartialPaymentDialog = false"
+      >
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-bold text-gray-900">Bar bezahlen</h3>
+            <button @click="showPartialPaymentDialog = false" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="space-y-1">
+            <p class="text-sm text-gray-500">
+              {{ selectedPayments.length }} Zahlung{{ selectedPayments.length > 1 ? 'en' : '' }} · Offen
+              <span class="font-semibold text-gray-900">{{ formatCurrency(totalSelectedAmount) }}</span>
+            </p>
+            <!-- Show credit being automatically applied -->
+            <p v-if="totalCreditUsedInSelection > 0" class="text-xs text-green-700 font-medium flex items-center gap-1">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              CHF {{ (totalCreditUsedInSelection / 100).toFixed(2) }} Guthaben wird automatisch angerechnet
+            </p>
+            <p class="text-xs text-gray-400">
+              Bei Teilzahlung werden günstigste Termine zuerst vollständig abgerechnet.
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Bezahlter Betrag (CHF)</label>
+            <input
+              v-model="partialPaymentInput"
+              type="number"
+              min="0.01"
+              step="0.05"
+              class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-colors"
+              :class="partialInputOverMax ? 'border-amber-400 bg-amber-50' : 'border-gray-300'"
+              :style="{ '--tw-ring-color': primaryColor }"
+              @keydown.enter="confirmPartialPayment"
+            />
+            <p v-if="partialInputOverMax" class="mt-1 text-xs text-green-700 font-medium">
+              CHF {{ (parsePartialInput() - totalSelectedAmount / 100).toFixed(2) }} Überzahlung → wird dem Guthaben des Kunden gutgeschrieben.
+            </p>
+          </div>
+
+          <!-- Preview of how payment will be split -->
+          <div v-if="partialPaymentInput" class="bg-gray-50 rounded-lg p-3 space-y-2.5 text-xs">
+            <template v-for="item in partialPaymentPreview" :key="item.id">
+              <div class="space-y-1.5">
+                <!-- Appointment date + final status -->
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-gray-700 font-semibold">{{ item.label }}</span>
+                  <span
+                    class="shrink-0 font-semibold px-2 py-0.5 rounded-full text-xs"
+                    :class="item.status === 'completed' ? 'bg-green-100 text-green-700' : item.status === 'partial' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-400'"
+                  >
+                    {{ item.status === 'completed' ? '✓ vollständig bezahlt' : item.status === 'partial' ? 'Teilzahlung' : 'offen' }}
+                  </span>
+                </div>
+                <!-- Payment breakdown -->
+                <div class="pl-2 border-l-2 border-gray-200 space-y-0.5">
+                  <!-- Tracked history entries -->
+                  <div v-for="(entry, i) in item.history" :key="i" class="flex justify-between text-gray-400">
+                    <span>{{ new Date(entry.paid_at).toLocaleDateString('de-CH') }}</span>
+                    <span>CHF {{ (entry.amount_rappen / 100).toFixed(2) }}</span>
+                  </div>
+                  <!-- If history is empty but there was already a previous partial amount -->
+                  <div v-if="item.history.length === 0 && item.alreadyPaid > 0" class="flex justify-between text-gray-400">
+                    <span>Frühere Zahlung(en)</span>
+                    <span>CHF {{ (item.alreadyPaid / 100).toFixed(2) }}</span>
+                  </div>
+                  <!-- This new payment -->
+                  <div v-if="item.amountPaid > 0" class="flex justify-between font-semibold" :class="item.status === 'completed' ? 'text-green-700' : 'text-yellow-700'">
+                    <span>Jetzt</span>
+                    <span>CHF {{ (item.amountPaid / 100).toFixed(2) }}</span>
+                  </div>
+                  <!-- Total line if there was already something paid -->
+                  <div v-if="item.alreadyPaid > 0 && item.amountPaid > 0" class="flex justify-between text-gray-500 border-t border-gray-200 pt-0.5 mt-0.5">
+                    <span>Total bezahlt</span>
+                    <span>CHF {{ ((item.alreadyPaid + item.amountPaid) / 100).toFixed(2) }} / {{ ((item.due + item.alreadyPaid) / 100).toFixed(2) }}</span>
+                  </div>
+                  <!-- Remaining if partial -->
+                  <div v-if="item.status === 'partial'" class="flex justify-between text-red-500">
+                    <span>Noch offen</span>
+                    <span>CHF {{ ((item.due - item.amountPaid) / 100).toFixed(2) }}</span>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <div class="flex gap-3 pt-1">
+            <button
+              @click="showPartialPaymentDialog = false"
+              class="flex-1 px-4 py-2 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Abbrechen
+            </button>
+            <button
+              @click="confirmPartialPayment"
+              :disabled="isProcessingBulkAction || !partialPaymentInput || parseFloat(String(partialPaymentInput).replace(',', '.')) <= 0"
+              class="flex-1 px-4 py-2 rounded-xl text-white text-sm font-semibold transition-all disabled:opacity-50"
+              :style="{ backgroundColor: secondaryColor || '#22C55E' }"
+            >
+              <span v-if="isProcessingBulkAction">Wird verarbeitet…</span>
+              <span v-else>Bestätigen</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -2327,6 +2482,11 @@ const selectedPayments = ref<string[]>([])
 const isProcessingBulkAction = ref(false)
 const expandedCancelledPayments = ref<Set<string>>(new Set())
 
+// Partial payment dialog state
+const showPartialPaymentDialog = ref(false)
+const partialPaymentInput = ref<number | string>('')
+const partialPaymentMethod = ref<'cash' | 'online'>('cash')
+
 // Toggle payment selection
 const togglePaymentSelection = (paymentId: string) => {
   if (selectedPayments.value.includes(paymentId)) {
@@ -2345,21 +2505,28 @@ const formatCurrency = (amount: number): string => {
 }
 
 // Handle bulk payment method selection
-const handleBulkPayment = async (method: 'cash' | 'online') => {
+const openCashPaymentDialog = (method: 'cash' | 'online') => {
+  if (selectedPayments.value.length === 0) return
+  partialPaymentMethod.value = method
+  partialPaymentInput.value = (totalSelectedAmount.value / 100).toFixed(2)
+  showPartialPaymentDialog.value = true
+}
+
+const handleBulkPayment = async (method: 'cash' | 'online', partialAmountRappen?: number) => {
   if (selectedPayments.value.length === 0) return
   
   isProcessingBulkAction.value = true
   try {
     logger.debug(`💳 Processing ${selectedPayments.value.length} payments as ${method}`)
-    logger.debug(`Payment IDs: ${selectedPayments.value.join(', ')}`)
     
-    // ✅ Use secure backend API instead of direct Supabase
+    const body: any = { payment_ids: selectedPayments.value, method }
+    if (typeof partialAmountRappen === 'number' && partialAmountRappen > 0) {
+      body.partial_amount_rappen = partialAmountRappen
+    }
+
     const response = await $fetch('/api/staff/process-bulk-payment', {
       method: 'POST',
-      body: {
-        payment_ids: selectedPayments.value,
-        method
-      }
+      body
     }) as any
 
     if (!response?.success) {
@@ -2367,30 +2534,26 @@ const handleBulkPayment = async (method: 'cash' | 'online') => {
     }
 
     logger.debug('✅ Bulk payment processing results:', response.summary)
-
-    // Log individual results
-    response.results.forEach((result: any) => {
-      if (result.success) {
-        logger.debug(`✅ Payment ${result.payment_id} updated to ${method}`)
-      } else {
-        logger.warn(`⚠️ Payment ${result.payment_id} failed: ${result.error}`)
-      }
-    })
     
-    // Reload payments and lessons to reflect changes
-    const processedCount = response.summary.successful
     await loadPayments()
     await loadLessons()
-    
-    // Clear selection after processing
     selectedPayments.value = []
     
-    logger.debug(`✅ Successfully processed ${processedCount} out of ${selectedPayments.value.length} payments as ${method}`)
   } catch (error) {
     console.error('❌ Error processing bulk payment:', error)
   } finally {
     isProcessingBulkAction.value = false
   }
+}
+
+const confirmPartialPayment = async () => {
+  const amountCHF = parsePartialInput()
+  if (isNaN(amountCHF) || amountCHF <= 0) return
+
+  showPartialPaymentDialog.value = false
+  const amountRappen = Math.round(amountCHF * 100)
+  // Always pass the amount so backend can detect overpayment and credit the difference
+  await handleBulkPayment(partialPaymentMethod.value, amountRappen)
 }
 
 // Computed properties
@@ -2402,8 +2565,62 @@ const totalSelectedAmount = computed(() => {
     if (payment?.appointment?.status === 'cancelled') {
       return total
     }
-    return total + (payment?.total_amount_rappen || 0) - (payment?.credit_used_rappen || 0)
+    const base = (payment?.total_amount_rappen || 0) - (payment?.credit_used_rappen || 0)
+    // For partial payments, only count the remaining balance
+    const alreadyPaid = payment?.payment_status === 'partial' ? (payment?.amount_paid_rappen || 0) : 0
+    return total + Math.max(0, base - alreadyPaid)
   }, 0)
+})
+
+const parsePartialInput = () => {
+  const raw = partialPaymentInput.value
+  if (typeof raw === 'number') return raw
+  return parseFloat(String(raw).replace(',', '.'))
+}
+
+const totalCreditUsedInSelection = computed(() =>
+  selectedPayments.value.reduce((sum, id) => {
+    const p = payments.value.find(p => p.id === id)
+    return sum + (p?.credit_used_rappen || 0)
+  }, 0)
+)
+
+const partialInputOverMax = computed(() => {
+  const amount = parsePartialInput()
+  if (isNaN(amount) || amount <= 0) return false
+  return Math.round(amount * 100) > totalSelectedAmount.value
+})
+
+// Preview of how a partial payment amount will be distributed across selected appointments
+const partialPaymentPreview = computed(() => {
+  const amountCHF = parsePartialInput()
+  const inputRappen = isNaN(amountCHF) ? 0 : Math.round(amountCHF * 100)
+
+  const items = selectedPayments.value
+    .map(id => payments.value.find(p => p.id === id))
+    .filter(Boolean)
+    .map((p: any) => {
+      const base = Math.max(0, (p.total_amount_rappen || 0) - (p.credit_used_rappen || 0))
+      const alreadyPaid = p.payment_status === 'partial' ? (p.amount_paid_rappen || 0) : 0
+      const due = Math.max(0, base - alreadyPaid)
+      const date = p.appointment?.start_time ? new Date(p.appointment.start_time).toLocaleDateString('de-CH') : 'Termin'
+      const history: { amount_rappen: number; paid_at: string }[] = p.metadata?.partial_payments || []
+      return { id: p.id, label: date, due, alreadyPaid, history }
+    })
+    .sort((a, b) => a.due - b.due)
+
+  let remaining = inputRappen
+  return items.map(item => {
+    if (remaining >= item.due) {
+      remaining -= item.due
+      return { ...item, status: 'completed' as const, amountPaid: item.due }
+    } else if (remaining > 0) {
+      const paid = remaining
+      remaining = 0
+      return { ...item, status: 'partial' as const, amountPaid: paid }
+    }
+    return { ...item, status: 'pending' as const, amountPaid: 0 }
+  })
 })
 
 // Handle click on payment card
@@ -3585,4 +3802,6 @@ async function downloadReceipts() {
 .hover\:tenant-border:hover {
   border-color: var(--color-primary, #1E40AF);
 }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
