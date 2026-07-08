@@ -1,6 +1,6 @@
 <template>
   <!-- Backdrop -->
-  <div v-if="show" class="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:p-4" @vue:mounted="onModalOpen">
+  <div v-if="show" class="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:p-4">
     <div class="fixed inset-0 bg-gray-900/60 transition-opacity" @click="closeModal"/>
 
     <!-- Modal panel – full-screen sheet on mobile, centered dialog on sm+ -->
@@ -493,21 +493,56 @@
               </div>
             </div>
 
-            <!-- Notes -->
-            <div v-if="invoice.notes || invoice.internal_notes || isEditing">
-              <div class="bg-gray-50 rounded-xl p-4 space-y-3">
-                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Notizen</h4>
+            <!-- Notes + Rechnungstexte -->
+            <div v-if="invoice.notes || invoice.payment_terms || invoice.footer_text || isEditing">
+              <div class="bg-gray-50 rounded-xl p-4 space-y-4">
+                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Rechnungstexte</h4>
+
+                <!-- Einleitungstext -->
                 <div v-if="isEditing || invoice.notes">
-                  <label class="block text-xs font-medium text-gray-500 mb-1.5">Nachricht an den Kunden</label>
+                  <label class="block text-xs font-medium text-gray-500 mb-1.5">Einleitungstext</label>
                   <textarea
                     v-if="isEditing"
                     v-model="safeEditedInvoice.notes"
                     rows="3"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Sehr geehrte Damen und Herren, anbei erhalten Sie die Rechnung für die durchgeführten Fahrstunden..."
+                    :placeholder="tenantInvoiceTexts.invoice_intro_text || 'Einleitungstext…'"
                   />
-                  <p v-else-if="invoice.notes" class="text-sm text-gray-700">{{ invoice.notes }}</p>
-                  <p v-else class="text-sm text-gray-400">Keine Nachricht vorhanden</p>
+                  <p v-else class="text-sm text-gray-700 whitespace-pre-line">{{ invoice.notes }}</p>
+                </div>
+
+                <!-- Zahlungsbedingungen -->
+                <div v-if="isEditing || invoice.payment_terms">
+                  <label class="block text-xs font-medium text-gray-500 mb-1.5">Zahlungsbedingungen</label>
+                  <textarea
+                    v-if="isEditing"
+                    ref="paymentTermsRef"
+                    v-model="safeEditedInvoice.payment_terms"
+                    rows="2"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    :placeholder="tenantInvoiceTexts.invoice_payment_terms || 'Zahlungsbedingungen…'"
+                  />
+                  <p v-if="isEditing" class="text-xs text-gray-400 mt-1">
+                    <button
+                      type="button"
+                      class="inline-flex items-center bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-1.5 py-0.5 rounded font-mono transition-colors"
+                      @click="insertDueDatePlaceholder"
+                    >+ {due_date}</button> einfügen – wird durch das Fälligkeitsdatum der Rechnung ersetzt
+                  </p>
+                  <p v-else class="text-sm text-gray-700 whitespace-pre-line">{{ invoice.payment_terms }}</p>
+                </div>
+
+                <!-- Abschlusstext -->
+                <div v-if="isEditing || invoice.footer_text">
+                  <label class="block text-xs font-medium text-gray-500 mb-1.5">Abschlusstext</label>
+                  <textarea
+                    v-if="isEditing"
+                    v-model="safeEditedInvoice.footer_text"
+                    rows="2"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    :placeholder="tenantInvoiceTexts.invoice_footer_text || 'Abschlusstext…'"
+                  />
+                  <p v-else class="text-sm text-gray-700 whitespace-pre-line">{{ invoice.footer_text }}</p>
                 </div>
               </div>
             </div>
@@ -598,7 +633,7 @@
 
 <script setup lang="ts">
 
-import { defineProps, defineEmits, ref, watch, computed } from 'vue'
+import { defineProps, defineEmits, ref, watch, computed, nextTick } from 'vue'
 import InvoiceStatusBadge from './InvoiceStatusBadge.vue'
 import PaymentStatusBadge from './PaymentStatusBadge.vue'
 // ProductSelectorModal entfernt (Rechnung ist read-only bzgl. Positionen)
@@ -787,7 +822,27 @@ const confirmMarkAsPaid = async () => {
 }
 
 // Reactive state für detaillierte Zahlungsdaten
+const paymentTermsRef = ref<HTMLTextAreaElement | null>(null)
+
+const insertDueDatePlaceholder = () => {
+  const el = paymentTermsRef.value
+  if (!el) return
+  const start = el.selectionStart ?? el.value.length
+  const end = el.selectionEnd ?? el.value.length
+  const placeholder = '{due_date}'
+  const current = (safeEditedInvoice.value as any).payment_terms || ''
+  const newVal = current.slice(0, start) + placeholder + current.slice(end)
+  if (editedInvoice.value) {
+    (editedInvoice.value as any).payment_terms = newVal
+  }
+  nextTick(() => {
+    el.focus()
+    el.setSelectionRange(start + placeholder.length, start + placeholder.length)
+  })
+}
+
 const isLoadingDetails = ref(false)
+const tenantInvoiceTexts = ref<{ invoice_intro_text?: string | null, invoice_payment_terms?: string | null, invoice_footer_text?: string | null }>({})
   const fallbackPayment = ref<any | null>(null)
   const appointmentStartTime = ref<string | null>(null)
   const appointmentEventTypeCode = ref<string | null>(null)
@@ -845,6 +900,7 @@ const loadInvoicePayments = async () => {
 }
 
 // ✅ Lade detaillierte Daten via secure API
+let _loadingDetailsCalled = false
 const loadDetailedData = async () => {
   // Initialisiere editedInvoice wenn das Modal geöffnet wird
   if (props.invoice) {
@@ -854,10 +910,26 @@ const loadDetailedData = async () => {
   if (!props.invoice || !props.show) {
     return;
   }
+
+  // Verhindere parallele Aufrufe
+  if (_loadingDetailsCalled) return;
+  _loadingDetailsCalled = true;
   
   isLoadingDetails.value = true;
   
   try {
+    // ✅ Lade Tenant-Standardtexte für Platzhalter
+    try {
+      const settings = await $fetch<any>('/api/admin/invoice-settings')
+      tenantInvoiceTexts.value = {
+        invoice_intro_text: settings?.invoice_intro_text || null,
+        invoice_payment_terms: settings?.invoice_payment_terms || null,
+        invoice_footer_text: settings?.invoice_footer_text || null,
+      }
+    } catch (e) {
+      // ignore
+    }
+
     // ✅ Lade alle Payments für diese Rechnung
     await loadInvoicePayments();
     await loadInvoicePaymentsHistory();
@@ -902,42 +974,32 @@ const loadDetailedData = async () => {
     console.error('Error loading detailed data:', error);
   } finally {
     isLoadingDetails.value = false;
+    _loadingDetailsCalled = false;
   }
 };
 
 // Watch für show prop um Daten zu laden
 watch(() => props.show, (newShow) => {
   if (newShow && props.invoice) {
-    // Kurze Verzögerung um sicherzustellen, dass das Modal vollständig geladen ist
-    setTimeout(() => {
-      loadDetailedData();
-      
-      // Wenn startInEditMode true ist, starte direkt im Bearbeitungsmodus
-      if (props.startInEditMode) {
-        setTimeout(() => {
-          startEditing();
-        }, 300); // Verzögerung um sicherzustellen, dass alle Daten geladen sind
-      }
-      
-    }, 100);
+    _loadingDetailsCalled = false;
+    loadDetailedData();
+    
+    if (props.startInEditMode) {
+      setTimeout(() => {
+        startEditing();
+      }, 300);
+    }
   }
 });
 
 // Watch für invoice prop: nur neu laden wenn sich die Rechnungs-ID ändert (nicht wenn Items nachgeladen werden)
 watch(() => props.invoice?.id, (newId, oldId) => {
   if (newId && newId !== oldId && props.show) {
-    setTimeout(() => {
-      loadDetailedData();
-    }, 100);
+    _loadingDetailsCalled = false;
+    loadDetailedData();
   }
 });
 
-// Zusätzlich: Lade Daten direkt wenn das Modal geöffnet wird
-const onModalOpen = () => {
-  if (props.invoice) {
-    loadDetailedData();
-  }
-};
 
 // ✅ Status-Update-Funktionen via secure API
 const updateInvoiceStatus = async (action: string) => {
@@ -1180,12 +1242,10 @@ const saveChanges = async () => {
   isSaving.value = true;
   
   try {
-    const paymentId = fallbackPayment.value?.id || props.invoice.id;
-    
     await $fetch('/api/admin/invoice-save', {
       method: 'POST',
       body: {
-        payment_id: paymentId,
+        invoice_id: props.invoice.id,
         update_data: {
           due_date: editedInvoice.value.due_date,
           billing_company_name: editedInvoice.value.billing_company_name,
@@ -1196,7 +1256,9 @@ const saveChanges = async () => {
           billing_city: editedInvoice.value.billing_city,
           billing_country: editedInvoice.value.billing_country,
           billing_email: editedInvoice.value.billing_email,
-          notes: editedInvoice.value.notes
+          notes: editedInvoice.value.notes,
+          payment_terms: (editedInvoice.value as any).payment_terms,
+          footer_text: (editedInvoice.value as any).footer_text
         }
       }
     });
@@ -1213,7 +1275,9 @@ const saveChanges = async () => {
         billing_city: editedInvoice.value.billing_city,
         billing_country: editedInvoice.value.billing_country,
         billing_email: editedInvoice.value.billing_email,
-        notes: editedInvoice.value.notes
+        notes: editedInvoice.value.notes,
+        payment_terms: (editedInvoice.value as any).payment_terms,
+        footer_text: (editedInvoice.value as any).footer_text
       });
     }
     

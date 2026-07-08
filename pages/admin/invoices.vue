@@ -208,7 +208,11 @@
                   <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold" :class="getStatusBadgeClass(invoice.status)">
                     {{ invoiceStatusLabel(invoice.status) }}
                   </span>
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold" :class="getPaymentStatusBadgeClass(invoice.payment_status)">
+                  <span
+                    v-if="invoice.status === 'sent' && invoice.payment_status"
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                    :class="getPaymentStatusBadgeClass(invoice.payment_status)"
+                  >
                     {{ invoicePaymentStatusLabel(invoice.payment_status) }}
                   </span>
                 </div>
@@ -339,7 +343,8 @@ const useDebounce = (callback: Function, delay: number) => {
 const { 
   invoices, 
   isLoading, 
-  totalInvoices, 
+  totalInvoices,
+  itemsPerPage,
   currentPage, 
   totalPages, 
   hasInvoices,
@@ -361,7 +366,6 @@ const shouldStartInEditMode = ref(false)
 const showStatusDropdown = ref(false)
 const showPaymentStatusDropdown = ref(false)
 const showDateDropdown = ref(false)
-const itemsPerPage = ref(10)
 const currentTenant = ref<any>(null)
 const summary = ref({
   total_invoices: 0,

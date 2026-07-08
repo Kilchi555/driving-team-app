@@ -1111,6 +1111,22 @@
                 <p class="text-xs text-gray-400 mt-1">Wird als Standardwert beim Erstellen neuer Rechnungspositionen verwendet. CH-Normalsatz: 8.1%, reduzierter Satz: 2.6%</p>
               </div>
 
+              <!-- Zahlungsfrist -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Zahlungsfrist (Tage)</label>
+                <div class="flex items-center gap-2">
+                  <input
+                    v-model.number="invoiceSettings.invoice_due_days"
+                    type="number"
+                    min="1"
+                    max="365"
+                    class="w-24 px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm"
+                  />
+                  <span class="text-sm text-gray-500">Tage ab Rechnungsdatum</span>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Definiert die Fälligkeit bei neuen Rechnungen.</p>
+              </div>
+
               <!-- Rechnungstexte -->
               <div class="col-span-2 border-t pt-4 mt-2">
                 <h5 class="text-sm font-semibold text-gray-700 mb-3">Rechnungstexte (Vorlagen)</h5>
@@ -1128,12 +1144,20 @@
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Zahlungsbedingungen</label>
                     <textarea
+                      ref="paymentTermsTextarea"
                       v-model="invoiceSettings.invoice_payment_terms"
                       rows="2"
-                      placeholder="z.B. Zahlbar innert 30 Tagen netto."
+                      placeholder="z.B. Zahlbar bis {due_date} netto."
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm resize-none"
                     />
-                    <p class="text-xs text-gray-400 mt-1">Erscheint nach den Positionen / Totals auf der Rechnung.</p>
+                    <p class="text-xs text-gray-400 mt-1">
+                      Erscheint nach den Positionen / Totals auf der Rechnung.
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-0.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-1.5 py-0.5 rounded font-mono transition-colors ml-1"
+                        @click="insertPlaceholder(paymentTermsTextarea, 'invoiceSettings', 'invoice_payment_terms', '{due_date}')"
+                      >+ {due_date}</button> einfügen – wird durch das Fälligkeitsdatum der Rechnung ersetzt
+                    </p>
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Abschlusstext / Dankestext</label>
@@ -1533,7 +1557,7 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted, markRaw, watch, onUnmounted, h } from 'vue'
+import { ref, computed, onMounted, markRaw, watch, onUnmounted, h, nextTick } from 'vue'
 import { navigateTo, useRoute, useRouter } from '#app'
 import { logger } from '~/utils/logger'
 import { compressImage, validateImageFile, getFileSizeKB } from '~/utils/imageCompression'
@@ -1730,6 +1754,22 @@ const paymentSettings = ref({
 })
 
 const staffInvoicePermission = ref<'hidden' | 'create_only' | 'create_and_send'>('create_and_send')
+const paymentTermsTextarea = ref<HTMLTextAreaElement | null>(null)
+
+const insertPlaceholder = (el: HTMLTextAreaElement | null, obj: string, field: string, placeholder: string) => {
+  if (!el) return
+  const start = el.selectionStart ?? el.value.length
+  const end = el.selectionEnd ?? el.value.length
+  const current = el.value
+  const newVal = current.slice(0, start) + placeholder + current.slice(end)
+  if (obj === 'invoiceSettings') {
+    (invoiceSettings.value as any)[field] = newVal
+  }
+  nextTick(() => {
+    el.focus()
+    el.setSelectionRange(start + placeholder.length, start + placeholder.length)
+  })
+}
 
 const invoiceSettings = ref({
   qr_iban: '',
@@ -1739,6 +1779,7 @@ const invoiceSettings = ref({
   invoice_city: '',
   invoice_number_prefix: 'RE',
   default_vat_rate: 7.70,
+  invoice_due_days: 30,
   invoice_intro_text: '',
   invoice_payment_terms: '',
   invoice_footer_text: '',
@@ -1757,6 +1798,7 @@ const loadInvoiceSettings = async (_tenantId: string) => {
         invoice_city: data.invoice_city || '',
         invoice_number_prefix: data.invoice_number_prefix || 'RE',
         default_vat_rate: data.default_vat_rate ?? 7.70,
+        invoice_due_days: data.invoice_due_days ?? 30,
         invoice_intro_text: data.invoice_intro_text || '',
         invoice_payment_terms: data.invoice_payment_terms || '',
         invoice_footer_text: data.invoice_footer_text || '',

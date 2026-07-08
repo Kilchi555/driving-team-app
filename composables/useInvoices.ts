@@ -386,6 +386,7 @@ export const useInvoices = () => {
     isLoading: readonly(isLoading),
     error: readonly(error),
     totalInvoices: readonly(totalInvoices),
+    itemsPerPage: readonly(itemsPerPage),
     currentPage: readonly(currentPage),
     totalPages: readonly(totalPages),
     hasInvoices: readonly(hasInvoices),

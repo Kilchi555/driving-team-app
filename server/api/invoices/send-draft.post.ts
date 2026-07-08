@@ -134,6 +134,8 @@ export default defineEventHandler(async (event) => {
       accounto_sync_status: 'not_synced',
       sent_at: send_email ? now : null,
       notes: (draft as any).notes || null,
+      payment_terms: (draft as any).payment_terms || null,
+      footer_text: (draft as any).footer_text || null,
     })
     .select()
     .single()
@@ -336,6 +338,9 @@ export default defineEventHandler(async (event) => {
           creditorName: (draft as any).creditor_name || legalName,
           primaryColor: tenantData.primary_color || '#1E40AF',
           secondaryColor: tenantData.secondary_color || '#64748B',
+          introText: (draft as any).notes || (tenantData as any).invoice_intro_text || null,
+          paymentTerms: (draft as any).payment_terms || (tenantData as any).invoice_payment_terms || null,
+          footerText: (draft as any).footer_text || (tenantData as any).invoice_footer_text || null,
         })
         pdfAttachments = [{
           filename: `Rechnung_${invoiceNumber}.pdf`,

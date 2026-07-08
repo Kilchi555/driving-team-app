@@ -256,75 +256,163 @@
         </div>
 
         <!-- Zahlungen -->
-        <div v-if="userPayments.length > 0" class="bg-white shadow rounded-lg overflow-hidden">
-          <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Zahlungen</h3>
-            <span class="text-sm text-gray-500">{{ userPayments.length }} Total</span>
+        <div v-if="userPayments.length > 0" class="bg-white shadow rounded-xl overflow-hidden">
+          <!-- Header + Stats -->
+          <div class="px-5 py-4 border-b border-gray-100">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-semibold text-gray-900">Zahlungen</h3>
+              <button
+                v-if="userPayments.length > 5"
+                @click="showAllPayments = true"
+                class="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+              >Alle {{ userPayments.length }} anzeigen →</button>
+            </div>
+            <!-- Summary stats -->
+            <div class="grid grid-cols-3 gap-3">
+              <div class="bg-gray-50 rounded-lg px-3 py-2">
+                <p class="text-xs text-gray-500">Total</p>
+                <p class="text-sm font-semibold text-gray-900 mt-0.5">{{ formatCHF(userPayments.filter(p => p.payment_status !== 'cancelled').reduce((s: number, p: any) => s + (p.total_amount_rappen || 0), 0)) }}</p>
+              </div>
+              <div class="bg-green-50 rounded-lg px-3 py-2">
+                <p class="text-xs text-green-600">Bezahlt</p>
+                <p class="text-sm font-semibold text-green-700 mt-0.5">{{ formatCHF(userPayments.filter(p => p.payment_status === 'completed').reduce((s: number, p: any) => s + (p.total_amount_rappen || 0), 0)) }}</p>
+              </div>
+              <div class="bg-amber-50 rounded-lg px-3 py-2">
+                <p class="text-xs text-amber-600">Ausstehend</p>
+                <p class="text-sm font-semibold text-amber-700 mt-0.5">{{ formatCHF(userPayments.filter(p => p.payment_status === 'pending').reduce((s: number, p: any) => s + (p.total_amount_rappen || 0), 0)) }}</p>
+              </div>
+            </div>
           </div>
-          <div class="divide-y divide-gray-100">
-            <div v-for="pay in userPayments" :key="pay.id" class="px-6 py-4">
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-semibold text-gray-900 truncate">
-                    {{ pay.appointments?.title || (pay.appointments?.event_type_code === 'lesson' ? 'Fahrstunde' : pay.appointments?.event_type_code ? pay.appointments.event_type_code : 'Zahlung') }}
-                  </p>
-                  <p class="text-xs text-gray-500 mt-0.5">{{ formatDateShort(pay.created_at) }}</p>
-                  <p v-if="pay.appointments?.start_time" class="text-xs text-gray-400">Termin: {{ formatDateShort(pay.appointments.start_time) }}</p>
-                  <p v-if="pay.paid_at" class="text-xs text-gray-400">Bezahlt: {{ formatDateShort(pay.paid_at) }}</p>
-                </div>
-                <div class="flex flex-col items-end gap-1 flex-shrink-0">
-                  <span class="text-sm font-bold text-gray-900">{{ formatCHF(pay.total_amount_rappen || 0) }}</span>
-                  <span :class="{
-                    'bg-green-100 text-green-700': pay.payment_status === 'completed',
-                    'bg-amber-100 text-amber-700': pay.payment_status === 'pending',
-                    'bg-red-100 text-red-700': pay.payment_status === 'failed',
-                    'bg-gray-100 text-gray-600': pay.payment_status === 'cancelled'
-                  }" class="px-2 py-0.5 text-xs font-medium rounded-full">
-                    {{ pay.payment_status === 'completed' ? 'Bezahlt' : pay.payment_status === 'pending' ? 'Ausstehend' : pay.payment_status === 'failed' ? 'Fehlgeschlagen' : pay.payment_status === 'cancelled' ? 'Storniert' : pay.payment_status }}
-                  </span>
-                  <span class="text-xs text-gray-400">{{ pay.payment_method || '—' }}</span>
+          <!-- Latest 5 rows -->
+          <div class="divide-y divide-gray-50">
+            <div v-for="pay in userPayments.slice(0, 5)" :key="pay.id" class="px-5 py-3 flex items-center gap-3">
+              <!-- Icon -->
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" :class="pay.payment_status === 'completed' ? 'bg-green-50' : pay.payment_status === 'cancelled' ? 'bg-gray-100' : 'bg-amber-50'">
+                <svg class="w-4 h-4" :class="pay.payment_status === 'completed' ? 'text-green-600' : pay.payment_status === 'cancelled' ? 'text-gray-400' : 'text-amber-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                </svg>
+              </div>
+              <!-- Info -->
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-900 truncate">
+                  {{ pay.appointments?.title || (pay.appointments?.event_type_code === 'lesson' ? 'Fahrstunde' : pay.appointments?.event_type_code || 'Zahlung') }}
+                </p>
+                <p class="text-xs text-gray-400">{{ formatDateShort(pay.created_at) }}{{ pay.payment_method ? ` · ${pay.payment_method}` : '' }}</p>
+              </div>
+              <!-- Amount + Status -->
+              <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                <span class="text-sm font-semibold" :class="pay.payment_status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'">{{ formatCHF(pay.total_amount_rappen || 0) }}</span>
+                <span class="px-1.5 py-0.5 text-xs font-medium rounded-md" :class="{
+                  'bg-green-100 text-green-700': pay.payment_status === 'completed',
+                  'bg-amber-100 text-amber-700': pay.payment_status === 'pending',
+                  'bg-red-100 text-red-700': pay.payment_status === 'failed',
+                  'bg-gray-100 text-gray-500': pay.payment_status === 'cancelled'
+                }">{{ pay.payment_status === 'completed' ? 'Bezahlt' : pay.payment_status === 'pending' ? 'Ausstehend' : pay.payment_status === 'failed' ? 'Fehlgeschlagen' : 'Storniert' }}</span>
+              </div>
+            </div>
+          </div>
+          <!-- Show all button if > 5 -->
+          <div v-if="userPayments.length > 5" class="px-5 py-3 border-t border-gray-50 bg-gray-50/50">
+            <button @click="showAllPayments = true" class="w-full text-center text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors">
+              + {{ userPayments.length - 5 }} weitere Zahlungen anzeigen
+            </button>
+          </div>
+        </div>
+
+        <!-- Modal: Alle Zahlungen -->
+        <Teleport to="body">
+          <div v-if="showAllPayments" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="showAllPayments = false">
+            <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showAllPayments = false"/>
+            <div class="relative bg-white w-full sm:max-w-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
+              <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <h3 class="text-base font-semibold text-gray-900">Alle Zahlungen <span class="text-sm font-normal text-gray-400 ml-1">{{ userPayments.length }} Total</span></h3>
+                <button @click="showAllPayments = false" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+              <div class="overflow-y-auto flex-1 divide-y divide-gray-50">
+                <div v-for="pay in userPayments" :key="pay.id" class="px-5 py-3 flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" :class="pay.payment_status === 'completed' ? 'bg-green-50' : pay.payment_status === 'cancelled' ? 'bg-gray-100' : 'bg-amber-50'">
+                    <svg class="w-4 h-4" :class="pay.payment_status === 'completed' ? 'text-green-600' : pay.payment_status === 'cancelled' ? 'text-gray-400' : 'text-amber-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">{{ pay.appointments?.title || (pay.appointments?.event_type_code === 'lesson' ? 'Fahrstunde' : pay.appointments?.event_type_code || 'Zahlung') }}</p>
+                    <p class="text-xs text-gray-400">{{ formatDateShort(pay.created_at) }}{{ pay.payment_method ? ` · ${pay.payment_method}` : '' }}{{ pay.paid_at ? ` · Bezahlt ${formatDateShort(pay.paid_at)}` : '' }}</p>
+                  </div>
+                  <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                    <span class="text-sm font-semibold" :class="pay.payment_status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'">{{ formatCHF(pay.total_amount_rappen || 0) }}</span>
+                    <span class="px-1.5 py-0.5 text-xs font-medium rounded-md" :class="{
+                      'bg-green-100 text-green-700': pay.payment_status === 'completed',
+                      'bg-amber-100 text-amber-700': pay.payment_status === 'pending',
+                      'bg-red-100 text-red-700': pay.payment_status === 'failed',
+                      'bg-gray-100 text-gray-500': pay.payment_status === 'cancelled'
+                    }">{{ pay.payment_status === 'completed' ? 'Bezahlt' : pay.payment_status === 'pending' ? 'Ausstehend' : pay.payment_status === 'failed' ? 'Fehlgeschlagen' : 'Storniert' }}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </Teleport>
 
         <!-- Termine -->
-        <div v-if="userAppointments.length > 0" class="bg-white shadow rounded-lg overflow-hidden">
-          <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Termine</h3>
-            <span class="text-sm text-gray-500">{{ userAppointments.length }} Total</span>
+        <div v-if="userAppointments.length > 0" class="bg-white shadow rounded-xl overflow-hidden">
+          <!-- Header -->
+          <div class="px-5 py-4 border-b border-gray-100">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-semibold text-gray-900">Termine</h3>
+              <button
+                v-if="userAppointments.length > 5"
+                @click="showAllAppointments = true"
+                class="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+              >Alle {{ userAppointments.length }} anzeigen →</button>
+            </div>
+            <!-- Summary stats -->
+            <div class="grid grid-cols-3 gap-3">
+              <div class="bg-gray-50 rounded-lg px-3 py-2">
+                <p class="text-xs text-gray-500">Total</p>
+                <p class="text-sm font-semibold text-gray-900 mt-0.5">{{ userAppointments.length }}</p>
+              </div>
+              <div class="bg-green-50 rounded-lg px-3 py-2">
+                <p class="text-xs text-green-600">Bestätigt</p>
+                <p class="text-sm font-semibold text-green-700 mt-0.5">{{ userAppointments.filter((a: any) => a.status === 'confirmed' || a.status === 'completed').length }}</p>
+              </div>
+              <div class="bg-red-50 rounded-lg px-3 py-2">
+                <p class="text-xs text-red-500">Storniert</p>
+                <p class="text-sm font-semibold text-red-600 mt-0.5">{{ userAppointments.filter((a: any) => a.status === 'cancelled').length }}</p>
+              </div>
+            </div>
           </div>
-          <div class="divide-y divide-gray-100">
-            <div v-for="appt in userAppointments" :key="appt.id" class="px-6 py-4">
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-semibold text-gray-900">{{ appt.type || 'Fahrstunde' }}</p>
-                  <p class="text-xs text-gray-500 mt-0.5">
-                    {{ formatDateShort(appt.start_time) }}
-                    <span v-if="appt.start_time" class="ml-1 text-gray-600 font-medium">
-                      {{ new Date(appt.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }) }}
-                    </span>
-                  </p>
-                  <p v-if="appt.staff" class="text-xs text-gray-400">Fahrlehrer: {{ appt.staff?.first_name }} {{ appt.staff?.last_name }}</p>
-                  <p v-if="appt.duration_minutes" class="text-xs text-gray-400">{{ appt.duration_minutes }} Min.</p>
+          <!-- Latest 5 rows -->
+          <div class="divide-y divide-gray-50">
+            <div v-for="appt in userAppointments.slice(0, 5)" :key="appt.id" class="px-5 py-3">
+              <div class="flex items-center gap-3">
+                <!-- Date badge -->
+                <div class="w-10 flex-shrink-0 text-center bg-gray-50 rounded-lg py-1.5 border border-gray-100">
+                  <p class="text-xs font-bold text-gray-700 leading-none">{{ appt.start_time ? new Date(appt.start_time).toLocaleDateString('de-CH', { day: '2-digit', timeZone: 'Europe/Zurich' }) : '—' }}</p>
+                  <p class="text-xs text-gray-400 mt-0.5">{{ appt.start_time ? new Date(appt.start_time).toLocaleDateString('de-CH', { month: 'short', timeZone: 'Europe/Zurich' }) : '' }}</p>
                 </div>
+                <!-- Info -->
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-900">{{ appt.type || 'Fahrstunde' }}</p>
+                  <p class="text-xs text-gray-400">
+                    {{ appt.start_time ? new Date(appt.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }) : '' }}
+                    {{ appt.duration_minutes ? `· ${appt.duration_minutes} Min.` : '' }}
+                    {{ appt.staff ? `· ${appt.staff.first_name} ${appt.staff.last_name}` : '' }}
+                  </p>
+                </div>
+                <!-- Status + Edit -->
                 <div class="flex items-center gap-2 flex-shrink-0">
-                  <span :class="{
+                  <span class="px-1.5 py-0.5 text-xs font-medium rounded-md" :class="{
                     'bg-green-100 text-green-700': appt.status === 'confirmed',
                     'bg-blue-100 text-blue-700': appt.status === 'completed',
                     'bg-amber-100 text-amber-700': appt.status === 'pending',
                     'bg-red-100 text-red-700': appt.status === 'cancelled',
                     'bg-gray-100 text-gray-600': !['confirmed','completed','pending','cancelled'].includes(appt.status)
-                  }" class="px-2 py-0.5 text-xs font-medium rounded-full mt-0.5">
-                    {{ appt.status === 'confirmed' ? 'Bestätigt' : appt.status === 'completed' ? 'Abgeschlossen' : appt.status === 'pending' ? 'Ausstehend' : appt.status === 'cancelled' ? 'Storniert' : appt.status }}
-                  </span>
-                  <button
-                    @click="toggleApptEdit(appt.id)"
-                    class="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                    title="Bearbeiten"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  }">{{ appt.status === 'confirmed' ? 'Bestätigt' : appt.status === 'completed' ? 'Abgeschlossen' : appt.status === 'pending' ? 'Ausstehend' : appt.status === 'cancelled' ? 'Storniert' : appt.status }}</span>
+                  <button @click="toggleApptEdit(appt.id)" class="p-1 rounded-lg text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors" title="Bearbeiten">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
                     </svg>
                   </button>
@@ -335,52 +423,70 @@
                 <div class="grid grid-cols-3 gap-3">
                   <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1">Datum</label>
-                    <input
-                      v-model="apptEditForm.date"
-                      type="date"
-                      class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
+                    <input v-model="apptEditForm.date" type="date" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1">Uhrzeit</label>
-                    <input
-                      v-model="apptEditForm.time"
-                      type="time"
-                      class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
+                    <input v-model="apptEditForm.time" type="time" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1">Dauer (Min.)</label>
-                    <input
-                      v-model.number="apptEditForm.duration_minutes"
-                      type="number"
-                      min="15"
-                      step="15"
-                      class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
+                    <input v-model.number="apptEditForm.duration_minutes" type="number" min="15" step="15" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   </div>
                 </div>
                 <div class="flex gap-2 mt-3">
-                  <button
-                    @click="saveApptEdit(appt)"
-                    :disabled="isSavingAppt"
-                    class="px-3 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50 transition-colors"
-                    style="background: #1e40af"
-                  >
-                    {{ isSavingAppt ? 'Speichert…' : 'Speichern' }}
-                  </button>
-                  <button
-                    @click="editingApptId = null"
-                    class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    Abbrechen
-                  </button>
+                  <button @click="saveApptEdit(appt)" :disabled="isSavingAppt" class="px-3 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50 transition-colors" style="background: #1e40af">{{ isSavingAppt ? 'Speichert…' : 'Speichern' }}</button>
+                  <button @click="editingApptId = null" class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Abbrechen</button>
                 </div>
                 <p v-if="apptEditError" class="mt-2 text-xs text-red-600">{{ apptEditError }}</p>
               </div>
             </div>
           </div>
+          <!-- Show all button if > 5 -->
+          <div v-if="userAppointments.length > 5" class="px-5 py-3 border-t border-gray-50 bg-gray-50/50">
+            <button @click="showAllAppointments = true" class="w-full text-center text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors">
+              + {{ userAppointments.length - 5 }} weitere Termine anzeigen
+            </button>
+          </div>
         </div>
+
+        <!-- Modal: Alle Termine -->
+        <Teleport to="body">
+          <div v-if="showAllAppointments" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="showAllAppointments = false">
+            <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showAllAppointments = false"/>
+            <div class="relative bg-white w-full sm:max-w-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
+              <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <h3 class="text-base font-semibold text-gray-900">Alle Termine <span class="text-sm font-normal text-gray-400 ml-1">{{ userAppointments.length }} Total</span></h3>
+                <button @click="showAllAppointments = false" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+              <div class="overflow-y-auto flex-1 divide-y divide-gray-50">
+                <div v-for="appt in userAppointments" :key="appt.id" class="px-5 py-3 flex items-center gap-3">
+                  <div class="w-10 flex-shrink-0 text-center bg-gray-50 rounded-lg py-1.5 border border-gray-100">
+                    <p class="text-xs font-bold text-gray-700 leading-none">{{ appt.start_time ? new Date(appt.start_time).toLocaleDateString('de-CH', { day: '2-digit', timeZone: 'Europe/Zurich' }) : '—' }}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">{{ appt.start_time ? new Date(appt.start_time).toLocaleDateString('de-CH', { month: 'short', timeZone: 'Europe/Zurich' }) : '' }}</p>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900">{{ appt.type || 'Fahrstunde' }}</p>
+                    <p class="text-xs text-gray-400">
+                      {{ appt.start_time ? new Date(appt.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }) : '' }}
+                      {{ appt.duration_minutes ? `· ${appt.duration_minutes} Min.` : '' }}
+                      {{ appt.staff ? `· ${appt.staff.first_name} ${appt.staff.last_name}` : '' }}
+                    </p>
+                  </div>
+                  <span class="px-1.5 py-0.5 text-xs font-medium rounded-md flex-shrink-0" :class="{
+                    'bg-green-100 text-green-700': appt.status === 'confirmed',
+                    'bg-blue-100 text-blue-700': appt.status === 'completed',
+                    'bg-amber-100 text-amber-700': appt.status === 'pending',
+                    'bg-red-100 text-red-700': appt.status === 'cancelled',
+                    'bg-gray-100 text-gray-600': !['confirmed','completed','pending','cancelled'].includes(appt.status)
+                  }">{{ appt.status === 'confirmed' ? 'Bestätigt' : appt.status === 'completed' ? 'Abgeschlossen' : appt.status === 'pending' ? 'Ausstehend' : appt.status === 'cancelled' ? 'Storniert' : appt.status }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Teleport>
 
         <!-- Fahrlehrer & Verfügbarkeit (nur für Rolle staff) -->
         <div v-if="userDetails?.role === 'staff' && isOnlineBookingEnabled" class="bg-white shadow rounded-lg overflow-hidden">
@@ -725,6 +831,8 @@ const showEditModal = ref(false)
 const userCourseRegistrations = ref<any[]>([])
 const userPayments = ref<any[]>([])
 const userAppointments = ref<any[]>([])
+const showAllPayments = ref(false)
+const showAllAppointments = ref(false)
 const editingApptId = ref<string | null>(null)
 const apptEditForm = ref({ date: '', time: '', duration_minutes: 45 })
 const isSavingAppt = ref(false)

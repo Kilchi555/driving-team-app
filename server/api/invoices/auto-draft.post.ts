@@ -131,7 +131,7 @@ export default defineEventHandler(async (event) => {
   // Tenant-Daten für Rechnungsnummer-Prefix + QR-IBAN + Rechnungstexte
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, invoice_number_prefix, next_invoice_number, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text')
+    .select('id, name, invoice_number_prefix, next_invoice_number, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_due_days')
     .eq('id', staffUser.tenant_id)
     .single()
 
@@ -143,7 +143,8 @@ export default defineEventHandler(async (event) => {
 
   const today = new Date()
   const dueDate = new Date(today)
-  dueDate.setDate(dueDate.getDate() + 30)
+  const dueDays = (tenant as any)?.invoice_due_days ?? 30
+  dueDate.setDate(dueDate.getDate() + dueDays)
 
   // Draft-Objekt zusammenstellen
   // BRUTTO-Subtotal: total_amount_rappen enthält bereits (Preis - Rabatt), aber NICHT Guthaben.

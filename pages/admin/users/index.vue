@@ -206,7 +206,7 @@
                   Guide bearbeiten
                 </span>
               </th>
-              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tenant</th>
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">E-Mail</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-50">
@@ -300,13 +300,10 @@
               </td>
 
               <td class="px-5 py-3.5">
-                <p class="text-sm text-gray-700">{{ currentTenant?.name || 'Unbekannt' }}</p>
-                <div class="text-xs text-gray-500">
-                  {{ user.is_invitation && user.invitation_expires_at 
-                    ? `Läuft ab: ${formatExpiryDate(user.invitation_expires_at)}` 
-                    : (currentTenant?.slug || 'Kein Slug') 
-                  }}
-                </div>
+                <p class="text-sm text-gray-700">{{ user.email || '—' }}</p>
+                <p v-if="user.is_invitation && user.invitation_expires_at" class="text-xs text-gray-400 mt-0.5">
+                  Läuft ab: {{ formatExpiryDate(user.invitation_expires_at) }}
+                </p>
               </td>
             </tr>
 
