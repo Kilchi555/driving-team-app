@@ -197,6 +197,17 @@
                 <dt class="text-sm font-medium text-gray-500">Registriert am</dt>
                 <dd class="mt-1 text-sm text-gray-900">{{ formatDate(userDetails?.created_at) }}</dd>
               </div>
+              <div v-if="userDetails?.role === 'client' && studentCreditRappen !== null">
+                <dt class="text-sm font-medium text-gray-500">Guthaben</dt>
+                <dd class="mt-1">
+                  <span
+                    class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                    :class="studentCreditRappen > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'"
+                  >
+                    CHF {{ ((studentCreditRappen ?? 0) / 100).toFixed(2) }}
+                  </span>
+                </dd>
+              </div>
               <div v-if="userDetails?.role === 'staff'" class="md:col-span-3">
                 <dt class="text-sm font-medium text-gray-500 mb-2">Fahrkategorien</dt>
                 <dd class="mt-1">
@@ -854,6 +865,7 @@ const isOnlineBookingEnabled = computed(() => {
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const userDetails = ref<UserDetails | null>(null)
+const studentCreditRappen = ref<number | null>(null)
 const appointmentStats = ref({
   total: 0,
   upcoming: 0,
@@ -1439,6 +1451,19 @@ const formatDateShort = (d?: string | null) => {
   return new Date(d).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+const loadStudentCredit = async () => {
+  if (!userId) return
+  try {
+    const res = await $fetch<any>('/api/student-credits/get-credits', {
+      query: { user_ids: userId }
+    })
+    const credit = res?.data?.[userId]
+    studentCreditRappen.value = credit?.balance_rappen ?? 0
+  } catch (e) {
+    studentCreditRappen.value = null
+  }
+}
+
 onMounted(async () => {
   try {
     await loadFeatures()
@@ -1450,6 +1475,7 @@ onMounted(async () => {
       loadUserCourseRegistrations(),
       loadUserPayments(),
       loadUserAppointmentsList(),
+      loadStudentCredit(),
     ])
     if (userDetails.value?.role === 'staff') {
       await loadCategories()

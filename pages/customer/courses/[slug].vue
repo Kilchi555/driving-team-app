@@ -256,7 +256,7 @@
               >
                 {{ idx + 1 }}
               </div>
-              <div class="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0 flex-1">
                 <p class="font-medium text-slate-700 whitespace-nowrap">
                   {{ formatSessionDate(session.date) }} 
                   <span class="font-normal text-slate-600">{{ session.timeRange }}</span>
@@ -277,6 +277,17 @@
                   Einzeln · CHF {{ formatPrice(session.individualPriceRappen) }}
                 </button>
               </div>
+              <button
+                v-if="idx > 0 && courseSessionAlternatives[course.id]?.[idx + 1]"
+                @click.stop="openSessionCustomizer(course)"
+                class="shrink-0 px-2.5 py-1 text-xs font-medium rounded-lg transition-colors"
+                :style="{
+                  backgroundColor: `${tenantBranding?.primary_color || '#10B981'}20`,
+                  color: tenantBranding?.primary_color || '#10B981'
+                }"
+              >
+                Ändern
+              </button>
             </div>
           </div>
           
@@ -320,7 +331,7 @@
               <div class="space-y-2">
                 <!-- Sessions anpassen Button (only if course has free slots) -->
                 <button
-                  v-if="hasChangeableSessions(course) && course.free_slots > 0"
+                  v-if="courseSessionAlternatives[course.id] && Object.values(courseSessionAlternatives[course.id]).some(v => v)"
                   @click.stop="openSessionCustomizer(course)"
                   class="w-full px-4 py-2 font-medium rounded-lg border-2 transition-colors flex items-center justify-center gap-2"
                   :style="{
@@ -500,6 +511,8 @@ useHead(computed(() => ({
   ] : []
 })))
 const courses = ref<any[]>([])
+// courseId → sessionPosition → hasAlternatives
+const courseSessionAlternatives = ref<Record<string, Record<number, boolean>>>({})
 const selectedCategory = ref('')
 const selectedLocation = ref('')
 const selectedCourse = ref<any>(null)
@@ -702,6 +715,9 @@ const loadData = async () => {
     
     logger.debug(`Loaded ${courses.value.length} future courses`)
 
+    // Check which changeable sessions have actual alternatives (in background)
+    checkAllSessionAlternatives()
+
     // Auto-open modal if courseId was passed in the URL
     const courseIdParam = route.query.courseId as string | undefined
     if (courseIdParam) {
@@ -732,14 +748,26 @@ const getGroupedSessions = (course: any) => {
     individualPriceRappen: number | null
     requiresConfirmation: boolean
     confirmationText: string | null
+    minFreeSlots: number | null
   }
   
   const grouped: GroupedSession[] = []
   let currentDate = ''
   let currentGroup: GroupedSession | null = null
+
+  const calcSessionFreeSlots = (session: any): number | null => {
+    if (session.max_participants != null) {
+      return session.max_participants - (session.current_participants || 0)
+    }
+    if (session.current_participants != null) {
+      return (course.max_participants || 0) - session.current_participants
+    }
+    return null
+  }
   
   for (const session of sorted) {
     const date = session.start_time.split('T')[0]
+    const sessionFree = calcSessionFreeSlots(session)
     
     if (date !== currentDate) {
       if (currentGroup) {
@@ -754,12 +782,17 @@ const getGroupedSessions = (course: any) => {
         allowIndividualBooking: !!session.allow_individual_booking,
         individualPriceRappen: session.individual_price_rappen ?? null,
         requiresConfirmation: session.individual_booking_requires_confirmation ?? true,
-        confirmationText: session.individual_booking_confirmation_text ?? null
+        confirmationText: session.individual_booking_confirmation_text ?? null,
+        minFreeSlots: sessionFree
       }
     } else {
       if (currentGroup) {
         currentGroup.endTime = session.end_time
         currentGroup.parts++
+        // Take minimum free slots across sessions in the same group
+        if (sessionFree !== null) {
+          currentGroup.minFreeSlots = currentGroup.minFreeSlots === null ? sessionFree : Math.min(currentGroup.minFreeSlots, sessionFree)
+        }
         // Propagate individual booking flag if any session in the group has it
         if (session.allow_individual_booking) {
           currentGroup.allowIndividualBooking = true
@@ -774,17 +807,24 @@ const getGroupedSessions = (course: any) => {
   if (currentGroup) {
     grouped.push(currentGroup)
   }
+
+  const courseFreeSlots = (course.max_participants || 0) - (course.current_participants || 0)
   
   // Format time ranges
-  return grouped.map(g => ({
-    date: g.date,
-    timeRange: `${formatTime(g.startTime)} - ${formatTime(g.endTime)}`,
-    parts: g.parts,
-    allowIndividualBooking: g.allowIndividualBooking,
-    individualPriceRappen: g.individualPriceRappen,
-    requiresConfirmation: g.requiresConfirmation,
-    confirmationText: g.confirmationText
-  }))
+  return grouped.map(g => {
+    const sessionFree = g.minFreeSlots ?? courseFreeSlots
+    const freeSlots = Math.max(0, Math.min(courseFreeSlots, sessionFree))
+    return {
+      date: g.date,
+      timeRange: `${formatTime(g.startTime)} - ${formatTime(g.endTime)}`,
+      parts: g.parts,
+      allowIndividualBooking: g.allowIndividualBooking,
+      individualPriceRappen: g.individualPriceRappen,
+      requiresConfirmation: g.requiresConfirmation,
+      confirmationText: g.confirmationText,
+      freeSlots
+    }
+  })
 }
 
 const formatSessionDate = (dateStr: string) => {
@@ -983,6 +1023,51 @@ const loadMyRegistrations = async () => {
 }
 
 // Load data
+const checkAllSessionAlternatives = async () => {
+  const tenantId = tenant.value?.id
+  if (!tenantId) return
+
+  const checks: Promise<void>[] = []
+
+  for (const course of courses.value) {
+    if (!hasChangeableSessions(course) || course.free_slots <= 0) continue
+
+    const grouped = getGroupedSessions(course)
+    for (let idx = 1; idx < grouped.length; idx++) {
+      const group = grouped[idx]
+      const prevGroup = grouped[idx - 1]
+      const afterDate = prevGroup?.date
+
+      checks.push((async () => {
+        try {
+          const res = await $fetch('/api/courses/available-sessions', {
+            query: {
+              tenantId,
+              category: course.category,
+              sessionPosition: idx + 1,
+              afterDate,
+              excludeCourseId: course.id,
+              courseLocation: course.description,
+              currentDate: group.date
+            }
+          }) as any
+          if (!courseSessionAlternatives.value[course.id]) {
+            courseSessionAlternatives.value[course.id] = {}
+          }
+          courseSessionAlternatives.value[course.id][idx + 1] = !!(res?.sessions?.length)
+        } catch {
+          if (!courseSessionAlternatives.value[course.id]) {
+            courseSessionAlternatives.value[course.id] = {}
+          }
+          courseSessionAlternatives.value[course.id][idx + 1] = false
+        }
+      })())
+    }
+  }
+
+  await Promise.allSettled(checks)
+}
+
 onMounted(async () => {
   logger.debug('Loading courses for slug:', slug.value)
   

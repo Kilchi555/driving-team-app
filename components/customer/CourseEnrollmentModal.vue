@@ -125,22 +125,40 @@
               <div 
                 v-for="(session, idx) in sessionGroups" 
                 :key="idx" 
-                class="text-sm p-2 rounded-lg flex flex-col gap-1"
+                class="text-sm p-2 rounded-lg flex items-center justify-between gap-2"
                 :class="session.isCustom ? 'border' : 'bg-gray-50'"
                 :style="session.isCustom ? { background: `${getTenantPrimaryColor()}15`, borderColor: `${getTenantPrimaryColor()}33` } : {}"
               >
-                <div>
-                  <span class="text-gray-800 font-medium">{{ session.label }}: </span>
-                  <span class="text-gray-800">{{ formatSessionDate(session.displayDate) }}</span>
+                <div class="flex flex-col gap-0.5 min-w-0">
+                  <div>
+                    <span class="text-gray-800 font-medium">{{ session.label }}: </span>
+                    <span class="text-gray-800">{{ formatSessionDate(session.displayDate) }}</span>
+                  </div>
+                  <span class="text-gray-500">{{ session.timeRange }}</span>
+                  <span v-if="session.isCustom" class="text-xs" :style="{ color: getTenantPrimaryColor() }">({{ session.customCourseName }})</span>
                 </div>
-                <span class="text-gray-500">{{ session.timeRange }}</span>
-                <span v-if="session.isCustom" class="text-xs" :style="{ color: getTenantPrimaryColor() }">({{ session.customCourseName }})</span>
+                <div class="shrink-0 flex items-center gap-1.5">
+                  <span
+                    class="text-xs px-2 py-0.5 rounded-full font-medium"
+                    :class="session.freeSlots > 3 ? 'bg-green-100 text-green-700' : session.freeSlots > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'"
+                  >
+                    {{ session.freeSlots }} frei
+                  </span>
+                  <button
+                    v-if="session.isChangeable && sessionHasAlternatives[session.position]"
+                    @click="openSessionSwapModal(session)"
+                    class="px-2.5 py-1 text-xs font-medium rounded-lg transition-colors"
+                    :style="{ backgroundColor: getTenantPrimaryColor() + '20', color: getTenantPrimaryColor() }"
+                  >
+                    Ändern
+                  </button>
+                </div>
               </div>
             </div>
             
             <!-- Sessions anpassen Button -->
             <button
-              v-if="hasChangeableSessions"
+              v-if="hasChangeableSessions && Object.values(sessionHasAlternatives).some(v => v)"
               @click="showSessionCustomizer = true"
               class="mt-3 w-full py-2 text-sm font-medium rounded-lg border transition-colors flex items-center justify-center gap-2"
               :style="{ 
@@ -905,6 +923,34 @@ const showSessionCustomizer = ref(false)
 const showSessionSwapModal = ref(false)
 const swappingSession = ref<any>(null)
 const availableSwapSessions = ref<any[]>([])
+
+// Which positions have actual alternatives available (position → boolean)
+const sessionHasAlternatives = ref<Record<number, boolean>>({})
+
+const checkSessionAlternatives = async () => {
+  if (!hasChangeableSessions.value || !props.course?.course_sessions?.length) return
+  const groups = sessionGroups.value.filter((g: any) => g.isChangeable)
+  const results = await Promise.allSettled(groups.map(async (group: any) => {
+    const prevGroup = sessionGroups.value.find((g: any) => g.position === group.position - 1)
+    const afterDate = prevGroup?.displayDate || prevGroup?.date
+    try {
+      const res = await $fetch('/api/courses/available-sessions', {
+        query: {
+          tenantId: props.tenantId,
+          category: props.course.category,
+          sessionPosition: group.position,
+          afterDate,
+          excludeCourseId: props.course.id,
+          courseLocation: props.course.description,
+          currentDate: group.displayDate || group.date
+        }
+      }) as any
+      sessionHasAlternatives.value[group.position] = !!(res?.sessions?.length)
+    } catch {
+      sessionHasAlternatives.value[group.position] = false
+    }
+  }))
+}
 const isLoadingSwapOptions = ref(false)
 
 // Partial enrollment (Teil-3-only / upgrade path)
@@ -1044,6 +1090,22 @@ const sessionGroups = computed(() => {
     // Check if this session has been customized
     const customSession = customSessions.value[position.toString()]
     
+    // Calculate per-session free slots (min across all sessions in group)
+    const courseFreeSlots = (props.course.max_participants || 0) - (props.course.current_participants || 0)
+    let groupFreeSlots = courseFreeSlots
+    for (const s of sessions) {
+      let sf: number
+      if (s.max_participants != null) {
+        sf = s.max_participants - (s.current_participants || 0)
+      } else if (s.current_participants != null) {
+        sf = (props.course.max_participants || 0) - s.current_participants
+      } else {
+        sf = courseFreeSlots
+      }
+      groupFreeSlots = Math.min(groupFreeSlots, sf)
+    }
+    const freeSlots = Math.max(0, groupFreeSlots)
+
     groups.push({
       position,
       label: `Teil ${startSessionNum}${isGrouped ? `-${endSessionNum}` : ''}`,
@@ -1059,7 +1121,8 @@ const sessionGroups = computed(() => {
       isCustom: !!customSession,
       customCourseName: customSession?.courseName?.split(' - ')[0],
       originalSariIds: sessions.map((s: any) => s.sari_session_id).filter(Boolean),
-      sariIds: customSession?.sariSessionId ? [customSession.sariSessionId] : sessions.map((s: any) => s.sari_session_id).filter(Boolean)
+      sariIds: customSession?.sariSessionId ? [customSession.sariSessionId] : sessions.map((s: any) => s.sari_session_id).filter(Boolean),
+      freeSlots
     })
   }
   
@@ -1520,6 +1583,8 @@ watch(() => props.isOpen, (isOpen) => {
     showSessionCustomizer.value = false
     isIndividualSessionMode.value = props.initialIndividualMode ?? false
     if (isIndividualSessionMode.value) partialConfirmed.value = true
+    sessionHasAlternatives.value = {}
+    checkSessionAlternatives()
   } else {
     step.value = isSariCourse.value ? 'lookup' : 'contact'
     lookupError.value = null
@@ -1536,6 +1601,7 @@ watch(() => props.isOpen, (isOpen) => {
     isPartialMode.value = false
     isIndividualSessionMode.value = false
     partialConfirmed.value = false
+    sessionHasAlternatives.value = {}
   }
 })
 
