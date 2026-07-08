@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export interface BookingPolicy {
   student_required_fields: string[]
+  student_optional_fields: string[]
   confirmation_email_enabled: boolean
   confirmation_email_mode: 'always' | 'after_registration' | 'never'
   registration_required: boolean
@@ -12,10 +13,12 @@ export interface BookingPolicy {
   registration_reminder_sms_enabled: boolean
   onboarding_sms_enabled: boolean
   staff_refund_permission: 'hidden' | 'request' | 'allowed'
+  staff_invoice_permission: 'hidden' | 'create_only' | 'create_and_send'
 }
 
 export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   student_required_fields: ['first_name', 'last_name', 'phone'],
+  student_optional_fields: ['email'],
   confirmation_email_enabled: true,
   confirmation_email_mode: 'always',
   registration_required: false,
@@ -25,6 +28,7 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   registration_reminder_sms_enabled: true,
   onboarding_sms_enabled: true,
   staff_refund_permission: 'hidden',
+  staff_invoice_permission: 'create_and_send',
 }
 
 export default defineEventHandler(async (event) => {

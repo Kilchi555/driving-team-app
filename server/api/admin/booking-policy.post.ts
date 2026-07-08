@@ -36,6 +36,17 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Validate student_optional_fields if provided
+  if (body.student_optional_fields !== undefined) {
+    if (!Array.isArray(body.student_optional_fields)) {
+      throw createError({ statusCode: 400, statusMessage: 'student_optional_fields must be an array' })
+    }
+    const invalid = body.student_optional_fields.filter((f: string) => !VALID_FIELDS.has(f))
+    if (invalid.length > 0) {
+      throw createError({ statusCode: 400, statusMessage: `Invalid optional fields: ${invalid.join(', ')}` })
+    }
+  }
+
   // Validate confirmation_email_mode if provided
   const validModes = ['always', 'after_registration', 'never']
   if (body.confirmation_email_mode !== undefined && !validModes.includes(body.confirmation_email_mode)) {

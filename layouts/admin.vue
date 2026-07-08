@@ -128,8 +128,10 @@
               class="drawer-link" :class="isActive('/admin/invoices') ? 'drawer-active' : ''">Rechnungen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/companies" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/companies') ? 'drawer-active' : ''">Firmenkunden</NuxtLink>
+            <NuxtLink to="/admin/privatkunden" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/privatkunden') ? 'drawer-active' : ''">Privatkunden</NuxtLink>
             <NuxtLink to="/admin/users" @click="showMobileMenu = false"
-              class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">{{ t.clientsPlural }}</NuxtLink>
+              class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">Mitarbeiter</NuxtLink>
 
             <NuxtLink to="/admin/student-credits" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
@@ -231,8 +233,10 @@
               class="drawer-link" :class="isActive('/admin/invoices') ? 'drawer-active' : ''">Rechnungen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/companies"
               class="drawer-link" :class="isActive('/admin/companies') ? 'drawer-active' : ''">Firmenkunden</NuxtLink>
+            <NuxtLink to="/admin/privatkunden"
+              class="drawer-link" :class="isActive('/admin/privatkunden') ? 'drawer-active' : ''">Privatkunden</NuxtLink>
             <NuxtLink to="/admin/users"
-              class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">{{ t.clientsPlural }}</NuxtLink>
+              class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">Mitarbeiter</NuxtLink>
             <NuxtLink to="/admin/student-credits"
               class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
             <NuxtLink to="/admin/accounting"

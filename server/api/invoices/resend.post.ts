@@ -264,10 +264,10 @@ export default defineEventHandler(async (event) => {
       attachments: pdfAttachments,
     })
 
-    // sent_at aktualisieren
+    // sent_at + status aktualisieren
     await supabase
       .from('invoices')
-      .update({ sent_at: new Date().toISOString() })
+      .update({ sent_at: new Date().toISOString(), status: 'sent' })
       .eq('id', invoiceId)
 
     console.log(`✅ Rechnung ${invoice.invoice_number} erneut versendet an ${billingEmail}`)

@@ -62,7 +62,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { draft } = body
+  const { draft, send_email = true } = body
 
   if (!draft || !draft.user_id || !draft.items?.length) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid draft data' })
@@ -128,11 +128,12 @@ export default defineEventHandler(async (event) => {
       vat_amount_rappen: draft.vat_amount_rappen || 0,
       discount_amount_rappen: draft.discount_amount_rappen || 0,
       total_amount_rappen: draft.total_amount_rappen,
-      status: 'sent',
+      status: send_email ? 'sent' : 'draft',
       payment_status: 'pending',
       paid_amount_rappen: 0,
       accounto_sync_status: 'not_synced',
-      sent_at: now,
+      sent_at: send_email ? now : null,
+      notes: (draft as any).notes || null,
     })
     .select()
     .single()
@@ -262,8 +263,8 @@ export default defineEventHandler(async (event) => {
     } catch { /* QR optional – Fehler ignorieren */ }
   }
 
-  // E-Mail an Schüler
-  if (studentEmail) {
+  // E-Mail an Schüler (nur wenn send_email=true)
+  if (send_email && studentEmail) {
     try {
       const html = buildInvoiceEmailHtml({
         customerName: studentName,
@@ -358,8 +359,8 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Admin-Benachrichtigung
-  try {
+  // Admin-Benachrichtigung (nur wenn send_email=true)
+  if (send_email) try {
     const adminEmail = tenantData.contact_email || staffUser.email
     if (adminEmail) {
       const adminHtml = generateAdminInvoiceNotification({

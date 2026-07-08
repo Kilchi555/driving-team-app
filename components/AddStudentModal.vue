@@ -151,7 +151,7 @@
           </div>
 
           <!-- Telefon -->
-          <div v-if="isFieldRequired('phone') || true">
+          <div v-if="isFieldVisible('phone') || bookingPolicy.onboarding_sms_enabled">
             <label for="phone" class="block text-xs font-medium text-gray-500 mb-1">
               Telefonnummer<span v-if="isFieldRequired('phone')" class="text-red-400 ml-0.5">*</span>
             </label>
@@ -186,7 +186,8 @@
           <!-- Geburtsdatum -->
           <div v-if="isFieldVisible('birthdate')">
             <label for="birthdate" class="block text-xs font-medium text-gray-500 mb-1">
-              Geburtsdatum<span class="text-red-400 ml-0.5">*</span>
+              Geburtsdatum<span v-if="isFieldRequired('birthdate')" class="text-red-400 ml-0.5">*</span>
+              <span v-else class="text-gray-400 font-normal ml-1">(opt.)</span>
             </label>
             <input
               id="birthdate"
@@ -258,7 +259,8 @@
           <!-- Beruf -->
           <div v-if="isFieldVisible('profession')">
             <label class="block text-xs font-medium text-gray-500 mb-1">
-              Beruf<span class="text-red-400 ml-0.5">*</span>
+              Beruf<span v-if="isFieldRequired('profession')" class="text-red-400 ml-0.5">*</span>
+              <span v-else class="text-gray-400 font-normal ml-1">(opt.)</span>
             </label>
             <input
               v-model="form.profession"
@@ -485,6 +487,7 @@ const isFormValid = computed(() => {
   if (required.includes('street') && !form.value.street.trim()) return false
   if (required.includes('zip') && !form.value.zip.trim()) return false
   if (required.includes('city') && !form.value.city.trim()) return false
+  if (required.includes('profession') && !form.value.profession?.trim()) return false
 
   return true
 })

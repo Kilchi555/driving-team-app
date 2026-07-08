@@ -5,12 +5,12 @@
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 pt-5 pb-4">
         <div>
-          <h1 class="text-xl font-bold text-gray-900">Benutzerverwaltung</h1>
-          <p class="text-sm text-gray-400 mt-0.5">{{ t.clientsPlural }}, {{ t.staffPlural }} und Admins</p>
+          <h1 class="text-xl font-bold text-gray-900">{{ isPrivatkundenPage ? 'Privatkunden' : 'Mitarbeiter' }}</h1>
+          <p class="text-sm text-gray-400 mt-0.5">{{ isPrivatkundenPage ? 'Alle Privatkunden' : `${t.staffPlural} und Admins` }}</p>
         </div>
       </div>
       <!-- Tabs -->
-      <div class="flex px-5 pb-0 border-b border-gray-100 gap-1">
+      <div v-if="tabs.length > 1" class="flex px-5 pb-0 border-b border-gray-100 gap-1">
         <button
           v-for="tab in tabs"
           :key="tab.id"
@@ -814,7 +814,7 @@ import { ref, computed, onMounted, onUnmounted, onActivated } from 'vue'
 import { logger } from '~/utils/logger'
 import { useRuntimeConfig, navigateTo } from '#app'
 import { toLocalTimeString } from '~/utils/dateUtils'
-import { useRouter } from '#app'
+import { useRouter, useRoute } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import { useTenantBranding } from '~/composables/useTenantBranding'
@@ -829,7 +829,8 @@ const { t } = useTerminology()
 
 definePageMeta({
   middleware: 'admin',
-  layout: 'admin'
+  layout: 'admin',
+  alias: ['/admin/privatkunden']
 })
 
 // Types
@@ -859,13 +860,15 @@ interface User {
 // State
 const authStore = useAuthStore()
 const supabase = getSupabase()
-const activeTab = ref<string>('customers')
+const route = useRoute()
+const isPrivatkundenPage = computed(() => route.path === '/admin/privatkunden')
+const activeTab = ref<string>(route.path === '/admin/privatkunden' ? 'customers' : 'staff')
 const togglingGuideEdit = ref<string | null>(null)
 const tabs = computed(() => {
-  const base = [
-    { id: 'customers', name: t.value.clientsPlural },
-    { id: 'staff', name: t.value.staffPlural }
-  ] as any[]
+  if (isPrivatkundenPage.value) {
+    return [{ id: 'customers', name: 'Privatkunden' }]
+  }
+  const base = [{ id: 'staff', name: t.value.staffPlural }] as any[]
   if (authStore.isAdmin) base.push({ id: 'admins', name: 'Admins' })
   return base
 })

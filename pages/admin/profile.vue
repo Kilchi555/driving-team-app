@@ -1160,6 +1160,41 @@
             </div>
           </div>
 
+          <!-- Staff Invoice Permissions -->
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-1">Rechnungs-Berechtigungen für Mitarbeiter</h2>
+            <p class="text-sm text-gray-500 mb-4">Legen Sie fest, was Mitarbeiter (nicht Admins) mit Rechnungen tun dürfen.</p>
+            <div class="space-y-2">
+              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                     :class="staffInvoicePermission === 'hidden' ? '' : 'border-gray-200'"
+                     :style="staffInvoicePermission === 'hidden' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
+                <input type="radio" v-model="staffInvoicePermission" value="hidden" class="mt-1 mr-3" />
+                <div>
+                  <div class="font-medium text-gray-900">Keine Rechnungen</div>
+                  <div class="text-sm text-gray-600">Mitarbeiter sehen keine Option zum Erstellen von Rechnungen</div>
+                </div>
+              </label>
+              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                     :class="staffInvoicePermission === 'create_only' ? '' : 'border-gray-200'"
+                     :style="staffInvoicePermission === 'create_only' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
+                <input type="radio" v-model="staffInvoicePermission" value="create_only" class="mt-1 mr-3" />
+                <div>
+                  <div class="font-medium text-gray-900">Nur erstellen</div>
+                  <div class="text-sm text-gray-600">Mitarbeiter können Rechnungen erstellen, aber keine E-Mail an den Schüler senden</div>
+                </div>
+              </label>
+              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                     :class="staffInvoicePermission === 'create_and_send' ? '' : 'border-gray-200'"
+                     :style="staffInvoicePermission === 'create_and_send' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
+                <input type="radio" v-model="staffInvoicePermission" value="create_and_send" class="mt-1 mr-3" />
+                <div>
+                  <div class="font-medium text-gray-900">Erstellen und versenden</div>
+                  <div class="text-sm text-gray-600">Mitarbeiter können Rechnungen erstellen und direkt per E-Mail versenden</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <!-- Cash Payment Settings -->
           <div class="bg-white rounded-lg shadow-sm border p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Barzahlungs-Einstellungen</h2>
@@ -1694,6 +1729,8 @@ const paymentSettings = ref({
   cash_payment_visibility: 'staff_only'
 })
 
+const staffInvoicePermission = ref<'hidden' | 'create_only' | 'create_and_send'>('create_and_send')
+
 const invoiceSettings = ref({
   qr_iban: '',
   invoice_street: '',
@@ -2053,6 +2090,16 @@ const loadPaymentSettings = async (tenantId: string) => {
         ...parsed
       }
       logger.debug('✅ Payment settings loaded:', paymentSettings.value)
+    }
+
+    // Booking policy für Staff-Rechnungsberechtigungen laden
+    try {
+      const policyData = await $fetch<{ success: boolean; policy: any }>('/api/admin/booking-policy')
+      if (policyData?.policy?.staff_invoice_permission) {
+        staffInvoicePermission.value = policyData.policy.staff_invoice_permission
+      }
+    } catch (policyErr) {
+      console.warn('Could not load booking policy:', policyErr)
     }
 
     await loadStaffMembers(tenantId)
@@ -2843,6 +2890,21 @@ watch(paymentSettings, () => {
     savePaymentSettings()
   }, 1000)
 }, { deep: true })
+
+// Watch Staff Invoice Permission (auto-save)
+watch(staffInvoicePermission, async (newVal, oldVal) => {
+  if (isInitialLoad.value || newVal === oldVal) return
+  try {
+    await $fetch('/api/admin/booking-policy', {
+      method: 'POST',
+      body: { staff_invoice_permission: newVal },
+    })
+    showAutoSaveSuccess('Rechnungsberechtigung gespeichert')
+  } catch (e) {
+    console.error('Error saving staff invoice permission:', e)
+    showAutoSaveError('Fehler beim Speichern')
+  }
+})
 
 // Watch Template (auto-save after 2 seconds for typing)
 watch(currentTemplate, () => {
