@@ -33,6 +33,7 @@ export default defineEventHandler(async (event) => {
       invoice_zip: body.invoice_zip?.trim() || null,
       invoice_city: body.invoice_city?.trim() || null,
       default_vat_rate: body.default_vat_rate != null ? parseFloat(body.default_vat_rate) : 7.70,
+      invoice_due_days: body.invoice_due_days != null ? parseInt(body.invoice_due_days) : 30,
       invoice_intro_text: body.invoice_intro_text?.trim() || null,
       invoice_payment_terms: body.invoice_payment_terms?.trim() || null,
       invoice_footer_text: body.invoice_footer_text?.trim() || null,

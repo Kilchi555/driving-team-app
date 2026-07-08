@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
   const { data: userData, error: userError } = await supabase
     .from('users')
     .select('role, tenant_id')
-    .eq('id', user.id)
+    .eq('auth_user_id', user.id)
     .single()
 
   if (userError || !userData) {

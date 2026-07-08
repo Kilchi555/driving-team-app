@@ -1,33 +1,16 @@
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
-  // ✅ Auth check
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
-  }
-  const token = authHeader.substring(7)
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) throw createError({ statusCode: 401, message: 'Unauthorized' })
 
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NUXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const supabase = getSupabaseAdmin()
 
-  if (!supabaseUrl || !supabaseKey) {
-    throw createError({ statusCode: 500, message: 'Server configuration error' })
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseKey)
-
-  // ✅ Verify user token and get user
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !user) {
-    throw createError({ statusCode: 401, message: 'Invalid token' })
-  }
-
-  // ✅ Check if user is admin/staff
   const { data: userData, error: userError } = await supabase
     .from('users')
     .select('role, tenant_id')
-    .eq('id', user.id)
+    .eq('auth_user_id', authUser.id)
     .single()
 
   if (userError || !userData) {
@@ -38,16 +21,15 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: 'Admin access required' })
   }
 
-  // ✅ Get body
   const body = await readBody(event)
-  const { payment_id, update_data } = body
+  const { invoice_id, update_data } = body
 
-  if (!payment_id || !update_data) {
-    throw createError({ statusCode: 400, message: 'payment_id and update_data required' })
+  if (!invoice_id || !update_data) {
+    throw createError({ statusCode: 400, message: 'invoice_id and update_data required' })
   }
 
-  // ✅ Whitelist allowed fields for update
   const allowedFields = [
+    'due_date',
     'billing_company_name',
     'billing_contact_person',
     'billing_street',
@@ -56,10 +38,11 @@ export default defineEventHandler(async (event) => {
     'billing_city',
     'billing_country',
     'billing_email',
-    'notes'
+    'notes',
+    'payment_terms',
+    'footer_text',
   ]
 
-  // Filter to only allowed fields
   const sanitizedData: any = {}
   for (const field of allowedFields) {
     if (update_data[field] !== undefined) {
@@ -74,26 +57,24 @@ export default defineEventHandler(async (event) => {
   sanitizedData.updated_at = new Date().toISOString()
 
   try {
-    // ✅ Verify payment belongs to tenant
-    const { data: existingPayment, error: checkError } = await supabase
-      .from('payments')
+    const { data: existingInvoice, error: checkError } = await supabase
+      .from('invoices')
       .select('id, tenant_id')
-      .eq('id', payment_id)
+      .eq('id', invoice_id)
       .single()
 
-    if (checkError || !existingPayment) {
-      throw createError({ statusCode: 404, message: 'Payment not found' })
+    if (checkError || !existingInvoice) {
+      throw createError({ statusCode: 404, message: 'Invoice not found' })
     }
 
-    if (existingPayment.tenant_id !== userData.tenant_id && userData.role !== 'superadmin') {
+    if (existingInvoice.tenant_id !== userData.tenant_id && userData.role !== 'superadmin') {
       throw createError({ statusCode: 403, message: 'Access denied' })
     }
 
-    // ✅ Update payment
-    const { data: updatedPayment, error: updateError } = await supabase
-      .from('payments')
+    const { data: updatedInvoice, error: updateError } = await supabase
+      .from('invoices')
       .update(sanitizedData)
-      .eq('id', payment_id)
+      .eq('id', invoice_id)
       .select()
       .single()
 
@@ -102,14 +83,10 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, message: 'Failed to save invoice' })
     }
 
-    return {
-      success: true,
-      payment: updatedPayment
-    }
+    return { success: true, invoice: updatedInvoice }
   } catch (error: any) {
     if (error.statusCode) throw error
     console.error('Error saving invoice:', error)
     throw createError({ statusCode: 500, message: 'Failed to save invoice' })
   }
 })
-

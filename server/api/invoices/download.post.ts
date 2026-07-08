@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
   // Tenant
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, legal_company_name, contact_email, primary_color, secondary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, logo_wide_url')
+    .select('name, legal_company_name, contact_email, primary_color, secondary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, logo_wide_url, invoice_intro_text, invoice_payment_terms, invoice_footer_text')
     .eq('id', invoice.tenant_id)
     .single()
 
@@ -219,6 +219,9 @@ export default defineEventHandler(async (event) => {
     creditorName: (tenant as any)?.legal_company_name || (tenant as any)?.name || '',
     primaryColor: (tenant as any)?.primary_color || '#1E40AF',
     secondaryColor: (tenant as any)?.secondary_color || '#64748B',
+    introText: (invoice as any).notes || (tenant as any)?.invoice_intro_text || null,
+    paymentTerms: (invoice as any).payment_terms || (tenant as any)?.invoice_payment_terms || null,
+    footerText: (invoice as any).footer_text || (tenant as any)?.invoice_footer_text || null,
   })
 
   const pdfBase64 = pdfBuffer.toString('base64')

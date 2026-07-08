@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
 
   const { data, error } = await supabase
     .from('tenants')
-    .select('qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_number_prefix, default_vat_rate, invoice_intro_text, invoice_payment_terms, invoice_footer_text')
+    .select('qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_number_prefix, default_vat_rate, invoice_due_days, invoice_intro_text, invoice_payment_terms, invoice_footer_text')
     .eq('id', profile.tenant_id)
     .maybeSingle()
 

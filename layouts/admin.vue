@@ -122,19 +122,17 @@
               class="drawer-link" :class="isActive('/admin') && !isActive('/admin/') ? '' : (route.path === '/admin' ? 'drawer-active' : '')">
               Dashboard
             </NuxtLink>
+            <NuxtLink to="/admin/users" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">Mitarbeiter</NuxtLink>
+            <NuxtLink to="/admin/privatkunden" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/privatkunden') ? 'drawer-active' : ''">Privatkunden</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/companies" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/companies') ? 'drawer-active' : ''">Firmenkunden</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/payment-overview" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/payment-overview') ? 'drawer-active' : ''">Zahlungen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/invoices" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/invoices') ? 'drawer-active' : ''">Rechnungen</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/companies" @click="showMobileMenu = false"
-              class="drawer-link" :class="isActive('/admin/companies') ? 'drawer-active' : ''">Firmenkunden</NuxtLink>
-            <NuxtLink to="/admin/privatkunden" @click="showMobileMenu = false"
-              class="drawer-link" :class="isActive('/admin/privatkunden') ? 'drawer-active' : ''">Privatkunden</NuxtLink>
-            <NuxtLink to="/admin/users" @click="showMobileMenu = false"
-              class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">Mitarbeiter</NuxtLink>
 
-            <NuxtLink to="/admin/student-credits" @click="showMobileMenu = false"
-              class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
             <NuxtLink to="/admin/accounting" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/accounting') ? 'drawer-active' : ''">Buchhaltung</NuxtLink>
             <NuxtLink to="/admin/payroll" @click="showMobileMenu = false"
@@ -169,6 +167,8 @@
               class="drawer-link" :class="isActive('/admin/discounts') ? 'drawer-active' : ''">Rabatte</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('categories_enabled')" to="/admin/categories" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">Preise & Infrastruktur</NuxtLink>
+            <NuxtLink to="/admin/student-credits" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('examiners_enabled')" to="/admin/examiners" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/examiners') ? 'drawer-active' : ''">Experten</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('evaluations_enabled')" to="/admin/evaluation-system" @click="showMobileMenu = false"
@@ -227,18 +227,16 @@
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-2 pb-1">Hauptbereich</p>
             <NuxtLink to="/admin"
               class="drawer-link" :class="route.path === '/admin' ? 'drawer-active' : ''">Dashboard</NuxtLink>
+            <NuxtLink to="/admin/users"
+              class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">Mitarbeiter</NuxtLink>
+            <NuxtLink to="/admin/privatkunden"
+              class="drawer-link" :class="isActive('/admin/privatkunden') ? 'drawer-active' : ''">Privatkunden</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/companies"
+              class="drawer-link" :class="isActive('/admin/companies') ? 'drawer-active' : ''">Firmenkunden</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/payment-overview"
               class="drawer-link" :class="isActive('/admin/payment-overview') ? 'drawer-active' : ''">Zahlungen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/invoices"
               class="drawer-link" :class="isActive('/admin/invoices') ? 'drawer-active' : ''">Rechnungen</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/companies"
-              class="drawer-link" :class="isActive('/admin/companies') ? 'drawer-active' : ''">Firmenkunden</NuxtLink>
-            <NuxtLink to="/admin/privatkunden"
-              class="drawer-link" :class="isActive('/admin/privatkunden') ? 'drawer-active' : ''">Privatkunden</NuxtLink>
-            <NuxtLink to="/admin/users"
-              class="drawer-link" :class="isActive('/admin/users') ? 'drawer-active' : ''">Mitarbeiter</NuxtLink>
-            <NuxtLink to="/admin/student-credits"
-              class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
             <NuxtLink to="/admin/accounting"
               class="drawer-link" :class="isActive('/admin/accounting') ? 'drawer-active' : ''">Buchhaltung</NuxtLink>
             <NuxtLink to="/admin/payroll"
@@ -273,6 +271,8 @@
               class="drawer-link" :class="isActive('/admin/discounts') ? 'drawer-active' : ''">Rabatte</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('categories_enabled')" to="/admin/categories"
               class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">Preise & Infrastruktur</NuxtLink>
+            <NuxtLink to="/admin/student-credits"
+              class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('examiners_enabled')" to="/admin/examiners"
               class="drawer-link" :class="isActive('/admin/examiners') ? 'drawer-active' : ''">Experten</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('evaluations_enabled')" to="/admin/evaluation-system"

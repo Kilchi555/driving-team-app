@@ -100,6 +100,9 @@ export interface InvoicePdfData {
   scorRef?: string | null
   creditorName?: string
   note?: string
+  introText?: string | null
+  paymentTerms?: string | null
+  footerText?: string | null
   primaryColor?: string
   secondaryColor?: string
 }
@@ -228,8 +231,18 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
         .text(data.customerName, refX, addrTop + 33, { width: refW })
     }
 
+    // ── Einleitungstext ──────────────────────────────────────────────────────
+    let introBlockH = 0
+    if (data.introText) {
+      const introY = addrTop + 108
+      doc.fontSize(9).fillColor('#374151').font('Helvetica')
+      const introH = doc.heightOfString(data.introText, { width: W - margin * 2 })
+      doc.text(data.introText, margin, introY, { width: W - margin * 2 })
+      introBlockH = introH + 14
+    }
+
     // ── Items table ──────────────────────────────────────────────────────────
-    const tableTop = addrTop + 105
+    const tableTop = addrTop + 105 + introBlockH
     // Spalten so dass alles innerhalb von margin..W-margin (50..545) bleibt
     const tableRight = W - margin   // 545
     const colPos  = [margin, 300, 385, 455]   // Startpositionen
@@ -330,21 +343,37 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
     rowY += 34
 
-    // ── Payment note ─────────────────────────────────────────────────────────
+    // ── Zahlungsbedingungen ───────────────────────────────────────────────────
+    const rawPaymentText = data.paymentTerms ||
+      `Bitte überweise den Betrag bis ${formatDate(data.dueDate)} unter Angabe der Rechnungsnummer ${data.invoiceNumber}.`
+    const paymentText = rawPaymentText.replace(/\{due_date\}/g, formatDate(data.dueDate))
+
     rowY += 14
-    doc.rect(margin, rowY, tableWidth, 36).fill(`rgb(${pr}, ${pg}, ${pb}, 0.07)`)
-      .strokeColor(primary).lineWidth(0.5).stroke()
-    doc.rect(margin, rowY, 4, 36).fill(primary)
+    doc.fontSize(9).fillColor('#374151').font('Helvetica')
+    const paymentTextH = doc.heightOfString(paymentText, { width: tableWidth - 20 })
+    const paymentBlockH = Math.max(36, paymentTextH + 26)
+
+    // Light tinted background
+    doc.save().fillOpacity(0.07)
+    doc.rect(margin, rowY, tableWidth, paymentBlockH).fill(primary)
+    doc.restore()
+    // Border + accent stripe
+    doc.rect(margin, rowY, tableWidth, paymentBlockH).stroke(primary).lineWidth(0.5)
+    doc.rect(margin, rowY, 4, paymentBlockH).fill(primary)
 
     doc.fontSize(8.5).fillColor('#1e293b').font('Helvetica-Bold')
-      .text('Zahlungsart: Rechnung', margin + 14, rowY + 7)
-    doc.fontSize(8).fillColor('#475569').font('Helvetica')
-      .text(
-        `Bitte überweise den Betrag bis ${formatDate(data.dueDate)} unter Angabe der Rechnungsnummer ${data.invoiceNumber}.`,
-        margin + 14, rowY + 19, { width: tableWidth - 20 }
-      )
+      .text('Zahlungsbedingungen', margin + 14, rowY + 8)
+    doc.fontSize(9).fillColor('#374151').font('Helvetica')
+      .text(paymentText, margin + 14, rowY + 22, { width: tableWidth - 24 })
 
-    rowY += 50
+    rowY += paymentBlockH + 10
+
+    // ── Abschlusstext ────────────────────────────────────────────────────────
+    if (data.footerText) {
+      doc.fontSize(9).fillColor('#374151').font('Helvetica')
+        .text(data.footerText, margin, rowY, { width: W - margin * 2 })
+      rowY += doc.heightOfString(data.footerText, { width: W - margin * 2 }) + 10
+    }
 
     // ── Swiss QR-Rechnung – Standard Einzahlungsschein (SPS 2.2) ────────────
     if (data.qrCodeDataUrl) {
