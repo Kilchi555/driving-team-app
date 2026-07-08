@@ -1797,7 +1797,7 @@ const loadInvoiceSettings = async (_tenantId: string) => {
         invoice_zip: data.invoice_zip || '',
         invoice_city: data.invoice_city || '',
         invoice_number_prefix: data.invoice_number_prefix || 'RE',
-        default_vat_rate: data.default_vat_rate ?? 7.70,
+        default_vat_rate: data.default_vat_rate != null ? parseFloat(data.default_vat_rate) : 7.70,
         invoice_due_days: data.invoice_due_days ?? 30,
         invoice_intro_text: data.invoice_intro_text || '',
         invoice_payment_terms: data.invoice_payment_terms || '',

@@ -267,7 +267,7 @@ export const useTenantBranding = () => {
         allowThemeSwitch: data.allow_theme_switch ?? true,
         business_type: data.business_type,
         // Invoice settings
-        default_vat_rate: data.default_vat_rate ?? 7.70,
+        default_vat_rate: data.default_vat_rate != null ? parseFloat(data.default_vat_rate) : 7.70,
         invoice_intro_text: data.invoice_intro_text ?? null,
         invoice_payment_terms: data.invoice_payment_terms ?? null,
         invoice_footer_text: data.invoice_footer_text ?? null,
@@ -540,7 +540,7 @@ export const useTenantBranding = () => {
       const raw = (currentTenantBranding.value as any)?.default_vat_rate
       if (raw == null) return 8.10
       const parsed = parseFloat(raw)
-      return !isNaN(parsed) && parsed > 0 ? parsed : 8.10
+      return !isNaN(parsed) && parsed >= 0 ? parsed : 8.10
     }),
     invoiceIntroText: computed(() => (currentTenantBranding.value as any)?.invoice_intro_text ?? ''),
     invoicePaymentTerms: computed(() => (currentTenantBranding.value as any)?.invoice_payment_terms ?? ''),

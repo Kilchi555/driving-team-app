@@ -857,8 +857,8 @@ interface User {
 const authStore = useAuthStore()
 const supabase = getSupabase()
 const route = useRoute()
-const isPrivatkundenPage = computed(() => false)
-const activeTab = ref<string>('staff')
+const isPrivatkundenPage = computed(() => true)
+const activeTab = ref<string>('customers')
 const togglingGuideEdit = ref<string | null>(null)
 const tabs = computed(() => {
   if (isPrivatkundenPage.value) {
