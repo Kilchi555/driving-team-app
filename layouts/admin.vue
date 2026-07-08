@@ -461,6 +461,12 @@ const isActive = (path) => {
   if (path === '/admin') {
     return route.path === '/admin'
   }
+  // On a user detail page, determine active nav by stored origin
+  if (route.path.startsWith('/admin/users/') && route.path !== '/admin/users') {
+    const origin = sessionStorage?.getItem('userDetailOrigin') || '/admin/users'
+    if (path === '/admin/privatkunden') return origin === '/admin/privatkunden'
+    if (path === '/admin/users') return origin === '/admin/users'
+  }
   return route.path.startsWith(path)
 }
 

@@ -6,13 +6,13 @@
       <div class="mb-6">
         <!-- Back Link -->
         <NuxtLink
-          to="/admin/users"
+          :to="backLink"
           class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors mb-5"
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
           </svg>
-          Zurück zur Benutzerverwaltung
+          {{ backLabel }}
         </NuxtLink>
 
         <!-- Header card -->
@@ -255,6 +255,9 @@
           </div>
         </div>
 
+        <!-- Zahlungen + Termine nebeneinander ab 1000px -->
+        <div class="grid grid-cols-1 min-[1000px]:grid-cols-2 gap-6 items-start">
+
         <!-- Zahlungen -->
         <div v-if="userPayments.length > 0" class="bg-white shadow rounded-xl overflow-hidden">
           <!-- Header + Stats -->
@@ -462,31 +465,64 @@
                 </button>
               </div>
               <div class="overflow-y-auto flex-1 divide-y divide-gray-50">
-                <div v-for="appt in userAppointments" :key="appt.id" class="px-5 py-3 flex items-center gap-3">
-                  <div class="w-10 flex-shrink-0 text-center bg-gray-50 rounded-lg py-1.5 border border-gray-100">
-                    <p class="text-xs font-bold text-gray-700 leading-none">{{ appt.start_time ? new Date(appt.start_time).toLocaleDateString('de-CH', { day: '2-digit', timeZone: 'Europe/Zurich' }) : '—' }}</p>
-                    <p class="text-xs text-gray-400 mt-0.5">{{ appt.start_time ? new Date(appt.start_time).toLocaleDateString('de-CH', { month: 'short', timeZone: 'Europe/Zurich' }) : '' }}</p>
+                <div v-for="appt in userAppointments" :key="appt.id" class="px-5 py-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 flex-shrink-0 text-center bg-gray-50 rounded-lg py-1.5 border border-gray-100">
+                      <p class="text-xs font-bold text-gray-700 leading-none">{{ appt.start_time ? new Date(appt.start_time).toLocaleDateString('de-CH', { day: '2-digit', timeZone: 'Europe/Zurich' }) : '—' }}</p>
+                      <p class="text-xs text-gray-400 mt-0.5">{{ appt.start_time ? new Date(appt.start_time).toLocaleDateString('de-CH', { month: 'short', timeZone: 'Europe/Zurich' }) : '' }}</p>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-gray-900">{{ appt.type || 'Fahrstunde' }}</p>
+                      <p class="text-xs text-gray-400">
+                        {{ appt.start_time ? new Date(appt.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }) : '' }}
+                        {{ appt.duration_minutes ? `· ${appt.duration_minutes} Min.` : '' }}
+                        {{ appt.staff ? `· ${appt.staff.first_name} ${appt.staff.last_name}` : '' }}
+                      </p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                      <span class="px-1.5 py-0.5 text-xs font-medium rounded-md" :class="{
+                        'bg-green-100 text-green-700': appt.status === 'confirmed',
+                        'bg-blue-100 text-blue-700': appt.status === 'completed',
+                        'bg-amber-100 text-amber-700': appt.status === 'pending',
+                        'bg-red-100 text-red-700': appt.status === 'cancelled',
+                        'bg-gray-100 text-gray-600': !['confirmed','completed','pending','cancelled'].includes(appt.status)
+                      }">{{ appt.status === 'confirmed' ? 'Bestätigt' : appt.status === 'completed' ? 'Abgeschlossen' : appt.status === 'pending' ? 'Ausstehend' : appt.status === 'cancelled' ? 'Storniert' : appt.status }}</span>
+                      <button @click="toggleApptEdit(appt.id)" class="p-1 rounded-lg text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors" title="Bearbeiten">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-gray-900">{{ appt.type || 'Fahrstunde' }}</p>
-                    <p class="text-xs text-gray-400">
-                      {{ appt.start_time ? new Date(appt.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }) : '' }}
-                      {{ appt.duration_minutes ? `· ${appt.duration_minutes} Min.` : '' }}
-                      {{ appt.staff ? `· ${appt.staff.first_name} ${appt.staff.last_name}` : '' }}
-                    </p>
+                  <!-- Inline Edit Panel -->
+                  <div v-if="editingApptId === appt.id" class="mt-3 pt-3 border-t border-gray-100">
+                    <div class="grid grid-cols-3 gap-3">
+                      <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Datum</label>
+                        <input v-model="apptEditForm.date" type="date" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      </div>
+                      <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Uhrzeit</label>
+                        <input v-model="apptEditForm.time" type="time" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      </div>
+                      <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Dauer (Min.)</label>
+                        <input v-model.number="apptEditForm.duration_minutes" type="number" min="15" step="15" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      </div>
+                    </div>
+                    <div class="flex gap-2 mt-3">
+                      <button @click="saveApptEdit(appt)" :disabled="isSavingAppt" class="px-3 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50 transition-colors" style="background: #1e40af">{{ isSavingAppt ? 'Speichert…' : 'Speichern' }}</button>
+                      <button @click="editingApptId = null" class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Abbrechen</button>
+                    </div>
+                    <p v-if="apptEditError" class="mt-2 text-xs text-red-600">{{ apptEditError }}</p>
                   </div>
-                  <span class="px-1.5 py-0.5 text-xs font-medium rounded-md flex-shrink-0" :class="{
-                    'bg-green-100 text-green-700': appt.status === 'confirmed',
-                    'bg-blue-100 text-blue-700': appt.status === 'completed',
-                    'bg-amber-100 text-amber-700': appt.status === 'pending',
-                    'bg-red-100 text-red-700': appt.status === 'cancelled',
-                    'bg-gray-100 text-gray-600': !['confirmed','completed','pending','cancelled'].includes(appt.status)
-                  }">{{ appt.status === 'confirmed' ? 'Bestätigt' : appt.status === 'completed' ? 'Abgeschlossen' : appt.status === 'pending' ? 'Ausstehend' : appt.status === 'cancelled' ? 'Storniert' : appt.status }}</span>
                 </div>
               </div>
             </div>
           </div>
         </Teleport>
+
+        </div><!-- end grid Zahlungen + Termine -->
 
         <!-- Fahrlehrer & Verfügbarkeit (nur für Rolle staff) -->
         <div v-if="userDetails?.role === 'staff' && isOnlineBookingEnabled" class="bg-white shadow rounded-lg overflow-hidden">
@@ -903,6 +939,27 @@ const emailLink = computed(() => {
 
 const phoneLink = computed(() => {
   return `tel:${userDetails.value?.phone || ''}`
+})
+
+const backLink = computed(() => {
+  if (process.client) {
+    const origin = sessionStorage.getItem('userDetailOrigin')
+    if (origin) return origin
+  }
+  // Fallback by role
+  const role = userDetails.value?.role
+  if (role === 'client') return '/admin/privatkunden'
+  return '/admin/users'
+})
+
+const backLabel = computed(() => {
+  if (process.client) {
+    const origin = sessionStorage.getItem('userDetailOrigin')
+    if (origin === '/admin/privatkunden') return 'Zurück zu Privatkunden'
+  }
+  const role = userDetails.value?.role
+  if (role === 'client') return 'Zurück zu Privatkunden'
+  return 'Zurück zu Mitarbeiter'
 })
 
 const roleLabel = computed(() => {
