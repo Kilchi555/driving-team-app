@@ -150,7 +150,9 @@ export default defineEventHandler(async (event) => {
           allow_individual_booking,
           individual_price_rappen,
           individual_booking_requires_confirmation,
-          individual_booking_confirmation_text
+          individual_booking_confirmation_text,
+          current_participants,
+          max_participants
         )
       `)
       .eq('tenant_id', tenant.id)

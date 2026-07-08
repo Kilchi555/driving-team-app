@@ -86,12 +86,14 @@ export default defineEventHandler(async (event) => {
       }
       // Einzelne Kursteile ausblenden (gilt für PGS; andere Kategorien haben keine solchen Namen)
       if (category === 'PGS' && /teil\s*[123]/i.test(c.name || '')) return false
-      // Muss mind. eine zukünftige Session haben
-      return (c.course_sessions || []).some((s) => new Date(s.start_time) > now)
+      // Kurs nur zeigen wenn die erste Session noch nicht begonnen hat
+      const sortedSessions = (c.course_sessions || []).sort((a, b) => a.start_time.localeCompare(b.start_time))
+      if (sortedSessions.length === 0) return false
+      return new Date(sortedSessions[0].start_time) > now
     })
     .map((c) => {
+      // Alle Sessions anzeigen, chronologisch sortiert
       const sessions = (c.course_sessions || [])
-        .filter((s) => new Date(s.start_time) > now)
         .sort((a, b) => a.start_time.localeCompare(b.start_time))
 
       const spots = Math.max(0, (c.max_participants || 5) - (c.current_participants || 0))
@@ -104,7 +106,7 @@ export default defineEventHandler(async (event) => {
         priceChf: c.price_per_participant_rappen
           ? Math.round(c.price_per_participant_rappen / 100)
           : null,
-        sessions: sessions.slice(0, 3).map((s) => ({
+        sessions: sessions.map((s) => ({
           date: formatDateDeCh(s.start_time),
           time: `${formatTimeDeCh(s.start_time)}–${formatTimeDeCh(s.end_time)}`,
           startIso: s.start_time,
