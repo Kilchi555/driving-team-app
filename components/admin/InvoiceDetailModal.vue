@@ -168,10 +168,19 @@
                     <dt class="text-sm text-gray-500 flex-shrink-0">Erstellt</dt>
                     <dd class="text-sm text-gray-900">{{ formatDate(invoice.created_at) }}</dd>
                   </div>
-                  <div v-if="invoice.due_date" class="flex items-center justify-between gap-2">
+                  <div class="flex items-center justify-between gap-2">
                     <dt class="text-sm text-gray-500 flex-shrink-0">Fällig</dt>
-                    <dd class="text-sm font-medium" :class="isOverdue(invoice.due_date) ? 'text-red-600' : 'text-gray-900'">
-                      {{ formatDate(invoice.due_date) }}
+                    <dd class="text-sm font-medium">
+                      <input
+                        v-if="isEditing"
+                        v-model="safeEditedInvoice.due_date"
+                        type="date"
+                        class="px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                      <span v-else-if="invoice.due_date" :class="isOverdue(invoice.due_date) ? 'text-red-600' : 'text-gray-900'">
+                        {{ formatDate(invoice.due_date) }}
+                      </span>
+                      <span v-else class="text-gray-400">—</span>
                     </dd>
                   </div>
                 </dl>
@@ -271,18 +280,18 @@
                   <!-- Strasse & Nr -->
                   <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1">Strasse, Nr.</label>
-                    <div v-if="isEditing" class="flex gap-2">
+                    <div v-if="isEditing" class="flex gap-2 min-w-0">
                       <input
                         v-model="safeEditedInvoice.billing_street"
                         type="text"
-                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         :placeholder="invoice.billing_street || 'Strasse'"
                       >
                       <input
                         v-model="safeEditedInvoice.billing_street_number"
                         type="text"
-                        class="w-16 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        :placeholder="invoice.billing_street_number || 'Nr.'"
+                        class="w-16 shrink-0 px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        :placeholder="'Nr.'"
                       >
                     </div>
                     <span v-else class="text-sm text-gray-900">{{ invoice.billing_street || '' }} {{ invoice.billing_street_number || '' || '—' }}</span>
@@ -1178,6 +1187,7 @@ const saveChanges = async () => {
       body: {
         payment_id: paymentId,
         update_data: {
+          due_date: editedInvoice.value.due_date,
           billing_company_name: editedInvoice.value.billing_company_name,
           billing_contact_person: editedInvoice.value.billing_contact_person,
           billing_street: editedInvoice.value.billing_street,
@@ -1194,6 +1204,7 @@ const saveChanges = async () => {
     // Aktualisiere die lokalen Daten nach dem Speichern
     if (fallbackPayment.value) {
       Object.assign(fallbackPayment.value, {
+        due_date: editedInvoice.value.due_date,
         billing_company_name: editedInvoice.value.billing_company_name,
         billing_contact_person: editedInvoice.value.billing_contact_person,
         billing_street: editedInvoice.value.billing_street,

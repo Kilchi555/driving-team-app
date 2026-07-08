@@ -3,6 +3,7 @@
   <InvoicePreviewModal
     v-model="showInvoicePreview"
     :draft="invoiceDraft"
+    :can-send="canSendInvoice"
     @sent="onInvoiceSentFromModal"
     @view-invoice="onViewInvoiceFromModal"
   />
@@ -737,7 +738,7 @@
                   Bar bezahlen
                 </button>
                 <button
-                  v-if="selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p?.payment_status === 'pending' && !isInvoicedPayment(p) })"
+                  v-if="canCreateInvoice && selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p?.payment_status === 'pending' && !isInvoicedPayment(p) })"
                   class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md"
                   :style="{ background: primaryGradient }"
                   @click="handleBulkInvoice"
@@ -2036,8 +2037,13 @@ const refundReason = ref('')
 const isSubmittingRefund = ref(false)
 const refundSuccess = ref(false)
 
-const bookingPolicy = ref<{ staff_refund_permission?: 'hidden' | 'request' | 'allowed' } | null>(null)
+const bookingPolicy = ref<{ staff_refund_permission?: 'hidden' | 'request' | 'allowed'; staff_invoice_permission?: 'hidden' | 'create_only' | 'create_and_send' } | null>(null)
 const isAdminRole = computed(() => ['admin', 'superadmin'].includes(props.currentUser?.role ?? ''))
+
+// Invoice permission für Staff
+const staffInvoicePerm = computed(() => bookingPolicy.value?.staff_invoice_permission ?? 'create_and_send')
+const canCreateInvoice = computed(() => isAdminRole.value || staffInvoicePerm.value !== 'hidden')
+const canSendInvoice = computed(() => isAdminRole.value || staffInvoicePerm.value === 'create_and_send')
 const canSeeRefundButton = computed(() => {
   if (isAdminRole.value) return true
   const perm = bookingPolicy.value?.staff_refund_permission

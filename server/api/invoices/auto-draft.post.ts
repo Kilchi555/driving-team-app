@@ -128,10 +128,10 @@ export default defineEventHandler(async (event) => {
     .limit(1)
     .maybeSingle()
 
-  // Tenant-Daten für Rechnungsnummer-Prefix + QR-IBAN
+  // Tenant-Daten für Rechnungsnummer-Prefix + QR-IBAN + Rechnungstexte
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, invoice_number_prefix, next_invoice_number, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city')
+    .select('id, name, invoice_number_prefix, next_invoice_number, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text')
     .eq('id', staffUser.tenant_id)
     .single()
 
@@ -244,6 +244,10 @@ export default defineEventHandler(async (event) => {
     creditor_zip: tenant?.invoice_zip || '',
     creditor_city: tenant?.invoice_city || '',
     qr_iban: tenant?.qr_iban || null,
+    // Rechnungstexte aus Tenant-Einstellungen
+    notes: (tenant as any)?.invoice_intro_text || null,
+    payment_terms: (tenant as any)?.invoice_payment_terms || null,
+    footer_text: (tenant as any)?.invoice_footer_text || null,
   }
 
   // Produkte pro Termin laden und in Draft-Items einbetten

@@ -300,19 +300,83 @@
               <div class="flex items-start justify-between gap-4">
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-semibold text-gray-900">{{ appt.type || 'Fahrstunde' }}</p>
-                  <p class="text-xs text-gray-500 mt-0.5">{{ formatDateShort(appt.start_time) }}</p>
+                  <p class="text-xs text-gray-500 mt-0.5">
+                    {{ formatDateShort(appt.start_time) }}
+                    <span v-if="appt.start_time" class="ml-1 text-gray-600 font-medium">
+                      {{ new Date(appt.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }) }}
+                    </span>
+                  </p>
                   <p v-if="appt.staff" class="text-xs text-gray-400">Fahrlehrer: {{ appt.staff?.first_name }} {{ appt.staff?.last_name }}</p>
                   <p v-if="appt.duration_minutes" class="text-xs text-gray-400">{{ appt.duration_minutes }} Min.</p>
                 </div>
-                <span :class="{
-                  'bg-green-100 text-green-700': appt.status === 'confirmed',
-                  'bg-blue-100 text-blue-700': appt.status === 'completed',
-                  'bg-amber-100 text-amber-700': appt.status === 'pending',
-                  'bg-red-100 text-red-700': appt.status === 'cancelled',
-                  'bg-gray-100 text-gray-600': !['confirmed','completed','pending','cancelled'].includes(appt.status)
-                }" class="px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0 mt-0.5">
-                  {{ appt.status === 'confirmed' ? 'Bestätigt' : appt.status === 'completed' ? 'Abgeschlossen' : appt.status === 'pending' ? 'Ausstehend' : appt.status === 'cancelled' ? 'Storniert' : appt.status }}
-                </span>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span :class="{
+                    'bg-green-100 text-green-700': appt.status === 'confirmed',
+                    'bg-blue-100 text-blue-700': appt.status === 'completed',
+                    'bg-amber-100 text-amber-700': appt.status === 'pending',
+                    'bg-red-100 text-red-700': appt.status === 'cancelled',
+                    'bg-gray-100 text-gray-600': !['confirmed','completed','pending','cancelled'].includes(appt.status)
+                  }" class="px-2 py-0.5 text-xs font-medium rounded-full mt-0.5">
+                    {{ appt.status === 'confirmed' ? 'Bestätigt' : appt.status === 'completed' ? 'Abgeschlossen' : appt.status === 'pending' ? 'Ausstehend' : appt.status === 'cancelled' ? 'Storniert' : appt.status }}
+                  </span>
+                  <button
+                    @click="toggleApptEdit(appt.id)"
+                    class="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                    title="Bearbeiten"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <!-- Inline Edit Panel -->
+              <div v-if="editingApptId === appt.id" class="mt-3 pt-3 border-t border-gray-100">
+                <div class="grid grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Datum</label>
+                    <input
+                      v-model="apptEditForm.date"
+                      type="date"
+                      class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Uhrzeit</label>
+                    <input
+                      v-model="apptEditForm.time"
+                      type="time"
+                      class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Dauer (Min.)</label>
+                    <input
+                      v-model.number="apptEditForm.duration_minutes"
+                      type="number"
+                      min="15"
+                      step="15"
+                      class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                  </div>
+                </div>
+                <div class="flex gap-2 mt-3">
+                  <button
+                    @click="saveApptEdit(appt)"
+                    :disabled="isSavingAppt"
+                    class="px-3 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50 transition-colors"
+                    style="background: #1e40af"
+                  >
+                    {{ isSavingAppt ? 'Speichert…' : 'Speichern' }}
+                  </button>
+                  <button
+                    @click="editingApptId = null"
+                    class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+                <p v-if="apptEditError" class="mt-2 text-xs text-red-600">{{ apptEditError }}</p>
               </div>
             </div>
           </div>
@@ -661,6 +725,10 @@ const showEditModal = ref(false)
 const userCourseRegistrations = ref<any[]>([])
 const userPayments = ref<any[]>([])
 const userAppointments = ref<any[]>([])
+const editingApptId = ref<string | null>(null)
+const apptEditForm = ref({ date: '', time: '', duration_minutes: 45 })
+const isSavingAppt = ref(false)
+const apptEditError = ref<string | null>(null)
 const showDeleteConfirm = ref(false)
 const deleteReason = ref('')
 const isSaving = ref(false)
@@ -1135,6 +1203,68 @@ const loadUserAppointmentsList = async () => {
     }) as any
     if (response?.success) userAppointments.value = response.data || []
   } catch (e) { console.warn('Could not load appointments:', e) }
+}
+
+const toggleApptEdit = (id: string) => {
+  if (editingApptId.value === id) {
+    editingApptId.value = null
+    return
+  }
+  const appt = userAppointments.value.find(a => a.id === id)
+  if (!appt) return
+  const dt = appt.start_time ? new Date(appt.start_time) : new Date()
+  const toZurich = (d: Date) => new Date(d.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }))
+  const local = toZurich(dt)
+  apptEditForm.value = {
+    date: `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, '0')}-${String(local.getDate()).padStart(2, '0')}`,
+    time: `${String(local.getHours()).padStart(2, '0')}:${String(local.getMinutes()).padStart(2, '0')}`,
+    duration_minutes: appt.duration_minutes || 45,
+  }
+  apptEditError.value = null
+  editingApptId.value = id
+}
+
+const saveApptEdit = async (appt: any) => {
+  if (isSavingAppt.value) return
+  isSavingAppt.value = true
+  apptEditError.value = null
+  try {
+    const { date, time, duration_minutes } = apptEditForm.value
+    // Combine date + time in Europe/Zurich and convert to UTC ISO string
+    const localIso = `${date}T${time}:00`
+    // Use the Intl API to get the UTC offset for Zurich at that moment
+    const zurichDate = new Date(new Date(localIso).toLocaleString('en-US', { timeZone: 'Europe/Zurich' }))
+    const offsetMs = new Date(localIso).getTime() - zurichDate.getTime()
+    const utcStart = new Date(new Date(localIso).getTime() + offsetMs)
+    const utcEnd = new Date(utcStart.getTime() + duration_minutes * 60 * 1000)
+
+    await $fetch('/api/staff/update-appointment', {
+      method: 'POST',
+      body: {
+        appointment_id: appt.id,
+        update_data: {
+          start_time: utcStart.toISOString(),
+          end_time: utcEnd.toISOString(),
+          duration_minutes,
+        },
+      },
+    })
+    // Update local data
+    const idx = userAppointments.value.findIndex(a => a.id === appt.id)
+    if (idx !== -1) {
+      userAppointments.value[idx] = {
+        ...userAppointments.value[idx],
+        start_time: utcStart.toISOString(),
+        end_time: utcEnd.toISOString(),
+        duration_minutes,
+      }
+    }
+    editingApptId.value = null
+  } catch (err: any) {
+    apptEditError.value = err?.data?.statusMessage || err?.message || 'Fehler beim Speichern'
+  } finally {
+    isSavingAppt.value = false
+  }
 }
 
 const formatCHF = (rappen: number) => `CHF ${(rappen / 100).toFixed(2)}`

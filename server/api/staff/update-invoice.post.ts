@@ -74,7 +74,12 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ LAYER 4: Field whitelist
-    const allowedFields = ['status', 'paid_at', 'notes']
+    const allowedFields = [
+      'status', 'paid_at', 'notes', 'due_date',
+      'billing_company_name', 'billing_contact_person',
+      'billing_street', 'billing_street_number',
+      'billing_zip', 'billing_city', 'billing_country', 'billing_email',
+    ]
     const sanitizedData: any = {}
     for (const key of Object.keys(updateData)) {
       if (allowedFields.includes(key)) {

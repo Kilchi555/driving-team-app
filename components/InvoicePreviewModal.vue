@@ -355,14 +355,31 @@
               </svg>
               {{ isLoadingPdf ? 'Lädt…' : 'PDF anzeigen' }}
             </button>
-            <!-- Im draft-Modus: Später / Schliessen -->
+            <!-- Im draft-Modus: Erstellen (ohne E-Mail) — immer verfügbar wenn Zugriff auf Modal -->
+            <button
+              v-else-if="!hasSent"
+              @click="createInvoiceOnly"
+              :disabled="isSending || !draft || !isBillingComplete"
+              class="px-5 py-2.5 rounded-xl border text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              :style="isBillingComplete ? { borderColor: primaryColor, color: primaryColor } : { borderColor: '#d1d5db', color: '#9ca3af' }"
+            >
+              <svg v-if="isSending && props.canSend === false" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Erstellen
+            </button>
+            <!-- Fallback: Später/Schliessen wenn kein Erstellen-Button angezeigt wird -->
             <button
               v-else
               @click="close"
               :disabled="isSending"
               class="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
-              Später
+              {{ hasSent ? 'Schliessen' : 'Später' }}
             </button>
             <!-- Erneut senden (nur im view-Modus) -->
             <button
@@ -381,36 +398,36 @@
               </svg>
               {{ isResending ? 'Wird gesendet…' : 'Erneut senden' }}
             </button>
-            <!-- Rechnung anzeigen (nach erfolgreichem Senden) -->
-            <button
-              v-if="props.mode !== 'view' && hasSent"
-              @click="emit('view-invoice', sentInvoiceId!)"
-              class="flex-1 px-5 py-2.5 rounded-xl text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:brightness-110"
-              :style="{ background: primaryGradient }"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              Rechnung anzeigen
-            </button>
-            <!-- Rechnung senden (nur im draft-Modus, solange noch nicht gesendet) -->
-            <button
-              v-if="props.mode !== 'view' && !hasSent"
-              @click="sendInvoice"
-              :disabled="isSending || !draft || !isBillingComplete"
-              class="flex-1 px-5 py-2.5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:brightness-110 disabled:shadow-none disabled:hover:brightness-100"
-              :style="isBillingComplete ? { background: primaryGradient } : { background: '#9ca3af' }"
-            >
-              <svg v-if="isSending" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-              {{ isSending ? 'Wird gesendet…' : `Rechnung senden` }}
-            </button>
+            <!-- Nach dem Erstellen: Rechnung anzeigen + Versenden -->
+            <template v-if="props.mode !== 'view' && hasSent">
+              <button
+                @click="emit('view-invoice', sentInvoiceId!)"
+                class="flex-1 px-5 py-2.5 rounded-xl border text-sm font-semibold transition-all flex items-center justify-center gap-2"
+                :style="{ borderColor: primaryColor, color: primaryColor }"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Anzeigen
+              </button>
+              <button
+                v-if="props.canSend !== false && !hasEmailSent"
+                @click="sendCreatedInvoice"
+                :disabled="isSendingEmail"
+                class="flex-1 px-5 py-2.5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:brightness-110 disabled:shadow-none disabled:hover:brightness-100"
+                :style="{ background: primaryGradient }"
+              >
+                <svg v-if="isSendingEmail" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                {{ isSendingEmail ? 'Wird versendet…' : 'Versenden' }}
+              </button>
+            </template>
           </div>
         </div>
 
@@ -422,6 +439,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useDynamicBranding } from '~/composables/useDynamicBranding'
+import { openPdf as openPdfUtil } from '~/utils/openPdf'
 
 interface InvoiceDraftItem {
   product_name: string
@@ -475,12 +493,16 @@ interface InvoiceDraft {
   creditor_street_nr?: string
   creditor_zip?: string
   creditor_city?: string
+  notes?: string | null
+  payment_terms?: string | null
+  footer_text?: string | null
 }
 
 const props = defineProps<{
   modelValue: boolean
   draft: InvoiceDraft | null
   mode?: 'edit' | 'view'
+  canSend?: boolean
   viewInvoice?: {
     id?: string
     invoice_number: string
@@ -531,11 +553,13 @@ const primaryGradient = computed(() => {
 
 const isSending = ref(false)
 const isResending = ref(false)
+const isSendingEmail = ref(false)
 const isLoadingPdf = ref(false)
 const isSavingAddress = ref(false)
 const error = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 const hasSent = ref(false)
+const hasEmailSent = ref(false)
 const sentInvoiceId = ref<string | null>(null)
 const localDueDate = ref('')
 const localNote = ref('')
@@ -587,13 +611,15 @@ const isBillingComplete = computed(() =>
 watch(() => props.draft, (d) => {
   if (d) {
     localDueDate.value = d.due_date
-    localNote.value = `Vielen Dank für Ihren Auftrag, welchen wir hiermit in Rechnung stellen.\nFreundliche Grüsse\n${brandingName.value || 'Driving Team'}`
+    // Notiztext aus Tenant-Einstellungen (invoice_intro_text) laden, kein hardcoded Fallback
+    localNote.value = d.notes || ''
     error.value = null
     editingAddress.value = false
     editingDueDate.value = false
     expandedItems.value = []
     qrDataUrl.value = null
     hasSent.value = false
+    hasEmailSent.value = false
     sentInvoiceId.value = null
     localBilling.value = {
       company_name: d.billing_company_name || (d as any).billing_company_name || '',
@@ -784,8 +810,7 @@ async function saveViewBilling() {
   }
 }
 
-async function openPdf() {
-  const invoiceId = props.viewInvoice?.id
+async function openPdfById(invoiceId: string) {
   if (!invoiceId) return
   isLoadingPdf.value = true
   try {
@@ -794,24 +819,8 @@ async function openPdf() {
       body: { invoiceId },
     })
     if (result?.pdfUrl) {
-      // iOS Safari blockiert fetch() auf data:-URLs → base64 direkt mit atob() dekodieren
-      const base64Match = result.pdfUrl.match(/^data:([^;]+);base64,(.+)$/)
-      if (!base64Match) throw new Error('Ungültiges PDF-Format')
-      const mimeType = base64Match[1]
-      const binaryStr = atob(base64Match[2])
-      const bytes = new Uint8Array(binaryStr.length)
-      for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i)
-      const blob = new Blob([bytes], { type: mimeType })
-      const blobUrl = URL.createObjectURL(blob)
-      const win = window.open(blobUrl, '_blank')
-      if (!win) {
-        // Fallback: als Download
-        const a = document.createElement('a')
-        a.href = blobUrl
-        a.download = `Rechnung-${props.viewInvoice?.invoice_number || invoiceId}.pdf`
-        a.click()
-      }
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000)
+      const filename = `Rechnung-${invoiceId}.pdf`
+      await openPdfUtil(result.pdfUrl, filename)
     }
   } catch (err: any) {
     error.value = err?.data?.statusMessage || err?.message || 'Fehler beim Laden des PDFs'
@@ -820,10 +829,15 @@ async function openPdf() {
   }
 }
 
-async function sendInvoice() {
+async function openPdf() {
+  const invoiceId = props.viewInvoice?.id
+  if (!invoiceId) return
+  await openPdfById(invoiceId)
+}
+
+async function createInvoiceOnly() {
   if (!props.draft || isSending.value) return
 
-  // Validate required billing fields
   billingErrors.value = {
     first_name: !localBilling.value.first_name.trim(),
     last_name: !localBilling.value.last_name.trim(),
@@ -833,7 +847,6 @@ async function sendInvoice() {
     email: !localBilling.value.email.trim(),
   }
   if (Object.values(billingErrors.value).some(Boolean)) {
-    // Open billing edit section if not already open
     editingAddress.value = true
     return
   }
@@ -864,7 +877,7 @@ async function sendInvoice() {
       total_amount_rappen: number
     }>('/api/invoices/send-draft', {
       method: 'POST',
-      body: { draft: payload },
+      body: { draft: payload, send_email: false },
     })
 
     emit('sent', {
@@ -874,12 +887,37 @@ async function sendInvoice() {
     })
     hasSent.value = true
     sentInvoiceId.value = result.invoice_id
-    successMessage.value = `Rechnung ${result.invoice_number} wurde erfolgreich versendet.`
+    successMessage.value = `Rechnung ${result.invoice_number} wurde erstellt.`
     setTimeout(() => { successMessage.value = null }, 3000)
+    // PDF nach dem Erstellen direkt öffnen
+    openPdfById(result.invoice_id)
   } catch (err: any) {
-    error.value = err?.data?.statusMessage || err?.message || 'Fehler beim Senden der Rechnung'
+    error.value = err?.data?.statusMessage || err?.message || 'Fehler beim Erstellen der Rechnung'
   } finally {
     isSending.value = false
+  }
+}
+
+async function sendCreatedInvoice() {
+  const invoiceId = sentInvoiceId.value
+  if (!invoiceId || isSendingEmail.value) return
+  isSendingEmail.value = true
+  error.value = null
+  try {
+    const result = await $fetch<{ success: boolean; invoiceNumber?: string; sentTo?: string; error?: string }>(
+      '/api/invoices/resend',
+      { method: 'POST', body: { invoiceId } }
+    )
+    if (!result.success) throw new Error(result.error || 'Fehler beim Versenden')
+    hasEmailSent.value = true
+    successMessage.value = result.sentTo
+      ? `Rechnung versendet an ${result.sentTo}.`
+      : 'Rechnung wurde versendet.'
+    setTimeout(() => { successMessage.value = null }, 4000)
+  } catch (err: any) {
+    error.value = err?.data?.statusMessage || err?.message || 'Fehler beim Versenden'
+  } finally {
+    isSendingEmail.value = false
   }
 }
 
