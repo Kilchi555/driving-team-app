@@ -87,7 +87,118 @@ export default defineEventHandler(async (event) => {
     return { ok: res.ok, data }
   }
 
+  const body = await readBody(event).catch(() => ({})) as any
   const LANDING_PAGE = 'https://drivingteam.ch/czv-grundkurs/'
+
+  // ── ads_only mode: add RSA ads to an existing campaign's ad groups ────────────
+  if (body?.ads_only && body?.campaign_id) {
+    const existingCampaignId = String(body.campaign_id)
+
+    // Query existing enabled ad groups for this campaign
+    const searchUrl = `https://googleads.googleapis.com/v23/customers/${customerId}/googleAds:searchStream`
+    const query = `
+      SELECT ad_group.resource_name, ad_group.name
+      FROM ad_group
+      WHERE
+        ad_group.status = 'ENABLED'
+        AND campaign.id = ${existingCampaignId}
+    `
+    const searchRes = await fetch(searchUrl, {
+      method: 'POST',
+      headers: adsHeaders,
+      body: JSON.stringify({ query }),
+    })
+    const searchData = await searchRes.json() as any[]
+    const adGroups: Array<{ name: string; resourceName: string }> = []
+    for (const batch of (Array.isArray(searchData) ? searchData : [])) {
+      for (const row of (batch.results ?? [])) {
+        adGroups.push({ name: row.adGroup?.name ?? '', resourceName: row.adGroup?.resourceName ?? '' })
+      }
+    }
+
+    // Ad configs (same as main creation — correct 90-char descriptions + 15-char paths)
+    const adConfigs: Record<string, { headlines: any[]; descriptions: any[]; path1: string; path2: string }> = {
+      'CZV Grundkurs': {
+        headlines: [
+          { text: 'CZV Grundkurs Lachen', pinnedField: 'HEADLINE_1' },
+          { text: 'Berufschauffeur Kurs', pinnedField: 'HEADLINE_2' },
+          { text: '5 Tage | Flexibel' },
+          { text: 'Fähigkeitsausweis' },
+          { text: 'Kategorien C/CE & D' },
+          { text: 'Inkl. Prüfungsvorbereitung' },
+          { text: 'Jetzt Platz reservieren' },
+          { text: 'CHF 2200 | Ab September' },
+        ],
+        descriptions: [
+          { text: 'CZV Kurs C/CE & D. 5 Tage flexibel. Prüfungsvorbereitung inkl.', pinnedField: 'DESCRIPTION_1' },
+          { text: 'Driving Team Lachen | Fähigkeitsausweis inklusive | Jetzt anmelden' },
+        ],
+        path1: 'CZV-Kurs', path2: 'Lachen',
+      },
+      'Berufschauffeur Ausbildung': {
+        headlines: [
+          { text: 'Berufschauffeur werden', pinnedField: 'HEADLINE_1' },
+          { text: 'CZV Grundkurs Lachen', pinnedField: 'HEADLINE_2' },
+          { text: 'Fähigkeitsausweis' },
+          { text: 'Kategorien C/CE & D' },
+          { text: 'Inkl. Prüfungsvorbereitung' },
+          { text: 'Jetzt Platz sichern' },
+        ],
+        descriptions: [
+          { text: 'CZV Grundkurs Kat. C/CE & D — 5 Tage. Fähigkeitsausweis inkl.', pinnedField: 'DESCRIPTION_1' },
+          { text: 'Driving Team Lachen | Kat. C/CE & D | Flexibel | Jetzt anmelden' },
+        ],
+        path1: 'Berufschauffeur', path2: 'Ausbildung',
+      },
+      'Lastwagen C Führerschein': {
+        headlines: [
+          { text: 'LKW Führerschein C/CE', pinnedField: 'HEADLINE_1' },
+          { text: 'CZV Grundkurs Lachen', pinnedField: 'HEADLINE_2' },
+          { text: 'Berufsmässig LKW fahren' },
+          { text: '5 Tage Ausbildung CH' },
+          { text: 'Fähigkeitsausweis' },
+          { text: 'Jetzt Platz reservieren' },
+        ],
+        descriptions: [
+          { text: 'CZV Kurs Kat. C1/C/CE. 5 Tage flexibel. Prüfungsvorbereitung inkl.', pinnedField: 'DESCRIPTION_1' },
+          { text: 'Driving Team Lachen | Inkl. C & CE | Flexibel | Jetzt anmelden' },
+        ],
+        path1: 'LKW-Fuehrerschei', path2: 'CZV-Kurs',
+      },
+    }
+
+    const adsResults: any[] = []
+    for (const ag of adGroups) {
+      const cfg = adConfigs[ag.name]
+      if (!cfg) {
+        adsResults.push({ ad_group: ag.name, skipped: true, reason: 'No ad config for this ad group name' })
+        continue
+      }
+      const adResult = await mutate('adGroupAds', [{
+        create: {
+          adGroup: ag.resourceName,
+          status: 'ENABLED',
+          ad: {
+            responsiveSearchAd: {
+              headlines: cfg.headlines,
+              descriptions: cfg.descriptions,
+              path1: cfg.path1,
+              path2: cfg.path2,
+            },
+            finalUrls: [LANDING_PAGE],
+          },
+        },
+      }])
+      adsResults.push({ ad_group: ag.name, ok: adResult.ok, detail: adResult.ok ? 'created' : adResult.data })
+    }
+
+    return {
+      mode: 'ads_only',
+      campaign_id: existingCampaignId,
+      ad_groups_found: adGroups.map(ag => ag.name),
+      ads: adsResults,
+    }
+  }
 
   // ── Step 1: Budget (CHF 20/day — CZV leads are high value at CHF 2200/student) ─
   const budgetResult = await mutate('campaignBudgets', [{
