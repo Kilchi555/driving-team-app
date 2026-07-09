@@ -206,6 +206,22 @@ export default defineEventHandler(async (event) => {
       return { success: true, data: data || [] }
     }
 
+    if (action === 'get-staff-appointments') {
+      const { year, month } = body // month: 1-12
+      if (!user_id || !year || !month) throw createError({ statusCode: 400, statusMessage: 'user_id, year and month required' })
+      const from = new Date(Date.UTC(year, month - 1, 1)).toISOString()
+      const to   = new Date(Date.UTC(year, month, 1)).toISOString()
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('id, title, start_time, end_time, duration_minutes, status, type, event_type_code, cancellation_charge_percentage, cancellation_policy_applied, user_id, student:users!appointments_user_id_fkey(first_name, last_name)')
+        .eq('staff_id', user_id)
+        .gte('start_time', from)
+        .lt('start_time', to)
+        .order('start_time', { ascending: true })
+      if (error) throw error
+      return { success: true, data: data || [] }
+    }
+
     if (action === 'get-user-course-registrations') {
       const { data, error } = await supabase
         .from('course_registrations')
@@ -241,6 +257,29 @@ export default defineEventHandler(async (event) => {
 
       if (error) throw error
       return { success: true, data: data || [] }
+    }
+
+    if (action === 'get-staff-license-photos') {
+      if (!user_id) throw createError({ statusCode: 400, statusMessage: 'user_id required' })
+      // Fetch documents
+      const { data: docs, error: docsError } = await supabase
+        .from('user_documents')
+        .select('id, document_type, side, file_name, file_type, storage_path, title, is_verified, created_at')
+        .eq('user_id', user_id)
+        .eq('document_type', 'fuehrerschein')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true })
+      if (docsError) throw docsError
+      if (!docs || docs.length === 0) return { success: true, data: [] }
+
+      // Generate signed URLs (valid 1 hour)
+      const withUrls = await Promise.all(docs.map(async (doc) => {
+        const { data: signed } = await supabase.storage
+          .from('user-documents')
+          .createSignedUrl(doc.storage_path, 3600)
+        return { ...doc, signed_url: signed?.signedUrl || null }
+      }))
+      return { success: true, data: withUrls }
     }
 
     throw createError({
