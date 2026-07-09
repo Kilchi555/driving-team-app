@@ -163,7 +163,7 @@ export default defineEventHandler(async (event) => {
           { text: 'CZV Kurs Kat. C1/C/CE. 5 Tage flexibel. Prüfungsvorbereitung inkl.', pinnedField: 'DESCRIPTION_1' },
           { text: 'Driving Team Lachen | Inkl. C & CE | Flexibel | Jetzt anmelden' },
         ],
-        path1: 'LKW-Fuehrerschei', path2: 'CZV-Kurs',
+        path1: 'LKW-Kurs', path2: 'CZV-Kurs',
       },
     }
 
