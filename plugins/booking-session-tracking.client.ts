@@ -93,6 +93,12 @@ export default defineNuxtPlugin(() => {
   let isNewSession = false
 
   const dtAttr = urlParams.get('dt_attr')
+  // Direct click IDs in URL — present when Google Ads links directly to app.simy.ch
+  // instead of going through drivingteam.ch (which would produce a dt_attr blob).
+  const gclidFromUrl = urlParams.get('gclid')
+  const gbraidFromUrl = urlParams.get('gbraid')
+  const wbraidFromUrl = urlParams.get('wbraid')
+
   if (dtAttr) {
     attribution = decodeAttribution(dtAttr)
     if (attribution) {
@@ -108,6 +114,34 @@ export default defineNuxtPlugin(() => {
         body: JSON.stringify({ session_id: sessionId, tenant_id: window.__tenantId ?? null, attribution }),
       }).catch(() => {})
     }
+  } else if (gclidFromUrl || gbraidFromUrl || wbraidFromUrl) {
+    // Fallback: Google Ads linked directly to app.simy.ch with ?gclid= in the URL.
+    // Build the attribution from the raw click-ID params so the booking conversion
+    // can still be uploaded server-side.
+    attribution = {
+      gclid: gclidFromUrl ?? null,
+      gbraid: gbraidFromUrl ?? null,
+      wbraid: wbraidFromUrl ?? null,
+      fbclid: null,
+      fbc: null,
+      fbp: null,
+      utm_source: urlParams.get('utm_source') ?? 'google',
+      utm_medium: urlParams.get('utm_medium') ?? 'cpc',
+      utm_campaign: urlParams.get('utm_campaign') ?? null,
+      utm_content: urlParams.get('utm_content') ?? null,
+      utm_term: urlParams.get('utm_term') ?? null,
+      landing_page: window.location.pathname,
+    }
+    try {
+      localStorage.setItem(ATTR_KEY, JSON.stringify(attribution))
+    } catch {
+      // ignore
+    }
+    fetch('/api/marketing-attribution', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, tenant_id: window.__tenantId ?? null, attribution }),
+    }).catch(() => {})
   } else {
     try {
       const stored = localStorage.getItem(ATTR_KEY)

@@ -25,27 +25,17 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event)
 
-  // Validate student_required_fields if provided
-  if (body.student_required_fields !== undefined) {
-    if (!Array.isArray(body.student_required_fields)) {
-      throw createError({ statusCode: 400, statusMessage: 'student_required_fields must be an array' })
-    }
-    const invalid = body.student_required_fields.filter((f: string) => !VALID_FIELDS.has(f))
-    if (invalid.length > 0) {
-      throw createError({ statusCode: 400, statusMessage: `Invalid fields: ${invalid.join(', ')}` })
-    }
+  const validateFieldArray = (arr: unknown, name: string) => {
+    if (arr === undefined) return
+    if (!Array.isArray(arr)) throw createError({ statusCode: 400, statusMessage: `${name} must be an array` })
+    const invalid = (arr as string[]).filter((f) => !VALID_FIELDS.has(f))
+    if (invalid.length > 0) throw createError({ statusCode: 400, statusMessage: `Invalid fields in ${name}: ${invalid.join(', ')}` })
   }
 
-  // Validate student_optional_fields if provided
-  if (body.student_optional_fields !== undefined) {
-    if (!Array.isArray(body.student_optional_fields)) {
-      throw createError({ statusCode: 400, statusMessage: 'student_optional_fields must be an array' })
-    }
-    const invalid = body.student_optional_fields.filter((f: string) => !VALID_FIELDS.has(f))
-    if (invalid.length > 0) {
-      throw createError({ statusCode: 400, statusMessage: `Invalid optional fields: ${invalid.join(', ')}` })
-    }
-  }
+  validateFieldArray(body.student_required_fields, 'student_required_fields')
+  validateFieldArray(body.student_optional_fields, 'student_optional_fields')
+  validateFieldArray(body.booking_required_fields, 'booking_required_fields')
+  validateFieldArray(body.booking_optional_fields, 'booking_optional_fields')
 
   // Validate confirmation_email_mode if provided
   const validModes = ['always', 'after_registration', 'never']

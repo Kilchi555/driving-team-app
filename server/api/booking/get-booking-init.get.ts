@@ -5,6 +5,7 @@
 
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { DEFAULT_BOOKING_POLICY } from '~/server/api/admin/booking-policy.get'
 
 export default defineEventHandler(async (event) => {
   const { slug } = getQuery(event)
@@ -21,7 +22,7 @@ export default defineEventHandler(async (event) => {
   // Resolve slug to tenant
   const { data: tenant, error: tenantErr } = await supabase
     .from('tenants')
-    .select('id, name, slug, business_type, primary_color, secondary_color, accent_color, logo_url, logo_square_url, logo_wide_url')
+    .select('id, name, slug, business_type, primary_color, secondary_color, accent_color, logo_url, logo_square_url, logo_wide_url, booking_policy')
     .eq('slug', slug)
     .single()
 
@@ -64,8 +65,21 @@ export default defineEventHandler(async (event) => {
     locationsCount = locationsResult.data?.length ?? 0
   }
 
+  // Expose only the customer-facing policy fields (not internal staff settings)
+  const rawPolicy = (tenant as any).booking_policy ?? {}
+  const bookingPolicy = {
+    registration_required: rawPolicy.registration_required ?? DEFAULT_BOOKING_POLICY.registration_required,
+    booking_required_fields: rawPolicy.booking_required_fields ?? DEFAULT_BOOKING_POLICY.booking_required_fields,
+    booking_optional_fields: rawPolicy.booking_optional_fields ?? DEFAULT_BOOKING_POLICY.booking_optional_fields,
+    onboarding_sms_enabled: rawPolicy.onboarding_sms_enabled ?? DEFAULT_BOOKING_POLICY.onboarding_sms_enabled,
+    onboarding_email_enabled: rawPolicy.onboarding_email_enabled ?? DEFAULT_BOOKING_POLICY.onboarding_email_enabled,
+  }
+
+  // Strip booking_policy from tenant object before returning (avoid leaking internal settings)
+  const { booking_policy: _bp, ...tenantPublic } = tenant as any
+
   return {
     success: true,
-    data: { tenant, categories, locationsCount },
+    data: { tenant: tenantPublic, categories, locationsCount, bookingPolicy },
   }
 })

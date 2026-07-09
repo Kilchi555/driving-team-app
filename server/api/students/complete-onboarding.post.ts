@@ -181,35 +181,63 @@ export default defineEventHandler(async (event) => {
         // Recover: find the existing auth user, update their password, then link them.
         logger.debug('🔍 Auth user already exists - attempting recovery for orphaned record...')
 
-        const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+        try {
+          // Try to get the user directly via their email
+          const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserByEmail(email)
+          
+          if (userError || !userData?.user) {
+            logger.warn('⚠️ Could not find auth user by email:', email)
+            // Fallback: List users if direct lookup fails (slower but more reliable)
+            const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
 
-        if (listError) {
-          logger.error('❌ Could not list auth users for recovery:', listError.message)
-          throw createError({ statusCode: 500, message: 'Fehler bei der Kontosuche. Bitte versuche es später erneut.' })
+            if (listError) {
+              logger.error('❌ Could not list auth users for recovery:', { error: listError })
+              throw createError({ statusCode: 500, message: 'Fehler bei der Kontosuche. Bitte versuche es später erneut.' })
+            }
+
+            const orphanedAuthUser = listData?.users?.find(
+              u => u.email?.toLowerCase() === email.toLowerCase().trim()
+            )
+
+            if (!orphanedAuthUser) {
+              throw createError({ statusCode: 409, message: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich direkt an.' })
+            }
+
+            // Update password and metadata for the recovered auth user
+            const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(orphanedAuthUser.id, {
+              password: password,
+              email_confirm: true,
+              user_metadata: { first_name: firstName, last_name: lastName }
+            })
+
+            if (updateAuthError) {
+              logger.error('❌ Could not update orphaned auth user:', updateAuthError.message)
+              throw createError({ statusCode: 500, message: 'Fehler beim Aktualisieren des Benutzerkontos.' })
+            }
+
+            resolvedAuthUserId = orphanedAuthUser.id
+            logger.debug('✅ Orphaned auth user recovered and password updated:', orphanedAuthUser.id)
+          } else {
+            // Direct lookup worked — update password for this auth user
+            const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(userData.user.id, {
+              password: password,
+              email_confirm: true,
+              user_metadata: { first_name: firstName, last_name: lastName }
+            })
+
+            if (updateAuthError) {
+              logger.error('❌ Could not update existing auth user:', updateAuthError.message)
+              throw createError({ statusCode: 500, message: 'Fehler beim Aktualisieren des Benutzerkontos.' })
+            }
+
+            resolvedAuthUserId = userData.user.id
+            logger.debug('✅ Existing auth user recovered and password updated:', userData.user.id)
+          }
+        } catch (err: any) {
+          if (err.statusCode) throw err
+          logger.error('❌ Recovery failed:', err)
+          throw createError({ statusCode: 500, message: 'Fehler bei der Kontoaktivierung. Bitte kontaktiere die Fahrschule.' })
         }
-
-        const orphanedAuthUser = listData?.users?.find(
-          u => u.email?.toLowerCase() === email.toLowerCase().trim()
-        )
-
-        if (!orphanedAuthUser) {
-          throw createError({ statusCode: 409, message: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich direkt an.' })
-        }
-
-        // Update password and metadata for the recovered auth user
-        const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(orphanedAuthUser.id, {
-          password: password,
-          email_confirm: true,
-          user_metadata: { first_name: firstName, last_name: lastName }
-        })
-
-        if (updateAuthError) {
-          logger.error('❌ Could not update orphaned auth user:', updateAuthError.message)
-          throw createError({ statusCode: 500, message: 'Fehler beim Aktualisieren des Benutzerkontos.' })
-        }
-
-        resolvedAuthUserId = orphanedAuthUser.id
-        logger.debug('✅ Orphaned auth user recovered and password updated:', orphanedAuthUser.id)
 
       } else if (authError.message.includes('password')) {
         throw createError({
