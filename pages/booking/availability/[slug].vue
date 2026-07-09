@@ -1037,7 +1037,7 @@
             
             <!-- Countdown Timer -->
           </div>
-          <div v-if="currentReservationId" class="max-w-2xl mx-auto mt-4 p-3 border rounded-lg" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
+          <div v-if="currentReservationId" class="max-w-2xl mx-auto mt-4 mb-1 p-3 border rounded-lg" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
             <div class="flex items-center justify-between">
               <span class="text-sm font-medium" :style="{ color: primaryColor }">Termin reserviert</span>
               <div class="text-lg font-bold" :style="{ color: remainingSeconds < 60 ? '#dc2626' : getBrandPrimary() }">
@@ -1173,6 +1173,267 @@
     </div>
   </div>
 
+  <!-- Guest Form Modal (when registration_required = false) -->
+  <div v-if="showGuestForm" class="fixed inset-0 bg-black bg-opacity-60 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden">
+      <!-- Header -->
+      <div class="px-5 pt-5 pb-4 border-b border-gray-100">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-bold text-gray-900">Fast geschafft!</h2>
+            <p class="text-sm text-gray-500 mt-0.5">Gib deine Kontaktdaten ein um die Buchung abzuschliessen.</p>
+          </div>
+          <button
+            @click="showGuestForm = false; isCreatingBooking = false"
+            class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Countdown reminder — turns red and urgent when < 60s -->
+        <div
+          v-if="currentReservationId"
+          class="mt-3 flex items-center gap-2 text-xs rounded-lg px-3 py-2 transition-colors"
+          :class="remainingSeconds < 60 ? 'bg-red-50' : ''"
+          :style="remainingSeconds < 60 ? { color: '#dc2626' } : { background: `${getBrandPrimary()}15`, color: getBrandPrimary() }"
+        >
+          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span v-if="remainingSeconds < 60">
+            <strong>Beeil dich!</strong> Reservierung läuft in <strong>{{ getCountdownText }}</strong> ab.
+          </span>
+          <span v-else>Slot reserviert: noch <strong>{{ getCountdownText }}</strong></span>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <form @submit.prevent="submitGuestBooking" class="px-5 py-5 space-y-4">
+        <!-- Error -->
+        <div v-if="guestFormError" class="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {{ guestFormError }}
+          <button
+            v-if="guestFormError.includes('registriert')"
+            type="button"
+            class="block mt-2 text-xs font-medium underline"
+            @click="showGuestForm = false; showLoginModal = true; loginModalTab = 'login'"
+          >
+            Zum Login wechseln →
+          </button>
+        </div>
+
+        <!-- Name row -->
+        <div class="grid grid-cols-2 gap-3" v-if="isBookingFieldVisible('first_name') || isBookingFieldVisible('last_name')">
+          <div v-if="isBookingFieldVisible('first_name')">
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Vorname <span v-if="isBookingFieldRequired('first_name')" class="text-red-400">*</span>
+            </label>
+            <input
+              v-model="guestFirstName"
+              type="text"
+              autocomplete="given-name"
+              :required="isBookingFieldRequired('first_name')"
+              placeholder="Max"
+              autofocus
+              class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition"
+              :style="{ '--tw-ring-color': getBrandPrimary() }"
+            />
+          </div>
+          <div v-if="isBookingFieldVisible('last_name')">
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Nachname <span v-if="isBookingFieldRequired('last_name')" class="text-red-400">*</span>
+            </label>
+            <input
+              v-model="guestLastName"
+              type="text"
+              autocomplete="family-name"
+              :required="isBookingFieldRequired('last_name')"
+              placeholder="Muster"
+              class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition"
+              :style="{ '--tw-ring-color': getBrandPrimary() }"
+            />
+          </div>
+        </div>
+
+        <!-- Phone -->
+        <div v-if="isBookingFieldVisible('phone')">
+          <label class="block text-xs font-medium text-gray-600 mb-1">
+            Telefon <span v-if="isBookingFieldRequired('phone')" class="text-red-400">*</span>
+          </label>
+          <input
+            v-model="guestPhone"
+            type="tel"
+            autocomplete="tel"
+            :required="isBookingFieldRequired('phone')"
+            placeholder="+41 79 123 45 67"
+            @blur="validateGuestPhone"
+            class="w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition"
+            :class="guestPhoneError ? 'border-red-300' : 'border-gray-200'"
+            :style="{ '--tw-ring-color': getBrandPrimary() }"
+          />
+          <p v-if="guestPhoneError" class="mt-1 text-xs text-red-500">{{ guestPhoneError }}</p>
+        </div>
+
+        <!-- Email -->
+        <div v-if="isBookingFieldVisible('email')">
+          <label class="block text-xs font-medium text-gray-600 mb-1">
+            E-Mail <span v-if="isBookingFieldRequired('email')" class="text-red-400">*</span>
+            <span v-else class="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <input
+            v-model="guestEmail"
+            type="email"
+            autocomplete="email"
+            :required="isBookingFieldRequired('email')"
+            placeholder="max.muster@gmail.com"
+            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition"
+            :style="{ '--tw-ring-color': getBrandPrimary() }"
+          />
+        </div>
+
+        <!-- Birthdate -->
+        <div v-if="isBookingFieldVisible('birthdate')">
+          <label class="block text-xs font-medium text-gray-600 mb-1">
+            Geburtsdatum <span v-if="isBookingFieldRequired('birthdate')" class="text-red-400">*</span>
+            <span v-else class="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <input
+            v-model="guestBirthdate"
+            type="date"
+            autocomplete="bday"
+            :required="isBookingFieldRequired('birthdate')"
+            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition"
+            :style="{ '--tw-ring-color': getBrandPrimary() }"
+          />
+        </div>
+
+        <!-- Street row -->
+        <div
+          v-if="isBookingFieldVisible('street') || isBookingFieldVisible('street_nr')"
+          class="grid gap-3"
+          :class="isBookingFieldVisible('street') && isBookingFieldVisible('street_nr') ? 'grid-cols-[1fr_auto]' : 'grid-cols-1'"
+        >
+          <div v-if="isBookingFieldVisible('street')">
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Strasse <span v-if="isBookingFieldRequired('street')" class="text-red-400">*</span>
+              <span v-else class="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <input
+              v-model="guestStreet"
+              type="text"
+              autocomplete="address-line1"
+              :required="isBookingFieldRequired('street')"
+              placeholder="Bahnhofstrasse"
+              class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition"
+              :style="{ '--tw-ring-color': getBrandPrimary() }"
+            />
+          </div>
+          <div v-if="isBookingFieldVisible('street_nr')" class="w-24">
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Nr. <span v-if="isBookingFieldRequired('street_nr')" class="text-red-400">*</span>
+              <span v-else class="text-gray-400 font-normal">(opt.)</span>
+            </label>
+            <input
+              v-model="guestStreetNr"
+              type="text"
+              autocomplete="address-line2"
+              :required="isBookingFieldRequired('street_nr')"
+              placeholder="12a"
+              class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition"
+              :style="{ '--tw-ring-color': getBrandPrimary() }"
+            />
+          </div>
+        </div>
+
+        <!-- ZIP + City row -->
+        <div
+          v-if="isBookingFieldVisible('zip') || isBookingFieldVisible('city')"
+          class="grid gap-3"
+          :class="isBookingFieldVisible('zip') && isBookingFieldVisible('city') ? 'grid-cols-[auto_1fr]' : 'grid-cols-1'"
+        >
+          <div v-if="isBookingFieldVisible('zip')" class="w-24">
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              PLZ <span v-if="isBookingFieldRequired('zip')" class="text-red-400">*</span>
+              <span v-else class="text-gray-400 font-normal">(opt.)</span>
+            </label>
+            <input
+              v-model="guestZip"
+              type="text"
+              autocomplete="postal-code"
+              :required="isBookingFieldRequired('zip')"
+              placeholder="8001"
+              class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition"
+              :style="{ '--tw-ring-color': getBrandPrimary() }"
+            />
+          </div>
+          <div v-if="isBookingFieldVisible('city')">
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Ort <span v-if="isBookingFieldRequired('city')" class="text-red-400">*</span>
+              <span v-else class="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <input
+              v-model="guestCity"
+              type="text"
+              autocomplete="address-level2"
+              :required="isBookingFieldRequired('city')"
+              placeholder="Zürich"
+              class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition"
+              :style="{ '--tw-ring-color': getBrandPrimary() }"
+            />
+          </div>
+        </div>
+
+        <!-- Profession -->
+        <div v-if="isBookingFieldVisible('profession')">
+          <label class="block text-xs font-medium text-gray-600 mb-1">
+            Beruf <span v-if="isBookingFieldRequired('profession')" class="text-red-400">*</span>
+            <span v-else class="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <input
+            v-model="guestProfession"
+            type="text"
+            autocomplete="organization-title"
+            :required="isBookingFieldRequired('profession')"
+            placeholder="Kaufmännische/r Angestellte/r"
+            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition"
+            :style="{ '--tw-ring-color': getBrandPrimary() }"
+          />
+        </div>
+
+        <!-- Info note -->
+        <p class="text-xs text-gray-400 leading-relaxed">
+          Du erhältst nach der Buchung einen SMS-Link um dein kostenloses Konto zu aktivieren und deine Termine zu verwalten.
+        </p>
+
+        <!-- Submit -->
+        <button
+          type="submit"
+          :disabled="isSubmittingGuestForm"
+          class="w-full py-3 rounded-xl font-semibold text-white text-sm transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
+          :style="{ backgroundColor: getBrandPrimary() }"
+        >
+          <span v-if="isSubmittingGuestForm" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+          <span>{{ isSubmittingGuestForm ? 'Buchung wird erstellt…' : 'Jetzt verbindlich buchen →' }}</span>
+        </button>
+
+        <!-- Switch to login -->
+        <p class="text-center text-xs text-gray-400">
+          Bereits ein Konto?
+          <button
+            type="button"
+            class="underline font-medium text-gray-600"
+            @click="showGuestForm = false; showLoginModal = true; loginModalTab = 'login'"
+          >
+            Einloggen
+          </button>
+        </p>
+      </form>
+    </div>
+  </div>
+
   <!-- Login/Register Modal -->
   <LoginRegisterModal 
     v-if="showLoginModal"
@@ -1272,6 +1533,106 @@
     </div>
   </div>
 
+  <!-- Step 10: Guest Booking Success -->
+  <div v-if="currentStep === 10" class="max-w-xl mx-auto px-4 py-8">
+    <div class="bg-white shadow rounded-2xl p-6 sm:p-8 text-center">
+      <!-- Success Icon -->
+      <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-5">
+        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+      </div>
+
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Buchung bestätigt!</h2>
+      <p class="text-gray-500 text-sm mb-6">
+        Dein Termin wurde erfolgreich gebucht.
+        <template v-if="guestOnboardingSmsSent && guestOnboardingEmailSent"> Du erhältst in Kürze eine SMS und eine E-Mail mit weiteren Details.</template>
+        <template v-else-if="guestOnboardingSmsSent"> Du erhältst in Kürze eine SMS mit weiteren Details.</template>
+        <template v-else-if="guestOnboardingEmailSent"> Du erhältst in Kürze eine E-Mail mit weiteren Details.</template>
+      </p>
+
+      <!-- Booking summary -->
+      <div class="text-left bg-gray-50 rounded-xl p-4 space-y-3 mb-6">
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-500">Kategorie</span>
+          <span class="font-medium text-gray-900">{{ selectedCategory?.name }}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-500">Fahrlehrer</span>
+          <span class="font-medium text-gray-900">{{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-500">Datum</span>
+          <span class="font-medium text-gray-900">{{ formatDate(selectedSlot?.start_time) }}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-500">Zeit</span>
+          <span class="font-medium text-gray-900">{{ formatTime(selectedSlot?.start_time) }} Uhr</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-500">Dauer</span>
+          <span class="font-medium text-gray-900">{{ selectedSlot?.duration_minutes }} Minuten</span>
+        </div>
+        <div v-if="selectedLocation" class="flex justify-between text-sm">
+          <span class="text-gray-500">Ort</span>
+          <span class="font-medium text-gray-900">{{ selectedLocation.name }}</span>
+        </div>
+        <div v-if="selectedLocation?.address" class="flex justify-between text-sm">
+          <span class="text-gray-500">Adresse Treffpunkt</span>
+          <span class="font-medium text-gray-900">{{ selectedLocation.address }}</span>
+        </div>
+        <div v-if="guestStreet" class="flex justify-between text-sm">
+          <span class="text-gray-500">Adresse</span>
+          <span class="font-medium text-gray-900">{{ guestStreet }} {{ guestStreetNr }}</span>
+        </div>
+        <div v-if="guestZip || guestCity" class="flex justify-between text-sm">
+          <span class="text-gray-500">PLZ / Ort</span>
+          <span class="font-medium text-gray-900">{{ guestZip }} {{ guestCity }}</span>
+        </div>
+      </div>
+
+      <!-- Onboarding hint — dynamisch je nach was versendet wurde -->
+      <div class="flex items-start gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl mb-6 text-left">
+        <svg v-if="guestOnboardingEmailSent && !guestOnboardingSmsSent" class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        <svg v-else class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+        </svg>
+        <div>
+          <p class="text-sm font-medium text-blue-800">
+            <template v-if="guestOnboardingSmsSent && guestOnboardingEmailSent">Konto-Aktivierung per SMS &amp; E-Mail unterwegs</template>
+            <template v-else-if="guestOnboardingSmsSent">Konto-Aktivierung per SMS unterwegs</template>
+            <template v-else-if="guestOnboardingEmailSent">Konto-Aktivierung per E-Mail unterwegs</template>
+            <template v-else>Konto-Aktivierung</template>
+          </p>
+          <p class="text-xs text-blue-600 mt-0.5">
+            <template v-if="guestOnboardingSmsSent && guestOnboardingEmailSent">
+              Du erhältst in Kürze eine SMS und eine E-Mail mit einem Link um dein kostenloses Konto zu aktivieren und deine Buchungen jederzeit zu verwalten.
+            </template>
+            <template v-else-if="guestOnboardingSmsSent">
+              Du erhältst in Kürze eine SMS mit einem Link um dein kostenloses Konto zu aktivieren und deine Buchungen jederzeit zu verwalten.
+            </template>
+            <template v-else-if="guestOnboardingEmailSent">
+              Du erhältst in Kürze eine E-Mail mit einem Link um dein kostenloses Konto zu aktivieren und deine Buchungen jederzeit zu verwalten.
+            </template>
+            <template v-else>
+              Kontaktiere die Fahrschule um dein Konto zu aktivieren und deine Buchungen zu verwalten.
+            </template>
+          </p>
+        </div>
+      </div>
+
+      <button
+        @click="currentStep = 0; guestBookingSuccess = false"
+        class="w-full py-3 rounded-xl font-semibold text-white text-sm"
+        :style="{ backgroundColor: getBrandPrimary() }"
+      >
+        Weitere Buchung
+      </button>
+    </div>
+  </div>
+
   <!-- Success Modal -->
   <div v-if="showSuccessModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-lg p-8 max-w-md mx-4 shadow-lg">
@@ -1306,6 +1667,7 @@ import BookingProposalForm from '~/components/BookingProposalForm.vue'
 import { useRoute, useRuntimeConfig } from '#app'
 import { useFeatures } from '~/composables/useFeatures'
 import { navigateTo } from '#app'
+import { getSupabase } from '~/utils/supabase'
 import AppointmentPreferencesForm from '~/components/booking/AppointmentPreferencesForm.vue'
 import { parseTimeWindows } from '~/utils/travelTimeValidation'
 import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
@@ -1669,6 +2031,40 @@ if (initData.value?.success) {
   categories.value = initData.value.data.categories || []
   locationsCount.value = initData.value.data.locationsCount ?? 0
 }
+
+// ── Booking policy (loaded from get-booking-init, public subset only) ────────
+const bookingPolicy = computed(() => initData.value?.data?.bookingPolicy ?? {
+  registration_required: false,
+  booking_required_fields: ['first_name', 'last_name', 'phone'],
+  booking_optional_fields: ['email'],
+  onboarding_sms_enabled: true,
+})
+const registrationRequired = computed(() => bookingPolicy.value.registration_required === true)
+const bookingRequiredFields = computed<string[]>(() => bookingPolicy.value.booking_required_fields ?? ['first_name', 'last_name', 'phone'])
+const bookingOptionalFields = computed<string[]>(() => bookingPolicy.value.booking_optional_fields ?? ['email'])
+
+const isBookingFieldVisible = (key: string) =>
+  bookingRequiredFields.value.includes(key) || bookingOptionalFields.value.includes(key)
+const isBookingFieldRequired = (key: string) => bookingRequiredFields.value.includes(key)
+
+// ── Guest form state ─────────────────────────────────────────────────────────
+const showGuestForm = ref(false)
+const guestBookingSuccess = ref(false)
+const guestOnboardingSmsSent = ref(false)
+const guestOnboardingEmailSent = ref(false)
+const isSubmittingGuestForm = ref(false)
+const guestFormError = ref<string | null>(null)
+const guestFirstName = ref('')
+const guestLastName = ref('')
+const guestPhone = ref('')
+const guestEmail = ref('')
+const guestBirthdate = ref('')
+const guestStreet = ref('')
+const guestStreetNr = ref('')
+const guestZip = ref('')
+const guestCity = ref('')
+const guestProfession = ref('')
+const guestPhoneError = ref<string | null>(null)
 
 // New flow state
 const currentStep = ref(0)
@@ -3762,37 +4158,40 @@ const confirmBooking = async () => {
     
     isCreatingBooking.value = true
     
-    // FIRST: Check if user is authenticated BEFORE making any API calls
-    logger.debug('🔐 Checking authentication status...')
+    // Check auth client-side first (no network roundtrip) — fall back to API only if
+    // the local session state is ambiguous.
+    logger.debug('🔐 Checking authentication status (client-side)...')
     let isAuthenticated = false
-    
+
     try {
-      const currentUser = await $fetch('/api/auth/current-user')
-      logger.debug('✅ User is authenticated:', (currentUser as any)?.id)
-      isAuthenticated = true
-    } catch (authError: any) {
-      // User is not authenticated - this is expected
-      logger.debug('🔑 User not authenticated, will show login modal', {
-        statusCode: authError.statusCode,
-        status: authError.status,
-        data: authError.data,
-        message: authError.message
-      })
-      isAuthenticated = false
+      const { data: { session } } = await getSupabase().auth.getSession()
+      isAuthenticated = !!session
+      logger.debug(isAuthenticated ? '✅ User is authenticated (session found)' : '🔑 No active session')
+    } catch (sessionErr: any) {
+      logger.debug('⚠️ getSession failed, falling back to API check:', sessionErr.message)
+      try {
+        await $fetch('/api/auth/current-user')
+        isAuthenticated = true
+      } catch {
+        isAuthenticated = false
+      }
     }
     
-    // If not authenticated, show login modal instead of proceeding
+    // If not authenticated, decide what to show based on booking policy
     if (!isAuthenticated) {
-      logger.debug('🔑 Showing login modal for unauthenticated user', {
-        showLoginModalBefore: showLoginModal.value,
-        isCreatingBooking: isCreatingBooking.value
-      })
       isCreatingBooking.value = false
-      showLoginModal.value = true
-      loginModalTab.value = 'register'
-      logger.debug('🔑 Login modal should now be visible', {
-        showLoginModalAfter: showLoginModal.value
-      })
+      if (!registrationRequired.value) {
+        // Guest booking allowed — show lightweight contact form
+        logger.debug('👤 Guest booking enabled — showing guest form')
+        guestFormError.value = null   // clear any previous error
+        guestPhoneError.value = null
+        showGuestForm.value = true
+      } else {
+        // Registration is mandatory — show login/register modal
+        logger.debug('🔑 Registration required — showing login modal')
+        showLoginModal.value = true
+        loginModalTab.value = 'register'
+      }
       return
     }
     
@@ -4023,6 +4422,131 @@ const handleAuthSuccess = () => {
     selectedSlot.value = null
     reservationExpiredNotice.value = true
     currentStep.value = 6
+  }
+}
+
+// ── Guest booking submission ─────────────────────────────────────────────────
+const validateGuestPhone = () => {
+  if (!isBookingFieldVisible('phone') || !guestPhone.value.trim()) {
+    guestPhoneError.value = null
+    return true
+  }
+  const digits = guestPhone.value.replace(/\D/g, '')
+  const valid = digits.length >= 9 && digits.length <= 12
+  guestPhoneError.value = valid ? null : 'Bitte gib eine gültige Schweizer Telefonnummer ein (z.B. 079 123 45 67)'
+  return valid
+}
+
+const submitGuestBooking = async () => {
+  guestFormError.value = null
+
+  // Client-side validation
+  const missingRequired: string[] = []
+  if (isBookingFieldRequired('first_name') && !guestFirstName.value.trim()) missingRequired.push('Vorname')
+  if (isBookingFieldRequired('last_name') && !guestLastName.value.trim()) missingRequired.push('Nachname')
+  if (isBookingFieldRequired('phone') && !guestPhone.value.trim()) missingRequired.push('Telefon')
+  if (isBookingFieldRequired('email') && !guestEmail.value.trim()) missingRequired.push('E-Mail')
+  if (isBookingFieldRequired('birthdate') && !guestBirthdate.value.trim()) missingRequired.push('Geburtsdatum')
+  if (isBookingFieldRequired('street') && !guestStreet.value.trim()) missingRequired.push('Strasse')
+  if (isBookingFieldRequired('street_nr') && !guestStreetNr.value.trim()) missingRequired.push('Hausnummer')
+  if (isBookingFieldRequired('zip') && !guestZip.value.trim()) missingRequired.push('PLZ')
+  if (isBookingFieldRequired('city') && !guestCity.value.trim()) missingRequired.push('Ort')
+  if (isBookingFieldRequired('profession') && !guestProfession.value.trim()) missingRequired.push('Beruf')
+
+  if (missingRequired.length > 0) {
+    guestFormError.value = `Bitte fülle alle Pflichtfelder aus: ${missingRequired.join(', ')}`
+    return
+  }
+
+  if (!validateGuestPhone()) return
+
+  isSubmittingGuestForm.value = true
+  isCreatingBooking.value = true
+
+  try {
+    const result = await $fetch('/api/booking/guest-book', {
+      method: 'POST',
+      body: {
+        slot_id: selectedSlot.value?.id,
+        session_id: sessionId.value,
+        tenant_slug: route.params.slug,
+        category_code: selectedCategory.value?.code,
+        first_name: guestFirstName.value.trim() || undefined,
+        last_name: guestLastName.value.trim() || undefined,
+        phone: guestPhone.value.trim() || undefined,
+        email: guestEmail.value.trim() || undefined,
+        birthdate: guestBirthdate.value.trim() || undefined,
+        street: guestStreet.value.trim() || undefined,
+        street_nr: guestStreetNr.value.trim() || undefined,
+        zip: guestZip.value.trim() || undefined,
+        city: guestCity.value.trim() || undefined,
+        profession: guestProfession.value.trim() || undefined,
+        notes: bookingNotes.value || undefined,
+        vehicle_mode: selectedVehicleMode.value ?? null,
+        customer_pickup_plz: selectedLocation.value?.isPickup ? (pickupPLZ.value || null) : null,
+        customer_pickup_address: selectedLocation.value?.isPickup ? (pickupAddressDetails.value?.formatted || pickupAddress.value || null) : null,
+        marketing_session_id: (typeof window !== 'undefined' && (window as any).__analyticsSessionId) || undefined,
+        marketing_attribution: (typeof window !== 'undefined' && (window as any).__marketingAttribution) || undefined,
+      },
+    }) as any
+
+    logger.debug('✅ Guest booking confirmed:', result.appointment_id)
+
+    // Track booking completion
+    if (typeof window !== 'undefined' && (window as any).__trackBookingEvent) {
+      (window as any).__trackBookingEvent('completed', {
+        appointment_id: result.appointment_id,
+        category_code: selectedCategory.value?.code,
+        guest: true,
+      })
+    }
+
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      ;(window as any).gtag('event', 'booking_completed', {
+        event_category: 'conversion',
+        event_label: selectedCategory.value?.code ?? 'unknown',
+        appointment_id: result.appointment_id,
+        guest: true,
+      })
+    }
+
+    // Store SMS sent status for success page
+    guestOnboardingSmsSent.value = result.onboarding_sms_sent ?? false
+    guestOnboardingEmailSent.value = result.onboarding_email_sent ?? false
+
+    // Reset form fields so a second booking in the same session starts fresh
+    guestFirstName.value = ''
+    guestLastName.value = ''
+    guestPhone.value = ''
+    guestEmail.value = ''
+    guestBirthdate.value = ''
+    guestStreet.value = ''
+    guestStreetNr.value = ''
+    guestZip.value = ''
+    guestCity.value = ''
+    guestProfession.value = ''
+    guestPhoneError.value = null
+
+    showGuestForm.value = false
+    guestBookingSuccess.value = true
+    currentStep.value = 10 // Guest success step
+
+  } catch (err: any) {
+    logger.error('❌ Guest booking failed:', err)
+    const code = err?.data?.code
+    if (code === 'DUPLICATE_PHONE' || code === 'DUPLICATE_EMAIL') {
+      guestFormError.value = err.statusMessage || 'Diese Kontaktdaten sind bereits registriert. Bitte melde dich an.'
+    } else if (err.statusCode === 409) {
+      guestFormError.value = 'Dieser Zeitslot ist leider nicht mehr verfügbar. Bitte wähle einen anderen.'
+      showGuestForm.value = false
+      selectedSlot.value = null
+      currentStep.value = 6
+    } else {
+      guestFormError.value = err.statusMessage || 'Buchung fehlgeschlagen. Bitte versuche es erneut.'
+    }
+  } finally {
+    isSubmittingGuestForm.value = false
+    isCreatingBooking.value = false
   }
 }
 

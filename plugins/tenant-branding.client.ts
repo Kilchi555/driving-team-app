@@ -145,37 +145,21 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     }
   }
 
-  // Router-Hooks registrieren - register IMMEDIATELY on plugin load
+  // Router-Hooks registrieren in app:mounted hook when router is ready
   if (process.client) {
-    // Try to register guard immediately
-    try {
+    nuxtApp.hook('app:mounted', () => {
       const $router = nuxtApp.$router
+      
       if ($router && $router.beforeEach) {
-        logger.debug('✅ Registering router guard immediately on plugin load')
+        logger.debug('✅ Router guard for tenant branding registered (app:mounted)')
         $router.beforeEach(async (to: any, from: any) => {
           logger.debug('🔄 beforeEach guard triggered:', to.path)
           await handleRouteChange(to)
-          // Vue Router 4: Just return undefined (or nothing) to proceed
         })
+      } else {
+        logger.warn('⚠️ Router not available in app:mounted hook')
       }
-    } catch (e) {
-      logger.debug('⚠️ Router not available immediately, will register in app:mounted')
-      
-      // Fallback: Register in app:mounted hook if not available yet
-      nuxtApp.hook('app:mounted', () => {
-        const $router = nuxtApp.$router
-        
-        if ($router && $router.beforeEach) {
-          logger.debug('✅ Router guard for tenant branding registered (app:mounted)')
-          $router.beforeEach(async (to: any, from: any) => {
-            logger.debug('🔄 beforeEach guard triggered (app:mounted):', to.path)
-            await handleRouteChange(to)
-          })
-        } else {
-          console.warn('⚠️ Router not available in app:mounted hook')
-        }
-      })
-    }
+    })
   }
 
   // Also load branding initially for current route

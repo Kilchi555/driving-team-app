@@ -35,9 +35,33 @@
           <div class="space-y-3">
             <p class="text-sm text-gray-600 font-medium">Was können Sie tun?</p>
 
-            <!-- Option 1: Kontakt Fahrschule -->
+            <!-- Option 1: Request new link -->
             <div class="bg-white rounded-lg border border-gray-200 p-4 text-left">
-              <p class="text-sm font-medium text-gray-800 mb-1">📱 Neuen Link anfordern</p>
+              <p class="text-sm font-medium text-gray-800 mb-1">✉️ Neuen Link zusenden</p>
+              <p class="text-xs text-gray-500 mb-3">Wir können dir einen neuen Link direkt zusenden.</p>
+              <div class="flex gap-2">
+                <button
+                  @click="requestOnboardingLink('sms')"
+                  :disabled="requestingLink"
+                  class="text-xs font-medium text-white px-3 py-1.5 rounded-md transition-colors hover:opacity-90 disabled:opacity-50"
+                  :style="{ background: primaryColor }"
+                >
+                  {{ requestingLink ? 'Wird versendet...' : 'Per SMS' }}
+                </button>
+                <button
+                  @click="requestOnboardingLink('email')"
+                  :disabled="requestingLink"
+                  class="text-xs font-medium text-white px-3 py-1.5 rounded-md transition-colors hover:opacity-90 disabled:opacity-50"
+                  :style="{ background: primaryColor }"
+                >
+                  {{ requestingLink ? 'Wird versendet...' : 'Per E-Mail' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Option 2: Kontakt Fahrschule -->
+            <div class="bg-white rounded-lg border border-gray-200 p-4 text-left">
+              <p class="text-sm font-medium text-gray-800 mb-1">📱 Fahrschule kontaktieren</p>
               <p class="text-xs text-gray-500 mb-3">Bitten Sie Ihre Fahrschule, den Onboarding-Link erneut per SMS zu senden.</p>
               <a
                 :href="`mailto:${userData?.email || ''}`"
@@ -48,7 +72,7 @@
               </a>
             </div>
 
-            <!-- Option 2: Login (falls bereits registriert) -->
+            <!-- Option 3: Login (falls bereits registriert) -->
             <div class="bg-white rounded-lg border border-gray-200 p-4 text-left">
               <p class="text-sm font-medium text-gray-800 mb-1">🔑 Bereits registriert?</p>
               <p class="text-xs text-gray-500 mb-3">Falls Sie Ihr Konto bereits aktiviert haben, melden Sie sich direkt an.</p>
@@ -805,6 +829,7 @@ const isSubmitting = ref(false)
 const error = ref('')
 const passwordError = ref('')
 const successMessage = ref('')
+const requestingLink = ref(false)
 const showErrorModal = ref(false)
 const showSuccessModal = ref(false)
 const showRegulationModal = ref(false)
@@ -1134,7 +1159,14 @@ onMounted(async () => {
     if (userData.value.firstName || userData.value.first_name) form.firstName = userData.value.firstName || userData.value.first_name
     if (userData.value.lastName || userData.value.last_name) form.lastName = userData.value.lastName || userData.value.last_name
     if (userData.value.phone) form.phone = userData.value.phone
-    if (userData.value.birthdate) form.birthdate = userData.value.birthdate?.split('T')[0] // Format as YYYY-MM-DD
+    if (userData.value.birthdate) {
+      form.birthdate = userData.value.birthdate?.split('T')[0] // Format as YYYY-MM-DD
+      // Also pre-fill the birthdate dropdowns
+      const [y, m, d] = form.birthdate.split('-')
+      birthdateYear.value = y
+      birthdateMonth.value = m
+      birthdateDay.value = d
+    }
     if (userData.value.street) form.street = userData.value.street
     if (userData.value.street_nr) form.street_nr = userData.value.street_nr
     if (userData.value.zip) form.zip = userData.value.zip
@@ -1283,6 +1315,37 @@ const goToLogin = async () => {
     await navigateTo(`/${userData.value.tenant_slug}`)
   } else {
     await navigateTo('/')
+  }
+}
+
+// Request new onboarding link
+const requestOnboardingLink = async (method: 'sms' | 'email') => {
+  if (!userData.value?.email) {
+    showErrorMessage('E-Mail-Adresse erforderlich')
+    return
+  }
+
+  requestingLink.value = true
+  try {
+    const result = await $fetch('/api/students/request-onboarding-link', {
+      method: 'POST',
+      body: {
+        email: userData.value.email,
+        method
+      }
+    }) as any
+
+    if (result.success) {
+      showSuccessMessage(result.message || `Link per ${method === 'sms' ? 'SMS' : 'E-Mail'} versendet!`)
+    } else {
+      showErrorMessage(result.message || 'Fehler beim Versenden des Links')
+    }
+  } catch (err: any) {
+    logger.error('❌ Request onboarding link error:', err)
+    const errorMsg = err?.data?.statusMessage || err?.message || 'Fehler beim Versenden des Links'
+    showErrorMessage(errorMsg)
+  } finally {
+    requestingLink.value = false
   }
 }
 
