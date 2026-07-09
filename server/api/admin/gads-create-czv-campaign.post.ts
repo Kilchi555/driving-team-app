@@ -125,8 +125,8 @@ export default defineEventHandler(async (event) => {
         positiveGeoTargetType: 'PRESENCE_OR_INTEREST',
         negativeGeoTargetType: 'PRESENCE',
       },
-      // Manual CPC with eCPC — optimal for niche B2B with limited historical data
-      manualCpc: { enhancedCpcEnabled: true },
+      // Manual CPC — switch to eCPC in UI after creation if desired
+      manualCpc: { enhancedCpcEnabled: false },
       containsEuPoliticalAdvertising: 'DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING',
     },
   }])
