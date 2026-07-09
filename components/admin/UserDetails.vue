@@ -266,8 +266,8 @@
           </div>
         </div>
 
-        <!-- Zahlungen + Termine nebeneinander ab 1000px -->
-        <div class="grid grid-cols-1 min-[1000px]:grid-cols-2 gap-6 items-start">
+        <!-- Zahlungen + Termine nebeneinander ab 1000px (nur für Privatkunden) -->
+        <div v-if="userDetails?.role === 'client'" class="grid grid-cols-1 min-[1000px]:grid-cols-2 gap-6 items-start">
 
         <!-- Zahlungen -->
         <div v-if="userPayments.length > 0" class="bg-white shadow rounded-xl overflow-hidden">
@@ -539,7 +539,156 @@
         <div v-if="userDetails?.role === 'staff' && isOnlineBookingEnabled" class="bg-white shadow rounded-lg overflow-hidden">
           <div class="p-0 sm:p-0">
             <div class="overflow-x-auto">
-              <StaffTab :current-user="{ id: userDetails?.id, role: 'admin' }" :tenant-settings="{}" />
+              <StaffTab :current-user="{ id: userDetails?.id, role: 'admin' }" :tenant-settings="{ tenantId: userDetails?.tenant_id }" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Führerausweis (nur Staff) -->
+        <div v-if="userDetails?.role === 'staff'" class="bg-white shadow rounded-xl overflow-hidden">
+          <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-gray-900">Führerausweis</h3>
+            <span v-if="licensePhotos.length > 0 && licensePhotos.every(p => p.is_verified)"
+              class="text-xs font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded-full">Verifiziert</span>
+            <span v-else-if="licensePhotos.length > 0"
+              class="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Nicht verifiziert</span>
+          </div>
+
+          <div v-if="licensePhotosLoading" class="flex justify-center py-6">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-400"></div>
+          </div>
+
+          <div v-else-if="licensePhotos.length === 0" class="px-5 py-6 text-center text-sm text-gray-400">
+            Noch kein Führerausweis hochgeladen
+          </div>
+
+          <div v-else class="px-5 py-4 flex gap-4">
+            <!-- Vorderseite -->
+            <div v-if="licenseFront" class="flex-1">
+              <p class="text-xs text-gray-500 mb-2">Vorderseite</p>
+              <button
+                @click="lightboxPhoto = licenseFront.signed_url"
+                class="block w-full group relative overflow-hidden rounded-lg border border-gray-200 hover:border-purple-400 transition-colors"
+              >
+                <img
+                  :src="licenseFront.signed_url"
+                  alt="Führerausweis Vorderseite"
+                  class="w-full h-28 object-cover"
+                />
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                  <svg class="w-7 h-7 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
+                  </svg>
+                </div>
+              </button>
+            </div>
+            <!-- Rückseite -->
+            <div v-if="licenseBack" class="flex-1">
+              <p class="text-xs text-gray-500 mb-2">Rückseite</p>
+              <button
+                @click="lightboxPhoto = licenseBack.signed_url"
+                class="block w-full group relative overflow-hidden rounded-lg border border-gray-200 hover:border-purple-400 transition-colors"
+              >
+                <img
+                  :src="licenseBack.signed_url"
+                  alt="Führerausweis Rückseite"
+                  class="w-full h-28 object-cover"
+                />
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                  <svg class="w-7 h-7 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
+                  </svg>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lightbox -->
+        <Teleport to="body">
+          <div
+            v-if="lightboxPhoto"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+            @click.self="lightboxPhoto = null"
+          >
+            <div class="relative max-w-3xl w-full">
+              <img :src="lightboxPhoto" class="w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" alt="Führerausweis" />
+              <button
+                @click="lightboxPhoto = null"
+                class="absolute -top-3 -right-3 bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-colors"
+              >
+                <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </Teleport>
+
+        <!-- Staff Termine (Monatsansicht) -->
+        <div v-if="userDetails?.role === 'staff'" class="bg-white shadow rounded-xl overflow-hidden">
+          <!-- Header mit Monat-Navigation -->
+          <div class="px-5 py-4 border-b border-gray-100">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-gray-900">Termine</h3>
+              <div class="flex items-center gap-2">
+                <button @click="prevStaffMonth" class="p-1 rounded hover:bg-gray-100 transition-colors">
+                  <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <span class="text-sm font-medium text-gray-700 w-36 text-center">{{ staffApptMonthLabel }}</span>
+                <button @click="nextStaffMonth" class="p-1 rounded hover:bg-gray-100 transition-colors">
+                  <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+            </div>
+            <!-- Summary Stats -->
+            <div v-if="!staffApptLoading" class="flex items-center gap-4 mt-3">
+              <div class="bg-gray-50 rounded-lg px-3 py-2 flex-1 text-center">
+                <p class="text-xs text-gray-500">Termine</p>
+                <p class="text-sm font-semibold text-gray-900">{{ staffAppts.length }}</p>
+              </div>
+              <div class="bg-blue-50 rounded-lg px-3 py-2 flex-1 text-center">
+                <p class="text-xs text-blue-600">Stunden</p>
+                <p class="text-sm font-semibold text-blue-700">{{ Math.floor(staffApptTotalMinutes / 60) }}h {{ staffApptTotalMinutes % 60 }}min</p>
+              </div>
+              <div class="bg-green-50 rounded-lg px-3 py-2 flex-1 text-center">
+                <p class="text-xs text-green-600">Ferien</p>
+                <p class="text-sm font-semibold text-green-700">{{ staffApptVacationCount }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loading -->
+          <div v-if="staffApptLoading" class="flex justify-center py-8">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400"></div>
+          </div>
+
+          <!-- Leer -->
+          <div v-else-if="staffAppts.length === 0" class="px-5 py-8 text-center text-sm text-gray-400">
+            Keine Termine in diesem Monat
+          </div>
+
+          <!-- Liste -->
+          <div v-else class="divide-y divide-gray-50">
+            <div v-for="appt in staffAppts" :key="appt.id" class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors">
+              <!-- Datum -->
+              <div class="w-10 text-center flex-shrink-0">
+                <div class="text-base font-bold text-gray-900 leading-none">{{ formatStaffApptDate(appt.start_time).day }}</div>
+                <div class="text-xs text-gray-400 uppercase">{{ formatStaffApptDate(appt.start_time).month }}</div>
+              </div>
+              <!-- Info -->
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium text-gray-900 truncate">
+                  {{ appt.student?.first_name }} {{ appt.student?.last_name }}
+                </div>
+                <div class="text-xs text-gray-500">
+                  {{ formatStaffApptTime(appt.start_time) }} · {{ appt.duration_minutes }} Min. · {{ appt.type || appt.event_type_code || '—' }}
+                </div>
+              </div>
+              <!-- Status -->
+              <span :class="['text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0', staffApptStatusColor(appt.status)]">
+                {{ staffApptStatusLabel(appt.status) }}
+              </span>
             </div>
           </div>
         </div>
@@ -865,6 +1014,91 @@ const isOnlineBookingEnabled = computed(() => {
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const userDetails = ref<UserDetails | null>(null)
+
+// Führerausweis-Fotos (nur Staff)
+const licensePhotos = ref<any[]>([])
+const licensePhotosLoading = ref(false)
+const lightboxPhoto = ref<string | null>(null)
+
+const licenseFront = computed(() => licensePhotos.value.find(p => p.side === 'front'))
+const licenseBack  = computed(() => licensePhotos.value.find(p => p.side === 'back'))
+
+const loadLicensePhotos = async () => {
+  if (!userId || userDetails.value?.role !== 'staff') return
+  licensePhotosLoading.value = true
+  try {
+    const res = await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: { action: 'get-staff-license-photos', user_id: userId }
+    }) as any
+    licensePhotos.value = res?.data || []
+  } catch (e) { console.warn('Could not load license photos:', e) }
+  finally { licensePhotosLoading.value = false }
+}
+const staffAppts = ref<any[]>([])
+const staffApptMonth = ref(new Date().getMonth() + 1)
+const staffApptYear = ref(new Date().getFullYear())
+const staffApptLoading = ref(false)
+
+const staffApptMonthLabel = computed(() => {
+  return new Date(staffApptYear.value, staffApptMonth.value - 1, 1)
+    .toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
+})
+const staffApptTotalMinutes = computed(() => staffAppts.value
+  .filter(a => {
+    if (a.event_type_code === 'vacation') return false
+    if (a.status === 'cancelled') {
+      // Nur mitzählen wenn Storno verrechnet wurde (Policy nicht eingehalten)
+      return (a.cancellation_charge_percentage || 0) > 0 || !!a.cancellation_policy_applied
+    }
+    return true
+  })
+  .reduce((s, a) => s + (a.duration_minutes || 0), 0))
+const staffApptVacationCount = computed(() => staffAppts.value.filter(a => a.event_type_code === 'vacation').length)
+
+const prevStaffMonth = () => {
+  if (staffApptMonth.value === 1) { staffApptMonth.value = 12; staffApptYear.value-- }
+  else staffApptMonth.value--
+  loadStaffAppointments()
+}
+const nextStaffMonth = () => {
+  if (staffApptMonth.value === 12) { staffApptMonth.value = 1; staffApptYear.value++ }
+  else staffApptMonth.value++
+  loadStaffAppointments()
+}
+
+const loadStaffAppointments = async () => {
+  if (!userId || userDetails.value?.role !== 'staff') return
+  staffApptLoading.value = true
+  try {
+    const res = await $fetch('/api/admin/users', {
+      method: 'POST',
+      body: { action: 'get-staff-appointments', user_id: userId, year: staffApptYear.value, month: staffApptMonth.value }
+    }) as any
+    staffAppts.value = res?.data || []
+  } catch (e) { console.warn('Could not load staff appointments:', e) }
+  finally { staffApptLoading.value = false }
+}
+
+const formatStaffApptTime = (isoStr: string) => {
+  return new Date(isoStr).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
+}
+const formatStaffApptDate = (isoStr: string) => {
+  const d = new Date(isoStr)
+  return { day: d.toLocaleDateString('de-CH', { day: '2-digit', timeZone: 'Europe/Zurich' }), month: d.toLocaleDateString('de-CH', { month: 'short', timeZone: 'Europe/Zurich' }) }
+}
+const staffApptStatusColor = (status: string) => {
+  if (status === 'confirmed') return 'bg-green-100 text-green-700'
+  if (status === 'completed') return 'bg-blue-100 text-blue-700'
+  if (status === 'cancelled') return 'bg-red-100 text-red-600'
+  return 'bg-gray-100 text-gray-500'
+}
+const staffApptStatusLabel = (status: string) => {
+  if (status === 'confirmed') return 'Bestätigt'
+  if (status === 'completed') return 'Abgeschlossen'
+  if (status === 'cancelled') return 'Storniert'
+  return status
+}
 const studentCreditRappen = ref<number | null>(null)
 const appointmentStats = ref({
   total: 0,
@@ -1479,6 +1713,8 @@ onMounted(async () => {
     ])
     if (userDetails.value?.role === 'staff') {
       await loadCategories()
+      await loadStaffAppointments()
+      await loadLicensePhotos()
     }
   } catch (err) {
     console.error('❌ Error in onMounted:', err)

@@ -697,14 +697,17 @@ const loadStaff = async () => {
   try {
     logger.debug('🔄 Loading staff from database...')
     
-    // Get current user's tenant_id
-    const authUser = authStore.user // ✅ MIGRATED
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', authUser?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
+    // Get current user's tenant_id — use prop shortcut when available (e.g. admin detail view)
+    let tenantId: string | null = props.tenantSettings?.tenantId || null
+    if (!tenantId) {
+      const authUser = authStore.user
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', authUser?.id)
+        .single()
+      tenantId = userProfile?.tenant_id ?? null
+    }
     
     if (!tenantId) {
       throw new Error('User has no tenant assigned')
@@ -1141,12 +1144,15 @@ const createLocation = async () => {
   
   try {
     const authUser = { data: { user: authStore.user } } // ✅ MIGRATED
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', authUser?.data?.user?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
+    let tenantId: string | null = props.tenantSettings?.tenantId || null
+    if (!tenantId) {
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', authUser?.data?.user?.id)
+        .single()
+      tenantId = userProfile?.tenant_id ?? null
+    }
     
     if (!tenantId) {
       throw new Error('User has no tenant assigned')
@@ -1381,14 +1387,17 @@ const createStaff = async () => {
   try {
     logger.debug('🔄 Creating new staff member...')
     
-    // Get current user's tenant_id
-    const authUser = authStore.user // ✅ MIGRATED
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', authUser?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
+    // Get current user's tenant_id — use prop shortcut when available
+    let tenantId: string | null = props.tenantSettings?.tenantId || null
+    if (!tenantId) {
+      const authUser = authStore.user
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('auth_user_id', authUser?.id)
+        .single()
+      tenantId = userProfile?.tenant_id ?? null
+    }
     
     if (!tenantId) {
       throw new Error('User has no tenant assigned')

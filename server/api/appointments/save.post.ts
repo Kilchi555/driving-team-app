@@ -605,16 +605,40 @@ export default defineEventHandler(async (event) => {
 
     // Fire-and-forget: email + queue recalc for edits (non-blocking)
     if (mode === 'create') {
-      Promise.resolve().then(async () => {
-        try {
-          await $fetch('/api/reminders/send-appointment-confirmation', {
+      // Wait for payment to be created BEFORE sending confirmation email
+      if (paymentPromise) {
+        paymentPromise.then(async () => {
+          try {
+            await $fetch('/api/reminders/send-appointment-confirmation', {
+              method: 'POST',
+              body: { appointmentId: result.id, userId: appointmentData.user_id, tenantId: appointmentData.tenant_id }
+            })
+          } catch (err: any) {
+            logger.warn('⚠️ Confirmation email failed (async):', err.message)
+          }
+        }).catch((err: any) => {
+          logger.warn('⚠️ Failed to wait for payment before sending email:', err.message)
+          // Fallback: send email anyway
+          $fetch('/api/reminders/send-appointment-confirmation', {
             method: 'POST',
             body: { appointmentId: result.id, userId: appointmentData.user_id, tenantId: appointmentData.tenant_id }
+          }).catch((emailErr: any) => {
+            logger.warn('⚠️ Confirmation email fallback failed:', emailErr.message)
           })
-        } catch (err: any) {
-          logger.warn('⚠️ Confirmation email failed (async):', err.message)
-        }
-      })
+        })
+      } else {
+        // No payment needed, send email immediately
+        Promise.resolve().then(async () => {
+          try {
+            await $fetch('/api/reminders/send-appointment-confirmation', {
+              method: 'POST',
+              body: { appointmentId: result.id, userId: appointmentData.user_id, tenantId: appointmentData.tenant_id }
+            })
+          } catch (err: any) {
+            logger.warn('⚠️ Confirmation email failed (async):', err.message)
+          }
+        })
+      }
     }
 
     return {
