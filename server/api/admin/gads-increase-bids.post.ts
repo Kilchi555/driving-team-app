@@ -130,21 +130,38 @@ export default defineEventHandler(async (event) => {
       campaignName.toLowerCase().includes(r.campaign_name_contains.toLowerCase()),
     )
     if (!matchingRule) continue
-    if (currentCeilingMicros === 0) continue // no ceiling set — skip (bidding is uncapped)
 
-    const newCeilingMicros = Math.min(
-      Math.round(currentCeilingMicros * (1 + matchingRule.increase_pct / 100)),
-      absoluteMaxMicros,
-    )
+    // If ceiling = 0 (not set / uncapped), set an initial ceiling based on the increase %
+    // If ceiling > 0, increase it by the configured %
+    const DEFAULT_CEILING_CHF: Record<string, number> = {
+      'Anhänger Fahrschule Zürich': 5.0,
+      'Fahrschule Zürich Umgebung': 4.5,
+      'Fahrschule Lachen Umgebung': 4.0,
+    }
+    let newCeilingChf: number
+    if (currentCeilingMicros === 0) {
+      // Set initial ceiling from defaults
+      const rule = rules.find(r => campaignName.toLowerCase().includes(r.campaign_name_contains.toLowerCase()))
+      const defaultCeiling = Object.entries(DEFAULT_CEILING_CHF).find(([k]) =>
+        campaignName.toLowerCase().includes(k.toLowerCase()),
+      )?.[1] ?? 4.0
+      newCeilingChf = Math.min(defaultCeiling, absoluteMaxMicros / 1_000_000)
+    }
+    else {
+      newCeilingChf = Math.min(
+        (currentCeilingMicros / 1_000_000) * (1 + matchingRule.increase_pct / 100),
+        absoluteMaxMicros / 1_000_000,
+      )
+    }
 
     plan.push({
       resourceName,
       campaignName,
       currentCeilingChf: currentCeilingMicros / 1_000_000,
-      newCeilingChf: newCeilingMicros / 1_000_000,
-      currentSharePct: Math.round(currentShareFraction / 10_000), // fraction micros → %
+      newCeilingChf,
+      currentSharePct: Math.round(currentShareFraction / 10_000),
       increasePct: matchingRule.increase_pct,
-      capped: newCeilingMicros === absoluteMaxMicros,
+      capped: newCeilingChf * 1_000_000 >= absoluteMaxMicros,
     })
   }
 
