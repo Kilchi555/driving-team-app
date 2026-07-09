@@ -7,14 +7,20 @@
     <!-- Toggle zwischen Standard und Custom (nur für zukünftige Termine) -->
     <div v-if="!props.isPastAppointment" class="flex gap-2 mb-3">
       <button
-        @click="useStandardLocations = true"
+        @click="useStandardLocations = true; clearManualLocation()"
         :class="['px-3 py-1.5 text-sm rounded-xl border font-medium transition-colors', useStandardLocations ? 'border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50']"
         :style="useStandardLocations ? primaryBg : {}"
       >
         Standard-Orte
       </button>
       <button
-        @click="useStandardLocations = false"
+        @click="() => {
+          useStandardLocations = false
+          selectedLocationId = ''
+          clearManualLocation()
+          emit('update:modelValue', null)
+          emit('locationSelected', null)
+        }"
         :class="['px-3 py-1.5 text-sm rounded-xl border font-medium transition-colors', !useStandardLocations ? 'border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50']"
         :style="!useStandardLocations ? primaryBg : {}"
       >
@@ -30,21 +36,30 @@
         <span>{{ error }}</span>
       </div>
       
-      <div>
-       <input
+      <!-- Read-only display (view/past mode) -->
+      <div v-if="props.isPastAppointment && selectedCustomLocation" class="p-3 bg-gray-50 border border-gray-200 rounded-xl">
+        <div class="font-medium text-gray-900">{{ selectedCustomLocation.name }}</div>
+        <div v-if="selectedCustomLocation.address !== selectedCustomLocation.name" class="text-sm text-gray-500">{{ selectedCustomLocation.address }}</div>
+      </div>
+
+      <!-- Editable input (create/edit mode) -->
+      <div v-if="!props.isPastAppointment">
+        <input
           v-model="manualLocationInput"
           @input="onLocationSearch"
           @blur="hideLocationSuggestionsDelayed"
-          @keyup.enter="handleManualLocationSubmit"
           @focus="showLocationSuggestions = true"
           type="text"
-          placeholder="z.B. Zürich HB, Bahnhofstrasse 1, 8001 Zürich"
+          placeholder="z.B. Zürich HB, Weiher, Bahnhofstrasse 1, 8001 Zürich"
           class="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 text-black bg-white"
         />
+        <div v-if="manualLocationInput && !showLocationSuggestions && !selectedCustomLocation" class="mt-2 text-xs text-green-600 bg-green-50 p-2 rounded">
+          ✅ Adresse wird gespeichert: <strong>{{ manualLocationInput }}</strong>
+        </div>
       </div>
 
       <!-- Google Places Suggestions (online) -->
-      <div v-if="showLocationSuggestions && locationSuggestions.length > 0" class="relative">
+      <div v-if="!props.isPastAppointment && showLocationSuggestions && locationSuggestions.length > 0" class="relative">
         <div class="absolute top-0 left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
           <div
             v-for="suggestion in locationSuggestions"
@@ -59,20 +74,6 @@
               {{ suggestion.structured_formatting?.secondary_text || '' }}
             </div>
           </div>
-        </div>
-      </div>
-      
-      <!-- Current manual location display -->
-      <div v-if="selectedCustomLocation && selectedCustomLocation.id && selectedCustomLocation.id.includes('manual')" 
-           class="p-3 bg-gray-50 border border-gray-200 rounded-xl">
-        <div class="flex items-center justify-between">
-          <div class="flex-1">
-            <div class="font-medium text-gray-900">{{ selectedCustomLocation.name }}</div>
-            <div class="text-sm text-gray-500">{{ selectedCustomLocation.address }}</div>
-          </div>
-          <button @click="clearManualLocation" class="text-red-500 hover:text-red-700">
-            ✕
-          </button>
         </div>
       </div>
     </div>
@@ -111,13 +112,13 @@
       <option v-if="isLoadingLocations" disabled class="text-black bg-white">Lade Standorte...</option>
     </select>
 
-    <!-- Selected Custom Location Preview -->
-    <div v-if="!useStandardLocations && selectedCustomLocation" class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+    <!-- Selected Custom Location Preview (nur wenn nicht im read-only mode, da read-only direkt oben angezeigt wird) -->
+    <div v-if="!useStandardLocations && selectedCustomLocation && !props.isPastAppointment" class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
       <div class="flex items-start gap-3">
         <span class="text-green-600 text-lg mt-0.5">✅</span>
         <div class="flex-1">
           <div class="font-medium text-green-800">{{ selectedCustomLocation.name }}</div>
-          <div class="text-sm text-green-600">{{ selectedCustomLocation.address }}</div>
+          <div v-if="selectedCustomLocation.address !== selectedCustomLocation.name" class="text-sm text-green-600">{{ selectedCustomLocation.address }}</div>
           <div class="flex gap-2 mt-2">
             <a :href="getLocationMapsUrl(selectedCustomLocation)" target="_blank"
                class="text-xs text-blue-600 hover:text-blue-800">
@@ -220,11 +221,15 @@ const props = defineProps({
   isPastAppointment: {  // ✅ NEU: Verhindert Änderungen für vergangene Termine
     type: Boolean,
     default: false
+  },
+  customLocationAddress: {  // ✅ NEW: Custom address for manual locations
+    type: String,
+    default: null
   }
 })
 
 // Emits
-const emit = defineEmits(['update:modelValue', 'locationSelected'])
+const emit = defineEmits(['update:modelValue', 'locationSelected', 'manual-input-changed'])
 
 // Supabase
 
@@ -308,6 +313,7 @@ const clearManualLocation = () => {
   locationSearchQuery.value = ''
   emit('update:modelValue', null)
   emit('locationSelected', null)
+  emit('manual-input-changed', '')
 }
 
 // === DATABASE FUNCTIONS ===
@@ -594,11 +600,19 @@ const onLocationSearch = async () => {
   if (query.length < 3) {
     locationSuggestions.value = []
     showLocationSuggestions.value = false
+    // ✅ NEW: Clear error wenn User anfängt zu tippen
+    error.value = null
+    // ✅ NEW: Emit dass User tippt (aber noch < 3 Zeichen)
+    if (query.length > 0) {
+      emit('manual-input-changed', query)
+    }
     return
   }
 
+  // ✅ NEW: Emit dass User tippt (genug Zeichen)
+  emit('manual-input-changed', query)
+
   isLoadingGooglePlaces.value = true
-  error.value = null
   
   try {
     // Lazy-initialize Places if Maps has loaded since mount (handles loading=async race condition)
@@ -664,18 +678,26 @@ const onLocationSearch = async () => {
           logger.debug('✅ Legacy API suggestions loaded:', locationSuggestions.value.length)
         } else {
           locationSuggestions.value = []
-          error.value = 'Keine Vorschläge von Google Places gefunden'
+          // ✅ NEW: Fallback to manual entry on Google API error
+          useStandardLocations.value = false
+          error.value = '⚠️ Google-Adresssuche nicht verfügbar. Bitte Adresse manuell eingeben.'
+          logger.debug('🔄 Fallback to manual entry - Google API not responding')
         }
       })
     } else {
-      logger.debug('📴 Google Places not available - using manual input')
+      logger.debug('📴 Google Places not available - switching to manual entry')
       isLoadingGooglePlaces.value = false
+      useStandardLocations.value = false
+      error.value = '⚠️ Google-Adresssuche nicht verfügbar. Bitte Adresse manuell eingeben.'
     }
   } catch (err: any) {
     console.error('Error searching places:', err)
-    error.value = 'Fehler bei der Adresssuche'
+    // ✅ NEW: Fallback to manual entry on error
+    useStandardLocations.value = false
+    error.value = '⚠️ Google-Adresssuche fehlgeschlagen. Bitte Adresse manuell eingeben.'
     isLoadingGooglePlaces.value = false
     locationSuggestions.value = []
+    logger.debug('🔄 Fallback to manual entry - search error')
   }
 }
 
@@ -714,10 +736,20 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
         logger.debug('✅ Fetched place details:', placeDetails)
       } else {
         logger.warn('⚠️ Could not fetch place details:', response.error)
+        // ✅ NEW: Fallback to manual entry on error
+        useStandardLocations.value = false
+        error.value = '⚠️ Google-Adressdetails nicht verfügbar. Speichern mit manueller Adresse möglich.'
+        logger.debug('🔄 Fallback to manual entry')
       }
     } catch (err: any) {
       logger.warn('⚠️ Error fetching place details:', err.message)
-      // Continue with partial data
+      // ✅ NEW: Fallback to manual entry on error
+      useStandardLocations.value = false
+      error.value = '⚠️ Google-Adressdetails nicht verfügbar. Speichern mit manueller Adresse möglich.'
+      logger.debug('🔄 Fallback to manual entry')
+      isLoadingGooglePlaces.value = false
+      showLocationSuggestions.value = false
+      return
     }
     
     const locationData = {
@@ -962,6 +994,31 @@ watch(() => props.modelValue, (newValue) => {
     logger.debug('✅ LocationSelector: Location updated from modelValue:', newValue)
   }
 })
+
+// ✅ NEW: Watch for customLocationAddress prop changes
+watch(() => props.customLocationAddress, (newAddress) => {
+  logger.debug('🔍 LocationSelector: customLocationAddress changed:', newAddress)
+  if (newAddress && newAddress.trim().length > 0) {
+    // Switch to manual tab and populate the field
+    useStandardLocations.value = false
+    manualLocationInput.value = newAddress
+    
+    // Create a temporary location object for display
+    selectedCustomLocation.value = {
+      id: `manual_${Date.now()}`,
+      name: newAddress.split(',')[0].trim() || newAddress,
+      address: newAddress,
+      place_id: `manual_${Date.now()}`,
+      latitude: null,
+      longitude: null,
+      location_type: 'pickup',
+      source: 'manual'
+    }
+    
+    emit('manual-input-changed', newAddress)
+    logger.debug('✅ LocationSelector: Loaded custom location from prop:', newAddress)
+  }
+}, { immediate: true })
 
 // === LIFECYCLE ===
 

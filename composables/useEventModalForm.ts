@@ -121,14 +121,14 @@ const useEventModalForm = (currentUser?: any, refs?: {
       const isValid = baseValid && 
                      selectedStudent.value && 
                      formData.value.type && 
-                     formData.value.location_id &&
+                     (formData.value.location_id || formData.value.custom_location_address) &&
                      formData.value.duration_minutes > 0
       
       logger.debug('🔍 Form validation check:', {
         baseValid,
         hasStudent: !!selectedStudent.value,
         hasType: !!formData.value.type,
-        hasLocation: !!formData.value.location_id,
+        hasLocation: !!(formData.value.location_id || formData.value.custom_location_address),
         hasDuration: formData.value.duration_minutes > 0,
         isValid
       })
@@ -787,7 +787,18 @@ const useEventModalForm = (currentUser?: any, refs?: {
     error.value = null
     
     try {
-      if (!isFormValid.value) {
+      // ✅ NEW: Extended validation - allow either location_id OR custom_location_address
+      const hasLocationOrCustom = formData.value.location_id || formData.value.custom_location_address
+      const isValidForSave = isFormValid.value || (formData.value.eventType === 'lesson' && hasLocationOrCustom && 
+                                                    formData.value.title && 
+                                                    formData.value.startDate && 
+                                                    formData.value.startTime &&
+                                                    formData.value.endTime &&
+                                                    selectedStudent.value && 
+                                                    formData.value.type && 
+                                                    formData.value.duration_minutes > 0)
+      
+      if (!isValidForSave) {
         throw new Error('Bitte füllen Sie alle Pflichtfelder aus')
       }
       

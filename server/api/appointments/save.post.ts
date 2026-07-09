@@ -155,7 +155,11 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ Validate location_id - reject temporary location IDs
-    if (appointmentData.location_id) {
+    if (appointmentData.location_id === '') {
+      // ✅ NEW: Empty string → set to null (allows custom locations)
+      logger.debug('📍 Empty location_id detected, setting to null for custom location')
+      appointmentData.location_id = null
+    } else if (appointmentData.location_id) {
       if (typeof appointmentData.location_id === 'string' && appointmentData.location_id.startsWith('temp_')) {
         // Temporary location ID - set to null instead of saving invalid UUID
         logger.warn('⚠️ Temporary location ID detected, setting to null:', appointmentData.location_id)

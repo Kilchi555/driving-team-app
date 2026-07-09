@@ -329,12 +329,14 @@
               :model-value="formData.location_id"
               :selected-student-id="isLessonType(formData.eventType) ? selectedStudent?.id : undefined"
               :current-staff-id="formData.staff_id"
+              :custom-location-address="formData.custom_location_address"
               :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
               :disable-auto-selection="props.mode === 'edit' || props.mode === 'view'"
               :show-buttons="!(props.mode === 'edit' && isPastAppointment)"
-              :is-past-appointment="props.mode === 'edit' && isPastAppointment"
+              :is-past-appointment="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
               @update:model-value="updateLocationId"
               @location-selected="handleLocationSelected"
+              @manual-input-changed="handleManualInputChanged"
             />
 
             <!-- Pickup Address — shown when customer provided a pickup address -->
@@ -548,7 +550,7 @@
           <button
             v-if="props.mode !== 'view'"
             @click="handleSaveAppointment"
-            :disabled="!isFormValid || isLoading || (props.mode === 'edit' && isPastAppointment) || (formData.selectedSpecialType === 'vacation' && vacationCapacityStatus !== null && !vacationCapacityStatus.allowed)"
+            :disabled="!isFormValidWithManualInput || isLoading || (props.mode === 'edit' && isPastAppointment) || (formData.selectedSpecialType === 'vacation' && vacationCapacityStatus !== null && !vacationCapacityStatus.allowed)"
             :class="[
               'flex items-center gap-1.5 px-5 py-2 text-sm font-semibold rounded-xl transition-colors',
               (props.mode === 'edit' && isPastAppointment)
@@ -1397,6 +1399,56 @@ const handleCustomerInvites = async (appointmentData: any) => {
 // ✅ NEUE FUNKTION: Handle appointment save
 const handleSaveAppointment = async () => {
   const saveStartTime = performance.now()
+  
+  // ✅ NEW: If manual input is provided but no location_id, save as pickup location for reuse
+  if (manualLocationInput.value && !formData.value.location_id) {
+    const trimmedInput = manualLocationInput.value.trim()
+    if (trimmedInput.length > 0) {
+      logger.debug('✍️ Saving manual address as pickup location for reuse:', trimmedInput)
+      
+      const userId = selectedStudent.value?.id || formData.value.staff_id
+      if (userId) {
+        try {
+          const studentName = selectedStudent.value 
+            ? `${selectedStudent.value.first_name} ${selectedStudent.value.last_name}`.trim()
+            : null
+          const locationName = studentName 
+            ? `${studentName} - ${trimmedInput.split(',')[0].trim()}`
+            : trimmedInput.split(',')[0].trim()
+          
+          const savedLocation = await $fetch('/api/locations/create-pickup', {
+            method: 'POST',
+            body: {
+              name: locationName,
+              address: trimmedInput,
+              latitude: null,
+              longitude: null,
+              postal_code: null,
+              city: null,
+              place_id: null,
+              userId
+            }
+          }) as any
+          
+          if (savedLocation?.id) {
+            formData.value.location_id = savedLocation.id
+            formData.value.custom_location_address = null
+            formData.value.custom_location_name = null
+            logger.debug('✅ Manual address saved as pickup location:', savedLocation.id)
+          }
+        } catch (err: any) {
+          // Fallback: speichere als custom_location_address wenn DB-Save fehlschlägt
+          logger.warn('⚠️ Could not save manual address as pickup location, fallback to custom_location_address:', err.message)
+          formData.value.custom_location_name = trimmedInput
+          formData.value.custom_location_address = trimmedInput
+        }
+      } else {
+        // Kein userId → nur als custom_location_address speichern
+        formData.value.custom_location_name = trimmedInput
+        formData.value.custom_location_address = trimmedInput
+      }
+    }
+  }
 
   // ── Ferien-Batch: mehrere Tage als Urlaub anlegen ────────────────────────
   if (formData.value.selectedSpecialType === 'vacation' && props.mode === 'create') {
@@ -1984,6 +2036,46 @@ const isLoadingAdminFee = ref<boolean>(false)
 const availableStaff = ref<StaffAvailability[]>([])
 const { loadStaffWithAvailability, checkStaffAvailability, isLoading: isLoadingStaff } = useStaffAvailability()
 const isEditingStaff = ref(false)
+
+// ✅ Manual Location Input tracking
+const manualLocationInput = ref<string>('')
+
+// ✅ NEW: Extended form validation that includes manual input
+const isFormValidWithManualInput = computed(() => {
+  const baseFormValid = isFormValid.value
+  
+  // If form already valid (has location_id), no need to check manual input
+  if (baseFormValid) {
+    return true
+  }
+  
+  // If form not valid but has manual input, it can still be valid for lesson types
+  if (formData.value.eventType === 'lesson') {
+    // Check if manual input is provided and has content
+    const hasManualInput = manualLocationInput.value && manualLocationInput.value.trim().length > 0
+    
+    if (hasManualInput) {
+      // Form is valid if all other required fields + manual input present
+      const otherFieldsValid = formData.value.title && 
+                              formData.value.startDate && 
+                              formData.value.startTime &&
+                              formData.value.endTime &&
+                              selectedStudent.value && 
+                              formData.value.type && 
+                              formData.value.duration_minutes > 0
+      
+      logger.debug('🔍 Form validation with manual input:', {
+        otherFieldsValid,
+        hasManualInput,
+        manualInputLength: manualLocationInput.value.length
+      })
+      
+      return otherFieldsValid
+    }
+  }
+  
+  return baseFormValid
+})
 
 // ✅ Auto-Assign Staff
 const { checkFirstAppointmentAssignment } = useAutoAssignStaff()
@@ -4030,7 +4122,8 @@ const handleOpenPaymentModal = () => {
 }
 
 const updateLocationId = (locationId: string | null) => {
-  formData.value.location_id = locationId || ''
+  // ✅ NEW: Set to null instead of empty string to allow custom locations
+  formData.value.location_id = locationId || null
 }
 
 const handleLocationSelected = (location: any) => {
@@ -4043,7 +4136,16 @@ const handleLocationSelected = (location: any) => {
   }
   
   selectedLocation.value = location
-  formData.value.location_id = location?.id || ''
+  // ✅ NEW: Set to null instead of empty string
+  formData.value.location_id = location?.id || null
+  // ✅ NEW: Clear manual input wenn Location ausgewählt
+  manualLocationInput.value = ''
+}
+
+// ✅ NEW: Handle manual location input
+const handleManualInputChanged = (input: string) => {
+  logger.debug('✍️ Manual input changed:', input)
+  manualLocationInput.value = input
 }
 
 const triggerStudentLoad = () => {
