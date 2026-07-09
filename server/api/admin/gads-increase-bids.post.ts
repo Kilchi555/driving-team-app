@@ -97,15 +97,13 @@ export default defineEventHandler(async (event) => {
       campaign.target_impression_share.location,
       campaign.target_impression_share.location_fraction_micros
     FROM campaign
-    WHERE
-      campaign.status = 'ENABLED'
-      AND campaign.bidding_strategy_type = 'TARGET_IMPRESSION_SHARE'
+    WHERE campaign.status = 'ENABLED'
   `)
 
   const rules = PRESETS[preset]
   const absoluteMaxMicros = Math.round(maxCapChf * 1_000_000)
 
-  // 2. Build plan — increase CPC ceiling for matching campaigns
+  // 2. Build plan — filter to Target Impression Share campaigns (type 9) and increase CPC ceiling
   type PlanEntry = {
     resourceName: string
     campaignName: string
@@ -119,6 +117,10 @@ export default defineEventHandler(async (event) => {
   const plan: PlanEntry[] = []
 
   for (const camp of campaignResponse as any[]) {
+    const biddingStrategyType = camp.campaign?.bidding_strategy_type
+    // Only process Target Impression Share campaigns (enum value 9 in the API response)
+    if (biddingStrategyType !== 9 && biddingStrategyType !== 'TARGET_IMPRESSION_SHARE') continue
+
     const campaignName: string = camp.campaign?.name ?? ''
     const currentCeilingMicros: number = camp.campaign?.target_impression_share?.cpc_bid_ceiling_micros ?? 0
     const currentShareFraction: number = camp.campaign?.target_impression_share?.location_fraction_micros ?? 0
