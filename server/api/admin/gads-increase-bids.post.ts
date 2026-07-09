@@ -227,15 +227,14 @@ export default defineEventHandler(async (event) => {
 
   for (const p of plan) {
     try {
-      const campaignId = p.resourceName.split('/').pop()
       const res = await fetch(
-        `https://googleads.googleapis.com/v19/customers/${customerId}/campaigns:mutate`,
+        `https://googleads.googleapis.com/v23/customers/${customerId}/campaigns:mutate`,
         {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${accessToken}`,
             'developer-token': developerToken,
-            'login-customer-id': loginCustomerId || customerId,
+            ...(loginCustomerId ? { 'login-customer-id': loginCustomerId } : {}),
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -244,9 +243,9 @@ export default defineEventHandler(async (event) => {
               update: {
                 resourceName: p.resourceName,
                 targetImpressionShare: {
-                  // ANYWHERE_ON_PAGE = 2 (most common default)
+                  // ANYWHERE_ON_PAGE = 2 (most common default for max reach)
                   location: 2,
-                  // 80% impression share target
+                  // 80% impression share target — Google will bid to achieve this
                   locationFractionMicros: 800_000,
                   cpcBidCeilingMicros: Math.round(p.newCeilingChf * 1_000_000),
                 },
