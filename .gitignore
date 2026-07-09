@@ -61,3 +61,4 @@ docs/pci/**/*.html
 .env.vercel.production
 .env.backfill
 supabase/.temp/
+.env.vercel.pulled

@@ -105,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import ResourceBlockModal from '~/components/admin/ResourceBlockModal.vue'
 
@@ -219,7 +219,7 @@ const blockModal = ref({
 
 function openNewBooking(room: any, date: string | null) {
   blockModal.value.open = false
-  nextTick(() => {
+  setTimeout(() => {
     blockModal.value = {
       open: true,
       resourceId: room.id,
@@ -227,12 +227,12 @@ function openNewBooking(room: any, date: string | null) {
       prefillDate: date ?? undefined,
       editingBooking: null,
     }
-  })
+  }, 50)
 }
 
 function openExistingBooking(room: any, booking: any) {
   blockModal.value.open = false
-  nextTick(() => {
+  setTimeout(() => {
     blockModal.value = {
       open: true,
       resourceId: room.id,
@@ -240,7 +240,7 @@ function openExistingBooking(room: any, booking: any) {
       prefillDate: undefined,
       editingBooking: booking,
     }
-  })
+  }, 50)
 }
 
 function onSaved() {
