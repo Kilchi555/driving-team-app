@@ -84,14 +84,26 @@ export default defineEventHandler(async (event) => {
     login_customer_id: loginCustomerId || undefined,
   })
 
-  // 1. Fetch all active keywords with their current CPCs
+  // 1a. Fetch ad groups (for ad-group-level default CPC bids)
+  const adGroupResponse = await customer.query(`
+    SELECT
+      ad_group.resource_name,
+      ad_group.name,
+      ad_group.cpc_bid_micros,
+      campaign.name
+    FROM ad_group
+    WHERE
+      ad_group.status = 'ENABLED'
+      AND campaign.status = 'ENABLED'
+  `)
+
+  // 1b. Fetch individual keyword bids (keyword-level overrides)
   const kwResponse = await customer.query(`
     SELECT
       ad_group_criterion.resource_name,
       ad_group_criterion.keyword.text,
       ad_group_criterion.keyword.match_type,
       ad_group_criterion.cpc_bid_micros,
-      ad_group_criterion.status,
       campaign.name,
       ad_group.name
     FROM ad_group_criterion
@@ -102,58 +114,101 @@ export default defineEventHandler(async (event) => {
       AND ad_group.status = 'ENABLED'
   `)
 
-  const allKeywords = kwResponse as any[]
-
   const rules = PRESETS[preset]
   const maxCapMicros = Math.round(maxCapChf * 1_000_000)
   const minMicros = Math.round(MIN_CPC_CHF * 1_000_000)
 
-  // 2. Build plan
-  const plan: Array<{
+  // 2. Build plan — prefer keyword-level bids, fall back to ad group bid
+  const adGroupBidMap = new Map<string, number>()
+  for (const ag of adGroupResponse as any[]) {
+    adGroupBidMap.set(ag.ad_group?.resource_name ?? '', ag.ad_group?.cpc_bid_micros ?? 0)
+  }
+
+  type PlanEntry = {
+    type: 'keyword' | 'ad_group'
     resourceName: string
-    keyword: string
+    label: string
     campaignName: string
     currentCpcChf: number
     newCpcChf: number
     increasePct: number
     capped: boolean
-  }> = []
+  }
 
-  for (const kw of allKeywords) {
+  const plan: PlanEntry[] = []
+
+  // Track which ad groups already have keyword-level overrides
+  const adGroupsWithKwBids = new Set<string>()
+
+  for (const kw of kwResponse as any[]) {
     const campaignName: string = kw.campaign?.name ?? ''
-    const currentMicros: number = kw.ad_group_criterion?.cpc_bid_micros ?? 0
+    const kwMicros: number = kw.ad_group_criterion?.cpc_bid_micros ?? 0
     const resourceName: string = kw.ad_group_criterion?.resource_name ?? ''
-
-    if (currentMicros < minMicros) continue // skip keywords using ad group default bid
 
     const matchingRule = rules.find(r =>
       campaignName.toLowerCase().includes(r.campaign_name_contains.toLowerCase()),
     )
     if (!matchingRule) continue
 
+    if (kwMicros >= minMicros) {
+      // Keyword has its own bid — update it
+      const newMicros = Math.min(
+        Math.round(kwMicros * (1 + matchingRule.increase_pct / 100)),
+        maxCapMicros,
+      )
+      if (newMicros !== kwMicros) {
+        plan.push({
+          type: 'keyword',
+          resourceName,
+          label: `[KW] "${kw.ad_group_criterion?.keyword?.text}" in ${kw.ad_group?.name}`,
+          campaignName,
+          currentCpcChf: kwMicros / 1_000_000,
+          newCpcChf: newMicros / 1_000_000,
+          increasePct: matchingRule.increase_pct,
+          capped: newMicros === maxCapMicros,
+        })
+      }
+    }
+    // Track the ad group so we know it might have keywords
+    adGroupsWithKwBids.add(resourceName.split('/ad_group_criteria/')[0] ?? '')
+  }
+
+  // Also update ad group default bids for matching campaigns
+  for (const ag of adGroupResponse as any[]) {
+    const campaignName: string = ag.campaign?.name ?? ''
+    const agMicros: number = ag.ad_group?.cpc_bid_micros ?? 0
+    const resourceName: string = ag.ad_group?.resource_name ?? ''
+
+    const matchingRule = rules.find(r =>
+      campaignName.toLowerCase().includes(r.campaign_name_contains.toLowerCase()),
+    )
+    if (!matchingRule) continue
+    if (agMicros < minMicros) continue
+
     const newMicros = Math.min(
-      Math.round(currentMicros * (1 + matchingRule.increase_pct / 100)),
+      Math.round(agMicros * (1 + matchingRule.increase_pct / 100)),
       maxCapMicros,
     )
-
-    if (newMicros === currentMicros) continue // already at cap
-
-    plan.push({
-      resourceName,
-      keyword: kw.ad_group_criterion?.keyword?.text ?? '',
-      campaignName,
-      currentCpcChf: currentMicros / 1_000_000,
-      newCpcChf: newMicros / 1_000_000,
-      increasePct: matchingRule.increase_pct,
-      capped: newMicros === maxCapMicros,
-    })
+    if (newMicros !== agMicros) {
+      plan.push({
+        type: 'ad_group',
+        resourceName,
+        label: `[AdGroup] "${ag.ad_group?.name}" default CPC`,
+        campaignName,
+        currentCpcChf: agMicros / 1_000_000,
+        newCpcChf: newMicros / 1_000_000,
+        increasePct: matchingRule.increase_pct,
+        capped: newMicros === maxCapMicros,
+      })
+    }
   }
 
   if (dryRun) {
     const summary = rules.map(r => ({
       campaign: r.campaign_name_contains,
       increase: `+${r.increase_pct}%`,
-      keywords_affected: plan.filter(p => p.campaignName.includes(r.campaign_name_contains)).length,
+      keywords_affected: plan.filter(p => p.campaignName.includes(r.campaign_name_contains) && p.type === 'keyword').length,
+      ad_groups_affected: plan.filter(p => p.campaignName.includes(r.campaign_name_contains) && p.type === 'ad_group').length,
     }))
 
     return {
@@ -162,7 +217,7 @@ export default defineEventHandler(async (event) => {
       max_cap_chf: maxCapChf,
       summary,
       changes: plan.map(p => ({
-        keyword: p.keyword,
+        what: p.label,
         campaign: p.campaignName,
         current_cpc: `CHF ${p.currentCpcChf.toFixed(2)}`,
         new_cpc: `CHF ${p.newCpcChf.toFixed(2)}`,
@@ -173,13 +228,17 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // 3. Apply in batches of 50
+  // 3. Apply — separate mutations for keywords vs ad groups
   const updated: string[] = []
   const errors: string[] = []
   const BATCH_SIZE = 50
 
-  for (let i = 0; i < plan.length; i += BATCH_SIZE) {
-    const batch = plan.slice(i, i + BATCH_SIZE)
+  const kwUpdates = plan.filter(p => p.type === 'keyword')
+  const agUpdates = plan.filter(p => p.type === 'ad_group')
+
+  // 3a. Keyword-level updates
+  for (let i = 0; i < kwUpdates.length; i += BATCH_SIZE) {
+    const batch = kwUpdates.slice(i, i + BATCH_SIZE)
     const operations = batch.map(p => ({
       entity: 'ad_group_criterion',
       operation: 'update',
@@ -189,17 +248,37 @@ export default defineEventHandler(async (event) => {
       },
       update_mask: { paths: ['cpc_bid_micros'] },
     }))
-
     try {
       await customer.mutateResources(operations)
       for (const p of batch) {
-        updated.push(
-          `"${p.keyword}" [${p.campaignName}]: CHF ${p.currentCpcChf.toFixed(2)} → CHF ${p.newCpcChf.toFixed(2)}${p.capped ? ' (capped)' : ''}`,
-        )
+        updated.push(`${p.label} [${p.campaignName}]: CHF ${p.currentCpcChf.toFixed(2)} → CHF ${p.newCpcChf.toFixed(2)}${p.capped ? ' (capped)' : ''}`)
       }
     }
     catch (err: any) {
-      errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${err?.message ?? String(err)}`)
+      errors.push(`KW batch ${Math.floor(i / BATCH_SIZE) + 1}: ${err?.message ?? String(err)}`)
+    }
+  }
+
+  // 3b. Ad group default CPC updates
+  for (let i = 0; i < agUpdates.length; i += BATCH_SIZE) {
+    const batch = agUpdates.slice(i, i + BATCH_SIZE)
+    const operations = batch.map(p => ({
+      entity: 'ad_group',
+      operation: 'update',
+      resource: {
+        resource_name: p.resourceName,
+        cpc_bid_micros: Math.round(p.newCpcChf * 1_000_000),
+      },
+      update_mask: { paths: ['cpc_bid_micros'] },
+    }))
+    try {
+      await customer.mutateResources(operations)
+      for (const p of batch) {
+        updated.push(`${p.label} [${p.campaignName}]: CHF ${p.currentCpcChf.toFixed(2)} → CHF ${p.newCpcChf.toFixed(2)}${p.capped ? ' (capped)' : ''}`)
+      }
+    }
+    catch (err: any) {
+      errors.push(`AdGroup batch ${Math.floor(i / BATCH_SIZE) + 1}: ${err?.message ?? String(err)}`)
     }
   }
 
