@@ -247,7 +247,7 @@ export default defineEventHandler(async (event) => {
 
         // Insert new busy times
         const busyTimes = windowEvents.map(ev => {
-          const convertToUTC = (isoStr: string): string => {
+          const formatUTCTime = (isoStr: string): string => {
             const date = new Date(isoStr)
             const year = date.getUTCFullYear()
             const month = String(date.getUTCMonth() + 1).padStart(2, '0')
@@ -264,8 +264,8 @@ export default defineEventHandler(async (event) => {
             external_calendar_id: calendar.id,
             external_event_id: ((ev.uid || `event_${Date.now()}_${Math.random()}`) + '').slice(0, 255),
             event_title: 'Privat',
-            start_time: convertToUTC(ev.start),
-            end_time: convertToUTC(ev.end),
+            start_time: formatUTCTime(ev.start),
+            end_time: formatUTCTime(ev.end),
             sync_source: 'ics'
           }
           
@@ -474,11 +474,44 @@ function parseICSTimestamp(timestamp: string, opts?: { tzid?: string, dateOnly?:
     
     if (opts?.tzid) {
       try {
-        const dateAsUTC = new Date(`${localTimeString}Z`)
-        const utcOffset = getUTCOffsetForTimezone(opts.tzid, dateAsUTC)
-        const utcTime = dateAsUTC.getTime() - utcOffset
-        const utcDate = new Date(utcTime)
-        return utcDate.toISOString()
+        // Create a date assuming the local time string is in the target timezone
+        // The trick is to create a UTC date from the local time, then adjust
+        const localDate = new Date(`${localTimeString}Z`)
+        
+        // Get what UTC time corresponds to this local time in the timezone
+        const utcFormatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'UTC',
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', second: '2-digit',
+          hour12: false
+        })
+        
+        const tzFormatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: opts.tzid,
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', second: '2-digit',
+          hour12: false
+        })
+        
+        // Format the local date in both timezones
+        const utcFormatted = utcFormatter.format(localDate)
+        const tzFormatted = tzFormatter.format(localDate)
+        
+        // Parse to compare
+        const [utcY, utcM, utcD, utcH, utcMin, utcS] = utcFormatted.split(/\D+/).filter(Boolean).map(Number)
+        const [tzY, tzM, tzD, tzH, tzMin, tzS] = tzFormatted.split(/\D+/).filter(Boolean).map(Number)
+        
+        // Create UTC dates from these times
+        const utcMs = new Date(Date.UTC(utcY, utcM - 1, utcD, utcH, utcMin, utcS)).getTime()
+        const tzMs = new Date(Date.UTC(tzY, tzM - 1, tzD, tzH, tzMin, tzS)).getTime()
+        
+        // The offset is the difference
+        const offsetMs = utcMs - tzMs
+        
+        // Now apply the reverse: if local time is HH:MM in timezone, 
+        // the UTC time is HH:MM plus the offset (for positive offset timezones ahead of UTC)
+        const resultMs = localDate.getTime() + offsetMs
+        return new Date(resultMs).toISOString()
       } catch (e) {
         logger.warn(`⚠️ Failed to convert TZID ${opts.tzid}, falling back to UTC assumption`)
       }
@@ -494,6 +527,7 @@ function parseICSTimestamp(timestamp: string, opts?: { tzid?: string, dateOnly?:
 
 function getUTCOffsetForTimezone(tzid: string, date: Date): number {
   try {
+    // Get UTC representation of the date
     const utcFormatter = new Intl.DateTimeFormat('en-US', {
       timeZone: 'UTC',
       year: 'numeric', month: '2-digit', day: '2-digit',
@@ -501,6 +535,7 @@ function getUTCOffsetForTimezone(tzid: string, date: Date): number {
       hour12: false
     })
     
+    // Get timezone representation of the date
     const zoneFormatter = new Intl.DateTimeFormat('en-US', {
       timeZone: tzid,
       year: 'numeric', month: '2-digit', day: '2-digit',
@@ -511,10 +546,22 @@ function getUTCOffsetForTimezone(tzid: string, date: Date): number {
     const utcString = utcFormatter.format(date)
     const zoneString = zoneFormatter.format(date)
     
-    const utcTime = new Date(utcString).getTime()
-    const zoneTime = new Date(zoneString).getTime()
+    // Parse the formatted strings correctly
+    const [utcY, utcM, utcD, utcH, utcMin, utcS] = utcString.split(/\D+/).filter(Boolean)
+    const [zoneY, zoneM, zoneD, zoneH, zoneMin, zoneS] = zoneString.split(/\D+/).filter(Boolean)
     
-    return zoneTime - utcTime
+    const utcTime = new Date(Date.UTC(
+      parseInt(utcY), parseInt(utcM) - 1, parseInt(utcD),
+      parseInt(utcH), parseInt(utcMin), parseInt(utcS)
+    )).getTime()
+    
+    const zoneTime = new Date(Date.UTC(
+      parseInt(zoneY), parseInt(zoneM) - 1, parseInt(zoneD),
+      parseInt(zoneH), parseInt(zoneMin), parseInt(zoneS)
+    )).getTime()
+    
+    // Return the offset in milliseconds
+    return utcTime - zoneTime
   } catch (e) {
     logger.warn(`⚠️ Failed to calculate offset for ${tzid}`)
     return 0
