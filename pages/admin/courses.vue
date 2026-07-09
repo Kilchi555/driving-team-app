@@ -1348,14 +1348,20 @@
             class="flex items-center gap-2 mb-3 p-3 bg-blue-50 border border-blue-100 rounded-xl"
           >
             <input
+              v-if="requireInstructorConfirmation"
               id="notifyStaffCheckbox"
               v-model="notifyStaff"
               type="checkbox"
               class="w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer"
             />
-            <label for="notifyStaffCheckbox" class="text-sm text-blue-800 font-medium cursor-pointer select-none">
+            <label v-if="requireInstructorConfirmation" for="notifyStaffCheckbox" class="text-sm text-blue-800 font-medium cursor-pointer select-none">
               📧 Instruktoren per Email benachrichtigen &amp; Bestätigung anfordern
             </label>
+
+            <!-- Info text when instructor confirmation is disabled -->
+            <div v-if="!requireInstructorConfirmation" class="text-xs text-gray-500 italic">
+              Instruktor-Bestätigung ist deaktiviert. Die Checkbox wird nicht angezeigt.
+            </div>
           </div>
 
           <!-- Split-session warnings: staff assigned to only one of two back-to-back sessions -->
@@ -4218,6 +4224,7 @@ const isCanceling = ref(false)
 const notifyByEmail = ref(true)
 const notifyBySMS = ref(false)
 const notifyStaff = ref(false) // opt-in: send confirmation email to assigned staff
+const requireInstructorConfirmation = ref(true) // tenant setting: whether instructor confirmation is required
 const cancellationReasons = ['Ausfall Kursleiter', 'Zu wenig Teilnehmer', 'Technische Probleme', 'Veranstaltungsort nicht verfügbar']
 const cancellationReason = ref('')
 const cancellationReasonCustom = ref('')
@@ -4878,6 +4885,15 @@ const loadStaff = async () => {
     availableStaff.value = result.data || []
   } catch (err) {
     console.error('Error loading staff:', err)
+  }
+}
+
+const loadInstructorConfirmationRequirement = async () => {
+  try {
+    const result: any = await $fetch('/api/admin/tenant/instructor-confirmation-setting')
+    requireInstructorConfirmation.value = result.require_instructor_confirmation ?? true
+  } catch (err) {
+    console.error('Error loading instructor confirmation setting:', err)
   }
 }
 
@@ -6258,6 +6274,7 @@ onMounted(async () => {
     currentUser.value?.tenant_id ? loadVehicles(currentUser.value.tenant_id) : Promise.resolve(),
     loadGeneralResources(),
     fetchMissingInstructors(),
+    loadInstructorConfirmationRequirement(),
   ])
   
   // Close dropdown when clicking outside

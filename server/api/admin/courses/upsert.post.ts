@@ -116,10 +116,20 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdmin()
 
+  // ── Load tenant settings ───────────────────────────────────────────────────
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('require_instructor_confirmation')
+    .eq('id', profile.tenant_id)
+    .single()
+
+  const requireInstructorConfirmation = tenant?.require_instructor_confirmation ?? true
+
   // ── Active-status guard ───────────────────────────────────────────────────
   // Only block if the status is being *changed to* 'active' (not if it's already active).
   // (skip check for tenants with only 1 staff member)
-  if (courseData.status === 'active' && courseId) {
+  // Only enforce if tenant has require_instructor_confirmation enabled
+  if (courseData.status === 'active' && courseId && requireInstructorConfirmation) {
     const { data: currentCourse } = await supabase
       .from('courses')
       .select('status')
@@ -414,9 +424,13 @@ export default defineEventHandler(async (event) => {
       logger.debug(`✅ ${apptRows.length} course appointments created for staff`)
     }
 
-    // ── Send email only if explicitly requested (notifyStaff flag) ────────────
-    if (!notifyStaff) {
-      logger.debug('ℹ️ notifyStaff=false – skipping staff email notification')
+    // ── Send email only if explicitly requested (notifyStaff flag) AND tenant allows it ────────────
+    if (!notifyStaff || !requireInstructorConfirmation) {
+      if (!notifyStaff) {
+        logger.debug('ℹ️ notifyStaff=false – skipping staff email notification')
+      } else {
+        logger.debug('ℹ️ Tenant has require_instructor_confirmation=false – skipping staff email notification')
+      }
     } else {
     // ── Send email to each internal staff member ────────────────────────────
     // Group sessions by staff_id
