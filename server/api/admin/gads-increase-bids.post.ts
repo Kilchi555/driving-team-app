@@ -56,6 +56,7 @@ export default defineEventHandler(async (event) => {
   const dryRun: boolean = body?.dry_run !== false
   const preset: string = body?.preset ?? 'rank_fix'
   const maxCapChf: number = body?.max_cap_chf ?? MAX_CPC_CAP_CHF
+  const debug: boolean = body?.debug === true
 
   if (!PRESETS[preset]) {
     return { ok: false, reason: `Unknown preset. Use: ${Object.keys(PRESETS).join(', ')}` }
@@ -83,6 +84,50 @@ export default defineEventHandler(async (event) => {
     refresh_token: refreshToken,
     login_customer_id: loginCustomerId || undefined,
   })
+
+  // 0. Debug: fetch campaign bidding strategies if requested
+  if (debug) {
+    const campDebug = await customer.query(`
+      SELECT
+        campaign.name,
+        campaign.bidding_strategy_type,
+        campaign.target_cpa.target_cpa_micros,
+        campaign.maximize_conversions.target_cpa_micros,
+        campaign.manual_cpc.enhanced_cpc_enabled,
+        campaign.status
+      FROM campaign
+      WHERE campaign.status != 'REMOVED'
+    `)
+    const agDebug = await customer.query(`
+      SELECT
+        ad_group.name,
+        ad_group.cpc_bid_micros,
+        campaign.name
+      FROM ad_group
+      WHERE
+        ad_group.status = 'ENABLED'
+        AND campaign.status = 'ENABLED'
+    `)
+    return {
+      debug: true,
+      campaigns: (campDebug as any[]).filter(c =>
+        PRESETS[preset].some(r => c.campaign?.name?.toLowerCase().includes(r.campaign_name_contains.toLowerCase())),
+      ).map(c => ({
+        name: c.campaign?.name,
+        bidding_strategy_type: c.campaign?.bidding_strategy_type,
+        manual_cpc_enhanced: c.campaign?.manual_cpc?.enhanced_cpc_enabled,
+        target_cpa_micros: c.campaign?.target_cpa?.target_cpa_micros,
+      })),
+      ad_groups: (agDebug as any[]).filter(ag =>
+        PRESETS[preset].some(r => ag.campaign?.name?.toLowerCase().includes(r.campaign_name_contains.toLowerCase())),
+      ).map(ag => ({
+        campaign: ag.campaign?.name,
+        ad_group: ag.ad_group?.name,
+        cpc_bid_micros: ag.ad_group?.cpc_bid_micros,
+        cpc_bid_chf: (ag.ad_group?.cpc_bid_micros ?? 0) / 1_000_000,
+      })),
+    }
+  }
 
   // 1a. Fetch ad groups (for ad-group-level default CPC bids)
   const adGroupResponse = await customer.query(`
