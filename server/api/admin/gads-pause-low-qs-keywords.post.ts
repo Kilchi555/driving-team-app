@@ -118,11 +118,11 @@ export default defineEventHandler(async (event) => {
     const qs: number | null = kw.ad_group_criterion?.quality_info?.quality_score ?? null
     const resourceName: string = kw.ad_group_criterion?.resource_name ?? ''
 
-    // Check against confirmed waste list
+    // Check against confirmed waste list — use exact campaign name match, not partial
     const confirmed = CONFIRMED_WASTE_KEYWORDS.find(
       c =>
         kwText.toLowerCase() === c.keyword.toLowerCase() &&
-        campaignName.toLowerCase().includes(c.campaign.toLowerCase().split(' ')[0].toLowerCase()),
+        campaignName.toLowerCase() === c.campaign.toLowerCase(),
     )
     if (confirmed) {
       candidates.push({
