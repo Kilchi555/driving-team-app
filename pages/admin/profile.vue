@@ -899,6 +899,53 @@
           </Transition>
         </Teleport>
 
+        <!-- Kurs-Einstellungen Section (am Ende der Funktionen Tab) -->
+        <div v-show="activeTab === 'features'" class="bg-white rounded-lg shadow-sm border p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900">Kurs-Einstellungen</h2>
+              <p class="text-sm text-gray-600">Konfigurieren Sie wie Instruktoren ihre Kurse bestätigen</p>
+            </div>
+          </div>
+
+          <div class="space-y-6 mt-6">
+            <!-- Instructor Confirmation Required -->
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div class="flex-1">
+                <h3 class="text-sm font-medium text-gray-900">Instruktor-Bestätigung erforderlich</h3>
+                <p class="text-sm text-gray-600">Instruktoren müssen ihre Sessions bestätigen, bevor der Kurs aktiviert werden kann. Ohne diese Einstellung können Kurse sofort aktiviert werden.</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer ml-4">
+                <input
+                  type="checkbox"
+                  :checked="instructorConfirmationRequired"
+                  @change="toggleInstructorConfirmation"
+                  :disabled="isSavingInstructorConfirmation"
+                  class="sr-only peer"
+                />
+                <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all disabled:opacity-50"></div>
+              </label>
+            </div>
+
+            <!-- Info Text -->
+            <div v-if="instructorConfirmationRequired" class="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p class="text-sm text-green-800">
+                <strong>✅ Aktiviert:</strong> Bei der Kurserstellung können Administratoren Instruktoren per E-Mail benachrichtigen. Diese müssen ihre Sessions bestätigen, bevor der Kurs aktiviert werden kann.
+              </p>
+            </div>
+            <div v-else class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p class="text-sm text-blue-800">
+                <strong>ℹ️ Deaktiviert:</strong> Instruktoren werden nicht zur Bestätigung angefordert. Kurse können sofort aktiviert werden, auch wenn Instruktoren noch nicht bestätigt haben.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <!-- Kontakt Tab -->
         <div v-show="activeTab === 'contact'" class="space-y-6">
           <div class="bg-white rounded-lg shadow-sm border p-6">
@@ -2163,6 +2210,48 @@ const showSariDisableModal = ref(false)
 const syncingCourseType = ref<'VKU' | 'PGS' | null>(null)
 const sariSyncResult = ref<{ success: boolean; message: string } | null>(null)
 
+// Instructor Confirmation Settings
+const instructorConfirmationRequired = ref(true)
+const isSavingInstructorConfirmation = ref(false)
+
+const loadInstructorConfirmationSetting = async () => {
+  try {
+    const result: any = await $fetch('/api/admin/tenant/instructor-confirmation-setting')
+    instructorConfirmationRequired.value = result.require_instructor_confirmation ?? true
+  } catch (err: any) {
+    logger.error('Error loading instructor confirmation setting:', err)
+  }
+}
+
+const toggleInstructorConfirmation = async () => {
+  isSavingInstructorConfirmation.value = true
+  try {
+    const newValue = !instructorConfirmationRequired.value
+    const result: any = await $fetch('/api/admin/tenant/instructor-confirmation-setting', {
+      method: 'PUT',
+      body: { require_instructor_confirmation: newValue }
+    })
+    instructorConfirmationRequired.value = result.require_instructor_confirmation
+    autoSaveMessage.value = newValue 
+      ? '✅ Instruktor-Bestätigung erforderlich' 
+      : '✅ Instruktor-Bestätigung optional'
+    showAutoSaveIndicator.value = true
+    setTimeout(() => {
+      showAutoSaveIndicator.value = false
+    }, 3000)
+  } catch (err: any) {
+    logger.error('Error saving instructor confirmation setting:', err)
+    autoSaveMessage.value = '❌ Fehler beim Speichern'
+    showAutoSaveIndicator.value = true
+    instructorConfirmationRequired.value = !instructorConfirmationRequired.value
+    setTimeout(() => {
+      showAutoSaveIndicator.value = false
+    }, 3000)
+  } finally {
+    isSavingInstructorConfirmation.value = false
+  }
+}
+
 // SARI CZV/FL Settings (neu – SOAP CoursesV3)
 const {
   settings: czvSettings,
@@ -2479,6 +2568,7 @@ const loadData = async () => {
       await loadInvoiceSettings(tenantId)
       await loadReminderSettings(tenantId)
       await loadSARISettings(tenantId)
+      await loadInstructorConfirmationSetting()
       await loadTemplates(tenantId)
       await loadFeatures()
     }

@@ -104,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import ResourceBlockModal from '~/components/admin/ResourceBlockModal.vue'
 
@@ -228,23 +228,29 @@ const blockModal = ref({
 })
 
 function openNewBooking(vehicle: any, date: string | null) {
-  blockModal.value = {
-    open: true,
-    resourceId: vehicle.id,
-    resourceName: vehicle.name || `${vehicle.marke ?? ''} ${vehicle.modell ?? ''}`.trim(),
-    prefillDate: date ?? undefined,
-    editingBooking: null,
-  }
+  blockModal.value.open = false
+  nextTick(() => {
+    blockModal.value = {
+      open: true,
+      resourceId: vehicle.id,
+      resourceName: vehicle.name || `${vehicle.marke ?? ''} ${vehicle.modell ?? ''}`.trim(),
+      prefillDate: date ?? undefined,
+      editingBooking: null,
+    }
+  })
 }
 
 function openExistingBooking(vehicle: any, booking: any) {
-  blockModal.value = {
-    open: true,
-    resourceId: vehicle.id,
-    resourceName: vehicle.name || `${vehicle.marke ?? ''} ${vehicle.modell ?? ''}`.trim(),
-    prefillDate: undefined,
-    editingBooking: booking,
-  }
+  blockModal.value.open = false
+  nextTick(() => {
+    blockModal.value = {
+      open: true,
+      resourceId: vehicle.id,
+      resourceName: vehicle.name || `${vehicle.marke ?? ''} ${vehicle.modell ?? ''}`.trim(),
+      prefillDate: undefined,
+      editingBooking: booking,
+    }
+  })
 }
 
 function onSaved() {

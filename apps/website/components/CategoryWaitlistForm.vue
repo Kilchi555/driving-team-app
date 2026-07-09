@@ -6,7 +6,7 @@
           <div class="text-3xl mb-3">🔔</div>
           <h2 class="text-xl font-bold text-gray-900">Auf Warteliste eintragen</h2>
           <p class="text-gray-600 text-sm mt-2">
-            Aktuell sind keine Plätze frei. Trag dich ein – wir melden uns, sobald ein neuer {{ categoryLabel }} startet.
+            Falls keine Plätze frei sind oder die Daten dir nicht passen, tag dich ein – wir melden uns, sobald ein neuer {{ categoryLabel }} startet.
           </p>
         </div>
 
