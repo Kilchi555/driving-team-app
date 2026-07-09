@@ -197,14 +197,20 @@ export default defineEventHandler(async (event) => {
       }
 
       // Get existing appointments for conflict checking
-      logger.debug('🔍 Getting existing appointments:', { staff_id, start_date, end_date })
+      logger.debug('🔍 Getting existing appointments:', { staff_id, user_id, start_date, end_date })
       
       let query = supabase
         .from('appointments')
-        .select('*')
-        .eq('staff_id', staff_id)
+        .select('id, user_id, staff_id, start_time, end_time, duration_minutes, type, status')
         .eq('tenant_id', userProfile.tenant_id)
         .neq('status', 'cancelled')
+      
+      // Filter by staff_id or user_id depending on what's provided
+      if (user_id) {
+        query = query.eq('user_id', user_id)
+      } else if (staff_id) {
+        query = query.eq('staff_id', staff_id)
+      }
       
       // ✅ Only add date filters if they're provided
       if (start_date) {

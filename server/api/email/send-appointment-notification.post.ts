@@ -393,7 +393,7 @@ const TEMPLATES = {
 
 export default defineEventHandler(async (event) => {
   try {
-    const body = await readBody(event) as AppointmentNotificationBody
+    let body = await readBody(event) as AppointmentNotificationBody
     
     const { email, studentName, type, tenantId } = body
     
@@ -423,7 +423,7 @@ export default defineEventHandler(async (event) => {
         const supabase = getSupabaseAdmin()
         const { data: tenant, error: tenantError } = await supabase
           .from('tenants')
-          .select('primary_color, slug, logo_wide_url, logo_url, logo_square_url')
+          .select('primary_color, slug, logo_wide_url, logo_url, logo_square_url, name')
           .eq('id', tenantId)
           .single()
         
@@ -437,6 +437,10 @@ export default defineEventHandler(async (event) => {
             logger.debug(`✅ Loaded tenant slug: ${tenantSlug}`)
           }
           logoUrl = tenant.logo_wide_url || tenant.logo_url || tenant.logo_square_url || null
+          // Tenant name for sender + email footer (override body.tenantName if not provided)
+          if (!body.tenantName && tenant.name) {
+            body = { ...body, tenantName: tenant.name }
+          }
         } else if (tenantError) {
           console.warn(`⚠️ Could not load tenant data:`, tenantError.message)
         }
