@@ -99,7 +99,7 @@ export default defineEventHandler(async (event) => {
     FROM campaign
     WHERE
       campaign.status = 'ENABLED'
-      AND campaign.bidding_strategy_type = 9
+      AND campaign.bidding_strategy_type = 'TARGET_IMPRESSION_SHARE'
   `)
 
   const rules = PRESETS[preset]
