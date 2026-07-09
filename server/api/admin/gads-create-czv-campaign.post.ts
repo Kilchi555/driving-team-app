@@ -272,64 +272,74 @@ export default defineEventHandler(async (event) => {
     const kwResult = await mutate('adGroupCriteria', kwOps)
     kwResults.push({ ad_group: agConfig.name, added: kwResult.data.results?.length ?? 0, ok: kwResult.ok })
 
-    // Create RSA
+    // Create RSA — headlines max 30 chars, descriptions max 90 chars, paths max 15 chars
+    const adConfigs: Record<string, { headlines: any[]; descriptions: any[]; path1: string; path2: string }> = {
+      'CZV Grundkurs': {
+        headlines: [
+          { text: 'CZV Grundkurs Lachen', pinnedField: 'HEADLINE_1' },    // 20 ✓
+          { text: 'Berufschauffeur Kurs', pinnedField: 'HEADLINE_2' },     // 20 ✓
+          { text: '5 Tage | Flexibel' },                                   // 18 ✓
+          { text: 'Fähigkeitsausweis' },                                   // 17 ✓
+          { text: 'Kategorien C/CE & D' },                                 // 19 ✓
+          { text: 'Inkl. Prüfungsvorbereitung' },                          // 26 ✓
+          { text: 'Jetzt Platz reservieren' },                             // 23 ✓
+          { text: 'CHF 2200 | Ab September' },                             // 23 ✓
+        ],
+        descriptions: [
+          { text: 'CZV Kurs C/CE & D. 5 Tage flexibel. Prüfungsvorbereitung inkl.', pinnedField: 'DESCRIPTION_1' }, // 65 ✓
+          { text: 'Driving Team Lachen | Fähigkeitsausweis inklusive | Jetzt anmelden' },                            // 68 ✓
+        ],
+        path1: 'CZV-Kurs',   // 8 ✓
+        path2: 'Lachen',     // 6 ✓
+      },
+      'Berufschauffeur Ausbildung': {
+        headlines: [
+          { text: 'Berufschauffeur werden', pinnedField: 'HEADLINE_1' },   // 22 ✓
+          { text: 'CZV Grundkurs Lachen', pinnedField: 'HEADLINE_2' },    // 20 ✓
+          { text: 'Fähigkeitsausweis' },                                   // 17 ✓
+          { text: 'Kategorien C/CE & D' },                                 // 19 ✓
+          { text: 'Inkl. Prüfungsvorbereitung' },                          // 26 ✓
+          { text: 'Jetzt Platz sichern' },                                 // 19 ✓
+        ],
+        descriptions: [
+          { text: 'CZV Grundkurs Kat. C/CE & D — 5 Tage. Fähigkeitsausweis inkl.', pinnedField: 'DESCRIPTION_1' }, // 66 ✓
+          { text: 'Driving Team Lachen | Kat. C/CE & D | Flexibel | Jetzt anmelden' },                              // 66 ✓
+        ],
+        path1: 'Berufschauffeur', // 15 ✓
+        path2: 'Ausbildung',      // 10 ✓
+      },
+      'Lastwagen C Führerschein': {
+        headlines: [
+          { text: 'LKW Führerschein C/CE', pinnedField: 'HEADLINE_1' },   // 21 ✓
+          { text: 'CZV Grundkurs Lachen', pinnedField: 'HEADLINE_2' },    // 20 ✓
+          { text: 'Berufsmässig LKW fahren' },                            // 23 ✓
+          { text: '5 Tage Ausbildung CH' },                               // 20 ✓
+          { text: 'Fähigkeitsausweis' },                                   // 17 ✓
+          { text: 'Jetzt Platz reservieren' },                             // 23 ✓
+        ],
+        descriptions: [
+          { text: 'CZV Kurs Kat. C1/C/CE. 5 Tage flexibel. Prüfungsvorbereitung inkl.', pinnedField: 'DESCRIPTION_1' }, // 71 ✓
+          { text: 'Driving Team Lachen | Inkl. C & CE Kat. | Flexibel | Jetzt anmelden' },                              // 70 ✓
+        ],
+        path1: 'LKW-Fuehrerschein', // 16 — need to trim
+        path2: 'CZV-Kurs',          // 8 ✓
+      },
+    }
+    // path1 max 15 chars — clamp
+    const adCfg = adConfigs[agConfig.name] ?? adConfigs['CZV Grundkurs']
+    adCfg.path1 = adCfg.path1.slice(0, 15)
+
     const adResult = await mutate('adGroupAds', [{
       create: {
         adGroup: agResourceName,
         status: 'ENABLED',
         ad: {
-          responsiveSearchAd: agConfig.name === 'CZV Grundkurs'
-            ? {
-                headlines: [
-                  { text: 'CZV Grundkurs Lachen', pinnedField: 'HEADLINE_1' },
-                  { text: 'Berufschauffeur Ausbildung', pinnedField: 'HEADLINE_2' },
-                  { text: '5 Tage | Flexibel planbar' },
-                  { text: 'Fähigkeitsausweis sichern' },
-                  { text: 'Kategorien C/CE und D/D1' },
-                  { text: 'Inkl. Prüfungsvorbereitung' },
-                  { text: 'Jetzt Platz reservieren' },
-                  { text: 'CHF 2200 | Nächster Kurs bald' },
-                ],
-                descriptions: [
-                  { text: 'Obligatorischer CZV Grundkurs für Berufsfahrer Kat. C/CE & D. 5 Tage intensiv, flexibel planbar. Nächster Kurs ab September 2026.', pinnedField: 'DESCRIPTION_1' },
-                  { text: 'Professionelle Ausbildung mit Driving Team. Prüfungsvorbereitung inkl. | Region Lachen, Pfäffikon, Zürich.' },
-                ],
-                path1: 'CZV-Kurs',
-                path2: 'Lachen',
-              }
-            : agConfig.name === 'Berufschauffeur Ausbildung'
-              ? {
-                  headlines: [
-                    { text: 'Berufschauffeur werden', pinnedField: 'HEADLINE_1' },
-                    { text: 'CZV Grundkurs Lachen', pinnedField: 'HEADLINE_2' },
-                    { text: 'Fähigkeitsausweis in 5 Tagen' },
-                    { text: 'Kategorien C/CE und D/D1' },
-                    { text: 'Inkl. Prüfungsvorbereitung' },
-                    { text: 'Jetzt Platz sichern' },
-                  ],
-                  descriptions: [
-                    { text: 'Starte deine Karriere als Berufsfahrer mit dem CZV Grundkurs. 5 Tage Ausbildung, Fähigkeitsausweis inklusive.', pinnedField: 'DESCRIPTION_1' },
-                    { text: 'Driving Team Lachen | Regionale Ausbildung für Kat. C/CE & D | Flexible Kursplanung | Jetzt anmelden' },
-                  ],
-                  path1: 'Berufschauffeur',
-                  path2: 'Ausbildung',
-                }
-              : {
-                  headlines: [
-                    { text: 'Lastwagen Führerschein C/CE', pinnedField: 'HEADLINE_1' },
-                    { text: 'CZV Grundkurs Lachen', pinnedField: 'HEADLINE_2' },
-                    { text: 'Berufsmässig LKW fahren' },
-                    { text: '5 Tage Ausbildung CH' },
-                    { text: 'Fähigkeitsausweis sichern' },
-                    { text: 'Jetzt Platz reservieren' },
-                  ],
-                  descriptions: [
-                    { text: 'CZV Grundkurs für Kat. C1/C/CE (Lastwagen). 5 Tage Ausbildung, individuell planbar. Prüfungsvorbereitung inklusive.', pinnedField: 'DESCRIPTION_1' },
-                    { text: 'Driving Team — Fahrschule Lachen | Region Lachen, Pfäffikon, Zürich | Inkl. C & CE Kategorien | Jetzt anmelden' },
-                  ],
-                  path1: 'LKW-Führerschein',
-                  path2: 'CZV-Kurs',
-                },
+          responsiveSearchAd: {
+            headlines: adCfg.headlines,
+            descriptions: adCfg.descriptions,
+            path1: adCfg.path1,
+            path2: adCfg.path2,
+          },
           finalUrls: [LANDING_PAGE],
         },
       },
