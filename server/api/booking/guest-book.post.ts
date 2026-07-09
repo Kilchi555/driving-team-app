@@ -446,11 +446,32 @@ export default defineEventHandler(async (event) => {
     const customerName = `${body.first_name || ''} ${body.last_name || ''}`.trim() || 'Kunde'
     const displayTenantName = tenant.name || 'Deine Fahrschule'
     
-    // Load appointment details for email
-    const staffName = selectedInstructor?.first_name && selectedInstructor?.last_name 
-      ? `${selectedInstructor.first_name} ${selectedInstructor.last_name}`
-      : 'Dein Fahrlehrer'
-    const locationName = location?.name || 'Dein Treffpunkt'
+    // Load staff and location info for email
+    let staffName = 'Dein Fahrlehrer'
+    let locationName = 'Dein Treffpunkt'
+    
+    if (slot.staff_id) {
+      try {
+        const { data: staffData } = await supabase.from('staff').select('first_name, last_name').eq('id', slot.staff_id).single()
+        if (staffData?.first_name && staffData?.last_name) {
+          staffName = `${staffData.first_name} ${staffData.last_name}`
+        }
+      } catch (err) {
+        logger.debug('⚠️ Could not load staff name for email')
+      }
+    }
+    
+    if (slot.location_id) {
+      try {
+        const { data: locationData } = await supabase.from('locations').select('name').eq('id', slot.location_id).single()
+        if (locationData?.name) {
+          locationName = locationData.name
+        }
+      } catch (err) {
+        logger.debug('⚠️ Could not load location name for email')
+      }
+    }
+    
     const appointmentDate = new Date(newAppointment.start_time)
     const formattedDate = appointmentDate.toLocaleDateString('de-CH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
     const formattedTime = appointmentDate.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })

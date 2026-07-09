@@ -1215,6 +1215,7 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
           // Pickup address for pickup-type lessons
           customer_pickup_plz: (apt as any).customer_pickup_plz || null,
           customer_pickup_address: (apt as any).customer_pickup_address || null,
+          original_price_rappen: (apt as any).original_price_rappen ?? null,
         }
       }
       
@@ -2174,33 +2175,97 @@ const pasteAppointmentDirectly = async () => {
       return result
     }
     
+    // ── Pricing aus DB laden (vor appointmentData, damit original_price_rappen gesetzt werden kann) ──
+    let lessonPriceRappen = 0
+    let adminFeeRappen = 0
+    const durationMinutes = clipboardAppointment.value.duration || 45
+    const clipUserId = clipboardAppointment.value.user_id
+
+    try {
+      // Parallel: pricing rules + bestehende Termine des Users (server-seitig gefiltert)
+      const [pricingResponse, countResponse] = await Promise.all([
+        $fetch('/api/calendar/manage', {
+          method: 'POST',
+          body: {
+            action: 'get-pricing-rules',
+            tenant_id: props.currentUser?.tenant_id,
+            category: category
+          }
+        }) as Promise<any>,
+        $fetch('/api/calendar/manage', {
+          method: 'POST',
+          body: {
+            action: 'get-existing-appointments',
+            tenant_id: props.currentUser?.tenant_id,
+            user_id: clipUserId
+          }
+        }) as Promise<any>
+      ])
+
+      const pricingRules = pricingResponse?.data?.[0]
+
+      if (pricingRules) {
+        // Lesson price from DB
+        const pricePerMinute = Number(pricingRules.price_per_minute_rappen) || 0
+        let price = pricePerMinute * durationMinutes
+        if (pricingRules.duration_multiplier && pricingRules.duration_multiplier !== '1.00') {
+          price *= parseFloat(pricingRules.duration_multiplier)
+        }
+        lessonPriceRappen = Math.round(price / 5) * 5  // round to 5 Rappen
+        logger.debug('✅ Lesson price from DB:', lessonPriceRappen, 'Rappen')
+
+        // Admin fee
+        if (pricingRules.admin_fee_applies_from) {
+          const existingCount = (countResponse?.data || []).length
+          const newAppointmentNumber = existingCount + 1
+          if (newAppointmentNumber === pricingRules.admin_fee_applies_from) {
+            adminFeeRappen = pricingRules.admin_fee_rappen || 0
+            logger.debug('✅ Admin fee applies (appointment #' + newAppointmentNumber + '):', adminFeeRappen)
+          } else {
+            logger.debug('ℹ️ Admin fee does not apply (appointment #' + newAppointmentNumber + ')')
+          }
+        }
+      } else {
+        // Fallback: Preis aus dem originalen Termin (original_price_rappen) übernehmen
+        if (clipboardAppointment.value?.original_price_rappen) {
+          lessonPriceRappen = clipboardAppointment.value.original_price_rappen
+          logger.warn('⚠️ No pricing rule found — using original_price_rappen from source appointment:', lessonPriceRappen)
+        } else {
+          const fallbackPpm = clipboardAppointment.value?.price_per_minute || 0
+          lessonPriceRappen = Math.round(fallbackPpm * durationMinutes / 5) * 5
+          logger.warn('⚠️ No pricing rule found for category:', category, '— fallback to price_per_minute:', lessonPriceRappen)
+        }
+      }
+    } catch (err) {
+      console.error('❌ Error loading pricing rules:', err)
+    }
+
+    const totalAmountRappen = lessonPriceRappen + adminFeeRappen
+    const amountForEmail = `CHF ${(totalAmountRappen / 100).toFixed(2)}`
+
+    // ── Termin erstellen ─────────────────────────────────────────────────────
+    // Titel aus Schüler-Name bauen (nicht den Anzeige-Titel mit Adresse übernehmen)
+    const cleanTitle = clipboardAppointment.value.student?.trim() || 'Kopierter Termin'
+
     const appointmentData = {
-      // Basis-Felder (NOT NULL)
-      title: clipboardAppointment.value.title || 'Kopierter Termin',
+      title: cleanTitle,
       description: clipboardAppointment.value.description || '-',
       user_id: clipboardAppointment.value.user_id,
       staff_id: clipboardAppointment.value.staff_id || props.currentUser?.id,
       location_id: clipboardAppointment.value.location_id,
-      
-      // Zeit-Felder (NOT NULL) - MUSS UTC sein!
-      start_time: convertToUTC(clickedDate), // ✅ Removed +1 hour quick fix - use exact clicked time
-      end_time: convertToUTC(endDate), // ✅ Removed +1 hour quick fix - use exact end time
-      duration_minutes: clipboardAppointment.value.duration || 45,
-      
-      // Typ-Felder (NOT NULL)
+      start_time: convertToUTC(clickedDate),
+      end_time: convertToUTC(endDate),
+      duration_minutes: durationMinutes,
       type: category,
       status: 'confirmed',
-      
-      // Optional aber wichtig
       event_type_code: clipboardAppointment.value.event_type_code || 'lesson',
       tenant_id: props.currentUser?.tenant_id || clipboardAppointment.value.tenant_id,
-      
-      // Note: Pricing, payments, discounts, products werden über separates Payment-System verwaltet
+      created_by: props.currentUser?.id || null,
+      original_price_rappen: lessonPriceRappen,
     }
-    
-    // ✅ FINALE DEBUG-AUSGABE
+
     logger.debug('💾 FINAL appointmentData before save:', appointmentData)
-    
+
     const createResponse = await $fetch('/api/calendar/manage', {
       method: 'POST',
       body: {
@@ -2209,86 +2274,16 @@ const pasteAppointmentDirectly = async () => {
         appointment_data: appointmentData
       }
     }) as any
-    
+
     if (!createResponse?.success) {
       throw new Error(createResponse?.message || 'Failed to create appointment')
     }
 
     const newAppointment = createResponse.data
-
     logger.debug('✅ Appointment created via API:', newAppointment.id)
-    
-    // ✅ DEBUG: Zeige ganzen clipboard content
     logger.debug('🔍 DEBUG clipboardAppointment.value:', clipboardAppointment.value)
-    logger.debug('🔍 DEBUG clipboardAppointment.value.email:', clipboardAppointment.value?.email)
-    logger.debug('🔍 DEBUG clipboardAppointment.value.student:', clipboardAppointment.value?.student)
-    
-    // ✅ FIRST: Calculate payment amount BEFORE sending email
-    const basePriceMapping: Record<string, number> = {
-      'B': 95, 'A': 95, 'A1': 95, 'BE': 120, 'C': 170, 
-      'C1': 150, 'D': 200, 'CE': 200, 'Motorboot': 120, 'Boot': 120, 'BPT': 95
-    }
-    
-    const durationUnits = Math.ceil((newAppointment.duration_minutes || 45) / 45)
-    const basePriceChf = (basePriceMapping[category] || 95) * durationUnits
-    const lessonPriceRappen = Math.round(basePriceChf * 100)
-    
-    // ✅ NEU: Admin Fee basierend auf pricing_rules berechnen
-    let adminFeeRappen = 0
-    try {
-      const adminFeeResponse = await $fetch('/api/calendar/manage', {
-        method: 'POST',
-        body: {
-          action: 'get-existing-appointments',
-          tenant_id: props.currentUser?.tenant_id,
-          staff_id: newAppointment.staff_id,
-          start_date: null,
-          end_date: null
-        }
-      }) as any
 
-      const existingAppointments = adminFeeResponse?.data || []
-      const appointmentCount = existingAppointments?.filter((a: any) => 
-        a.user_id === newAppointment.user_id && 
-        a.staff_id === newAppointment.staff_id &&
-        a.id !== newAppointment.id
-      ).length || 0
-      
-      logger.debug('📊 Existing appointments for user via API:', appointmentCount)
-      
-      // ✅ Get pricing rules via API
-      const pricingResponse = await $fetch('/api/calendar/manage', {
-        method: 'POST',
-        body: {
-          action: 'get-pricing-rules',
-          tenant_id: props.currentUser?.tenant_id,
-          category: category
-        }
-      }) as any
-
-      const pricingRules = pricingResponse?.data?.[0]
-      
-      if (pricingRules && pricingRules.admin_fee_applies_from) {
-        // Admin Fee wird NUR bei Termin N verrechnet (z.B. nur beim 2. Termin)
-        // appointmentCount ist die Anzahl BESTEHENDER Termine
-        // Der neue Termin ist Termin Nummer: appointmentCount + 1
-        const newAppointmentNumber = appointmentCount + 1
-        
-        if (newAppointmentNumber === pricingRules.admin_fee_applies_from) {
-          adminFeeRappen = pricingRules.admin_fee_rappen || 0
-          logger.debug('✅ Admin fee applies (appointment #' + newAppointmentNumber + ') via API:', adminFeeRappen)
-        } else {
-          logger.debug('ℹ️ Admin fee does not apply (appointment #' + newAppointmentNumber + ', only applies at #' + pricingRules.admin_fee_applies_from + ')')
-        }
-      }
-    } catch (err) {
-      console.error('❌ Error calculating admin fee:', err)
-    }
-    
-    const totalAmountRappen = lessonPriceRappen + adminFeeRappen
-    const amountForEmail = `CHF ${(totalAmountRappen / 100).toFixed(2)}`
-    
-    // ✅ Extract email and student info for notification
+    // ── Email & Student-Daten laden ──────────────────────────────────────────
     let studentEmail = clipboardAppointment.value?.email
     let studentName = clipboardAppointment.value?.student
     
@@ -2344,8 +2339,26 @@ const pasteAppointmentDirectly = async () => {
         console.error('❌ Error fetching staff data:', err)
       }
     }
-    
-    // ✅ NEU: Email "Bestätigung erforderlich" versenden (MIT Betrag)
+
+    // ── Location-Info für Email ────────────────────────────────────────────────
+    let locationName: string | undefined
+    let locationAddress: string | undefined
+    const locObj = clipboardAppointment.value?.location
+    if (locObj) {
+      locationName = locObj.name
+      locationAddress = locObj.address
+    }
+
+    // Map event_type_code → lesbarer Name
+    const eventTypeLabels: Record<string, string> = {
+      lesson: 'Fahrstunde',
+      exam: 'Prüfung',
+      theory: 'Theorie',
+      vku: 'VKU',
+      nfa: 'NFA',
+      other: 'Sonstiges',
+    }
+    const eventTypeName = eventTypeLabels[clipboardAppointment.value?.event_type_code || 'lesson'] || 'Fahrstunde'
     
     if (studentEmail) {
       logger.debug('📧 Sending confirmation email for pasted appointment...')
@@ -2357,8 +2370,14 @@ const pasteAppointmentDirectly = async () => {
             studentName: studentName,
             appointmentTime: appointmentTime,
             type: 'pending_payment',
-            amount: amountForEmail,
+            amount: totalAmountRappen > 0 ? amountForEmail : undefined,
+            showPrice: totalAmountRappen > 0,
             staffName: staffName,
+            location: locationName,
+            locationAddress: locationAddress,
+            eventTypeName: eventTypeName,
+            durationMinutes: durationMinutes,
+            userId: newAppointment.user_id,
             tenantId: props.currentUser?.tenant_id
           }
         })
@@ -2540,7 +2559,7 @@ const handleCopyAppointment = async (copyData: any) => {
   } catch (err) {
     console.warn('⚠️ Could not fetch payment method:', err)
   }
-  
+
   // In Zwischenablage speichern
   logger.debug('🔍 DEBUG copyData.eventData.extendedProps:', copyData.eventData.extendedProps)
   logger.debug('🔍 DEBUG copyData.eventData.extendedProps?.email:', copyData.eventData.extendedProps?.email)
@@ -2575,21 +2594,24 @@ const handleCopyAppointment = async (copyData: any) => {
   }
   
   clipboardAppointment.value = {
-      id: copyData.eventData.id,
-        title: copyData.eventData.title?.replace(' (Kopie)', '') || 'Kopierter Termin',
-        user_id: copyData.eventData.user_id,
-        staff_id: copyData.eventData.staff_id,
-        location_id: copyData.eventData.location_id,
-        appointment_type: copyData.eventData.appointment_type,
-        category: appointmentCategory,
-        type: appointmentCategory,
-        duration: copyData.eventData.duration_minutes || 45,
-        duration_minutes: copyData.eventData.duration_minutes || 45,
-        price_per_minute: copyData.eventData.price_per_minute,
-        payment_method: paymentMethod, // ✅ Von DB geladen
-        email: studentEmail || copyData.eventData.extendedProps?.email || copyData.eventData.email, // ✅ Email aus extendedProps ODER DB ODER direkt
-        student: studentName || copyData.eventData.extendedProps?.student || copyData.eventData.student, // ✅ Student name aus extendedProps ODER DB ODER direkt
-        event_type_code: copyData.eventData.event_type_code || 'lesson', // ✅ Event type code
+    id: copyData.eventData.id,
+    title: copyData.eventData.title?.replace(' (Kopie)', '') || 'Kopierter Termin',
+    user_id: copyData.eventData.user_id,
+    staff_id: copyData.eventData.staff_id,
+    location_id: copyData.eventData.location_id,
+    location: copyData.eventData.extendedProps?.location || null,
+    appointment_type: copyData.eventData.appointment_type,
+    category: appointmentCategory,
+    type: appointmentCategory,
+    duration: copyData.eventData.duration_minutes || 45,
+    duration_minutes: copyData.eventData.duration_minutes || 45,
+    price_per_minute: copyData.eventData.price_per_minute,
+    original_price_rappen: copyData.eventData.extendedProps?.original_price_rappen ?? null,
+    payment_method: paymentMethod,
+    email: studentEmail || copyData.eventData.extendedProps?.email || copyData.eventData.email,
+    student: studentName || copyData.eventData.extendedProps?.student || copyData.eventData.student,
+    event_type_code: copyData.eventData.event_type_code || 'lesson',
+    staff_first_name: copyData.eventData.extendedProps?.instructor || null,
   }
   
   logger.debug('✅ Termin in Zwischenablage gespeichert:', clipboardAppointment.value)
