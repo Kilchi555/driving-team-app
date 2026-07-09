@@ -58,6 +58,8 @@ const COMPETITOR_NEGATIVES = [
   'lkwtheorie',
   'transportschule',
   'fahrschule regensdorf',  // specific competitor location if not served
+  'ziganek fahrschule',
+  'ziganek',
 ]
 
 // Irrelevant search terms that keep appearing across campaigns and waste budget.
@@ -144,6 +146,39 @@ const IRRELEVANT_NEGATIVES = [
   'driving school near me',  // English queries — low intent for CH-German school
   'driving exam switzerland',
   'learning driving licence',
+  // Government info pages
+  'www.zh.ch',
+  'zh.ch lernfahrer',
+  'lernfahrer zh',
+  // Price info only (not booking)
+  'fahrstunden preis',
+  'fahrstunden preis schweiz',
+  'fahrschule preise vergleich',
+  // Competitor: TCS
+  'tcs fahrkurs',
+  'tcs fahrkurse',
+  'tcs fahrschule',
+  // Wrong licence categories
+  'lernfahrausweis kat a',
+  'führerausweis kategorie m',
+  'kategorie m',
+  'kat m führerschein',
+  'c1 führerschein wohnmobil',
+  'wohnmobil führerschein',
+  'autoprüfung anmelden',
+  'prüfungsanmeldung',
+  'fahrprüfung anmelden',
+  // Wrong product: category info seekers (want info about BE licence, not a course)
+  'fahrausweise schweiz',
+  'führerausweise',
+  'ausweis kategorien',
+  'ausweis kategorie',
+  'kat be',             // only info, no booking intent — real buyers search "anhänger kurs" etc.
+  'kategorie be',
+  'kat be schweiz',
+  // TCS/ADAC-style courses
+  'sicherheitskurs',
+  'fahrsicherheitskurs',
 ]
 
 // All campaigns owned by DrivingTeam (campaign IDs from DB)
