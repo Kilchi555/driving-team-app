@@ -208,65 +208,40 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // 3. Apply — update campaign CPC ceiling via REST API
-  // (mutateResources doesn't support nested campaign bidding strategy fields well)
-  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: refreshToken,
-      grant_type: 'refresh_token',
-    }),
-  })
-  const tokenData = await tokenRes.json() as any
-  const accessToken: string = tokenData.access_token
-  if (!accessToken) throw createError({ statusCode: 500, statusMessage: 'Failed to obtain access token' })
-
+  // 3. Apply — update campaign CPC ceiling via google-ads-api library
   const updated: string[] = []
   const errors: string[] = []
 
   for (const p of plan) {
     try {
-      const res = await fetch(
-        `https://googleads.googleapis.com/v23/customers/${customerId}/campaigns:mutate`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'developer-token': developerToken,
-            ...(loginCustomerId ? { 'login-customer-id': loginCustomerId } : {}),
-            'Content-Type': 'application/json',
+      const result = await customer.mutateResources([{
+        entity: 'campaign',
+        operation: 'update',
+        resource: {
+          resource_name: p.resourceName,
+          target_impression_share: {
+            // ANYWHERE_ON_PAGE = 2
+            location: 2,
+            // 80% impression share target
+            location_fraction_micros: 800_000,
+            cpc_bid_ceiling_micros: Math.round(p.newCeilingChf * 1_000_000),
           },
-          body: JSON.stringify({
-            operations: [{
-              updateMask: 'targetImpressionShare.cpcBidCeilingMicros,targetImpressionShare.location,targetImpressionShare.locationFractionMicros',
-              update: {
-                resourceName: p.resourceName,
-                targetImpressionShare: {
-                  // ANYWHERE_ON_PAGE = 2 (most common default for max reach)
-                  location: 2,
-                  // 80% impression share target — Google will bid to achieve this
-                  locationFractionMicros: 800_000,
-                  cpcBidCeilingMicros: Math.round(p.newCeilingChf * 1_000_000),
-                },
-              },
-            }],
-          }),
         },
-      )
-      if (!res.ok) {
-        const errBody = await res.text()
-        errors.push(`${p.campaignName}: HTTP ${res.status} — ${errBody.slice(0, 200)}`)
-        continue
-      }
+        update_mask: {
+          paths: [
+            'target_impression_share.cpc_bid_ceiling_micros',
+            'target_impression_share.location',
+            'target_impression_share.location_fraction_micros',
+          ],
+        },
+      }])
       updated.push(
         `${p.campaignName}: CPC ceiling CHF ${p.currentCeilingChf.toFixed(2)} → CHF ${p.newCeilingChf.toFixed(2)}, TIS target set to 80%`,
       )
     }
     catch (err: any) {
-      errors.push(`${p.campaignName}: ${err?.message ?? JSON.stringify(err)}`)
+      const errMsg = err?.message ?? err?.errors?.[0]?.message ?? JSON.stringify(err)
+      errors.push(`${p.campaignName}: ${errMsg}`)
     }
   }
 
