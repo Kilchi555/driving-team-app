@@ -87,12 +87,13 @@ export default defineEventHandler(async (event) => {
     login_customer_id: loginCustomerId || undefined,
   })
 
-  // 1. Fetch campaigns with Target Impression Share settings
+  // 1. Fetch campaigns with Target Impression Share settings + portfolio strategy info
   const campaignResponse = await customer.query(`
     SELECT
       campaign.resource_name,
       campaign.name,
       campaign.bidding_strategy_type,
+      campaign.bidding_strategy,
       campaign.target_impression_share.cpc_bid_ceiling_micros,
       campaign.target_impression_share.location,
       campaign.target_impression_share.location_fraction_micros
@@ -168,12 +169,13 @@ export default defineEventHandler(async (event) => {
   if (debug) {
     return {
       debug: true,
-      raw: (campaignResponse as any[]).map(c => ({
+      raw: (campaignResponse as any[]).filter(c =>
+        PRESETS[preset].some(r => (c.campaign?.name ?? '').toLowerCase().includes(r.campaign_name_contains.toLowerCase())),
+      ).map(c => ({
         name: c.campaign?.name,
         bidding_strategy_type: c.campaign?.bidding_strategy_type,
-        ceiling_micros: c.campaign?.target_impression_share?.cpc_bid_ceiling_micros,
+        bidding_strategy_portfolio: c.campaign?.bidding_strategy,
         ceiling_chf: (c.campaign?.target_impression_share?.cpc_bid_ceiling_micros ?? 0) / 1_000_000,
-        share_fraction_micros: c.campaign?.target_impression_share?.location_fraction_micros,
         share_pct: Math.round((c.campaign?.target_impression_share?.location_fraction_micros ?? 0) / 10_000),
         location: c.campaign?.target_impression_share?.location,
       })),
