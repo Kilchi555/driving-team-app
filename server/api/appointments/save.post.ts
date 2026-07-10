@@ -180,6 +180,9 @@ export default defineEventHandler(async (event) => {
     logger.debug('📋 Saving appointment via API:', { mode, eventId, appointmentData })
 
     let result
+    // Declared here so it's accessible both inside the create branch and after the if/else block
+    let paymentPromise: Promise<void> | null = null
+
     if (mode === 'edit' && eventId) {
       // Update existing appointment
       const { data: oldAppointment, error: fetchError } = await supabase
@@ -391,7 +394,6 @@ export default defineEventHandler(async (event) => {
       const isChargeableEventType = ['lesson', 'exam', 'theory'].includes(appointmentData.event_type_code || 'lesson')
       
       // Prepare payment data synchronously (no DB calls needed)
-      let paymentPromise: Promise<void> | null = null
       if (isChargeableEventType) {
         let finalTotalAmount = totalAmountRappenForPayment ?? 0
         let finalBasePrice = basePriceRappen || 0
