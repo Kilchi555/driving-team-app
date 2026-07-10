@@ -652,32 +652,75 @@
           </div>
 
           <!-- Import Ergebnis -->
-          <div v-if="importResult" class="mt-4 p-4 rounded-xl border"
-            :class="importResult.errorCount > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'">
-            <div class="flex flex-wrap gap-4 text-sm">
-              <div v-if="importResult.importedCount" class="flex items-center gap-1.5 text-green-700">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                <strong>{{ importResult.importedCount }}</strong> importiert
-              </div>
-              <div v-if="importResult.updatedCount" class="flex items-center gap-1.5 text-blue-700">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                <strong>{{ importResult.updatedCount }}</strong> aktualisiert
-              </div>
-              <div v-if="importResult.skippedCount" class="flex items-center gap-1.5 text-gray-600">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <strong>{{ importResult.skippedCount }}</strong> übersprungen
-              </div>
-              <div v-if="importResult.errorCount" class="flex items-center gap-1.5 text-red-600">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
-                <strong>{{ importResult.errorCount }}</strong> Fehler
+          <div v-if="importResult" class="mt-4 space-y-3">
+
+            <!-- Partial-Import Warnung -->
+            <div v-if="importResult.errorCount > 0 && (importResult.importedCount > 0 || importResult.updatedCount > 0)"
+              class="p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-3">
+              <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+              <div>
+                <p class="text-sm font-semibold text-amber-800">Teilweise importiert</p>
+                <p class="text-xs text-amber-700 mt-0.5">
+                  {{ importResult.importedCount + importResult.updatedCount }} Einträge wurden bereits geschrieben und bleiben erhalten.
+                  Die fehlgeschlagenen Zeilen wurden <strong>nicht</strong> importiert.
+                </p>
+                <p class="text-xs text-amber-700 mt-1">
+                  💡 <strong>Du kannst dieselbe Datei erneut importieren</strong> — bereits geschriebene Einträge werden als Duplikate erkannt und gemäss deiner Auswahl behandelt.
+                </p>
               </div>
             </div>
-            <!-- Fehlerdetails -->
-            <div v-if="importResult.errors?.length" class="mt-3 max-h-32 overflow-y-auto space-y-1">
-              <p v-for="err in importResult.errors.slice(0, 20)" :key="err.row"
-                class="text-xs text-red-700">
-                Zeile {{ err.row }}: {{ err.email }} — {{ err.reason }}
-              </p>
+
+            <!-- Erfolgsmeldung -->
+            <div v-if="importResult.errorCount === 0"
+              class="p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2">
+              <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              <p class="text-sm font-medium text-green-800">Import erfolgreich abgeschlossen</p>
+            </div>
+
+            <!-- Zähler -->
+            <div class="p-4 rounded-xl border"
+              :class="importResult.errorCount > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200'">
+              <div class="flex flex-wrap gap-5 text-sm">
+                <div v-if="importResult.importedCount" class="flex items-center gap-1.5 text-green-700">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  <strong>{{ importResult.importedCount }}</strong> neu importiert
+                </div>
+                <div v-if="importResult.updatedCount" class="flex items-center gap-1.5 text-blue-700">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                  <strong>{{ importResult.updatedCount }}</strong> aktualisiert
+                </div>
+                <div v-if="importResult.skippedCount" class="flex items-center gap-1.5 text-gray-500">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  <strong>{{ importResult.skippedCount }}</strong> übersprungen
+                </div>
+                <div v-if="importResult.errorCount" class="flex items-center gap-1.5 text-red-600">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+                  <strong>{{ importResult.errorCount }}</strong> Fehler
+                </div>
+              </div>
+
+              <!-- Fehlerdetails -->
+              <div v-if="importResult.errors?.length" class="mt-4">
+                <p class="text-xs font-medium text-red-700 mb-2">Fehlerdetails (max. 100 angezeigt):</p>
+                <div class="max-h-40 overflow-y-auto rounded-lg border border-red-200 bg-white">
+                  <table class="min-w-full text-xs">
+                    <thead class="bg-red-50 sticky top-0">
+                      <tr>
+                        <th class="px-3 py-2 text-left text-red-700 font-medium">Zeile</th>
+                        <th class="px-3 py-2 text-left text-red-700 font-medium">Identifikator</th>
+                        <th class="px-3 py-2 text-left text-red-700 font-medium">Grund</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-red-100">
+                      <tr v-for="err in importResult.errors" :key="err.row">
+                        <td class="px-3 py-1.5 text-gray-400 font-mono">{{ err.row }}</td>
+                        <td class="px-3 py-1.5 text-gray-700 max-w-[150px] truncate">{{ err.identifier || err.email || '–' }}</td>
+                        <td class="px-3 py-1.5 text-red-600">{{ err.reason }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
