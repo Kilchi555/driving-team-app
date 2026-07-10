@@ -80,9 +80,19 @@
             <div class="flex-1 h-px bg-gray-300 mx-2 min-w-[12px]"></div>
             <!-- Step 3 -->
             <div class="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 flex-shrink-0">
+              <div :class="['w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0', importTarget && validationResult ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600']">
+                <svg v-if="importTarget && validationResult" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                <span v-else>3</span>
+              </div>
+              <span class="text-xs sm:text-sm font-medium text-gray-900 text-center sm:text-left leading-tight">Ziel & <br class="sm:hidden">Mapping</span>
+            </div>
+            <!-- Connector -->
+            <div class="flex-1 h-px bg-gray-300 mx-2 min-w-[12px]"></div>
+            <!-- Step 4 -->
+            <div class="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 flex-shrink-0">
               <div :class="['w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0', canImport ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600']">
                 <svg v-if="canImport" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                <span v-else>3</span>
+                <span v-else>4</span>
               </div>
               <span class="text-xs sm:text-sm font-medium text-gray-900 text-center sm:text-left leading-tight">Impor<wbr>tieren</span>
             </div>
@@ -268,132 +278,200 @@
       </div>
 
 
-      <!-- Import Settings -->
+      <!-- Import-Ziel Auswahl -->
       <div v-if="rows.length && validationResult" class="bg-white rounded-lg shadow-sm border">
         <div class="p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">3. Import-Einstellungen</h3>
-          
-          <div class="grid gap-6 md:grid-cols-2">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Datenquelle <span class="text-red-500">*</span>
+          <h3 class="text-lg font-medium text-gray-900 mb-1">3. Import-Ziel wählen</h3>
+          <p class="text-sm text-gray-500 mb-4">Wo sollen die importierten Daten gespeichert werden?</p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Option: Leads -->
+            <button
+              type="button"
+              @click="importTarget = 'leads'"
+              :class="[
+                'relative rounded-xl border-2 p-4 text-left transition-all',
+                importTarget === 'leads'
+                  ? 'border-orange-400 bg-orange-50'
+                  : 'border-gray-200 hover:border-gray-300 bg-white'
+              ]"
+            >
+              <div class="flex items-start gap-3">
+                <div :class="['w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-lg', importTarget === 'leads' ? 'bg-orange-100' : 'bg-gray-100']">
+                  📣
+                </div>
+                <div>
+                  <p class="font-semibold text-gray-900 text-sm">Marketing-Leads</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Für Newsletter, Kampagnen und Interessenten. Kein Login-Zugang.</p>
+                  <p class="text-xs text-orange-600 mt-1.5 font-medium">→ leads Tabelle</p>
+                </div>
+              </div>
+              <div v-if="importTarget === 'leads'" class="absolute top-3 right-3 w-5 h-5 rounded-full bg-orange-400 flex items-center justify-center">
+                <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              </div>
+            </button>
+
+            <!-- Option: Users/Kunden -->
+            <button
+              type="button"
+              @click="importTarget = 'users'"
+              :class="[
+                'relative rounded-xl border-2 p-4 text-left transition-all',
+                importTarget === 'users'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300 bg-white'
+              ]"
+            >
+              <div class="flex items-start gap-3">
+                <div :class="['w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-lg', importTarget === 'users' ? 'bg-blue-100' : 'bg-gray-100']">
+                  👤
+                </div>
+                <div>
+                  <p class="font-semibold text-gray-900 text-sm">Echte Kunden</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Vollständige Kundenprofile mit Buchungsverlauf. Werden als Kunden angelegt.</p>
+                  <p class="text-xs text-blue-600 mt-1.5 font-medium">→ users Tabelle (role: client)</p>
+                </div>
+              </div>
+              <div v-if="importTarget === 'users'" class="absolute top-3 right-3 w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+                <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              </div>
+            </button>
+          </div>
+
+          <!-- Users: Duplikat-Handling -->
+          <div v-if="importTarget === 'users'" class="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <p class="text-sm font-medium text-gray-700 mb-3">Wenn E-Mail bereits existiert:</p>
+            <div class="flex gap-3">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" v-model="duplicateMode" value="skip" class="text-blue-500" />
+                <span class="text-sm text-gray-700">Überspringen</span>
               </label>
-              <input
-                v-model="importSettings.source"
-                type="text"
-                placeholder="z.B. 'Altes CRM', 'Excel-Export Q1'"
-                required
-                class="tenant-focus w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-              />
-              <p class="mt-1 text-xs text-gray-500">Bezeichnung für diesen Import-Batch</p>
-            </div>
-            
-            <div class="relative">
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Datentyp <span class="text-red-500">*</span>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" v-model="duplicateMode" value="update" class="text-blue-500" />
+                <span class="text-sm text-gray-700">Daten aktualisieren</span>
               </label>
-              <input
-                v-model="dataTypeInput"
-                type="text"
-                placeholder="z.B. Termine, Kundendaten, Leads..."
-                autocomplete="off"
-                required
-                @input="onDataTypeInput"
-                @focus="showDataTypeSuggestions = true"
-                @blur="onDataTypeBlur"
-                class="tenant-focus w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-              />
-              <!-- Suggestions dropdown -->
-              <ul
-                v-if="showDataTypeSuggestions && filteredDataTypes.length"
-                class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
-              >
-                <li
-                  v-for="type in filteredDataTypes"
-                  :key="type.value"
-                  @mousedown.prevent="selectDataType(type.value, type.label)"
-                  class="px-4 py-2.5 text-sm cursor-pointer hover:bg-gray-50 flex items-center justify-between"
-                >
-                  <span>{{ type.label }}</span>
-                  <span class="text-xs text-gray-400 font-mono">{{ type.value }}</span>
-                </li>
-                <li
-                  v-if="dataTypeInput.trim() && !filteredDataTypes.find(t => t.label === dataTypeInput)"
-                  @mousedown.prevent="selectDataType(dataTypeInput.trim().toLowerCase().replace(/\s+/g, '_'), dataTypeInput.trim())"
-                  class="px-4 py-2.5 text-sm cursor-pointer hover:bg-gray-50 border-t border-gray-100 text-gray-600"
-                >
-                  <span class="font-medium" :style="{ color: primaryColor }">+ Eigener Typ: </span>
-                  "{{ dataTypeInput.trim() }}"
-                </li>
-              </ul>
-              <p class="mt-1 text-xs text-gray-500">
-                Wähle einen Typ oder gib einen eigenen ein (z.B. "Termine", "Leads")
-              </p>
-            </div>
-            
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Notiz (optional)
-              </label>
-              <textarea
-                v-model="importSettings.note"
-                rows="3"
-                placeholder="Zusätzliche Informationen zum Import..."
-                class="tenant-focus w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-              ></textarea>
             </div>
           </div>
 
-          <!-- Column Mapping Info -->
-          <div class="mt-6 p-4 rounded-lg" :style="{ background: `${primaryColor}10` }">
-            <div class="flex items-start">
-              <svg class="w-5 h-5 mt-0.5 mr-3" :style="{ color: primaryColor }" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
-              </svg>
-              <div>
-                <h4 class="text-sm font-medium" :style="{ color: primaryColor }">Automatische Spalten-Erkennung</h4>
-                <p class="text-sm mt-1" :style="{ color: primaryColor }">
-                  Das System erkennt automatisch Spalten wie 
-                  <span class="font-mono px-1 rounded" :style="{ background: `${primaryColor}1f` }">email</span>, 
-                  <span class="font-mono px-1 rounded" :style="{ background: `${primaryColor}1f` }">first_name</span>, 
-                  <span class="font-mono px-1 rounded" :style="{ background: `${primaryColor}1f` }">last_name</span>, 
-                  <span class="font-mono px-1 rounded" :style="{ background: `${primaryColor}1f` }">phone</span> 
-                  basierend auf den Spaltennamen.
-                </p>
+          <!-- Leads: Quelle -->
+          <div v-if="importTarget === 'leads'" class="mt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Bezeichnung / Quelle <span class="text-red-500">*</span></label>
+            <input
+              v-model="importSettings.source"
+              type="text"
+              placeholder="z.B. 'Altes CRM', 'Excel-Export Q1'"
+              class="tenant-focus w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Spalten-Mapping -->
+      <div v-if="rows.length && validationResult && importTarget" class="bg-white rounded-lg shadow-sm border">
+        <div class="p-6">
+          <h3 class="text-lg font-medium text-gray-900 mb-1">4. Spalten zuordnen</h3>
+          <p class="text-sm text-gray-500 mb-5">Ordne die Spalten aus deiner Datei den Simy-Feldern zu. Automatisch erkannte Felder sind bereits zugeordnet.</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Pflichtfelder -->
+            <div v-for="field in currentTargetFields" :key="field.key"
+              :class="['rounded-xl border p-3', field.required && !columnMapping[field.key] ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50']">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-mono font-semibold text-gray-700">{{ field.key }}</span>
+                  <span v-if="field.required" class="text-red-500 text-xs font-bold">*</span>
+                </div>
+                <span v-if="columnMapping[field.key]" class="text-xs text-green-600 font-medium flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                  Zugeordnet
+                </span>
+                <span v-else-if="field.required" class="text-xs text-red-500 font-medium">Pflichtfeld</span>
+                <span v-else class="text-xs text-gray-400">Optional</span>
               </div>
+              <p class="text-xs text-gray-500 mb-2">{{ field.label }}</p>
+              <select
+                v-model="columnMapping[field.key]"
+                :class="['w-full px-2.5 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2', field.required && !columnMapping[field.key] ? 'border-red-300 focus:ring-red-200' : 'border-gray-300 focus:ring-blue-200']"
+              >
+                <option value="">— Nicht importieren —</option>
+                <option v-for="col in columns" :key="col" :value="col">{{ col }}</option>
+              </select>
+              <!-- Vorschau des gemappten Werts -->
+              <p v-if="columnMapping[field.key] && rows[0]" class="mt-1.5 text-xs text-gray-500 truncate">
+                Beispiel: <span class="font-medium text-gray-700">{{ rows[0][columnMapping[field.key]] || '–' }}</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Vorschau der gemappten Daten -->
+          <div class="mt-6">
+            <p class="text-sm font-medium text-gray-700 mb-3">Vorschau (erste 5 Zeilen mit Mapping):</p>
+            <div class="overflow-x-auto rounded-xl border border-gray-200">
+              <table class="min-w-full text-xs">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-3 py-2.5 text-left text-gray-500 font-medium">#</th>
+                    <th v-for="field in currentTargetFields.filter(f => columnMapping[f.key])" :key="field.key"
+                      class="px-3 py-2.5 text-left text-gray-500 font-medium">
+                      {{ field.key }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr v-for="(row, i) in rows.slice(0, 5)" :key="i" class="hover:bg-gray-50">
+                    <td class="px-3 py-2 text-gray-400">{{ i + 1 }}</td>
+                    <td v-for="field in currentTargetFields.filter(f => columnMapping[f.key])" :key="field.key"
+                      class="px-3 py-2 text-gray-800 max-w-[200px] truncate">
+                      {{ row[columnMapping[field.key]] || '–' }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Import Button -->
-      <div v-if="validationResult" class="bg-white rounded-lg shadow-sm border">
+      <div v-if="validationResult && importTarget && canImport" class="bg-white rounded-lg shadow-sm border">
         <div class="p-6">
+          <!-- Summary -->
+          <div class="flex flex-wrap gap-3 mb-4">
+            <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm text-gray-700">
+              <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+              <strong>{{ rows.length.toLocaleString() }}</strong> Zeilen
+            </div>
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium"
+              :class="importTarget === 'users' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'">
+              {{ importTarget === 'users' ? '👤 Kunden (users)' : '📣 Leads (marketing)' }}
+            </div>
+            <div class="flex items-center gap-2 px-3 py-1.5 bg-green-100 rounded-lg text-sm text-green-700">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              {{ Object.values(columnMapping).filter(Boolean).length }} Felder zugeordnet
+            </div>
+          </div>
+
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 class="text-lg font-medium text-gray-900">Bereit zum Importieren</h3>
-              <p class="text-sm text-gray-600 mt-1">
-                {{ rows.length.toLocaleString() }} Zeilen werden als "{{ dataTypeInput || importSettings.dataType }}" importiert
-              </p>
+              <p class="text-sm text-gray-500 mt-0.5">Dieser Vorgang kann nicht rückgängig gemacht werden.</p>
             </div>
             <button
               type="button"
-              :disabled="!canImport || importing"
+              :disabled="importing"
               @click="importData"
               :class="[
-                'w-full sm:w-auto px-6 py-3 rounded-lg text-sm font-medium transition-colors',
-                canImport && !importing
-                  ? 'bg-green-600 text-white hover:bg-green-700 shadow-sm'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                'w-full sm:w-auto px-6 py-3 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2',
+                !importing ? 'bg-green-600 text-white hover:bg-green-700 shadow-sm' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               ]"
             >
-              <svg v-if="importing" class="w-4 h-4 inline mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-if="importing" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
               </svg>
-              <svg v-else class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
               </svg>
-              {{ importing ? `Importiere... (${importProgress.current.toLocaleString()} / ${importProgress.total.toLocaleString()})` : 'Daten importieren' }}
+              {{ importing ? `Importiere... (${importProgress.current.toLocaleString()} / ${importProgress.total.toLocaleString()})` : `${rows.length.toLocaleString()} Einträge importieren` }}
             </button>
           </div>
 
@@ -404,10 +482,39 @@
               <span>{{ Math.round((importProgress.current / importProgress.total) * 100) }}%</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2">
-              <div
-                class="h-2 rounded-full transition-all duration-300"
-                :style="{ width: `${(importProgress.current / importProgress.total) * 100}%`, background: primaryColor }"
-              ></div>
+              <div class="h-2 rounded-full transition-all duration-300"
+                :style="{ width: `${(importProgress.current / importProgress.total) * 100}%`, background: primaryColor }">
+              </div>
+            </div>
+          </div>
+
+          <!-- Import Ergebnis -->
+          <div v-if="importResult" class="mt-4 p-4 rounded-xl border"
+            :class="importResult.errorCount > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'">
+            <div class="flex flex-wrap gap-4 text-sm">
+              <div v-if="importResult.importedCount" class="flex items-center gap-1.5 text-green-700">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                <strong>{{ importResult.importedCount }}</strong> importiert
+              </div>
+              <div v-if="importResult.updatedCount" class="flex items-center gap-1.5 text-blue-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                <strong>{{ importResult.updatedCount }}</strong> aktualisiert
+              </div>
+              <div v-if="importResult.skippedCount" class="flex items-center gap-1.5 text-gray-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <strong>{{ importResult.skippedCount }}</strong> übersprungen
+              </div>
+              <div v-if="importResult.errorCount" class="flex items-center gap-1.5 text-red-600">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+                <strong>{{ importResult.errorCount }}</strong> Fehler
+              </div>
+            </div>
+            <!-- Fehlerdetails -->
+            <div v-if="importResult.errors?.length" class="mt-3 max-h-32 overflow-y-auto space-y-1">
+              <p v-for="err in importResult.errors.slice(0, 20)" :key="err.row"
+                class="text-xs text-red-700">
+                Zeile {{ err.row }}: {{ err.email }} — {{ err.reason }}
+              </p>
             </div>
           </div>
         </div>
@@ -1137,6 +1244,65 @@ const importSettings = reactive({
   dataType: '' as string,
 })
 
+// ── Import target & column mapping ────────────────────────────────────────────
+const importTarget = ref<'leads' | 'users' | ''>('')
+const duplicateMode = ref<'skip' | 'update'>('skip')
+const importResult = ref<any>(null)
+
+// Fields per import target
+const LEADS_FIELDS = [
+  { key: 'email', label: 'E-Mail-Adresse', required: true },
+  { key: 'first_name', label: 'Vorname', required: false },
+  { key: 'last_name', label: 'Nachname', required: false },
+  { key: 'phone', label: 'Telefonnummer', required: false },
+]
+
+const USERS_FIELDS = [
+  { key: 'email', label: 'E-Mail-Adresse', required: true },
+  { key: 'first_name', label: 'Vorname', required: true },
+  { key: 'last_name', label: 'Nachname', required: true },
+  { key: 'phone', label: 'Telefonnummer', required: false },
+  { key: 'birth_date', label: 'Geburtsdatum (TT.MM.JJJJ)', required: false },
+  { key: 'street', label: 'Strasse', required: false },
+  { key: 'street_nr', label: 'Hausnummer', required: false },
+  { key: 'zip', label: 'PLZ', required: false },
+  { key: 'city', label: 'Ort', required: false },
+  { key: 'notes', label: 'Notizen / Bemerkungen', required: false },
+]
+
+const currentTargetFields = computed(() =>
+  importTarget.value === 'users' ? USERS_FIELDS : LEADS_FIELDS
+)
+
+// Column mapping: field.key → CSV column name
+const columnMapping = reactive<Record<string, string>>({})
+
+// Auto-detect mapping when columns change
+watch(columns, (cols) => {
+  if (!cols.length) return
+  // Clear existing
+  Object.keys(columnMapping).forEach(k => delete columnMapping[k])
+
+  const all = [...LEADS_FIELDS, ...USERS_FIELDS]
+  for (const field of all) {
+    const match = cols.find(col => {
+      const c = col.toLowerCase()
+      if (field.key === 'email') return c.includes('email') || c.includes('e-mail')
+      if (field.key === 'first_name') return c.includes('vorname') || c.includes('firstname') || c === 'first_name'
+      if (field.key === 'last_name') return c.includes('nachname') || c.includes('lastname') || c === 'last_name'
+      if (field.key === 'phone') return c.includes('telefon') || c.includes('phone') || c.includes('mobile') || c.includes('handy')
+      if (field.key === 'birth_date') return c.includes('geburt') || c.includes('birth')
+      if (field.key === 'street') return (c.includes('strasse') || c.includes('street')) && !c.includes('nr')
+      if (field.key === 'street_nr') return c.includes('nr') || c.includes('hausnummer')
+      if (field.key === 'zip') return c.includes('plz') || c.includes('postal') || c.includes('zip')
+      if (field.key === 'city') return c.includes('ort') || c.includes('city') || c.includes('stadt')
+      if (field.key === 'notes') return c.includes('notiz') || c.includes('note') || c.includes('bemerkung')
+      return false
+    })
+    if (match) columnMapping[field.key] = match
+  }
+}, { immediate: true })
+
 // Predefined data types — users can also type their own
 const PREDEFINED_DATA_TYPES = [
   { value: 'customers', label: 'Kundendaten' },
@@ -1181,16 +1347,14 @@ function onDataTypeInput() {
   }
 }
 
-// Is the selected data type one of the structured ones (customers/invoices)?
-const isStructuredType = computed(() =>
-  importSettings.dataType === 'customers' || importSettings.dataType === 'invoices'
-)
-
 // Computed property to check if import is allowed
 const canImport = computed(() => {
-  return validationResult.value && 
-         importSettings.source.trim() !== '' && 
-         importSettings.dataType.trim() !== ''
+  if (!validationResult.value || !importTarget.value) return false
+  if (importTarget.value === 'leads') {
+    return !!importSettings.source.trim() && !!columnMapping['email']
+  }
+  // users: require email + at least first or last name mapped
+  return !!columnMapping['email'] && (!!columnMapping['first_name'] || !!columnMapping['last_name'])
 })
 
 // View functionality (from imported-data.vue)
@@ -1360,6 +1524,10 @@ function resetAll() {
   importSettings.source = ''
   importSettings.note = ''
   dataTypeInput.value = ''
+  importTarget.value = ''
+  importResult.value = null
+  duplicateMode.value = 'skip'
+  Object.keys(columnMapping).forEach(k => delete columnMapping[k])
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
@@ -1465,75 +1633,79 @@ function mapRow(row: Row): any {
   return mapped
 }
 
+function buildMappedRow(row: Row): Record<string, any> {
+  const result: Record<string, any> = {}
+  for (const [fieldKey, csvCol] of Object.entries(columnMapping)) {
+    if (csvCol && row[csvCol] !== undefined) {
+      result[fieldKey] = row[csvCol]
+    }
+  }
+  return result
+}
+
 async function importData() {
-  if (!rows.value.length || !validationResult.value) return
-  
+  if (!rows.value.length || !validationResult.value || !importTarget.value) return
+
   importing.value = true
   importProgress.current = 0
   importProgress.total = rows.value.length
+  importResult.value = null
 
   try {
-    const authStore = useAuthStore()
-    const tenantId = authStore.userProfile?.tenant_id
-    const userId = authStore.userProfile?.id
-    
-    if (!tenantId || !userId) {
-      throw new Error('Keine Tenant- oder Benutzer-ID gefunden')
-    }
+    const mappedRows = rows.value.map(buildMappedRow)
 
-    const batchResponse = await $fetch('/api/imports/create-batch', {
-      method: 'POST',
-      body: {
-        tenantId,
-        source: importSettings.source,
-        note: importSettings.note,
-        totalRows: rows.value.length,
-        createdBy: userId,
-        dataType: importSettings.dataType
-      }
-    })
-
-    const batchId = batchResponse.batchId
-
-    if (isStructuredType.value) {
-      // Structured types: column mapping + dedicated tables
-      const mappedData = rows.value.map(mapRow)
-      const endpoint = importSettings.dataType === 'customers'
-        ? '/api/imports/import-customers'
-        : '/api/imports/import-invoices'
-      const payloadKey = importSettings.dataType === 'customers' ? 'customers' : 'invoices'
-
-      for (let i = 0; i < mappedData.length; i += CHUNK_SIZE) {
-        const chunk = mappedData.slice(i, i + CHUNK_SIZE)
-        await $fetch(endpoint, {
-          method: 'POST',
-          body: { tenantId, batchId, [payloadKey]: chunk, createdBy: userId }
-        })
-        importProgress.current = Math.min(i + CHUNK_SIZE, mappedData.length)
-      }
+    if (importTarget.value === 'users') {
+      // ── Import as real customers into users table ────────────────────
+      const result = await $fetch('/api/admin/import-users', {
+        method: 'POST',
+        body: {
+          rows: mappedRows,
+          duplicateMode: duplicateMode.value,
+        },
+      }) as any
+      importProgress.current = rows.value.length
+      importResult.value = result
     } else {
-      // Generic type: store raw JSON as-is
-      const genericData = rows.value.map(row => ({ raw_json: { ...row } }))
+      // ── Import as leads (existing batch import system) ───────────────
+      const authStore = useAuthStore()
+      const tenantId = authStore.userProfile?.tenant_id
+      const userId = authStore.userProfile?.id
+      if (!tenantId || !userId) throw new Error('Keine Tenant- oder Benutzer-ID gefunden')
 
-      for (let i = 0; i < genericData.length; i += CHUNK_SIZE) {
-        const chunk = genericData.slice(i, i + CHUNK_SIZE)
-        await $fetch('/api/imports/import-records', {
+      const batchResponse = await $fetch('/api/imports/create-batch', {
+        method: 'POST',
+        body: {
+          tenantId,
+          source: importSettings.source,
+          note: importSettings.note,
+          totalRows: rows.value.length,
+          createdBy: userId,
+          dataType: 'leads',
+        },
+      }) as any
+      const batchId = batchResponse.batchId
+
+      for (let i = 0; i < mappedRows.length; i += CHUNK_SIZE) {
+        const chunk = mappedRows.slice(i, i + CHUNK_SIZE)
+        await $fetch('/api/imports/import-customers', {
           method: 'POST',
-          body: { tenantId, batchId, dataType: importSettings.dataType, records: chunk, createdBy: userId }
+          body: { tenantId, batchId, customers: chunk, createdBy: userId },
         })
-        importProgress.current = Math.min(i + CHUNK_SIZE, genericData.length)
+        importProgress.current = Math.min(i + CHUNK_SIZE, mappedRows.length)
       }
-    }
 
-    alert(`Erfolgreich ${rows.value.length.toLocaleString()} Einträge als "${dataTypeInput.value || importSettings.dataType}" importiert!`)
-    
-    resetAll()
-    await loadBatches()
-    activeTab.value = 'view'
-    
+      importResult.value = {
+        importedCount: rows.value.length,
+        updatedCount: 0,
+        skippedCount: 0,
+        errorCount: 0,
+        errors: [],
+      }
+      await loadBatches()
+    }
   } catch (error: any) {
     console.error('Import failed:', error)
-    alert(`Import fehlgeschlagen: ${error.message || 'Unbekannter Fehler'}`)
+    importResult.value = { errorCount: 1, errors: [{ row: 0, email: '', reason: error.message || 'Unbekannter Fehler' }] }
   } finally {
     importing.value = false
     importProgress.current = 0
