@@ -758,27 +758,48 @@
             </div>
           </div>
 
+          <!-- Hinweis: Dry-Run erforderlich (nur users) -->
+          <div v-if="importTarget === 'users' && !dryRunChecked"
+            class="flex items-start gap-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl mb-4">
+            <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+            <div>
+              <p class="text-sm font-semibold text-amber-800">Duplikat-Prüfung erforderlich</p>
+              <p class="text-xs text-amber-700 mt-0.5">Bitte führe zuerst oben die Duplikat-Prüfung aus. So siehst du vor dem Import, welche Einträge bereits in der Datenbank vorhanden sind.</p>
+            </div>
+          </div>
+
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 class="text-lg font-medium text-gray-900">Bereit zum Importieren</h3>
-              <p class="text-sm text-gray-500 mt-0.5">Dieser Vorgang kann nicht rückgängig gemacht werden.</p>
+              <h3 class="text-lg font-medium" :class="dryRunChecked ? 'text-gray-900' : 'text-gray-400'">
+                {{ dryRunChecked ? 'Bereit zum Importieren' : 'Import gesperrt' }}
+              </h3>
+              <p class="text-sm mt-0.5" :class="dryRunChecked ? 'text-gray-500' : 'text-gray-400'">
+                {{ dryRunChecked ? 'Dieser Vorgang kann nicht rückgängig gemacht werden.' : 'Duplikat-Prüfung muss zuerst ausgeführt werden.' }}
+              </p>
             </div>
             <button
               type="button"
-              :disabled="importing"
+              :disabled="importing || !dryRunChecked"
               @click="importData"
               :class="[
                 'w-full sm:w-auto px-6 py-3 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2',
-                !importing ? 'bg-green-600 text-white hover:bg-green-700 shadow-sm' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                importing || !dryRunChecked ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700 shadow-sm'
               ]"
             >
               <svg v-if="importing" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
               </svg>
+              <svg v-else-if="!dryRunChecked" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+              </svg>
               <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
               </svg>
-              {{ importing ? `Importiere... (${importProgress.current.toLocaleString()} / ${importProgress.total.toLocaleString()})` : `${rows.length.toLocaleString()} Einträge importieren` }}
+              {{ importing
+                ? `Importiere... (${importProgress.current.toLocaleString()} / ${importProgress.total.toLocaleString()})`
+                : !dryRunChecked
+                  ? 'Duplikate zuerst prüfen'
+                  : `+ ${rows.length.toLocaleString()} Einträge importieren` }}
             </button>
           </div>
 
@@ -1824,6 +1845,12 @@ function onDataTypeInput() {
 }
 
 // Computed property to check if import is allowed
+// True once the dry-run has been successfully completed for users imports
+const dryRunChecked = computed(() => {
+  if (importTarget.value !== 'users') return true
+  return !!(dryRunResult.value && !dryRunResult.value.error)
+})
+
 const canImport = computed(() => {
   if (!validationResult.value || !importTarget.value) return false
   if (importTarget.value === 'leads') {
