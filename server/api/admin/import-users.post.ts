@@ -14,6 +14,29 @@ interface UserRow {
   zip?: string
   city?: string
   lernfahrausweis_nr?: string
+  // Extended fields
+  category?: string        // comma-separated → text[] in DB
+  profession?: string
+  language?: string
+  preferred_payment_method?: string
+  faberid?: string
+  sari_faberid?: string
+  sari_birthdate?: string  // date string, same parsing as birthdate
+  acquisition_source?: string
+  referred_by_code?: string
+  // Extra: arbitrary key-value pairs from metadata columns
+  [key: string]: string | undefined
+}
+
+/** Sanitize a raw CSV column name into a valid JSONB key */
+function sanitizeMetaKey(raw: string): string {
+  return raw.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_|_$/g, '')
+}
+
+/** Parse comma/semicolon-separated category string into array */
+function parseCategories(raw: string | undefined): string[] | null {
+  if (!raw?.trim()) return null
+  return raw.split(/[,;]/).map(c => c.trim().toUpperCase()).filter(Boolean)
 }
 
 /**
@@ -82,11 +105,13 @@ export default defineEventHandler(async (event) => {
     duplicateMode = 'skip',
     rowActions = {},
     dryRun = false,
+    metadataFields = [],
   } = body as {
     rows: UserRow[]
     duplicateMode?: DuplicateMode
     rowActions?: Record<number, DuplicateMode>
     dryRun?: boolean
+    metadataFields?: string[]   // CSV column names to store in metadata JSONB
   }
 
   if (!Array.isArray(rows) || rows.length === 0) {
@@ -123,6 +148,13 @@ export default defineEventHandler(async (event) => {
       return
     }
 
+    // Build metadata object from designated CSV columns
+    const metadata: Record<string, string> = {}
+    for (const colName of metadataFields) {
+      const val = row[colName]?.trim()
+      if (val) metadata[sanitizeMetaKey(colName)] = val
+    }
+
     validRows.push({
       _rowIndex: index + 2,
       email,
@@ -137,6 +169,17 @@ export default defineEventHandler(async (event) => {
       street_nr: row.street_nr?.trim() || null,
       zip: row.zip?.trim() || null,
       city: row.city?.trim() || null,
+      // Extended fields
+      category: parseCategories(row.category),
+      profession: row.profession?.trim() || null,
+      language: row.language?.trim() || null,
+      preferred_payment_method: row.preferred_payment_method?.trim() || null,
+      faberid: row.faberid?.trim() || null,
+      sari_faberid: row.sari_faberid?.trim() || null,
+      sari_birthdate: parseDate(row.sari_birthdate),
+      acquisition_source: row.acquisition_source?.trim() || null,
+      referred_by_code: row.referred_by_code?.trim() || null,
+      _metadata: Object.keys(metadata).length > 0 ? metadata : null,
     })
   })
 
@@ -189,7 +232,7 @@ export default defineEventHandler(async (event) => {
   const toUpdate: { id: string; data: any; rowIndex: number; matchedOn: string; mode: DuplicateMode }[] = []
 
   for (const row of validRows) {
-    const { _rowIndex, phone_normalized, phone_raw, name_key, ...userData } = row
+    const { _rowIndex, phone_normalized, phone_raw, name_key, _metadata, ...userData } = row
 
     // Collect all matches across all methods
     const matches: { id: string; via: string }[] = []
@@ -202,7 +245,11 @@ export default defineEventHandler(async (event) => {
     const existingId = matches[0]?.id
     const matchedOn = matches.map(m => m.via).join(', ')
 
-    const insertData = { ...userData, phone: phone_raw }
+    const insertData = {
+      ...userData,
+      phone: phone_raw,
+      ...(_metadata ? { metadata: _metadata } : {}),
+    }
     const identifier = row.email || phone_raw || row.lernfahrausweis_nr || `${row.first_name} ${row.last_name}`
 
     // Per-row action overrides the global duplicateMode
@@ -233,7 +280,7 @@ export default defineEventHandler(async (event) => {
     const ids = toUpdate.map(r => r.id)
     const { data: existingData } = await supabase
       .from('users')
-      .select('id, email, phone, birthdate, street, street_nr, zip, city, lernfahrausweis_nr')
+      .select('id, email, phone, birthdate, street, street_nr, zip, city, lernfahrausweis_nr, category, profession, language, preferred_payment_method, faberid, sari_faberid, sari_birthdate, acquisition_source, referred_by_code, metadata')
       .in('id', ids)
     for (const u of existingData || []) {
       existingRecordsById.set(u.id, u)
@@ -304,13 +351,26 @@ export default defineEventHandler(async (event) => {
       // Only set fields that are currently NULL/empty in the existing record
       const existing = existingRecordsById.get(id) || {}
       updatePayload = {}
-      const SUPPLEMENTABLE = ['first_name', 'last_name', 'phone', 'birthdate', 'street', 'street_nr', 'zip', 'city', 'lernfahrausweis_nr'] as const
+      const SUPPLEMENTABLE = [
+        'first_name', 'last_name', 'phone', 'birthdate', 'street', 'street_nr', 'zip', 'city',
+        'lernfahrausweis_nr', 'category', 'profession', 'language', 'preferred_payment_method',
+        'faberid', 'sari_faberid', 'sari_birthdate', 'acquisition_source', 'referred_by_code',
+      ] as const
       for (const field of SUPPLEMENTABLE) {
         const incomingVal = field === 'phone' ? data.phone : data[field]
         const existingVal = existing[field]
         // Only update if existing is null/empty AND incoming has a value
-        if ((existingVal === null || existingVal === undefined || existingVal === '') && incomingVal) {
+        if ((existingVal === null || existingVal === undefined || existingVal === '' ||
+             (Array.isArray(existingVal) && existingVal.length === 0)) && incomingVal) {
           updatePayload[field] = incomingVal
+        }
+      }
+      // Supplement metadata: merge new keys into existing JSONB (don't overwrite existing keys)
+      if (data.metadata && typeof data.metadata === 'object') {
+        const existingMeta = existing.metadata || {}
+        const mergedMeta = { ...data.metadata, ...existingMeta } // existing keys take priority
+        if (JSON.stringify(mergedMeta) !== JSON.stringify(existingMeta)) {
+          updatePayload.metadata = mergedMeta
         }
       }
       if (Object.keys(updatePayload).length === 0) {
@@ -330,7 +390,17 @@ export default defineEventHandler(async (event) => {
         street_nr: data.street_nr,
         zip: data.zip,
         city: data.city,
-        ...(data.lernfahrausweis_nr ? { lernfahrausweis_nr: data.lernfahrausweis_nr } : {}),
+        ...(data.lernfahrausweis_nr != null ? { lernfahrausweis_nr: data.lernfahrausweis_nr } : {}),
+        ...(data.category != null ? { category: data.category } : {}),
+        ...(data.profession != null ? { profession: data.profession } : {}),
+        ...(data.language != null ? { language: data.language } : {}),
+        ...(data.preferred_payment_method != null ? { preferred_payment_method: data.preferred_payment_method } : {}),
+        ...(data.faberid != null ? { faberid: data.faberid } : {}),
+        ...(data.sari_faberid != null ? { sari_faberid: data.sari_faberid } : {}),
+        ...(data.sari_birthdate != null ? { sari_birthdate: data.sari_birthdate } : {}),
+        ...(data.acquisition_source != null ? { acquisition_source: data.acquisition_source } : {}),
+        ...(data.referred_by_code != null ? { referred_by_code: data.referred_by_code } : {}),
+        ...(data.metadata != null ? { metadata: data.metadata } : {}),
       }
     }
 
