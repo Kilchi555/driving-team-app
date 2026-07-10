@@ -1502,13 +1502,8 @@
       </div>
     </div>
 
-    <!-- Status Change Modal - Using Teleport for reliable rendering -->
+    <!-- Status Change Modal -->
     <Teleport to="body">
-      <!-- DEBUG: Check if modal renders -->
-      <div v-if="showStatusChangeModal" data-status-modal class="fixed top-0 right-0 bg-green-600 text-white p-4 z-[10000] text-sm font-bold shadow-lg">
-        ✅ MODAL IS RENDERING!
-      </div>
-      
       <div 
         v-if="showStatusChangeModal" 
         class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-[9999] p-4" 
@@ -1520,16 +1515,6 @@
         >
         <div class="px-6 py-4 border-b border-gray-200" :style="{ background: `${primaryColor}10` }">
           <h2 class="text-xl font-bold text-gray-900">Kurs-Status ändern</h2>
-          <!-- DEBUG: Show modal state with visual indicator -->
-          <div class="mt-3 p-3 bg-white rounded border-2" :style="{ borderColor: `${primaryColor}66` }">
-            <div class="text-xs font-mono space-y-1 text-gray-700">
-              <div>🔸 Modal Sichtbar: {{ showStatusChangeModal ? '✅ JA' : '❌ NEIN' }}</div>
-              <div>📍 Kurs ID: {{ statusChangeCourse?.id?.substring(0, 12) }}...</div>
-              <div>📝 Name: {{ statusChangeCourse?.name }}</div>
-              <div>🔄 Status: {{ oldStatus }} → {{ newStatus }}</div>
-              <div>🎯 isCanceling: {{ isCanceling }}</div>
-            </div>
-          </div>
         </div>
         
         <div class="px-6 py-4 space-y-6">
@@ -4248,60 +4233,6 @@ const statusChangeCourse = ref<any>(null)
 const oldStatus = ref('')
 const newStatus = ref('')
 
-// DEBUG: Watch for showStatusChangeModal changes - BRUTE FORCE DOM INJECTION
-watch(showStatusChangeModal, (newVal, oldVal) => {
-  console.log('🔴🔴🔴 WATCH: showStatusChangeModal changed!', { oldVal, newVal })
-  
-  // Remove any existing brute-force modal
-  const existingModal = document.getElementById('brute-force-status-modal')
-  if (existingModal) {
-    existingModal.remove()
-  }
-  
-  if (newVal && statusChangeCourse.value) {
-    console.log('🔴🔴🔴 CREATING BRUTE FORCE MODAL!')
-    
-    // Create modal backdrop
-    const modalBackdrop = document.createElement('div')
-    modalBackdrop.id = 'brute-force-status-modal'
-    modalBackdrop.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 99999;'
-    
-    // Create modal content
-    const modalContent = document.createElement('div')
-    modalContent.style.cssText = 'background: white; padding: 24px; border-radius: 8px; max-width: 500px; width: 90%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);'
-    modalContent.innerHTML = `
-      <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 16px;">🔄 Kurs-Status ändern</h2>
-      <p style="margin-bottom: 8px;"><strong>Kurs:</strong> ${statusChangeCourse.value?.name || 'Unbekannt'}</p>
-      <p style="margin-bottom: 16px;"><strong>Status:</strong> ${oldStatus.value} → ${newStatus.value}</p>
-      <div style="display: flex; gap: 12px; justify-content: flex-end;">
-        <button id="bf-cancel-btn" style="padding: 8px 16px; background: #e5e7eb; border-radius: 6px; cursor: pointer;">Abbrechen</button>
-        <button id="bf-confirm-btn" style="padding: 8px 16px; background: #2563eb; color: white; border-radius: 6px; cursor: pointer;">Status ändern</button>
-      </div>
-    `
-    
-    modalBackdrop.appendChild(modalContent)
-    document.body.appendChild(modalBackdrop)
-    
-    // Add event listeners
-    document.getElementById('bf-cancel-btn')?.addEventListener('click', () => {
-      showStatusChangeModal.value = false
-    })
-    
-    document.getElementById('bf-confirm-btn')?.addEventListener('click', () => {
-      // Call the actual confirm function
-      confirmStatusChange()
-    })
-    
-    // Close on backdrop click
-    modalBackdrop.addEventListener('click', (e) => {
-      if (e.target === modalBackdrop) {
-        showStatusChangeModal.value = false
-      }
-    })
-    
-    console.log('🔴🔴🔴 BRUTE FORCE MODAL CREATED!')
-  }
-}, { immediate: false })
 const statusChangeOptions = ref({
   notifyParticipants: true,
   updateLandingPage: true,
