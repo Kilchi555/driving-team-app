@@ -364,7 +364,8 @@
             </div>
             <!-- Aktion bei Duplikat -->
             <div>
-              <p class="text-sm font-medium text-gray-700 mb-3">Was tun bei Duplikat?</p>
+              <p class="text-sm font-medium text-gray-700 mb-1">Standard-Aktion bei Duplikaten</p>
+              <p class="text-xs text-gray-500 mb-3">Gilt für alle Duplikate — kann nach der Prüfung pro Zeile überschrieben werden.</p>
               <div class="grid grid-cols-1 gap-2">
                 <label v-for="opt in duplicateModeOptions" :key="opt.value"
                   :class="['flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all', duplicateMode === opt.value ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300']">
@@ -505,36 +506,65 @@
               </div>
             </div>
 
-            <!-- Duplikat-Details -->
+            <!-- Duplikat-Details mit per-Zeile Aktion -->
             <div v-if="dryRunResult.duplicates?.length" class="overflow-hidden rounded-xl border border-yellow-200">
-              <div class="bg-yellow-50 px-4 py-2.5 border-b border-yellow-200">
-                <p class="text-sm font-medium text-yellow-800">Duplikate — werden {{ duplicateMode === 'update' ? 'aktualisiert' : 'übersprungen' }}</p>
+              <div class="bg-yellow-50 px-4 py-2.5 border-b border-yellow-200 flex items-center justify-between gap-3 flex-wrap">
+                <p class="text-sm font-medium text-yellow-800">
+                  {{ dryRunResult.duplicates.length }} Duplikat{{ dryRunResult.duplicates.length !== 1 ? 'e' : '' }} gefunden
+                </p>
+                <!-- Bulk-Aktion -->
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-yellow-700">Alle:</span>
+                  <select
+                    :value="duplicateMode"
+                    @change="duplicateMode = ($event.target as HTMLSelectElement).value as any"
+                    class="text-xs border border-yellow-300 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none"
+                  >
+                    <option value="skip">Überspringen</option>
+                    <option value="supplement">Ergänzen</option>
+                    <option value="overwrite">Überschreiben</option>
+                    <option value="create">Neu anlegen</option>
+                  </select>
+                </div>
               </div>
-              <div class="overflow-x-auto max-h-48 overflow-y-auto">
+              <div class="overflow-x-auto max-h-64 overflow-y-auto">
                 <table class="min-w-full text-xs">
-                  <thead class="bg-yellow-50 sticky top-0">
+                  <thead class="bg-yellow-50 sticky top-0 z-10">
                     <tr>
                       <th class="px-3 py-2 text-left text-yellow-700 font-medium">Zeile</th>
-                      <th class="px-3 py-2 text-left text-yellow-700 font-medium">Identifikator</th>
+                      <th class="px-3 py-2 text-left text-yellow-700 font-medium">Name / Identifikator</th>
                       <th class="px-3 py-2 text-left text-yellow-700 font-medium">Erkannt via</th>
-                      <th class="px-3 py-2 text-left text-yellow-700 font-medium">Aktion</th>
+                      <th class="px-3 py-2 text-left text-yellow-700 font-medium w-44">Aktion für diese Zeile</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-yellow-100 bg-white">
-                    <tr v-for="dup in dryRunResult.duplicates" :key="dup.row">
-                      <td class="px-3 py-2 text-gray-500">{{ dup.row }}</td>
-                      <td class="px-3 py-2 text-gray-800 font-medium">{{ dup.identifier }}</td>
+                    <tr v-for="dup in dryRunResult.duplicates" :key="dup.row" class="hover:bg-yellow-50">
+                      <td class="px-3 py-2 text-gray-400 font-mono">{{ dup.row }}</td>
+                      <td class="px-3 py-2 text-gray-800 font-medium max-w-[180px] truncate" :title="dup.identifier">{{ dup.identifier }}</td>
                       <td class="px-3 py-2">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">{{ dup.matchedOn }}</span>
+                        <div class="flex flex-wrap gap-1">
+                          <span v-for="via in dup.matchedOn.split(', ')" :key="via"
+                            class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                            {{ via }}
+                          </span>
+                        </div>
                       </td>
                       <td class="px-3 py-2">
-                        <span :class="[
-                          'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
-                          dup.action === 'Überschreiben' ? 'bg-orange-100 text-orange-700' :
-                          dup.action === 'Ergänzen' ? 'bg-blue-100 text-blue-700' :
-                          dup.action === 'Neu anlegen' ? 'bg-green-100 text-green-700' :
-                          'bg-gray-100 text-gray-600'
-                        ]">{{ dup.action }}</span>
+                        <select
+                          v-model="rowActions[dup.row]"
+                          :class="[
+                            'w-full text-xs border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1',
+                            rowActions[dup.row] === 'skip' ? 'border-gray-300 text-gray-600 bg-gray-50' :
+                            rowActions[dup.row] === 'supplement' ? 'border-blue-300 text-blue-700 bg-blue-50 focus:ring-blue-300' :
+                            rowActions[dup.row] === 'overwrite' ? 'border-orange-300 text-orange-700 bg-orange-50 focus:ring-orange-300' :
+                            'border-green-300 text-green-700 bg-green-50 focus:ring-green-300'
+                          ]"
+                        >
+                          <option value="skip">Überspringen</option>
+                          <option value="supplement">Ergänzen</option>
+                          <option value="overwrite">Überschreiben</option>
+                          <option value="create">Neu anlegen</option>
+                        </select>
                       </td>
                     </tr>
                   </tbody>
@@ -1383,6 +1413,26 @@ const duplicateMode = ref<'skip' | 'overwrite' | 'supplement' | 'create'>('skip'
 const importResult = ref<any>(null)
 const dryRunResult = ref<any>(null)
 const dryRunning = ref(false)
+// Per-duplicate action overrides: rowIndex → action
+const rowActions = reactive<Record<number, string>>({})
+
+// When dry-run completes, pre-fill rowActions with the global default
+watch(dryRunResult, (result) => {
+  if (!result || result.error) return
+  Object.keys(rowActions).forEach(k => delete rowActions[+k])
+  for (const dup of result.duplicates || []) {
+    rowActions[dup.row] = duplicateMode.value
+  }
+})
+
+// When global duplicateMode changes, apply to all rows that still have the old default
+// (only if dry-run is done)
+watch(duplicateMode, (newMode) => {
+  if (!dryRunResult.value) return
+  for (const dup of dryRunResult.value.duplicates || []) {
+    rowActions[dup.row] = newMode
+  }
+})
 
 const duplicateModeOptions = [
   {
@@ -1696,6 +1746,7 @@ function resetAll() {
   importResult.value = null
   dryRunResult.value = null
   duplicateMode.value = 'skip'
+  Object.keys(rowActions).forEach(k => delete rowActions[+k])
   Object.keys(columnMapping).forEach(k => delete columnMapping[k])
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
@@ -1847,6 +1898,7 @@ async function importData() {
         body: {
           rows: mappedRows,
           duplicateMode: duplicateMode.value,
+          rowActions: { ...rowActions },
         },
       }) as any
       importProgress.current = rows.value.length
