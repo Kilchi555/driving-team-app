@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
         targetSearchNetwork: true,
         targetContentNetwork: false,
       },
-      containsEuPoliticalAdvertising: false,
+      containsEuPoliticalAdvertising: 'NOT_EU_POLITICAL_ADVERTISING',
     },
   }])
   if (!campaignRes.ok) return { success: false, step: 'campaigns', reason: campaignRes.data }
