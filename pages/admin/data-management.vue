@@ -347,26 +347,19 @@
 
           <!-- Users: Duplikat-Handling -->
           <div v-if="importTarget === 'users'" class="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-5">
-            <!-- Dedup-Schlüssel -->
-            <div>
-              <p class="text-sm font-medium text-gray-700 mb-3">Duplikat-Erkennung via:</p>
-              <div class="grid grid-cols-1 gap-2">
-                <label v-for="opt in dedupOptions" :key="opt.value"
-                  :class="['flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all', dedupKey === opt.value ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300']">
-                  <input type="radio" v-model="dedupKey" :value="opt.value" class="accent-blue-500 mt-0.5 flex-shrink-0" />
-                  <div class="min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <span class="text-sm font-medium text-gray-800">{{ opt.label }}</span>
-                      <span v-if="opt.recommended" class="text-xs text-blue-600 font-medium bg-blue-100 px-1.5 py-0.5 rounded">Empfohlen</span>
-                      <span v-if="opt.reliability" class="text-xs text-gray-500">{{ opt.reliability }}</span>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-0.5">{{ opt.description }}</p>
-                    <p v-if="opt.warning" class="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                      <svg class="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                      {{ opt.warning }}
-                    </p>
-                  </div>
-                </label>
+            <!-- Automatische Dedup-Info -->
+            <div class="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+              <div>
+                <p class="text-sm font-medium text-blue-800">Automatische Duplikat-Erkennung</p>
+                <p class="text-xs text-blue-700 mt-1">Es werden alle verfügbaren Felder gleichzeitig geprüft:</p>
+                <div class="flex flex-wrap gap-1.5 mt-2">
+                  <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">E-Mail</span>
+                  <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Telefon (normalisiert)</span>
+                  <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Name + Geburtsdatum</span>
+                  <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Lernfahrausweis-Nr</span>
+                </div>
+                <p class="text-xs text-blue-600 mt-1.5">Ein Treffer via einem beliebigen Feld gilt als Duplikat. Das Ergebnis zeigt via welche Felder erkannt wurde.</p>
               </div>
             </div>
             <!-- Aktion bei Duplikat -->
@@ -1387,7 +1380,6 @@ const importSettings = reactive({
 // ── Import target & column mapping ────────────────────────────────────────────
 const importTarget = ref<'leads' | 'users' | ''>('')
 const duplicateMode = ref<'skip' | 'overwrite' | 'supplement' | 'create'>('skip')
-const dedupKey = ref<'email' | 'phone' | 'email_or_phone' | 'name_birthdate' | 'lernfahrausweis'>('email_or_phone')
 const importResult = ref<any>(null)
 const dryRunResult = ref<any>(null)
 const dryRunning = ref(false)
@@ -1420,41 +1412,6 @@ const duplicateModeOptions = [
   },
 ] as const
 
-const dedupOptions = [
-  {
-    value: 'email_or_phone',
-    label: 'E-Mail oder Telefon',
-    reliability: '★★★★★',
-    recommended: true,
-    description: 'Treffer wenn E-Mail oder Telefon bereits existiert. Ideal für allgemeine Altdaten.',
-  },
-  {
-    value: 'email',
-    label: 'Nur E-Mail',
-    reliability: '★★★★★',
-    description: 'Nur Duplikat bei exakter E-Mail-Übereinstimmung. Gleiche Telefonnummern werden ignoriert.',
-  },
-  {
-    value: 'phone',
-    label: 'Nur Telefon',
-    reliability: '★★★★',
-    description: 'Duplikat bei normalisierter Telefonnummer (z.B. 079 123 45 67 = +41791234567).',
-  },
-  {
-    value: 'name_birthdate',
-    label: 'Name + Geburtsdatum',
-    reliability: '★★★★★',
-    description: 'Vergleich via Vor- + Nachname + Geburtsdatum (normalisiert). Zuverlässig wenn Email/Telefon fehlen.',
-    warning: 'Setzt voraus, dass Geburtsdatum in der Datei vorhanden ist.',
-  },
-  {
-    value: 'lernfahrausweis',
-    label: 'Lernfahrausweis-Nr',
-    reliability: '★★★★★',
-    description: 'Eindeutige nationale ID pro Fahrschüler. Perfekt für Importe aus anderen Fahrstundensystemen.',
-    warning: 'Nur sinnvoll wenn die CSV-Datei die Lernfahrausweis-Nr enthält.',
-  },
-] as const
 
 // Fields per import target
 const LEADS_FIELDS = [
@@ -1739,7 +1696,6 @@ function resetAll() {
   importResult.value = null
   dryRunResult.value = null
   duplicateMode.value = 'skip'
-  dedupKey.value = 'email_or_phone'
   Object.keys(columnMapping).forEach(k => delete columnMapping[k])
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
@@ -1854,7 +1810,7 @@ async function runDryRun() {
     const mappedRows = rows.value.map(buildMappedRow)
     dryRunResult.value = await $fetch('/api/admin/import-users', {
       method: 'POST',
-      body: { rows: mappedRows, duplicateMode: duplicateMode.value, dedupKey: dedupKey.value, dryRun: true },
+      body: { rows: mappedRows, duplicateMode: duplicateMode.value, dryRun: true },
     })
   } catch (err: any) {
     dryRunResult.value = { error: err.message }
@@ -1891,7 +1847,6 @@ async function importData() {
         body: {
           rows: mappedRows,
           duplicateMode: duplicateMode.value,
-          dedupKey: dedupKey.value,
         },
       }) as any
       importProgress.current = rows.value.length
