@@ -80,10 +80,12 @@ export default defineEventHandler(async (event) => {
   const {
     rows,
     duplicateMode = 'skip',
+    rowActions = {},
     dryRun = false,
   } = body as {
     rows: UserRow[]
     duplicateMode?: DuplicateMode
+    rowActions?: Record<number, DuplicateMode>
     dryRun?: boolean
   }
 
@@ -203,16 +205,20 @@ export default defineEventHandler(async (event) => {
     const insertData = { ...userData, phone: phone_raw }
     const identifier = row.email || phone_raw || row.lernfahrausweis_nr || `${row.first_name} ${row.last_name}`
 
-    if (existingId && duplicateMode !== 'create') {
-      if (duplicateMode === 'skip') {
+    // Per-row action overrides the global duplicateMode
+    const effectiveMode: DuplicateMode = existingId
+      ? ((rowActions[_rowIndex] as DuplicateMode) || duplicateMode)
+      : duplicateMode
+
+    if (existingId && effectiveMode !== 'create') {
+      if (effectiveMode === 'skip') {
         skippedCount++
         errorsLog.push({ row: _rowIndex, identifier, reason: `Bereits vorhanden via ${matchedOn} (übersprungen)` })
       } else {
-        // overwrite or supplement
-        toUpdate.push({ id: existingId, data: insertData, rowIndex: _rowIndex, matchedOn, mode: duplicateMode })
+        toUpdate.push({ id: existingId, data: insertData, rowIndex: _rowIndex, matchedOn, mode: effectiveMode })
       }
     } else {
-      // No match found, OR mode === 'create' (always insert)
+      // No match found, OR effectiveMode === 'create' (always insert)
       toInsert.push({
         ...insertData,
         role: 'client',
