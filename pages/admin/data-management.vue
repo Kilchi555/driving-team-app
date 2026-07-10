@@ -239,26 +239,20 @@
 
           <div class="overflow-hidden border border-gray-200 rounded-lg">
             <div class="overflow-x-auto">
-              <table class="min-w-full text-sm">
+              <table class="min-w-full text-sm whitespace-nowrap">
                 <thead class="bg-gray-50">
                   <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">#</th>
-                    <th v-for="col in columns.slice(0, 8)" :key="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12 sticky left-0 bg-gray-50 z-10">#</th>
+                    <th v-for="col in columns" :key="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       {{ col }}
-                    </th>
-                    <th v-if="columns.length > 8" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      +{{ columns.length - 8 }} weitere
                     </th>
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                   <tr v-for="(row, idx) in rows.slice(0, 10)" :key="idx" class="hover:bg-gray-50">
-                    <td class="px-4 py-3 text-gray-500 font-medium">{{ idx + 1 }}</td>
-                    <td v-for="col in columns.slice(0, 8)" :key="col" class="px-4 py-3 text-gray-900 max-w-xs truncate" :title="String(row[col] ?? '')">
+                    <td class="px-4 py-3 text-gray-500 font-medium sticky left-0 bg-white">{{ idx + 1 }}</td>
+                    <td v-for="col in columns" :key="col" class="px-4 py-3 text-gray-900 max-w-[200px] truncate" :title="String(row[col] ?? '')">
                       {{ formatCell(row[col]) }}
-                    </td>
-                    <td v-if="columns.length > 8" class="px-4 py-3 text-gray-500">
-                      ...
                     </td>
                   </tr>
                 </tbody>
@@ -460,6 +454,100 @@
               </table>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Duplikat-Vorprüfung (nur für users) -->
+      <div v-if="validationResult && importTarget === 'users' && canImport" class="bg-white rounded-lg shadow-sm border">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-lg font-medium text-gray-900">Duplikate vorab prüfen</h3>
+              <p class="text-sm text-gray-500 mt-0.5">Prüft gegen die DB ohne etwas zu importieren.</p>
+            </div>
+            <button
+              type="button"
+              :disabled="dryRunning"
+              @click="runDryRun"
+              class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              <svg v-if="dryRunning" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              {{ dryRunning ? 'Prüfe...' : 'Duplikate prüfen' }}
+            </button>
+          </div>
+
+          <!-- Dry-Run Ergebnis -->
+          <div v-if="dryRunResult && !dryRunResult.error" class="space-y-3">
+            <!-- Zusammenfassung -->
+            <div class="grid grid-cols-3 gap-3">
+              <div class="text-center p-3 bg-green-50 rounded-xl border border-green-200">
+                <div class="text-2xl font-bold text-green-700">{{ dryRunResult.newCount }}</div>
+                <div class="text-xs text-green-600 mt-0.5">Neu (wird importiert)</div>
+              </div>
+              <div class="text-center p-3 bg-yellow-50 rounded-xl border border-yellow-200">
+                <div class="text-2xl font-bold text-yellow-700">{{ dryRunResult.duplicateCount }}</div>
+                <div class="text-xs text-yellow-600 mt-0.5">Duplikate gefunden</div>
+              </div>
+              <div class="text-center p-3 bg-red-50 rounded-xl border border-red-200">
+                <div class="text-2xl font-bold text-red-700">{{ dryRunResult.invalidCount }}</div>
+                <div class="text-xs text-red-600 mt-0.5">Ungültig (wird ignoriert)</div>
+              </div>
+            </div>
+
+            <!-- Duplikat-Details -->
+            <div v-if="dryRunResult.duplicates?.length" class="overflow-hidden rounded-xl border border-yellow-200">
+              <div class="bg-yellow-50 px-4 py-2.5 border-b border-yellow-200">
+                <p class="text-sm font-medium text-yellow-800">Duplikate — werden {{ duplicateMode === 'update' ? 'aktualisiert' : 'übersprungen' }}</p>
+              </div>
+              <div class="overflow-x-auto max-h-48 overflow-y-auto">
+                <table class="min-w-full text-xs">
+                  <thead class="bg-yellow-50 sticky top-0">
+                    <tr>
+                      <th class="px-3 py-2 text-left text-yellow-700 font-medium">Zeile</th>
+                      <th class="px-3 py-2 text-left text-yellow-700 font-medium">Identifikator</th>
+                      <th class="px-3 py-2 text-left text-yellow-700 font-medium">Erkannt via</th>
+                      <th class="px-3 py-2 text-left text-yellow-700 font-medium">Aktion</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-yellow-100 bg-white">
+                    <tr v-for="dup in dryRunResult.duplicates" :key="dup.row">
+                      <td class="px-3 py-2 text-gray-500">{{ dup.row }}</td>
+                      <td class="px-3 py-2 text-gray-800 font-medium">{{ dup.identifier }}</td>
+                      <td class="px-3 py-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">{{ dup.matchedOn }}</span>
+                      </td>
+                      <td class="px-3 py-2">
+                        <span :class="['inline-flex items-center px-2 py-0.5 rounded text-xs font-medium', dup.action === 'update' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600']">
+                          {{ dup.action === 'update' ? 'Aktualisieren' : 'Überspringen' }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Ungültige Zeilen -->
+            <div v-if="dryRunResult.invalids?.length" class="overflow-hidden rounded-xl border border-red-200">
+              <div class="bg-red-50 px-4 py-2.5 border-b border-red-200">
+                <p class="text-sm font-medium text-red-800">Ungültige Zeilen — werden ignoriert</p>
+              </div>
+              <div class="max-h-32 overflow-y-auto">
+                <table class="min-w-full text-xs">
+                  <tbody class="divide-y divide-red-100 bg-white">
+                    <tr v-for="inv in dryRunResult.invalids" :key="inv.row">
+                      <td class="px-3 py-2 text-gray-500 w-16">Zeile {{ inv.row }}</td>
+                      <td class="px-3 py-2 text-gray-700">{{ inv.identifier }}</td>
+                      <td class="px-3 py-2 text-red-600">{{ inv.reason }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <p v-if="dryRunResult?.error" class="text-sm text-red-600 mt-2">Fehler: {{ dryRunResult.error }}</p>
         </div>
       </div>
 
@@ -1280,6 +1368,8 @@ const importTarget = ref<'leads' | 'users' | ''>('')
 const duplicateMode = ref<'skip' | 'update'>('skip')
 const dedupKey = ref<'email' | 'phone' | 'email_or_phone' | 'name_birthdate' | 'lernfahrausweis'>('email_or_phone')
 const importResult = ref<any>(null)
+const dryRunResult = ref<any>(null)
+const dryRunning = ref(false)
 
 const dedupOptions = [
   {
@@ -1598,6 +1688,7 @@ function resetAll() {
   dataTypeInput.value = ''
   importTarget.value = ''
   importResult.value = null
+  dryRunResult.value = null
   duplicateMode.value = 'skip'
   dedupKey.value = 'email_or_phone'
   Object.keys(columnMapping).forEach(k => delete columnMapping[k])
@@ -1704,6 +1795,23 @@ function mapRow(row: Row): any {
     else if (lowerKey.includes('id') && !mapped.legacy_id) mapped.legacy_id = row[key]
   })
   return mapped
+}
+
+async function runDryRun() {
+  if (!rows.value.length || !importTarget.value || importTarget.value !== 'users') return
+  dryRunning.value = true
+  dryRunResult.value = null
+  try {
+    const mappedRows = rows.value.map(buildMappedRow)
+    dryRunResult.value = await $fetch('/api/admin/import-users', {
+      method: 'POST',
+      body: { rows: mappedRows, duplicateMode: duplicateMode.value, dedupKey: dedupKey.value, dryRun: true },
+    })
+  } catch (err: any) {
+    dryRunResult.value = { error: err.message }
+  } finally {
+    dryRunning.value = false
+  }
 }
 
 function buildMappedRow(row: Row): Record<string, any> {
