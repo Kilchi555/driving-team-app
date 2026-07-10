@@ -402,9 +402,9 @@
           <h3 class="text-lg font-medium text-gray-900 mb-1">4. Spalten zuordnen</h3>
           <p class="text-sm text-gray-500 mb-5">Ordne die Spalten aus deiner Datei den Simy-Feldern zu. Automatisch erkannte Felder sind bereits zugeordnet.</p>
 
+          <!-- Standard-Felder -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Felder -->
-            <div v-for="field in currentTargetFields" :key="field.key"
+            <div v-for="field in currentTargetFields.filter(f => !(f as any).group)" :key="field.key"
               :class="[
                 'rounded-xl border p-3',
                 field.required && !columnMapping[field.key] ? 'border-red-200 bg-red-50' :
@@ -432,10 +432,76 @@
                 <option value="">— Nicht importieren —</option>
                 <option v-for="col in columns" :key="col" :value="col">{{ col }}</option>
               </select>
-              <!-- Vorschau des gemappten Werts -->
               <p v-if="columnMapping[field.key] && rows[0]" class="mt-1.5 text-xs text-gray-500 truncate">
                 Beispiel: <span class="font-medium text-gray-700">{{ rows[0][columnMapping[field.key]] || '–' }}</span>
               </p>
+            </div>
+          </div>
+
+          <!-- Weitere Felder (nur users) -->
+          <div v-if="importTarget === 'users'" class="mt-4">
+            <button type="button" @click="showExtraFields = !showExtraFields"
+              class="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors">
+              <svg :class="['w-4 h-4 transition-transform', showExtraFields ? 'rotate-90' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+              Weitere DB-Felder ({{ currentTargetFields.filter(f => (f as any).group === 'extra').length }} verfügbar)
+            </button>
+            <div v-if="showExtraFields" class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div v-for="field in currentTargetFields.filter(f => (f as any).group === 'extra')" :key="field.key"
+                class="rounded-xl border p-3"
+                :class="columnMapping[field.key] ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'">
+                <div class="flex items-center justify-between mb-1.5">
+                  <span class="text-xs font-mono font-semibold text-gray-700">{{ field.key }}</span>
+                  <span v-if="columnMapping[field.key]" class="text-xs text-green-600 font-medium flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    Zugeordnet
+                  </span>
+                  <span v-else class="text-xs text-gray-400">Optional</span>
+                </div>
+                <p class="text-xs text-gray-500 mb-2">{{ field.label }}</p>
+                <select v-model="columnMapping[field.key]"
+                  class="w-full px-2.5 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-200">
+                  <option value="">— Nicht importieren —</option>
+                  <option v-for="col in columns" :key="col" :value="col">{{ col }}</option>
+                </select>
+                <p v-if="columnMapping[field.key] && rows[0]" class="mt-1.5 text-xs text-gray-500 truncate">
+                  Beispiel: <span class="font-medium text-gray-700">{{ rows[0][columnMapping[field.key]] || '–' }}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nicht zugeordnete CSV-Spalten → metadata -->
+          <div v-if="unmappedColumns.length > 0" class="mt-5">
+            <div class="flex items-center gap-2 mb-3">
+              <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+              <p class="text-sm font-medium text-gray-700">
+                Nicht zugeordnete Spalten ({{ unmappedColumns.length }})
+              </p>
+            </div>
+            <p class="text-xs text-gray-500 mb-3">
+              Diese CSV-Spalten sind keinem DB-Feld zugeordnet. Du kannst sie in <code class="bg-gray-100 px-1 rounded">metadata</code> speichern (als JSON) oder ignorieren.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <label v-for="col in unmappedColumns" :key="col"
+                class="flex items-center justify-between gap-3 rounded-lg border p-3 cursor-pointer transition-colors"
+                :class="metadataColumns.has(col) ? 'border-purple-200 bg-purple-50' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'">
+                <div class="flex items-center gap-2 min-w-0">
+                  <input type="checkbox"
+                    :checked="metadataColumns.has(col)"
+                    @change="metadataColumns.has(col) ? metadataColumns.delete(col) : metadataColumns.add(col)"
+                    class="rounded border-gray-300 text-purple-600 focus:ring-purple-200 flex-shrink-0"/>
+                  <span class="text-xs font-mono text-gray-700 truncate">{{ col }}</span>
+                </div>
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                  <span v-if="metadataColumns.has(col)" class="text-xs text-purple-700 font-medium">→ metadata</span>
+                  <span v-else class="text-xs text-gray-400">ignorieren</span>
+                  <span v-if="rows[0] && rows[0][col]" class="text-xs text-gray-400 max-w-[80px] truncate hidden sm:block">
+                    ({{ rows[0][col] }})
+                  </span>
+                </div>
+              </label>
             </div>
           </div>
 
@@ -610,7 +676,7 @@
             </div>
             <div class="flex items-center gap-2 px-3 py-1.5 bg-green-100 rounded-lg text-sm text-green-700">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-              {{ Object.values(columnMapping).filter(Boolean).length }} Felder zugeordnet
+              {{ Object.values(columnMapping).filter(Boolean).length }} Felder zugeordnet<span v-if="metadataColumns.size > 0"> · {{ metadataColumns.size }} in metadata</span>
             </div>
           </div>
 
@@ -1527,6 +1593,16 @@ const USERS_FIELDS = [
   { key: 'street_nr', label: 'Hausnummer', required: false },
   { key: 'zip', label: 'PLZ', required: false },
   { key: 'city', label: 'Ort', required: false },
+  // Weitere Felder (group: 'extra') — in erweiterter Ansicht sichtbar
+  { key: 'category', label: 'Fahrausweis-Kategorien (B, A, …)', required: false, group: 'extra' },
+  { key: 'profession', label: 'Beruf', required: false, group: 'extra' },
+  { key: 'language', label: 'Sprache (de / fr / it / en)', required: false, group: 'extra' },
+  { key: 'preferred_payment_method', label: 'Bevorzugte Zahlungsmethode', required: false, group: 'extra' },
+  { key: 'faberid', label: 'Faber ID', required: false, group: 'extra' },
+  { key: 'sari_faberid', label: 'Sari Faber ID', required: false, group: 'extra' },
+  { key: 'sari_birthdate', label: 'Sari Geburtsdatum (TT.MM.JJJJ)', required: false, group: 'extra' },
+  { key: 'acquisition_source', label: 'Herkunftskanal (Google, Empfehlung, …)', required: false, group: 'extra' },
+  { key: 'referred_by_code', label: 'Referral-Code', required: false, group: 'extra' },
 ]
 
 const currentTargetFields = computed(() =>
@@ -1535,6 +1611,18 @@ const currentTargetFields = computed(() =>
 
 // Column mapping: field.key → CSV column name
 const columnMapping = reactive<Record<string, string>>({})
+
+// Whether to show extra (non-standard) fields in the mapping UI
+const showExtraFields = ref(false)
+
+// Unmatched CSV columns that the admin wants stored in metadata
+const metadataColumns = reactive<Set<string>>(new Set())
+
+// CSV columns not currently assigned to any known DB field
+const unmappedColumns = computed(() => {
+  const assigned = new Set(Object.values(columnMapping).filter(Boolean))
+  return columns.value.filter(col => !assigned.has(col))
+})
 
 // Auto-detect mapping when columns change
 watch(columns, (cols) => {
@@ -1556,6 +1644,15 @@ watch(columns, (cols) => {
       if (field.key === 'zip') return c.includes('plz') || c.includes('postal') || c.includes('zip')
       if (field.key === 'city') return c.includes('ort') || c.includes('city') || c.includes('stadt')
       if (field.key === 'lernfahrausweis_nr') return c.includes('lernfahr') || c.includes('ausweis') || c.includes('fahrausweis')
+      if (field.key === 'category') return c.includes('kategori') || c.includes('category') || c.includes('führerschein') || c === 'kat'
+      if (field.key === 'profession') return c.includes('beruf') || c.includes('profession') || c.includes('job')
+      if (field.key === 'language') return c.includes('sprache') || c.includes('language') || c === 'lang'
+      if (field.key === 'preferred_payment_method') return c.includes('zahlung') || c.includes('payment')
+      if (field.key === 'faberid') return c === 'faberid' || c === 'faber_id' || c === 'faber id'
+      if (field.key === 'sari_faberid') return c.includes('sari') && (c.includes('faber') || c.includes('id'))
+      if (field.key === 'sari_birthdate') return c.includes('sari') && c.includes('geburt')
+      if (field.key === 'acquisition_source') return c.includes('herkunft') || c.includes('acquisition') || c.includes('source') || c.includes('kanal')
+      if (field.key === 'referred_by_code') return c.includes('referral') || c.includes('refer') || c.includes('empfehlung')
       return false
     })
     if (match) columnMapping[field.key] = match
@@ -1791,6 +1888,8 @@ function resetAll() {
   duplicateMode.value = 'skip'
   Object.keys(rowActions).forEach(k => delete rowActions[+k])
   Object.keys(columnMapping).forEach(k => delete columnMapping[k])
+  metadataColumns.clear()
+  showExtraFields.value = false
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
@@ -1904,7 +2003,7 @@ async function runDryRun() {
     const mappedRows = rows.value.map(buildMappedRow)
     dryRunResult.value = await $fetch('/api/admin/import-users', {
       method: 'POST',
-      body: { rows: mappedRows, duplicateMode: duplicateMode.value, dryRun: true },
+      body: { rows: mappedRows, duplicateMode: duplicateMode.value, dryRun: true, metadataFields: [...metadataColumns] },
     })
   } catch (err: any) {
     dryRunResult.value = { error: err.message }
@@ -1919,6 +2018,10 @@ function buildMappedRow(row: Row): Record<string, any> {
     if (csvCol && row[csvCol] !== undefined) {
       result[fieldKey] = row[csvCol]
     }
+  }
+  // Include metadata columns using their original CSV column name as key
+  for (const col of metadataColumns) {
+    if (row[col] !== undefined) result[col] = row[col]
   }
   return result
 }
@@ -1942,6 +2045,7 @@ async function importData() {
           rows: mappedRows,
           duplicateMode: duplicateMode.value,
           rowActions: { ...rowActions },
+          metadataFields: [...metadataColumns],
         },
       }) as any
       importProgress.current = rows.value.length
