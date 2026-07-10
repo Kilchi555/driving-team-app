@@ -641,18 +641,96 @@
             <!-- Ungültige Zeilen -->
             <div v-if="dryRunResult.invalids?.length" class="overflow-hidden rounded-xl border border-red-200">
               <div class="bg-red-50 px-4 py-2.5 border-b border-red-200">
-                <p class="text-sm font-medium text-red-800">Ungültige Zeilen — werden ignoriert</p>
+                <p class="text-sm font-medium text-red-800">
+                  {{ dryRunResult.invalids.length }} ungültige Zeile{{ dryRunResult.invalids.length !== 1 ? 'n' : '' }} — werden ignoriert
+                </p>
+                <p class="text-xs text-red-600 mt-0.5">Du kannst Zeilen direkt hier korrigieren — der Dry-Run wird danach automatisch neu ausgeführt.</p>
               </div>
-              <div class="max-h-32 overflow-y-auto">
-                <table class="min-w-full text-xs">
-                  <tbody class="divide-y divide-red-100 bg-white">
-                    <tr v-for="inv in dryRunResult.invalids" :key="inv.row">
-                      <td class="px-3 py-2 text-gray-500 w-16">Zeile {{ inv.row }}</td>
-                      <td class="px-3 py-2 text-gray-700">{{ inv.identifier }}</td>
-                      <td class="px-3 py-2 text-red-600">{{ inv.reason }}</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div class="max-h-[600px] overflow-y-auto divide-y divide-red-100 bg-white">
+                <div v-for="inv in dryRunResult.invalids" :key="inv.row" class="px-4 py-3">
+
+                  <!-- Header: Zeile + Fehler + Aktionen -->
+                  <div class="flex items-start justify-between gap-3 mb-2">
+                    <div class="flex items-start gap-3 min-w-0">
+                      <span class="text-xs font-mono text-gray-400 flex-shrink-0 mt-0.5">Zeile {{ inv.row }}</span>
+                      <div class="flex items-center gap-2 min-w-0">
+                        <svg class="w-3.5 h-3.5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+                        <span class="text-xs font-semibold text-red-700">{{ inv.reason }}</span>
+                      </div>
+                    </div>
+                    <!-- Aktions-Buttons -->
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                      <button v-if="editingInvalidRow !== inv.row"
+                        type="button"
+                        @click="startEditInvalid(inv)"
+                        class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        Korrigieren
+                      </button>
+                      <button v-else
+                        type="button"
+                        @click="cancelEditInvalid()"
+                        class="px-2.5 py-1 text-xs font-medium text-gray-600 hover:text-gray-800 border border-gray-200 rounded-lg transition-colors">
+                        Abbrechen
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Aktuelle Feldwerte -->
+                  <div v-if="editingInvalidRow !== inv.row && rows[inv.row - 2]" class="ml-10 flex flex-wrap gap-x-4 gap-y-1 mb-1">
+                    <template v-for="col in columns" :key="col">
+                      <div v-if="rows[inv.row - 2][col]" class="flex items-baseline gap-1">
+                        <span class="text-xs text-gray-400 font-medium">{{ col }}:</span>
+                        <span class="text-xs text-gray-700 max-w-[200px] truncate" :title="rows[inv.row - 2][col]">{{ rows[inv.row - 2][col] }}</span>
+                      </div>
+                    </template>
+                    <span v-if="columns.every(col => !rows[inv.row - 2]?.[col])" class="text-xs text-gray-400 italic">Zeile leer</span>
+                  </div>
+
+                  <!-- Inline-Edit-Formular -->
+                  <div v-if="editingInvalidRow === inv.row" class="mt-3 ml-10">
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                      <p class="text-xs font-medium text-blue-800 mb-3">Felder korrigieren — alle Pflichtfelder müssen ausgefüllt sein:</p>
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div v-for="field in USERS_FIELDS.filter(f => !f.group)" :key="field.key">
+                          <label class="block text-xs font-medium mb-1"
+                            :class="problematicFields(inv.reason).includes(field.key) ? 'text-red-700' : 'text-gray-600'">
+                            {{ field.label }}
+                            <span v-if="field.required" class="text-red-500 ml-0.5">*</span>
+                            <span v-if="problematicFields(inv.reason).includes(field.key)"
+                              class="ml-1 text-red-500 font-normal">(Fehlerquelle)</span>
+                          </label>
+                          <input
+                            v-model="editBuffer[field.key]"
+                            type="text"
+                            :placeholder="field.label"
+                            :class="[
+                              'w-full px-2.5 py-1.5 text-xs border rounded-lg bg-white focus:outline-none focus:ring-2',
+                              problematicFields(inv.reason).includes(field.key)
+                                ? 'border-red-300 focus:ring-red-200 bg-red-50'
+                                : 'border-gray-300 focus:ring-blue-200'
+                            ]"
+                          />
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2 mt-4">
+                        <button
+                          type="button"
+                          @click="saveEditInvalid(inv.row)"
+                          :disabled="dryRunning"
+                          class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-lg transition-colors">
+                          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                          Speichern &amp; Dry-Run neu ausführen
+                        </button>
+                        <button type="button" @click="cancelEditInvalid()"
+                          class="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 border border-gray-200 bg-white rounded-lg transition-colors">
+                          Abbrechen
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
               </div>
             </div>
           </div>
@@ -1525,6 +1603,48 @@ const dryRunning = ref(false)
 // Per-duplicate action overrides: rowIndex → action
 const rowActions = reactive<Record<number, string>>({})
 
+// Manual corrections for invalid dry-run rows: rowArrayIndex → { fieldKey: value }
+const correctedRows = reactive(new Map<number, Record<string, string>>())
+// Which invalid row is currently being edited (inv.row = CSV row number)
+const editingInvalidRow = ref<number | null>(null)
+// Temporary buffer while editing
+const editBuffer = reactive<Record<string, string>>({})
+
+function startEditInvalid(inv: { row: number; reason: string }) {
+  const rowArrayIdx = inv.row - 2
+  const rawRow = rows.value[rowArrayIdx] || {}
+  const existing = correctedRows.get(rowArrayIdx)
+  Object.keys(editBuffer).forEach(k => delete editBuffer[k])
+  for (const field of USERS_FIELDS.filter(f => !f.group)) {
+    const csvCol = columnMapping[field.key]
+    editBuffer[field.key] = existing?.[field.key] ?? (csvCol ? (String(rawRow[csvCol] ?? '')) : '')
+  }
+  editingInvalidRow.value = inv.row
+}
+
+async function saveEditInvalid(rowIndex: number) {
+  const rowArrayIdx = rowIndex - 2
+  correctedRows.set(rowArrayIdx, { ...editBuffer })
+  editingInvalidRow.value = null
+  // Re-run dry-run automatically so the corrected row is re-evaluated
+  await runDryRun()
+}
+
+function cancelEditInvalid() {
+  editingInvalidRow.value = null
+}
+
+function removeCorrection(rowIndex: number) {
+  correctedRows.delete(rowIndex - 2)
+}
+
+/** Which field(s) are problematic based on the error reason */
+function problematicFields(reason: string): string[] {
+  if (reason.includes('E-Mail')) return ['email']
+  if (reason.includes('Vor') || reason.includes('Nach') || reason.includes('NOT NULL')) return ['first_name', 'last_name']
+  return []
+}
+
 // When dry-run completes, pre-fill rowActions with the global default
 watch(dryRunResult, (result) => {
   if (!result || result.error) return
@@ -1890,6 +2010,9 @@ function resetAll() {
   Object.keys(columnMapping).forEach(k => delete columnMapping[k])
   metadataColumns.clear()
   showExtraFields.value = false
+  correctedRows.clear()
+  editingInvalidRow.value = null
+  Object.keys(editBuffer).forEach(k => delete editBuffer[k])
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
@@ -2000,7 +2123,7 @@ async function runDryRun() {
   dryRunning.value = true
   dryRunResult.value = null
   try {
-    const mappedRows = rows.value.map(buildMappedRow)
+    const mappedRows = rows.value.map((row, i) => buildMappedRow(row, i))
     dryRunResult.value = await $fetch('/api/admin/import-users', {
       method: 'POST',
       body: { rows: mappedRows, duplicateMode: duplicateMode.value, dryRun: true, metadataFields: [...metadataColumns] },
@@ -2012,14 +2135,22 @@ async function runDryRun() {
   }
 }
 
-function buildMappedRow(row: Row): Record<string, any> {
+function buildMappedRow(row: Row, rowArrayIndex?: number): Record<string, any> {
+  // If there's a manual correction for this row, use it (merged with metadata from original)
+  if (rowArrayIndex !== undefined && correctedRows.has(rowArrayIndex)) {
+    const correction = correctedRows.get(rowArrayIndex)!
+    const result: Record<string, any> = { ...correction }
+    for (const col of metadataColumns) {
+      if (row[col] !== undefined) result[col] = row[col]
+    }
+    return result
+  }
   const result: Record<string, any> = {}
   for (const [fieldKey, csvCol] of Object.entries(columnMapping)) {
     if (csvCol && row[csvCol] !== undefined) {
       result[fieldKey] = row[csvCol]
     }
   }
-  // Include metadata columns using their original CSV column name as key
   for (const col of metadataColumns) {
     if (row[col] !== undefined) result[col] = row[col]
   }
@@ -2035,7 +2166,7 @@ async function importData() {
   importResult.value = null
 
   try {
-    const mappedRows = rows.value.map(buildMappedRow)
+    const mappedRows = rows.value.map((row, i) => buildMappedRow(row, i))
 
     if (importTarget.value === 'users') {
       // ── Import as real customers into users table ────────────────────
