@@ -16,8 +16,6 @@ interface UserRow {
   lernfahrausweis_nr?: string
 }
 
-type DedupKey = 'email' | 'phone' | 'email_or_phone' | 'name_birthdate' | 'lernfahrausweis'
-
 /**
  * skip        – leave existing record untouched, discard CSV row
  * overwrite   – replace all fields in existing record with CSV values
@@ -68,10 +66,12 @@ function nameKey(firstName: string, lastName: string, birthdate: string | null):
 /**
  * POST /api/admin/import-users
  *
+ * Always checks ALL dedup methods simultaneously:
+ *   email, phone (normalized), name+birthdate, lernfahrausweis_nr
+ *
  * Body:
  *   rows          – array of mapped user objects
  *   duplicateMode – 'skip' | 'overwrite' | 'supplement' | 'create'
- *   dedupKey      – 'email' | 'phone' | 'email_or_phone' | 'name_birthdate' | 'lernfahrausweis'
  *   dryRun        – if true, only analyse without writing to DB
  */
 export default defineEventHandler(async (event) => {
@@ -80,12 +80,10 @@ export default defineEventHandler(async (event) => {
   const {
     rows,
     duplicateMode = 'skip',
-    dedupKey = 'email_or_phone',
     dryRun = false,
   } = body as {
     rows: UserRow[]
     duplicateMode?: DuplicateMode
-    dedupKey?: DedupKey
     dryRun?: boolean
   }
 
@@ -140,75 +138,42 @@ export default defineEventHandler(async (event) => {
     })
   })
 
-  // ── Build lookup maps from existing DB users ──────────────────────────────
+  // ── Build lookup maps — ALL methods run in parallel ──────────────────────
   const existingByEmail = new Map<string, string>()
   const existingByPhone = new Map<string, string>()
   const existingByNameBirthdate = new Map<string, string>()
   const existingByLernfahrausweis = new Map<string, string>()
 
-  const useEmail = ['email', 'email_or_phone'].includes(dedupKey)
-  const usePhone = ['phone', 'email_or_phone'].includes(dedupKey)
-  const useNameBirthdate = dedupKey === 'name_birthdate'
-  const useLernfahrausweis = dedupKey === 'lernfahrausweis'
+  const emailList = validRows.map(r => r.email).filter(Boolean) as string[]
+  const phoneList = validRows.map(r => r.phone_normalized).filter(Boolean) as string[]
+  const birthdateList = [...new Set(validRows.map(r => r.birthdate).filter(Boolean) as string[])]
+  const nrList = validRows.map(r => r.lernfahrausweis_nr).filter(Boolean) as string[]
 
-  if (useEmail) {
-    const emailList = validRows.map(r => r.email).filter(Boolean) as string[]
-    if (emailList.length > 0) {
-      const { data } = await supabase
-        .from('users')
-        .select('id, email')
-        .eq('tenant_id', profile.tenant_id)
-        .in('email', emailList)
-      for (const u of data || []) {
-        if (u.email) existingByEmail.set(u.email.toLowerCase(), u.id)
-      }
-    }
-  }
+  await Promise.all([
+    // Email lookup
+    emailList.length > 0
+      ? supabase.from('users').select('id, email').eq('tenant_id', profile.tenant_id).in('email', emailList)
+          .then(({ data }) => { for (const u of data || []) if (u.email) existingByEmail.set(u.email.toLowerCase(), u.id) })
+      : Promise.resolve(),
 
-  if (usePhone) {
-    const phoneList = validRows.map(r => r.phone_normalized).filter(Boolean) as string[]
-    if (phoneList.length > 0) {
-      const { data } = await supabase
-        .from('users')
-        .select('id, phone')
-        .eq('tenant_id', profile.tenant_id)
-        .not('phone', 'is', null)
-      for (const u of data || []) {
-        const norm = normalizePhone(u.phone)
-        if (norm && phoneList.includes(norm)) existingByPhone.set(norm, u.id)
-      }
-    }
-  }
+    // Phone lookup (fetch all non-null phones, normalize & compare)
+    phoneList.length > 0
+      ? supabase.from('users').select('id, phone').eq('tenant_id', profile.tenant_id).not('phone', 'is', null)
+          .then(({ data }) => { for (const u of data || []) { const n = normalizePhone(u.phone); if (n && phoneList.includes(n)) existingByPhone.set(n, u.id) } })
+      : Promise.resolve(),
 
-  if (useNameBirthdate) {
-    const birthdateList = validRows.map(r => r.birthdate).filter(Boolean) as string[]
-    if (birthdateList.length > 0) {
-      // Fetch users with a matching birthdate (already a significant filter)
-      const { data } = await supabase
-        .from('users')
-        .select('id, first_name, last_name, birthdate')
-        .eq('tenant_id', profile.tenant_id)
-        .in('birthdate', birthdateList)
-      for (const u of data || []) {
-        const key = nameKey(u.first_name, u.last_name, u.birthdate)
-        if (key) existingByNameBirthdate.set(key, u.id)
-      }
-    }
-  }
+    // Name + birthdate lookup (pre-filtered by birthdate)
+    birthdateList.length > 0
+      ? supabase.from('users').select('id, first_name, last_name, birthdate').eq('tenant_id', profile.tenant_id).in('birthdate', birthdateList)
+          .then(({ data }) => { for (const u of data || []) { const k = nameKey(u.first_name, u.last_name, u.birthdate); if (k) existingByNameBirthdate.set(k, u.id) } })
+      : Promise.resolve(),
 
-  if (useLernfahrausweis) {
-    const nrList = validRows.map(r => r.lernfahrausweis_nr).filter(Boolean) as string[]
-    if (nrList.length > 0) {
-      const { data } = await supabase
-        .from('users')
-        .select('id, lernfahrausweis_nr')
-        .eq('tenant_id', profile.tenant_id)
-        .in('lernfahrausweis_nr', nrList)
-      for (const u of data || []) {
-        if (u.lernfahrausweis_nr) existingByLernfahrausweis.set(u.lernfahrausweis_nr, u.id)
-      }
-    }
-  }
+    // Lernfahrausweis-Nr lookup
+    nrList.length > 0
+      ? supabase.from('users').select('id, lernfahrausweis_nr').eq('tenant_id', profile.tenant_id).in('lernfahrausweis_nr', nrList)
+          .then(({ data }) => { for (const u of data || []) if (u.lernfahrausweis_nr) existingByLernfahrausweis.set(u.lernfahrausweis_nr, u.id) })
+      : Promise.resolve(),
+  ])
 
   // ── Fetch full existing records for supplement mode ───────────────────────
   // (needed to know which fields are already set)
@@ -217,32 +182,23 @@ export default defineEventHandler(async (event) => {
     // We'll fetch lazily per matched ID below — collected first
   }
 
-  // ── Classify each row ─────────────────────────────────────────────────────
+  // ── Classify each row — check ALL methods, collect all matches ───────────
   const toInsert: any[] = []
   const toUpdate: { id: string; data: any; rowIndex: number; matchedOn: string; mode: DuplicateMode }[] = []
 
   for (const row of validRows) {
     const { _rowIndex, phone_normalized, phone_raw, name_key, ...userData } = row
 
-    let existingId: string | undefined
-    let matchedOn = ''
+    // Collect all matches across all methods
+    const matches: { id: string; via: string }[] = []
+    if (row.email) { const id = existingByEmail.get(row.email); if (id) matches.push({ id, via: 'E-Mail' }) }
+    if (phone_normalized) { const id = existingByPhone.get(phone_normalized); if (id && !matches.find(m => m.id === id)) matches.push({ id, via: 'Telefon' }) }
+    if (name_key) { const id = existingByNameBirthdate.get(name_key); if (id && !matches.find(m => m.id === id)) matches.push({ id, via: 'Name+Geburtsdatum' }) }
+    if (row.lernfahrausweis_nr) { const id = existingByLernfahrausweis.get(row.lernfahrausweis_nr); if (id && !matches.find(m => m.id === id)) matches.push({ id, via: 'Lernfahrausweis-Nr' }) }
 
-    if (useEmail && row.email) {
-      existingId = existingByEmail.get(row.email)
-      if (existingId) matchedOn = 'E-Mail'
-    }
-    if (!existingId && usePhone && phone_normalized) {
-      existingId = existingByPhone.get(phone_normalized)
-      if (existingId) matchedOn = 'Telefon'
-    }
-    if (!existingId && useNameBirthdate && name_key) {
-      existingId = existingByNameBirthdate.get(name_key)
-      if (existingId) matchedOn = 'Name + Geburtsdatum'
-    }
-    if (!existingId && useLernfahrausweis && row.lernfahrausweis_nr) {
-      existingId = existingByLernfahrausweis.get(row.lernfahrausweis_nr)
-      if (existingId) matchedOn = 'Lernfahrausweis-Nr'
-    }
+    // Use first/best match as the canonical existing record
+    const existingId = matches[0]?.id
+    const matchedOn = matches.map(m => m.via).join(', ')
 
     const insertData = { ...userData, phone: phone_raw }
     const identifier = row.email || phone_raw || row.lernfahrausweis_nr || `${row.first_name} ${row.last_name}`
