@@ -71,7 +71,6 @@ export default defineEventHandler(async (event) => {
         targetSearchNetwork: true,
         targetContentNetwork: false,
       },
-      startDate: new Date().toISOString().slice(0, 10).replace(/-/g, ''),
     },
   }])
   if (!campaignRes.ok) return { success: false, step: 'campaigns', reason: campaignRes.data }
