@@ -339,17 +339,44 @@
           </div>
 
           <!-- Users: Duplikat-Handling -->
-          <div v-if="importTarget === 'users'" class="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-            <p class="text-sm font-medium text-gray-700 mb-3">Wenn E-Mail bereits existiert:</p>
-            <div class="flex gap-3">
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" v-model="duplicateMode" value="skip" class="text-blue-500" />
-                <span class="text-sm text-gray-700">Überspringen</span>
-              </label>
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" v-model="duplicateMode" value="update" class="text-blue-500" />
-                <span class="text-sm text-gray-700">Daten aktualisieren</span>
-              </label>
+          <div v-if="importTarget === 'users'" class="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-4">
+            <!-- Dedup-Schlüssel -->
+            <div>
+              <p class="text-sm font-medium text-gray-700 mb-2">Duplikat-Erkennung via:</p>
+              <div class="flex flex-wrap gap-3">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" v-model="dedupKey" value="email_or_phone" class="accent-blue-500" />
+                  <span class="text-sm text-gray-700">E-Mail <span class="text-gray-400">oder</span> Telefon</span>
+                  <span class="text-xs text-blue-600 font-medium bg-blue-50 px-1.5 py-0.5 rounded">Empfohlen</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" v-model="dedupKey" value="email" class="accent-blue-500" />
+                  <span class="text-sm text-gray-700">Nur E-Mail</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" v-model="dedupKey" value="phone" class="accent-blue-500" />
+                  <span class="text-sm text-gray-700">Nur Telefon</span>
+                </label>
+              </div>
+              <p class="mt-1.5 text-xs text-gray-500">
+                <span v-if="dedupKey === 'email_or_phone'">Treffer wenn E-Mail <em>oder</em> Telefonnummer bereits in der DB ist — auch wenn das andere Feld fehlt oder abweicht.</span>
+                <span v-else-if="dedupKey === 'email'">Nur Duplikat wenn die E-Mail exakt übereinstimmt. Gleiche Telefonnummern werden ignoriert.</span>
+                <span v-else>Nur Duplikat wenn die Telefonnummer übereinstimmt (normalisiert). Gleiche E-Mails werden ignoriert.</span>
+              </p>
+            </div>
+            <!-- Aktion bei Duplikat -->
+            <div>
+              <p class="text-sm font-medium text-gray-700 mb-2">Wenn Duplikat gefunden:</p>
+              <div class="flex gap-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" v-model="duplicateMode" value="skip" class="accent-blue-500" />
+                  <span class="text-sm text-gray-700">Überspringen</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" v-model="duplicateMode" value="update" class="accent-blue-500" />
+                  <span class="text-sm text-gray-700">Daten aktualisieren</span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -1253,6 +1280,7 @@ const importSettings = reactive({
 // ── Import target & column mapping ────────────────────────────────────────────
 const importTarget = ref<'leads' | 'users' | ''>('')
 const duplicateMode = ref<'skip' | 'update'>('skip')
+const dedupKey = ref<'email' | 'phone' | 'email_or_phone'>('email_or_phone')
 const importResult = ref<any>(null)
 
 // Fields per import target
@@ -1536,6 +1564,7 @@ function resetAll() {
   importTarget.value = ''
   importResult.value = null
   duplicateMode.value = 'skip'
+  dedupKey.value = 'email_or_phone'
   Object.keys(columnMapping).forEach(k => delete columnMapping[k])
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
@@ -1670,6 +1699,7 @@ async function importData() {
         body: {
           rows: mappedRows,
           duplicateMode: duplicateMode.value,
+          dedupKey: dedupKey.value,
         },
       }) as any
       importProgress.current = rows.value.length
