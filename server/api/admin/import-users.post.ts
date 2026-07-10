@@ -4,16 +4,15 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
 interface UserRow {
-  email: string
+  email?: string
   first_name?: string
   last_name?: string
   phone?: string
-  birth_date?: string
+  birthdate?: string
   street?: string
   street_nr?: string
   zip?: string
   city?: string
-  notes?: string
 }
 
 function isValidEmail(email: string): boolean {
@@ -74,47 +73,57 @@ export default defineEventHandler(async (event) => {
   // Validate and normalize
   const validRows: any[] = []
   rows.forEach((row, index) => {
+    // DB-seitige NOT NULL Felder: first_name und last_name
+    // email ist nullable in der DB, aber wir warnen wenn fehlend
     const email = (row.email || '').trim().toLowerCase()
-    if (!email || !isValidEmail(email)) {
-      errorsLog.push({ row: index + 2, email: row.email || '', reason: 'Ungültige oder fehlende E-Mail-Adresse' })
+    const firstName = row.first_name?.trim() || ''
+    const lastName = row.last_name?.trim() || ''
+
+    if (!firstName && !lastName) {
+      errorsLog.push({ row: index + 2, email: email || '(keine Email)', reason: 'Vor- oder Nachname erforderlich (DB NOT NULL)' })
       return
     }
-    if (!row.first_name?.trim() && !row.last_name?.trim()) {
-      errorsLog.push({ row: index + 2, email, reason: 'Vor- oder Nachname erforderlich' })
+
+    // Warn (as skipped) if email is invalid but don't block if it's empty — email is nullable in DB
+    if (email && !isValidEmail(email)) {
+      errorsLog.push({ row: index + 2, email: row.email || '', reason: 'Ungültige E-Mail-Adresse (übersprungen)' })
       return
     }
 
     validRows.push({
       _rowIndex: index + 2,
-      email,
-      first_name: row.first_name?.trim() || '',
-      last_name: row.last_name?.trim() || '',
+      email: email || null,
+      first_name: firstName,
+      last_name: lastName,
       phone: row.phone?.trim() || null,
-      birth_date: parseDate(row.birth_date),
+      birthdate: parseDate(row.birthdate),
       street: row.street?.trim() || null,
       street_nr: row.street_nr?.trim() || null,
       zip: row.zip?.trim() || null,
       city: row.city?.trim() || null,
-      notes: row.notes?.trim() || null,
     })
   })
 
-  // Fetch existing emails for this tenant in one query
-  const emailList = validRows.map(r => r.email)
-  const { data: existingUsers } = await supabase
-    .from('users')
-    .select('id, email')
-    .eq('tenant_id', profile.tenant_id)
-    .in('email', emailList)
-
-  const existingByEmail = new Map((existingUsers || []).map(u => [u.email, u.id]))
+  // Fetch existing emails for this tenant in one query (only for rows that have an email)
+  const emailList = validRows.map(r => r.email).filter(Boolean) as string[]
+  const existingByEmail = new Map<string, string>()
+  if (emailList.length > 0) {
+    const { data: existingUsers } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('tenant_id', profile.tenant_id)
+      .in('email', emailList)
+    for (const u of existingUsers || []) {
+      if (u.email) existingByEmail.set(u.email, u.id)
+    }
+  }
 
   const toInsert: any[] = []
   const toUpdate: { id: string; data: any; rowIndex: number }[] = []
 
   for (const row of validRows) {
     const { _rowIndex, ...userData } = row
-    const existingId = existingByEmail.get(row.email)
+    const existingId = row.email ? existingByEmail.get(row.email) : undefined
 
     if (existingId) {
       if (duplicateMode === 'update') {

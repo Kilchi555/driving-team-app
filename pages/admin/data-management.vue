@@ -373,19 +373,25 @@
           <p class="text-sm text-gray-500 mb-5">Ordne die Spalten aus deiner Datei den Simy-Feldern zu. Automatisch erkannte Felder sind bereits zugeordnet.</p>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Pflichtfelder -->
+            <!-- Felder -->
             <div v-for="field in currentTargetFields" :key="field.key"
-              :class="['rounded-xl border p-3', field.required && !columnMapping[field.key] ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50']">
+              :class="[
+                'rounded-xl border p-3',
+                field.required && !columnMapping[field.key] ? 'border-red-200 bg-red-50' :
+                (field as any).recommended && !columnMapping[field.key] ? 'border-yellow-200 bg-yellow-50' :
+                'border-gray-200 bg-gray-50'
+              ]">
               <div class="flex items-center justify-between mb-1.5">
                 <div class="flex items-center gap-1.5">
                   <span class="text-xs font-mono font-semibold text-gray-700">{{ field.key }}</span>
-                  <span v-if="field.required" class="text-red-500 text-xs font-bold">*</span>
+                  <span v-if="field.required" class="text-red-500 text-xs font-bold" title="DB NOT NULL">*</span>
+                  <span v-else-if="(field as any).recommended" class="text-yellow-600 text-xs font-medium">empfohlen</span>
                 </div>
                 <span v-if="columnMapping[field.key]" class="text-xs text-green-600 font-medium flex items-center gap-1">
                   <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                   Zugeordnet
                 </span>
-                <span v-else-if="field.required" class="text-xs text-red-500 font-medium">Pflichtfeld</span>
+                <span v-else-if="field.required" class="text-xs text-red-500 font-medium">Pflichtfeld (DB)</span>
                 <span v-else class="text-xs text-gray-400">Optional</span>
               </div>
               <p class="text-xs text-gray-500 mb-2">{{ field.label }}</p>
@@ -1258,16 +1264,17 @@ const LEADS_FIELDS = [
 ]
 
 const USERS_FIELDS = [
-  { key: 'email', label: 'E-Mail-Adresse', required: true },
+  // DB NOT NULL — wirklich zwingend
   { key: 'first_name', label: 'Vorname', required: true },
   { key: 'last_name', label: 'Nachname', required: true },
+  // nullable in DB — für Import empfohlen, aber nicht blockierend
+  { key: 'email', label: 'E-Mail-Adresse', required: false, recommended: true },
   { key: 'phone', label: 'Telefonnummer', required: false },
-  { key: 'birth_date', label: 'Geburtsdatum (TT.MM.JJJJ)', required: false },
+  { key: 'birthdate', label: 'Geburtsdatum (TT.MM.JJJJ)', required: false },
   { key: 'street', label: 'Strasse', required: false },
   { key: 'street_nr', label: 'Hausnummer', required: false },
   { key: 'zip', label: 'PLZ', required: false },
   { key: 'city', label: 'Ort', required: false },
-  { key: 'notes', label: 'Notizen / Bemerkungen', required: false },
 ]
 
 const currentTargetFields = computed(() =>
@@ -1291,7 +1298,7 @@ watch(columns, (cols) => {
       if (field.key === 'first_name') return c.includes('vorname') || c.includes('firstname') || c === 'first_name'
       if (field.key === 'last_name') return c.includes('nachname') || c.includes('lastname') || c === 'last_name'
       if (field.key === 'phone') return c.includes('telefon') || c.includes('phone') || c.includes('mobile') || c.includes('handy')
-      if (field.key === 'birth_date') return c.includes('geburt') || c.includes('birth')
+      if (field.key === 'birthdate') return c.includes('geburt') || c.includes('birth')
       if (field.key === 'street') return (c.includes('strasse') || c.includes('street')) && !c.includes('nr')
       if (field.key === 'street_nr') return c.includes('nr') || c.includes('hausnummer')
       if (field.key === 'zip') return c.includes('plz') || c.includes('postal') || c.includes('zip')
@@ -1351,10 +1358,12 @@ function onDataTypeInput() {
 const canImport = computed(() => {
   if (!validationResult.value || !importTarget.value) return false
   if (importTarget.value === 'leads') {
+    // Leads: Quelle + email mapping
     return !!importSettings.source.trim() && !!columnMapping['email']
   }
-  // users: require email + at least first or last name mapped
-  return !!columnMapping['email'] && (!!columnMapping['first_name'] || !!columnMapping['last_name'])
+  // Users: nur DB NOT NULL Felder: first_name UND last_name müssen zugeordnet sein
+  // email ist nullable in DB → empfohlen aber nicht blockierend
+  return !!columnMapping['first_name'] && !!columnMapping['last_name']
 })
 
 // View functionality (from imported-data.vue)
