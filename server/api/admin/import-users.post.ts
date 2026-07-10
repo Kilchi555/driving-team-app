@@ -64,6 +64,7 @@ function nameKey(firstName: string, lastName: string, birthdate: string | null):
  *   rows          – array of mapped user objects
  *   duplicateMode – 'skip' | 'update'
  *   dedupKey      – 'email' | 'phone' | 'email_or_phone' | 'name_birthdate' | 'lernfahrausweis'
+ *   dryRun        – if true, only check for duplicates without writing to DB
  */
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
@@ -72,10 +73,12 @@ export default defineEventHandler(async (event) => {
     rows,
     duplicateMode = 'skip',
     dedupKey = 'email_or_phone',
+    dryRun = false,
   } = body as {
     rows: UserRow[]
     duplicateMode?: 'skip' | 'update'
     dedupKey?: DedupKey
+    dryRun?: boolean
   }
 
   if (!Array.isArray(rows) || rows.length === 0) {
@@ -246,6 +249,36 @@ export default defineEventHandler(async (event) => {
         tenant_id: profile.tenant_id,
         is_active: true,
       })
+    }
+  }
+
+  // ── Dry-run: return classification without writing ────────────────────────
+  if (dryRun) {
+    const duplicateDetails = [
+      ...toUpdate.map(r => ({
+        row: r.rowIndex,
+        identifier: r.data.email || r.data.phone || `${r.data.first_name} ${r.data.last_name}`,
+        matchedOn: r.matchedOn,
+        action: 'update' as const,
+      })),
+      ...errorsLog
+        .filter(e => e.reason.includes('Bereits vorhanden'))
+        .map(e => ({
+          row: e.row,
+          identifier: e.identifier,
+          matchedOn: e.reason.match(/via (.+?) \(/)?.[1] || '',
+          action: 'skip' as const,
+        })),
+    ].sort((a, b) => a.row - b.row)
+
+    return {
+      dryRun: true,
+      totalRows: validRows.length,
+      newCount: toInsert.length,
+      duplicateCount: toUpdate.length + skippedCount,
+      invalidCount: errorsLog.filter(e => !e.reason.includes('Bereits vorhanden')).length,
+      duplicates: duplicateDetails,
+      invalids: errorsLog.filter(e => !e.reason.includes('Bereits vorhanden')).slice(0, 50),
     }
   }
 
