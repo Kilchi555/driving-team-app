@@ -358,15 +358,19 @@
             </div>
             <!-- Aktion bei Duplikat -->
             <div>
-              <p class="text-sm font-medium text-gray-700 mb-2">Wenn Duplikat gefunden:</p>
-              <div class="flex gap-4">
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" v-model="duplicateMode" value="skip" class="accent-blue-500" />
-                  <span class="text-sm text-gray-700">Überspringen</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" v-model="duplicateMode" value="update" class="accent-blue-500" />
-                  <span class="text-sm text-gray-700">Daten aktualisieren</span>
+              <p class="text-sm font-medium text-gray-700 mb-3">Was tun bei Duplikat?</p>
+              <div class="grid grid-cols-1 gap-2">
+                <label v-for="opt in duplicateModeOptions" :key="opt.value"
+                  :class="['flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all', duplicateMode === opt.value ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300']">
+                  <input type="radio" v-model="duplicateMode" :value="opt.value" class="accent-blue-500 mt-0.5 flex-shrink-0" />
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="text-sm font-medium text-gray-800">{{ opt.label }}</span>
+                      <span v-if="opt.recommended" class="text-xs text-blue-600 font-medium bg-blue-100 px-1.5 py-0.5 rounded">Empfohlen</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-0.5">{{ opt.description }}</p>
+                    <p v-if="opt.example" class="text-xs text-gray-400 mt-0.5 italic">{{ opt.example }}</p>
+                  </div>
                 </label>
               </div>
             </div>
@@ -518,9 +522,13 @@
                         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">{{ dup.matchedOn }}</span>
                       </td>
                       <td class="px-3 py-2">
-                        <span :class="['inline-flex items-center px-2 py-0.5 rounded text-xs font-medium', dup.action === 'update' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600']">
-                          {{ dup.action === 'update' ? 'Aktualisieren' : 'Überspringen' }}
-                        </span>
+                        <span :class="[
+                          'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+                          dup.action === 'Überschreiben' ? 'bg-orange-100 text-orange-700' :
+                          dup.action === 'Ergänzen' ? 'bg-blue-100 text-blue-700' :
+                          dup.action === 'Neu anlegen' ? 'bg-green-100 text-green-700' :
+                          'bg-gray-100 text-gray-600'
+                        ]">{{ dup.action }}</span>
                       </td>
                     </tr>
                   </tbody>
@@ -1365,11 +1373,39 @@ const importSettings = reactive({
 
 // ── Import target & column mapping ────────────────────────────────────────────
 const importTarget = ref<'leads' | 'users' | ''>('')
-const duplicateMode = ref<'skip' | 'update'>('skip')
+const duplicateMode = ref<'skip' | 'overwrite' | 'supplement' | 'create'>('skip')
 const dedupKey = ref<'email' | 'phone' | 'email_or_phone' | 'name_birthdate' | 'lernfahrausweis'>('email_or_phone')
 const importResult = ref<any>(null)
 const dryRunResult = ref<any>(null)
 const dryRunning = ref(false)
+
+const duplicateModeOptions = [
+  {
+    value: 'skip',
+    label: 'Überspringen',
+    recommended: true,
+    description: 'Vorhandener Datensatz bleibt unverändert. CSV-Zeile wird ignoriert.',
+    example: 'Gut für: Erstimport wenn Daten bereits korrekt sind.',
+  },
+  {
+    value: 'supplement',
+    label: 'Ergänzen (nur leere Felder füllen)',
+    description: 'Bestehende Werte werden NICHT überschrieben. Nur Felder die aktuell leer sind, werden befüllt.',
+    example: 'Gut für: Altdaten mit fehlenden Telefonnummern oder Adressen nachpflegen.',
+  },
+  {
+    value: 'overwrite',
+    label: 'Überschreiben (alle Felder ersetzen)',
+    description: 'Alle Felder werden mit den CSV-Werten ersetzt — auch wenn der vorhandene Wert besser ist.',
+    example: 'Gut für: Migration zu einem neueren, vollständigeren Datensatz.',
+  },
+  {
+    value: 'create',
+    label: 'Als neuen Kunden anlegen',
+    description: 'Immer ein neues Kundenprofil erstellen, auch wenn E-Mail oder Telefon bereits existiert.',
+    example: 'Gut für: Familienangehörige mit gleicher Telefonnummer, oder bewusstes Separieren.',
+  },
+] as const
 
 const dedupOptions = [
   {

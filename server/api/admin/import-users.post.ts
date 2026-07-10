@@ -18,6 +18,14 @@ interface UserRow {
 
 type DedupKey = 'email' | 'phone' | 'email_or_phone' | 'name_birthdate' | 'lernfahrausweis'
 
+/**
+ * skip        – leave existing record untouched, discard CSV row
+ * overwrite   – replace all fields in existing record with CSV values
+ * supplement  – only fill fields that are currently NULL/empty in the existing record
+ * create      – always insert as a new record, even if a match is found
+ */
+type DuplicateMode = 'skip' | 'overwrite' | 'supplement' | 'create'
+
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
 }
@@ -62,9 +70,9 @@ function nameKey(firstName: string, lastName: string, birthdate: string | null):
  *
  * Body:
  *   rows          – array of mapped user objects
- *   duplicateMode – 'skip' | 'update'
+ *   duplicateMode – 'skip' | 'overwrite' | 'supplement' | 'create'
  *   dedupKey      – 'email' | 'phone' | 'email_or_phone' | 'name_birthdate' | 'lernfahrausweis'
- *   dryRun        – if true, only check for duplicates without writing to DB
+ *   dryRun        – if true, only analyse without writing to DB
  */
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
@@ -76,7 +84,7 @@ export default defineEventHandler(async (event) => {
     dryRun = false,
   } = body as {
     rows: UserRow[]
-    duplicateMode?: 'skip' | 'update'
+    duplicateMode?: DuplicateMode
     dedupKey?: DedupKey
     dryRun?: boolean
   }
@@ -202,9 +210,16 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // ── Fetch full existing records for supplement mode ───────────────────────
+  // (needed to know which fields are already set)
+  const existingRecordsById = new Map<string, any>()
+  if (duplicateMode === 'supplement' || dryRun) {
+    // We'll fetch lazily per matched ID below — collected first
+  }
+
   // ── Classify each row ─────────────────────────────────────────────────────
   const toInsert: any[] = []
-  const toUpdate: { id: string; data: any; rowIndex: number; matchedOn: string }[] = []
+  const toUpdate: { id: string; data: any; rowIndex: number; matchedOn: string; mode: DuplicateMode }[] = []
 
   for (const row of validRows) {
     const { _rowIndex, phone_normalized, phone_raw, name_key, ...userData } = row
@@ -230,19 +245,18 @@ export default defineEventHandler(async (event) => {
     }
 
     const insertData = { ...userData, phone: phone_raw }
+    const identifier = row.email || phone_raw || row.lernfahrausweis_nr || `${row.first_name} ${row.last_name}`
 
-    if (existingId) {
-      if (duplicateMode === 'update') {
-        toUpdate.push({ id: existingId, data: insertData, rowIndex: _rowIndex, matchedOn })
-      } else {
+    if (existingId && duplicateMode !== 'create') {
+      if (duplicateMode === 'skip') {
         skippedCount++
-        errorsLog.push({
-          row: _rowIndex,
-          identifier: row.email || phone_raw || row.lernfahrausweis_nr || `${row.first_name} ${row.last_name}`,
-          reason: `Bereits vorhanden via ${matchedOn} (übersprungen)`,
-        })
+        errorsLog.push({ row: _rowIndex, identifier, reason: `Bereits vorhanden via ${matchedOn} (übersprungen)` })
+      } else {
+        // overwrite or supplement
+        toUpdate.push({ id: existingId, data: insertData, rowIndex: _rowIndex, matchedOn, mode: duplicateMode })
       }
     } else {
+      // No match found, OR mode === 'create' (always insert)
       toInsert.push({
         ...insertData,
         role: 'client',
@@ -252,14 +266,33 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // ── For supplement mode: fetch existing records to compare ────────────────
+  if (duplicateMode === 'supplement' && toUpdate.length > 0) {
+    const ids = toUpdate.map(r => r.id)
+    const { data: existingData } = await supabase
+      .from('users')
+      .select('id, email, phone, birthdate, street, street_nr, zip, city, lernfahrausweis_nr')
+      .in('id', ids)
+    for (const u of existingData || []) {
+      existingRecordsById.set(u.id, u)
+    }
+  }
+
   // ── Dry-run: return classification without writing ────────────────────────
   if (dryRun) {
+    const actionLabel: Record<DuplicateMode, string> = {
+      skip: 'Überspringen',
+      overwrite: 'Überschreiben',
+      supplement: 'Ergänzen',
+      create: 'Neu anlegen',
+    }
+
     const duplicateDetails = [
       ...toUpdate.map(r => ({
         row: r.rowIndex,
         identifier: r.data.email || r.data.phone || `${r.data.first_name} ${r.data.last_name}`,
         matchedOn: r.matchedOn,
-        action: 'update' as const,
+        action: actionLabel[r.mode],
       })),
       ...errorsLog
         .filter(e => e.reason.includes('Bereits vorhanden'))
@@ -267,7 +300,7 @@ export default defineEventHandler(async (event) => {
           row: e.row,
           identifier: e.identifier,
           matchedOn: e.reason.match(/via (.+?) \(/)?.[1] || '',
-          action: 'skip' as const,
+          action: actionLabel['skip'],
         })),
     ].sort((a, b) => a.row - b.row)
 
@@ -302,10 +335,31 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Update existing records ───────────────────────────────────────────────
-  for (const { id, data, rowIndex, matchedOn } of toUpdate) {
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
+  for (const { id, data, rowIndex, matchedOn, mode } of toUpdate) {
+    let updatePayload: Record<string, any>
+
+    if (mode === 'supplement') {
+      // Only set fields that are currently NULL/empty in the existing record
+      const existing = existingRecordsById.get(id) || {}
+      updatePayload = {}
+      const SUPPLEMENTABLE = ['first_name', 'last_name', 'phone', 'birthdate', 'street', 'street_nr', 'zip', 'city', 'lernfahrausweis_nr'] as const
+      for (const field of SUPPLEMENTABLE) {
+        const incomingVal = field === 'phone' ? data.phone : data[field]
+        const existingVal = existing[field]
+        // Only update if existing is null/empty AND incoming has a value
+        if ((existingVal === null || existingVal === undefined || existingVal === '') && incomingVal) {
+          updatePayload[field] = incomingVal
+        }
+      }
+      if (Object.keys(updatePayload).length === 0) {
+        // Nothing to supplement — skip
+        skippedCount++
+        errorsLog.push({ row: rowIndex, identifier: data.email || data.phone || '–', reason: `Bereits vorhanden via ${matchedOn} — keine neuen Felder zum Ergänzen` })
+        continue
+      }
+    } else {
+      // overwrite: replace all fields with incoming values
+      updatePayload = {
         first_name: data.first_name,
         last_name: data.last_name,
         phone: data.phone,
@@ -315,7 +369,12 @@ export default defineEventHandler(async (event) => {
         zip: data.zip,
         city: data.city,
         ...(data.lernfahrausweis_nr ? { lernfahrausweis_nr: data.lernfahrausweis_nr } : {}),
-      })
+      }
+    }
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update(updatePayload)
       .eq('id', id)
       .eq('tenant_id', profile.tenant_id)
 
@@ -323,7 +382,7 @@ export default defineEventHandler(async (event) => {
       errorsLog.push({ row: rowIndex, identifier: data.email || data.phone || '–', reason: updateError.message })
     } else {
       updatedCount++
-      logger.debug(`✏️ Updated user ${id} matched via ${matchedOn}`)
+      logger.debug(`✏️ ${mode === 'supplement' ? 'Supplemented' : 'Overwrote'} user ${id} matched via ${matchedOn} (fields: ${Object.keys(updatePayload).join(', ')})`)
     }
   }
 
