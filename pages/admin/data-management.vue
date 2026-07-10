@@ -175,8 +175,11 @@
       <!-- Validation Section -->
       <div v-if="fileMeta.name" class="bg-white rounded-lg shadow-sm border">
         <div class="p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-medium text-gray-900">2. Daten prüfen</h3>
+          <div class="flex items-center justify-between mb-1">
+            <div>
+              <h3 class="text-lg font-medium text-gray-900">2. Daten prüfen</h3>
+              <p class="text-xs text-gray-400 mt-0.5">Nur lokale Datei-Validierung — Duplikate gegen DB werden in Schritt 5 geprüft</p>
+            </div>
             <button
               :disabled="!rows.length || validating"
               @click="runValidation"
