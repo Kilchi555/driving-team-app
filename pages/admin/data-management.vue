@@ -339,30 +339,28 @@
           </div>
 
           <!-- Users: Duplikat-Handling -->
-          <div v-if="importTarget === 'users'" class="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-4">
+          <div v-if="importTarget === 'users'" class="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-5">
             <!-- Dedup-Schlüssel -->
             <div>
-              <p class="text-sm font-medium text-gray-700 mb-2">Duplikat-Erkennung via:</p>
-              <div class="flex flex-wrap gap-3">
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" v-model="dedupKey" value="email_or_phone" class="accent-blue-500" />
-                  <span class="text-sm text-gray-700">E-Mail <span class="text-gray-400">oder</span> Telefon</span>
-                  <span class="text-xs text-blue-600 font-medium bg-blue-50 px-1.5 py-0.5 rounded">Empfohlen</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" v-model="dedupKey" value="email" class="accent-blue-500" />
-                  <span class="text-sm text-gray-700">Nur E-Mail</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" v-model="dedupKey" value="phone" class="accent-blue-500" />
-                  <span class="text-sm text-gray-700">Nur Telefon</span>
+              <p class="text-sm font-medium text-gray-700 mb-3">Duplikat-Erkennung via:</p>
+              <div class="grid grid-cols-1 gap-2">
+                <label v-for="opt in dedupOptions" :key="opt.value"
+                  :class="['flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all', dedupKey === opt.value ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300']">
+                  <input type="radio" v-model="dedupKey" :value="opt.value" class="accent-blue-500 mt-0.5 flex-shrink-0" />
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="text-sm font-medium text-gray-800">{{ opt.label }}</span>
+                      <span v-if="opt.recommended" class="text-xs text-blue-600 font-medium bg-blue-100 px-1.5 py-0.5 rounded">Empfohlen</span>
+                      <span v-if="opt.reliability" class="text-xs text-gray-500">{{ opt.reliability }}</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-0.5">{{ opt.description }}</p>
+                    <p v-if="opt.warning" class="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                      <svg class="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                      {{ opt.warning }}
+                    </p>
+                  </div>
                 </label>
               </div>
-              <p class="mt-1.5 text-xs text-gray-500">
-                <span v-if="dedupKey === 'email_or_phone'">Treffer wenn E-Mail <em>oder</em> Telefonnummer bereits in der DB ist — auch wenn das andere Feld fehlt oder abweicht.</span>
-                <span v-else-if="dedupKey === 'email'">Nur Duplikat wenn die E-Mail exakt übereinstimmt. Gleiche Telefonnummern werden ignoriert.</span>
-                <span v-else>Nur Duplikat wenn die Telefonnummer übereinstimmt (normalisiert). Gleiche E-Mails werden ignoriert.</span>
-              </p>
             </div>
             <!-- Aktion bei Duplikat -->
             <div>
@@ -1280,8 +1278,44 @@ const importSettings = reactive({
 // ── Import target & column mapping ────────────────────────────────────────────
 const importTarget = ref<'leads' | 'users' | ''>('')
 const duplicateMode = ref<'skip' | 'update'>('skip')
-const dedupKey = ref<'email' | 'phone' | 'email_or_phone'>('email_or_phone')
+const dedupKey = ref<'email' | 'phone' | 'email_or_phone' | 'name_birthdate' | 'lernfahrausweis'>('email_or_phone')
 const importResult = ref<any>(null)
+
+const dedupOptions = [
+  {
+    value: 'email_or_phone',
+    label: 'E-Mail oder Telefon',
+    reliability: '★★★★★',
+    recommended: true,
+    description: 'Treffer wenn E-Mail oder Telefon bereits existiert. Ideal für allgemeine Altdaten.',
+  },
+  {
+    value: 'email',
+    label: 'Nur E-Mail',
+    reliability: '★★★★★',
+    description: 'Nur Duplikat bei exakter E-Mail-Übereinstimmung. Gleiche Telefonnummern werden ignoriert.',
+  },
+  {
+    value: 'phone',
+    label: 'Nur Telefon',
+    reliability: '★★★★',
+    description: 'Duplikat bei normalisierter Telefonnummer (z.B. 079 123 45 67 = +41791234567).',
+  },
+  {
+    value: 'name_birthdate',
+    label: 'Name + Geburtsdatum',
+    reliability: '★★★★★',
+    description: 'Vergleich via Vor- + Nachname + Geburtsdatum (normalisiert). Zuverlässig wenn Email/Telefon fehlen.',
+    warning: 'Setzt voraus, dass Geburtsdatum in der Datei vorhanden ist.',
+  },
+  {
+    value: 'lernfahrausweis',
+    label: 'Lernfahrausweis-Nr',
+    reliability: '★★★★★',
+    description: 'Eindeutige nationale ID pro Fahrschüler. Perfekt für Importe aus anderen Fahrstundensystemen.',
+    warning: 'Nur sinnvoll wenn die CSV-Datei die Lernfahrausweis-Nr enthält.',
+  },
+] as const
 
 // Fields per import target
 const LEADS_FIELDS = [
@@ -1299,6 +1333,7 @@ const USERS_FIELDS = [
   { key: 'email', label: 'E-Mail-Adresse', required: false, recommended: true },
   { key: 'phone', label: 'Telefonnummer', required: false },
   { key: 'birthdate', label: 'Geburtsdatum (TT.MM.JJJJ)', required: false },
+  { key: 'lernfahrausweis_nr', label: 'Lernfahrausweis-Nr', required: false },
   { key: 'street', label: 'Strasse', required: false },
   { key: 'street_nr', label: 'Hausnummer', required: false },
   { key: 'zip', label: 'PLZ', required: false },
@@ -1331,7 +1366,7 @@ watch(columns, (cols) => {
       if (field.key === 'street_nr') return c.includes('nr') || c.includes('hausnummer')
       if (field.key === 'zip') return c.includes('plz') || c.includes('postal') || c.includes('zip')
       if (field.key === 'city') return c.includes('ort') || c.includes('city') || c.includes('stadt')
-      if (field.key === 'notes') return c.includes('notiz') || c.includes('note') || c.includes('bemerkung')
+      if (field.key === 'lernfahrausweis_nr') return c.includes('lernfahr') || c.includes('ausweis') || c.includes('fahrausweis')
       return false
     })
     if (match) columnMapping[field.key] = match
