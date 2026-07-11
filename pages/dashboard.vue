@@ -83,9 +83,16 @@ const showProductSaleModal = ref(false)
 const isTodayActive = ref(false)
 const currentMonth = ref('')
 const selectedStaffId = ref<string | null>(null) // For admin staff filtering
+// Deep link from a reminder email (?openProposal=<id>) — jump straight to that request
+const highlightProposalId = ref<string | null>(null)
 
 // Computed: Dynamically select the default tab based on pending counts
 const defaultPendenzenTab = computed(() => {
+  // A deep-linked request always wins over the auto-selected tab
+  if (highlightProposalId.value) {
+    return 'anfragen'
+  }
+
   const pendenzenCount = pendingTasksComposable.unconfirmedNext24hCount?.value || 0
   const bewertungenCount = pendingCount.value || 0
   const unbestätigtCount = unconfirmedNext24hCount.value || 0
@@ -394,6 +401,13 @@ onMounted(async () => {
     logger.debug('✅ Pending data refresh completed')
     logger.debug('🔥 Pending count after refresh:', pendingCount.value)
 
+    // Deep link from a reminder email: open the Pendenzen modal directly on
+    // the matching booking request (?openProposal=<proposal_id>)
+    if (typeof route.query.openProposal === 'string' && route.query.openProposal) {
+      logger.debug('🔗 Deep link to booking proposal:', route.query.openProposal)
+      highlightProposalId.value = route.query.openProposal
+      showPendenzen.value = true
+    }
   }
   logger.debug('🔄 About to update today state...')
 
@@ -565,7 +579,8 @@ onUnmounted(() => {
       :is-open="showPendenzen"
       :current-user="currentUser"
       :default-tab="defaultPendenzenTab"
-      @close="() => { logger.debug('🔥 Closing pendenzen modal'); showPendenzen = false; }"
+      :highlight-proposal-id="highlightProposalId"
+      @close="() => { logger.debug('🔥 Closing pendenzen modal'); showPendenzen = false; highlightProposalId = null; }"
       @evaluate-lesson="handleEvaluateLesson"
       @appointment-cancelled="onAppointmentCancelled"
     />

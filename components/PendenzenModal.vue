@@ -544,6 +544,8 @@ interface Props {
   isOpen: boolean
   currentUser: any
   defaultTab?: 'pendenzen' | 'bewertungen' | 'anfragen' | 'unconfirmed'
+  /** Booking proposal ID to auto-open (e.g. from a reminder email deep link) */
+  highlightProposalId?: string | null
 }
 
 const props = defineProps<Props>()
@@ -1436,8 +1438,19 @@ watch(() => props.isOpen, async (newIsOpen) => {
     await nextTick()
     logger.debug('✅ All nextTicks completed')
     
+    // Deep link from a reminder email: jump straight to the matching request
+    if (props.highlightProposalId) {
+      activeTab.value = 'anfragen'
+      const target = bookingProposals.value.find((p: any) => p.id === props.highlightProposalId)
+      if (target) {
+        logger.debug('🎯 Auto-opening highlighted proposal:', target.id)
+        openProposalDetailModal(target)
+      } else {
+        logger.debug('⚠️ Highlighted proposal not found in open list (already handled?):', props.highlightProposalId)
+      }
+    }
     // Setze Tab anhand defaultTab, falls übergeben
-    if (props.defaultTab) {
+    else if (props.defaultTab) {
       activeTab.value = props.defaultTab === 'unconfirmed' ? 'bewertungen' : (props.defaultTab as any)
       logger.debug('📌 Using defaultTab:', activeTab.value)
     } else {

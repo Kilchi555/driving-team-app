@@ -145,7 +145,7 @@ export default defineEventHandler(async (event) => {
 
       <!-- CTA -->
       <div style="margin-top: 28px; text-align: center;">
-        <a href="https://app.simy.ch" style="display: inline-block; background: ${opts.primaryColor}; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-size: 15px; font-weight: 600;">
+        <a href="https://app.simy.ch/login?returnTo=%2Fdashboard" style="display: inline-block; background: ${opts.primaryColor}; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-size: 15px; font-weight: 600;">
           Anfragen jetzt öffnen →
         </a>
       </div>
