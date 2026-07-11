@@ -16,6 +16,8 @@ import { SARIClient } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
+import { findExistingUserByContact } from '~/server/utils/user-matching'
+import { escapeLikePattern } from '~/server/utils/sql-helpers'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -423,15 +425,13 @@ const handler = defineEventHandler(async (event) => {
     }
 
     // 8. Create or find Guest User
-    logger.debug('🔍 Looking for existing user with email:', finalEmail)
-    
+    // Match by normalized email (case-insensitive) first, then by phone as a fallback —
+    // avoids creating a duplicate account when the customer signs up without logging in
+    // under a slightly different email casing (e.g. SARI-returned email) or phone format.
+    logger.debug('🔍 Looking for existing user with email/phone:', { finalEmail, finalPhone })
+
     let guestUserId: string
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', finalEmail)
-      .eq('tenant_id', tenantId)
-      .maybeSingle()
+    const existingUser = await findExistingUserByContact(supabase, { email: finalEmail, phone: finalPhone, tenantId })
 
     if (existingUser) {
       guestUserId = existingUser.id
@@ -480,10 +480,14 @@ const handler = defineEventHandler(async (event) => {
 
     if (discountCode) {
       try {
+        // discountCode is user-supplied — escape LIKE wildcards (%, _) before ilike()
+        // so a value like "S%" can't be used to guess/match an active code by prefix.
+        const escapedDiscountCode = escapeLikePattern(discountCode)
+
         const { data: voucherData } = await supabase
           .from('voucher_codes')
           .select('*')
-          .ilike('code', discountCode)
+          .ilike('code', escapedDiscountCode)
           .eq('tenant_id', tenantId)
           .eq('is_active', true)
           .maybeSingle()
@@ -494,7 +498,7 @@ const handler = defineEventHandler(async (event) => {
           const { data: giftCard } = await supabase
             .from('vouchers')
             .select('*')
-            .ilike('code', discountCode)
+            .ilike('code', escapedDiscountCode)
             .eq('tenant_id', tenantId)
             .eq('is_active', true)
             .maybeSingle()
@@ -507,7 +511,7 @@ const handler = defineEventHandler(async (event) => {
           const { data: discountData } = await supabase
             .from('discounts')
             .select('*')
-            .ilike('code', discountCode)
+            .ilike('code', escapedDiscountCode)
             .eq('tenant_id', tenantId)
             .eq('is_active', true)
             .maybeSingle()
