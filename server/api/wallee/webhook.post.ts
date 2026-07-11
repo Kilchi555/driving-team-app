@@ -10,6 +10,9 @@ import { logger } from '~/utils/logger'
 import { getWalleeConfigForTenant, getWalleeConfigBySpace, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { SARIClient } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
+import { findExistingUserByContact } from '~/server/utils/user-matching'
+import { normalizePhoneNumber } from '~/server/utils/sms'
+import { escapeLikePattern } from '~/server/utils/sql-helpers'
 // crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
@@ -579,15 +582,14 @@ export default defineEventHandler(async (event) => {
                 if (payment.user_id) {
                   userId = payment.user_id
                 } else if (payment.metadata?.email) {
-                  // Look for existing user (try all, not just active, to avoid duplicate-key errors)
-                  const { data: existingUser } = await supabase
-                    .from('users')
-                    .select('id')
-                    .eq('email', payment.metadata.email)
-                    .eq('tenant_id', course.tenant_id)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle()
+                  // Look for existing user by normalized email (case-insensitive), then by
+                  // phone as a fallback — avoids creating a duplicate account for a returning
+                  // customer whose email casing/phone format differs from what's on file.
+                  const existingUser = await findExistingUserByContact(supabase, {
+                    email: payment.metadata?.email,
+                    phone: payment.metadata?.phone,
+                    tenantId: course.tenant_id
+                  })
                   
                   if (existingUser) {
                     userId = existingUser.id
@@ -598,8 +600,8 @@ export default defineEventHandler(async (event) => {
                       .insert({
                         first_name: payment.metadata?.firstname || 'Guest',
                         last_name: payment.metadata?.lastname || 'User',
-                        email: payment.metadata?.email,
-                        phone: payment.metadata?.phone,
+                        email: payment.metadata?.email ? String(payment.metadata.email).trim().toLowerCase() : payment.metadata?.email,
+                        phone: normalizePhoneNumber(payment.metadata?.phone || '') || payment.metadata?.phone,
                         tenant_id: course.tenant_id,
                         role: 'client',
                         is_active: true,
@@ -659,12 +661,11 @@ export default defineEventHandler(async (event) => {
                       })
                       // Fallback: duplicate key — look up the existing user
                       if (createUserError?.code === '23505') {
-                        const { data: fallbackUser } = await supabase
-                          .from('users')
-                          .select('id')
-                          .eq('email', payment.metadata.email)
-                          .eq('tenant_id', course.tenant_id)
-                          .maybeSingle()
+                        const fallbackUser = await findExistingUserByContact(supabase, {
+                          email: payment.metadata?.email,
+                          phone: payment.metadata?.phone,
+                          tenantId: course.tenant_id
+                        })
                         if (fallbackUser) {
                           userId = fallbackUser.id
                           logger.info('✅ Fallback: found existing user after duplicate-key error:', userId)
@@ -773,11 +774,14 @@ export default defineEventHandler(async (event) => {
                     const discountCode = payment.metadata?.discount_code
                     const tenantIdForDiscount = payment.tenant_id
                     if (!discountCode || !tenantIdForDiscount) continue
+                    // Escape LIKE wildcards — discountCode originates from payment metadata,
+                    // which is attacker-influenced (set from the original enrollment request).
+                    const escapedDiscountCode = escapeLikePattern(discountCode)
 
                     const { data: disc } = await supabase
                       .from('discounts')
                       .select('id, usage_count')
-                      .ilike('code', discountCode)
+                      .ilike('code', escapedDiscountCode)
                       .eq('tenant_id', tenantIdForDiscount)
                       .maybeSingle()
 
@@ -790,7 +794,7 @@ export default defineEventHandler(async (event) => {
                     const { data: vc } = await supabase
                       .from('voucher_codes')
                       .select('id, current_redemptions')
-                      .ilike('code', discountCode)
+                      .ilike('code', escapedDiscountCode)
                       .eq('tenant_id', tenantIdForDiscount)
                       .maybeSingle()
 

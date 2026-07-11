@@ -17,6 +17,8 @@ import { SARIClient } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
 import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
+import { findExistingUserByContact } from '~/server/utils/user-matching'
+import { normalizePhoneNumber } from '~/server/utils/sms'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -217,15 +219,13 @@ const handler = defineEventHandler(async (event) => {
     }
 
     // 8. Create or find Guest User (same as Wallee flow)
-    logger.debug('🔍 Looking for existing user with email:', finalEmail)
-    
+    // Match by normalized email (case-insensitive) first, then by phone as a fallback —
+    // avoids creating a duplicate account when the customer signs up without logging in
+    // under a slightly different email casing (e.g. SARI-returned email) or phone format.
+    logger.debug('🔍 Looking for existing user with email/phone:', { finalEmail, finalPhone })
+
     let guestUserId: string
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', finalEmail)
-      .eq('tenant_id', tenantId)
-      .maybeSingle()
+    const existingUser = await findExistingUserByContact(supabase, { email: finalEmail, phone: finalPhone, tenantId })
 
     if (existingUser) {
       guestUserId = existingUser.id
@@ -239,8 +239,8 @@ const handler = defineEventHandler(async (event) => {
         .insert({
           first_name: customerData.firstname,
           last_name: customerData.lastname,
-          email: finalEmail,
-          phone: finalPhone,
+          email: finalEmail ? finalEmail.trim().toLowerCase() : finalEmail,
+          phone: normalizePhoneNumber(finalPhone) || finalPhone,
           tenant_id: tenantId,
           role: 'student',
           is_active: true,
