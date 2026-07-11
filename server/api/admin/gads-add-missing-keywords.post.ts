@@ -19,13 +19,14 @@
  *     -d '{ "dry_run": false, "preset": "all" }'
  *
  * Presets:
- *   "all"           — applies all groups below
- *   "be_keywords"   — only Kat. BE / trailer keywords
- *   "march"         — only "fahrschule march" in Lachen campaign
- *   "fahrstunden"   — only fahrstunden keywords in Zürich campaign
+ *   "all"             — applies all groups below
+ *   "be_keywords"     — only Kat. BE / trailer keywords
+ *   "march"           — only "fahrschule march" in Lachen campaign
+ *   "fahrstunden"     — only fahrstunden keywords in Zürich campaign
+ *   "buchungsintent"  — high-intent booking keywords for Fahrschule Zürich + Lachen
  */
 
-import { GoogleAdsApi } from 'google-ads-api'
+import { resolveGadsAuth, buildGadsCustomer } from '~/server/utils/gads-auth'
 
 const MATCH_TYPE_ENUM: Record<string, number> = {
   EXACT: 3,
@@ -128,46 +129,113 @@ const KEYWORD_GROUPS: Array<{
     ],
     reason: 'Fahrstunden and Limmattal intent keywords missing in Dietikon ad group',
   },
+
+  // ── Buchungsintent: Zürich — generic + per location ─────────────────────────
+  {
+    preset: 'buchungsintent',
+    campaign_name_contains: 'Fahrschule Zürich Umgebung',
+    ad_group_name_contains: 'Fahrschule Altstetten',
+    keywords: [
+      { text: 'fahrstunden buchen zürich',     match_type: 'EXACT',  cpc_chf: 4.0 },
+      { text: 'auto fahrstunden zürich',        match_type: 'EXACT',  cpc_chf: 4.0 },
+      { text: 'führerschein machen zürich',     match_type: 'PHRASE', cpc_chf: 3.5 },
+      { text: 'fahrschule zürich online buchen',match_type: 'PHRASE', cpc_chf: 3.5 },
+      { text: 'fahrlehrer zürich buchen',       match_type: 'PHRASE', cpc_chf: 3.5 },
+      { text: 'fahrstunden buchen altstetten',  match_type: 'EXACT',  cpc_chf: 4.0 },
+      { text: 'auto führerschein zürich',       match_type: 'PHRASE', cpc_chf: 3.5 },
+    ],
+    reason: 'Hochintent-Buchungskeywords fehlen komplett in Zürich Kampagne',
+  },
+  {
+    preset: 'buchungsintent',
+    campaign_name_contains: 'Fahrschule Zürich Umgebung',
+    ad_group_name_contains: 'Fahrschule Dietikon',
+    keywords: [
+      { text: 'fahrstunden buchen dietikon',    match_type: 'EXACT',  cpc_chf: 4.0 },
+      { text: 'auto fahrstunden dietikon',      match_type: 'EXACT',  cpc_chf: 4.0 },
+      { text: 'führerschein machen dietikon',   match_type: 'PHRASE', cpc_chf: 3.5 },
+      { text: 'fahrlehrer dietikon buchen',     match_type: 'PHRASE', cpc_chf: 3.5 },
+    ],
+    reason: 'Hochintent-Buchungskeywords fehlen in Dietikon Ad Group',
+  },
+  {
+    preset: 'buchungsintent',
+    campaign_name_contains: 'Fahrschule Zürich Umgebung',
+    ad_group_name_contains: 'Fahrschule Schlieren',
+    keywords: [
+      { text: 'fahrstunden buchen schlieren',   match_type: 'EXACT',  cpc_chf: 4.0 },
+      { text: 'auto fahrstunden schlieren',     match_type: 'EXACT',  cpc_chf: 4.0 },
+      { text: 'führerschein machen schlieren',  match_type: 'PHRASE', cpc_chf: 3.5 },
+    ],
+    reason: 'Hochintent-Buchungskeywords fehlen in Schlieren Ad Group',
+  },
+  {
+    preset: 'buchungsintent',
+    campaign_name_contains: 'Fahrschule Zürich Umgebung',
+    ad_group_name_contains: 'Fahrschule Urdorf',
+    keywords: [
+      { text: 'fahrstunden buchen urdorf',      match_type: 'EXACT',  cpc_chf: 4.0 },
+      { text: 'auto fahrstunden urdorf',        match_type: 'EXACT',  cpc_chf: 4.0 },
+    ],
+    reason: 'Hochintent-Buchungskeywords fehlen in Urdorf Ad Group',
+  },
+  {
+    preset: 'buchungsintent',
+    campaign_name_contains: 'Fahrschule Zürich Umgebung',
+    ad_group_name_contains: 'Fahrschule Birmensdorf',
+    keywords: [
+      { text: 'fahrstunden buchen birmensdorf', match_type: 'EXACT',  cpc_chf: 3.5 },
+      { text: 'fahrschule birmensdorf buchen',  match_type: 'EXACT',  cpc_chf: 3.5 },
+    ],
+    reason: 'Hochintent-Buchungskeywords fehlen in Birmensdorf Ad Group',
+  },
+
+  // ── Buchungsintent: Lachen — generic + per location ─────────────────────────
+  {
+    preset: 'buchungsintent',
+    campaign_name_contains: 'Fahrschule Lachen Umgebung',
+    ad_group_name_contains: 'Fahrschule Lachen',
+    keywords: [
+      { text: 'fahrstunden buchen lachen',      match_type: 'EXACT',  cpc_chf: 4.0 },
+      { text: 'auto fahrstunden lachen',        match_type: 'EXACT',  cpc_chf: 4.0 },
+      { text: 'führerschein machen lachen',     match_type: 'PHRASE', cpc_chf: 3.5 },
+      { text: 'führerschein machen march',      match_type: 'PHRASE', cpc_chf: 3.5 },
+      { text: 'fahrschule lachen online buchen',match_type: 'PHRASE', cpc_chf: 3.5 },
+      { text: 'fahrlehrer lachen buchen',       match_type: 'PHRASE', cpc_chf: 3.5 },
+      { text: 'auto führerschein lachen',       match_type: 'PHRASE', cpc_chf: 3.5 },
+      { text: 'fahrstunden march sz',           match_type: 'PHRASE', cpc_chf: 3.5 },
+    ],
+    reason: 'Hochintent-Buchungskeywords fehlen komplett in Lachen Kampagne',
+  },
+  {
+    preset: 'buchungsintent',
+    campaign_name_contains: 'Fahrschule Lachen Umgebung',
+    ad_group_name_contains: 'Fahrschule Pfäffikon',
+    keywords: [
+      { text: 'fahrstunden buchen pfäffikon',   match_type: 'EXACT',  cpc_chf: 4.0 },
+      { text: 'auto fahrstunden pfäffikon',     match_type: 'EXACT',  cpc_chf: 4.0 },
+      { text: 'führerschein machen pfäffikon',  match_type: 'PHRASE', cpc_chf: 3.5 },
+      { text: 'fahrlehrer pfäffikon sz',        match_type: 'PHRASE', cpc_chf: 3.5 },
+    ],
+    reason: 'Hochintent-Buchungskeywords fehlen in Pfäffikon Ad Group',
+  },
 ]
 
 export default defineEventHandler(async (event) => {
-  const cronSecret = process.env.CRON_SECRET
-  const authHeader = getHeader(event, 'authorization')
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  // ── Auth + Credentials (tenant-aware) ────────────────────────────────────────
+  const gads = await resolveGadsAuth(event)
+  if (!gads.ok) return gads
 
   const body = await readBody(event)
   const dryRun: boolean = body?.dry_run !== false
   const preset: string = body?.preset ?? 'all'
 
-  const validPresets = ['all', 'be_keywords', 'march', 'fahrstunden']
+  const validPresets = ['all', 'be_keywords', 'march', 'fahrstunden', 'buchungsintent']
   if (!validPresets.includes(preset)) {
     return { ok: false, reason: `Invalid preset. Use one of: ${validPresets.join(', ')}` }
   }
 
-  const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID
-  const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN
-  const clientId = process.env.GOOGLE_ADS_CLIENT_ID
-  const clientSecret = process.env.GOOGLE_ADS_CLIENT_SECRET
-  const refreshToken = process.env.GOOGLE_ADS_REFRESH_TOKEN
-  const loginCustomerId = process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID
-
-  if (!customerId || !developerToken || !clientId || !clientSecret || !refreshToken) {
-    throw createError({ statusCode: 500, statusMessage: 'Missing Google Ads environment variables' })
-  }
-
-  const client = new GoogleAdsApi({
-    client_id: clientId,
-    client_secret: clientSecret,
-    developer_token: developerToken,
-  })
-
-  const customer = client.Customer({
-    customer_id: customerId,
-    refresh_token: refreshToken,
-    login_customer_id: loginCustomerId || undefined,
-  })
+  const customer = buildGadsCustomer(gads)
 
   // 1. Fetch all active ad groups with their campaign names
   const adGroupsResponse = await customer.query(`
