@@ -98,7 +98,10 @@ export default defineEventHandler(async (event) => {
       continue
     }
 
-    const appUrl = 'https://app.simy.ch'
+    // Deep link: go straight to login, then land on this exact request
+    // (instead of dropping the user on the generic homepage).
+    const returnPath = `/dashboard?openProposal=${p.id}`
+    const appUrl = `https://app.simy.ch/login?returnTo=${encodeURIComponent(returnPath)}`
 
     const badgeColor = isNoShow ? '#6b7280' : '#d97706'
     const badgeBg = isNoShow ? '#f3f4f6' : '#fffbeb'

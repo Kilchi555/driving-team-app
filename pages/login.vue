@@ -748,6 +748,10 @@ const handlePasskeyLogin = async () => {
       } else if (role === 'client') {
         redirectPath = '/customer-dashboard'
       }
+      const returnTo = route.query.returnTo as string | undefined
+      if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
+        redirectPath = returnTo
+      }
       window.location.href = redirectPath
     } else {
       passkeyError.value = 'Passkey-Anmeldung fehlgeschlagen.'
@@ -780,6 +784,10 @@ const handleBackupCodeLogin = async () => {
         redirectPath = '/staff/dashboard'
       } else if (role === 'client') {
         redirectPath = '/customer-dashboard'
+      }
+      const returnTo = route.query.returnTo as string | undefined
+      if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
+        redirectPath = returnTo
       }
       window.location.href = redirectPath
     } else {
@@ -1374,15 +1382,23 @@ onMounted(async () => {
     }
     
     logger.debug('✅ User profile found, redirecting...')
+    let redirectPath = '/customer-dashboard'
     if (user?.role === 'super_admin') {
-      router.push('/tenant-admin')
+      redirectPath = '/tenant-admin'
     } else if (user?.role === 'admin' || user?.role === 'tenant_admin') {
-      router.push('/admin')
+      redirectPath = '/admin'
     } else if (user?.role === 'staff') {
-      router.push('/dashboard')
-    } else {
-      router.push('/customer-dashboard')
+      redirectPath = '/dashboard'
     }
+
+    // Honour a safe internal returnTo (e.g. deep link from a reminder email)
+    // even if the user already has a valid session on this device.
+    const returnTo = route.query.returnTo as string | undefined
+    if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
+      redirectPath = returnTo
+    }
+
+    router.push(redirectPath)
   }
 })
 
