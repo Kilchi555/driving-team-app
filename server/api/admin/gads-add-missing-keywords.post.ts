@@ -238,31 +238,44 @@ export default defineEventHandler(async (event) => {
   const customer = buildGadsCustomer(gads)
 
   // 1. Fetch all active ad groups with their campaign names
-  const adGroupsResponse = await customer.query(`
-    SELECT
-      ad_group.resource_name,
-      ad_group.name,
-      campaign.name,
-      campaign.resource_name
-    FROM ad_group
-    WHERE
-      ad_group.status = 'ENABLED'
-      AND campaign.status != 'REMOVED'
-  `)
+  let adGroupsResponse: any[]
+  let existingKwResponse: any[]
+  try {
+    adGroupsResponse = await customer.query(`
+      SELECT
+        ad_group.resource_name,
+        ad_group.name,
+        campaign.name,
+        campaign.resource_name
+      FROM ad_group
+      WHERE
+        ad_group.status = 'ENABLED'
+        AND campaign.status != 'REMOVED'
+    `) as any[]
+  }
+  catch (err: any) {
+    return { ok: false, step: 'fetch_ad_groups', error: err?.message ?? String(err) }
+  }
 
-  const adGroups = adGroupsResponse as any[]
+  const adGroups = adGroupsResponse
 
   // 2. Fetch existing keywords to avoid duplicates
-  const existingKwResponse = await customer.query(`
-    SELECT
-      ad_group_criterion.keyword.text,
-      ad_group_criterion.keyword.match_type,
-      ad_group.resource_name
-    FROM ad_group_criterion
-    WHERE
-      ad_group_criterion.type = 'KEYWORD'
-      AND ad_group_criterion.status != 'REMOVED'
-  `)
+  try {
+    existingKwResponse = await customer.query(`
+      SELECT
+        ad_group_criterion.keyword.text,
+        ad_group_criterion.keyword.match_type,
+        ad_group.resource_name
+      FROM ad_group_criterion
+      WHERE
+        ad_group_criterion.type = 'KEYWORD'
+        AND ad_group_criterion.status != 'REMOVED'
+        AND campaign.status != 'REMOVED'
+    `) as any[]
+  }
+  catch (err: any) {
+    return { ok: false, step: 'fetch_existing_keywords', error: err?.message ?? String(err) }
+  }
 
   const existingKwSet = new Set(
     (existingKwResponse as any[]).map(
