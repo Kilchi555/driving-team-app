@@ -133,8 +133,22 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
     }
     
     // Parse ICS data
-    const events = parseICSData(icsData)
-    
+    const rawEvents = parseICSData(icsData)
+
+    // ✅ SAFETY NET: Discard implausibly long events (e.g. accidental multi-month
+    // entries from a mis-dragged end date in Apple Calendar). A single busy block
+    // longer than MAX_BUSY_EVENT_DAYS would otherwise gray out the entire staff
+    // calendar for that whole span, hiding all working hours.
+    const MAX_BUSY_EVENT_MS = 14 * 24 * 60 * 60 * 1000 // 14 days
+    const events = rawEvents.filter(ev => {
+      const durationMs = new Date(ev.end).getTime() - new Date(ev.start).getTime()
+      if (durationMs > MAX_BUSY_EVENT_MS) {
+        logger.warn(`⚠️ Skipping implausibly long ICS event (${Math.round(durationMs / 86400000)} days): "${ev.summary || 'untitled'}" ${ev.start} → ${ev.end}`)
+        return false
+      }
+      return true
+    })
+
     if (events.length === 0) {
       return {
         success: true,

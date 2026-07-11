@@ -1228,11 +1228,29 @@ export class AvailabilityCalculator {
       // Step 1: Upsert new slots.
       // onConflict on the natural key preserves the existing UUID for unchanged slots,
       // so any slot_id a user loaded before recalculation remains valid after it.
-      logger.debug(`⬆️ Upserting ${slots.length} slots...`)
+      //
+      // Deduplicate within the batch first — Postgres rejects upserts that target the
+      // same conflict key twice in one statement (21000: "cannot affect row a second time").
+      // Duplicates can appear when overlapping working-hour blocks or duplicate durations
+      // generate identical (staff, location, start, end, category) rows.
+      const toEpoch = (t: string) => new Date(t).getTime()
+      const dedupeKey = (s: AvailabilitySlot) =>
+        `${s.staff_id}|${s.location_id}|${toEpoch(s.start_time)}|${toEpoch(s.end_time)}|${s.category_code}`
+
+      const uniqueSlotsMap = new Map<string, AvailabilitySlot>()
+      for (const slot of slots) {
+        uniqueSlotsMap.set(dedupeKey(slot), slot)
+      }
+      const uniqueSlots = Array.from(uniqueSlotsMap.values())
+      if (uniqueSlots.length < slots.length) {
+        logger.warn(`⚠️ Removed ${slots.length - uniqueSlots.length} duplicate slot(s) before upsert`)
+      }
+
+      logger.debug(`⬆️ Upserting ${uniqueSlots.length} slots...`)
       let insertedCount = 0
 
-      for (let i = 0; i < slots.length; i += upsertBatchSize) {
-        const batch = slots.slice(i, i + upsertBatchSize)
+      for (let i = 0; i < uniqueSlots.length; i += upsertBatchSize) {
+        const batch = uniqueSlots.slice(i, i + upsertBatchSize)
 
         const { error: insertError } = await this.supabase
           .from('availability_slots')
@@ -1259,10 +1277,7 @@ export class AvailabilityCalculator {
       // toISOString() returns "2026-06-20T06:15:00.000Z" but Supabase/PostgREST
       // returns "2026-06-20T06:15:00+00:00" — raw string comparison would never match,
       // causing every just-inserted slot to be treated as stale and immediately deleted.
-      const toEpoch = (t: string) => new Date(t).getTime()
-      const newKeySet = new Set(
-        slots.map(s => `${s.staff_id}|${s.location_id}|${toEpoch(s.start_time)}|${toEpoch(s.end_time)}|${s.category_code}`)
-      )
+      const newKeySet = new Set(uniqueSlots.map(dedupeKey))
 
       // Fetch existing slots with pagination to avoid Supabase's default 1000-row API
       // limit. Without pagination a staff member with thousands of slots (e.g. many
