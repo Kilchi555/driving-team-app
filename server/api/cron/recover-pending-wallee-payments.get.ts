@@ -394,7 +394,132 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Phase 2 (processing lock release) failed:', phase2Err.message)
     }
 
-    // ============ PHASE 3: Cancel abandoned checkouts ============
+    // ============ PHASE 3: Reset 'failed' payments back to 'pending' ============
+    // A failed Wallee attempt must stay retryable (same product rule as processing
+    // lock release). Phase 1 used to write pending→failed; those rows (and any
+    // webhook-set failed rows) would otherwise stay failed forever and hide the
+    // pay button. We also recover FULFILL if the webhook was missed.
+    let failedReset = 0
+    try {
+      const tenMinutesAgoPhase3 = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+
+      const { data: failedPayments, error: failedQueryError } = await supabase
+        .from('payments')
+        .select('id, user_id, tenant_id, wallee_transaction_id, wallee_space_id, payment_status, created_at, updated_at')
+        .eq('payment_status', 'failed')
+        .eq('payment_method', 'wallee')
+        .lt('updated_at', tenMinutesAgoPhase3)
+
+      logger.info(`🔁 Phase 3: found ${failedPayments?.length ?? 0} failed wallee payment(s) to reset`)
+
+      if (!failedQueryError && failedPayments && failedPayments.length > 0) {
+        for (const payment of failedPayments) {
+          let walleeState: string | undefined
+          try {
+            // Prefer Wallee truth when we have a transaction id — may still be FULFILL.
+            let mappedStatus = 'pending'
+            if (payment.wallee_transaction_id) {
+              let walleeConfig
+              if (payment.wallee_space_id) {
+                walleeConfig = await getWalleeConfigBySpace(payment.tenant_id, payment.wallee_space_id)
+              } else {
+                walleeConfig = await getWalleeConfigForTenant(payment.tenant_id)
+              }
+              const config = getWalleeSDKConfig(walleeConfig.spaceId, walleeConfig.userId, walleeConfig.apiSecret)
+              const transactionService = new Wallee.api.TransactionService(config)
+              const response = await transactionService.read(walleeConfig.spaceId, parseInt(payment.wallee_transaction_id))
+              const transaction = response?.body || response
+              walleeState = transaction?.state
+
+              if (walleeState) {
+                const fromWallee = STATUS_MAPPING[walleeState] || 'pending'
+                if (fromWallee === 'completed' || fromWallee === 'authorized') {
+                  mappedStatus = fromWallee
+                } else {
+                  // failed / cancelled / processing / pending → retryable pending
+                  mappedStatus = 'pending'
+                }
+                logger.info(`📊 Phase 3 payment ${payment.id}: Wallee=${walleeState} → ${mappedStatus}`)
+              } else {
+                logger.warn(`⚠️ Phase 3: no Wallee state for failed payment ${payment.id} — resetting to pending`)
+              }
+            } else {
+              logger.info(`🔁 Phase 3 payment ${payment.id}: no wallee_transaction_id — resetting to pending`)
+            }
+
+            const updateData: any = {
+              payment_status: mappedStatus,
+              updated_at: new Date().toISOString()
+            }
+            if (mappedStatus === 'completed') {
+              updateData.paid_at = new Date().toISOString()
+            }
+
+            const { error: resetErr } = await supabase
+              .from('payments')
+              .update(updateData)
+              .eq('id', payment.id)
+              .eq('payment_status', 'failed')
+
+            if (resetErr) {
+              logger.error(`❌ Phase 3: error resetting payment ${payment.id}:`, resetErr)
+            } else {
+              failedReset++
+              if (mappedStatus === 'completed' || mappedStatus === 'authorized') {
+                recovered++
+              }
+              try {
+                await supabase.from('webhook_logs').insert({
+                  transaction_id: payment.wallee_transaction_id || 'none',
+                  payment_id: payment.id,
+                  wallee_state: walleeState ?? 'N/A',
+                  payment_status_before: 'failed',
+                  payment_status_after: mappedStatus,
+                  success: true,
+                  error_message: mappedStatus === 'pending'
+                    ? 'Failed payment reset to pending via cron (retryable)'
+                    : 'Failed payment recovered to success via cron (webhook missed)',
+                  raw_payload: {
+                    recovery: true,
+                    wallee_state: walleeState,
+                    phase: mappedStatus === 'pending' ? 'failed_reset' : 'failed_complete'
+                  }
+                })
+              } catch {}
+            }
+          } catch (failedErr: any) {
+            logger.error(`❌ Phase 3: error checking failed payment ${payment.id}:`, failedErr.message)
+            // Still release to pending so the customer is not blocked if Wallee API is down
+            try {
+              const { error: fallbackErr } = await supabase
+                .from('payments')
+                .update({ payment_status: 'pending', updated_at: new Date().toISOString() })
+                .eq('id', payment.id)
+                .eq('payment_status', 'failed')
+              if (!fallbackErr) {
+                failedReset++
+                try {
+                  await supabase.from('webhook_logs').insert({
+                    transaction_id: payment.wallee_transaction_id || 'none',
+                    payment_id: payment.id,
+                    wallee_state: 'ERROR',
+                    payment_status_before: 'failed',
+                    payment_status_after: 'pending',
+                    success: true,
+                    error_message: `Failed payment force-reset to pending after Wallee error: ${failedErr.message}`,
+                    raw_payload: { recovery: true, phase: 'failed_reset_fallback', error: failedErr.message }
+                  })
+                } catch {}
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch (phase3Err: any) {
+      logger.warn('⚠️ Phase 3 (failed → pending reset) failed:', phase3Err.message)
+    }
+
+    // ============ PHASE 4: Cancel abandoned checkouts ============
     // Pending payments with no user_id older than 3 hours = abandoned checkout.
     // The user started the Wallee checkout page but never completed it.
     // We mark them as cancelled so they don't pollute the dashboard stats.
@@ -410,7 +535,7 @@ export default defineEventHandler(async (event) => {
         .is('user_id', null)
         .lt('created_at', threeHoursAgo)
 
-      logger.info(`🗑️ Phase 3: found ${abandonedPayments?.length ?? 0} abandoned checkout(s) (no user_id after 3h)`)
+      logger.info(`🗑️ Phase 4: found ${abandonedPayments?.length ?? 0} abandoned checkout(s) (no user_id after 3h)`)
 
       if (!abandonedError && abandonedPayments && abandonedPayments.length > 0) {
         const ids = abandonedPayments.map(p => p.id)
@@ -425,17 +550,17 @@ export default defineEventHandler(async (event) => {
 
         if (!cancelError) {
           abandoned = ids.length
-          logger.info(`🧹 Phase 3: cancelled ${abandoned} abandoned checkout payment(s)`)
+          logger.info(`🧹 Phase 4: cancelled ${abandoned} abandoned checkout payment(s)`)
         } else {
-          logger.warn('⚠️ Phase 3: error cancelling abandoned payments:', cancelError.message)
+          logger.warn('⚠️ Phase 4: error cancelling abandoned payments:', cancelError.message)
         }
       }
     } catch (abandonedErr: any) {
-      logger.warn('⚠️ Phase 3 (abandoned cleanup) failed:', abandonedErr.message)
+      logger.warn('⚠️ Phase 4 (abandoned cleanup) failed:', abandonedErr.message)
     }
 
     const duration = Date.now() - startTime
-    logger.info(`🏁 Recovery cron finished in ${duration}ms — Phase1: ${recovered} recovered / ${failed} failed | Phase2: ${processingReleased} processing released | Phase3: ${abandoned} abandoned cancelled`)
+    logger.info(`🏁 Recovery cron finished in ${duration}ms — Phase1: ${recovered} recovered / ${failed} failed | Phase2: ${processingReleased} processing released | Phase3: ${failedReset} failed→pending | Phase4: ${abandoned} abandoned cancelled`)
 
     return {
       success: true,
@@ -445,7 +570,8 @@ export default defineEventHandler(async (event) => {
         phase1_recovered: recovered,
         phase1_failed: failed,
         phase2_processing_released: processingReleased,
-        phase3_abandoned_cancelled: abandoned,
+        phase3_failed_reset: failedReset,
+        phase4_abandoned_cancelled: abandoned,
         errors: errors.length > 0 ? errors : undefined
       },
       duration_ms: duration
