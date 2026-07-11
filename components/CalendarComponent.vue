@@ -635,7 +635,7 @@ const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate:
           title: '',
           start: `${dateStr}T00:00`,
           end: `${dateStr}T23:59`,
-          backgroundColor: '#f3f4f6', // Helles Grau (durchklickbar)
+          backgroundColor: '#e5e7eb', // Grau = Nicht-Arbeitszeit (Arbeitszeit bleibt weiß)
           borderColor: 'transparent',
           textColor: 'transparent',
           display: 'background',
@@ -661,7 +661,7 @@ const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate:
           title: '',
           start: `${dateStr}T${startHHMM}`,
           end: `${dateStr}T${endHHMM}`,
-          backgroundColor: '#f3f4f6',
+          backgroundColor: '#e5e7eb',
           borderColor: 'transparent',
           textColor: 'transparent',
           display: 'background',
@@ -773,7 +773,7 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
         title: '',
         start: new Date(currentDate).toISOString().split('T')[0] + 'T00:00:00',
         end: workStart.toISOString().replace('Z', ''), // Entferne Z für lokale Zeit
-        backgroundColor: '#f3f4f6', // Helles Grau (durchklickbar)
+        backgroundColor: '#e5e7eb', // Grau = Nicht-Arbeitszeit
         borderColor: 'transparent',
         textColor: 'transparent',
         display: 'background',
@@ -800,7 +800,7 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
           title: '',
           start: workEnd.toISOString().replace('Z', ''), // Entferne Z für lokale Zeit
           end: dayEnd.toISOString().replace('Z', ''), // Entferne Z für lokale Zeit
-          backgroundColor: '#f3f4f6', // Helles Grau (durchklickbar)
+          backgroundColor: '#e5e7eb', // Grau = Nicht-Arbeitszeit
           borderColor: 'transparent',
           textColor: 'transparent',
           display: 'background',
@@ -818,13 +818,13 @@ const generateWorkingHoursEvents = (staffId: string, startDate: Date, endDate: D
       // KEINE grauen Blöcke für die Arbeitszeit selbst (08:00-18:00 bleibt weiß)
       
     } else {
-      // Tag hat KEINE aktiven Arbeitszeiten -> ganzer Tag hellgrau (Default 00:00-24:00)
+      // Tag hat KEINE aktiven Arbeitszeiten -> ganzer Tag grau
       const fullDayEvent = {
         id: `working-hours-full-${dayOfWeek}-${currentDate.toISOString().split('T')[0]}`,
         title: '',
         start: new Date(currentDate).toISOString().split('T')[0] + 'T00:00:00',
         end: new Date(currentDate).toISOString().split('T')[0] + 'T23:59:59',
-        backgroundColor: '#f3f4f6', // Helles Grau (durchklickbar)
+        backgroundColor: '#e5e7eb', // Grau = Nicht-Arbeitszeit
         borderColor: 'transparent',
         textColor: 'transparent',
         display: 'background',
@@ -964,7 +964,7 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
         title: busy.event_title || 'Privat',
         start: parseUTCTime(busy.start_time),
         end: parseUTCTime(busy.end_time),
-        backgroundColor: '#e9d5ff',
+        backgroundColor: '#e5e7eb',
         borderColor: 'transparent',
         textColor: '#9333ea',
         display: 'background',
@@ -2985,78 +2985,69 @@ defineExpose({
   margin: 0 !important;
 }
 
-/* === NICHT-ARBEITSZEITEN BLÖCKE (grau für blockierte Zeit) === */
-/* Nicht-Arbeitszeit-Blöcke (hellgrau hinterlegt, durchklickbar) */
-.non-working-hours-block {
-  opacity: 0.5 !important; /* Halbtransparent für dezente Darstellung */
-  pointer-events: none !important; /* Durchklickbar */
-  z-index: 0 !important; /* Niedrigere z-index damit Termine darüber erscheinen */
-  border: none !important;
-  box-shadow: none !important;
+/* === KALENDER-HINTERGRUND: Arbeitszeit = weiß === */
+.fc {
+  --fc-page-bg-color: #ffffff;
+  --fc-bg-event-opacity: 1;
+  --fc-non-business-color: #e5e7eb;
 }
 
-/* External Busy Times (helles Lila, durchklickbar) */
-.external-busy-block {
-  opacity: 0.4 !important; /* Noch dezenter */
-  pointer-events: none !important; /* Durchklickbar */
+.fc-timegrid,
+.fc-timegrid-body,
+.fc-timegrid-cols,
+.fc-timegrid-col,
+.fc-timegrid-col-frame,
+.fc-timegrid-col-bg,
+.fc-scrollgrid-sync-table,
+.fc-timegrid-axis,
+.fc-timegrid-slots table,
+.fc-timegrid-slot,
+.fc-timegrid-slot-lane {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+}
+
+/* === NICHT-ARBEITSZEITEN (klar grau, Arbeitszeit bleibt weiß) === */
+/* Wichtig: background + background-color mit !important — sonst greift
+   FullCalendars Default (--fc-bg-event-color) bzw. .fc-event { inherit }. */
+.fc .fc-bg-event.non-working-hours-block,
+.non-working-hours-block {
+  background: #e5e7eb !important;
+  background-color: #e5e7eb !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
   z-index: 0 !important;
   border: none !important;
   box-shadow: none !important;
 }
 
-/* Kalender-Hintergrund auf weiß setzen */
-.fc-timegrid-slot {
-  background-color: #ffffff !important;
+/* External Busy Times — gleiches Grau wie Nicht-Arbeitszeit (nie lila) */
+.fc .fc-bg-event.external-busy-block,
+.external-busy-block {
+  background: #e5e7eb !important;
+  background-color: #e5e7eb !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
-.fc-timegrid-body {
-  background-color: #ffffff !important;
-}
-
-.fc-timegrid {
-  background-color: #ffffff !important;
-}
-
-/* CSS überschreibt nicht die backgroundColor - kommt aus dem Code */
-.non-working-hours-block .fc-event-title {
-  display: none !important;
-}
-
+.non-working-hours-block .fc-event-title,
 .non-working-hours-block .fc-event-main {
   display: none !important;
 }
 
-/* Nicht-Arbeitszeit-Block Hover-Effekt deaktivieren */
 .non-working-hours-block:hover {
-  opacity: 0.5 !important; /* Bleibt gleich beim Hover */
+  opacity: 1 !important;
   transform: none !important;
   box-shadow: none !important;
 }
 
-/* External Busy Block Hover-Effekt deaktivieren */
 .external-busy-block:hover {
-  opacity: 0.4 !important; /* Bleibt gleich beim Hover */
+  opacity: 1 !important;
   transform: none !important;
   box-shadow: none !important;
-}
-
-/* Freie Slots sollen weiß bleiben */
-.fc-timegrid-slot {
-  background-color: white !important;
-}
-
-/* Kalender-Hintergrund ist immer weiß */
-.fc-timegrid-body,
-.fc-scrollgrid-sync-table,
-.fc-col-header,
-.fc-timegrid-axis,
-.fc-timegrid-slots table {
-  background-color: white !important;
-}
-
-/* ARBEITSZEIT soll weiß sein - nur Slots ohne non-working-hours-block */
-.fc-timegrid-slot:not(.non-working-hours-block) {
-  background-color: white !important;
 }
 
 /* Entferne rote Ränder von allen Events */
@@ -3344,16 +3335,18 @@ defineExpose({
   border-color: #dc2626 !important;
 } */
 
-/* ✅ FullCalendar Background-Überschreibungen */
-.fc-event {
+/* Kategorie-Farben sollen greifen — aber NICHT bei Background-Events
+   (Arbeitszeit-Grau / External-Busy), sonst wird backgroundColor verworfen
+   und der Kalender wirkt überall grau. */
+.fc-event:not(.fc-bg-event) {
   background-color: inherit !important;
 }
 
-.fc-timegrid-event {
+.fc-timegrid-event:not(.fc-bg-event) {
   background-color: inherit !important;
 }
 
-.fc-event-main {
+.fc-event:not(.fc-bg-event) .fc-event-main {
   background-color: inherit !important;
 }
 
