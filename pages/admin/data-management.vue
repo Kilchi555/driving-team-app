@@ -1576,7 +1576,13 @@ function getFileExtension(name: string): string {
   return name.slice(name.lastIndexOf('.')).toLowerCase()
 }
 
+const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024 // 25 MB
+const MAX_IMPORT_ROWS = 5000 // matches server-side cap in /api/admin/import-users
+
 function validateFileType(file: File): string | null {
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return `Datei ist zu gross (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximal ${MAX_FILE_SIZE_BYTES / 1024 / 1024} MB erlaubt.`
+  }
   const ext = getFileExtension(file.name)
   if (ACCEPTED_EXTENSIONS.includes(ext)) return null
   if (ext === '.xls') return 'Das alte Excel-Format (.xls) wird nicht unterstützt. Bitte speichere die Datei als .xlsx.'
@@ -2194,6 +2200,10 @@ function mapRow(row: Row): any {
 
 async function runDryRun() {
   if (!rows.value.length || !importTarget.value || importTarget.value !== 'users') return
+  if (rows.value.length > MAX_IMPORT_ROWS) {
+    dryRunResult.value = { error: `Zu viele Zeilen (${rows.value.length}). Maximal ${MAX_IMPORT_ROWS} Zeilen pro Import — bitte Datei aufteilen.` }
+    return
+  }
   dryRunning.value = true
   dryRunResult.value = null
   try {
@@ -2233,6 +2243,10 @@ function buildMappedRow(row: Row, rowArrayIndex?: number): Record<string, any> {
 
 async function importData() {
   if (!rows.value.length || !validationResult.value || !importTarget.value) return
+  if (importTarget.value === 'users' && rows.value.length > MAX_IMPORT_ROWS) {
+    importResult.value = { error: `Zu viele Zeilen (${rows.value.length}). Maximal ${MAX_IMPORT_ROWS} Zeilen pro Import — bitte Datei aufteilen.` }
+    return
+  }
 
   importing.value = true
   importProgress.current = 0

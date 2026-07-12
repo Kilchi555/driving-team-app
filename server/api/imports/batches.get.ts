@@ -1,15 +1,8 @@
+import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
-  const query = getQuery(event)
-  const tenantId = query.tenantId as string
-
-  if (!tenantId) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'tenantId is required'
-    })
-  }
+  const profile = await requireAdminProfile(event)
 
   const supabaseAdmin = getSupabaseAdmin()
 
@@ -22,7 +15,7 @@ export default defineEventHandler(async (event) => {
         imported_invoices(count),
         imported_records(count)
       `)
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', profile.tenant_id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
@@ -30,7 +23,7 @@ export default defineEventHandler(async (event) => {
       console.error('Error fetching import batches:', error)
       throw createError({
         statusCode: 500,
-        statusMessage: `Failed to fetch import batches: ${error.message}`
+        statusMessage: 'Failed to fetch import batches'
       })
     }
 
@@ -39,10 +32,11 @@ export default defineEventHandler(async (event) => {
       batches: data
     }
   } catch (error: any) {
+    if (error?.statusCode) throw error
     console.error('Import batches fetch failed:', error)
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Failed to fetch import batches'
+      statusMessage: 'Failed to fetch import batches'
     })
   }
 })

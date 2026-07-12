@@ -1,13 +1,15 @@
+import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event)
   const body = await readBody(event)
-  const { tenantId, source, note, totalRows, createdBy, dataType } = body
+  const { source, note, totalRows, dataType } = body
 
-  if (!tenantId || !source) {
+  if (!source) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Missing required fields: tenantId and source are required'
+      statusMessage: 'Missing required field: source is required'
     })
   }
 
@@ -17,11 +19,11 @@ export default defineEventHandler(async (event) => {
     const { data, error } = await supabaseAdmin
       .from('imports_batches')
       .insert({
-        tenant_id: tenantId,
+        tenant_id: profile.tenant_id,
         source,
         note,
         total_rows: totalRows,
-        created_by: createdBy,
+        created_by: profile.id,
         data_type: dataType ?? null
       })
       .select()
@@ -31,7 +33,7 @@ export default defineEventHandler(async (event) => {
       console.error('Error creating import batch:', error)
       throw createError({
         statusCode: 500,
-        statusMessage: `Failed to create import batch: ${error.message}`
+        statusMessage: 'Failed to create import batch'
       })
     }
 
@@ -41,10 +43,11 @@ export default defineEventHandler(async (event) => {
       batch: data
     }
   } catch (error: any) {
+    if (error?.statusCode) throw error
     console.error('Import batch creation failed:', error)
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Failed to create import batch'
+      statusMessage: 'Failed to create import batch'
     })
   }
 })

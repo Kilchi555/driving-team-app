@@ -61,6 +61,7 @@ const handler = defineEventHandler(async (event) => {
       individualSessionNumber,  // Set when booking a single allow_individual_booking session
       marketingSessionId,   // Optional: analytics session ID from drivingteam.ch for attribution
       vehicleId,            // Optional: selected rental vehicle
+      paymentMethod: requestedPaymentMethod, // Optional: 'cash_on_site' (default) or 'invoice'
     } = body
 
     logger.debug('💵 Cash enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions, isPartialEnrollment })
@@ -104,7 +105,17 @@ const handler = defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: 'Tenant nicht verfügbar' })
     }
 
-    // 2b. Cash enrollment is allowed in three cases:
+    // 2b. This endpoint handles two "no upfront online payment" methods:
+    // cash-on-site and invoice. Which one is actually used is resolved below;
+    // both are gated so a spoofed request can't dodge Wallee for a course
+    // that requires it.
+    //
+    // Invoice is only allowed when BOTH are true:
+    //   a) The course's `payment_method` column is explicitly set to 'INVOICE'.
+    //   b) The tenant has enabled invoice payments tenant-wide
+    //      (tenant_settings.payment.payment_settings.invoice_payments_enabled).
+    //
+    // Cash-on-site is allowed in three cases:
     //   a) The course's `payment_method` column is explicitly set to
     //      'CASH_ON_SITE' by an admin (highest priority).
     //   b) The course's city is Einsiedeln (historical default).
@@ -118,8 +129,23 @@ const handler = defineEventHandler(async (event) => {
       : (course.description?.toLowerCase() || '').includes('einsiedeln')
     const adminAllowedCash = explicitMethod === 'CASH_ON_SITE'
 
-    if (!adminAllowedCash && !isEinsiedeln && tenant.wallee_enabled) {
-      logger.warn('❌ Cash payment attempted for course without cash override on Wallee-enabled tenant:', {
+    let adminAllowedInvoice = false
+    if (explicitMethod === 'INVOICE') {
+      const { data: paymentSettingRow } = await supabase
+        .from('tenant_settings')
+        .select('setting_value')
+        .eq('tenant_id', tenantId)
+        .eq('category', 'payment')
+        .eq('setting_key', 'payment_settings')
+        .maybeSingle()
+      const tenantPaymentSettings = paymentSettingRow?.setting_value
+        ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
+        : {}
+      adminAllowedInvoice = tenantPaymentSettings.invoice_payments_enabled === true
+    }
+
+    if (!adminAllowedCash && !adminAllowedInvoice && !isEinsiedeln && tenant.wallee_enabled) {
+      logger.warn('❌ Cash/invoice payment attempted for course without override on Wallee-enabled tenant:', {
         courseId,
         city: explicitCity,
         location: course.description,
@@ -130,6 +156,12 @@ const handler = defineEventHandler(async (event) => {
         statusMessage: 'Cash-on-site payment is not enabled for this course. Please use online payment.'
       })
     }
+
+    // Resolve the final payment_method to store: honor the client's request
+    // only if it's actually allowed for this course/tenant; otherwise fall
+    // back to whatever IS allowed (never trust the client blindly).
+    const finalPaymentMethod: 'invoice' | 'cash_on_site' =
+      (requestedPaymentMethod === 'invoice' && adminAllowedInvoice) ? 'invoice' : 'cash_on_site'
 
     // 3 & 4. SARI credential loading + validation (only for SARI-managed courses)
     let sari: any = null
@@ -466,7 +498,7 @@ const handler = defineEventHandler(async (event) => {
         license_number: customerData.licenseNumber || null,
         status: 'confirmed',
         payment_status: 'pending',
-        payment_method: 'cash_on_site',
+        payment_method: finalPaymentMethod,
         amount_paid_rappen: 0,
         registration_date: new Date().toISOString(),
         registered_at: new Date().toISOString(),
@@ -593,7 +625,7 @@ const handler = defineEventHandler(async (event) => {
         method: 'POST',
         body: {
           courseRegistrationId: enrollment.id,
-          paymentMethod: 'cash',
+          paymentMethod: finalPaymentMethod === 'invoice' ? 'invoice' : 'cash',
           totalAmount: effectivePrice / 100 // In CHF
         }
       })
@@ -605,7 +637,9 @@ const handler = defineEventHandler(async (event) => {
     return {
       success: true,
       enrollmentId: enrollment.id,
-      message: 'Anmeldung bestätigt! Bitte bringen Sie den Betrag in bar zum ersten Kurstag mit.'
+      message: finalPaymentMethod === 'invoice'
+        ? 'Anmeldung bestätigt! Sie erhalten die Rechnung in Kürze per E-Mail.'
+        : 'Anmeldung bestätigt! Bitte bringen Sie den Betrag in bar zum ersten Kurstag mit.'
     }
 
   } catch (error: any) {

@@ -10,15 +10,17 @@
  *   For very large imports (>500 leads) the email queue may outlive the serverless
  *   function. A "Consent-Mails erneut senden" button on the leads page handles this.
  */
+import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { fetchTenantEmailContext, sendConsentEmailWithContext } from '~/server/utils/send-consent-email'
 
 export default defineEventHandler(async (event) => {
-  const { tenantId, categories = [], onlyWithEmail = true } = await readBody(event)
-
-  if (!tenantId) {
-    throw createError({ statusCode: 400, statusMessage: 'tenantId required' })
-  }
+  const profile = await requireAdminProfile(event)
+  const { categories = [], onlyWithEmail = true } = await readBody(event)
+  // tenantId is intentionally NOT taken from the request body — always use the
+  // authenticated admin's own tenant to prevent importing/emailing another
+  // tenant's users.
+  const tenantId = profile.tenant_id
 
   const supabase = getSupabaseAdmin()
 

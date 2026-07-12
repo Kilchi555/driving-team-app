@@ -138,6 +138,28 @@ const handler = defineEventHandler(async (event) => {
         statusMessage: 'Dieser Kurs ist auf Barzahlung vor Ort eingestellt. Bitte verwende die Barzahlungs-Anmeldung.'
       })
     }
+    if (explicitMethod === 'INVOICE') {
+      // Only block if invoice is actually usable for this tenant — otherwise
+      // the client-side auto-degrade logic (getCoursePaymentMethod) will
+      // have already fallen back to WALLEE, and we must honor that here too.
+      const { data: paymentSettingRow } = await supabase
+        .from('tenant_settings')
+        .select('setting_value')
+        .eq('tenant_id', tenantId)
+        .eq('category', 'payment')
+        .eq('setting_key', 'payment_settings')
+        .maybeSingle()
+      const tenantPaymentSettings = paymentSettingRow?.setting_value
+        ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
+        : {}
+      if (tenantPaymentSettings.invoice_payments_enabled === true) {
+        logger.warn('🚫 Wallee enrollment blocked: course is admin-marked invoice-only', { courseId, tenantId })
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Dieser Kurs ist auf Rechnung eingestellt. Bitte verwende die Rechnungs-Anmeldung.'
+        })
+      }
+    }
 
     // Note: tenant.wallee_enabled is enforced LATER in the flow, only when a
     // Wallee payment is actually required. Users whose credit balance covers
