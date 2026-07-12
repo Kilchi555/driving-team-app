@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
   const role: string = authUser.role || authUser.profile?.role || ''
   const tenantId: string = authUser.tenant_id || authUser.profile?.tenant_id || ''
 
-  if (!['admin', 'staff', 'superadmin'].includes(role) || !tenantId) {
+  if (!['admin', 'staff', 'super_admin'].includes(role) || !tenantId) {
     console.warn(`🚫 rental-vehicles 403: role=${role} tenantId=${tenantId} authId=${authUser.id}`)
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }

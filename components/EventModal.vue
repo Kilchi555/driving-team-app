@@ -399,10 +399,10 @@
                   </span>
                 </div>
                 <div class="space-y-1.5">
-                  <!-- Auto option -->
+                  <!-- No vehicle reserved -->
                   <label class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <input type="radio" :value="null" v-model="formData.vehicle_id" class="text-blue-500" />
-                    <span class="text-sm text-gray-600">Automatisch (nächstes freies Fahrzeug)</span>
+                    <span class="text-sm text-gray-600">Kein Fahrzeug reservieren</span>
                   </label>
                   <!-- Specific vehicles -->
                   <label v-for="v in resourceVehicles" :key="v.id"
@@ -412,7 +412,10 @@
                       <input type="radio" :value="v.id" v-model="formData.vehicle_id" class="text-blue-500 flex-shrink-0" />
                       <span class="text-sm text-gray-800 truncate">{{ v.name }}</span>
                     </div>
-                    <span v-if="v.is_available" class="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex-shrink-0">frei</span>
+                    <span v-if="v.id === savedVehicleId && selectedStudent" class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">
+                      Reserviert für {{ selectedStudent.first_name }}
+                    </span>
+                    <span v-else-if="v.is_available" class="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex-shrink-0">frei</span>
                     <span v-else class="text-xs font-medium text-red-500 bg-red-50 px-2 py-0.5 rounded-full flex-shrink-0">
                       {{ v.conflicts[0] ? formatConflict(v.conflicts[0]) : 'belegt' }}
                     </span>
@@ -2310,6 +2313,14 @@ const selectedVehicleConflict = computed(() => {
   if (!formData.value.vehicle_id) return null
   const v = resourceVehicles.value.find(x => x.id === formData.value.vehicle_id)
   return v && !v.is_available ? v.conflicts[0] : null
+})
+
+/** The vehicle actually persisted on this appointment (unaffected by unsaved radio changes) —
+ *  used to show "Reserviert für <Schüler>" instead of a misleading "frei" badge, since the
+ *  availability check excludes this appointment's own booking from conflict detection. */
+const savedVehicleId = computed(() => {
+  const ed = props.eventData as any
+  return ed?.vehicle_id ?? ed?.extendedProps?.vehicle_id ?? null
 })
 
 const selectedRoomConflict = computed(() => {

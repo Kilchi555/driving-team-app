@@ -593,7 +593,14 @@
 
               <div v-if="categoryForm.room_mode !== 'none'" class="space-y-2">
                 <label class="block text-xs font-medium text-gray-700 mb-1">Verfügbare Räume</label>
-                <p v-if="availableRooms.length === 0" class="text-xs text-gray-400">Keine Räume konfiguriert. Füge zuerst Räume im Räume-Tab hinzu.</p>
+                <p v-if="isLoadingModalExtras" class="text-xs text-gray-400 flex items-center gap-1.5">
+                  <svg class="animate-spin h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                  Räume werden geladen…
+                </p>
+                <p v-else-if="availableRooms.length === 0" class="text-xs text-gray-400">Keine Räume konfiguriert. Füge zuerst Räume im Räume-Tab hinzu.</p>
                 <div v-else class="space-y-1 max-h-40 overflow-y-auto">
                   <label v-for="room in availableRooms" :key="room.id"
                     class="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-100 cursor-pointer">
@@ -615,7 +622,14 @@
             <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <h5 class="text-md font-medium text-amber-900 mb-1">Fahrzeug-Zuordnung</h5>
               <p class="text-xs text-amber-700 mb-3">Wähle welche Schulfahrzeuge für diese Kategorie eingesetzt werden können.</p>
-              <p v-if="availableVehicles.length === 0" class="text-xs text-gray-400">Keine Fahrzeuge konfiguriert. Füge zuerst Fahrzeuge im Fahrzeuge-Tab hinzu.</p>
+              <p v-if="isLoadingModalExtras" class="text-xs text-gray-400 flex items-center gap-1.5">
+                <svg class="animate-spin h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                Fahrzeuge werden geladen…
+              </p>
+              <p v-else-if="availableVehicles.length === 0" class="text-xs text-gray-400">Keine Fahrzeuge konfiguriert. Füge zuerst Fahrzeuge im Fahrzeuge-Tab hinzu.</p>
               <div v-else class="space-y-1 max-h-40 overflow-y-auto">
                 <label v-for="vehicle in availableVehicles" :key="vehicle.id"
                   class="flex items-center gap-2 p-2 rounded-lg hover:bg-amber-100 cursor-pointer">
@@ -633,111 +647,136 @@
               </div>
             </div>
 
-            <div class="flex justify-end space-x-3 pt-4">
-              <!-- Fahrzeug-Optionen (Fallback-Default) -->
-              <div class="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                <div class="flex items-center justify-between mb-2">
-                  <h5 class="text-md font-medium text-orange-900">Fahrzeug-Optionen (Fallback-Default)</h5>
-                  <label class="relative inline-flex items-center cursor-pointer">
-                    <input v-model="categoryForm.vehicle_enabled" type="checkbox" class="sr-only peer" />
-                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-300 rounded-full peer peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
-                    <span class="ml-3 text-sm font-medium text-gray-700">{{ categoryForm.vehicle_enabled ? 'Aktiviert' : 'Deaktiviert' }}</span>
-                  </label>
+            <!-- ─── Fahrzeug-Optionen (Fallback-Default) ─── -->
+            <div class="mb-6 rounded-xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 overflow-hidden">
+              <div class="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5 border-b border-orange-200/70">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex-shrink-0">
+                    <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM19 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 16.5H3v-3.6a2 2 0 01.34-1.11L5.5 8.2A2 2 0 017.16 7.3h7.68a2 2 0 011.66.9l2.16 3.6A2 2 0 0119 12.9v3.6h-2.5"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M8 16.5h8"/>
+                    </svg>
+                  </span>
+                  <div class="min-w-0">
+                    <h5 class="text-sm font-semibold text-orange-950 leading-tight">Fahrzeug-Optionen</h5>
+                    <p class="text-[11px] text-orange-700/80 leading-tight">Fallback-Default für alle Standorte</p>
+                  </div>
                 </div>
-                <p class="text-xs text-orange-700 mb-3">Gilt wenn eine Location keine eigene Fahrzeug-Konfiguration hat. Definiere beliebig viele Kombinationen (z.B. Schulauto + Eigenanhänger).</p>
+                <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                  <input v-model="categoryForm.vehicle_enabled" type="checkbox" class="sr-only peer" />
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-300 rounded-full peer peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                  <span class="ml-3 text-xs font-medium text-gray-600 whitespace-nowrap">{{ categoryForm.vehicle_enabled ? 'Aktiviert' : 'Deaktiviert' }}</span>
+                </label>
+              </div>
+
+              <div class="px-4 sm:px-5 py-4">
+                <p class="text-xs text-orange-800/80 mb-4 leading-relaxed">
+                  Gilt, wenn ein Standort keine eigene Fahrzeug-Konfiguration hat. Definiere beliebig viele Kombinationen (z.B. Schulauto + Eigenanhänger) — der Kunde wählt im Booking-Flow zwischen ihnen, sobald mind. 2 Optionen aktiv sind.
+                </p>
 
                 <div v-if="categoryForm.vehicle_enabled" class="space-y-3">
-                  <!-- Option list -->
+                  <!-- Option cards -->
                   <div
                     v-for="(opt, idx) in categoryForm.vehicle_options"
                     :key="idx"
-                    class="bg-white border border-orange-200 rounded-lg p-3 space-y-2"
+                    class="relative bg-white border border-orange-200/80 rounded-xl p-3.5 shadow-sm space-y-3"
+                    :class="{ 'ring-2 ring-orange-300': opt.is_default }"
                   >
-                    <div class="flex items-center justify-between gap-2">
-                      <div class="flex-1 min-w-0">
-                        <input
-                          v-model="opt.label"
-                          type="text"
-                          placeholder="Label (z.B. Schulauto + Eigenanhänger)"
-                          class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400"
-                        />
-                      </div>
-                      <div class="flex items-center gap-2 flex-shrink-0">
-                        <label class="text-xs text-gray-500 whitespace-nowrap">Standard</label>
-                        <input
-                          type="radio"
-                          :name="`vehicle-default-${editingCategory?.id || 'new'}`"
-                          :checked="opt.is_default"
-                          @change="setVehicleDefault(idx)"
-                          class="text-orange-500"
-                        />
-                        <button
-                          type="button"
-                          @click="removeVehicleOption(idx)"
-                          class="text-red-400 hover:text-red-600 p-1"
-                          title="Option entfernen"
-                        >
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                          </svg>
-                        </button>
-                      </div>
+                    <div v-if="opt.is_default" class="absolute -top-2.5 left-3 px-2 py-0.5 rounded-full bg-orange-500 text-white text-[10px] font-semibold tracking-wide uppercase shadow-sm">
+                      Standard
                     </div>
+
+                    <div class="flex items-center gap-2">
+                      <input
+                        v-model="opt.label"
+                        type="text"
+                        placeholder="Label (z.B. Schulauto + Eigenanhänger)"
+                        class="flex-1 min-w-0 px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                      />
+                      <button
+                        type="button"
+                        @click="removeVehicleOption(idx)"
+                        class="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
+                        title="Option entfernen"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </div>
+
                     <input
                       v-model="opt.description"
                       type="text"
                       placeholder="Beschreibung (optional, z.B. Bitte Anhänger mitbringen)"
-                      class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400"
+                      class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                     />
+
                     <div class="grid grid-cols-3 gap-2">
                       <div>
-                        <label class="block text-xs text-gray-500 mb-1">Preiseffekt</label>
-                        <select v-model="opt.cost_type" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md">
+                        <label class="block text-[11px] font-medium text-gray-500 mb-1">Preiseffekt</label>
+                        <select v-model="opt.cost_type" class="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400">
                           <option value="none">Kein</option>
                           <option value="surcharge">Aufpreis</option>
                           <option value="discount">Rabatt</option>
                         </select>
                       </div>
                       <div v-if="opt.cost_type !== 'none'">
-                        <label class="block text-xs text-gray-500 mb-1">Betrag (CHF)</label>
+                        <label class="block text-[11px] font-medium text-gray-500 mb-1">Betrag (CHF)</label>
                         <input
                           v-model.number="opt.cost_chf"
                           type="number"
                           step="0.01"
                           min="0"
-                          class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400"
+                          class="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
                           placeholder="0.00"
                         />
                       </div>
                       <div v-if="opt.cost_type !== 'none'">
-                        <label class="block text-xs text-gray-500 mb-1">Typ</label>
-                        <select v-model="opt.per_minute" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md">
+                        <label class="block text-[11px] font-medium text-gray-500 mb-1">Typ</label>
+                        <select v-model="opt.per_minute" class="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400">
                           <option :value="false">Pauschal</option>
                           <option :value="true">Pro Minute</option>
                         </select>
                       </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                      <input
-                        v-model="opt.requires_school_vehicle"
-                        type="checkbox"
-                        :id="`rsv-${idx}`"
-                        class="rounded text-orange-500"
-                      />
-                      <label :for="`rsv-${idx}`" class="text-xs text-gray-600">Schulfahrzeug nötig (Kapazitätsprüfung aktivieren)</label>
+
+                    <div class="flex items-center justify-between gap-3 pt-2 border-t border-gray-100">
+                      <label class="flex items-center gap-2 cursor-pointer">
+                        <input
+                          v-model="opt.requires_school_vehicle"
+                          type="checkbox"
+                          :id="`rsv-${idx}`"
+                          class="rounded text-orange-500 focus:ring-orange-400"
+                        />
+                        <span class="text-xs text-gray-600">Schulfahrzeug nötig (Kapazitätsprüfung)</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 cursor-pointer flex-shrink-0" title="Als Standard-Option markieren">
+                        <input
+                          type="radio"
+                          :name="`vehicle-default-${editingCategory?.id || 'new'}`"
+                          :checked="opt.is_default"
+                          @change="setVehicleDefault(idx)"
+                          class="text-orange-500 focus:ring-orange-400"
+                        />
+                        <span class="text-xs text-gray-500 whitespace-nowrap">Als Standard</span>
+                      </label>
                     </div>
                   </div>
 
                   <button
                     type="button"
                     @click="addVehicleOption"
-                    class="w-full py-2 border-2 border-dashed border-orange-300 rounded-lg text-sm text-orange-600 hover:bg-orange-50 transition-colors"
+                    class="w-full py-2.5 border-2 border-dashed border-orange-300 rounded-xl text-sm font-medium text-orange-600 hover:bg-orange-100/60 hover:border-orange-400 transition-colors"
                   >
                     + Option hinzufügen
                   </button>
                 </div>
               </div>
+            </div>
 
+            <div class="flex justify-end space-x-3 pt-4 border-t border-gray-100">
               <button
                 type="button"
                 @click="closeModal"
@@ -965,6 +1004,9 @@ const displayedCategories = computed(() => {
 })
 const showModal = ref(false)
 const editingCategory = ref<Category | null>(null)
+// While true, the Raum-/Fahrzeug-Zuordnung sections show a loading state
+// instead of prematurely claiming "Keine Räume/Fahrzeuge konfiguriert".
+const isLoadingModalExtras = ref(false)
 const savingCategoryIds = ref<Set<number>>(new Set())
 
 // Actions State
@@ -1015,7 +1057,9 @@ const loadAvailableRooms = async () => {
   try {
     const res: any = await $fetch('/api/admin/resources/rooms')
     availableRooms.value = res.rooms || []
-  } catch { /* silent */ }
+  } catch (err) {
+    console.error('⚠️ Error loading rooms for category modal:', err)
+  }
 }
 
 // Available vehicles for category_codes assignment
@@ -1026,7 +1070,9 @@ const loadAvailableVehicles = async () => {
   try {
     const res: any = await $fetch('/api/admin/rental-vehicles')
     availableVehicles.value = (res.vehicles || []).filter((v: any) => v.is_active !== false)
-  } catch { /* silent */ }
+  } catch (err) {
+    console.error('⚠️ Error loading vehicles for category modal:', err)
+  }
 }
 
 const initVehicleCategoryChecked = (categoryCode: string) => {
@@ -1291,58 +1337,85 @@ const closeSelectStandardsModal = () => {
 const openCreateModal = () => {
   editingCategory.value = null
   vehicleCategoryChecked.value = new Set()
-  loadAvailableRooms()
-  loadAvailableVehicles()
   showModal.value = true
+  isLoadingModalExtras.value = true
+  Promise.all([loadAvailableRooms(), loadAvailableVehicles()])
+    .catch((err) => {
+      console.error('⚠️ Error loading create-modal extras (rooms/vehicles):', err)
+    })
+    .finally(() => {
+      isLoadingModalExtras.value = false
+    })
 }
 
-const openEditModal = async (category: Category) => {
-  editingCategory.value = { ...category }
-  const vs = (category as any).vehicle_settings
-  const rs = (category as any).room_settings
-  categoryForm.value = {
-    code: category.code,
-    name: category.name,
-    description: category.description || '',
-    color: category.color,
-    lesson_duration_minutes: [...category.lesson_duration_minutes],
-    exam_duration_minutes: category.exam_duration_minutes,
-    price_per_lesson_chf: 0,
-    admin_fee_chf: 0,
-    admin_fee_applies_from: 2,
-    theory_enabled: false,
-    theory_price_chf: 0,
-    theory_duration_minutes: 45,
-    consultation_enabled: false,
-    consultation_price_chf: 0,
-    consultation_duration_minutes: 60,
-    vehicle_enabled: vs?.mode === 'options' && !!vs?.options?.length,
-    vehicle_options: (vs?.options ?? []).map((o: any) => ({
-      key: o.key,
-      label: o.label ?? '',
-      description: o.description ?? '',
-      cost_type: o.cost_type ?? 'none',
-      cost_chf: (o.cost_rappen ?? 0) / 100,
-      per_minute: !!o.per_minute,
-      is_default: !!o.is_default,
-      requires_school_vehicle: !!o.requires_school_vehicle,
-    })),
-    room_mode: rs?.mode ?? 'none',
-    room_allowed_ids: (rs?.allowed_room_ids ?? []).map(String),
+const openEditModal = (category: Category) => {
+  try {
+    editingCategory.value = { ...category }
+    const vs = (category as any).vehicle_settings
+    const rs = (category as any).room_settings
+    categoryForm.value = {
+      code: category.code,
+      name: category.name,
+      description: category.description || '',
+      color: category.color,
+      // Defensive: fall back to [] if this field is ever null/malformed in the DB,
+      // otherwise spreading a non-array here would throw and silently abort the
+      // whole function before the modal ever becomes visible.
+      lesson_duration_minutes: Array.isArray(category.lesson_duration_minutes)
+        ? [...category.lesson_duration_minutes]
+        : [],
+      exam_duration_minutes: category.exam_duration_minutes,
+      price_per_lesson_chf: 0,
+      admin_fee_chf: 0,
+      admin_fee_applies_from: 2,
+      theory_enabled: false,
+      theory_price_chf: 0,
+      theory_duration_minutes: 45,
+      consultation_enabled: false,
+      consultation_price_chf: 0,
+      consultation_duration_minutes: 60,
+      vehicle_enabled: vs?.mode === 'options' && !!vs?.options?.length,
+      vehicle_options: (Array.isArray(vs?.options) ? vs.options : []).map((o: any) => ({
+        key: o.key,
+        label: o.label ?? '',
+        description: o.description ?? '',
+        cost_type: o.cost_type ?? 'none',
+        cost_chf: (o.cost_rappen ?? 0) / 100,
+        per_minute: !!o.per_minute,
+        is_default: !!o.is_default,
+        requires_school_vehicle: !!o.requires_school_vehicle,
+      })),
+      room_mode: rs?.mode ?? 'none',
+      room_allowed_ids: (Array.isArray(rs?.allowed_room_ids) ? rs.allowed_room_ids : []).map(String),
+    }
+
+    // Open the modal immediately — don't block it behind network round-trips.
+    // Previously this awaited pricing/rooms/vehicles fetches *before* setting
+    // showModal, so on a slow/flaky connection the modal could take seconds to
+    // appear (or silently never appear if any of those calls unexpectedly threw),
+    // which looked like "click does nothing".
+    showModal.value = true
+    isLoadingModalExtras.value = true
+
+    Promise.all([
+      loadCategoryPricing(category.code),
+      loadAvailableRooms(),
+      loadAvailableVehicles().then(() => initVehicleCategoryChecked(category.code)),
+    ])
+      .catch((err) => {
+        console.error('⚠️ Error loading category modal extras (pricing/rooms/vehicles):', err)
+      })
+      .finally(() => {
+        isLoadingModalExtras.value = false
+      })
+  } catch (err) {
+    console.error('❌ Error opening category edit modal:', err)
   }
-  
-  // Load current pricing data and available rooms in parallel
-  await Promise.all([
-    loadCategoryPricing(category.code),
-    loadAvailableRooms(),
-    loadAvailableVehicles().then(() => initVehicleCategoryChecked(category.code)),
-  ])
-  
-  showModal.value = true
 }
 
 const closeModal = () => {
   showModal.value = false
+  isLoadingModalExtras.value = false
   editingCategory.value = null
   categoryForm.value = {
     code: '',
@@ -1654,8 +1727,8 @@ onMounted(async () => {
     return navigateTo('/dashboard')
   }
   
-  // Prüfe ob User Admin ist
-  if (!authStore.isAdmin) {
+  // Prüfe ob User Admin (oder Super-Admin) ist
+  if (!authStore.isAdmin && !authStore.isSuperAdmin) {
     logger.debug('❌ User not admin, redirecting to dashboard')
     return navigateTo('/dashboard')
   }

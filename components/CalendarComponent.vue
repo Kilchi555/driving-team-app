@@ -1216,6 +1216,9 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
           customer_pickup_plz: (apt as any).customer_pickup_plz || null,
           customer_pickup_address: (apt as any).customer_pickup_address || null,
           original_price_rappen: (apt as any).original_price_rappen ?? null,
+          vehicle_id: (apt as any).vehicle_id ?? null,
+          vehicle_mode: (apt as any).vehicle_mode ?? null,
+          room_id: (apt as any).room_id ?? null,
         }
       }
       

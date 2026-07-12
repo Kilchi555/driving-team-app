@@ -388,7 +388,7 @@ function buildAdminNotificationEmail(p: {
     </p>
     ${bookingDetailBox(p)}
     <div style="text-align:center;margin:24px 0">
-      <a href="${baseUrl}/admin/vehicle-rentals"
+      <a href="${baseUrl}/admin/categories"
         style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600">
         Anfrage bearbeiten →
       </a>

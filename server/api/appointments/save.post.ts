@@ -567,7 +567,7 @@ export default defineEventHandler(async (event) => {
 
         if (vehicle_id) {
           const vehicleCost = resourceSurcharges.find((s: any) => s.type === 'vehicle')?.rappen ?? 0
-          await supabase.from('vehicle_bookings').insert({
+          const { error: vehicleBookingError } = await supabase.from('vehicle_bookings').insert({
             vehicle_id,
             appointment_id: appointmentId,
             tenant_id: tenantId,
@@ -576,7 +576,11 @@ export default defineEventHandler(async (event) => {
             purpose: 'lesson',
             status: 'confirmed',
             cost_rappen: vehicleCost,
+            booked_by: callerProfile.id,
           })
+          if (vehicleBookingError) {
+            logger.warn('⚠️ Failed to insert vehicle_booking:', vehicleBookingError.message)
+          }
         }
 
         // ── Room bookings ─────────────────────────────────────────────────
@@ -587,7 +591,7 @@ export default defineEventHandler(async (event) => {
 
         if (room_id) {
           const roomCost = resourceSurcharges.find((s: any) => s.type === 'room')?.rappen ?? 0
-          await supabase.from('room_bookings').insert({
+          const { error: roomBookingError } = await supabase.from('room_bookings').insert({
             room_id,
             appointment_id: appointmentId,
             tenant_id: tenantId,
@@ -596,7 +600,11 @@ export default defineEventHandler(async (event) => {
             purpose: 'lesson',
             status: 'confirmed',
             room_cost_rappen: roomCost,
+            booked_by: callerProfile.id,
           })
+          if (roomBookingError) {
+            logger.warn('⚠️ Failed to insert room_booking:', roomBookingError.message)
+          }
         }
 
         logger.debug('✅ Resource bookings synced for appointment:', appointmentId)

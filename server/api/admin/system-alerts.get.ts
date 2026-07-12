@@ -168,7 +168,7 @@ export default defineEventHandler(async (event) => {
     label: 'Fahrzeug-Mietanfragen',
     count: rentals.length,
     priority: 'high',
-    link: '/admin/vehicle-rentals',
+    link: '/admin/categories',
     items: rentals.map(r => ({
       id: r.id,
       text: `${(r as any).users?.first_name ?? '?'} ${(r as any).users?.last_name ?? ''} — ${new Date(r.start_time).toLocaleDateString('de-CH')}`,

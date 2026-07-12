@@ -634,7 +634,9 @@ async function loadVehicles() {
     const data = await $fetch('/api/admin/rental-vehicles')
     adminVehicles.value = (data as any).vehicles || []
     vehicleLocations.value = (data as any).locations || []
-  } catch { /* silent */ } finally { isLoadingVehicles.value = false }
+  } catch (err) {
+    console.error('⚠️ Error loading rental vehicles:', err)
+  } finally { isLoadingVehicles.value = false }
 }
 
 function openVehicleModal(v?: any) {
