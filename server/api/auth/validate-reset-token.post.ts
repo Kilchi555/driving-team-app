@@ -37,6 +37,18 @@ export default defineEventHandler(async (event) => {
       .eq('token', token)
       .single()
 
+    // Look up the email early so the frontend can render a hidden username
+    // hint for password managers (best-effort — not required for validity).
+    const getEmailHint = async (userId: string | undefined) => {
+      if (!userId) return null
+      const { data: user } = await serviceSupabase
+        .from('users')
+        .select('email')
+        .eq('id', userId)
+        .single()
+      return user?.email || null
+    }
+
     if (tokenError || !tokenData) {
       logger.debug('❌ Token not found or error:', tokenError)
       return {
@@ -69,7 +81,8 @@ export default defineEventHandler(async (event) => {
     logger.debug('✅ Token is valid and not expired')
     return {
       valid: true,
-      message: 'Token ist gültig'
+      message: 'Token ist gültig',
+      email: await getEmailHint(tokenData.user_id)
     }
 
   } catch (error: any) {

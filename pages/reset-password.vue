@@ -45,7 +45,13 @@
         </div>
 
         <!-- Reset Form -->
-        <form v-else @submit.prevent="updatePassword" class="space-y-4">
+        <form v-else @submit.prevent="updatePassword" class="space-y-4" autocomplete="on">
+          <!-- Visually-hidden (not display:none) username mirror so Safari/Chrome
+               can associate the new password with the account. -->
+          <div style="clip:rect(0,0,0,0);position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;white-space:nowrap;border:0">
+            <input type="email" name="username" autocomplete="username" :value="resolvedEmail" tabindex="-1" readonly>
+          </div>
+
           <div class="text-center mb-6">
             <div class="text-4xl mb-2">🔑</div>
             <p class="text-green-600 font-medium">✅ Reset-Link ist gültig!</p>
@@ -60,6 +66,8 @@
             <input
               v-model="newPassword"
               :type="showPw ? 'text' : 'password'"
+              name="new-password"
+              autocomplete="new-password"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
               placeholder="Mindestens 12 Zeichen"
@@ -110,6 +118,8 @@
             <input
               v-model="confirmPassword"
               :type="showPw ? 'text' : 'password'"
+              name="confirm-password"
+              autocomplete="new-password"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
               placeholder="Passwort wiederholen"
@@ -150,6 +160,8 @@ const success = ref(false)
 const newPassword = ref('')
 const confirmPassword = ref('')
 const showPw = ref(false)
+// Username hint for password managers (resolved from the reset session below)
+const resolvedEmail = ref('')
 
 // Unified password policy (length + zxcvbn strength + HIBP breach check)
 const { zxcvbnScore, hibpStatus, hibpCount, strengthLabel, evaluate, isPasswordAcceptable } = usePasswordStrength()
@@ -241,6 +253,7 @@ onMounted(async () => {
       }
       
       logger.debug('Session set successfully:', data.session?.user?.email)
+      resolvedEmail.value = data.session?.user?.email || ''
       isLoading.value = false
     } else {
       // Check if we already have a valid session using httpOnly cookies
@@ -253,6 +266,7 @@ onMounted(async () => {
       
       if (session) {
         logger.debug('Existing session found:', session.user.email)
+        resolvedEmail.value = session.user.email || ''
         isLoading.value = false
       } else {
         throw new Error('Kein gültiger Reset-Token gefunden. Bitte fordern Sie einen neuen Reset-Link an.')

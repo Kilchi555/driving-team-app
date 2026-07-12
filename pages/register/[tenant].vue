@@ -244,8 +244,11 @@
               />
             </div>
 
-            <!-- ZIP and City (same row) -->
-            <div class="grid grid-cols-2 gap-4">
+            <!-- ZIP, City and Profession (same row on larger screens). This spans
+                 both columns of the outer 2-col grid so all three fields sit in
+                 one evenly-split row, instead of PLZ+Ort being squeezed into a
+                 nested grid inside a single outer cell next to Beruf. -->
+            <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <!-- ZIP -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -279,19 +282,19 @@
                   placeholder="Zürich"
                 />
               </div>
-            </div>
 
-            <!-- Profession -->
-            <div class="mt-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Beruf
-              </label>
-              <input
-                v-model="formData.profession"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
-                placeholder="z.B. Student/in, Software Engineer"
-              />
+              <!-- Profession -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Beruf
+                </label>
+                <input
+                  v-model="formData.profession"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
+                  placeholder="z.B. Student/in, Software Engineer"
+                />
+              </div>
             </div>
           </div>
 
@@ -429,8 +432,12 @@
           </div>
 
 
-          <!-- WICHTIG: Form Element um die Passwort-Felder -->
-          <form @submit.prevent="submitRegistration" class="space-y-4">
+          <!-- WICHTIG: Form Element um die Passwort-Felder. Der Submit-Button liegt
+               weiter unten in der gemeinsamen Navigation-Leiste (ausserhalb dieses
+               <form>), ist aber via form="account-creation-form" formal damit
+               verknüpft, damit Browser/iOS/Android beim Absenden ein echtes
+               submit-Event sehen und "Passwort speichern?" anbieten können. -->
+          <form id="account-creation-form" @submit.prevent="submitRegistration" class="space-y-4">
             <!-- E-Mail -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -660,7 +667,8 @@
         
         <button
           v-if="currentStep === maxSteps"
-          @click="submitRegistration"
+          type="submit"
+          form="account-creation-form"
           :disabled="!canSubmit || isSubmitting"
           class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
         >

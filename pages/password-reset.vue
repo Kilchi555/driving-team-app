@@ -65,8 +65,12 @@
 
         <!-- Password Reset Form -->
         <form v-else @submit.prevent="handleReset" class="space-y-4" autocomplete="on">
-          <!-- Hidden username hint so password managers associate the new password with the account -->
-          <input type="text" autocomplete="username" style="display:none" tabindex="-1" aria-hidden="true">
+          <!-- Visually-hidden (not display:none) username mirror, bound to the
+               email resolved from the reset token, so Safari/Chrome can
+               associate the new password with the account. -->
+          <div style="clip:rect(0,0,0,0);position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;white-space:nowrap;border:0">
+            <input type="email" name="username" autocomplete="username" :value="resolvedEmail" tabindex="-1" readonly>
+          </div>
           <!-- New Password Input -->
           <div>
             <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
@@ -295,6 +299,8 @@ const error = ref<string | null>(null)
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const resetToken = ref('')
+// Username hint for password managers, resolved from the reset token below
+const resolvedEmail = ref('')
 
 const form = ref({
   password: '',
@@ -379,6 +385,7 @@ const validateToken = async () => {
 
     if (response?.valid) {
       isValidToken.value = true
+      resolvedEmail.value = response?.email || ''
       logger.debug('✅ Token is valid')
     } else {
       isValidToken.value = false
