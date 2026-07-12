@@ -1156,6 +1156,31 @@
             </p>
           </div>
 
+          <!-- Payment method selector (only shown if admin enabled invoice for customers) -->
+          <div v-if="invoiceVisibleForCustomer && effectiveBookingTotal > 0" class="mt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Zahlungsart</label>
+            <div class="space-y-2">
+              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                     :class="selectedPaymentMethod === 'wallee' ? '' : 'border-gray-200'"
+                     :style="selectedPaymentMethod === 'wallee' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
+                <input type="radio" v-model="selectedPaymentMethod" value="wallee" class="mt-1 mr-3" />
+                <div>
+                  <div class="font-medium text-gray-900">Online-Zahlung</div>
+                  <div class="text-sm text-gray-600">Kreditkarte, TWINT & mehr</div>
+                </div>
+              </label>
+              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                     :class="selectedPaymentMethod === 'invoice' ? '' : 'border-gray-200'"
+                     :style="selectedPaymentMethod === 'invoice' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
+                <input type="radio" v-model="selectedPaymentMethod" value="invoice" class="mt-1 mr-3" />
+                <div>
+                  <div class="font-medium text-gray-900">Rechnung</div>
+                  <div class="text-sm text-gray-600">Du erhältst die Rechnung nach dem Termin per E-Mail.</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <!-- Navigation -->
           <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <button
@@ -1673,9 +1698,13 @@ import { parseTimeWindows } from '~/utils/travelTimeValidation'
 import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
+import { useInvoicePaymentSettings } from '~/composables/useInvoicePaymentSettings'
 
 const { primaryColor } = useTenantBranding()
 const { cashVisible: cashVisibleForCustomer } = useCashPaymentSettings('customer')
+const { invoiceVisible: invoiceVisibleForCustomer } = useInvoicePaymentSettings()
+// 'wallee' stays the default so nothing changes for tenants that haven't opted in to invoice.
+const selectedPaymentMethod = ref<'wallee' | 'invoice'>('wallee')
 
 // Page Meta
 // @ts-ignore - definePageMeta is a Nuxt compiler macro
@@ -4232,6 +4261,7 @@ const confirmBooking = async () => {
       // Cross-domain marketing attribution — forwarded from drivingteam.ch
       marketing_session_id: (typeof window !== 'undefined' && (window as any).__analyticsSessionId) || undefined,
       marketing_attribution: (typeof window !== 'undefined' && (window as any).__marketingAttribution) || undefined,
+      payment_method: invoiceVisibleForCustomer.value ? selectedPaymentMethod.value : undefined,
     } as any)
 
     logger.debug('✅ Appointment created:', result.appointment_id)
