@@ -20,51 +20,18 @@
  * Enable the campaign in the UI and verify the ad copy before going live.
  */
 
-import { defineEventHandler, getHeader, createError } from 'h3'
+import { defineEventHandler } from 'h3'
+import { resolveGadsAuth, getGadsAccessToken, buildGadsHeaders } from '~/server/utils/gads-auth'
 
 export default defineEventHandler(async (event) => {
-  // ── Auth ─────────────────────────────────────────────────────────────────────
-  const cronSecret = process.env.CRON_SECRET
-  const auth = getHeader(event, 'authorization') ?? ''
-  if (!cronSecret || auth !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  // ── Auth + Credentials (tenant-aware) ────────────────────────────────────────
+  const gads = await resolveGadsAuth(event)
+  if (!gads.ok) return gads
 
-  // ── Credentials ───────────────────────────────────────────────────────────────
-  const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN
-  const clientId       = process.env.GOOGLE_ADS_CLIENT_ID
-  const clientSecret   = process.env.GOOGLE_ADS_CLIENT_SECRET
-  const refreshToken   = process.env.GOOGLE_ADS_REFRESH_TOKEN
-  const customerId     = process.env.GOOGLE_ADS_CUSTOMER_ID
-
-  if (!developerToken || !clientId || !clientSecret || !refreshToken || !customerId) {
-    return { success: false, reason: 'missing_credentials' }
-  }
-
-  // ── OAuth ─────────────────────────────────────────────────────────────────────
-  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: refreshToken.trim(),
-      grant_type: 'refresh_token',
-    }),
-  })
-  const tokenData = await tokenRes.json() as any
-  if (!tokenData.access_token) return { success: false, reason: 'token_error', detail: tokenData }
-
-  const accessToken = tokenData.access_token
+  const accessToken = await getGadsAccessToken(gads)
   const GADS_VERSION = 'v23'
-  const adsHeaders = {
-    'Authorization': `Bearer ${accessToken}`,
-    'developer-token': developerToken,
-    'login-customer-id': customerId,
-    'Content-Type': 'application/json',
-  }
-
-  const customerPrefix = `customers/${customerId}`
+  const adsHeaders = buildGadsHeaders(gads, accessToken)
+  const customerPrefix = `customers/${gads.customerId}`
 
   async function mutate(resource: string, operations: object[]): Promise<{ ok: boolean; data: any }> {
     const res = await fetch(`https://googleads.googleapis.com/${GADS_VERSION}/${customerPrefix}/${resource}:mutate`, {

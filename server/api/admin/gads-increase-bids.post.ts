@@ -29,7 +29,7 @@
  *   "zuerich"     — only FS Zürich +20%
  */
 
-import { GoogleAdsApi } from 'google-ads-api'
+import { resolveGadsAuth, buildGadsCustomer } from '~/server/utils/gads-auth'
 
 const PRESETS: Record<string, Array<{ campaign_name_contains: string; increase_pct: number }>> = {
   rank_fix: [
@@ -48,11 +48,9 @@ const PRESETS: Record<string, Array<{ campaign_name_contains: string; increase_p
 const ABSOLUTE_MAX_CPC_CHF = 8.0 // Hard cap — never raise ceiling above this
 
 export default defineEventHandler(async (event) => {
-  const cronSecret = process.env.CRON_SECRET
-  const authHeader = getHeader(event, 'authorization')
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  // ── Auth + Credentials (tenant-aware) ────────────────────────────────────────
+  const gads = await resolveGadsAuth(event)
+  if (!gads.ok) return gads
 
   const body = await readBody(event)
   const dryRun: boolean = body?.dry_run !== false
@@ -64,28 +62,7 @@ export default defineEventHandler(async (event) => {
     return { ok: false, reason: `Unknown preset. Use: ${Object.keys(PRESETS).join(', ')}` }
   }
 
-  const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID
-  const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN
-  const clientId = process.env.GOOGLE_ADS_CLIENT_ID
-  const clientSecret = process.env.GOOGLE_ADS_CLIENT_SECRET
-  const refreshToken = process.env.GOOGLE_ADS_REFRESH_TOKEN
-  const loginCustomerId = process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID
-
-  if (!customerId || !developerToken || !clientId || !clientSecret || !refreshToken) {
-    throw createError({ statusCode: 500, statusMessage: 'Missing Google Ads environment variables' })
-  }
-
-  const client = new GoogleAdsApi({
-    client_id: clientId,
-    client_secret: clientSecret,
-    developer_token: developerToken,
-  })
-
-  const customer = client.Customer({
-    customer_id: customerId,
-    refresh_token: refreshToken,
-    login_customer_id: loginCustomerId || undefined,
-  })
+  const customer = buildGadsCustomer(gads)
 
   // 1. Fetch campaigns with Target Impression Share settings + portfolio strategy info
   const campaignResponse = await customer.query(`
