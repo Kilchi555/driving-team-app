@@ -7,7 +7,7 @@
  *   resource_id: string (UUID)
  *   start_time: string (ISO)
  *   end_time: string (ISO)
- *   purpose: 'internal' | 'external' | 'maintenance' | 'meeting' | 'event'
+ *   purpose: 'internal' | 'external' | 'maintenance' | 'meeting' | 'event' | <custom string, e.g. "Fotoshooting">
  *   notes?: string
  *   // Internal only:
  *   booked_by_user_id?: string (UUID) — defaults to caller's own user_id
@@ -26,6 +26,7 @@ import { generateInvoicePdf } from '~/server/utils/invoice-pdf'
 
 const INTERNAL_PURPOSES = ['internal', 'maintenance', 'meeting', 'event']
 const ALL_PURPOSES = [...INTERNAL_PURPOSES, 'external']
+const MAX_CUSTOM_PURPOSE_LENGTH = 60
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('de-CH', {
@@ -69,13 +70,19 @@ export default defineEventHandler(async (event) => {
   if (!resource_id || !start_time || !end_time) {
     throw createError({ statusCode: 400, statusMessage: 'resource_id, start_time, end_time are required' })
   }
-  if (!purpose || !ALL_PURPOSES.includes(purpose)) {
-    throw createError({ statusCode: 400, statusMessage: `purpose must be one of: ${ALL_PURPOSES.join(', ')}` })
+  const trimmedPurpose = typeof purpose === 'string' ? purpose.trim() : ''
+  if (!trimmedPurpose) {
+    throw createError({ statusCode: 400, statusMessage: `purpose must be one of: ${ALL_PURPOSES.join(', ')}, or a custom label` })
+  }
+  // Allow a custom, staff-defined purpose label (e.g. "Fotoshooting") in addition to the fixed set.
+  const isCustomPurpose = !ALL_PURPOSES.includes(trimmedPurpose)
+  if (isCustomPurpose && trimmedPurpose.length > MAX_CUSTOM_PURPOSE_LENGTH) {
+    throw createError({ statusCode: 400, statusMessage: `Zweck darf maximal ${MAX_CUSTOM_PURPOSE_LENGTH} Zeichen lang sein.` })
   }
   if (new Date(start_time) >= new Date(end_time)) {
     throw createError({ statusCode: 400, statusMessage: 'start_time must be before end_time' })
   }
-  if (purpose === 'external') {
+  if (trimmedPurpose === 'external') {
     if (!external_contact_name?.trim()) throw createError({ statusCode: 400, statusMessage: 'external_contact_name is required for external reservations' })
     if (!external_contact_email?.trim()) throw createError({ statusCode: 400, statusMessage: 'external_contact_email is required for external reservations' })
   }
@@ -111,8 +118,8 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Insert booking ────────────────────────────────────────────────────────────
-  const isExternal = purpose === 'external'
-  const bookingPurpose = isExternal ? 'external' : purpose // e.g. 'maintenance', 'meeting', 'event', 'internal'
+  const isExternal = trimmedPurpose === 'external'
+  const bookingPurpose = isExternal ? 'external' : trimmedPurpose // e.g. 'maintenance', 'meeting', 'event', 'internal', or a custom label
 
   const externalFields = isExternal ? {
     external_contact_name: external_contact_name.trim(),

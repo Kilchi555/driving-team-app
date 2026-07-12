@@ -21,6 +21,37 @@
 
         <!-- View-only for lesson/course bookings -->
         <div v-if="editingBooking && isReadonlyBooking" class="px-5 pb-5 space-y-4">
+
+          <!-- Student / Instructor (lesson bookings) -->
+          <div v-if="editingBooking.appointment" class="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+            <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+              :style="{ background: primaryColor }">
+              {{ (editingBooking.appointment.student?.first_name || '?').charAt(0) }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-gray-900 truncate">
+                {{ editingBooking.appointment.student?.first_name }} {{ editingBooking.appointment.student?.last_name }}
+              </p>
+              <p class="text-xs text-gray-500 truncate">
+                {{ editingBooking.appointment.student?.phone || editingBooking.appointment.student?.email || 'Keine Kontaktdaten' }}
+              </p>
+            </div>
+            <span v-if="editingBooking.appointment.type" class="text-xs font-medium px-2 py-0.5 rounded-full bg-white border border-blue-200 text-blue-700 flex-shrink-0">
+              {{ editingBooking.appointment.type }}
+            </span>
+          </div>
+
+          <!-- Course (course bookings) -->
+          <div v-else-if="editingBooking.course" class="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+            <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0" :style="{ background: primaryColor }">
+              🎓
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-gray-900 truncate">{{ editingBooking.course.name }}</p>
+              <p v-if="editingBooking.course.city" class="text-xs text-gray-500 truncate">{{ editingBooking.course.city }}</p>
+            </div>
+          </div>
+
           <div class="bg-gray-50 rounded-xl p-4 space-y-2">
             <div class="flex justify-between text-sm">
               <span class="text-gray-500">Typ</span>
@@ -33,6 +64,26 @@
             <div class="flex justify-between text-sm">
               <span class="text-gray-500">Bis</span>
               <span class="font-medium">{{ formatDT(editingBooking.end_time) }}</span>
+            </div>
+            <div v-if="editingBooking.appointment?.instructor" class="flex justify-between text-sm">
+              <span class="text-gray-500">Fahrlehrer</span>
+              <span class="font-medium">{{ editingBooking.appointment.instructor.first_name }} {{ editingBooking.appointment.instructor.last_name }}</span>
+            </div>
+            <div v-if="bookingLocationLabel" class="flex justify-between text-sm gap-3">
+              <span class="text-gray-500 flex-shrink-0">Ort</span>
+              <span class="font-medium text-right">{{ bookingLocationLabel }}</span>
+            </div>
+            <div v-if="editingBooking.cost_rappen" class="flex justify-between text-sm">
+              <span class="text-gray-500">Kosten Fahrzeug</span>
+              <span class="font-medium">CHF {{ (editingBooking.cost_rappen / 100).toFixed(2) }}</span>
+            </div>
+            <div v-if="editingBooking.booked_by_user" class="flex justify-between text-sm">
+              <span class="text-gray-500">Erstellt von</span>
+              <span class="font-medium">{{ editingBooking.booked_by_user.first_name }} {{ editingBooking.booked_by_user.last_name }}</span>
+            </div>
+            <div v-if="editingBooking.notes" class="pt-1 border-t border-gray-200">
+              <span class="text-gray-500 text-xs">Notizen</span>
+              <p class="font-medium text-sm mt-0.5">{{ editingBooking.notes }}</p>
             </div>
           </div>
           <p class="text-xs text-gray-400 text-center">Diese Buchung ist mit einem Termin oder Kurs verknüpft und kann nur dort bearbeitet werden.</p>
@@ -83,7 +134,16 @@
                 :class="form.purpose === p.value ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium' : 'border-gray-200 bg-white text-gray-600'">
                 {{ p.label }}
               </button>
+              <button type="button"
+                @click="form.purpose = 'custom'"
+                class="py-2 text-sm rounded-xl border-2 transition-all col-span-2"
+                :class="form.purpose === 'custom' ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium' : 'border-gray-200 bg-white text-gray-600'">
+                ✏️ Eigener Zweck
+              </button>
             </div>
+            <input v-if="form.purpose === 'custom'" v-model="form.customPurposeLabel" type="text"
+              required maxlength="60" placeholder="z.B. Fotoshooting, Probefahrt Kunde XY…"
+              class="mt-2 w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
           </div>
 
           <!-- Internal: booked by (staff selector) -->
@@ -358,8 +418,14 @@ const internalPurposes = [
   { value: 'event', label: '🎉 Event' },
 ]
 
+const linkedPurposeLabels: Record<string, string> = {
+  lesson: '🚗 Fahrstunde',
+  course: '🎓 Kurs',
+}
+
 function purposeLabelOf(p: string): string {
-  return internalPurposes.find(x => x.value === p)?.label
+  return linkedPurposeLabels[p]
+    ?? internalPurposes.find(x => x.value === p)?.label
     ?? (p === 'external' ? '🌐 Extern' : p)
 }
 
@@ -370,6 +436,13 @@ const formatDT = (iso: string) =>
 const isReadonlyBooking = computed(() =>
   !!(props.editingBooking?.appointment_id || props.editingBooking?.course_id)
 )
+
+const bookingLocationLabel = computed(() => {
+  const appt = props.editingBooking?.appointment
+  if (!appt) return ''
+  return appt.custom_location_address || appt.custom_location_name ||
+    appt.location?.address || appt.location?.name || ''
+})
 
 // Staff list for "booked for" dropdown
 const staffUsers = ref<any[]>([])
@@ -454,6 +527,7 @@ const form = ref({
   end_time: defaultEnd.value,
   isExternal: false,
   purpose: 'internal' as string,
+  customPurposeLabel: '',
   booked_by_user_id: '',
   external_contact_name: '',
   external_contact_email: '',
@@ -477,11 +551,14 @@ watch(() => props.editingBooking, (b) => {
     const pad = (n: number) => String(n).padStart(2, '0')
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
   }
+  const knownPurposes = internalPurposes.map(p => p.value)
+  const isKnownOrExternal = b.purpose === 'external' || knownPurposes.includes(b.purpose)
   form.value = {
     start_time: toLocal(b.start_time),
     end_time: toLocal(b.end_time),
     isExternal: b.purpose === 'external',
-    purpose: b.purpose === 'external' ? 'external' : (b.purpose || 'internal'),
+    purpose: b.purpose === 'external' ? 'external' : (isKnownOrExternal ? (b.purpose || 'internal') : 'custom'),
+    customPurposeLabel: isKnownOrExternal ? '' : (b.purpose || ''),
     booked_by_user_id: b.booked_by || '',
     external_contact_name: b.external_contact_name || '',
     external_contact_email: b.external_contact_email || '',
@@ -500,8 +577,15 @@ const error = ref('')
 
 const submit = async () => {
   error.value = ''
+  if (!form.value.isExternal && form.value.purpose === 'custom' && !form.value.customPurposeLabel.trim()) {
+    error.value = 'Bitte einen Zweck eingeben.'
+    return
+  }
   isSaving.value = true
   try {
+    const effectivePurpose = form.value.isExternal
+      ? 'external'
+      : (form.value.purpose === 'custom' ? form.value.customPurposeLabel.trim() : form.value.purpose)
     await $fetch('/api/admin/resources/block', {
       method: 'POST',
       body: {
@@ -509,7 +593,7 @@ const submit = async () => {
         resource_id: props.resourceId,
         start_time: new Date(form.value.start_time).toISOString(),
         end_time: new Date(form.value.end_time).toISOString(),
-        purpose: form.value.isExternal ? 'external' : form.value.purpose,
+        purpose: effectivePurpose,
         notes: form.value.notes || null,
         booked_by_user_id: form.value.booked_by_user_id || null,
         ...(form.value.isExternal ? {

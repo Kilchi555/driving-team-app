@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: vehicle } = await supabase
     .from('vehicles')
-    .select('id, make, model, hourly_rate_rappen, rental_access')
+    .select('id, marke, modell, hourly_rate_rappen, rental_access')
     .eq('id', vehicle_id)
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
@@ -106,7 +106,7 @@ export default defineEventHandler(async (event) => {
     success: true,
     vehicle: {
       id: vehicle.id,
-      label: `${vehicle.make} ${vehicle.model}`,
+      label: [vehicle.marke, vehicle.modell].filter(Boolean).join(' '),
       hourly_rate_rappen: vehicle.hourly_rate_rappen,
     },
     from,

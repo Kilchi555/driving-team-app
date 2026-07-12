@@ -546,12 +546,8 @@
 
         <!-- Führerausweis (nur Staff) -->
         <div v-if="userDetails?.role === 'staff'" class="bg-white shadow rounded-xl overflow-hidden">
-          <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div class="px-5 py-4 border-b border-gray-100">
             <h3 class="text-sm font-semibold text-gray-900">Führerausweis</h3>
-            <span v-if="licensePhotos.length > 0 && licensePhotos.every(p => p.is_verified)"
-              class="text-xs font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded-full">Verifiziert</span>
-            <span v-else-if="licensePhotos.length > 0"
-              class="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Nicht verifiziert</span>
           </div>
 
           <div v-if="licensePhotosLoading" class="flex justify-center py-6">

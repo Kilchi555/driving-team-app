@@ -1,21 +1,19 @@
 <template>
-  <!-- Invoice Preview Modal – Neue Rechnung erstellen -->
-  <InvoicePreviewModal
-    v-model="showInvoicePreview"
-    :draft="invoiceDraft"
-    :can-send="canSendInvoice"
-    @sent="onInvoiceSentFromModal"
-    @view-invoice="onViewInvoiceFromModal"
-  />
-  <!-- Invoice View Modal – Bestehende Rechnung anzeigen -->
-  <InvoicePreviewModal
-    v-model="showInvoiceView"
-    :draft="null"
-    mode="view"
-    :view-invoice="viewInvoiceData"
-  />
-
   <div v-if="selectedStudent" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2" :style="{ paddingTop: 'max(8px, env(safe-area-inset-top, 8px))', paddingBottom: 'max(8px, env(safe-area-inset-bottom, 8px))' }">
+    <!-- Invoice modals use <Teleport to="body"> internally — position here doesn't matter -->
+    <InvoicePreviewModal
+      v-model="showInvoicePreview"
+      :draft="invoiceDraft"
+      :can-send="canSendInvoice"
+      @sent="onInvoiceSentFromModal"
+      @view-invoice="onViewInvoiceFromModal"
+    />
+    <InvoicePreviewModal
+      v-model="showInvoiceView"
+      :draft="null"
+      mode="view"
+      :view-invoice="viewInvoiceData"
+    />
     <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-full overflow-hidden flex flex-col">
       <!-- Header -->
       <div class="bg-white px-4 py-3 border-b border-gray-100 flex-shrink-0">
@@ -1479,7 +1477,8 @@
       @cancel="handleCancelPayment"
       @close="handleCancelPayment"
     />
-  </div>
+
+  <!-- Sub-modals (Teleport to body — position here doesn't affect rendering) -->
 
   <!-- Cash Deposit Modal -->
   <Teleport to="body">
@@ -1728,6 +1727,7 @@
       </div>
     </Transition>
   </Teleport>
+  </div>
 </template>
 
 <script setup lang="ts">

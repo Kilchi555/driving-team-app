@@ -166,7 +166,7 @@
             <NuxtLink v-if="shouldShowNavLink('discounts_enabled')" to="/admin/discounts" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/discounts') ? 'drawer-active' : ''">Rabatte</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('categories_enabled')" to="/admin/categories" @click="showMobileMenu = false"
-              class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">Preise & Infrastruktur</NuxtLink>
+              class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">Kategorien & Infrastruktur</NuxtLink>
             <NuxtLink to="/admin/student-credits" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('examiners_enabled')" to="/admin/examiners" @click="showMobileMenu = false"
@@ -270,7 +270,7 @@
             <NuxtLink v-if="shouldShowNavLink('discounts_enabled')" to="/admin/discounts"
               class="drawer-link" :class="isActive('/admin/discounts') ? 'drawer-active' : ''">Rabatte</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('categories_enabled')" to="/admin/categories"
-              class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">Preise & Infrastruktur</NuxtLink>
+              class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">Kategorien & Infrastruktur</NuxtLink>
             <NuxtLink to="/admin/student-credits"
               class="drawer-link" :class="isActive('/admin/student-credits') ? 'drawer-active' : ''">Guthaben</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('examiners_enabled')" to="/admin/examiners"
