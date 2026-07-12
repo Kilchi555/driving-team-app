@@ -15,6 +15,9 @@ interface PricingRule {
   rule_name: string
   valid_from: string | null
   valid_until: string | null
+  // ✅ Theorie-Preisregel (rule_type='theory'), pro Kategorie vom Tenant aktivierbar
+  theory_price_per_minute_rappen?: number
+  theory_base_duration_minutes?: number
 }
 
 interface CalculatedPrice {
@@ -560,16 +563,42 @@ export const usePricing = (options: UsePricingOptions = {}) => {
   // ✅ NEUE VALIDIERUNG: Theorielektionen und Fahrkategorien behandeln
   const validDrivingCategories = ['A', 'A1', 'A35kW', 'B', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'DE', 'Motorboot', 'Boot', 'BPT']
   
-  // ✅ Theorielektionen: Preis skaliert mit Duration (85 CHF = 45 min Basis)
+  // ✅ Theorielektionen: Preis kommt aus der pro Kategorie vom Tenant hinterlegten
+  // Preisregel (rule_type='theory' in pricing_rules, konfiguriert in der Kategorien-Verwaltung)
   if (appointmentType === 'theory') {
     const durationVal = Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes
-    const THEORY_BASE_RAPPEN = 8500 // 85 CHF for 45 minutes
-    const THEORY_BASE_DURATION_MIN = 45
-    const pricePerMinuteRappen = THEORY_BASE_RAPPEN / THEORY_BASE_DURATION_MIN
-    const scaledPriceRappen = roundToNearestFranken(Math.round(pricePerMinuteRappen * durationVal))
-    
-    logger.debug(`📚 Theorielektion: ${durationVal}min → CHF ${(scaledPriceRappen / 100).toFixed(2)}`)
-    
+
+    // Tenant ermitteln, um die Preisregeln laden zu können
+    let theoryTenantId = tenantId
+    if (!theoryTenantId) {
+      try {
+        const authStore = useAuthStore()
+        theoryTenantId = authStore.userProfile?.tenant_id
+      } catch (err) {
+        console.warn('⚠️ Could not fetch tenant_id for theory pricing:', err)
+      }
+    }
+
+    if (pricingRules.value.length === 0) {
+      await loadPricingRules(false, theoryTenantId)
+    }
+
+    const theoryRule = getPricingRule(categoryCode)
+    const theoryPricePerMinuteRappen = theoryRule?.theory_price_per_minute_rappen || 0
+
+    let scaledPriceRappen: number
+    if (theoryPricePerMinuteRappen > 0) {
+      // ✅ Preis aus der vom Tenant konfigurierten Theorie-Preisregel dieser Kategorie
+      scaledPriceRappen = roundToNearestFranken(Math.round(theoryPricePerMinuteRappen * durationVal))
+      logger.debug(`📚 Theorielektion (Kategorie ${categoryCode}): ${durationVal}min → CHF ${(scaledPriceRappen / 100).toFixed(2)} (aus Preisregel)`)
+    } else {
+      // Fallback, falls für diese Kategorie (noch) keine Theorie-Preisregel existiert
+      const THEORY_BASE_RAPPEN = 8500 // 85 CHF for 45 minutes
+      const THEORY_BASE_DURATION_MIN = 45
+      scaledPriceRappen = roundToNearestFranken(Math.round((THEORY_BASE_RAPPEN / THEORY_BASE_DURATION_MIN) * durationVal))
+      logger.warn(`⚠️ Keine Theorie-Preisregel für Kategorie "${categoryCode}" gefunden - Verwende Standardpreis (85 CHF/45min)`)
+    }
+
     const result: CalculatedPrice = {
       base_price_rappen: scaledPriceRappen,
       admin_fee_rappen: 0,
@@ -853,6 +882,16 @@ export const usePricing = (options: UsePricingOptions = {}) => {
   const availableCategories = computed(() => 
     pricingRules.value.map(rule => rule.category_code).sort()
   )
+  // ✅ True, sobald mind. eine Kategorie eine aktive Theorie-Preisregel hat
+  // (= Tenant hat Theorielektionen für diese Kategorie aktiviert)
+  const hasTheoryPricing = computed(() =>
+    pricingRules.value.some(rule => (rule.theory_price_per_minute_rappen || 0) > 0)
+  )
+  const theoryEnabledCategories = computed(() =>
+    pricingRules.value
+      .filter(rule => (rule.theory_price_per_minute_rappen || 0) > 0)
+      .map(rule => rule.category_code)
+  )
 
   // ===== RETURN API =====
   return {
@@ -863,6 +902,8 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     isLoaded,
     categoriesCount,
     availableCategories,
+    hasTheoryPricing,
+    theoryEnabledCategories,
 
     // Dynamic Pricing State
     dynamicPricing: computed(() => dynamicPricing.value),

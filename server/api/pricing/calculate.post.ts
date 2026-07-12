@@ -160,7 +160,11 @@ export default defineEventHandler(async (event) => {
               base_duration_minutes: 45,
               is_active: true,
               valid_from: rule.valid_from,
-              valid_until: rule.valid_until
+              valid_until: rule.valid_until,
+              // ✅ Theorie-Preisregel (rule_type='theory') separat mitführen, damit der Client
+              // erkennen kann, ob der Tenant Theorielektionen für diese Kategorie aktiviert hat
+              theory_price_per_minute_rappen: 0,
+              theory_base_duration_minutes: 45
             }
           }
 
@@ -186,6 +190,15 @@ export default defineEventHandler(async (event) => {
             }
             if (rule.rule_name) {
               acc[rule.category_code].rule_name = rule.rule_name
+            }
+          }
+
+          if (rule.rule_type === 'theory') {
+            if (rule.price_per_minute_rappen) {
+              acc[rule.category_code].theory_price_per_minute_rappen = rule.price_per_minute_rappen
+            }
+            if (rule.base_duration_minutes) {
+              acc[rule.category_code].theory_base_duration_minutes = rule.base_duration_minutes
             }
           }
 

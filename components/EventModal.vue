@@ -1372,6 +1372,29 @@ const getLessonTypeText = (appointmentType: string): string => {
   }
 }
 
+// ✅ Ermittelt den Standort-Text für die Titel-Generierung.
+// Persönliche Treffpunkte ("Pickup"-Adressen) werden beim Speichern eines manuell
+// eingegebenen Standorts als "{Vorname Nachname} - {Adresse}" benannt (siehe
+// /api/locations/create-pickup), damit sie in gemeinsamen Listen zuordenbar sind.
+// Für den Termin-Titel wollen wir aber nur die reine Adresse – sonst taucht der
+// Schülername doppelt auf (z.B. "Max - Max Mustermann - weiher").
+const getLocationTextForTitle = (location: any, student: any): string => {
+  if (!location) return 'Unbekannter Ort'
+
+  if (location.name === 'Treffpunkt') {
+    return location.address || 'Unbekannter Ort'
+  }
+
+  if (student?.first_name && student?.last_name && location.name) {
+    const fullNamePrefix = `${student.first_name} ${student.last_name} - `
+    if (location.name.startsWith(fullNamePrefix)) {
+      return location.name.slice(fullNamePrefix.length) || location.address || 'Unbekannter Ort'
+    }
+  }
+
+  return location.name || location.address || 'Unbekannter Ort'
+}
+
 // 3. Callback-Funktion für SMS-Integration erstellen
 const handleCustomerInvites = async (appointmentData: any) => {
   if (invitedCustomers.value.length > 0 && customerInviteSelectorRef.value) {
@@ -3920,10 +3943,7 @@ const handleLessonTypeSelected = async (lessonType: any) => {
   // ✅ NEU: Title automatisch aktualisieren basierend auf neuem Lesson Type
   if (selectedStudent.value && selectedLocation.value) {
     const studentName = selectedStudent.value.first_name
-    // ✅ Verwende address statt name, wenn name "Treffpunkt" ist
-    const locationName = selectedLocation.value.name === 'Treffpunkt' 
-      ? (selectedLocation.value.address || 'Unbekannter Ort')
-      : (selectedLocation.value.name || selectedLocation.value.address || 'Unbekannter Ort')
+    const locationName = getLocationTextForTitle(selectedLocation.value, selectedStudent.value)
     const lessonTypeText = getLessonTypeText(lessonType.code)
     formData.value.title = `${studentName} - ${locationName} (${lessonTypeText})`
     logger.debug('✅ Title updated with new lesson type:', formData.value.title)
@@ -5890,10 +5910,7 @@ const handleCreateMode = async () => {
     
     // ✅ NEU: Standard-Titel für Create-Mode setzen
     if (selectedStudent.value?.first_name && selectedLocation.value) {
-      // ✅ Verwende address statt name, wenn name "Treffpunkt" ist
-      const locationName = selectedLocation.value.name === 'Treffpunkt'
-        ? (selectedLocation.value.address || 'Unbekannter Ort')
-        : (selectedLocation.value.name || selectedLocation.value.address || 'Unbekannter Ort')
+      const locationName = getLocationTextForTitle(selectedLocation.value, selectedStudent.value)
       formData.value.title = `${selectedStudent.value.first_name} - ${locationName}`
       logger.debug('🎯 CREATE MODE: Set default title with student and location')
     } else if (selectedStudent.value?.first_name) {

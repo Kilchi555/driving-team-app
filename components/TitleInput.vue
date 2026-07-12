@@ -140,6 +140,17 @@ const suggestions = computed(() => {
       location = props.selectedLocation.address
     }
   }
+
+  // ✅ Persönliche Treffpunkte ("Pickup"-Adressen) werden beim Speichern als
+  // "{Vorname Nachname} - {Adresse}" benannt (siehe /api/locations/create-pickup).
+  // Diesen Präfix hier entfernen, sonst taucht der Schülername doppelt im Titel auf
+  // (z.B. "Max Mustermann - Max Mustermann - weiher").
+  if (props.selectedStudent?.first_name && props.selectedStudent?.last_name) {
+    const fullNamePrefix = `${props.selectedStudent.first_name} ${props.selectedStudent.last_name} - `
+    if (location.startsWith(fullNamePrefix)) {
+      location = location.slice(fullNamePrefix.length) || props.selectedLocation?.address || location
+    }
+  }
   
   // 2. Event type code suffix - REMOVED (not needed anymore)
   // Titles will be clean without [VKU], [NOTHELFER] suffixes

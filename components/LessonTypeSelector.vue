@@ -26,8 +26,9 @@
 
 <script setup lang="ts">
 
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { useEventTypes } from '~/composables/useEventTypes'
+import { usePricing } from '~/composables/usePricing'
 import { logger } from '~/utils/logger'
 
 // Types
@@ -69,9 +70,25 @@ const fallbackTypes: LessonType[] = [
   { code: 'theory', name: 'Theorie', emoji: '📚', require_payment: true },
 ]
 const eventTypes = ref<LessonType[]>([...fallbackTypes])
-const paidEventTypes = computed(() => eventTypes.value.filter((et: any) => et.require_payment))
 
 const { loadEventTypes } = useEventTypes()
+
+// ✅ "Theorie" nur anzeigen, wenn der Tenant für mind. eine Kategorie eine
+// Theorie-Preisregel aktiviert hat (Kategorien-Verwaltung → Theorielektion)
+const { loadPricingRules, hasTheoryPricing } = usePricing()
+
+const paidEventTypes = computed(() =>
+  eventTypes.value.filter((et: any) =>
+    et.require_payment && (et.code !== 'theory' || hasTheoryPricing.value || et.code === selectedPaidCode.value)
+  )
+)
+
+onMounted(() => {
+  // Lädt (bzw. nutzt gecachte) Preisregeln, damit hasTheoryPricing zuverlässig ist
+  loadPricingRules().catch(() => {
+    logger.debug('⚠️ LessonTypeSelector: could not load pricing rules for theory-gating')
+  })
+})
 
 // Lazy load: erst wenn Dropdown geöffnet wird
 const onDropdownFocus = async () => {
