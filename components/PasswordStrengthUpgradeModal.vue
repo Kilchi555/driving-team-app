@@ -25,9 +25,14 @@
             Bitte aktualisieren Sie Ihr Passwort, um Ihren Account zu schützen.
           </p>
 
-          <!-- New Password -->
-          <form autocomplete="on" @submit.prevent>
-          <input type="text" autocomplete="username" style="display:none" tabindex="-1" aria-hidden="true">
+          <!-- New Password. id + form="" association lets the submit button in the
+               footer (outside this <form>) trigger a real submit event, and the
+               visually-hidden (clip, not display:none) username mirror lets
+               Safari/Chrome associate the new password with the account. -->
+          <form id="password-strength-form" autocomplete="on" @submit.prevent="updatePassword">
+          <div style="clip:rect(0,0,0,0);position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;white-space:nowrap;border:0">
+            <input type="email" name="username" autocomplete="username" :value="currentUserEmail" tabindex="-1" readonly>
+          </div>
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">
               Neues Passwort *
@@ -116,7 +121,8 @@
           Später
         </button>
         <button
-          @click="updatePassword"
+          type="submit"
+          form="password-strength-form"
           :disabled="!canSubmit || isSubmitting"
           class="flex-1 px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
         >
@@ -132,6 +138,7 @@
 import { ref, computed, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { usePasswordStrength, generateStrongPassword } from '~/composables/usePasswordStrength'
+import { useAuthStore } from '~/stores/auth'
 
 const props = defineProps({
   modelValue: {
@@ -146,6 +153,11 @@ const isOpen = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 })
+
+// Username hint for password managers (this modal always updates the
+// currently logged-in user's own password)
+const authStore = useAuthStore()
+const currentUserEmail = computed(() => authStore.userProfile?.email || '')
 
 const newPassword = ref('')
 const confirmPassword = ref('')

@@ -34,7 +34,14 @@
         </div>
 
         <!-- Password Setup Form -->
-        <form v-else @submit.prevent="setPassword" class="space-y-6">
+        <form v-else @submit.prevent="setPassword" class="space-y-6" autocomplete="on">
+          <!-- Visually-hidden (not display:none) username mirror so Safari/Chrome
+               can associate the new password with the account, since the email
+               is only ever shown as plain text below, not as an input. -->
+          <div style="clip:rect(0,0,0,0);position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;white-space:nowrap;border:0">
+            <input type="email" name="username" autocomplete="username" :value="userInfo?.email || ''" tabindex="-1" readonly>
+          </div>
+
           <!-- User Info Display -->
           <div v-if="userInfo" class="p-4 bg-gray-50 rounded-lg">
             <div class="flex items-center gap-3">
@@ -82,6 +89,7 @@
               id="password"
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
+              name="new-password"
               required
               minlength="12"
               autocomplete="new-password"
@@ -98,6 +106,7 @@
               id="confirmPassword"
               v-model="confirmPassword"
               :type="showPassword ? 'text' : 'password'"
+              name="confirm-password"
               required
               minlength="12"
               autocomplete="new-password"

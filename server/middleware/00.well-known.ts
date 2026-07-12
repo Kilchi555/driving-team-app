@@ -18,6 +18,11 @@ const APPLE_APP_SITE_ASSOCIATION = {
       },
     ],
   },
+  // Ties app.simy.ch to this app for iCloud Keychain (matches the
+  // webcredentials: entry in ios/App/App/App.entitlements).
+  webcredentials: {
+    apps: ['25H29N3PDT.ch.simy.app'],
+  },
 }
 
 const ANDROID_ASSETLINKS = [
