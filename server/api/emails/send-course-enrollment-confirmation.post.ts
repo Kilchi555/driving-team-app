@@ -14,7 +14,7 @@ import { generateAdminEnrollmentNotificationEmail } from '~/server/utils/email-t
 
 interface ConfirmationEmailRequest {
   courseRegistrationId: string
-  paymentMethod: 'wallee' | 'cash' | 'admin'
+  paymentMethod: 'wallee' | 'cash' | 'admin' | 'invoice'
   totalAmount?: number // In CHF (optional, for cash display)
   testEmail?: string  // Override recipient for testing
 }
@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    if (!['wallee', 'cash', 'admin'].includes(paymentMethod)) {
+    if (!['wallee', 'cash', 'admin', 'invoice'].includes(paymentMethod)) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Invalid payment method'
@@ -205,6 +205,20 @@ export default defineEventHandler(async (event) => {
         </table>
       `
       emailSubject = `Anmeldebestätigung: ${course?.name} (Barzahlung)`
+    } else if (paymentMethod === 'invoice') {
+      paymentMethodNotice = `
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #eff6ff; border-radius: 8px; margin: 15px 0; border-left: 4px solid #3b82f6;">
+          <tr>
+            <td style="padding: 12px;">
+              <h3 style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Zahlungsmethode: Rechnung</h3>
+              <p style="margin: 0; color: #1e40af; font-size: 13px;">
+                Sie erhalten die Rechnung über CHF ${price} in Kürze per separater E-Mail.
+              </p>
+            </td>
+          </tr>
+        </table>
+      `
+      emailSubject = `Anmeldebestätigung: ${course?.name} (Rechnung)`
     } else if (paymentMethod === 'admin') {
       paymentMethodNotice = `
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #eff6ff; border-radius: 8px; margin: 15px 0; border-left: 4px solid #3b82f6;">

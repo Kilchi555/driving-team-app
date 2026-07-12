@@ -71,6 +71,8 @@ interface CreateAppointmentOptions {
   vehicle_mode?: string | null
   /** Cross-domain marketing session ID (from drivingteam.ch). */
   marketing_session_id?: string
+  /** Customer-selected payment method — 'wallee' (default) or 'invoice' (only honored if tenant allows it). */
+  payment_method?: 'wallee' | 'invoice'
   /** Decoded marketing attribution blob — used for server-side Google Ads conversion. */
   marketing_attribution?: {
     gclid?: string | null
@@ -193,6 +195,7 @@ export const useSecureAvailability = () => {
           vehicle_mode: options.vehicle_mode ?? null,
           marketing_session_id: options.marketing_session_id,
           marketing_attribution: options.marketing_attribution,
+          payment_method: options.payment_method,
         }
       })
 

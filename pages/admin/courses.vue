@@ -922,7 +922,11 @@
               <option :value="null">Automatisch (basierend auf Stadt)</option>
               <option value="WALLEE">Online-Zahlung (Wallee, Kreditkarte, TWINT)</option>
               <option value="CASH_ON_SITE">Barzahlung vor Ort</option>
+              <option value="INVOICE">Rechnung</option>
             </select>
+            <p v-if="newCourse.payment_method === 'INVOICE' && !invoicePaymentsEnabledForTenant" class="text-xs text-amber-700 mt-1">
+              Hinweis: "Rechnung als Zahlungsoption erlauben" ist in den Zahlungseinstellungen aktuell deaktiviert — aktivieren Sie es dort, sonst wird für diesen Kurs automatisch auf Online-Zahlung/Barzahlung zurückgefallen.
+            </p>
             <p
               v-if="!newCourse.payment_method"
               class="text-xs mt-1"
@@ -4059,11 +4063,13 @@ import { formatDateTime, formatDate, formatTime } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import ToggleSwitch from '~/components/ToggleSwitch.vue'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
+import { useInvoicePaymentSettings } from '~/composables/useInvoicePaymentSettings'
 import { getCoursePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLocationUtils'
 
 // Warning banner: surface "no online payments" so admins understand all
 // course enrollments will fall back to cash.
 const { walleeEnabled, walleeStatusLoaded, loadWalleeStatus } = useWalleeStatus()
+const { invoiceEnabled: invoicePaymentsEnabledForTenant } = useInvoicePaymentSettings()
 
 // Simple toast notification functions
 const showSuccessToast = (title: string, message: string = '') => {
@@ -4558,7 +4564,7 @@ const newCourse = ref({
   sari_course_id: null as string | null,
   registration_deadline: null as string | null,
   status: 'draft',
-  payment_method: null as 'WALLEE' | 'CASH_ON_SITE' | null
+  payment_method: null as 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null
 })
 
 // Live preview: which payment method will the auto-detection pick when
@@ -4571,7 +4577,8 @@ const autoPaymentMethodLabel = computed(() => {
       description: newCourse.value.description || null,
       name: newCourse.value.name || null
     },
-    walleeEnabled.value
+    walleeEnabled.value,
+    invoicePaymentsEnabledForTenant.value
   )
   return getPaymentMethodLabel(method)
 })
@@ -4580,10 +4587,12 @@ const autoPaymentMethodLabel = computed(() => {
 // admin override and the automatic fallback, so admins can see at a glance
 // which courses they've customized.
 function getCoursePaymentBadge(course: any): { label: string; icon: string; cssClass: string; title: string } {
-  const method = getCoursePaymentMethod(course, walleeEnabled.value)
-  const isOverride = course?.payment_method === 'WALLEE' || course?.payment_method === 'CASH_ON_SITE'
+  const method = getCoursePaymentMethod(course, walleeEnabled.value, invoicePaymentsEnabledForTenant.value)
+  const isOverride = course?.payment_method === 'WALLEE' || course?.payment_method === 'CASH_ON_SITE' || course?.payment_method === 'INVOICE'
   const base = method === 'CASH_ON_SITE'
     ? { label: 'Bar', icon: '💵', cssClass: 'bg-amber-100 text-amber-800' }
+    : method === 'INVOICE'
+    ? { label: 'Rechnung', icon: '🧾', cssClass: 'bg-purple-100 text-purple-800' }
     : { label: 'Online', icon: '💳', cssClass: 'bg-blue-100 text-blue-800' }
   return {
     ...base,
@@ -5770,7 +5779,7 @@ const editCourse = (course: any) => {
     sari_course_id: course.sari_course_id || '',
     registration_deadline: course.registration_deadline || null,
     status: course.status || 'draft',
-    payment_method: (course.payment_method as 'WALLEE' | 'CASH_ON_SITE' | null) ?? null
+    payment_method: (course.payment_method as 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null) ?? null
   }
   
   // Set derived values

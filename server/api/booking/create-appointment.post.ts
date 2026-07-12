@@ -83,6 +83,8 @@ interface CreateAppointmentRequest {
   vehicle_mode?: 'school' | 'own' | null
   /** Room selected by client in step 5.5 */
   room_id?: string | null
+  /** Customer-selected payment method. Only 'invoice' is honored, and only when the tenant has explicitly enabled it — otherwise falls back to 'wallee'. */
+  payment_method?: 'wallee' | 'invoice'
 }
 
 export default defineEventHandler(async (event: H3Event) => {
@@ -771,6 +773,30 @@ export default defineEventHandler(async (event: H3Event) => {
     const grossAmountRappen = totalAmountRappen + adminFeeRappen
     const netAmountRappen = Math.max(0, grossAmountRappen - validatedDiscountAmount)
 
+    // ============ LAYER 7c: RESOLVE PAYMENT METHOD ============
+    // Default to 'wallee'. A customer-requested 'invoice' is only honored if
+    // the tenant has explicitly enabled it in tenant_settings — otherwise we
+    // silently fall back to wallee so a spoofed request body can't be used
+    // to avoid online payment.
+    let resolvedPaymentMethod: 'wallee' | 'invoice' = 'wallee'
+    if (body.payment_method === 'invoice') {
+      const { data: paymentSettingRow } = await supabase
+        .from('tenant_settings')
+        .select('setting_value')
+        .eq('tenant_id', tenantId)
+        .eq('category', 'payment')
+        .eq('setting_key', 'payment_settings')
+        .maybeSingle()
+      const tenantPaymentSettings = paymentSettingRow?.setting_value
+        ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
+        : {}
+      if (tenantPaymentSettings.invoice_payments_enabled === true) {
+        resolvedPaymentMethod = 'invoice'
+      } else {
+        logger.warn('⚠️ Customer requested invoice payment but tenant has not enabled it — falling back to wallee', { tenantId })
+      }
+    }
+
     // ============ LAYER 8: CREATE PAYMENT ============ 
     logger.debug('💳 Creating payment record for appointment...', {
       appointment_id: newAppointment.id,
@@ -793,8 +819,8 @@ export default defineEventHandler(async (event: H3Event) => {
       discount_amount_rappen: validatedDiscountAmount,
       total_amount_rappen: netAmountRappen,
       payment_status: 'pending',
-      payment_method: 'wallee',
-      payment_provider: 'wallee',
+      payment_method: resolvedPaymentMethod,
+      payment_provider: resolvedPaymentMethod === 'wallee' ? 'wallee' : null,
       payment_method_id: null,
       description: appointmentTitle,
       metadata: {

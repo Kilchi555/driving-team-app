@@ -27,7 +27,7 @@ export function extractCityFromCourseDescription(description: string): string | 
   return null
 }
 
-export type CoursePaymentMethod = 'WALLEE' | 'CASH_ON_SITE'
+export type CoursePaymentMethod = 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE'
 
 /**
  * Determine payment method based on location and tenant Wallee status.
@@ -66,6 +66,12 @@ export function determinePaymentMethod(
  * This is the single entry point that UI and server-side handlers should
  * call so that admin overrides, city-based defaults and tenant Wallee
  * status are evaluated consistently.
+ *
+ * `invoiceEnabled` mirrors `walleeEnabled`: it reflects the tenant-wide
+ * "Rechnung als Zahlungsoption erlauben" toggle. A course explicitly set to
+ * INVOICE degrades to the automatic WALLEE/CASH_ON_SITE logic if the tenant
+ * has since disabled invoice payments — so enrollment never gets stuck on a
+ * payment method nobody can select.
  */
 export function getCoursePaymentMethod(
   course: {
@@ -74,7 +80,8 @@ export function getCoursePaymentMethod(
     description?: string | null
     name?: string | null
   } | null | undefined,
-  walleeEnabled?: boolean
+  walleeEnabled?: boolean,
+  invoiceEnabled?: boolean
 ): CoursePaymentMethod {
   const explicit = course?.payment_method
   if (explicit === 'WALLEE' || explicit === 'CASH_ON_SITE') {
@@ -86,6 +93,13 @@ export function getCoursePaymentMethod(
     }
     return explicit
   }
+  if (explicit === 'INVOICE') {
+    if (invoiceEnabled === false) {
+      const city = course?.city || extractCityFromCourseDescription(course?.description || course?.name || '')
+      return determinePaymentMethod(city, walleeEnabled)
+    }
+    return 'INVOICE'
+  }
 
   const city = course?.city || extractCityFromCourseDescription(course?.description || course?.name || '')
   return determinePaymentMethod(city, walleeEnabled)
@@ -94,12 +108,14 @@ export function getCoursePaymentMethod(
 /**
  * Get human-readable label for payment method
  */
-export function getPaymentMethodLabel(method: 'WALLEE' | 'CASH_ON_SITE'): string {
+export function getPaymentMethodLabel(method: CoursePaymentMethod): string {
   switch (method) {
     case 'WALLEE':
       return 'Online-Zahlung (Kreditkarte, TWINT)'
     case 'CASH_ON_SITE':
       return 'Barzahlung vor Ort'
+    case 'INVOICE':
+      return 'Rechnung'
     default:
       return 'Zahlung'
   }
@@ -108,12 +124,14 @@ export function getPaymentMethodLabel(method: 'WALLEE' | 'CASH_ON_SITE'): string
 /**
  * Get description for payment method
  */
-export function getPaymentMethodDescription(method: 'WALLEE' | 'CASH_ON_SITE'): string {
+export function getPaymentMethodDescription(method: CoursePaymentMethod): string {
   switch (method) {
     case 'WALLEE':
       return 'Du wirst nach der Anmeldung zur sicheren Zahlungsseite weitergeleitet.'
     case 'CASH_ON_SITE':
       return 'Bitte bringe den Betrag passend in bar zum ersten Kurstag mit.'
+    case 'INVOICE':
+      return 'Du erhältst die Rechnung nach der Anmeldung per E-Mail.'
     default:
       return ''
   }

@@ -1393,6 +1393,40 @@
             </div>
           </div>
 
+          <!-- Invoice Payment Settings -->
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Rechnungs-Zahlung für Kunden</h2>
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div class="flex-1">
+                <h3 class="text-sm font-medium text-gray-900">"Rechnung" als Zahlungsoption erlauben</h3>
+                <p class="text-sm text-gray-600">
+                  Wenn aktiviert, können Kunden bei der Online-Buchung von Fahrstunden und bei der Kursanmeldung
+                  "Rechnung" als Zahlungsmethode wählen, statt online per Kreditkarte/TWINT zu bezahlen.
+                </p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer ml-4">
+                <input
+                  type="checkbox"
+                  v-model="paymentSettings.invoice_payments_enabled"
+                  class="sr-only peer"
+                />
+                <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+              </label>
+            </div>
+            <div v-if="paymentSettings.invoice_payments_enabled" class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-3">
+              <div class="flex">
+                <svg class="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                </svg>
+                <div class="text-sm text-yellow-800">
+                  <strong>Hinweis:</strong> Die Rechnung selbst wird nicht automatisch erstellt — Mitarbeiter müssen
+                  sie weiterhin manuell erstellen und versenden (siehe Rechnungs-Berechtigungen oben).
+                  Für Kurse gilt die Option zusätzlich nur, wenn ein Kurs explizit auf "Rechnung" gestellt ist.
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- Reglemente Tab -->
@@ -2085,7 +2119,11 @@ const paymentSettings = ref({
   automatic_payment_hours_before: 24,
   automatic_authorization_hours_before: 72,
   cash_payments_enabled: true,
-  cash_payment_visibility: 'staff_only'
+  cash_payment_visibility: 'staff_only',
+  // Off by default: previously there was no way for customers to choose
+  // "Rechnung" in self-service booking, so keep that behavior unchanged
+  // until an admin explicitly opts in.
+  invoice_payments_enabled: false
 })
 
 const staffInvoicePermission = ref<'hidden' | 'create_only' | 'create_and_send'>('create_and_send')
