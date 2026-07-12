@@ -1,4 +1,8 @@
+import { requireAdminProfile } from '~/server/utils/auth'
+
 export default defineEventHandler(async (event) => {
+  await requireAdminProfile(event)
+
   const body = await readBody(event)
   const columns = (body?.columns ?? []) as string[]
   const rows = (body?.rows ?? []) as Array<Record<string, any>>
@@ -9,6 +13,7 @@ export default defineEventHandler(async (event) => {
 
   // Basic sanity checks (no DB writes)
   const maxColumns = 200
+  const maxRows = 20000 // sanity cap to avoid unbounded CPU/memory usage on abuse
   const issues: Array<{ index: number; message: string }> = []
 
   if (columns.length === 0) {
@@ -17,7 +22,9 @@ export default defineEventHandler(async (event) => {
   if (columns.length > maxColumns) {
     issues.push({ index: -1, message: `Zu viele Spalten (${columns.length} > ${maxColumns})` })
   }
-  // Removed row limit - validate all rows
+  if (rows.length > maxRows) {
+    throw createError({ statusCode: 400, statusMessage: `Zu viele Zeilen (${rows.length} > ${maxRows})` })
+  }
 
   // Check for duplicate column names
   const lower = columns.map(c => (c || '').toString().trim().toLowerCase())

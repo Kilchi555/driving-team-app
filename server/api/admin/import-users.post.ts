@@ -1,6 +1,7 @@
-import { defineEventHandler, readBody, createError } from 'h3'
-import { requireAdminProfile } from '~/server/utils/auth'
+import { defineEventHandler, readBody, createError, getRequestHeader } from 'h3'
+import { requireAdminOnly } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logger } from '~/utils/logger'
 
 interface UserRow {
@@ -48,7 +49,20 @@ function parseCategories(raw: string | undefined): string[] | null {
 type DuplicateMode = 'skip' | 'overwrite' | 'supplement' | 'create'
 
 function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  const trimmed = email.trim()
+  if (trimmed.length === 0 || trimmed.length > 254) return false
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)
+}
+
+/**
+ * Neutralizes CSV/spreadsheet formula-injection payloads: values starting
+ * with `=`, `+`, `-`, `@` or a tab are interpreted as formulas by Excel/
+ * Sheets and could run arbitrary logic (or leak data) for anyone who later
+ * exports this data back to a spreadsheet. Prefixing a single quote forces
+ * spreadsheet apps to treat the value as plain text.
+ */
+function sanitizeCsvValue(value: string): string {
+  return /^[=+\-@\t]/.test(value) ? `'${value}` : value
 }
 
 /** Normalize phone to E.164-ish digits for comparison */
@@ -98,7 +112,20 @@ function nameKey(firstName: string, lastName: string, birthdate: string | null):
  *   dryRun        – if true, only analyse without writing to DB
  */
 export default defineEventHandler(async (event) => {
-  const profile = await requireAdminProfile(event)
+  // Admin-only (not staff): bulk import can overwrite/supplement any user
+  // record in the tenant, so it's restricted to the same role tier as other
+  // destructive tenant-wide operations.
+  const profile = await requireAdminOnly(event)
+
+  const ip = getRequestHeader(event, 'x-forwarded-for')?.split(',')[0]?.trim()
+    || getRequestHeader(event, 'x-real-ip')
+    || event.node.req.socket?.remoteAddress
+    || 'unknown'
+  const rateLimit = await checkRateLimit(ip, 'admin_import_users', 20, 60 * 60 * 1000, undefined, profile.tenant_id)
+  if (!rateLimit.allowed) {
+    throw createError({ statusCode: 429, statusMessage: 'Zu viele Import-Anfragen. Bitte später erneut versuchen.' })
+  }
+
   const body = await readBody(event)
   const {
     rows,
@@ -131,8 +158,8 @@ export default defineEventHandler(async (event) => {
   const validRows: any[] = []
   rows.forEach((row, index) => {
     const email = (row.email || '').trim().toLowerCase() || null
-    const firstName = row.first_name?.trim() || ''
-    const lastName = row.last_name?.trim() || ''
+    const firstName = sanitizeCsvValue(row.first_name?.trim() || '')
+    const lastName = sanitizeCsvValue(row.last_name?.trim() || '')
     const phone = normalizePhone(row.phone)
     const birthdate = parseDate(row.birthdate)
     const lernfahrausweis = row.lernfahrausweis_nr?.trim() || null
@@ -152,7 +179,7 @@ export default defineEventHandler(async (event) => {
     const metadata: Record<string, string> = {}
     for (const colName of metadataFields) {
       const val = row[colName]?.trim()
-      if (val) metadata[sanitizeMetaKey(colName)] = val
+      if (val) metadata[sanitizeMetaKey(colName)] = sanitizeCsvValue(val)
     }
 
     validRows.push({
@@ -165,67 +192,71 @@ export default defineEventHandler(async (event) => {
       birthdate,
       name_key: nameKey(firstName, lastName, birthdate),
       lernfahrausweis_nr: lernfahrausweis,
-      street: row.street?.trim() || null,
+      street: sanitizeCsvValue(row.street?.trim() || '') || null,
       street_nr: row.street_nr?.trim() || null,
       zip: row.zip?.trim() || null,
-      city: row.city?.trim() || null,
+      city: sanitizeCsvValue(row.city?.trim() || '') || null,
       // Extended fields
       category: parseCategories(row.category),
-      profession: row.profession?.trim() || null,
+      profession: sanitizeCsvValue(row.profession?.trim() || '') || null,
       language: row.language?.trim() || null,
       preferred_payment_method: row.preferred_payment_method?.trim() || null,
       faberid: row.faberid?.trim() || null,
       sari_faberid: row.sari_faberid?.trim() || null,
       sari_birthdate: parseDate(row.sari_birthdate),
-      acquisition_source: row.acquisition_source?.trim() || null,
+      acquisition_source: sanitizeCsvValue(row.acquisition_source?.trim() || '') || null,
       referred_by_code: row.referred_by_code?.trim() || null,
       _metadata: Object.keys(metadata).length > 0 ? metadata : null,
     })
   })
 
   // ── Build lookup maps — ALL methods run in parallel ──────────────────────
-  const existingByEmail = new Map<string, string>()
-  const existingByPhone = new Map<string, string>()
-  const existingByNameBirthdate = new Map<string, string>()
-  const existingByLernfahrausweis = new Map<string, string>()
+  // Each match carries the existing user's role so privileged accounts
+  // (admin/staff/super_admin) can be protected from CSV-driven overwrites.
+  const existingByEmail = new Map<string, { id: string; role: string }>()
+  const existingByPhone = new Map<string, { id: string; role: string }>()
+  const existingByNameBirthdate = new Map<string, { id: string; role: string }>()
+  const existingByLernfahrausweis = new Map<string, { id: string; role: string }>()
 
   const emailList = validRows.map(r => r.email).filter(Boolean) as string[]
   const phoneList = validRows.map(r => r.phone_normalized).filter(Boolean) as string[]
   const birthdateList = [...new Set(validRows.map(r => r.birthdate).filter(Boolean) as string[])]
   const nrList = validRows.map(r => r.lernfahrausweis_nr).filter(Boolean) as string[]
 
+  // Phone matching requires re-normalizing every stored phone number, which
+  // can't be pushed down into the query. Cap the scanned set so a huge
+  // tenant can't turn every import into a full-table scan.
+  const PHONE_SCAN_LIMIT = 20000
+
   await Promise.all([
     // Email lookup
     emailList.length > 0
-      ? supabase.from('users').select('id, email').eq('tenant_id', profile.tenant_id).in('email', emailList)
-          .then(({ data }) => { for (const u of data || []) if (u.email) existingByEmail.set(u.email.toLowerCase(), u.id) })
+      ? supabase.from('users').select('id, email, role').eq('tenant_id', profile.tenant_id).in('email', emailList)
+          .then(({ data }) => { for (const u of data || []) if (u.email) existingByEmail.set(u.email.toLowerCase(), { id: u.id, role: u.role }) })
       : Promise.resolve(),
 
-    // Phone lookup (fetch all non-null phones, normalize & compare)
+    // Phone lookup (fetch non-null phones up to a bounded limit, normalize & compare)
     phoneList.length > 0
-      ? supabase.from('users').select('id, phone').eq('tenant_id', profile.tenant_id).not('phone', 'is', null)
-          .then(({ data }) => { for (const u of data || []) { const n = normalizePhone(u.phone); if (n && phoneList.includes(n)) existingByPhone.set(n, u.id) } })
+      ? supabase.from('users').select('id, phone, role').eq('tenant_id', profile.tenant_id).not('phone', 'is', null).limit(PHONE_SCAN_LIMIT)
+          .then(({ data }) => { for (const u of data || []) { const n = normalizePhone(u.phone); if (n && phoneList.includes(n)) existingByPhone.set(n, { id: u.id, role: u.role }) } })
       : Promise.resolve(),
 
     // Name + birthdate lookup (pre-filtered by birthdate)
     birthdateList.length > 0
-      ? supabase.from('users').select('id, first_name, last_name, birthdate').eq('tenant_id', profile.tenant_id).in('birthdate', birthdateList)
-          .then(({ data }) => { for (const u of data || []) { const k = nameKey(u.first_name, u.last_name, u.birthdate); if (k) existingByNameBirthdate.set(k, u.id) } })
+      ? supabase.from('users').select('id, first_name, last_name, birthdate, role').eq('tenant_id', profile.tenant_id).in('birthdate', birthdateList)
+          .then(({ data }) => { for (const u of data || []) { const k = nameKey(u.first_name, u.last_name, u.birthdate); if (k) existingByNameBirthdate.set(k, { id: u.id, role: u.role }) } })
       : Promise.resolve(),
 
     // Lernfahrausweis-Nr lookup
     nrList.length > 0
-      ? supabase.from('users').select('id, lernfahrausweis_nr').eq('tenant_id', profile.tenant_id).in('lernfahrausweis_nr', nrList)
-          .then(({ data }) => { for (const u of data || []) if (u.lernfahrausweis_nr) existingByLernfahrausweis.set(u.lernfahrausweis_nr, u.id) })
+      ? supabase.from('users').select('id, lernfahrausweis_nr, role').eq('tenant_id', profile.tenant_id).in('lernfahrausweis_nr', nrList)
+          .then(({ data }) => { for (const u of data || []) if (u.lernfahrausweis_nr) existingByLernfahrausweis.set(u.lernfahrausweis_nr, { id: u.id, role: u.role }) })
       : Promise.resolve(),
   ])
 
   // ── Fetch full existing records for supplement mode ───────────────────────
   // (needed to know which fields are already set)
   const existingRecordsById = new Map<string, any>()
-  if (duplicateMode === 'supplement' || dryRun) {
-    // We'll fetch lazily per matched ID below — collected first
-  }
 
   // ── Classify each row — check ALL methods, collect all matches ───────────
   const toInsert: any[] = []
@@ -235,14 +266,31 @@ export default defineEventHandler(async (event) => {
     const { _rowIndex, phone_normalized, phone_raw, name_key, _metadata, ...userData } = row
 
     // Collect all matches across all methods
-    const matches: { id: string; via: string }[] = []
-    if (row.email) { const id = existingByEmail.get(row.email); if (id) matches.push({ id, via: 'E-Mail' }) }
-    if (phone_normalized) { const id = existingByPhone.get(phone_normalized); if (id && !matches.find(m => m.id === id)) matches.push({ id, via: 'Telefon' }) }
-    if (name_key) { const id = existingByNameBirthdate.get(name_key); if (id && !matches.find(m => m.id === id)) matches.push({ id, via: 'Name+Geburtsdatum' }) }
-    if (row.lernfahrausweis_nr) { const id = existingByLernfahrausweis.get(row.lernfahrausweis_nr); if (id && !matches.find(m => m.id === id)) matches.push({ id, via: 'Lernfahrausweis-Nr' }) }
+    const matches: { id: string; via: string; role: string }[] = []
+    if (row.email) { const m = existingByEmail.get(row.email); if (m) matches.push({ id: m.id, via: 'E-Mail', role: m.role }) }
+    if (phone_normalized) { const m = existingByPhone.get(phone_normalized); if (m && !matches.find(x => x.id === m.id)) matches.push({ id: m.id, via: 'Telefon', role: m.role }) }
+    if (name_key) { const m = existingByNameBirthdate.get(name_key); if (m && !matches.find(x => x.id === m.id)) matches.push({ id: m.id, via: 'Name+Geburtsdatum', role: m.role }) }
+    if (row.lernfahrausweis_nr) { const m = existingByLernfahrausweis.get(row.lernfahrausweis_nr); if (m && !matches.find(x => x.id === m.id)) matches.push({ id: m.id, via: 'Lernfahrausweis-Nr', role: m.role }) }
+
+    const identifier = row.email || phone_raw || row.lernfahrausweis_nr || `${row.first_name} ${row.last_name}`
+
+    // Different match methods disagreeing on WHICH existing user this row
+    // belongs to is ambiguous — silently picking one risks merging/overwriting
+    // the wrong account. Flag for manual review instead.
+    const distinctIds = new Set(matches.map(m => m.id))
+    if (distinctIds.size > 1) {
+      skippedCount++
+      errorsLog.push({
+        row: _rowIndex,
+        identifier,
+        reason: `Uneindeutiger Treffer: mehrere unterschiedliche bestehende Nutzer gefunden (${matches.map(m => m.via).join(', ')}) — bitte manuell prüfen`,
+      })
+      continue
+    }
 
     // Use first/best match as the canonical existing record
     const existingId = matches[0]?.id
+    const existingRole = matches[0]?.role
     const matchedOn = matches.map(m => m.via).join(', ')
 
     const insertData = {
@@ -250,12 +298,20 @@ export default defineEventHandler(async (event) => {
       phone: phone_raw,
       ...(_metadata ? { metadata: _metadata } : {}),
     }
-    const identifier = row.email || phone_raw || row.lernfahrausweis_nr || `${row.first_name} ${row.last_name}`
 
     // Per-row action overrides the global duplicateMode
     const effectiveMode: DuplicateMode = existingId
       ? ((rowActions[_rowIndex] as DuplicateMode) || duplicateMode)
       : duplicateMode
+
+    // Never let a CSV row overwrite/supplement a privileged account
+    // (admin/staff/super_admin) — those aren't "customers" and shouldn't be
+    // mutated by a bulk customer import.
+    if (existingId && existingRole && existingRole !== 'client' && effectiveMode !== 'create') {
+      skippedCount++
+      errorsLog.push({ row: _rowIndex, identifier, reason: `Treffer via ${matchedOn} ist ein ${existingRole}-Konto — aus Sicherheitsgründen nicht überschrieben` })
+      continue
+    }
 
     if (existingId && effectiveMode !== 'create') {
       if (effectiveMode === 'skip') {
@@ -276,7 +332,12 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── For supplement mode: fetch existing records to compare ────────────────
-  if (duplicateMode === 'supplement' && toUpdate.length > 0) {
+  // Checked per-row (not just the global duplicateMode) because a per-row
+  // action override (rowActions) can set an individual row to 'supplement'
+  // even when the global mode is something else — without this, those rows'
+  // existing data would look empty and get fully overwritten instead of
+  // supplemented.
+  if (toUpdate.some(r => r.mode === 'supplement')) {
     const ids = toUpdate.map(r => r.id)
     const { data: existingData } = await supabase
       .from('users')

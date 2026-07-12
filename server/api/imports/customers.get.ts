@@ -1,58 +1,49 @@
+import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/utils/supabase'
-import { routeRequiresFeatureFlag, validateFeatureAccess } from '~/utils/featureFlags'
+import { escapeLikePattern, escapeOrFilterValue, sanitizeJsonColumnKey } from '~/server/utils/sql-helpers'
 import { logger } from '~/utils/logger'
 
+const SEARCH_COLUMNS = ['Id', 'Datum', 'Titel', 'E-Mail', 'Status', 'Schüler', 'Institution', 'Erstellt von', 'Auftragsnummer']
+
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event)
+
   const query = getQuery(event)
-  const { tenantId, batchId, search, searchColumn } = query
-  const limit = parseInt(query.limit as string) || 50
+  const { batchId, search, searchColumn } = query
+  const limit = Math.min(parseInt(query.limit as string) || 50, 500)
   const offset = parseInt(query.offset as string) || 0
-
-  if (!tenantId) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'tenantId is required'
-    })
-  }
-
-  // Check feature flag
-  const url = event.node.req.url || ''
-  if (routeRequiresFeatureFlag(url)) {
-    const featureCheck = await validateFeatureAccess(tenantId, url)
-    if (!featureCheck.enabled) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: `Feature access denied: ${featureCheck.message}`
-      })
-    }
-  }
 
   const supabaseAdmin = getSupabaseAdmin()
 
   try {
-    logger.debug('🔍 Search parameters:', { tenantId, batchId, search, searchColumn, limit, offset })
-    
+    logger.debug('🔍 Search parameters:', { tenantId: profile.tenant_id, batchId, search, searchColumn, limit, offset })
+
     // First get the total count
     let countQuery = supabaseAdmin
       .from('imported_customers')
       .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', profile.tenant_id)
       .is('deleted_at', null)
 
     if (batchId) {
       countQuery = countQuery.eq('batch_id', batchId)
     }
 
+    let safeColumn: string | null = null
+    if (search && searchColumn) {
+      safeColumn = sanitizeJsonColumnKey(searchColumn as string)
+      if (!safeColumn) {
+        throw createError({ statusCode: 400, statusMessage: 'Invalid searchColumn' })
+      }
+    }
+
     if (search) {
-      if (searchColumn) {
-        logger.debug('🔎 customers count - column specific search:', searchColumn, search)
-        // Column-specific search
-        countQuery = countQuery.ilike(`raw_json->>${searchColumn}`, `%${search}%`)
+      const escapedTerm = `%${escapeLikePattern(search as string)}%`
+      if (safeColumn) {
+        countQuery = countQuery.ilike(`raw_json->>${safeColumn}`, escapedTerm)
       } else {
-        logger.debug('🔎 customers count - general search:', search)
-        // Search across all major columns dynamically
-        const searchTerm = `%${search}%`
-        countQuery = countQuery.or(`raw_json->>Id.ilike.${searchTerm},raw_json->>Datum.ilike.${searchTerm},raw_json->>Titel.ilike.${searchTerm},raw_json->>E-Mail.ilike.${searchTerm},raw_json->>Status.ilike.${searchTerm},raw_json->>Schüler.ilike.${searchTerm},raw_json->>Institution.ilike.${searchTerm},raw_json->>Erstellt von.ilike.${searchTerm},raw_json->>Auftragsnummer.ilike.${searchTerm}`)
+        const orTerm = escapeOrFilterValue(escapedTerm)
+        countQuery = countQuery.or(SEARCH_COLUMNS.map(col => `raw_json->>${col}.ilike.${orTerm}`).join(','))
       }
     }
 
@@ -62,10 +53,9 @@ export default defineEventHandler(async (event) => {
 
     if (countError) {
       console.error('Error counting imported customers:', countError)
-      console.error('Full error details:', JSON.stringify(countError, null, 2))
       throw createError({
         statusCode: 500,
-        statusMessage: `Failed to count imported customers: ${countError.message}`
+        statusMessage: 'Failed to count imported customers'
       })
     }
 
@@ -73,7 +63,7 @@ export default defineEventHandler(async (event) => {
     let dataQuery = supabaseAdmin
       .from('imported_customers')
       .select('*')
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', profile.tenant_id)
       .is('deleted_at', null)
 
     if (batchId) {
@@ -81,15 +71,12 @@ export default defineEventHandler(async (event) => {
     }
 
     if (search) {
-      if (searchColumn) {
-        logger.debug('🔎 customers data - column specific search:', searchColumn, search)
-        // Column-specific search
-        dataQuery = dataQuery.ilike(`raw_json->>${searchColumn}`, `%${search}%`)
+      const escapedTerm = `%${escapeLikePattern(search as string)}%`
+      if (safeColumn) {
+        dataQuery = dataQuery.ilike(`raw_json->>${safeColumn}`, escapedTerm)
       } else {
-        logger.debug('🔎 customers data - general search:', search)
-        // Search across all major columns dynamically
-        const searchTerm = `%${search}%`
-        dataQuery = dataQuery.or(`raw_json->>Id.ilike.${searchTerm},raw_json->>Datum.ilike.${searchTerm},raw_json->>Titel.ilike.${searchTerm},raw_json->>E-Mail.ilike.${searchTerm},raw_json->>Status.ilike.${searchTerm},raw_json->>Schüler.ilike.${searchTerm},raw_json->>Institution.ilike.${searchTerm},raw_json->>Erstellt von.ilike.${searchTerm},raw_json->>Auftragsnummer.ilike.${searchTerm}`)
+        const orTerm = escapeOrFilterValue(escapedTerm)
+        dataQuery = dataQuery.or(SEARCH_COLUMNS.map(col => `raw_json->>${col}.ilike.${orTerm}`).join(','))
       }
     }
 
@@ -103,7 +90,7 @@ export default defineEventHandler(async (event) => {
       console.error('Error fetching imported customers:', error)
       throw createError({
         statusCode: 500,
-        statusMessage: `Failed to fetch imported customers: ${error.message}`
+        statusMessage: 'Failed to fetch imported customers'
       })
     }
 
@@ -115,10 +102,11 @@ export default defineEventHandler(async (event) => {
       offset: offset
     }
   } catch (error: any) {
+    if (error?.statusCode) throw error
     console.error('Imported customers fetch failed:', error)
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Failed to fetch imported customers'
+      statusMessage: 'Failed to fetch imported customers'
     })
   }
 })

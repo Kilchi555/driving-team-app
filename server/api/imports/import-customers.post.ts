@@ -1,22 +1,35 @@
+import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event)
   const body = await readBody(event)
-  const { tenantId, batchId, customers, createdBy } = body
+  const { batchId, customers } = body
 
-  if (!tenantId || !batchId || !customers || !Array.isArray(customers)) {
+  if (!batchId || !customers || !Array.isArray(customers)) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Missing required fields: tenantId, batchId, and customers array are required'
+      statusMessage: 'Missing required fields: batchId and customers array are required'
     })
   }
 
   const supabaseAdmin = getSupabaseAdmin()
 
   try {
+    // Verify the batch belongs to the caller's tenant before writing rows into it
+    const { data: batch, error: batchError } = await supabaseAdmin
+      .from('imports_batches')
+      .select('id, tenant_id')
+      .eq('id', batchId)
+      .single()
+
+    if (batchError || !batch || batch.tenant_id !== profile.tenant_id) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden – batch does not belong to your tenant' })
+    }
+
     // Prepare customer data for insertion
     const customerData = customers.map((customer: any) => ({
-      tenant_id: tenantId,
+      tenant_id: profile.tenant_id,
       batch_id: batchId,
       legacy_id: customer.legacy_id || null,
       email: customer.email || null,
@@ -33,7 +46,7 @@ export default defineEventHandler(async (event) => {
       updated_at_original: customer.updated_at_original || null,
       raw_json: customer.raw_json || {},
       mapped_json: customer.mapped_json || null,
-      created_by: createdBy
+      created_by: profile.id
     }))
 
     const { data, error } = await supabaseAdmin
@@ -45,7 +58,7 @@ export default defineEventHandler(async (event) => {
       console.error('Error importing customers:', error)
       throw createError({
         statusCode: 500,
-        statusMessage: `Failed to import customers: ${error.message}`
+        statusMessage: 'Failed to import customers'
       })
     }
 
@@ -55,10 +68,11 @@ export default defineEventHandler(async (event) => {
       customers: data
     }
   } catch (error: any) {
+    if (error?.statusCode) throw error
     console.error('Customer import failed:', error)
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Failed to import customers'
+      statusMessage: 'Failed to import customers'
     })
   }
 })

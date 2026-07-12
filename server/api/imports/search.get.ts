@@ -1,5 +1,6 @@
-import { getAuthenticatedUser } from '~/server/utils/auth'
+import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { logger } from '~/utils/logger'
 
 /**
@@ -8,22 +9,20 @@ import { logger } from '~/utils/logger'
  * simultaneously and returns grouped results with computed summaries.
  */
 export default defineEventHandler(async (event) => {
-  const authUser = await getAuthenticatedUser(event)
-  if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  const profile = await requireAdminProfile(event)
 
   const query = getQuery(event)
   const q = (query.q as string | undefined)?.trim()
-  const tenantId = query.tenantId as string | undefined
+  // tenantId is intentionally NOT taken from the request — always scope to the
+  // authenticated admin's own tenant to prevent cross-tenant data access.
+  const tenantId = profile.tenant_id
 
   if (!q || q.length < 2) {
     throw createError({ statusCode: 400, statusMessage: 'Suchbegriff muss mindestens 2 Zeichen lang sein' })
   }
-  if (!tenantId) {
-    throw createError({ statusCode: 400, statusMessage: 'tenantId ist erforderlich' })
-  }
 
   const supabase = getSupabaseAdmin()
-  const like = `%${q}%`
+  const like = `%${escapeLikePattern(q)}%`
 
   logger.debug('🔍 Import search:', { q, tenantId })
 

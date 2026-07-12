@@ -1,22 +1,35 @@
+import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event)
   const body = await readBody(event)
-  const { tenantId, batchId, invoices, createdBy } = body
+  const { batchId, invoices } = body
 
-  if (!tenantId || !batchId || !invoices || !Array.isArray(invoices)) {
+  if (!batchId || !invoices || !Array.isArray(invoices)) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Missing required fields: tenantId, batchId, and invoices array are required'
+      statusMessage: 'Missing required fields: batchId and invoices array are required'
     })
   }
 
   const supabaseAdmin = getSupabaseAdmin()
 
   try {
+    // Verify the batch belongs to the caller's tenant before writing rows into it
+    const { data: batch, error: batchError } = await supabaseAdmin
+      .from('imports_batches')
+      .select('id, tenant_id')
+      .eq('id', batchId)
+      .single()
+
+    if (batchError || !batch || batch.tenant_id !== profile.tenant_id) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden – batch does not belong to your tenant' })
+    }
+
     // Prepare invoice data for insertion
     const invoiceData = invoices.map((invoice: any) => ({
-      tenant_id: tenantId,
+      tenant_id: profile.tenant_id,
       batch_id: batchId,
       legacy_id: invoice.legacy_id || null,
       number: invoice.number || null,
@@ -32,7 +45,7 @@ export default defineEventHandler(async (event) => {
       paid_at: invoice.paid_at || null,
       raw_json: invoice.raw_json || {},
       mapped_json: invoice.mapped_json || null,
-      created_by: createdBy
+      created_by: profile.id
     }))
 
     const { data, error } = await supabaseAdmin
@@ -44,7 +57,7 @@ export default defineEventHandler(async (event) => {
       console.error('Error importing invoices:', error)
       throw createError({
         statusCode: 500,
-        statusMessage: `Failed to import invoices: ${error.message}`
+        statusMessage: 'Failed to import invoices'
       })
     }
 
@@ -54,10 +67,11 @@ export default defineEventHandler(async (event) => {
       invoices: data
     }
   } catch (error: any) {
+    if (error?.statusCode) throw error
     console.error('Invoice import failed:', error)
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Failed to import invoices'
+      statusMessage: 'Failed to import invoices'
     })
   }
 })

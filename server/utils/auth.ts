@@ -227,7 +227,7 @@ export async function getAuthenticatedUser(event: H3Event) {
  */
 export async function requireAdminProfile(
   event: H3Event,
-  allowedRoles: string[] = ['admin', 'staff', 'superadmin']
+  allowedRoles: string[] = ['admin', 'staff', 'super_admin']
 ) {
   const authUser = await getAuthenticatedUser(event)
   if (!authUser) {
@@ -263,7 +263,7 @@ export async function requireAdminProfile(
  * Alias for requireAdminProfile with admin-only roles.
  */
 export async function requireAdminOnly(event: H3Event) {
-  return requireAdminProfile(event, ['admin', 'superadmin'])
+  return requireAdminProfile(event, ['admin', 'super_admin'])
 }
 
 /**
