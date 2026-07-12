@@ -31,7 +31,7 @@
  *     -d '{ "dry_run": false, "max_quality_score": 3 }'
  */
 
-import { GoogleAdsApi } from 'google-ads-api'
+import { resolveGadsAuth, buildGadsCustomer } from '~/server/utils/gads-auth'
 
 // These specific keywords are confirmed waste from the July 2026 data analysis.
 // Resource names will be fetched dynamically — this list is used to filter.
@@ -45,39 +45,15 @@ const CONFIRMED_WASTE_KEYWORDS = [
 ]
 
 export default defineEventHandler(async (event) => {
-  const cronSecret = process.env.CRON_SECRET
-  const authHeader = getHeader(event, 'authorization')
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  // ── Auth + Credentials (tenant-aware) ────────────────────────────────────────
+  const gads = await resolveGadsAuth(event)
+  if (!gads.ok) return gads
 
   const body = await readBody(event)
   const dryRun: boolean = body?.dry_run !== false
-  // Default: pause QS ≤ 2. Caller can raise to 3 to be more aggressive.
   const maxQualityScore: number = body?.max_quality_score ?? 2
 
-  const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID
-  const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN
-  const clientId = process.env.GOOGLE_ADS_CLIENT_ID
-  const clientSecret = process.env.GOOGLE_ADS_CLIENT_SECRET
-  const refreshToken = process.env.GOOGLE_ADS_REFRESH_TOKEN
-  const loginCustomerId = process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID
-
-  if (!customerId || !developerToken || !clientId || !clientSecret || !refreshToken) {
-    throw createError({ statusCode: 500, statusMessage: 'Missing Google Ads environment variables' })
-  }
-
-  const client = new GoogleAdsApi({
-    client_id: clientId,
-    client_secret: clientSecret,
-    developer_token: developerToken,
-  })
-
-  const customer = client.Customer({
-    customer_id: customerId,
-    refresh_token: refreshToken,
-    login_customer_id: loginCustomerId || undefined,
-  })
+  const customer = buildGadsCustomer(gads)
 
   // 1. Fetch all active keywords WITH their quality scores.
   const keywordsResponse = await customer.query(`

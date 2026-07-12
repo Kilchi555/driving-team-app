@@ -7,37 +7,14 @@
  *     -H "Authorization: Bearer $CRON_SECRET"
  */
 
-import { GoogleAdsApi } from 'google-ads-api'
+import { resolveGadsAuth, buildGadsCustomer } from '~/server/utils/gads-auth'
 
 export default defineEventHandler(async (event) => {
-  const cronSecret = process.env.CRON_SECRET
-  const authHeader = getHeader(event, 'authorization')
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  // ── Auth + Credentials (tenant-aware) ────────────────────────────────────────
+  const gads = await resolveGadsAuth(event)
+  if (!gads.ok) return gads
 
-  const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID
-  const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN
-  const clientId = process.env.GOOGLE_ADS_CLIENT_ID
-  const clientSecret = process.env.GOOGLE_ADS_CLIENT_SECRET
-  const refreshToken = process.env.GOOGLE_ADS_REFRESH_TOKEN
-  const loginCustomerId = process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID
-
-  if (!customerId || !developerToken || !clientId || !clientSecret || !refreshToken) {
-    throw createError({ statusCode: 500, statusMessage: 'Missing Google Ads environment variables' })
-  }
-
-  const client = new GoogleAdsApi({
-    client_id: clientId,
-    client_secret: clientSecret,
-    developer_token: developerToken,
-  })
-
-  const customer = client.Customer({
-    customer_id: customerId,
-    refresh_token: refreshToken,
-    login_customer_id: loginCustomerId || undefined,
-  })
+  const customer = buildGadsCustomer(gads)
 
   const response = await customer.query(`
     SELECT

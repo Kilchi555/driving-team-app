@@ -7,54 +7,23 @@
  * Body: { dry_run: true }   ← set to false to actually apply
  */
 
-import { defineEventHandler, readBody, getHeader, createError } from 'h3'
+import { defineEventHandler, readBody } from 'h3'
 import { logger } from '~/utils/logger'
+import { resolveGadsAuth, getGadsAccessToken, buildGadsHeaders } from '~/server/utils/gads-auth'
 
 const GADS_VERSION = 'v23'
 
-async function getAccessToken(): Promise<string> {
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: process.env.GOOGLE_ADS_CLIENT_ID ?? '',
-      client_secret: process.env.GOOGLE_ADS_CLIENT_SECRET ?? '',
-      refresh_token: (process.env.GOOGLE_ADS_REFRESH_TOKEN ?? '').trim(),
-      grant_type: 'refresh_token',
-    }),
-  })
-  const data = await res.json() as any
-  if (!data.access_token) throw new Error(`Token error: ${JSON.stringify(data)}`)
-  return data.access_token
-}
-
 export default defineEventHandler(async (event) => {
-  // Auth check
-  const cronSecret = process.env.CRON_SECRET
-  const auth = getHeader(event, 'authorization') ?? ''
-  if (!cronSecret || auth !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  // ── Auth + Credentials (tenant-aware) ────────────────────────────────────────
+  const gads = await resolveGadsAuth(event)
+  if (!gads.ok) return gads
 
   const body = await readBody(event).catch(() => ({})) as any
-  const dryRun = body?.dry_run !== false // default: dry run
+  const dryRun = body?.dry_run !== false
 
-  const customerId = (process.env.GOOGLE_ADS_CUSTOMER_ID ?? '').trim()
-  const managerCustomerId = (process.env.GOOGLE_ADS_MANAGER_CUSTOMER_ID ?? '').trim()
-  const developerToken = (process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? '').trim()
-
-  if (!customerId || !developerToken) {
-    return { ok: false, reason: 'missing_credentials', customerId: !!customerId, developerToken: !!developerToken }
-  }
-
-  const accessToken = await getAccessToken()
-
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${accessToken}`,
-    'developer-token': developerToken,
-    'Content-Type': 'application/json',
-  }
-  if (managerCustomerId) headers['login-customer-id'] = managerCustomerId
+  const customerId = gads.customerId
+  const accessToken = await getGadsAccessToken(gads)
+  const headers = buildGadsHeaders(gads, accessToken)
 
   // 1. Fetch all active non-broad keywords
   const searchUrl = `https://googleads.googleapis.com/v23/customers/${customerId}/googleAds:searchStream`
