@@ -25,6 +25,8 @@ const statusClasses = computed(() => {
   switch (props.status) {
     case 'draft':
       return 'bg-gray-100 text-gray-800'
+    case 'pdf_created':
+      return 'bg-indigo-100 text-indigo-800'
     case 'sent':
       return 'bg-blue-100 text-blue-800'
     case 'paid':

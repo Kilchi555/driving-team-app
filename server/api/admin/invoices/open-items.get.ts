@@ -48,6 +48,7 @@ export default defineEventHandler(async (event) => {
     .from('payments')
     .select(`
       id, total_amount_rappen, created_at, payment_method, payment_status, user_id, appointment_id,
+      description, metadata, course_registration_id,
       appointments(
         title, start_time, duration_minutes, type,
         staff:staff_id(first_name, last_name)
@@ -59,22 +60,115 @@ export default defineEventHandler(async (event) => {
     .is('invoice_id', null)
     .gt('total_amount_rappen', 0)
 
+  // ── 2. Uninvoiced course registrations — any payment method, not yet invoiced ──
+  const { data: courseRegs } = await supabase
+    .from('course_registrations')
+    .select('id, user_id, amount_paid_rappen, payment_status, payment_method, course_id, custom_sessions, is_partial_enrollment, partial_start_session, individual_session_number, courses(name, price_per_participant_rappen, course_start_date, category)')
+    .in('user_id', userIds)
+    .eq('tenant_id', tenantId)
+    .neq('status', 'cancelled')
+    .not('payment_status', 'eq', 'paid')
+    .is('invoice_id', null)
+
+  // Batch-load the actual session dates for all courses involved, so partial /
+  // individual-session enrollments show the real session date(s) instead of a
+  // generic course start date or (worse) the payment's creation timestamp.
+  const courseIdsNeedingSessions = new Set<string>()
+  for (const p of (lessonPayments || [])) {
+    const meta = ((p as any).metadata || {}) as Record<string, any>
+    if (!(p as any).appointments && meta.course_id) courseIdsNeedingSessions.add(meta.course_id)
+  }
+  for (const r of (courseRegs || [])) {
+    if (r.course_id) courseIdsNeedingSessions.add(r.course_id)
+  }
+
+  const sessionsByCourse = new Map<string, { session_number: number; start_time: string }[]>()
+  if (courseIdsNeedingSessions.size > 0) {
+    const { data: sessions } = await supabase
+      .from('course_sessions')
+      .select('course_id, session_number, start_time')
+      .in('course_id', Array.from(courseIdsNeedingSessions))
+      .eq('is_active', true)
+      .order('session_number', { ascending: true })
+
+    for (const s of (sessions || [])) {
+      const list = sessionsByCourse.get(s.course_id) || []
+      list.push({ session_number: s.session_number, start_time: s.start_time })
+      sessionsByCourse.set(s.course_id, list)
+    }
+  }
+
+  // Resolve which session dates apply to a given enrollment (full / partial / single session)
+  const resolveSessionDates = (courseId: string | null | undefined, opts: {
+    individualSessionNumber?: number | null
+    partialStartPosition?: number | null
+    customSessions?: Record<string, any> | null
+  }): string[] => {
+    const sessions = (courseId && sessionsByCourse.get(courseId)) || []
+    if (sessions.length === 0) return []
+
+    let relevant = sessions
+    if (opts.individualSessionNumber) {
+      relevant = sessions.filter(s => s.session_number === opts.individualSessionNumber)
+    } else if (opts.partialStartPosition != null) {
+      relevant = sessions.filter(s => s.session_number >= opts.partialStartPosition!)
+    }
+    // Drop sessions that were swapped out to a different course
+    if (opts.customSessions && typeof opts.customSessions === 'object') {
+      relevant = relevant.filter(s => !opts.customSessions![String(s.session_number)])
+    }
+    return relevant.map(s => s.start_time)
+  }
+
+  // Course names conventionally bake in the date of session 1 (e.g. "Kurs XY - 08.08.2026"),
+  // which is misleading for partial/individual-session enrollments where the actual date
+  // shown below is a later session. Strip that suffix and replace it with a "Teil X" hint
+  // that matches the resolved session date instead.
+  const stripBakedInDate = (name: string) => name.replace(/\s*-\s*\d{2}\.\d{2}\.\d{4}$/, '')
+
+  const buildCourseLabel = (baseName: string | null | undefined, opts: {
+    individualSessionNumber?: number | null
+    partialStartPosition?: number | null
+  }): string | null => {
+    if (!baseName) return null
+    const clean = stripBakedInDate(baseName)
+    if (opts.individualSessionNumber) return `${clean} (Teil ${opts.individualSessionNumber})`
+    if (opts.partialStartPosition != null) return `${clean} (ab Teil ${opts.partialStartPosition})`
+    return clean
+  }
+
   for (const p of (lessonPayments || [])) {
     const apt = (p as any).appointments
     const staff = apt?.staff
     const staffName = staff ? `${staff.first_name || ''} ${staff.last_name || ''}`.trim() : null
+    // Payments without an appointment (e.g. course registrations paid via the public
+    // checkout) don't carry a title from the appointments join — fall back to the
+    // course info stored on the payment itself instead of a generic "Fahrstunde".
+    const meta = ((p as any).metadata || {}) as Record<string, any>
+    const isCoursePayment = !apt && !!(meta.course_name || p.course_registration_id)
+    const coursePartialStart = meta.is_partial_enrollment ? meta.partial_start_position : null
+    const sessionDates = isCoursePayment
+      ? resolveSessionDates(meta.course_id, {
+          individualSessionNumber: meta.individual_session_number,
+          partialStartPosition: coursePartialStart,
+          customSessions: meta.custom_sessions,
+        })
+      : []
     items.push({
-      type: 'lesson',
+      type: isCoursePayment ? 'course' : 'lesson',
       source_id: p.id,
       source_table: 'payments',
       appointment_id: p.appointment_id || null,
-      label: apt?.title || 'Fahrstunde',
+      label: apt?.title
+        || buildCourseLabel(meta.course_name, { individualSessionNumber: meta.individual_session_number, partialStartPosition: coursePartialStart })
+        || p.description || 'Fahrstunde',
       appointment_type: apt?.type || null,
-      date: apt?.start_time || p.created_at,
+      date: apt?.start_time || sessionDates[0] || meta.course_start_date || p.created_at,
+      session_dates: sessionDates.length > 1 ? sessionDates : undefined,
       duration_minutes: apt?.duration_minutes || null,
       staff_name: staffName,
       amount_rappen: p.total_amount_rappen || 0,
-      unit: 'Lektion',
+      unit: isCoursePayment ? 'Kurs' : 'Lektion',
       payment_method: p.payment_method,
       status: p.payment_status,
       user_id: p.user_id,
@@ -82,25 +176,22 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // ── 2. Uninvoiced course registrations — any payment method, not yet invoiced ──
-  const { data: courseRegs } = await supabase
-    .from('course_registrations')
-    .select('id, user_id, amount_paid_rappen, payment_status, payment_method, course_id, courses(name, price_per_participant_rappen, start_date, category)')
-    .in('user_id', userIds)
-    .eq('tenant_id', tenantId)
-    .neq('status', 'cancelled')
-    .not('payment_status', 'eq', 'paid')
-    .is('invoice_id', null)
-
   for (const r of (courseRegs || [])) {
     const course = (r as any).courses
+    const regPartialStart = r.is_partial_enrollment ? r.partial_start_session : null
+    const sessionDates = resolveSessionDates(r.course_id, {
+      individualSessionNumber: r.individual_session_number,
+      partialStartPosition: regPartialStart,
+      customSessions: r.custom_sessions as any,
+    })
     items.push({
       type: 'course',
       source_id: r.id,
       source_table: 'course_registrations',
-      label: course?.name || 'Kursanmeldung',
+      label: buildCourseLabel(course?.name, { individualSessionNumber: r.individual_session_number, partialStartPosition: regPartialStart }) || 'Kursanmeldung',
       appointment_type: course?.category || null,
-      date: course?.start_date || null,
+      date: sessionDates[0] || course?.course_start_date || null,
+      session_dates: sessionDates.length > 1 ? sessionDates : undefined,
       amount_rappen: course?.price_per_participant_rappen || r.amount_paid_rappen || 0,
       unit: 'Kurs',
       user_id: r.user_id,

@@ -113,17 +113,18 @@ export default defineEventHandler(async (event) => {
             }
           }
         }
+      }
 
-        // Load customer data
-        const { data: customer, error: customerError } = await supabase
-          .from('users')
-          .select('first_name, last_name, email, phone, street, street_nr, zip, city')
-          .eq('id', userId)
-          .single()
+      // Load customer data — independent of whether a payment record exists,
+      // e.g. invoices created directly in the admin area without a linked payment.
+      const { data: customer, error: customerError } = await supabase
+        .from('users')
+        .select('first_name, last_name, email, phone, street, street_nr, zip, city')
+        .eq('id', userId)
+        .single()
 
-        if (!customerError && customer) {
-          result.customerData = customer
-        }
+      if (!customerError && customer) {
+        result.customerData = customer
       }
     }
 

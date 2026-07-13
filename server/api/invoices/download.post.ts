@@ -225,5 +225,17 @@ export default defineEventHandler(async (event) => {
   })
 
   const pdfBase64 = pdfBuffer.toString('base64')
-  return { success: true, pdfUrl: `data:application/pdf;base64,${pdfBase64}` }
+
+  // Downloading the PDF moves a draft out of "Entwurf" into "PDF erstellt" —
+  // distinct from "Versendet", which only applies once actually emailed.
+  let newStatus: string | undefined
+  if (invoice.status === 'draft') {
+    const { error: statusError } = await supabase
+      .from('invoices')
+      .update({ status: 'pdf_created' })
+      .eq('id', invoiceId)
+    if (!statusError) newStatus = 'pdf_created'
+  }
+
+  return { success: true, pdfUrl: `data:application/pdf;base64,${pdfBase64}`, newStatus }
 })

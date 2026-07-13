@@ -1,6 +1,6 @@
 <template>
-  <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[60]">
-    <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white admin-modal">
+  <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto min-h-[100svh] w-full z-[60] p-2 sm:p-4">
+    <div class="relative top-10 mx-auto p-5 border w-11/12 max-w-4xl max-h-[calc(100svh-80px-env(safe-area-inset-bottom,0px))] overflow-y-auto shadow-lg rounded-md bg-white admin-modal">
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
         <h3 class="text-lg font-medium text-gray-900">Neue Rechnung erstellen</h3>
@@ -104,7 +104,11 @@
                 </div>
                 <!-- Detail pills -->
                 <div class="flex flex-wrap gap-1.5 mt-1">
-                  <span v-if="item.date" class="text-xs text-gray-500">
+                  <!-- Multi-session enrollments: list each session date instead of just one -->
+                  <span v-if="item.session_dates && item.session_dates.length > 1" class="text-xs text-gray-500">
+                    {{ item.session_dates.map(formatDateShort).join(' · ') }}
+                  </span>
+                  <span v-else-if="item.date" class="text-xs text-gray-500">
                     {{ formatDate(item.date) }}
                   </span>
                   <span v-if="item.duration_minutes" class="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
@@ -578,7 +582,7 @@ function searchCustomers() {
       $fetch('/api/admin/users/search', { query: { q } }),
       $fetch('/api/admin/companies', { query: { search: q } }),
     ])
-    const userList = (Array.isArray(usersRes.value) ? usersRes.value : []).map((u: any) => ({
+    const userList = (usersRes.value?.users || []).map((u: any) => ({
       id: u.id, type: 'user',
       name: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
       subtitle: u.email || '',
@@ -756,10 +760,15 @@ function toggleOpenItem(item: any) {
     // Add as invoice item, remove the empty placeholder if present
     const hasEmpty = invoiceItems.value.length === 1 && !invoiceItems.value[0].product_name
     if (hasEmpty) invoiceItems.value.splice(0, 1)
+    // Multi-session enrollments (e.g. partial course bookings) don't fit into the
+    // single appointment_date field — list all session dates in the description instead.
+    const description = item.session_dates?.length > 1
+      ? `${item.unit} · ${item.session_dates.map(formatDateShort).join(', ')}`
+      : item.unit
     const newItem: any = {
       ...DEFAULT_INVOICE_ITEM_VALUES,
       product_name: item.label,
-      product_description: item.unit,
+      product_description: description,
       quantity: 1,
       unit_price_rappen: item.amount_rappen,
       total_price_rappen: item.amount_rappen,
@@ -864,7 +873,7 @@ const createInvoiceHandler = async () => {
     if (result.error) {
       alert('Fehler beim Erstellen der Rechnung: ' + result.error)
     } else {
-      alert(`Rechnung erfolgreich erstellt! Rechnungsnummer: ${result.invoice_number}`)
+      // Parent opens the invoice detail modal for the newly created invoice
       emit('created', result.data)
     }
     
@@ -886,6 +895,14 @@ const formatDate = (dateString: string) => {
     const date = d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
     const time = d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
     return `${date}, ${time}`
+  } catch {
+    return dateString
+  }
+}
+
+const formatDateShort = (dateString: string) => {
+  try {
+    return new Date(dateString).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
   } catch {
     return dateString
   }
