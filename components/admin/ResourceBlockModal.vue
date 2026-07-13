@@ -469,7 +469,7 @@ function searchContacts() {
       $fetch('/api/admin/users/search', { query: { q } }),
       $fetch('/api/admin/companies', { query: { search: q } }),
     ])
-    const users = (Array.isArray(usersRes.value) ? usersRes.value : []).map((u: any) => ({
+    const users = (usersRes.value?.users || []).map((u: any) => ({
       id: u.id, type: 'user',
       name: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
       subtitle: u.email || '',

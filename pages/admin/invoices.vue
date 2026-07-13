@@ -89,7 +89,7 @@
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </button>
           <div v-if="showStatusDropdown" class="absolute z-10 mt-1.5 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 space-y-0.5">
-            <label v-for="[val, lbl] in [['draft','Entwurf'],['sent','Versendet'],['paid','Bezahlt'],['overdue','Überfällig'],['cancelled','Storniert']]" :key="val"
+            <label v-for="[val, lbl] in [['draft','Entwurf'],['pdf_created','PDF erstellt'],['sent','Versendet'],['paid','Bezahlt'],['overdue','Überfällig'],['cancelled','Storniert']]" :key="val"
               class="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-gray-50 cursor-pointer text-sm text-gray-700">
               <input type="checkbox" :checked="filters.status?.includes(val) || false" @change="toggleStatusFilter(val)" class="rounded keep-checkbox"/>
               {{ lbl }}
@@ -268,6 +268,7 @@
       @markAsPaid="handleMarkAsPaid"
       @cancel="handleCancelInvoice"
       @updated="onInvoiceUpdated"
+      @statusChanged="handleStatusChanged"
     />
   </div>
 </template>
@@ -609,9 +610,22 @@ const handleCancelInvoice = async (id: string) => {
   }
 }
 
-const onInvoiceCreated = async () => {
+const onInvoiceCreated = async (invoice: any) => {
   showCreateModal.value = false
   await refreshData()
+
+  if (invoice?.id) {
+    // Open the detail modal for the just-created invoice instead of a success alert
+    shouldStartInEditMode.value = false
+    selectedInvoiceId.value = invoice.id
+    selectedInvoiceWithItems.value = invoice // show immediately with header data
+    showDetailModal.value = true
+
+    const invoiceWithItems = await fetchInvoiceWithItems(invoice.id)
+    if (invoiceWithItems && showDetailModal.value) {
+      selectedInvoiceWithItems.value = invoiceWithItems
+    }
+  }
 }
 
 const handleModalClose = () => {
@@ -624,6 +638,16 @@ const handleModalClose = () => {
 const onInvoiceUpdated = async () => {
   showDetailModal.value = false
   await refreshData()
+}
+
+// Lightweight status patch (e.g. draft → pdf_created after downloading the PDF)
+// that doesn't close the modal. `invoices` from useInvoices() is readonly, so the
+// list row is refreshed in the background instead of being mutated directly.
+const handleStatusChanged = (id: string, status: string) => {
+  if (selectedInvoiceWithItems.value && selectedInvoiceWithItems.value.id === id) {
+    selectedInvoiceWithItems.value = { ...selectedInvoiceWithItems.value, status }
+  }
+  refreshData()
 }
 
 // Utility functions
@@ -648,6 +672,7 @@ const getStatusLabel = (status?: string) => {
     const status = filters.value.status[0]
     const labels: Record<string, string> = {
       'draft': 'Entwurf',
+      'pdf_created': 'PDF erstellt',
       'sent': 'Versendet',
       'paid': 'Bezahlt',
       'overdue': 'Überfällig',
@@ -677,6 +702,7 @@ const getPaymentStatusLabel = (status?: string) => {
 const getStatusBadgeClass = (status: string) => {
   const classes: Record<string, string> = {
     'draft': 'bg-gray-100 text-gray-800',
+    'pdf_created': 'bg-indigo-100 text-indigo-800',
     'sent': 'bg-blue-100 text-blue-800',
     'paid': 'bg-green-100 text-green-800',
     'overdue': 'bg-red-100 text-red-800',
@@ -688,6 +714,7 @@ const getStatusBadgeClass = (status: string) => {
 const invoiceStatusLabel = (status: string) => {
   const labels: Record<string, string> = {
     'draft': 'Entwurf',
+    'pdf_created': 'PDF erstellt',
     'sent': 'Versendet',
     'paid': 'Bezahlt',
     'overdue': 'Überfällig',

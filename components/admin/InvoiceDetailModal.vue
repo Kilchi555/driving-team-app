@@ -753,6 +753,10 @@ const downloadPdf = async () => {
       link.download = `${props.invoice.invoice_number}.pdf`
       link.click()
     }
+    // Draft moves to "PDF erstellt" once a PDF has actually been generated
+    if (res?.newStatus) {
+      emit('statusChanged', props.invoice.id, res.newStatus)
+    }
   } catch (e) {
     console.error('PDF download failed:', e)
   } finally {
@@ -873,6 +877,7 @@ const emit = defineEmits<{
   markAsPaid: [id: string]
   cancel: [id: string]
   updated: [id: string]
+  statusChanged: [id: string, status: string]
 }>()
 
 const closeModal = () => {

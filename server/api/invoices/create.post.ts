@@ -29,24 +29,27 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    // Generate invoice number (tenant prefix + year + sequential counter)
+    // Generate invoice number (tenant prefix + year + sequential counter).
+    // Uses the persisted tenants.next_invoice_number counter (same approach as
+    // send-draft.post.ts / resources/block.post.ts) instead of COUNT(*), which
+    // breaks whenever there's a gap in existing invoice numbers (e.g. a deleted
+    // invoice) and produces a number that collides with an existing one.
     const { data: tenantData } = await supabaseAdmin
       .from('tenants')
-      .select('invoice_number_prefix')
+      .select('invoice_number_prefix, next_invoice_number')
       .eq('id', userProfile.tenant_id)
       .single()
 
     const prefix = tenantData?.invoice_number_prefix || 'RE'
+    const nextNum = tenantData?.next_invoice_number || 1
     const year = new Date().getFullYear()
+    const invoiceNumber = `${prefix}-${year}-${String(nextNum).padStart(4, '0')}`
 
-    const { count: existingCount } = await supabaseAdmin
-      .from('invoices')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', userProfile.tenant_id)
-      .like('invoice_number', `${prefix}-${year}-%`)
-
-    const seq = String((existingCount || 0) + 1).padStart(4, '0')
-    const invoiceNumber = `${prefix}-${year}-${seq}`
+    // Reserve the invoice number before inserting
+    await supabaseAdmin
+      .from('tenants')
+      .update({ next_invoice_number: nextNum + 1 })
+      .eq('id', userProfile.tenant_id)
 
     // Compute totals server-side
     const subtotalRappen: number = items.reduce((sum: number, item: any) => sum + (item.total_price_rappen || 0), 0)
@@ -64,9 +67,12 @@ export default defineEventHandler(async (event) => {
       total_amount_rappen: totalRappen,
       status: 'draft',
       payment_status: 'pending',
-      // company invoices have no user_id — coerce empty string to null
+      // company invoices have no user_id — coerce empty strings to null (uuid columns)
       user_id: invoiceData.user_id || null,
       company_id: invoiceData.company_id || null,
+      staff_id: invoiceData.staff_id || null,
+      product_sale_id: invoiceData.product_sale_id || null,
+      appointment_id: invoiceData.appointment_id || null,
     }
 
     const { data: invoice, error: invoiceError } = await supabaseAdmin

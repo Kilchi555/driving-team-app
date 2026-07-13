@@ -115,7 +115,7 @@ export interface InvoiceWithDetails extends Invoice {
 }
 
 // Enums
-export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+export type InvoiceStatus = 'draft' | 'pdf_created' | 'sent' | 'paid' | 'overdue' | 'cancelled'
 export type PaymentStatus = 'pending' | 'partial' | 'paid' | 'overdue'
 export type AccountoSyncStatus = 'not_synced' | 'syncing' | 'synced' | 'error'
 export type PaymentItemStatus = 'pending' | 'completed' | 'failed' | 'refunded'
@@ -220,6 +220,7 @@ export interface InvoiceSummary {
 // Constants
 export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
   draft: 'Entwurf',
+  pdf_created: 'PDF erstellt',
   sent: 'Versendet',
   paid: 'Bezahlt',
   overdue: 'Überfällig',
