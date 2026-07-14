@@ -6,7 +6,7 @@ import logger from '~/utils/logger'
 /**
  * ✅ POST /api/staff/update-student-details
  * 
- * Update student details (email, phone, address, etc.)
+ * Update student details (name, email, phone, address, etc.)
  * Only accessible by staff/admin
  */
 
@@ -72,6 +72,8 @@ export default defineEventHandler(async (event) => {
     
     const {
       user_id,
+      first_name,
+      last_name,
       email,
       phone,
       category,
@@ -88,6 +90,20 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 400,
         statusMessage: 'user_id is required'
+      })
+    }
+
+    if (first_name !== undefined && !String(first_name).trim()) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'first_name cannot be empty'
+      })
+    }
+
+    if (last_name !== undefined && !String(last_name).trim()) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'last_name cannot be empty'
       })
     }
 
@@ -128,6 +144,8 @@ export default defineEventHandler(async (event) => {
     // ✅ Update student
     const updateData: any = {}
 
+    if (first_name !== undefined) updateData.first_name = String(first_name).trim()
+    if (last_name !== undefined) updateData.last_name = String(last_name).trim()
     if (email !== undefined) updateData.email = email
     if (phone !== undefined) updateData.phone = phone
     if (category !== undefined) updateData.category = category
