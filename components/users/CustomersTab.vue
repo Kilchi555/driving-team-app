@@ -413,6 +413,7 @@ const loadCustomers = async (loadAppointments = true) => {
         street_nr,
         zip,
         city,
+        profession,
         is_active,
         category,
         assigned_staff_id,

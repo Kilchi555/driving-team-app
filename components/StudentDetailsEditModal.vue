@@ -36,6 +36,28 @@
             </button>
           </div>
 
+          <!-- Vorname / Nachname -->
+          <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-1.5">
+              <label class="block text-sm font-medium text-gray-900">Vorname</label>
+              <input
+                v-model="formData.first_name"
+                type="text"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm"
+                placeholder="Max"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <label class="block text-sm font-medium text-gray-900">Nachname</label>
+              <input
+                v-model="formData.last_name"
+                type="text"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm"
+                placeholder="Muster"
+              />
+            </div>
+          </div>
+
           <!-- E-Mail -->
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-gray-900">E-Mail</label>
@@ -137,6 +159,17 @@
               </div>
             </div>
           </div>
+
+          <!-- Beruf -->
+          <div class="space-y-1.5">
+            <label class="block text-sm font-medium text-gray-900">Beruf</label>
+            <input
+              v-model="formData.profession"
+              type="text"
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm"
+              placeholder="z. B. Student, Elektriker"
+            />
+          </div>
         </div>
 
         <!-- Actions -->
@@ -185,6 +218,8 @@ const loadingCategories = ref(false)
 const categories = ref<any[]>([])
 
 const formData = ref({
+  first_name: '',
+  last_name: '',
   email: '',
   phone: '',
   category: [] as string[],
@@ -192,7 +227,8 @@ const formData = ref({
   street: '',
   street_nr: '',
   zip: '',
-  city: ''
+  city: '',
+  profession: ''
 })
 
 // Load tenant categories: alle Subkategorien (wie bisher), plus Hauptkategorien ohne Kinder
@@ -265,6 +301,8 @@ watch(
   (student) => {
     if (student) {
       formData.value = {
+        first_name: student.first_name || '',
+        last_name: student.last_name || '',
         email: student.email || '',
         phone: student.phone || '',
         category: student.category ? [...student.category] : [],
@@ -272,7 +310,8 @@ watch(
         street: student.street || '',
         street_nr: student.street_nr || '',
         zip: student.zip || '',
-        city: student.city || ''
+        city: student.city || '',
+        profession: student.profession || ''
       }
     }
   },
@@ -282,6 +321,11 @@ watch(
 async function saveChanges() {
   if (!props.student?.id) {
     saveError.value = 'Schüler-ID fehlt'
+    return
+  }
+
+  if (!formData.value.first_name.trim() || !formData.value.last_name.trim()) {
+    saveError.value = 'Vorname und Nachname dürfen nicht leer sein'
     return
   }
 

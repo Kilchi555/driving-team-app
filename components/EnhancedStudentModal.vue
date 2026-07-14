@@ -1220,9 +1220,9 @@
                   </div>
                   <div class="flex-1 min-w-0">
                     <div class="text-sm font-medium text-gray-900">Adresse</div>
-                    <div v-if="selectedStudent.street && selectedStudent.street_nr && selectedStudent.zip && selectedStudent.city" class="mt-1 text-sm text-gray-700">
-                      {{ selectedStudent.street }} {{ selectedStudent.street_nr }}<br>
-                      {{ selectedStudent.zip }} {{ selectedStudent.city }}
+                    <div v-if="selectedStudent.street || selectedStudent.street_nr || selectedStudent.zip || selectedStudent.city" class="mt-1 text-sm text-gray-700">
+                      <template v-if="selectedStudent.street || selectedStudent.street_nr">{{ [selectedStudent.street, selectedStudent.street_nr].filter(Boolean).join(' ') }}<br></template>
+                      {{ [selectedStudent.zip, selectedStudent.city].filter(Boolean).join(' ') }}
                     </div>
                     <div v-else class="mt-1 text-sm text-gray-500 italic">Nicht angegeben</div>
                   </div>
