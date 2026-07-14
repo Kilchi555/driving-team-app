@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
           const { data: userProfile, error: profileError } = await supabaseAdmin
             .from('users')
             .select('tenant_id')
-            .eq('id', user.id)
+            .eq('auth_user_id', user.id)
             .single()
 
           if (!profileError && userProfile?.tenant_id) {

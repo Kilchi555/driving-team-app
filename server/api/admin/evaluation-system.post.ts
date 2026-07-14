@@ -17,6 +17,74 @@ function deduplicateByRating(items: any[], tenantId: string): any[] {
   return items.filter(i => i.tenant_id === null)
 }
 
+/**
+ * Resolve a requested evaluation_scale row id to one the tenant actually owns.
+ *
+ * The scale UI can show global default rows (tenant_id = null) when a tenant
+ * hasn't customized its scale yet. Editing/deleting those directly would
+ * either fail (0 rows matched by `.eq('tenant_id', tenantId)`) or silently
+ * no-op. Instead, materialize the tenant's own copy of the full standard
+ * scale on first write, then operate on the tenant-owned row with the same
+ * rating.
+ */
+async function resolveTenantScaleId(supabase: any, tenantId: string, requestedId: string): Promise<string> {
+  const { data: row, error } = await supabase
+    .from('evaluation_scale')
+    .select('id, rating, tenant_id')
+    .eq('id', requestedId)
+    .single()
+  if (error || !row) {
+    throw createError({ statusCode: 404, statusMessage: 'Bewertungsstufe nicht gefunden' })
+  }
+  if (row.tenant_id === tenantId) {
+    return requestedId
+  }
+  if (row.tenant_id !== null) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+
+  // Global row — materialize the tenant's own full scale, then map to it.
+  const { data: globalScale, error: globalError } = await supabase
+    .from('evaluation_scale')
+    .select('*')
+    .is('tenant_id', null)
+  if (globalError) throw createError({ statusCode: 500, statusMessage: globalError.message })
+
+  const { data: existingScale, error: existingError } = await supabase
+    .from('evaluation_scale')
+    .select('rating')
+    .eq('tenant_id', tenantId)
+  if (existingError) throw createError({ statusCode: 500, statusMessage: existingError.message })
+
+  const existingRatings = new Set((existingScale || []).map((s: any) => s.rating))
+  const missingScale = (globalScale || []).filter((item: any) => !existingRatings.has(item.rating))
+
+  if (missingScale.length > 0) {
+    const { error: insertError } = await supabase
+      .from('evaluation_scale')
+      .insert(missingScale.map((item: any) => ({
+        rating: item.rating,
+        label: item.label,
+        description: item.description,
+        color: item.color,
+        is_active: item.is_active,
+        tenant_id: tenantId,
+      })))
+    if (insertError) throw createError({ statusCode: 500, statusMessage: insertError.message })
+  }
+
+  const { data: ownRow, error: ownError } = await supabase
+    .from('evaluation_scale')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('rating', row.rating)
+    .single()
+  if (ownError || !ownRow) {
+    throw createError({ statusCode: 500, statusMessage: 'Konnte eigene Bewertungsstufe nicht anlegen' })
+  }
+  return ownRow.id
+}
+
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
   const supabase = getSupabaseAdmin()
@@ -187,10 +255,11 @@ export default defineEventHandler(async (event) => {
     const { id, rating, label, description, color } = body
 
     if (id) {
+      const ownedId = await resolveTenantScaleId(supabase, tenantId, id)
       const { data, error } = await supabase
         .from('evaluation_scale')
         .update({ rating, label, description, color })
-        .eq('id', id)
+        .eq('id', ownedId)
         .eq('tenant_id', tenantId)
         .select()
         .single()
@@ -211,10 +280,11 @@ export default defineEventHandler(async (event) => {
   if (action === 'delete-scale') {
     const { id } = body
     if (!id) throw createError({ statusCode: 400, statusMessage: 'Missing id' })
+    const ownedId = await resolveTenantScaleId(supabase, tenantId, id)
     const { error } = await supabase
       .from('evaluation_scale')
       .update({ is_active: false })
-      .eq('id', id)
+      .eq('id', ownedId)
       .eq('tenant_id', tenantId)
     if (error) throw createError({ statusCode: 500, statusMessage: error.message })
     return { success: true }
@@ -224,10 +294,11 @@ export default defineEventHandler(async (event) => {
   if (action === 'delete-scale-hard') {
     const { id } = body
     if (!id) throw createError({ statusCode: 400, statusMessage: 'Missing id' })
+    const ownedId = await resolveTenantScaleId(supabase, tenantId, id)
     const { error } = await supabase
       .from('evaluation_scale')
       .delete()
-      .eq('id', id)
+      .eq('id', ownedId)
       .eq('tenant_id', tenantId)
     if (error) throw createError({ statusCode: 500, statusMessage: error.message })
     return { success: true }
@@ -266,9 +337,26 @@ export default defineEventHandler(async (event) => {
     if (!globalScale || globalScale.length === 0) {
       throw createError({ statusCode: 404, statusMessage: 'Keine globale Standard-Skala gefunden' })
     }
+
+    // Only copy ratings the tenant doesn't already have — avoids a unique
+    // constraint violation (rating, tenant_id) when the tenant already
+    // customized some levels (e.g. a partial copy or manual edit happened before).
+    const { data: existingScale, error: existingError } = await supabase
+      .from('evaluation_scale')
+      .select('rating')
+      .eq('tenant_id', tenantId)
+    if (existingError) throw createError({ statusCode: 500, statusMessage: existingError.message })
+
+    const existingRatings = new Set((existingScale || []).map(s => s.rating))
+    const missingScale = globalScale.filter(item => !existingRatings.has(item.rating))
+
+    if (missingScale.length === 0) {
+      return { success: true, message: 'Alle Bewertungsstufen sind bereits vorhanden' }
+    }
+
     const { error: insertError } = await supabase
       .from('evaluation_scale')
-      .insert(globalScale.map(item => ({
+      .insert(missingScale.map(item => ({
         rating: item.rating,
         label: item.label,
         description: item.description,
@@ -277,7 +365,7 @@ export default defineEventHandler(async (event) => {
         tenant_id: tenantId,
       })))
     if (insertError) throw createError({ statusCode: 500, statusMessage: insertError.message })
-    return { success: true }
+    return { success: true, copiedCount: missingScale.length }
   }
 
   // ─── copy-standard-categories ─────────────────────────────────────────────

@@ -94,7 +94,7 @@ export default defineEventHandler(async (event) => {
       const { data: userProfile, error: userError } = await supabaseAdmin
         .from('users')
         .select('is_admin, tenant_id')
-        .eq('id', user.id)
+        .eq('auth_user_id', user.id)
         .single()
 
       if (userError || (!userProfile?.is_admin && body.voucherData.user_id !== user.id)) {

@@ -105,8 +105,7 @@ export default defineEventHandler(async (event) => {
 
     // ✅ LAYER 6: Fetch product_sales for this appointment directly
     let productSalesData = null
-    let psError = null
-    
+
     const { data: sales, error: error1 } = await supabaseAdmin
       .from('product_sales')
       .select(`
@@ -119,12 +118,16 @@ export default defineEventHandler(async (event) => {
       .eq('appointment_id', appointmentId)
       .eq('tenant_id', tenantId)
 
-    if (!error1 && Array.isArray(sales) && sales.length > 0) {
+    if (error1) {
+      // A real query error — log it, but don't fail the whole request since
+      // "no products" is a valid, common state for an appointment.
+      logger.warn('⚠️ Error fetching product_sales:', error1)
+    } else if (Array.isArray(sales) && sales.length > 0) {
       productSalesData = sales
       logger.debug('✅ Fetched product_sales:', sales.length)
     } else {
-      psError = error1
-      logger.warn('⚠️ Error fetching product_sales:', psError)
+      // No error and no rows — this appointment simply has no products sold.
+      logger.debug('ℹ️ No product_sales found for appointment (normal):', appointmentId)
     }
 
     let products: any[] = []

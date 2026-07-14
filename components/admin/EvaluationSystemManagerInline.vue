@@ -242,9 +242,10 @@
             <p class="text-sm text-gray-600">Verwalten Sie die Bewertungsstufen und deren Labels</p>
           </div>
           <div class="flex flex-col sm:flex-row gap-2">
-            <!-- Load Standards Button (only show if no tenant-specific scale exists) -->
+            <!-- Load Standards Button: always available — server only fills in
+                 rating levels the tenant doesn't already have, so it's safe
+                 to click even with a partially customized scale. -->
             <button
-              v-if="scale.length === 0"
               @click="loadStandardEvaluationScale"
               :disabled="isLoadingStandards"
               class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm sm:text-base"
@@ -255,11 +256,11 @@
               <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
               </svg>
-              <span class="hidden sm:inline">{{ isLoadingStandards ? 'Lade Standards...' : 'Standard-Skala laden' }}</span>
+              <span class="hidden sm:inline">{{ isLoadingStandards ? 'Lade Standards...' : 'Fehlende Standard-Stufen ergänzen' }}</span>
               <span class="sm:hidden">{{ isLoadingStandards ? 'Lade...' : 'Standards' }}</span>
             </button>
             <button
-              @click="showAddScaleModal = true"
+              @click="openAddScaleModal"
               class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
             >
               <span class="hidden sm:inline">+ Bewertungsstufe hinzufügen</span>
@@ -1350,12 +1351,16 @@ const loadStandardEvaluationScale = async () => {
   isLoadingStandards.value = true
   
   try {
-    await $fetch('/api/admin/evaluation-system', {
+    const response: any = await $fetch('/api/admin/evaluation-system', {
       method: 'POST',
       body: { action: 'copy-standard-scale' }
     })
     await loadData()
-    uiStore.showSuccess('Standard-Skala geladen', 'Die Bewertungsskala wurde erfolgreich geladen.')
+    if (response?.copiedCount) {
+      uiStore.showSuccess('Standard-Skala ergänzt', `${response.copiedCount} fehlende Bewertungsstufe(n) wurden ergänzt.`)
+    } else {
+      uiStore.showSuccess('Standard-Skala vollständig', 'Es fehlten keine Bewertungsstufen.')
+    }
   } catch (error: any) {
     console.error('❌ Error loading standard evaluation scale:', error)
     uiStore.showError('Fehler beim Laden', `Fehler beim Laden der Standard-Skala: ${error.message}`)
@@ -1869,6 +1874,23 @@ const saveCriteria = async () => {
 
 
 // Scale methods
+const nextAvailableRating = () => {
+  const used = new Set(scale.value.map(s => s.rating))
+  let candidate = 1
+  while (used.has(candidate)) candidate++
+  return candidate
+}
+
+const openAddScaleModal = () => {
+  scaleForm.value = {
+    rating: nextAvailableRating(),
+    label: '',
+    description: '',
+    color: '#6B7280'
+  }
+  showAddScaleModal.value = true
+}
+
 const editScale = (rating: Scale) => {
   editingScale.value = rating
   scaleForm.value = {
@@ -1905,8 +1927,16 @@ const saveScale = async () => {
     })
     await loadData()
     closeScaleModal()
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving scale:', error)
+    const message = error?.data?.statusMessage || error?.data?.message || error?.message || ''
+    const isDuplicate = /duplicate key|unique constraint/i.test(message)
+    uiStore.showError(
+      'Fehler beim Speichern',
+      isDuplicate
+        ? `Die Rating-Nummer ${scaleForm.value.rating} wird bereits verwendet. Bitte wählen Sie eine andere Nummer.`
+        : `Die Bewertungsstufe konnte nicht gespeichert werden: ${message || 'Unbekannter Fehler'}`
+    )
   }
 }
 
@@ -1918,8 +1948,10 @@ const deleteScale = async (id: string) => {
         body: { action: 'delete-scale', id }
       })
       await loadData()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting scale:', error)
+      const message = error?.data?.statusMessage || error?.data?.message || error?.message || 'Unbekannter Fehler'
+      uiStore.showError('Fehler beim Löschen', `Die Bewertungsstufe konnte nicht gelöscht werden: ${message}`)
     }
   }
 }

@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
   const { data: userData } = await admin
     .from('users')
     .select('tenant_id')
-    .eq('id', user.id)
+    .eq('auth_user_id', user.id)
     .single()
 
   // Upsert: insert or update the token (keeps updated_at fresh)

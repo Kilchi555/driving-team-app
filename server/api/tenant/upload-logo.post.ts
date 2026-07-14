@@ -44,21 +44,22 @@ function validateMagicBytes(data: Buffer, ext: string): boolean {
 export default defineEventHandler(async (event) => {
   try {
     // Verify authentication
-    const { user, tenant } = await verifyAuth(event)
-    if (!user || !tenant) {
+    const authResult = await verifyAuth(event)
+    if (!authResult?.userId || !authResult?.tenantId) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Unauthorized'
       })
     }
+    const { userId, tenantId } = authResult
 
     // Check if user is admin
     const supabase = getSupabaseAdmin()
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('role')
-      .eq('id', user.id)
-      .eq('tenant_id', tenant.id)
+      .eq('id', userId)
+      .eq('tenant_id', tenantId)
       .single()
 
     if (userError || userData?.role !== 'admin') {
@@ -129,10 +130,10 @@ export default defineEventHandler(async (event) => {
 
     // Construct storage path
     // Format: tenant-assets/{tenant_id}/{asset_type}.{ext}
-    const storagePath = `${tenant.id}/${assetType}.${ext}`
+    const storagePath = `${tenantId}/${assetType}.${ext}`
 
     logger.debug('Uploading logo to storage:', {
-      tenantId: tenant.id,
+      tenantId,
       assetType,
       path: storagePath,
       fileSize: fileData.length,
@@ -165,7 +166,7 @@ export default defineEventHandler(async (event) => {
       .from('tenant_assets')
       .upsert(
         {
-          tenant_id: tenant.id,
+          tenant_id: tenantId,
           asset_type: assetType,
           file_path: storagePath,
           format: ext,
@@ -186,7 +187,7 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug('Logo uploaded successfully:', {
-      tenantId: tenant.id,
+      tenantId,
       assetType,
       url: publicUrl
     })
@@ -195,7 +196,7 @@ export default defineEventHandler(async (event) => {
       success: true,
       asset: {
         id: asset?.id,
-        tenant_id: tenant.id,
+        tenant_id: tenantId,
         asset_type: assetType,
         url: publicUrl,
         format: ext,
