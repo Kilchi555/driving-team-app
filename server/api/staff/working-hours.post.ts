@@ -185,12 +185,9 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-      if (!body.blocks || body.blocks.length === 0) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'At least one block required'
-        })
-      }
+      // Ein leeres blocks-Array ist gültig: Damit wird der Tag deaktiviert
+      // (alle bestehenden Einträge werden weiter unten gelöscht und keine neuen angelegt).
+      const requestedBlocks = body.blocks || []
 
       // Get tenant_id for this staff
       const { data: userData, error: userError } = await supabase
@@ -216,7 +213,7 @@ export default defineEventHandler(async (event) => {
       if (deleteError) throw deleteError
 
       // Insert new entries for each block
-      const blocksToInsert = body.blocks
+      const blocksToInsert = requestedBlocks
         .filter(block => block.is_active)
         .map(block => ({
           staff_id: body.staffId,
