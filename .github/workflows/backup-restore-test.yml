@@ -42,7 +42,11 @@ jobs:
       - name: Find latest backup in R2
         id: latest
         run: |
-          LATEST=$(rclone lsf "r2:${{ secrets.R2_BUCKET }}" --dirs-only | sort -r | head -1 | tr -d '/')
+          # Nur echte Datums-Ordner (YYYY-MM-DD) berücksichtigen – der Bucket enthält
+          # daneben auch "storage/" (Supabase Storage Sync) und ggf. "credentials-*".
+          # "storage" > jede Zahl in lexikografischer Sortierung, daher gewann es
+          # bisher fälschlich gegen "sort -r" und liess den Restore-Test ins Leere laufen.
+          LATEST=$(rclone lsf "r2:${{ secrets.R2_BUCKET }}" --dirs-only | grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}/$' | sort -r | head -1 | tr -d '/')
           echo "LATEST=$LATEST" >> $GITHUB_OUTPUT
           echo "📦 Neuestes Backup: $LATEST"
           if [ -z "$LATEST" ]; then
@@ -53,6 +57,14 @@ jobs:
         run: |
           LATEST=${{ steps.latest.outputs.LATEST }}
           rclone copyto "r2:${{ secrets.R2_BUCKET }}/$LATEST/backup.dump" backup.dump
+          # Explizite Prüfung statt nur informativem "du" im echo: rclone copyto
+          # gibt bei fehlender Quelldatei fälschlich Exit-Code 0 zurück ("nothing
+          # to transfer"), und ein fehlschlagendes "du" innerhalb von $(...) wird
+          # von "set -e" nicht erkannt, wenn es in einen echo eingebettet ist.
+          if [ ! -s backup.dump ]; then
+            echo "❌ Download fehlgeschlagen: backup.dump fehlt oder ist leer (Ordner: $LATEST)!"
+            exit 1
+          fi
           echo "✅ Downloaded: $(du -sh backup.dump | cut -f1)"
 
       - name: Prepare Supabase roles + schemas in test DB
