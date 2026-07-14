@@ -60,6 +60,37 @@ export interface SARIResponse<T> {
   status: string // 'OK' or error message
 }
 
+/**
+ * `deletePersonCourse` status codes (per SARI_API_DOCUMENTATION.md) that mean
+ * the student is already in the desired "not enrolled" end state — safe to
+ * treat as a successful no-op rather than a failure.
+ */
+const SARI_UNENROLL_IDEMPOTENT_CODES = ['PERSON_NOT_FOUND', 'COURSEMEMBER_NOT_FOUND', 'PERSON_NOT_REGISTERED']
+
+/**
+ * `deletePersonCourse` status codes that mean SARI actively refuses the
+ * unenrollment (as opposed to a transient/system error) — the caller cannot
+ * retry its way out of this, it requires manual action in the SARI portal.
+ */
+const SARI_UNENROLL_BLOCKED_CODES = ['COURSEMEMBER_ALREADY_CONFIRMED']
+
+/** True if a thrown unenrollStudent() error means "already unenrolled" — safe to ignore. */
+export function isSariUnenrollIdempotent(message: string | undefined | null): boolean {
+  if (!message) return false
+  return SARI_UNENROLL_IDEMPOTENT_CODES.some(code => message.includes(code))
+}
+
+/** True if a thrown unenrollStudent() error means SARI permanently refuses the removal via API. */
+export function isSariUnenrollBlocked(message: string | undefined | null): boolean {
+  if (!message) return false
+  return SARI_UNENROLL_BLOCKED_CODES.some(code => message.includes(code))
+}
+
+/** User/admin-facing explanation for a blocked SARI unenrollment. */
+export function getSariUnenrollBlockedMessage(): string {
+  return 'Der Teilnehmer wurde bei SARI bereits bestätigt und kann über die API nicht mehr abgemeldet werden. Bitte die Abmeldung manuell im SARI-Portal vornehmen.'
+}
+
 export class SARIClient {
   private baseUrl: string
   private config: SARIConfig
