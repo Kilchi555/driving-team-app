@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
     const { data: currentUserData, error: currentUserError } = await supabaseAdmin
       .from('users')
       .select('tenant_id, role')
-      .eq('id', user.id)
+      .eq('auth_user_id', user.id)
       .single()
     
     if (currentUserError || !currentUserData) {

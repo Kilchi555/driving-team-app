@@ -12,21 +12,22 @@ const STORAGE_BUCKET = 'tenant-assets'
 export default defineEventHandler(async (event) => {
   try {
     // Verify authentication
-    const { user, tenant } = await verifyAuth(event)
-    if (!user || !tenant) {
+    const authResult = await verifyAuth(event)
+    if (!authResult?.userId || !authResult?.tenantId) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Unauthorized'
       })
     }
+    const { userId, tenantId: authTenantId } = authResult
 
     // Check if user is admin
     const supabase = getSupabaseAdmin()
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('role')
-      .eq('id', user.id)
-      .eq('tenant_id', tenant.id)
+      .eq('id', userId)
+      .eq('tenant_id', authTenantId)
       .single()
 
     if (userError || userData?.role !== 'admin') {
@@ -48,7 +49,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Security: Verify tenant ownership
-    if (tenantId !== tenant.id) {
+    if (tenantId !== authTenantId) {
       throw createError({
         statusCode: 403,
         statusMessage: 'Cannot delete assets from another tenant'

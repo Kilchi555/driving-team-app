@@ -1,12 +1,21 @@
-import { defineEventHandler, createError } from 'h3'
+import { defineEventHandler, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 
 export default defineEventHandler(async (event) => {
   try {
     const supabase = getSupabaseAdmin()
-    
+
+    const authorization = getHeader(event, 'authorization')
+    const token = authorization?.replace('Bearer ', '')
+    if (!token) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Not authenticated'
+      })
+    }
+
     // Get current user's tenant
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser(token)
     if (!user) {
       throw createError({
         statusCode: 401,
@@ -17,7 +26,7 @@ export default defineEventHandler(async (event) => {
     const { data: userProfile } = await supabase
       .from('users')
       .select('tenant_id, role')
-      .eq('id', user.id)
+      .eq('auth_user_id', user.id)
       .single()
 
     if (!userProfile?.tenant_id) {

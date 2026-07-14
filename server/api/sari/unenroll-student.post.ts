@@ -13,7 +13,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { SARIClient } from '~/utils/sariClient'
+import { SARIClient, isSariUnenrollIdempotent, isSariUnenrollBlocked, getSariUnenrollBlockedMessage } from '~/utils/sariClient'
 import { checkSARIRateLimit, formatRateLimitError, validateSARIInput, sanitizeSARIInput } from '~/server/utils/sari-rate-limit'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
@@ -78,7 +78,7 @@ export default defineEventHandler(async (event) => {
     const { data: userProfile, error: profileError } = await supabase
       .from('users')
       .select('tenant_id, role, auth_user_id')
-      .eq('id', user.id)
+      .eq('auth_user_id', user.id)
       .single()
 
     if (profileError || !userProfile?.tenant_id) {
@@ -182,10 +182,20 @@ export default defineEventHandler(async (event) => {
 
     // Unenroll student from SARI
     console.log(`📝 [${userProfile.auth_user_id}] Unenrolling student ${student.id} from SARI course ${sariCourseId}`)
-    
-    await sariClient.unenrollStudent(sariCourseId, student.faberid)
 
-    console.log(`✅ [${userProfile.auth_user_id}] Successfully unenrolled student from SARI course ${sariCourseId}`)
+    let alreadyUnenrolled = false
+    try {
+      await sariClient.unenrollStudent(sariCourseId, student.faberid)
+      console.log(`✅ [${userProfile.auth_user_id}] Successfully unenrolled student from SARI course ${sariCourseId}`)
+    } catch (unenrollErr: any) {
+      if (isSariUnenrollIdempotent(unenrollErr.message)) {
+        // Already in the desired end state — not an error from the caller's perspective.
+        alreadyUnenrolled = true
+        console.log(`ℹ️ [${userProfile.auth_user_id}] Student already unenrolled from SARI course ${sariCourseId}`)
+      } else {
+        throw unenrollErr
+      }
+    }
 
     // Update local registration (soft delete)
     const { error: updateError } = await supabase
@@ -221,13 +231,25 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      message: `Student ${student.first_name} ${student.last_name} unenrolled from SARI course`,
+      alreadyUnenrolled,
+      message: alreadyUnenrolled
+        ? `Student ${student.first_name} ${student.last_name} was already unenrolled from SARI course`
+        : `Student ${student.first_name} ${student.last_name} unenrolled from SARI course`,
       sariCourseId
     }
 
   } catch (error: any) {
     console.error('SARI unenroll-student error:', error)
-    
+
+    // Real blocker: SARI refuses the removal via API — no amount of retrying will help.
+    if (isSariUnenrollBlocked(error.message)) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: getSariUnenrollBlockedMessage(),
+        data: { code: 'COURSEMEMBER_ALREADY_CONFIRMED' }
+      })
+    }
+
     if (error.message?.includes('PERSON_NOT_FOUND')) {
       throw createError({ 
         statusCode: 404, 
@@ -242,13 +264,27 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    if (error.message?.includes('NO_PERMISSION')) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'No permission for this driving school in SARI'
+      })
+    }
+
+    if (error.message?.includes('COURSE_NOT_ALLOWED_OR_ENABLED')) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Course is not enabled in SARI'
+      })
+    }
+
     if (error.statusCode && error.statusMessage) {
       throw mapSupabaseError(error)
     }
 
     throw createError({
       statusCode: 500,
-      statusMessage: 'Failed to unenroll student from SARI course'
+      statusMessage: `Failed to unenroll student from SARI course: ${error.message || 'Unknown error'}`
     })
   }
 })
