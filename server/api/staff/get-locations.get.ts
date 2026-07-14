@@ -226,6 +226,36 @@ export default defineEventHandler(async (event) => {
         success: true,
         data: locations || []
       }
+    } else if (['admin', 'tenant_admin', 'super_admin'].includes(userProfile.role)) {
+      // Admins see all active locations in their tenant
+      logger.debug('🔍 Admin fetching all tenant locations:', {
+        adminId: userProfile.id,
+        role: userProfile.role
+      })
+      
+      const { data: locations, error } = await supabaseAdmin
+        .from('locations')
+        .select('id, name, address, formatted_address, postal_code, canton, city, tenant_id, location_type, user_id, is_active, public_bookable, time_windows')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .order('name', { ascending: true })
+      
+      if (error) {
+        logger.error('❌ Error fetching admin locations:', error)
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Failed to fetch locations'
+        })
+      }
+      
+      logger.debug('✅ Admin locations fetched:', {
+        count: locations?.length || 0
+      })
+      
+      return {
+        success: true,
+        data: locations || []
+      }
     }
     
     // Fallback: return empty
