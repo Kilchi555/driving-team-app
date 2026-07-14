@@ -161,13 +161,17 @@ export const useStaffWorkingHours = () => {
       logger.debug('💾 Saving working day with multiple blocks:', { staffId, workingDay })
       
       // Save via API
+      // Wichtig: Wenn der Tag als inaktiv markiert ist (Toggle aus), müssen wir
+      // leere Blocks senden, damit der Server bestehende Einträge löscht/deaktiviert.
+      // Sonst bleiben lokal noch vorhandene (aber ausgeblendete) Blocks aktiv in der DB,
+      // selbst wenn der Nutzer den Tag deaktiviert hat.
       const response = await $fetch('/api/staff/working-hours', {
         method: 'POST',
         body: {
           action: 'save_day',
           staffId,
           dayOfWeek: workingDay.day_of_week,
-          blocks: workingDay.blocks || []
+          blocks: workingDay.is_active ? (workingDay.blocks || []) : []
         }
       }) as any
 

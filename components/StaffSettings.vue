@@ -2417,7 +2417,13 @@ const {
 const workingHoursForm = ref<Record<number, { start_time: string; end_time: string; is_active: boolean }>>({})
 
 // Neue Working Day Form (mehrere Blöcke pro Tag)
-const workingDayForm = ref<Record<number, WorkingDayForm>>({})
+// Wird mit Default-Werten für alle Wochentage initialisiert, damit das Template
+// nie auf ein undefined-Objekt zugreift, bevor loadData() die echten Daten liefert.
+const workingDayForm = ref<Record<number, WorkingDayForm>>(
+  Object.fromEntries(
+    WEEKDAYS.map(day => [day.value, { day_of_week: day.value, is_active: false, blocks: [] }])
+  )
+)
 const weekdays = WEEKDAYS
 const isSavingWorkingHours = ref(false)
 
@@ -4043,14 +4049,8 @@ const autoSaveTimeouts = ref<Record<number, NodeJS.Timeout>>({})
 // Flag um Race Conditions zu verhindern
 const isAutoSaveInProgress = ref(false)
 
-const autoSaveWorkingDay = async (dayOfWeek: number) => {
+const autoSaveWorkingDay = (dayOfWeek: number) => {
   if (!props.currentUser?.id) return
-  
-  // Verhindere mehrfache gleichzeitige Saves
-  if (isAutoSaveInProgress.value) {
-    logger.debug(`⏳ Auto-save already in progress, skipping day ${dayOfWeek}`)
-    return
-  }
   
   // Debounce: Vorheriges Timeout für diesen Tag löschen
   if (autoSaveTimeouts.value[dayOfWeek]) {
@@ -4058,40 +4058,47 @@ const autoSaveWorkingDay = async (dayOfWeek: number) => {
   }
   
   // Debounce: Speichern nach 500ms Inaktivität
-  autoSaveTimeouts.value[dayOfWeek] = setTimeout(async () => {
-    if (isAutoSaveInProgress.value) {
-      logger.debug(`⏳ Auto-save already in progress (debounced), skipping day ${dayOfWeek}`)
-      return
-    }
+  autoSaveTimeouts.value[dayOfWeek] = setTimeout(() => runAutoSaveWorkingDay(dayOfWeek), 500)
+}
+
+// Führt den eigentlichen Save aus. Läuft bereits ein anderer Save (globaler Lock,
+// z.B. für einen anderen Wochentag), wird NICHT einfach aufgegeben, sondern kurz
+// später erneut versucht — sonst gehen währenddessen gemachte Änderungen verloren
+// (sie werden nie gespeichert, bis der nächste unabhängige Change das auslöst).
+const runAutoSaveWorkingDay = async (dayOfWeek: number) => {
+  if (isAutoSaveInProgress.value) {
+    logger.debug(`⏳ Auto-save already in progress, retrying day ${dayOfWeek} shortly`)
+    autoSaveTimeouts.value[dayOfWeek] = setTimeout(() => runAutoSaveWorkingDay(dayOfWeek), 200)
+    return
+  }
+  
+  isAutoSaveInProgress.value = true
+  isSavingWorkingHours.value = true
+  
+  try {
+    const dayData = workingDayForm.value[dayOfWeek]
+    logger.debug(`💾 Auto-saving working day ${dayOfWeek}:`, dayData)
     
-    isAutoSaveInProgress.value = true
-    isSavingWorkingHours.value = true
+    await saveWorkingDay(props.currentUser!.id, dayData)
     
-    try {
-      const dayData = workingDayForm.value[dayOfWeek]
-      logger.debug(`💾 Auto-saving working day ${dayOfWeek}:`, dayData)
-      
-      await saveWorkingDay(props.currentUser!.id, dayData)
-      
-      logger.debug(`✅ Working day ${dayOfWeek} auto-saved successfully`)
-      
-      // Reload working hours to update calendar (NICHT die Form!)
-      await loadWorkingHours(props.currentUser!.id)
-      logger.debug('🔄 Working hours reloaded after save')
-      
-      // Emit event to notify parent (calendar needs to reload)
-      emit('settings-updated')
-      
-    } catch (err: any) {
-      console.error(`❌ Error auto-saving working day ${dayOfWeek}:`, err)
-      error.value = `Fehler beim Speichern: ${err.message}`
-    } finally {
-      setTimeout(() => {
-        isSavingWorkingHours.value = false
-        isAutoSaveInProgress.value = false
-      }, 500) // Kurz anzeigen, dann ausblenden
-    }
-  }, 500) // 500ms Debounce
+    logger.debug(`✅ Working day ${dayOfWeek} auto-saved successfully`)
+    
+    // Reload working hours to update calendar (NICHT die Form!)
+    await loadWorkingHours(props.currentUser!.id)
+    logger.debug('🔄 Working hours reloaded after save')
+    
+    // Emit event to notify parent (calendar needs to reload)
+    emit('settings-updated')
+    
+  } catch (err: any) {
+    console.error(`❌ Error auto-saving working day ${dayOfWeek}:`, err)
+    error.value = `Fehler beim Speichern: ${err.message}`
+  } finally {
+    setTimeout(() => {
+      isSavingWorkingHours.value = false
+      isAutoSaveInProgress.value = false
+    }, 500) // Kurz anzeigen, dann ausblenden
+  }
 }
 
 // Arbeitszeit-Block hinzufügen
