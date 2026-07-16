@@ -4,9 +4,7 @@ import { usePaymentMethods } from '~/composables/usePaymentMethods'
 import { useTimeCalculations } from '~/composables/useTimeCalculations'
 import { usePricing } from '~/composables/usePricing' // ✅ EINHEITLICHE PRICING-LÖSUNG
 
-// Define constants for better readability and maintainability
 const DEFAULT_DURATION_MINUTES = 45
-const FALLBACK_PRICE_PER_MINUTE = 95 / DEFAULT_DURATION_MINUTES
 
 export const useEventModalHandlers = (
   formData: any,
@@ -572,22 +570,6 @@ const handleDurationsChanged = (durations: number[]) => {
   }
 
   /**
-   * Gets admin fee for category.
-   */
-  const getAdminFeeForCategory = (categoryCode: string, appointmentNumber: number) => {
-    // ✅ KORRIGIERT: Admin-Fee nur beim 2. Termin pro Kategorie (außer bei Motorrädern)
-    const motorcycleCategories = ['A', 'A1', 'A35kW']
-    const isMotorcycle = motorcycleCategories.includes(categoryCode)
-    
-    if (isMotorcycle || appointmentNumber !== 2) {
-      return 0
-    }
-    
-    // ✅ VERWENDET NEUE PRICING-DATEN
-    return pricing.dynamicPricing.value.hasAdminFee ? pricing.dynamicPricing.value.adminFeeChf : 0
-  }
-
-  /**
    * Gets appointment number for user.
    */
   const getAppointmentNumber = async (userId: string): Promise<number> => {
@@ -647,8 +629,6 @@ const handleDurationsChanged = (durations: number[]) => {
     getAppointmentNumber,
     getDefaultTitle,
     getEventTypeName,
-    getAdminFeeForCategory,
-    
     // Legacy support
     paymentMethods
   }

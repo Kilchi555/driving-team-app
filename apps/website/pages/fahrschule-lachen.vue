@@ -216,6 +216,11 @@
       <div class="section-container">
         <h2 class="text-xl font-bold text-gray-900 mb-5 text-center">Kurse & Ausbildungen in Lachen SZ</h2>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
+          <a href="/fahrstunden-lachen/" class="flex flex-col items-center gap-2 p-4 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
+            <span class="text-2xl">🚗</span>
+            <p class="font-semibold text-gray-900 text-sm">Fahrstunden Lachen</p>
+            <p class="text-xs text-primary-600">Auto Kat. B</p>
+          </a>
           <a href="/vku-kurs-lachen/" class="flex flex-col items-center gap-2 p-4 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
             <span class="text-2xl">📋</span>
             <p class="font-semibold text-gray-900 text-sm">VKU Kurs</p>

@@ -1,10 +1,11 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { setAuthCookies } from '~/server/utils/cookies'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    const { email, password, code, mfaType } = await readBody(event)
+    const { email, password, code, mfaType, rememberMe } = await readBody(event)
 
     if (!email || !password || !code || !mfaType) {
       throw createError({
@@ -139,6 +140,17 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug('✅ MFA login successful for user:', authData.user.id)
+
+    // Set httpOnly cookies (secure, XSS-protected) — the same session layer
+    // used by the normal password login. Without this, MFA users only ever
+    // get a client-side Supabase session and lose server-side auth (401s on
+    // every /api/* call) as soon as the page reloads.
+    const sessionDuration = rememberMe ? 604800 : 86400 // 7 days vs 24h, mirrors login.post.ts
+    setAuthCookies(event, authData.session.access_token, authData.session.refresh_token, {
+      rememberMe: !!rememberMe,
+      maxAge: sessionDuration
+    })
+    logger.debug('🍪 [MFA] Session cookies set (httpOnly, secure, sameSite)')
 
     return {
       success: true,

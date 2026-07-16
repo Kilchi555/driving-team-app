@@ -22,8 +22,18 @@
 // browser makes at most one /api/auth/refresh call at a time. Combined with the
 // Supabase "refresh token reuse interval" this removes the cross-instance race.
 //
-// The helper also re-hydrates the Supabase client + localStorage so subsequent
-// getSession() calls return a valid session.
+// The helper also re-hydrates the Supabase client so subsequent getSession()
+// calls return a valid session.
+//
+// SECURITY: raw access/refresh tokens are intentionally NOT written to
+// localStorage here. httpOnly cookies are the real, XSS-safe auth layer for
+// server-side requests; the Supabase client's own (module-managed) storage
+// covers client-side supabase-js calls. Duplicating the tokens into plain
+// localStorage would let any injected/XSS script read a fully usable session
+// straight out of `localStorage`, defeating the purpose of httpOnly cookies.
+// We still record a plain timestamp (no secret material) so the proactive
+// refresh interval in 02-supabase-auth-interceptor.client.ts knows when it
+// last ran.
 
 import { logger } from '~/utils/logger'
 
@@ -34,8 +44,7 @@ export interface RefreshedSession {
   expires_at?: number
 }
 
-// localStorage keys shared with 02-supabase-auth-interceptor.client.ts
-const SUPABASE_SESSION_KEY = 'supabase-session-cache'
+// Non-secret timestamp only — shared with 02-supabase-auth-interceptor.client.ts
 const LAST_REFRESH_KEY = 'last_token_refresh_time'
 
 // Short window during which a just-completed refresh is reused for bursty
@@ -56,14 +65,6 @@ async function hydrateClient(session: RefreshedSession): Promise<void> {
     // Non-fatal: caller still has the token to use directly.
   }
   try {
-    localStorage.setItem(
-      SUPABASE_SESSION_KEY,
-      JSON.stringify({
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
-        timestamp: Date.now(),
-      })
-    )
     localStorage.setItem(LAST_REFRESH_KEY, Date.now().toString())
   } catch {
     // localStorage may be unavailable (private mode) — non-fatal.
@@ -118,4 +119,15 @@ export async function refreshClientSession(
   })()
 
   return inFlight
+}
+
+/**
+ * Drop the cached/in-flight refresh result. Must be called on logout —
+ * otherwise a refresh completed just before logout can be replayed to
+ * bursty callers inside the reuse window, silently reviving a session
+ * the user just signed out of.
+ */
+export function resetRefreshCache(): void {
+  inFlight = null
+  lastResult = null
 }

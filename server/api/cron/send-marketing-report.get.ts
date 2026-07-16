@@ -19,6 +19,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 import { getHeader, getQuery } from 'h3'
+import { resolveCategoryGroup, BOOT_ALIASES } from '~/server/utils/category-groups'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -235,7 +236,9 @@ async function sendReport(supabase: any, tenant: { id: string; slug: string; nam
   const cancellations = cancelledApts.length
 
   // Category breakdown (B / Motorrad / Anhänger / LKW / Kurs)
-  const B_CATS = new Set(['B', 'B Schaltung', 'B Automatik'])
+  // B-Gruppe (inkl. Subkategorien wie "B Schaltung"/"B Automatik") wird zentral
+  // über categories.parent_category_id aufgelöst statt separat gepflegt.
+  const B_CATS = new Set(await resolveCategoryGroup(supabase, tenant.id, 'B'))
   const MOTO_CATS = new Set(['A', 'A1', 'A35kW'])
   const LKW_CATS = new Set(['C', 'C1', 'CE', 'C1E', 'D', 'D1'])
   const ANHAENGER_CATS = new Set(['BE', 'C1E-only', 'DE'])
@@ -246,7 +249,7 @@ async function sendReport(supabase: any, tenant: { id: string; slug: string; nam
     else if (MOTO_CATS.has(apt.type)) catCounts.moto++
     else if (ANHAENGER_CATS.has(apt.type)) catCounts.anhaenger++
     else if (LKW_CATS.has(apt.type)) catCounts.lkw++
-    else if (['Boot', 'Motorboot'].includes(apt.type)) catCounts.boot++
+    else if (BOOT_ALIASES.includes(apt.type)) catCounts.boot++
     else catCounts.other++
   }
 

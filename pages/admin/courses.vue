@@ -6059,6 +6059,9 @@ const executeCourseCancellation = async () => {
     if (sari) {
       if (sari.error) {
         msg += ` ⚠️ SARI-Abmeldung fehlgeschlagen: ${sari.error}`
+      } else if (sari.failedCount > 0) {
+        msg += ` ⚠️ ${sari.failedCount} von ${sari.unenrolled + sari.failedCount} Teilnehmer(n) konnten NICHT aus SARI abgemeldet werden`
+        msg += sari.blockedMessage ? ` (${sari.blockedMessage})` : '.'
       } else {
         msg += ` ${sari.unenrolled} Teilnehmer wurden aus SARI abgemeldet.`
       }
@@ -6657,13 +6660,23 @@ const confirmRemoveParticipant = async () => {
     await loadCourseEnrollments(selectedCourse.value.id)
     await loadCourses() // Update course statistics
 
+    let msg: string
     if (result?.refund?.success) {
-      success.value = `Teilnehmer entfernt. CHF ${result.refund.refundedAmountChf?.toFixed(2)} wurden via Wallee zurückerstattet.`
+      msg = `Teilnehmer entfernt. CHF ${result.refund.refundedAmountChf?.toFixed(2)} wurden via Wallee zurückerstattet.`
     } else if (removalProcessRefund.value && result?.refund?.error) {
-      success.value = `Teilnehmer entfernt. Rückerstattung fehlgeschlagen: ${result.refund.error}`
+      msg = `Teilnehmer entfernt. Rückerstattung fehlgeschlagen: ${result.refund.error}`
     } else {
-      success.value = 'Teilnehmer erfolgreich entfernt!'
+      msg = 'Teilnehmer erfolgreich entfernt!'
     }
+
+    // Surface SARI de-enrollment failures instead of silently swallowing them —
+    // the local removal always succeeds even if SARI itself rejected the unenroll.
+    const sariSync = result?.sariSync
+    if (sariSync?.attempted && !sariSync.success) {
+      msg += ` ⚠️ SARI-Abmeldung fehlgeschlagen: ${sariSync.message || 'Unbekannter Fehler'}`
+    }
+
+    success.value = msg
   } catch (err) {
     console.error('Error removing participant:', err)
     error.value = 'Fehler beim Entfernen des Teilnehmers'

@@ -13,7 +13,7 @@ const CUSTOMER_PORTAL_BASE_URL = (process.env.CUSTOMER_PORTAL_BASE_URL || 'https
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { appointmentId, userId, tenantId } = body
+    const { appointmentId, userId, tenantId, skipStaffNotification } = body
 
     if (!appointmentId || !userId || !tenantId) {
       throw createError({
@@ -58,27 +58,21 @@ export default defineEventHandler(async (event) => {
       return { success: true, skipped: true, reason: 'policy_disabled', message: 'Confirmation emails disabled by admin' }
     }
 
-    // 2b. Check if user has email
-    if (!user.email || user.email.trim() === '') {
-      logger.debug('⏭️ User has no email yet, skipping appointment confirmation')
-      return {
-        success: true,
-        skipped: true,
-        reason: 'user_email_missing',
-        message: 'User has no email, skipping confirmation'
-      }
-    }
-
-    // 3. Check if user is still in onboarding (no email captured by staff yet)
-    if (user.onboarding_status === 'pending') {
-      logger.debug('⏭️ User is still in onboarding, skipping appointment confirmation')
-      return {
-        success: true,
-        skipped: true,
-        reason: 'user_onboarding_pending',
-        message: 'User onboarding pending, will send after completion'
-      }
-    }
+    // 2b/3. Whether the CUSTOMER-facing confirmation email should be skipped for now.
+    // Guest bookings always start with onboarding_status === 'pending' (the customer
+    // gets a separate "activate your account" email immediately with the same booking
+    // details — see guest-book.post.ts). The customer confirmation here is re-sent later
+    // via students/complete-onboarding.post.ts once they activate.
+    // IMPORTANT: this must NOT skip the whole function — the staff "new booking"
+    // notification below is independent of the customer's onboarding status and should
+    // always go out for online bookings, otherwise staff silently never get notified
+    // for guest bookings (which never/rarely complete onboarding).
+    const skipCustomerEmail =
+      !user.email || user.email.trim() === '' ||
+      user.onboarding_status === 'pending'
+    const skipCustomerEmailReason = !user.email || user.email.trim() === ''
+      ? 'user_email_missing'
+      : 'user_onboarding_pending'
 
     // 4. Get appointment data with payment
     const { data: appointment, error: appointmentError } = await supabase
@@ -230,76 +224,90 @@ export default defineEventHandler(async (event) => {
     const amount = payment ? `CHF ${(payment.total_amount_rappen / 100).toFixed(2)}` : 'CHF 0.00'
 
     // 10. Send email using centralized appointment notification endpoint
-    logger.debug('📧 Calling send-appointment-notification endpoint...')
+    // (skipped for guests still pending onboarding / without an email — see note above;
+    // this does NOT skip the staff notification in step 12)
+    if (!skipCustomerEmail) {
+      logger.debug('📧 Calling send-appointment-notification endpoint...')
 
-    try {
-      const emailResponse = await $fetch('/api/email/send-appointment-notification', {
-        method: 'POST',
-        body: {
-          email: user.email,
-          studentName: `${user.first_name} ${user.last_name}`,
-          appointmentTime: appointmentDateTime,
-          type: 'appointment_confirmation',
-          staffName,
-          staffPhone,
-          location: meeting_type === 'phone' || meeting_type === 'online' ? undefined : locationDisplay,
-          locationAddress: meeting_type === 'phone' || meeting_type === 'online' ? undefined : locationAddressDisplay,
-          tenantName: tenant.name,
-          tenantId,
-          tenantSlug: tenant.slug,
-          amount,
-          confirmationLink,
-          customerDashboard,
-          userId,
-          eventTypeName,
-          durationMinutes,
-          showPrice,
-          isLessonType,
-          meeting_type,
-          meeting_link,
-        }
+      try {
+        const emailResponse = await $fetch('/api/email/send-appointment-notification', {
+          method: 'POST',
+          body: {
+            email: user.email,
+            studentName: `${user.first_name} ${user.last_name}`,
+            appointmentTime: appointmentDateTime,
+            type: 'appointment_confirmation',
+            staffName,
+            staffPhone,
+            location: meeting_type === 'phone' || meeting_type === 'online' ? undefined : locationDisplay,
+            locationAddress: meeting_type === 'phone' || meeting_type === 'online' ? undefined : locationAddressDisplay,
+            tenantName: tenant.name,
+            tenantId,
+            tenantSlug: tenant.slug,
+            amount,
+            confirmationLink,
+            customerDashboard,
+            userId,
+            eventTypeName,
+            durationMinutes,
+            showPrice,
+            isLessonType,
+            meeting_type,
+            meeting_link,
+          }
+        })
+
+        logger.debug('✅ Appointment confirmation email sent:', emailResponse)
+      } catch (emailError: any) {
+        logger.error('EmailNotification', 'Failed to send appointment confirmation email:', emailError)
+        // Don't fail the whole endpoint if email fails - log and continue
+      }
+
+      // Push notification to the student (fire-and-forget, non-blocking)
+      sendPushToUser(userId, {
+        title: '✅ Buchung bestätigt',
+        body: `Deine Fahrstunde am ${appointmentDateTime} wurde bestätigt.`,
+        data: { path: '/customer-dashboard' },
+      }).catch((err: any) => {
+        logger.warn('⚠️ Push notification failed (non-critical):', err.message)
       })
-
-      logger.debug('✅ Appointment confirmation email sent:', emailResponse)
-    } catch (emailError: any) {
-      logger.error('EmailNotification', 'Failed to send appointment confirmation email:', emailError)
-      // Don't fail the whole endpoint if email fails - log and continue
+    } else {
+      logger.debug(`⏭️ Skipping customer confirmation email (${skipCustomerEmailReason}) — staff notification still proceeds`)
     }
 
-    // 11. Send push notification to the student (fire-and-forget, non-blocking)
-    sendPushToUser(userId, {
-      title: '✅ Buchung bestätigt',
-      body: `Deine Fahrstunde am ${appointmentDateTime} wurde bestätigt.`,
-      data: { path: '/customer-dashboard' },
-    }).catch((err: any) => {
-      logger.warn('⚠️ Push notification failed (non-critical):', err.message)
-    })
-
-    // 12. Send staff notification – only for online bookings made by the customer (not manual)
+    // 12. Send staff notification – only for online bookings made by the customer (not manual).
+    // AWAITED (see note on step 10 above): Vercel freezes the lambda right after this
+    // function returns, so an un-awaited fire-and-forget call here was silently dropped
+    // most of the time — this is why staff stopped receiving new-booking notifications.
+    // skipStaffNotification is set by students/complete-onboarding.post.ts's backfill call,
+    // which re-triggers this endpoint purely to send the (until-then-skipped) customer email
+    // — staff were already notified immediately at booking time and must not be pinged twice.
     const isOnlineBooking = appointment.source === 'online' && appointment.created_by === userId
-    if (staff?.email && isOnlineBooking) {
-      $fetch('/api/email/send-appointment-notification', {
-        method: 'POST',
-        body: {
-          email: staff.email,
-          studentName: `${user.first_name} ${user.last_name}`,
-          appointmentTime: appointmentDateTime,
-          type: 'staff_new_booking',
-          staffName,
-          location: locationDisplay,
-          locationAddress: locationAddressDisplay,
-          tenantName: tenant.name,
-          tenantId,
-          tenantSlug: tenant.slug,
-          amount,
-          eventTypeName,
-          durationMinutes,
-          showPrice,
-        }
-      }).catch((err: any) => {
+    if (staff?.email && isOnlineBooking && !skipStaffNotification) {
+      try {
+        await $fetch('/api/email/send-appointment-notification', {
+          method: 'POST',
+          body: {
+            email: staff.email,
+            studentName: `${user.first_name} ${user.last_name}`,
+            appointmentTime: appointmentDateTime,
+            type: 'staff_new_booking',
+            staffName,
+            location: locationDisplay,
+            locationAddress: locationAddressDisplay,
+            tenantName: tenant.name,
+            tenantId,
+            tenantSlug: tenant.slug,
+            amount,
+            eventTypeName,
+            durationMinutes,
+            showPrice,
+          }
+        })
+        logger.debug('✅ Staff new booking notification sent to:', staff.email)
+      } catch (err: any) {
         logger.warn('⚠️ Could not send staff new booking notification (non-critical):', err.message)
-      })
-      logger.debug('📧 Staff new booking notification queued for:', staff.email)
+      }
     } else if (staff?.email && !isOnlineBooking) {
       logger.debug('⏭️ Skipping staff notification – manual appointment (source:', appointment.source, ')')
     }
@@ -308,8 +316,11 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      skipped: false,
-      message: 'Appointment confirmation email sent successfully'
+      skipped: skipCustomerEmail,
+      reason: skipCustomerEmail ? skipCustomerEmailReason : undefined,
+      message: skipCustomerEmail
+        ? `Customer email skipped (${skipCustomerEmailReason}), staff notification still attempted`
+        : 'Appointment confirmation email sent successfully'
     }
   } catch (error: any) {
     logger.error('AppointmentConfirmation', 'Unexpected error:', error)

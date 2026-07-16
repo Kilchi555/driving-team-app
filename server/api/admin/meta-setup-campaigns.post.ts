@@ -116,6 +116,14 @@ async function createAdSet(params: {
       pixel_id: PIXEL_ID,
       custom_event_type: 'PURCHASE',
     },
+    // Meta blocks changing this after creation (error_subcode 1504040) — must be
+    // set correctly at creation time. 1-day view-through credits users who saw
+    // (but didn't click) the ad and converted later; without it only click-through
+    // conversions are attributed, which undercounts real Purchase attribution.
+    attribution_spec: JSON.stringify([
+      { event_type: 'CLICK_THROUGH', window_days: 7 },
+      { event_type: 'VIEW_THROUGH', window_days: 1 },
+    ]),
     status: params.status,
   })
 }

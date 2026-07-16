@@ -18,6 +18,7 @@ import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
 import { findExistingUserByContact } from '~/server/utils/user-matching'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
+import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -649,7 +650,7 @@ const handler = defineEventHandler(async (event) => {
         }
 
         // Create confirmed registration directly
-        await supabase.from('course_registrations').insert({
+        const { data: creditRegistration } = await supabase.from('course_registrations').insert({
           course_id: courseId,
           tenant_id: tenantId,
           user_id: guestUserId,
@@ -680,9 +681,45 @@ const handler = defineEventHandler(async (event) => {
           sari_synced_at: course.sari_managed ? new Date().toISOString() : null,
           vehicle_id: vehicleId || null,
           created_at: new Date().toISOString(),
-        })
+        }).select('id').single()
 
         logger.info('✅ Course registration created (credit payment)')
+
+        // Meta CAPI: courses aren't linked to `appointments`, so this bypasses
+        // recordAndSendCapiEvent's audit table (its appointment_id column has a
+        // hard FK to appointments) and sends directly — fire-and-forget, never
+        // blocks the response.
+        ;(async () => {
+          try {
+            const { data: attrRow } = marketingSessionId
+              ? await supabase
+                  .from('marketing_attributions')
+                  .select('fbclid, fbc, fbp')
+                  .eq('session_id', marketingSessionId)
+                  .maybeSingle()
+              : { data: null }
+
+            const hashedEmail = finalEmail ? await sha256Hex(finalEmail.trim().toLowerCase()) : null
+            const normalizedPhone = (finalPhone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+            const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+
+            await sendCapiEvent({
+              appointment_id: `course_${creditRegistration?.id ?? courseId}`,
+              tenant_id: tenantId,
+              event_name: 'Purchase',
+              conversion_value_chf: finalAmount / 100,
+              conversion_date_time: new Date(),
+              fbclid: attrRow?.fbclid ?? null,
+              fbc: attrRow?.fbc ?? null,
+              fbp: attrRow?.fbp ?? null,
+              hashed_email: hashedEmail,
+              hashed_phone: hashedPhone,
+            })
+          } catch (err: any) {
+            logger.warn('⚠️ Meta CAPI upload failed for course credit enrollment (non-critical):', err?.message ?? err)
+          }
+        })()
+
         return { success: true, paidWithCredit: true }
       }
     }

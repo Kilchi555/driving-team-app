@@ -16,8 +16,10 @@ import { useFeatureFlags } from '@/utils/useFeatureFlags'
 import { useAuthStore } from '~/stores/auth'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useFallbackLogger } from '~/composables/useFallbackLogger'
 
 const { primaryColor } = useTenantBranding()
+const { logFallbackUsed } = useFallbackLogger()
 
 // ✅ Protect this page - require authentication
 definePageMeta({
@@ -35,8 +37,15 @@ interface CalendarApi {
 
 const goToTenantLogin = () => {
   if (process.client) {
-    const tenantSlug = localStorage.getItem('last_tenant_slug') || 'driving-team'
-    navigateTo(`/${tenantSlug}`)
+    const tenantSlug = localStorage.getItem('last_tenant_slug')
+    if (tenantSlug) {
+      navigateTo(`/${tenantSlug}`)
+    } else {
+      // ✅ Kein Fallback mehr auf 'driving-team': ohne bekannten Tenant-Slug
+      // geht es auf eine neutrale Login-Seite statt auf die falsche Fahrschule.
+      logFallbackUsed('tenant-slug', 'Kein last_tenant_slug im localStorage gefunden – neutrale Login-Seite verwendet.', { context: 'dashboard.goToTenantLogin' }, 'error')
+      navigateTo('/login')
+    }
   }
 }
 

@@ -32,10 +32,13 @@ export default defineEventHandler(async (event) => {
 
   let categories: any[] = []
   let locationsCount = 0
+  // Which booking service types (Fahrstunde/Theorie/Beratung) this tenant actually
+  // offers — derived from active pricing_rules, not hardcoded on the client.
+  let availableServiceTypes: Array<'fahrstunde' | 'theorie' | 'beratung'> = []
 
   if (tenant.business_type === 'driving_school') {
-    // Load categories + locations in parallel (no extra roundtrip)
-    const [categoriesResult, locationsResult] = await Promise.all([
+    // Load categories + locations + pricing rule types in parallel (no extra roundtrip)
+    const [categoriesResult, locationsResult, pricingRulesResult] = await Promise.all([
       supabase
         .from('categories')
         .select('id, code, name, description, lesson_duration_minutes, tenant_id, parent_category_id, color, icon_svg, vehicle_settings, room_settings')
@@ -46,6 +49,11 @@ export default defineEventHandler(async (event) => {
       supabase
         .from('locations')
         .select('id')
+        .eq('tenant_id', tenant.id)
+        .eq('is_active', true),
+      supabase
+        .from('pricing_rules')
+        .select('rule_type')
         .eq('tenant_id', tenant.id)
         .eq('is_active', true),
     ])
@@ -63,6 +71,11 @@ export default defineEventHandler(async (event) => {
     }))
 
     locationsCount = locationsResult.data?.length ?? 0
+
+    const ruleTypes = new Set((pricingRulesResult.data || []).map((r: any) => r.rule_type))
+    if (ruleTypes.has('base_price')) availableServiceTypes.push('fahrstunde')
+    if (ruleTypes.has('theory')) availableServiceTypes.push('theorie')
+    if (ruleTypes.has('consultation')) availableServiceTypes.push('beratung')
   }
 
   // Expose only the customer-facing policy fields (not internal staff settings)
@@ -80,6 +93,6 @@ export default defineEventHandler(async (event) => {
 
   return {
     success: true,
-    data: { tenant: tenantPublic, categories, locationsCount, bookingPolicy },
+    data: { tenant: tenantPublic, categories, locationsCount, bookingPolicy, availableServiceTypes },
   }
 })

@@ -722,25 +722,10 @@ const handleLogin = async () => {
 
     logger.debug('✅ Login successful')
 
-    // 💾 WICHTIG: Speichere Supabase Session für Token Refresh Interceptor
-    if (response?.session?.access_token && response?.session?.refresh_token) {
-      try {
-        if (typeof localStorage !== 'undefined') {
-          const sessionData = {
-            access_token: response.session.access_token,
-            refresh_token: response.session.refresh_token,
-            timestamp: Date.now()
-          }
-          localStorage.setItem('supabase-session-cache', JSON.stringify(sessionData))
-          logger.debug('💾 Supabase session saved to localStorage')
-        }
-      } catch (err) {
-        logger.warn('⚠️ Failed to save session to localStorage:', err)
-      }
-    }
-
-    // Session tokens are now in HTTP-Only cookies (set by backend)
-    // No need to call setSession - cookies are automatically sent with requests
+    // Session tokens are now in HTTP-Only cookies (set by backend) — never
+    // duplicated into localStorage (XSS-readable). The client-side Supabase
+    // session gets hydrated separately by auth-restore.client.ts via the
+    // cookie-based refresh endpoint.
 
     // Store user in auth store
     authStore.user = response.user
@@ -892,7 +877,7 @@ const handleLogin = async () => {
 }
 
 const handleMFAVerify = async () => {
-  const result = await mfaFlow.verifyMFACode(loginForm.value.password)
+  const result = await mfaFlow.verifyMFACode(loginForm.value.password, loginForm.value.rememberMe)
   
   if (result && result.success) {
     logger.debug('✅ MFA verification successful, logging in...')

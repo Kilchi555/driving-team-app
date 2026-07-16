@@ -261,6 +261,10 @@ export async function recordAndUploadConversion(input: ConversionUploadInput): P
 
   if (result.uploaded) {
     logger.info(`google-ads-conversion: uploaded for appointment ${input.appointment_id} (CHF ${input.conversion_value_chf})`)
+  } else if (result.reason === 'no_click_id') {
+    // Expected/benign: this booking has no gclid/gbraid/wbraid (e.g. direct visit,
+    // organic traffic, or another channel) — there is nothing to upload. Not a failure.
+    logger.debug(`google-ads-conversion: skipped for appointment ${input.appointment_id} — no click id on this booking (not from a Google Ads click)`)
   } else {
     logger.warn(`google-ads-conversion: upload skipped/failed for appointment ${input.appointment_id} — ${result.reason}${result.error ? `: ${result.error.slice(0, 200)}` : ''}`)
   }
@@ -352,6 +356,8 @@ export async function recordAndUploadInquiryConversion(input: {
 
   if (result.uploaded) {
     logger.info(`google-ads-conversion: inquiry uploaded for proposal ${input.proposal_id}`)
+  } else if (result.reason === 'no_click_id') {
+    logger.debug(`google-ads-conversion: inquiry skipped for proposal ${input.proposal_id} — no click id (not from a Google Ads click)`)
   } else {
     logger.warn(`google-ads-conversion: inquiry upload skipped/failed for proposal ${input.proposal_id} — ${result.reason}${result.error ? `: ${result.error.slice(0, 200)}` : ''}`)
   }

@@ -300,15 +300,21 @@
         <!-- Content -->
         <div v-else>
           <!-- Add New Reason Button -->
-          <div class="flex justify-between items-center mb-6">
+          <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
             <h2 class="text-lg font-semibold text-gray-900">Alle Absage-Gründe</h2>
-            <button
-              @click="showAddModal = true"
-              class="px-4 py-2 text-white rounded-md hover:opacity-90 transition-colors"
-              :style="{ background: primaryColor }"
-            >
-              ➕ Neuer Grund
-            </button>
+            <div class="flex items-center gap-3">
+              <label v-if="inactiveReasonsCount > 0" class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer select-none">
+                <input type="checkbox" v-model="showInactiveReasons" class="rounded text-gray-500" />
+                Inaktive anzeigen ({{ inactiveReasonsCount }})
+              </label>
+              <button
+                @click="showAddModal = true"
+                class="px-4 py-2 text-white rounded-md hover:opacity-90 transition-colors"
+                :style="{ background: primaryColor }"
+              >
+                ➕ Neuer Grund
+              </button>
+            </div>
           </div>
 
           <!-- Reasons List -->
@@ -332,6 +338,9 @@
                       Spezialregeln
                     </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Aktionen
                   </th>
                 </tr>
@@ -342,6 +351,7 @@
                   :key="reason.id"
                   @click="editReason(reason)"
                   class="tenant-row-hover hover:shadow-sm cursor-pointer transition-all duration-200"
+                  :class="{ 'opacity-50': !reason.is_active }"
                 >
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {{ reason.name_de }}
@@ -386,12 +396,28 @@
                         </span>
                       </div>
                     </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span :class="[
+                      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                      reason.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'
+                    ]">
+                      {{ reason.is_active ? 'Aktiv' : 'Inaktiv' }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button
+                      v-if="reason.is_active"
                       @click.stop="deleteReason(reason)"
                       class="text-red-600 hover:text-red-900 hover:bg-red-100 px-3 py-1 rounded transition-colors duration-200"
                     >
                       🗑️ Löschen
+                    </button>
+                    <button
+                      v-else
+                      @click.stop="toggleReasonStatus(reason)"
+                      class="text-green-600 hover:text-green-900 hover:bg-green-100 px-3 py-1 rounded transition-colors duration-200"
+                    >
+                      ↩️ Reaktivieren
                     </button>
                   </td>
                 </tr>
@@ -626,9 +652,23 @@ const {
   deleteCancellationReason
 } = useCancellationReasons()
 
+// "Löschen" ist ein Soft-Delete (is_active = false) — standardmässig blenden wir
+// deaktivierte Gründe aus, sonst sieht es nach dem Löschen so aus, als wäre
+// nichts passiert. Über den Toggle können sie bei Bedarf wieder eingeblendet
+// (und reaktiviert) werden.
+const showInactiveReasons = ref(false)
+
+const inactiveReasonsCount = computed(() =>
+  allCancellationReasons.value.filter(r => !r.is_active).length
+)
+
 // Computed: Sortiere Gründe nach Typ (Schüler zuerst, dann Fahrlehrer)
 const sortedCancellationReasons = computed(() => {
-  return [...allCancellationReasons.value].sort((a, b) => {
+  const source = showInactiveReasons.value
+    ? allCancellationReasons.value
+    : allCancellationReasons.value.filter(r => r.is_active)
+
+  return [...source].sort((a, b) => {
     // Erst nach Typ sortieren (student vor staff)
     if (a.cancellation_type !== b.cancellation_type) {
       return a.cancellation_type === 'student' ? -1 : 1
@@ -763,14 +803,14 @@ const saveReason = async () => {
     cancelEdit()
   } catch (error: any) {
     console.error('Error saving reason:', error)
-    
+
     // Spezifische Fehlermeldungen
-    if (error.code === '23505') {
-      alert('Ein Absage-Grund mit diesem Namen existiert bereits. Bitte wählen Sie einen anderen Namen.')
-    } else if (error.message?.includes('permission')) {
+    if (error.statusCode === 409 || error.data?.code === '23505' || error.data?.data?.code === '23505') {
+      alert(error.statusMessage || error.message || 'Ein Absage-Grund mit diesem Code existiert bereits. Bitte wählen Sie einen anderen Namen.')
+    } else if (error.statusCode === 403 || error.message?.includes('permission')) {
       alert('Keine Berechtigung zum Erstellen von Absage-Gründen.')
     } else {
-      alert(`Fehler beim Speichern des Grundes: ${error.message || 'Unbekannter Fehler'}`)
+      alert(`Fehler beim Speichern des Grundes: ${error.statusMessage || error.message || 'Unbekannter Fehler'}`)
     }
   }
 }

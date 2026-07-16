@@ -11,6 +11,7 @@ import { uploadConversionAdjustment } from '~/server/utils/google-ads-conversion
 import { sendCapiRefundEvent, sha256Hex } from '~/server/utils/meta-capi'
 import { processWalleeRefund } from '~/server/utils/wallee-refund'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
+import { cancelResourceBookingsForAppointment } from '~/server/utils/resource-bookings'
 
 export default defineEventHandler(async (event) => {
   // ── INTERNAL-ONLY GUARD ────────────────────────────────────────────────
@@ -679,6 +680,11 @@ async function markAppointmentCancelled(
   } catch (error: any) {
     console.warn('⚠️ Error marking appointment as cancelled:', error)
   }
+
+  // ✅ Fahrzeug- und Raumreservationen für diesen Termin ebenfalls freigeben,
+  // damit die Ressource für andere Termine im selben Zeitfenster wieder
+  // verfügbar ist (Verfügbarkeitsprüfungen filtern auf status != 'cancelled').
+  await cancelResourceBookingsForAppointment(supabase, appointmentId, opts.tenantId)
 }
 
 // Process refund to student credit OR back via Wallee

@@ -10,6 +10,7 @@ import { validateUUID } from '~/server/utils/validators'
 import { generateCustomerCancelledAdminEmail } from '~/server/utils/email'
 import { processWalleeRefund } from '~/server/utils/wallee-refund'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
+import { calculateCancellationCharges } from '~/utils/policyCalculations'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -161,7 +162,7 @@ export default defineEventHandler(async (event) => {
       .from('appointments')
       .select(`
         *,
-        payments (id, payment_status, total_amount_rappen, credit_used_rappen, wallee_transaction_id)
+        payments (id, payment_status, total_amount_rappen, credit_used_rappen, wallee_transaction_id, notes, metadata)
       `)
       .eq('id', appointmentId)
       .eq('tenant_id', tenantId)  // ✅ CRITICAL: Tenant isolation
@@ -234,6 +235,7 @@ export default defineEventHandler(async (event) => {
       `)
       .or(`tenant_id.eq.${userProfile.tenant_id},tenant_id.is.null`)
       .eq('is_active', true)
+      .eq('applies_to', 'appointments') // Without this filter a 'courses' policy could be picked instead
       .order('tenant_id', { ascending: false }) // Tenant-specific policies come first (non-NULL before NULL)
       .order('is_default', { ascending: false })
       .limit(1)
@@ -255,22 +257,9 @@ export default defineEventHandler(async (event) => {
     const policyScope = cancellationPolicy.tenant_id ? 'tenant-specific' : 'global'
     logger.debug(`✅ Using ${policyScope} cancellation policy:`, cancellationPolicy.name)
 
-    // Find the threshold for free cancellation (rule with charge_percentage = 0)
-    const freeRule = cancellationPolicy.rules.find((rule: any) => rule.charge_percentage === 0)
-    
-    if (!freeRule) {
-      const errorMsg = 'Keine kostenloses Stornierungsregel in der Policy konfiguriert. Bitte kontaktieren Sie den Administrator.'
-      logger.error('❌ No free cancellation rule found in policy:', cancellationPolicy.id)
-      throw createError({
-        statusCode: 500,
-        message: errorMsg
-      })
-    }
-    
-    const hoursBeforeCancellationFree = freeRule.hours_before_appointment
-    logger.debug('✅ Loaded free cancellation threshold from policy:', hoursBeforeCancellationFree, 'hours')
-
-    // 4. Calculate hours until appointment (using Zurich timezone)
+    // 4. Calculate hours until appointment (using Zurich timezone) — kept for
+    // logging/audit/email purposes even though the charge itself is now derived
+    // from the shared policy engine below.
     const appointmentTime = new Date(appointment.start_time)
     
     // Convert to Zurich timezone for accurate hour calculation
@@ -278,28 +267,47 @@ export default defineEventHandler(async (event) => {
     const nowZurich = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }))
     
     const hoursUntilAppointment = (appointmentZurich.getTime() - nowZurich.getTime()) / (1000 * 60 * 60)
-    
-    logger.debug('🕐 Backend hours until appointment (Zurich TZ):', hoursUntilAppointment.toFixed(2), {
-      appointment: appointment.start_time,
-      now: now.toISOString(),
-      hoursBeforeCancellationFree
-    })
 
-    // 5. Determine charge percentage based on policy
-    let chargePercentage = 100 // Default
-    let creditHours = false
+    // 5. Determine charge percentage based on the policy's rule tiers.
+    // ✅ FIX: This used to be a hardcoded binary 0%/100% check against a single
+    // "free cancellation" rule, which silently ignored any intermediate tiers
+    // (e.g. 50% between 24h and 48h) an admin might configure, and used its own
+    // logic instead of the shared engine that powers the staff flow (EventModal)
+    // and the customer-facing preview — so preview and actual result could drift.
+    // A per-reason force_charge_percentage (e.g. "No-Show" always 100%, "Force
+    // majeure" always 0%) takes priority over the time-based rules, mirroring
+    // the staff-side logic in EventModal.vue.
+    const forceChargePercentage = (reason as any).force_charge_percentage
+    let chargePercentage: number
+    let policyDescription: string
 
-    if (hoursUntilAppointment >= hoursBeforeCancellationFree) {
-      // More than threshold hours before appointment - free cancellation
-      logger.debug(`✅ Free cancellation (>= ${hoursBeforeCancellationFree}h)`)
-      chargePercentage = 0
-      creditHours = true
+    // payment is extracted early here (rather than further below) so its amount
+    // can feed the charge calculation.
+    payment = Array.isArray(appointment.payments) ? appointment.payments[0] : appointment.payments
+
+    if (forceChargePercentage !== null && forceChargePercentage !== undefined) {
+      chargePercentage = forceChargePercentage
+      policyDescription = chargePercentage === 0
+        ? `Kostenlose Stornierung (fester Absage-Grund: ${reason.name_de})`
+        : `Feste Stornogebühr für diesen Absage-Grund (${chargePercentage}%)`
+      logger.debug('✅ Using force_charge_percentage from cancellation reason:', chargePercentage)
     } else {
-      // Less than threshold hours before appointment - charged cancellation
-      logger.debug(`⚠️ Charged cancellation (< ${hoursBeforeCancellationFree}h)`)
-      chargePercentage = 100
-      creditHours = true
+      const appointmentDataForPolicy = {
+        id: appointment.id,
+        start_time: appointment.start_time,
+        duration_minutes: appointment.duration_minutes || 45,
+        price_rappen: payment?.total_amount_rappen || 0,
+        user_id: appointment.user_id,
+        staff_id: appointment.staff_id,
+      }
+      const calcResult = calculateCancellationCharges(cancellationPolicy as any, appointmentDataForPolicy, now, 'student')
+      chargePercentage = calcResult.calculation.chargePercentage
+      policyDescription = calcResult.calculation.description
+      logger.debug('✅ Charge percentage from policy engine:', chargePercentage, policyDescription)
     }
+
+    const creditHours = true // Unrelated to chargePercentage — preserves previous behavior.
+
     const updateData: any = {
       status: 'cancelled',
       deleted_at: toLocalTimeString(now),
@@ -356,88 +364,96 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // 8. Handle payment if exists
-    payment = Array.isArray(appointment.payments) 
-      ? appointment.payments[0] 
-      : appointment.payments
+    // 8. Handle payment if exists.
+    // ✅ FIX: This used to only run for a fully free (0%) cancellation — any
+    // charged cancellation (whether 100% or, previously unsupported, a partial
+    // tier like 50%) silently skipped this whole block. That was correct-by-luck
+    // for 100% (nothing to refund) but meant a partial tier's non-charged
+    // portion was never actually refunded. Now generalized to scale every
+    // refund amount by refundPercentage = 100 - chargePercentage.
+    const refundPercentage = 100 - chargePercentage
 
-    if (payment && hoursUntilAppointment >= hoursBeforeCancellationFree) {
-      // ✅ FREE CANCELLATION: Handle based on payment status
-      
-      // ✅ ALWAYS refund credit_used_rappen back to wallet — this portion was never charged to Wallee
+    if (payment && refundPercentage > 0) {
+      // ✅ ALWAYS refund the applicable share of credit_used_rappen back to wallet — this portion was never charged to Wallee
       if (payment.credit_used_rappen && payment.credit_used_rappen > 0) {
-        logger.debug('💳 Refunding credit portion back to wallet:', {
-          paymentId: payment.id,
-          creditUsed: (payment.credit_used_rappen / 100).toFixed(2)
-        })
+        const creditRefundAmount = Math.round((payment.credit_used_rappen * refundPercentage) / 100)
 
-        let { data: studentCreditForRefund, error: creditErrorForRefund } = await supabaseAdmin
-          .from('student_credits')
-          .select('id, balance_rappen')
-          .eq('user_id', appointment.user_id)
-          .eq('tenant_id', userProfile.tenant_id)
-          .maybeSingle()
-
-        if (creditErrorForRefund) {
-          logger.error('❌ Failed to load student_credits for credit refund:', creditErrorForRefund)
-          throw createError({ statusCode: 500, statusMessage: 'Stornierung fehlgeschlagen: Guthaben konnte nicht geladen werden.' })
-        }
-
-        // Create row if it doesn't exist yet
-        if (!studentCreditForRefund) {
-          const { data: newCredit, error: createCreditErr } = await supabaseAdmin
-            .from('student_credits')
-            .insert([{ user_id: appointment.user_id, balance_rappen: 0, tenant_id: userProfile.tenant_id }])
-            .select('id, balance_rappen')
-            .single()
-          if (createCreditErr) {
-            logger.error('❌ Failed to create student_credits for credit refund:', createCreditErr)
-            throw createError({ statusCode: 500, statusMessage: 'Stornierung fehlgeschlagen: Guthabenkonto konnte nicht erstellt werden.' })
-          }
-          studentCreditForRefund = newCredit
-        }
-
-        if (studentCreditForRefund) {
-          const oldCreditBalance = studentCreditForRefund.balance_rappen || 0
-          const creditRefundAmount = payment.credit_used_rappen
-          const newCreditBalance = oldCreditBalance + creditRefundAmount
-
-          const { error: updateCreditRefundError } = await supabaseAdmin
-            .from('student_credits')
-            .update({ balance_rappen: newCreditBalance, updated_at: new Date().toISOString() })
-            .eq('id', studentCreditForRefund.id)
-
-          if (updateCreditRefundError) {
-            logger.error('❌ Failed to refund credit portion to wallet:', updateCreditRefundError)
-            throw createError({ statusCode: 500, statusMessage: 'Stornierung fehlgeschlagen: Guthaben-Rückerstattung fehlgeschlagen.' })
-          }
-
-          logger.debug('✅ Credit portion refunded to wallet:', {
-            oldBalance: (oldCreditBalance / 100).toFixed(2),
-            refund: (creditRefundAmount / 100).toFixed(2),
-            newBalance: (newCreditBalance / 100).toFixed(2)
+        if (creditRefundAmount > 0) {
+          logger.debug('💳 Refunding credit portion back to wallet:', {
+            paymentId: payment.id,
+            creditUsed: (payment.credit_used_rappen / 100).toFixed(2),
+            refundPercentage,
+            creditRefundAmount: (creditRefundAmount / 100).toFixed(2)
           })
 
-          await supabaseAdmin.from('credit_transactions').insert([{
-            user_id: appointment.user_id,
-            tenant_id: userProfile.tenant_id,
-            transaction_type: 'cancellation_credit_refund',
-            amount_rappen: creditRefundAmount,
-            balance_before_rappen: oldCreditBalance,
-            balance_after_rappen: newCreditBalance,
-            payment_method: 'credit_refund',
-            reference_id: payment.id,
-            reference_type: 'payment',
-            created_by: userProfile.id,
-            notes: `Guthaben-Rückerstattung bei Stornierung: ${reason.name_de} (CHF ${(creditRefundAmount / 100).toFixed(2)})`
-          }])
+          let { data: studentCreditForRefund, error: creditErrorForRefund } = await supabaseAdmin
+            .from('student_credits')
+            .select('id, balance_rappen')
+            .eq('user_id', appointment.user_id)
+            .eq('tenant_id', userProfile.tenant_id)
+            .maybeSingle()
+
+          if (creditErrorForRefund) {
+            logger.error('❌ Failed to load student_credits for credit refund:', creditErrorForRefund)
+            throw createError({ statusCode: 500, statusMessage: 'Stornierung fehlgeschlagen: Guthaben konnte nicht geladen werden.' })
+          }
+
+          // Create row if it doesn't exist yet
+          if (!studentCreditForRefund) {
+            const { data: newCredit, error: createCreditErr } = await supabaseAdmin
+              .from('student_credits')
+              .insert([{ user_id: appointment.user_id, balance_rappen: 0, tenant_id: userProfile.tenant_id }])
+              .select('id, balance_rappen')
+              .single()
+            if (createCreditErr) {
+              logger.error('❌ Failed to create student_credits for credit refund:', createCreditErr)
+              throw createError({ statusCode: 500, statusMessage: 'Stornierung fehlgeschlagen: Guthabenkonto konnte nicht erstellt werden.' })
+            }
+            studentCreditForRefund = newCredit
+          }
+
+          if (studentCreditForRefund) {
+            const oldCreditBalance = studentCreditForRefund.balance_rappen || 0
+            const newCreditBalance = oldCreditBalance + creditRefundAmount
+
+            const { error: updateCreditRefundError } = await supabaseAdmin
+              .from('student_credits')
+              .update({ balance_rappen: newCreditBalance, updated_at: new Date().toISOString() })
+              .eq('id', studentCreditForRefund.id)
+
+            if (updateCreditRefundError) {
+              logger.error('❌ Failed to refund credit portion to wallet:', updateCreditRefundError)
+              throw createError({ statusCode: 500, statusMessage: 'Stornierung fehlgeschlagen: Guthaben-Rückerstattung fehlgeschlagen.' })
+            }
+
+            logger.debug('✅ Credit portion refunded to wallet:', {
+              oldBalance: (oldCreditBalance / 100).toFixed(2),
+              refund: (creditRefundAmount / 100).toFixed(2),
+              newBalance: (newCreditBalance / 100).toFixed(2)
+            })
+
+            await supabaseAdmin.from('credit_transactions').insert([{
+              user_id: appointment.user_id,
+              tenant_id: userProfile.tenant_id,
+              transaction_type: 'cancellation_credit_refund',
+              amount_rappen: creditRefundAmount,
+              balance_before_rappen: oldCreditBalance,
+              balance_after_rappen: newCreditBalance,
+              payment_method: 'credit_refund',
+              reference_id: payment.id,
+              reference_type: 'payment',
+              created_by: userProfile.id,
+              notes: `Guthaben-Rückerstattung bei Stornierung: ${reason.name_de} (CHF ${(creditRefundAmount / 100).toFixed(2)}, ${refundPercentage}% von CHF ${(payment.credit_used_rappen / 100).toFixed(2)})`
+            }])
+          }
         }
       }
       
       if (payment.payment_status === 'completed') {
-        // Payment was completed: refund the Wallee portion either to wallet or directly via Wallee
+        // Payment was completed: refund the applicable share of the Wallee portion either to wallet or directly via Wallee
         const creditAlreadyUsed = payment.credit_used_rappen || 0
-        const walleePortionToRefund = payment.total_amount_rappen - creditAlreadyUsed
+        const walleeCapturedRappen = payment.total_amount_rappen - creditAlreadyUsed
+        const walleePortionToRefund = Math.round((walleeCapturedRappen * refundPercentage) / 100)
 
         let walleeRefundId: string | null = null
         if (walleePortionToRefund > 0) {
@@ -517,16 +533,19 @@ export default defineEventHandler(async (event) => {
           }
         }
         
-        // Mark payment as refunded
+        // Mark payment as refunded (covers both full and partial refunds — the
+        // exact refunded share is recorded in notes/credit_transactions above)
         await supabaseAdmin
           .from('payments')
           .update({
             payment_status: 'refunded',
             refunded_at: new Date().toISOString(),
             ...(walleeRefundId ? { wallee_refund_id: walleeRefundId } : {}),
-            notes: refundDestination === 'wallee'
-              ? `Kundenstornierung (Wallee-Rückerstattung): ${reason.name_de}`
-              : `Kostenlose Stornierung: ${reason.name_de}`,
+            notes: refundPercentage < 100
+              ? `Kundenstornierung mit ${chargePercentage}% Gebühr: ${reason.name_de} (${refundPercentage}% erstattet${refundDestination === 'wallee' ? ' via Wallee' : ''})`
+              : refundDestination === 'wallee'
+                ? `Kundenstornierung (Wallee-Rückerstattung): ${reason.name_de}`
+                : `Kostenlose Stornierung: ${reason.name_de}`,
             updated_at: toLocalTimeString(now)
           })
           .eq('id', payment.id)
@@ -534,29 +553,74 @@ export default defineEventHandler(async (event) => {
         logger.debug('✅ Payment marked as refunded')
       } 
       else if (payment.payment_status === 'authorized') {
-        // TODO: Void Wallee authorization
-        logger.debug('⚠️ TODO: Void Wallee authorization:', payment.wallee_transaction_id)
-        
-        await supabaseAdmin
-          .from('payments')
-          .update({
-            payment_status: 'cancelled',
-            updated_at: toLocalTimeString(now)
+        if (chargePercentage === 0) {
+          // TODO: Void Wallee authorization
+          logger.debug('⚠️ TODO: Void Wallee authorization:', payment.wallee_transaction_id)
+
+          await supabaseAdmin
+            .from('payments')
+            .update({
+              payment_status: 'cancelled',
+              updated_at: toLocalTimeString(now)
+            })
+            .eq('id', payment.id)
+
+          logger.debug('✅ Payment cancelled (authorized)')
+        } else {
+          // A partial/forced charge on a not-yet-captured authorization can't be
+          // resolved automatically today (no partial-capture support in the Wallee
+          // integration) — leave it authorized and flag it for manual handling
+          // instead of silently doing nothing.
+          logger.warn('⚠️ Charged cancellation on an authorized (not yet captured) payment — needs manual capture/void:', {
+            paymentId: payment.id,
+            chargePercentage,
           })
-          .eq('id', payment.id)
-        
-        logger.debug('✅ Payment cancelled (authorized)')
+          await supabaseAdmin
+            .from('payments')
+            .update({
+              notes: `${payment.notes ? payment.notes + ' | ' : ''}⚠️ Kundenstornierung mit ${chargePercentage}% Gebühr auf offene Autorisierung — manuelle Erfassung nötig: ${reason.name_de}`,
+              updated_at: toLocalTimeString(now)
+            })
+            .eq('id', payment.id)
+        }
       }
       else if (payment.payment_status === 'pending') {
-        await supabaseAdmin
-          .from('payments')
-          .update({
-            payment_status: 'cancelled',
-            updated_at: toLocalTimeString(now)
+        if (chargePercentage === 0) {
+          await supabaseAdmin
+            .from('payments')
+            .update({
+              payment_status: 'cancelled',
+              updated_at: toLocalTimeString(now)
+            })
+            .eq('id', payment.id)
+
+          logger.debug('✅ Payment cancelled (pending)')
+        } else {
+          // Partial charge on an unpaid appointment: keep the payment pending
+          // but record the reduced amount actually owed so it isn't collected
+          // in full — mirrors the same pattern used for staff cancellations in
+          // handle-cancellation.post.ts.
+          const chargeAmountRappen = Math.round(((payment.total_amount_rappen || 0) * chargePercentage) / 100)
+          await supabaseAdmin
+            .from('payments')
+            .update({
+              notes: `${payment.notes ? payment.notes + ' | ' : ''}Stornierung mit ${chargePercentage}% Gebühr: ${reason.name_de}`,
+              metadata: {
+                ...(payment.metadata || {}),
+                cancellation_charge_percentage: chargePercentage,
+                cancellation_charge_amount_rappen: chargeAmountRappen,
+                cancellation_reason: reason.name_de,
+              },
+              updated_at: toLocalTimeString(now)
+            })
+            .eq('id', payment.id)
+
+          logger.debug('✅ Payment kept pending with reduced cancellation charge amount:', {
+            paymentId: payment.id,
+            chargePercentage,
+            chargeAmountRappen,
           })
-          .eq('id', payment.id)
-        
-        logger.debug('✅ Payment cancelled (pending)')
+        }
       }
     }
     // ============ LAYER 9: NOTIFY STAFF + CLIENT ============
@@ -603,10 +667,10 @@ export default defineEventHandler(async (event) => {
       const tenantName = tenant?.name || 'Fahrschule'
       const tenantSlug = tenant?.slug || ''
 
-      // Refund info for customer email
+      // Refund info for customer email — reflects any charge tier (0/50/100%…), not just free-vs-full
       const wasPaid = payment?.payment_status === 'completed'
-      const refundAmountRappen = wasPaid && chargePercentage === 0
-        ? (payment?.total_amount_rappen ?? 0)
+      const refundAmountRappen = wasPaid
+        ? Math.round(((payment?.total_amount_rappen ?? 0) * (100 - chargePercentage)) / 100)
         : 0
       const chargeAmountRappen = !wasPaid ? 0 : Math.round(((payment?.total_amount_rappen ?? 0) * chargePercentage) / 100)
       const refundAmountFormatted = refundAmountRappen > 0 ? `CHF ${(refundAmountRappen / 100).toFixed(2)}` : undefined
@@ -693,6 +757,7 @@ export default defineEventHandler(async (event) => {
       message: 'Termin erfolgreich abgesagt',
       requiresMedicalCertificate: reason.requires_proof || false,
       chargePercentage,
+      policyDescription,
       refundDestination: refundDestination || 'wallet',
     }
 

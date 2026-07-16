@@ -127,8 +127,10 @@ async function syncPricingRules(supabase: any, tenantId: string, categoryCode: s
     }
   ]
 
-  const motorcycleCategories = ['A', 'A1', 'A35kW']
-  if (!motorcycleCategories.includes(categoryCode) && pricing.admin_fee_chf > 0) {
+  // ✅ Keine hart codierte Motorrad-Kategorie-Liste mehr: die Admin-Fee-Ausnahme wird
+  // rein über admin_fee_applies_from (vom Admin im Formular konfiguriert, z.B. hoher
+  // Wert für Motorräder) und admin_fee_chf === 0 gesteuert.
+  if (pricing.admin_fee_chf > 0) {
     rules.push({
       rule_name: `Kategorie ${categoryCode} - Versicherung`,
       rule_type: 'admin_fee',

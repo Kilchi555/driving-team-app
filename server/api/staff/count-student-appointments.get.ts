@@ -2,6 +2,7 @@ import { defineEventHandler, createError, getQuery } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { createClient } from '@supabase/supabase-js'
 import logger from '~/utils/logger'
+import { BOOT_ALIASES } from '~/server/utils/category-groups'
 
 /**
  * ✅ GET /api/staff/count-student-appointments
@@ -81,7 +82,6 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ LAYER 4: DATABASE QUERY with Tenant Isolation
-    const bootMotorbootTypes = ['Boot', 'Motorboot']
     let apptQuery = supabaseAdmin
       .from('appointments')
       .select('id')
@@ -92,8 +92,8 @@ export default defineEventHandler(async (event) => {
       .neq('status', 'deleted')
       .not('status', 'eq', 'aborted')
 
-    if (bootMotorbootTypes.includes(categoryCode)) {
-      apptQuery = apptQuery.in('type', bootMotorbootTypes)
+    if (BOOT_ALIASES.includes(categoryCode)) {
+      apptQuery = apptQuery.in('type', BOOT_ALIASES)
     } else {
       apptQuery = apptQuery.eq('type', categoryCode)
     }

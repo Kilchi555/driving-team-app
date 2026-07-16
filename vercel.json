@@ -164,6 +164,10 @@
     {
       "path": "/api/cron/recover-pending-wallee-payments",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/review-vercel-logs",
+      "schedule": "0 5 * * *"
     }
   ],
   "rewrites": [

@@ -4,6 +4,7 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logger } from '~/utils/logger'
 import { sendEmail } from '~/server/utils/email'
+import { logFallbackUsed } from '~/server/utils/log-fallback'
 
 /**
  * POST /api/affiliate/register-partner
@@ -12,13 +13,11 @@ import { sendEmail } from '~/server/utils/email'
  * Creates (or looks up) a user with role='affiliate' and sends a Magic Link
  * (password-reset-style token) via email so they can access their dashboard.
  *
- * Body: { firstName: string, lastName: string, email: string }
+ * Body: { firstName: string, lastName: string, email: string, tenantSlug: string }
  *
  * Does NOT require authentication – this is the entry point for externals.
  * Rate limited by IP.
  */
-
-const DEFAULT_TENANT_SLUG = 'driving-team'
 
 function generateAffiliateCode(length = 8): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -48,9 +47,18 @@ export default defineEventHandler(async (event) => {
   if (!emailRegex.test(emailLower)) {
     throw createError({ statusCode: 400, message: 'Bitte gib eine gültige E-Mail-Adresse ein.' })
   }
-  const normalizedTenantSlug = typeof tenantSlug === 'string' && tenantSlug.trim()
-    ? tenantSlug.trim().toLowerCase()
-    : DEFAULT_TENANT_SLUG
+  if (typeof tenantSlug !== 'string' || !tenantSlug.trim()) {
+    // ✅ Kein Tenant-Rätselraten mehr: ohne expliziten Slug würde der Affiliate
+    // sonst versehentlich bei der falschen (driving-team-)Fahrschule registriert.
+    await logFallbackUsed({
+      source: 'tenant-slug',
+      message: 'Affiliate-Registrierung abgebrochen: kein tenantSlug im Request übermittelt.',
+      level: 'error',
+      details: { context: 'register-partner.post', email: emailLower }
+    })
+    throw createError({ statusCode: 400, message: 'Tenant konnte nicht ermittelt werden. Bitte lade die Seite neu.' })
+  }
+  const normalizedTenantSlug = tenantSlug.trim().toLowerCase()
 
   // Lookup tenant
   const { data: tenant } = await supabase

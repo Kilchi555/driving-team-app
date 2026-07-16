@@ -52,6 +52,7 @@
         </select>
 
         <!-- Policy Info -->
+        <p v-if="selectedReason && !policyInfo" class="text-xs text-gray-400 mb-4">Kostenfolge wird berechnet…</p>
         <div
           v-if="selectedReason && policyInfo"
           class="rounded-lg p-3 mb-4 border"
@@ -61,11 +62,17 @@
           <p class="text-sm" :style="{ color: primaryColor }">
             {{ policyInfo.description }}
           </p>
+          <p v-if="payment && policyInfo.chargePercentage > 0" class="text-sm font-medium mt-1" :style="{ color: primaryColor }">
+            Gebühr: CHF {{ chargeAmountChf.toFixed(2) }}
+          </p>
+          <p v-if="payment?.payment_status === 'completed' && policyInfo.chargePercentage < 100" class="text-xs mt-1" :style="{ color: primaryColor }">
+            Rückerstattung: CHF {{ refundAmountChf.toFixed(2) }}
+          </p>
         </div>
 
-        <!-- Refund Destination Choice (shown only on free cancellation with completed payment) -->
+        <!-- Refund Destination Choice (shown whenever a refund applies to a completed payment) -->
         <div
-          v-if="selectedReason && hoursUntilAppointment !== null && hoursUntilAppointment >= 24 && canChooseWalleeRefund"
+          v-if="selectedReason && chargePercentage !== null && chargePercentage < 100 && canChooseWalleeRefund"
           class="mb-4"
         >
           <p class="text-sm font-medium text-gray-700 mb-2">Wohin soll die Rückerstattung gehen?</p>
@@ -91,8 +98,8 @@
           </div>
         </div>
 
-        <!-- Medical Certificate Upload Section - only show when there's a penalty (less than 24h before) -->
-        <div v-if="selectedReason && selectedReason.requires_proof && hoursUntilAppointment !== null && hoursUntilAppointment < 24" class="mb-4">
+        <!-- Medical Certificate Upload Section - only show when there's an actual fee for this reason -->
+        <div v-if="selectedReason && selectedReason.requires_proof && chargePercentage !== null && chargePercentage > 0" class="mb-4">
           <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3">
             <div class="flex">
               <div class="flex-shrink-0">
@@ -196,8 +203,11 @@
 
 import { ref, computed, watch } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useCancellationPolicies } from '~/composables/useCancellationPolicies'
+import { calculateCancellationCharges } from '~/utils/policyCalculations'
 
 const { primaryColor } = useTenantBranding()
+const { defaultPolicy, fetchPolicies } = useCancellationPolicies()
 
 const props = defineProps<{
   isVisible: boolean
@@ -215,13 +225,19 @@ const emit = defineEmits<{
 const selectedReasonId = ref('')
 const selectedReason = ref<any>(null)
 const studentReasons = ref<any[]>([])
-const policyInfo = ref<any>(null)
 const uploadedFile = ref<File | null>(null)
 const isLoading = ref(false)
 const uploadingFile = ref(false)
 const errorMessage = ref('')
 // 'wallet' = Guthaben gutschreiben | 'wallee' = direkt auf Zahlungsmittel
 const refundDestination = ref<'wallet' | 'wallee'>('wallet')
+
+// Result of the real cancellation-policy calculation for the selected reason —
+// replaces the previous hardcoded 24h/0%-100% logic so the preview shown here
+// always matches what the backend (cancel-customer.post.ts) actually charges.
+const cancellationCharge = ref<{ chargePercentage: number; description: string } | null>(null)
+
+const chargePercentage = computed(() => cancellationCharge.value?.chargePercentage ?? null)
 
 // Whether the current situation allows a direct Wallee refund
 const canChooseWalleeRefund = computed(() => {
@@ -232,9 +248,33 @@ const canChooseWalleeRefund = computed(() => {
   return walleeCapture > 0
 })
 
+// Amount that will be charged/refunded, scaled by the actual chargePercentage
+// (0%, 100%, or anything in between — not just a binary free/full case)
+const chargeAmountChf = computed(() => {
+  if (chargePercentage.value === null || !props.payment) return 0
+  return ((props.payment.total_amount_rappen || 0) * chargePercentage.value / 100) / 100
+})
+
 const refundAmountChf = computed(() => {
-  if (!props.payment || props.payment.payment_status !== 'completed') return 0
-  return (props.payment.total_amount_rappen || 0) / 100
+  if (chargePercentage.value === null || !props.payment || props.payment.payment_status !== 'completed') return 0
+  return ((props.payment.total_amount_rappen || 0) * (100 - chargePercentage.value) / 100) / 100
+})
+
+const policyInfo = computed(() => {
+  if (!selectedReason.value || chargePercentage.value === null) return null
+  const pct = chargePercentage.value
+  let description: string
+  if (pct === 0) {
+    description = 'Kostenlose Stornierung'
+  } else if (pct === 100) {
+    description = 'Volle Kosten werden verrechnet (100%)'
+  } else {
+    description = `Teilweise Verrechnung: ${pct}% der Kosten`
+  }
+  if (selectedReason.value.requires_proof && pct > 0) {
+    description += ' — mit Arztzeugnis kostenlos, sonst wie angegeben'
+  }
+  return { chargePercentage: pct, description }
 })
 
 // Computed
@@ -281,30 +321,55 @@ const onReasonSelected = async () => {
   errorMessage.value = ''
   
   if (!selectedReason.value) {
-    policyInfo.value = null
+    cancellationCharge.value = null
     return
   }
 
-  // Calculate policy info
-  if (hoursUntilAppointment.value !== null) {
-    const hours = hoursUntilAppointment.value
-    if (hours >= 24) {
-      policyInfo.value = {
-        description: 'Kostenlose Stornierung (mehr als 24h vor Termin)'
-      }
-    } else if (hours >= 0) {
-      policyInfo.value = {
-        description: selectedReason.value.requires_proof 
-          ? 'Mit Arztzeugnis kostenlos, sonst 100% Kosten'
-          : '100% Kosten (weniger als 24h vor Termin)'
-      }
-    } else {
-      policyInfo.value = {
-        description: selectedReason.value.requires_proof
-          ? 'Mit Arztzeugnis kostenlos, sonst 100% Kosten'
-          : '100% Kosten (Termin bereits vorbei)'
-      }
+  await computeCancellationCharge()
+}
+
+// Computes the real charge percentage for the selected reason, using the same
+// engine (and the same force_charge_percentage override) as the staff-facing
+// EventModal and the backend cancel-customer.post.ts — so what the customer
+// sees here is guaranteed to match what actually gets charged/refunded.
+const computeCancellationCharge = async () => {
+  const reason = selectedReason.value
+  if (!reason || !props.appointment) return
+
+  const forceChargePercentage = reason.force_charge_percentage
+  if (forceChargePercentage !== null && forceChargePercentage !== undefined) {
+    cancellationCharge.value = {
+      chargePercentage: forceChargePercentage,
+      description: forceChargePercentage === 0
+        ? `Kostenlose Stornierung (fester Absage-Grund: ${reason.name_de})`
+        : `Feste Stornogebühr für diesen Absage-Grund (${forceChargePercentage}%)`
     }
+    return
+  }
+
+  if (!defaultPolicy.value) {
+    await fetchPolicies('appointments')
+  }
+
+  if (!defaultPolicy.value) {
+    console.error('⚠️ No cancellation policy available for preview')
+    cancellationCharge.value = null
+    return
+  }
+
+  const appointmentDataForPolicy = {
+    id: props.appointment.id,
+    start_time: props.appointment.start_time,
+    duration_minutes: props.appointment.duration_minutes || 45,
+    price_rappen: props.payment?.total_amount_rappen || 0,
+    user_id: props.appointment.user_id,
+    staff_id: props.appointment.staff_id,
+  }
+
+  const result = calculateCancellationCharges(defaultPolicy.value, appointmentDataForPolicy, new Date(), 'student')
+  cancellationCharge.value = {
+    chargePercentage: result.calculation.chargePercentage,
+    description: result.calculation.description
   }
 }
 
@@ -389,7 +454,7 @@ const close = () => {
   selectedReason.value = null
   uploadedFile.value = null
   errorMessage.value = ''
-  policyInfo.value = null
+  cancellationCharge.value = null
   refundDestination.value = 'wallet'
   emit('close')
 }
@@ -436,6 +501,10 @@ const fileInput = ref<HTMLInputElement | null>(null)
 watch(() => props.isVisible, (newVal) => {
   if (newVal) {
     loadCancellationReasons()
+    // Prefetch so the policy is already available by the time the user picks a reason
+    if (!defaultPolicy.value) {
+      fetchPolicies('appointments')
+    }
   }
 })
 </script>

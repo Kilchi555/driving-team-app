@@ -135,93 +135,6 @@ export const usePaymentsNew = () => {
     }
   }
 
-  // ✅ Zahlung für einen bestehenden Termin erstellen
-  const createAppointmentPayment = async (
-    appointmentId: string,
-    userId: string,
-    staffId: string,
-    paymentMethod: 'cash' | 'invoice' | 'online',
-    products: Product[] = [],
-    discounts: Discount[] = []
-  ): Promise<Payment | null> => {
-    
-    try {
-      // Load appointment details via API
-      const appointmentResponse = await $fetch('/api/appointments/get-appointment-info', {
-        method: 'POST',
-        body: {
-          action: 'get-by-id',
-          appointmentId
-        }
-      }) as any
-
-      if (!appointmentResponse?.success || !appointmentResponse?.data) {
-        error.value = 'Termin nicht gefunden'
-        return null
-      }
-
-      const appointment = appointmentResponse.data
-      const durationUnits = Math.ceil(appointment.duration_minutes / 45)
-      const basePrice = getBasePriceForCategory(appointment.type) * durationUnits
-
-      // 2. Payment Items vorbereiten
-      const items: CreatePaymentItemRequest[] = []
-
-      // 2a. Termin als Payment Item
-      items.push({
-        item_type: 'appointment',
-        item_id: appointmentId,
-        item_name: `Fahrstunde ${appointment.type}`,
-        quantity: 1,
-        unit_price_rappen: Math.round(basePrice * 100),
-        description: `Fahrstunde ${appointment.type} - ${appointment.duration_minutes}min`
-      })
-
-      // 2b. Produkte hinzufügen
-      products.forEach(product => {
-        items.push({
-          item_type: 'product',
-          item_id: product.id,
-          item_name: product.name,
-          quantity: 1,
-          unit_price_rappen: product.price_rappen,
-          description: product.name
-        })
-      })
-
-      // 2c. Rabatte hinzufügen
-      const totalBeforeDiscounts = basePrice + (products.reduce((sum, p) => sum + p.price_rappen / 100, 0))
-      discounts.forEach(discount => {
-        const discountAmount = discount.discount_type === 'percentage' 
-          ? (totalBeforeDiscounts * discount.discount_value / 100)
-          : discount.discount_value
-        
-        items.push({
-          item_type: 'discount',
-          item_id: discount.id,
-          item_name: `Rabatt: ${discount.name}`,
-          quantity: 1,
-          unit_price_rappen: -Math.round(discountAmount * 100),
-          description: `Rabatt: ${discount.name}`
-        })
-      })
-
-      // 3. Payment erstellen
-      return createPayment({
-        user_id: userId,
-        staff_id: staffId,
-        appointment_id: appointmentId,
-        payment_method: paymentMethod,
-        items,
-        description: `Fahrstunde ${appointment.type} - ${appointment.duration_minutes}min`
-      })
-    } catch (err: any) {
-      console.error('❌ Error creating appointment payment:', err)
-      error.value = err.message
-      return null
-    }
-  }
-
   // ✅ Standalone Produkt-Zahlung erstellen
   const createProductPayment = async (
     userId: string,
@@ -426,44 +339,6 @@ export const usePaymentsNew = () => {
     }
   }
 
-  const calculateAppointmentPrice = (category: string, durationMinutes: number): number => {
-    const fallbackPrices: Record<string, number> = {
-      'B': 2.111,         // 95 CHF / 45min
-      'A': 2.111,         // 95 CHF / 45min  
-      'A1': 2.111,        // 95 CHF / 45min
-      'BE': 2.667,        // 120 CHF / 45min
-      'C': 3.778,         // 170 CHF / 45min
-      'C1': 3.333,        // 150 CHF / 45min
-      'D': 4.444,         // 200 CHF / 45min
-      'CE': 4.444,        // 200 CHF / 45min
-      'D1': 3.333,        // 150 CHF / 45min
-      'Motorboot': 2.667, // 120 CHF / 45min
-      'BPT': 2.222        // 100 CHF / 45min
-    }
-    
-    const basePrice = fallbackPrices[category] || fallbackPrices['B']
-    const durationUnits = Math.ceil(durationMinutes / 45)
-    return basePrice * durationUnits
-  }
-
-  const getBasePriceForCategory = (category: string): number => {
-    const fallbackPrices: Record<string, number> = {
-      'B': 2.111,         // 95 CHF / 45min
-      'A': 2.111,         // 95 CHF / 45min  
-      'A1': 2.111,        // 95 CHF / 45min
-      'BE': 2.667,        // 120 CHF / 45min
-      'C': 3.778,         // 170 CHF / 45min
-      'C1': 3.333,        // 150 CHF / 45min
-      'D': 4.444,         // 200 CHF / 45min
-      'CE': 4.444,        // 200 CHF / 45min
-      'D1': 3.333,        // 150 CHF / 45min
-      'Motorboot': 2.667, // 120 CHF / 45min
-      'BPT': 2.222        // 100 CHF / 45min
-    }
-    
-    return fallbackPrices[category] || fallbackPrices['B']
-  }
-
   // ✅ Computed Properties
   const hasError = computed(() => !!error.value)
   const isProcessing = computed(() => isLoading.value)
@@ -481,7 +356,6 @@ export const usePaymentsNew = () => {
     createAppointmentWithPayment,
     createStandaloneProductPayment,
     createPayment,
-    createAppointmentPayment,
     createProductPayment,
     markPaymentAsCompleted,
     deletePayment,

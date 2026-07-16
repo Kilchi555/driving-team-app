@@ -96,9 +96,13 @@ export const getSupabase = (): SupabaseClient => {
 
     logger.debug('Supabase', '🔗 Initializing Supabase client with URL:', supabaseUrl)
     
-    // SECURITY: Use sessionStorage - tokens are in HTTP-Only cookies AND sessionStorage
-    // sessionStorage is cleared when browser tab closes (more secure than localStorage)
-    // This allows client-side Supabase queries while preventing XSS token theft
+    // NOTE: this uses localStorage (see getSecureSessionStorage above), not
+    // sessionStorage — needed so "Remember Me" sessions survive tab/browser
+    // restarts. httpOnly cookies remain the real, XSS-safe auth layer for all
+    // server-side (/api/*) requests; this storage only backs the Supabase JS
+    // client itself for client-side supabase-js queries on this fallback
+    // instance (rarely used — see getSupabase() below, which prefers the
+    // @nuxtjs/supabase module's own client/storage whenever available).
     const storage = process.client ? getSecureSessionStorage() : undefined
     
     supabaseInstance = createClient(supabaseUrl, supabaseKey, {

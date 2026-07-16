@@ -6,6 +6,21 @@ import type { Payment, Product, Discount, PaymentMethod } from '~/types/payment'
 import { useDiscounts } from '~/composables/useDiscounts'
 import { roundToNearest5Rappen } from '~/utils/rounding'
 
+/**
+ * Turns a thrown $fetch error into a clear, user-facing message.
+ * Distinguishes real server-side rejections (has statusCode/response) from
+ * connectivity issues (request never reached the server) so we don't tell
+ * customers a payment "failed" when nothing was ever charged or attempted.
+ */
+function toUserFacingPaymentError(err: any, contextMessage: string): Error {
+  const hasServerResponse = err?.response || typeof err?.statusCode === 'number'
+  if (hasServerResponse) {
+    const serverMessage = err?.data?.statusMessage || err?.data?.message || err?.statusMessage || err?.message
+    return new Error(serverMessage || contextMessage)
+  }
+  return new Error(`Verbindungsproblem: ${contextMessage}. Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut — es wurde noch nichts belastet.`)
+}
+
 export const usePayments = () => {
 
   const { validateDiscountCode, applyDiscount, loadDiscounts, loadDiscountsByCategory, availableDiscounts } = useDiscounts()
@@ -377,49 +392,59 @@ export const usePayments = () => {
       }
 
       // Create payment record via public shop endpoint (no auth required)
-      const paymentResponse = await $fetch('/api/shop/create-payment', {
-        method: 'POST',
-        body: {
-          user_id: actualUserId || null,
-          staff_id: staffId || null,
-          tenant_id: tenantId,
-          products_price_rappen: roundedSubtotalRappen,
-          discount_amount_rappen: roundedTotalDiscountRappen,
-          total_amount_rappen: roundedTotalRappen,
-          admin_fee_rappen: 0,
-          payment_method: 'wallee',
-          currency: 'CHF',
-          description: 'Produktkauf',
-          metadata: paymentData.metadata
-        }
-      }) as any
+      let paymentResponse: any
+      try {
+        paymentResponse = await $fetch('/api/shop/create-payment', {
+          method: 'POST',
+          body: {
+            user_id: actualUserId || null,
+            staff_id: staffId || null,
+            tenant_id: tenantId,
+            products_price_rappen: roundedSubtotalRappen,
+            discount_amount_rappen: roundedTotalDiscountRappen,
+            total_amount_rappen: roundedTotalRappen,
+            admin_fee_rappen: 0,
+            payment_method: 'wallee',
+            currency: 'CHF',
+            description: 'Produktkauf',
+            metadata: paymentData.metadata
+          }
+        }) as any
+      } catch (err: any) {
+        throw toUserFacingPaymentError(err, 'Bestellung konnte nicht erstellt werden')
+      }
 
       if (!paymentResponse || !paymentResponse.data) {
-        throw new Error('❌ Error creating payment record')
+        throw new Error('Verbindungsproblem: Bestellung konnte nicht angelegt werden. Bitte versuchen Sie es erneut — es wurde noch nichts belastet.')
       }
 
       const payment = paymentResponse.data
       logger.debug('✅ Payment record created:', payment.id)
 
       // Create Wallee transaction
-      const walleeResponse = await $fetch('/api/wallee/create-transaction', {
-        method: 'POST',
-        body: {
-          orderId: payment.id,
-          amount: roundedTotalRappen / 100, // Convert to CHF
-          currency: 'CHF',
-          customerEmail: customerEmail,
-          customerName: customerName,
-          description: 'Produktkauf',
-          userId: actualUserId, // ✅ Pass userId for Wallee config lookup
-          tenantId: tenantId, // ✅ Pass tenantId for Wallee config lookup
-          successUrl: `${window.location.origin}/payment/success?transaction_id=${payment.id}`,
-          failedUrl: `${window.location.origin}/payment/failed?transaction_id=${payment.id}`
-        }
-      })
+      let walleeResponse: any
+      try {
+        walleeResponse = await $fetch('/api/wallee/create-transaction', {
+          method: 'POST',
+          body: {
+            orderId: payment.id,
+            amount: roundedTotalRappen / 100, // Convert to CHF
+            currency: 'CHF',
+            customerEmail: customerEmail,
+            customerName: customerName,
+            description: 'Produktkauf',
+            userId: actualUserId, // ✅ Pass userId for Wallee config lookup
+            tenantId: tenantId, // ✅ Pass tenantId for Wallee config lookup
+            successUrl: `${window.location.origin}/payment/success?transaction_id=${payment.id}`,
+            failedUrl: `${window.location.origin}/payment/failed?transaction_id=${payment.id}`
+          }
+        })
+      } catch (err: any) {
+        throw toUserFacingPaymentError(err, 'Zahlungsanbieter konnte nicht erreicht werden')
+      }
 
       if (!walleeResponse.success) {
-        throw new Error(walleeResponse.error || 'Wallee transaction failed')
+        throw new Error(walleeResponse.error || 'Zahlung wurde vom Zahlungsanbieter abgelehnt. Bitte versuchen Sie es erneut oder wählen Sie eine andere Zahlungsmethode.')
       }
 
       // wallee_transaction_id is already set by /api/wallee/create-transaction directly on the payment record

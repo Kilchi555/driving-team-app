@@ -29,7 +29,8 @@
             👤 Anonymer Verkauf
           </button>
           <NuxtLink
-            :to="`/shop?tenant=${currentTenant?.slug || 'driving-team'}`"
+            v-if="currentTenant?.slug"
+            :to="`/shop?tenant=${currentTenant.slug}`"
             target="_blank"
             class="text-white px-4 py-2 rounded-lg hover:opacity-90 transition-colors flex-shrink-0"
             :style="{ background: primaryColor }"

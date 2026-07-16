@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { resolveCategoryGroup } from '~/server/utils/category-groups'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -36,7 +37,7 @@ export default defineEventHandler(async (event) => {
       // Fetch all appointments for the student, sorted by date
       const { data: appointments, error: appointmentsError } = await supabase
         .from('appointments')
-        .select('id, start_time, type')
+        .select('id, start_time, type, tenant_id')
         .eq('user_id', user_id)
         .order('start_time', { ascending: false })
 
@@ -76,18 +77,17 @@ export default defineEventHandler(async (event) => {
 
       if (notesError) throw notesError
 
-      // Filter notes by category if specified
-      // B-family: treat "B", "B Automatik", "B Schaltung" as the same group
-      const getBFamily = (cat: string) => {
-        const b = ['B', 'B Automatik', 'B Schaltung']
-        return b.includes(cat) ? 'B_FAMILY' : cat
-      }
+      // Filter notes by category if specified. Categories sharing the same
+      // parent (e.g. "B", "B Automatik", "B Schaltung") are treated as one group,
+      // resolved centrally from categories.parent_category_id.
       let filteredNotes = notes || []
       if (student_category) {
-        const targetFamily = getBFamily(student_category)
+        const tenantIdForGroup = appointments?.[0]?.tenant_id ?? null
+        const targetGroup = new Set(await resolveCategoryGroup(supabase, tenantIdForGroup, student_category))
+        targetGroup.add(student_category)
         filteredNotes = filteredNotes.filter((note: any) => {
           const appointmentType = appointmentTypeMap.get(note.appointment_id)
-          return getBFamily(appointmentType) === targetFamily
+          return appointmentType && targetGroup.has(appointmentType)
         })
       }
 

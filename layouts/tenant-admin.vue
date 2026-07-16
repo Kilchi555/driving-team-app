@@ -157,6 +157,7 @@ const navLinks = [
   { to: '/tenant-admin/marketing', label: 'Marketing', exact: true, icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' },
   { to: '/tenant-admin/security', label: 'Security', exact: true, icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
   { to: '/tenant-admin/errors', label: 'Errors', exact: true, icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' },
+  { to: '/tenant-admin/vercel-log-reviews', label: 'Vercel Reviews', exact: true, icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
   { to: '/tenant-admin/websites', label: 'Websites', exact: false, icon: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9' },
   { to: '/tenant-admin/business-types', label: 'Business Types', exact: true, icon: 'M4 6h16M4 10h16M4 14h16M4 18h16' },
   { to: '/tenant-admin/backup', label: 'Backup', exact: true, icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582 4 8 4' },

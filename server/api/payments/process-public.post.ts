@@ -23,6 +23,7 @@ import { Wallee } from 'wallee'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { z } from 'zod'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
+import { logFallbackUsed } from '~/server/utils/log-fallback'
 
 const ProcessPublicPaymentSchema = z.object({
   enrollmentId:  z.string().uuid().optional(),
@@ -75,7 +76,7 @@ export default defineEventHandler(async (event) => {
     const baseUrl = host ? `${protocol}://${host}` : (process.env.PUBLIC_URL || 'https://app.simy.ch')
     
     logger.info(`Payment redirect: host=${host}, forwardedHost=${forwardedHost}, regularHost=${regularHost}, baseUrl=${baseUrl}`)
-    let tenantSlug = 'driving-team' // Default
+    let tenantSlug: string | null = null
 
     const supabase = getSupabaseAdmin()
 
@@ -154,7 +155,23 @@ export default defineEventHandler(async (event) => {
     }
 
     // Now that enrollment is loaded, set tenantSlug
-    tenantSlug = enrollment.tenants?.slug || 'driving-team'
+    tenantSlug = enrollment.tenants?.slug || null
+    if (!tenantSlug) {
+      // ✅ Kein Tenant-Rätselraten: ohne echten Slug würde der Wallee-Redirect
+      // nach der Zahlung auf die falsche (driving-team-)Kursseite führen.
+      logger.error('❌ Kein Tenant-Slug für Public-Payment-Redirect gefunden, Zahlung wird abgebrochen', { tenantId, courseId, enrollmentId })
+      await logFallbackUsed({
+        source: 'tenant-slug',
+        message: `Public-Zahlung abgebrochen: kein Tenant-Slug für Tenant ${tenantId} gefunden.`,
+        tenantId,
+        level: 'error',
+        details: { context: 'process-public.post', courseId, enrollmentId }
+      })
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Zahlung konnte nicht gestartet werden, da die Fahrschule nicht eindeutig ermittelt werden konnte. Bitte versuche es erneut oder kontaktiere den Support.'
+      })
+    }
 
     // 3. Get Wallee config for tenant
     let walleeConfig: any

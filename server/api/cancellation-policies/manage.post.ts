@@ -48,6 +48,53 @@ export default defineEventHandler(async (event) => {
 
     const tenantId = userProfile.tenant_id
 
+    // ✅ Self-healing: if a tenant somehow ended up with zero cancellation
+    // policies (e.g. it was created outside the normal registration flow, or
+    // the one-time copy-on-registration step failed), copy the global
+    // "Global Standard Policy" template (tenant_id IS NULL) into this tenant
+    // on the fly instead of silently showing an empty list forever.
+    if (action === 'list' || action === 'fetch-all') {
+      const { count: existingPolicyCount } = await supabaseAdmin
+        .from('cancellation_policies')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+
+      if (!existingPolicyCount) {
+        logger.warn('⚠️ Tenant has no cancellation policies — backfilling from global template:', tenantId)
+        const { data: templatePolicies } = await supabaseAdmin
+          .from('cancellation_policies')
+          .select('*')
+          .is('tenant_id', null)
+
+        if (templatePolicies?.length) {
+          for (const template of templatePolicies) {
+            const newPolicyId = crypto.randomUUID()
+            const { id: _id, created_at: _ca, updated_at: _ua, ...templateRest } = template as any
+            await supabaseAdmin.from('cancellation_policies').insert({
+              ...templateRest,
+              id: newPolicyId,
+              tenant_id: tenantId,
+            })
+
+            const { data: templateRules } = await supabaseAdmin
+              .from('cancellation_rules')
+              .select('*')
+              .eq('policy_id', template.id)
+
+            if (templateRules?.length) {
+              await supabaseAdmin.from('cancellation_rules').insert(
+                templateRules.map((r: any) => {
+                  const { id: _rid, created_at: _rca, updated_at: _rua, ...ruleRest } = r
+                  return { ...ruleRest, id: crypto.randomUUID(), policy_id: newPolicyId, tenant_id: tenantId }
+                })
+              )
+            }
+          }
+          logger.debug(`✅ Backfilled ${templatePolicies.length} cancellation policy/policies for tenant:`, tenantId)
+        }
+      }
+    }
+
     // ========== LIST POLICIES BY TYPE ==========
     if (action === 'list') {
       logger.debug('📋 Fetching policies by type:', appliesTo)

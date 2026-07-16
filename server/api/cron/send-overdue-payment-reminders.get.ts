@@ -1,10 +1,18 @@
 // server/api/cron/send-overdue-payment-reminders.get.ts
 // ============================================================
-// Weekly reminders for wallee payments overdue by 15+ days.
+// Weekly reminders for payments overdue by 15+ days.
 //
 // Schedule: daily at 07:05 UTC (runs after send-payment-reminders)
 // Sends ONE email per user per week (7-day dedup window).
-// Also notifies the tenant admin on every send.
+//
+// Which payment methods trigger a direct customer reminder is
+// configurable per tenant (Admin > Zahlungen > Zahlungserinnerungen),
+// stored in tenant_settings (category='payment',
+// setting_key='payment_reminder_settings'). Defaults to wallee-only,
+// matching the previous hardcoded behavior.
+//
+// Admins/staff are informed separately via the weekly summary reports
+// (send-admin-payment-report / send-staff-payment-report).
 //
 // Test mode: ?test_user_id=<UUID>
 // ============================================================
@@ -12,6 +20,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader, getQuery } from 'h3'
+import { loadPaymentReminderSettingsByTenant } from '~/server/utils/payment-reminder-settings'
 
 const OVERDUE_DAYS   = 15   // appointment must be at least this many days in the past
 const RESEND_DAYS    = 7    // re-send at most once per week
@@ -41,12 +50,12 @@ export default defineEventHandler(async (event) => {
 
   if (testUserId) logger.debug(`🧪 TEST MODE: user=${testUserId}`)
 
-  // ── 1. Fetch overdue pending wallee payments ─────────────────
+  // ── 1. Fetch overdue pending payments (all methods except free) ─
   let paymentsQuery = supabase
     .from('payments')
-    .select('id, appointment_id, user_id, tenant_id, total_amount_rappen, payment_status')
-    .eq('payment_method', 'wallee')
+    .select('id, appointment_id, user_id, tenant_id, total_amount_rappen, payment_status, payment_method')
     .in('payment_status', ['pending', 'failed'])
+    .not('payment_method', 'eq', 'free')
 
   if (testUserId) {
     paymentsQuery = paymentsQuery.eq('user_id', testUserId)
@@ -63,8 +72,21 @@ export default defineEventHandler(async (event) => {
     return { success: true, queued: 0, skipped: 0, duration_ms: Date.now() - startTime, message: 'No pending payments' }
   }
 
+  // ── 1b. Filter by tenant-configured reminder settings per method ─
+  const candidateTenantIds = [...new Set((allPayments as any[]).map((p: any) => p.tenant_id).filter(Boolean))]
+  const reminderSettingsByTenant = await loadPaymentReminderSettingsByTenant(supabase, candidateTenantIds)
+
+  const methodFilteredPayments = (allPayments as any[]).filter((p: any) => {
+    const settings = reminderSettingsByTenant.get(p.tenant_id)
+    return settings?.customer_reminders?.[p.payment_method] === true
+  })
+
+  if (methodFilteredPayments.length === 0) {
+    return { success: true, queued: 0, skipped: 0, duration_ms: Date.now() - startTime, message: 'No payments with reminders enabled for their payment method' }
+  }
+
   // ── 2. Fetch appointments: only those older than OVERDUE_DAYS ─
-  const appointmentIds = [...new Set((allPayments as any[]).map((p: any) => p.appointment_id).filter(Boolean))]
+  const appointmentIds = [...new Set(methodFilteredPayments.map((p: any) => p.appointment_id).filter(Boolean))]
   const { data: appointments, error: aptError } = await supabase
     .from('appointments')
     .select('id, start_time')
@@ -82,7 +104,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const appointmentMap = new Map((appointments as any[]).map((a: any) => [a.id, a]))
-  const eligiblePayments = (allPayments as any[]).filter((p: any) => appointmentMap.has(p.appointment_id))
+  const eligiblePayments = methodFilteredPayments.filter((p: any) => appointmentMap.has(p.appointment_id))
 
   if (eligiblePayments.length === 0) {
     return { success: true, queued: 0, skipped: 0, duration_ms: Date.now() - startTime, message: 'No eligible overdue payments' }

@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
     const { data: paymentData } = await supabase
       .from('payments')
       .select('id, payment_status, total_amount_rappen, credit_used_rappen, wallee_transaction_id, tenant_id')
-      .eq('id', regWithPayment.payment_id)
+      .eq('id', reg.payment_id)
       .single()
     payment = paymentData
   }

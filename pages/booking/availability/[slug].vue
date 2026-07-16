@@ -183,9 +183,9 @@
             <div class="text-center mb-6">
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Was möchtest du buchen?</h2>
             </div>
-            <div :class="`grid ${getGridClasses(3)} gap-3`">
+            <div :class="`grid ${getGridClasses(visibleServiceTypes.length)} gap-3`">
               <div
-                v-for="serviceType in serviceTypes"
+                v-for="serviceType in visibleServiceTypes"
                 :key="serviceType.id"
                 @click="selectServiceType(serviceType.id)"
                 class="group cursor-pointer rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-200 transform active:translate-y-0.5"
@@ -594,73 +594,6 @@
               </h3>
             </div>
           </div>
-          </div>
-        </div>
-
-        <!-- Step 5.5: Room Selection (auto-skip when category has no rooms) -->
-        <div v-if="currentStep === 5.5" class="space-y-4">
-          <div class="bg-white shadow rounded-lg p-4 sm:p-6">
-            <div class="text-center mb-6">
-              <p class="text-xs uppercase tracking-wide text-gray-400 mb-1">Optional</p>
-              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Raum reservieren?</h2>
-              <p class="text-sm sm:text-base text-gray-600">Möchtest du für deine Fahrstunde einen Raum reservieren?</p>
-            </div>
-
-            <div v-if="isLoadingRooms" class="text-center py-8 text-gray-400">Wird geladen…</div>
-
-            <div v-else class="space-y-3 max-w-sm mx-auto">
-              <!-- No room option -->
-              <button
-                @click="selectedRoomId = null"
-                class="w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all"
-                :class="selectedRoomId === null ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'"
-              >
-                <span class="text-sm font-medium text-gray-700">Kein Raum</span>
-                <span v-if="selectedRoomId === null" class="text-blue-500">
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm-1 14.5l-4-4 1.41-1.41L11 13.67l6.59-6.58L19 8.5l-8 8z"/></svg>
-                </span>
-              </button>
-
-              <!-- Room options -->
-              <button
-                v-for="room in bookingRooms"
-                :key="room.id"
-                @click="room.is_available ? (selectedRoomId = room.id) : null"
-                :disabled="!room.is_available"
-                class="w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all"
-                :class="[
-                  selectedRoomId === room.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white',
-                  room.is_available ? 'hover:border-gray-300 cursor-pointer' : 'opacity-50 cursor-not-allowed'
-                ]"
-              >
-                <div class="text-left">
-                  <p class="text-sm font-medium text-gray-800">{{ room.name }}</p>
-                  <p v-if="!room.is_available" class="text-xs text-red-500 mt-0.5">Nicht verfügbar</p>
-                  <p v-else class="text-xs text-green-600 mt-0.5">Verfügbar</p>
-                </div>
-                <span v-if="selectedRoomId === room.id" class="text-blue-500">
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm-1 14.5l-4-4 1.41-1.41L11 13.67l6.59-6.58L19 8.5l-8 8z"/></svg>
-                </span>
-              </button>
-            </div>
-
-            <div class="mt-6 flex justify-center gap-3">
-              <button
-                v-if="categoryRoomMode !== 'required'"
-                @click="selectedRoomId = null; currentStep = 6; generateTimeSlotsForSpecificCombination()"
-                class="px-5 py-2.5 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50"
-              >
-                Überspringen
-              </button>
-              <button
-                @click="currentStep = 6; generateTimeSlotsForSpecificCombination()"
-                :disabled="categoryRoomMode === 'required' && selectedRoomId === null"
-                class="px-6 py-2.5 text-sm font-medium text-white rounded-xl disabled:opacity-50"
-                :style="{ background: getBrandPrimary() }"
-              >
-                Weiter
-              </button>
-            </div>
           </div>
         </div>
 
@@ -1200,9 +1133,9 @@
 
   <!-- Guest Form Modal (when registration_required = false) -->
   <div v-if="showGuestForm" class="fixed inset-0 bg-black bg-opacity-60 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-    <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden">
+    <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
       <!-- Header -->
-      <div class="px-5 pt-5 pb-4 border-b border-gray-100">
+      <div class="px-5 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-lg font-bold text-gray-900">Fast geschafft!</h2>
@@ -1236,7 +1169,7 @@
       </div>
 
       <!-- Form -->
-      <form @submit.prevent="submitGuestBooking" class="px-5 py-5 space-y-4">
+      <form @submit.prevent="submitGuestBooking" class="px-5 py-5 space-y-4 overflow-y-auto flex-1">
         <!-- Error -->
         <div v-if="guestFormError" class="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
           {{ guestFormError }}
@@ -1701,8 +1634,8 @@ import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 import { useInvoicePaymentSettings } from '~/composables/useInvoicePaymentSettings'
 
 const { primaryColor } = useTenantBranding()
-const { cashVisible: cashVisibleForCustomer } = useCashPaymentSettings('customer')
-const { invoiceVisible: invoiceVisibleForCustomer } = useInvoicePaymentSettings()
+const { cashVisible: cashVisibleForCustomer } = useCashPaymentSettings('customer', () => route.params.slug as string)
+const { invoiceVisible: invoiceVisibleForCustomer } = useInvoicePaymentSettings(() => route.params.slug as string)
 // 'wallee' stays the default so nothing changes for tenants that haven't opted in to invoice.
 const selectedPaymentMethod = ref<'wallee' | 'invoice'>('wallee')
 
@@ -2055,10 +1988,12 @@ const { data: initData } = await useAsyncData(
   () => $fetch<{ success: boolean; data: any }>('/api/booking/get-booking-init', { query: { slug: slug.value } }),
   { watch: [slug] }
 )
+const availableServiceTypes = ref<Array<'fahrstunde' | 'theorie' | 'beratung'>>([])
 if (initData.value?.success) {
   currentTenant.value = initData.value.data.tenant
   categories.value = initData.value.data.categories || []
   locationsCount.value = initData.value.data.locationsCount ?? 0
+  availableServiceTypes.value = initData.value.data.availableServiceTypes || []
 }
 
 // ── Booking policy (loaded from get-booking-init, public subset only) ────────
@@ -2127,6 +2062,13 @@ const serviceTypes = [
   },
 ]
 
+/** Only show service types the tenant actually offers (based on active pricing_rules).
+ *  'fahrstunde' always stays visible as a safety net — practically every tenant has
+ *  base_price rules, and hiding it entirely on a data hiccup would block booking. */
+const visibleServiceTypes = computed(() =>
+  serviceTypes.filter(st => st.id === 'fahrstunde' || availableServiceTypes.value.includes(st.id))
+)
+
 const selectServiceType = (id: 'fahrstunde' | 'theorie' | 'beratung') => {
   selectedServiceType.value = id
   currentStep.value = 1
@@ -2142,11 +2084,11 @@ const selectedInstructor = ref<any>(null)
 const lockedStaffId = ref<string | undefined>(undefined)
 const lockedStaffName = ref<string | undefined>(undefined)
 
-// ── Room selection (step 5.5) ──────────────────────────────────────────────
-const bookingRooms = ref<Array<{ id: string; name: string; is_available: boolean }>>([])
-const selectedRoomId = ref<string | null>(null)
+// ── Room auto-assignment ────────────────────────────────────────────────────
+// The customer never picks a room — the admin defines per category + service
+// type whether one must be reserved, and the system auto-assigns a free room
+// at booking time. This mode is only used for a small informational hint.
 const categoryRoomMode = ref<'none' | 'optional' | 'required'>('none')
-const isLoadingRooms = ref(false)
 const availableLocations = ref<any[]>([])
 const availableInstructors = ref<any[]>([])
 const availableTimeSlots = ref<any[]>([])
@@ -2263,8 +2205,9 @@ const restoreBookingPrefs = async () => {
       return
     }
 
-    // Restore service type
-    if (prefs.serviceType) {
+    // Restore service type — only skip step 0 if the tenant still offers it
+    // (e.g. an admin may have disabled Theorie/Beratung since the last visit)
+    if (prefs.serviceType && visibleServiceTypes.value.some(st => st.id === prefs.serviceType)) {
       selectedServiceType.value = prefs.serviceType
       currentStep.value = 1
     }
@@ -3307,30 +3250,12 @@ const selectSubcategory = async (category: any) => {
   }
   logger.debug('✅ Prices and staff loaded')
 
-  // Load room settings for this category (non-blocking)
-  const roomSettings = category?.room_settings
-  categoryRoomMode.value = roomSettings?.mode ?? 'none'
-  bookingRooms.value = []
-  selectedRoomId.value = null
-  if (categoryRoomMode.value !== 'none') {
-    const allowedIds: string[] = roomSettings?.allowed_room_ids ?? []
-    if (allowedIds.length > 0) {
-      isLoadingRooms.value = true
-      try {
-        // Fetch only availability boolean per room — no auth needed
-        bookingRooms.value = allowedIds.map((id: string) => ({ id, name: id, is_available: true }))
-        // Try to get names from public API — best effort
-        await Promise.all(allowedIds.map(async (roomId: string) => {
-          try {
-            const av: any = await $fetch(`/api/booking/room-availability?room_id=${roomId}&start_time=${new Date().toISOString()}&end_time=${new Date().toISOString()}`)
-            // Room name is not available from this endpoint; we'll use ID as fallback
-          } catch { /* silent */ }
-        }))
-      } catch { /* silent */ } finally {
-        isLoadingRooms.value = false
-      }
-    }
-  }
+  // Rooms are never chosen by the customer — the admin defines per category +
+  // service type whether a room must be reserved. The system auto-assigns a
+  // free room from the allowed pool at booking time (create-appointment) and
+  // filters out fully-booked slots server-side (get-available-slots) when
+  // the mode is 'required'. Here we only read the mode for a small info hint.
+  categoryRoomMode.value = category?.room_settings?.[selectedServiceType.value]?.mode ?? 'none'
 
   // Get unique locations from staff
   // Build unique locations from all staff, avoiding duplicates
@@ -3614,14 +3539,6 @@ const selectInstructor = async (instructor: any) => {
     return
   }
 
-  // Check if this category has a room step configured
-  if (categoryRoomMode.value !== 'none' && bookingRooms.value.length > 0) {
-    // Check room availability for all rooms (no specific time yet — just show the list)
-    currentStep.value = 5.5
-    saveBookingPrefs()
-    return
-  }
-
   currentStep.value = 6 // Wechsel zu Termin-Auswahl (inkl. Loading-State)
   saveBookingPrefs()
   
@@ -3691,6 +3608,7 @@ const generateTimeSlotsForSpecificCombination = async () => {
                 (o: any) => o.key === selectedVehicleMode.value
               )?.requires_school_vehicle)
             : false,
+          service_type: selectedServiceType.value,
         })
 
     // ✅ Run conflict check and slot fetch in parallel
@@ -4187,22 +4105,43 @@ const confirmBooking = async () => {
     
     isCreatingBooking.value = true
     
-    // Check auth client-side first (no network roundtrip) — fall back to API only if
-    // the local session state is ambiguous.
+    // Check auth client-side first (no network roundtrip) — fall back to the
+    // cookie-based API check whenever the local Supabase client session is
+    // missing/ambiguous, not just when getSession() throws. The Supabase JS
+    // client can legitimately resolve with `session: null` (e.g. its access
+    // token expired, or another tab already redeemed the single-use refresh
+    // cookie) while the user is still validly logged in via the httpOnly
+    // cookie — which is what the rest of the app (authStore) relies on. Only
+    // trusting getSession() here caused logged-in customers to be dropped
+    // into the guest/register flow.
     logger.debug('🔐 Checking authentication status (client-side)...')
     let isAuthenticated = false
 
     try {
       const { data: { session } } = await getSupabase().auth.getSession()
       isAuthenticated = !!session
-      logger.debug(isAuthenticated ? '✅ User is authenticated (session found)' : '🔑 No active session')
+      logger.debug(isAuthenticated ? '✅ User is authenticated (session found)' : '🔑 No local Supabase session')
     } catch (sessionErr: any) {
-      logger.debug('⚠️ getSession failed, falling back to API check:', sessionErr.message)
+      logger.debug('⚠️ getSession failed:', sessionErr.message)
+    }
+
+    if (!isAuthenticated) {
       try {
         await $fetch('/api/auth/current-user')
         isAuthenticated = true
+        logger.debug('✅ User is authenticated (cookie-based check)')
+
+        // Rehydrate the Supabase client from the httpOnly refresh cookie so
+        // subsequent client-side Supabase calls on this page also see the
+        // session (single-flight — safe to call even if others are already
+        // refreshing).
+        try {
+          const { refreshClientSession } = await import('~/utils/client-session-refresh')
+          await refreshClientSession()
+        } catch { /* non-fatal — booking still proceeds via cookie auth */ }
       } catch {
         isAuthenticated = false
+        logger.debug('🔑 No active session (client or cookie)')
       }
     }
     
@@ -4253,8 +4192,6 @@ const confirmBooking = async () => {
       notes: bookingNotes.value || undefined,
       discount_code: bookingDiscount.value?.code,
       discount_amount_rappen: bookingDiscount.value?.discountAmountRappen ?? 0,
-      // Room selected by client in step 5.5
-      room_id: selectedRoomId.value ?? null,
       // Store customer pickup PLZ and address on the appointment when booking a pickup lesson
       customer_pickup_plz: selectedLocation.value?.isPickup ? (pickupPLZ.value || null) : null,
       customer_pickup_address: selectedLocation.value?.isPickup ? (pickupAddressDetails.value?.formatted || pickupAddress.value || null) : null,
@@ -4376,6 +4313,7 @@ const createAppointmentSecure = async (userData: any) => {
         customer_pickup_plz: userData.customer_pickup_plz ?? null,
         customer_pickup_address: userData.customer_pickup_address ?? null,
         vehicle_mode: selectedVehicleMode.value ?? null,
+        service_type: selectedServiceType.value,
         marketing_session_id: userData.marketing_session_id,
         marketing_attribution: userData.marketing_attribution,
       }
@@ -4490,6 +4428,24 @@ const submitGuestBooking = async () => {
 
   if (!validateGuestPhone()) return
 
+  // Guard against a stale/expired reservation (e.g. countdown timed out while the
+  // guest was still filling in the form, or the page state got reset in the background).
+  // Sending the request anyway would produce a confusing raw 400 from the server.
+  const reservationStillValid = reservedUntil.value && reservedUntil.value.getTime() > Date.now()
+  if (!selectedSlot.value?.id || !sessionId.value || !selectedCategory.value?.code || !reservationStillValid) {
+    logger.debug('⏰ Guest booking aborted — reservation/selection no longer valid', {
+      hasSlot: !!selectedSlot.value?.id,
+      hasSession: !!sessionId.value,
+      hasCategory: !!selectedCategory.value?.code,
+      reservationStillValid,
+    })
+    showGuestForm.value = false
+    selectedSlot.value = null
+    reservationExpiredNotice.value = true
+    currentStep.value = 6
+    return
+  }
+
   isSubmittingGuestForm.value = true
   isCreatingBooking.value = true
 
@@ -4570,6 +4526,13 @@ const submitGuestBooking = async () => {
       guestFormError.value = 'Dieser Zeitslot ist leider nicht mehr verfügbar. Bitte wähle einen anderen.'
       showGuestForm.value = false
       selectedSlot.value = null
+      currentStep.value = 6
+    } else if (err.statusCode === 400) {
+      // Never leak raw technical field-validation messages to the customer
+      guestFormError.value = 'Deine Reservierung ist abgelaufen oder unvollständig. Bitte wähle erneut einen Zeitpunkt.'
+      showGuestForm.value = false
+      selectedSlot.value = null
+      reservationExpiredNotice.value = true
       currentStep.value = 6
     } else {
       guestFormError.value = err.statusMessage || 'Buchung fehlgeschlagen. Bitte versuche es erneut.'

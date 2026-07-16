@@ -6,9 +6,6 @@
         <p class="sa-page-sub">Fehler und Probleme auf der Plattform</p>
       </div>
       <div class="flex gap-2">
-        <button @click="groupErrors" :disabled="isGrouping" class="sa-btn-ghost">
-          {{ isGrouping ? 'Gruppiert…' : 'Errors gruppieren' }}
-        </button>
         <button @click="loadErrors" :disabled="isLoading" class="sa-btn-primary">
           <svg class="w-4 h-4" :class="{ 'animate-spin': isLoading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -18,6 +15,11 @@
       </div>
     </div>
 
+    <div v-if="accessDenied" class="sa-card sa-empty">
+      Kein Zugriff auf das Error Monitoring – diese Ansicht ist Admins und Superadmins vorbehalten.
+    </div>
+
+    <template v-else>
     <!-- KPI row -->
     <div class="sa-kpi-grid">
       <div class="sa-kpi-card sa-kpi-rose">
@@ -44,6 +46,11 @@
         <div class="sa-kpi-icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
         <div class="sa-kpi-value">{{ stats.errorRate }}%</div>
         <div class="sa-kpi-label">Error Rate</div>
+      </div>
+      <div class="sa-kpi-card sa-kpi-fallback" :title="'Stellen im Code, an denen mangels Live-Daten aus der DB ein hart codierter Fallback verwendet wurde (z.B. Preise, Kategorien, Tenant-Zuordnung).'">
+        <div class="sa-kpi-icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
+        <div class="sa-kpi-value">{{ stats.fallbackUsages }}</div>
+        <div class="sa-kpi-label">Fallback-Nutzung (7 Tage)</div>
       </div>
     </div>
 
@@ -131,6 +138,7 @@
         </div>
       </div>
     </div>
+    </template>
 
     <!-- Detail Modal -->
     <Teleport to="body">
@@ -175,16 +183,16 @@ definePageMeta({ layout: 'tenant-admin' })
 import { ref, onMounted, computed } from 'vue'
 
 const isLoading = ref(false)
-const isGrouping = ref(false)
 const errorLogs = ref<any[]>([])
 const trends = ref<any[]>([])
 const totalErrors = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(50)
 const selectedError = ref<any>(null)
+const accessDenied = ref(false)
 
-const stats = ref({ todayErrors: 0, openErrors: 0, fixedErrors: 0, affectedUsers: 0, errorRate: 0 })
-const filters = ref({ level: '', status: '', component: '', search: '', timeRange: '24h' })
+const stats = ref({ todayErrors: 0, openErrors: 0, fixedErrors: 0, affectedUsers: 0, errorRate: 0, fallbackUsages: 0 })
+const filters = ref({ level: '', status: '', component: '', search: '', timeRange: '7d' })
 
 const maxTrendValue = computed(() => Math.max(...trends.value.map(t => t.total), 1))
 const uniqueComponents = computed(() => [...new Set(errorLogs.value.map(e => e.component))])
@@ -197,51 +205,67 @@ const filteredErrors = computed(() => errorLogs.value.filter(e => {
 }))
 
 const formatDateTime = (d: string) => new Date(d).toLocaleString('de-CH', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })
-const getTimeRangeQuery = (range: string) => {
-  const s = new Date()
-  if (range === '1h')  s.setHours(s.getHours() - 1)
-  if (range === '24h') s.setDate(s.getDate() - 1)
-  if (range === '7d')  s.setDate(s.getDate() - 7)
-  if (range === '30d') s.setDate(s.getDate() - 30)
-  return s.toISOString()
+const rangeToHours = (range: string) => ({ '1h': 1, '24h': 24, '7d': 24 * 7, '30d': 24 * 30 }[range] || 24 * 7)
+
+/** Buckets the currently loaded logs into hourly counts for the trend chart (client-side, no extra endpoint needed). */
+const buildHourlyTrends = (logs: any[]) => {
+  const buckets = new Map<string, number>()
+  logs.forEach(l => {
+    const hourKey = (l.created_at || '').slice(0, 13) // "YYYY-MM-DDTHH"
+    if (!hourKey) return
+    buckets.set(hourKey, (buckets.get(hourKey) || 0) + 1)
+  })
+  return [...buckets.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([hour, total]) => ({ hour, total }))
 }
 
 const loadErrors = async () => {
   isLoading.value = true
+  accessDenied.value = false
   try {
-    const currentUserResponse = await $fetch<any>('/api/auth/current-user').catch(() => null)
-    const session = currentUserResponse?.user ? { user: currentUserResponse.user } : null
-    if (!session?.user) return
-    const { data: up } = await supabase.from('users').select('tenant_id, role').eq('auth_user_id', session.user.id).single()
-    if (!up) return
-    if (up.role === 'super_admin') {
-      const r = await $fetch<any>('/api/admin/error-logs-debug')
-      if (r.data) { errorLogs.value = r.data; totalErrors.value = r.count || 0 }
+    const r = await $fetch<any>('/api/admin/error-logs', {
+      params: {
+        hours: rangeToHours(filters.value.timeRange),
+        level: filters.value.level || undefined,
+        component: filters.value.component || undefined,
+        page: currentPage.value,
+        limit: pageSize.value,
+      }
+    })
+    if (r?.success) {
+      errorLogs.value = r.data.errorLogs || []
+      totalErrors.value = r.data.statistics?.totalErrors || 0
+      trends.value = buildHourlyTrends(errorLogs.value)
     }
-    const tr = await $fetch<any>('/api/admin/error-trends')
-    if (tr.trends) trends.value = tr.trends
-    await loadStats()
-  } catch (e) { console.error(e) } finally { isLoading.value = false }
-}
-
-const loadStats = async () => {
-  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
-  stats.value = {
-    todayErrors: errorLogs.value.filter(e => e.created_at >= todayStart.toISOString()).length,
-    openErrors: errorLogs.value.filter(e => e.status === 'open').length,
-    fixedErrors: errorLogs.value.filter(e => e.status === 'fixed').length,
-    affectedUsers: new Set(errorLogs.value.filter(e => e.user_id).map(e => e.user_id)).size,
-    errorRate: errorLogs.value.length > 0 ? Math.round((errorLogs.value.filter(e => e.level === 'error').length / errorLogs.value.length) * 100) : 0,
+    loadStats()
+  } catch (e: any) {
+    if (e?.statusCode === 401 || e?.statusCode === 403) accessDenied.value = true
+    console.error(e)
+  } finally {
+    isLoading.value = false
   }
 }
 
-const groupErrors = async () => {
-  isGrouping.value = true
-  try { await $fetch('/api/admin/error-group', { method: 'POST' }); await loadErrors() } catch (e) { console.error(e) } finally { isGrouping.value = false }
+const loadStats = () => {
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+  stats.value = {
+    todayErrors: errorLogs.value.filter(e => e.created_at >= todayStart.toISOString()).length,
+    // "new" is the DB default status; treat it the same as "open" for the KPI.
+    openErrors: errorLogs.value.filter(e => e.status === 'open' || e.status === 'new' || !e.status).length,
+    fixedErrors: errorLogs.value.filter(e => e.status === 'fixed').length,
+    affectedUsers: new Set(errorLogs.value.filter(e => e.user_id).map(e => e.user_id)).size,
+    errorRate: errorLogs.value.length > 0 ? Math.round((errorLogs.value.filter(e => e.level === 'error').length / errorLogs.value.length) * 100) : 0,
+    fallbackUsages: errorLogs.value.filter(e => (e.component || '').startsWith('fallback:')).length,
+  }
 }
 
 const updateErrorStatus = async (error: any) => {
-  try { await $fetch('/api/admin/error-update-status', { method: 'POST', body: { errorId: error.id, status: error.status } }) } catch (e) { console.error(e) }
+  try {
+    await $fetch('/api/admin/error-update-status', { method: 'POST', body: { errorId: error.id, status: error.status } })
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 onMounted(() => loadErrors())
@@ -256,19 +280,22 @@ onMounted(() => loadErrors())
 .sa-btn-ghost:hover { background:rgba(255,255,255,.08);color:#e2e8f0; }
 
 .sa-kpi-grid { display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin-bottom:1.5rem; }
-@media(min-width:1024px) { .sa-kpi-grid { grid-template-columns:repeat(5,1fr); } }
+@media(min-width:640px)  { .sa-kpi-grid { grid-template-columns:repeat(3,1fr); } }
+@media(min-width:1024px) { .sa-kpi-grid { grid-template-columns:repeat(6,1fr); } }
 .sa-kpi-card  { border-radius:14px;padding:1.25rem;border:1px solid transparent; }
 .sa-kpi-rose    { background:rgba(244,63,94,.08); border-color:rgba(244,63,94,.2); }
 .sa-kpi-amber   { background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.2); }
 .sa-kpi-emerald { background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.2); }
 .sa-kpi-violet  { background:rgba(139,92,246,.08);border-color:rgba(139,92,246,.2); }
 .sa-kpi-indigo  { background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.2); }
+.sa-kpi-fallback { background:rgba(251,146,60,.08);border-color:rgba(251,146,60,.2); }
 .sa-kpi-icon { width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:.75rem; }
 .sa-kpi-rose    .sa-kpi-icon { background:rgba(244,63,94,.15);  color:#fda4af; }
 .sa-kpi-amber   .sa-kpi-icon { background:rgba(245,158,11,.15); color:#fcd34d; }
 .sa-kpi-emerald .sa-kpi-icon { background:rgba(16,185,129,.15); color:#6ee7b7; }
 .sa-kpi-violet  .sa-kpi-icon { background:rgba(139,92,246,.15); color:#c4b5fd; }
 .sa-kpi-indigo  .sa-kpi-icon { background:rgba(99,102,241,.15); color:#a5b4fc; }
+.sa-kpi-fallback .sa-kpi-icon { background:rgba(251,146,60,.15); color:#fdba74; }
 .sa-kpi-value { font-size:2rem;font-weight:800;color:#f1f5f9;line-height:1;letter-spacing:-.04em; }
 .sa-kpi-label { font-size:.75rem;color:#64748b;margin-top:.375rem;font-weight:500; }
 

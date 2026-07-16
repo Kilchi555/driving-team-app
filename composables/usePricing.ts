@@ -2,6 +2,12 @@
 import { ref, computed, watch, type Ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { roundToNearest5Rappen } from '~/utils/rounding'
+import { useFallbackLogger } from '~/composables/useFallbackLogger'
+import { COMPLETE_FALLBACK_RULES, getFallbackRule } from '~/utils/fallbackPricingRules'
+// Note: fallback pricing data lives in utils/fallbackPricingRules.ts (the single source
+// of truth) so server endpoints can share the exact same numbers without importing a Vue
+// composable. Import from there directly rather than re-exporting here, to avoid Nuxt
+// auto-import ambiguity between composables/ and utils/.
 
 // ===== INTERFACES =====
 interface PricingRule {
@@ -44,6 +50,8 @@ interface DynamicPricing {
   isLoading: boolean
   error: string
   adminFeeRappen?: number // ✅ NEU: Für Verwendung in createPaymentEntry
+  /** True if this price came from a hardcoded fallback table instead of the tenant's live pricing_rules. */
+  isFallback?: boolean
 }
 
 interface UsePricingOptions {
@@ -60,113 +68,24 @@ interface UsePricingOptions {
   watchChanges?: boolean
 }
 
-// ===== FALLBACK RULES (basierend auf tatsächlichen DB-Daten) =====
-export const COMPLETE_FALLBACK_RULES = [
-  // ✅ HAUPTKATEGORIEN (aus den Projektunterlagen ermittelt)
-  {
-    id: 'fallback-B', category_code: 'B', name: 'Autoprüfung Kategorie B',
-    description: 'Personenwagen bis 3500kg',
-    price_per_minute_rappen: 211, price_per_minute_chf: 2.11, // 95 CHF / 45min = 2.11
-    admin_fee_rappen: 12000, admin_fee_chf: 120, admin_fee_applies_from: 2,
-    base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback B'
-  },
-  {
-    id: 'fallback-A', category_code: 'A', name: 'Kategorie A (Motorrad)',
-    description: 'Motorrad unbeschränkt',
-    price_per_minute_rappen: 211, price_per_minute_chf: 2.11, // 95 CHF / 45min = 2.11
-    admin_fee_rappen: 0, admin_fee_chf: 0, admin_fee_applies_from: 999, // Motorräder: keine Admin-Fee
-    base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback A'
-  },
-  {
-    id: 'fallback-A1', category_code: 'A1', name: 'Motorrad A1/A35kW/A',
-    description: 'Leichtmotorrad 125ccm',
-    price_per_minute_rappen: 211, price_per_minute_chf: 2.11, // 95 CHF / 45min = 2.11
-    admin_fee_rappen: 0, admin_fee_chf: 0, admin_fee_applies_from: 999, // Motorräder: keine Admin-Fee
-    base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback A1'
-  },
-  {
-    id: 'fallback-A35kW', category_code: 'A35kW', name: 'Kategorie A 35kW',
-    description: 'Motorrad mit Leistungsbeschränkung',
-    price_per_minute_rappen: 211, price_per_minute_chf: 2.11, // 95 CHF / 45min = 2.11
-    admin_fee_rappen: 0, admin_fee_chf: 0, admin_fee_applies_from: 999, // Motorräder: keine Admin-Fee
-    base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback A35kW'
-  },
-  {
-    id: 'fallback-BE', category_code: 'BE', name: 'Anhänger BE',
-    description: 'Personenwagen mit Anhänger',
-    price_per_minute_rappen: 267, price_per_minute_chf: 2.67, // 120 CHF / 45min = 2.67
-    admin_fee_rappen: 12000, admin_fee_chf: 120, admin_fee_applies_from: 2,
-    base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback BE'
-  },
-  {
-    id: 'fallback-C', category_code: 'C', name: 'LKW C',
-    description: 'Lastwagen über 3500kg',
-    price_per_minute_rappen: 378, price_per_minute_chf: 3.78, // 170 CHF / 45min = 3.78
-    admin_fee_rappen: 20000, admin_fee_chf: 200, admin_fee_applies_from: 2,
-    base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback C'
-  },
-  {
-    id: 'fallback-C1', category_code: 'C1', name: 'LKW C1/D1',
-    description: 'Kleinlastwagen 3500-7500kg',
-    price_per_minute_rappen: 334, price_per_minute_chf: 3.34, // Updated from database
-    admin_fee_rappen: 20000, admin_fee_chf: 200, admin_fee_applies_from: 2,
-    base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback C1'
-  },
-  {
-    id: 'fallback-CE', category_code: 'CE', name: 'LKW CE',
-    description: 'Lastwagen mit Anhänger',
-    price_per_minute_rappen: 445, price_per_minute_chf: 4.45, // Updated from database
-    admin_fee_rappen: 25000, admin_fee_chf: 250, admin_fee_applies_from: 2,
-    base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback CE'
-  },
-  {
-    id: 'fallback-D', category_code: 'D', name: 'Bus D',
-    description: 'Autobus über 8 Personen',
-    price_per_minute_rappen: 445, price_per_minute_chf: 4.45, // Updated from database
-    admin_fee_rappen: 30000, admin_fee_chf: 300, admin_fee_applies_from: 2,
-    base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback D'
-  },
-  {
-    id: 'fallback-D1', category_code: 'D1', name: 'D1 (Kleinbus)',
-    description: 'Kleinbus 9-16 Personen',
-    price_per_minute_rappen: 334, price_per_minute_chf: 3.34, // Updated from database
-    admin_fee_rappen: 20000, admin_fee_chf: 200, admin_fee_applies_from: 2,
-    base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback D1'
-  },
-  {
-    id: 'fallback-Boot', category_code: 'Motorboot', name: 'Motorboot',
-    description: 'Motorbootführerschein',
-    price_per_minute_rappen: 211, price_per_minute_chf: 2.11, // 95 CHF / 45min = 2.11
-    admin_fee_rappen: 12000, admin_fee_chf: 120, admin_fee_applies_from: 2,
-    base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback Motorboot'
-  },
-  {
-    id: 'fallback-BPT', category_code: 'BPT', name: 'Berufsprüfung Transport',
-    description: 'Berufskraftfahrer Theorieprüfung',
-    price_per_minute_rappen: 222, price_per_minute_chf: 2.22, // 100 CHF / 45min = 2.22
-    admin_fee_rappen: 12000, admin_fee_chf: 120, admin_fee_applies_from: 2,
-    base_duration_minutes: 45, is_active: true, valid_from: null, valid_until: null, rule_name: 'Fallback BPT'
-  }
-]
-
 // ===== UTILITY FUNCTIONS (EXPORTIERT) =====
-export const getFallbackRule = (categoryCode: string) => {
-  const category = categoryCode.split(',')[0].trim().toUpperCase()
-  return COMPLETE_FALLBACK_RULES.find(rule => rule.category_code === category) || null
-}
-
 export const calculateOfflinePrice = (categoryCode: string, durationMinutes: number, appointmentNumber: number = 1) => {
   const rule = getFallbackRule(categoryCode)
   if (!rule) return { basePrice: 0, adminFee: 0, total: 0, rule: null }
-  
+
+  useFallbackLogger().logFallbackUsed(
+    'pricing',
+    `Preis für Kategorie "${categoryCode}" konnte nicht online berechnet werden – Offline-Fallback-Preis verwendet.`,
+    { categoryCode, durationMinutes, appointmentNumber }
+  )
+
   const basePrice = Math.round(rule.price_per_minute_chf * durationMinutes * 100) / 100
   
-  // ✅ KORRIGIERT: Admin-Fee nur beim 2. Termin pro Kategorie (außer bei Motorrädern)
-  const motorcycleCategories = ['A', 'A1', 'A35kW']
-  const isMotorcycle = motorcycleCategories.includes(categoryCode)
-  
+  // ✅ Admin-Fee-Regel kommt zentral aus admin_fee_applies_from der (Fallback-)Preisregel,
+  // statt aus einer separat gepflegten Motorrad-Kategorie-Liste (Motorräder haben
+  // admin_fee_applies_from: 999, wodurch die Fee praktisch nie greift).
   let adminFee = 0
-  if (!isMotorcycle && appointmentNumber === 2) {
+  if (appointmentNumber >= rule.admin_fee_applies_from) {
     adminFee = rule.admin_fee_chf
   }
   
@@ -174,7 +93,8 @@ export const calculateOfflinePrice = (categoryCode: string, durationMinutes: num
     basePrice,
     adminFee,
     total: basePrice + adminFee,
-    rule
+    rule,
+    isFallback: true
   }
 }
 
@@ -210,6 +130,8 @@ const _sharedError = ref<string>('')
 const _sharedLastLoaded = ref<Date | null>(null)
 const _sharedPriceCache = ref<Map<string, { data: CalculatedPrice; timestamp: number }>>(new Map())
 let _sharedLoadingPromise: Promise<void> | null = null
+/** True while pricingRules were loaded from COMPLETE_FALLBACK_RULES instead of the tenant's real pricing_rules. */
+const _sharedIsFallbackActive = ref(false)
 
 // ===== HAUPT-COMPOSABLE =====
 export const usePricing = (options: UsePricingOptions = {}) => {
@@ -220,7 +142,10 @@ export const usePricing = (options: UsePricingOptions = {}) => {
   const isLoadingPrices = _sharedIsLoading
   const pricingError = _sharedError
   const lastLoaded = _sharedLastLoaded
+  const isFallbackActive = _sharedIsFallbackActive
   // In-flight deduplication: shared across all instances
+
+  const { logFallbackUsed } = useFallbackLogger()
 
   // ===== DYNAMIC PRICING STATE =====
   const dynamicPricing = ref<DynamicPricing>({
@@ -269,8 +194,8 @@ export const usePricing = (options: UsePricingOptions = {}) => {
   setInterval(clearExpiredCache, 60 * 1000)
 
   // ===== CORE FUNCTIONS =====
-  const createFallbackPricingRules = async (): Promise<void> => {
-    logger.debug('🔄 Using complete fallback pricing rules...')
+  const createFallbackPricingRules = async (reason: string, tenantId?: string): Promise<void> => {
+    logger.debug('🔄 Using complete fallback pricing rules...', reason)
     
     const fallbackRules = COMPLETE_FALLBACK_RULES.map(rule => ({
       id: rule.id,
@@ -287,7 +212,14 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     
     pricingRules.value = fallbackRules
     lastLoaded.value = new Date()
+    isFallbackActive.value = true
     logger.debug('✅ Fallback pricing rules loaded:', fallbackRules.length, 'categories')
+
+    logFallbackUsed(
+      'pricing',
+      `Preisregeln konnten nicht aus der Datenbank geladen werden (${reason}) – hart codierte Fallback-Preise werden verwendet.`,
+      { reason, tenantId: tenantId || null }
+    )
   }
 
   const loadPricingRules = async (forceReload = false, explicitTenantId?: string): Promise<void> => {
@@ -319,7 +251,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       
       if (!tenantId) {
         logger.debug('ℹ️ User has no tenant_id, using fallback pricing')
-        await createFallbackPricingRules()
+        await createFallbackPricingRules('no_tenant_id')
         return
       }
       
@@ -340,7 +272,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
 
       if (!pricingRulesData || pricingRulesData.length === 0) {
         logger.debug('ℹ️ No pricing rules found for tenant, using fallback')
-        await createFallbackPricingRules()
+        await createFallbackPricingRules('empty_response', tenantId)
         return
       }
 
@@ -348,6 +280,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
 
       pricingRules.value = pricingRulesData as PricingRule[]
       lastLoaded.value = new Date()
+      isFallbackActive.value = false
 
       // Cache invalidierung
       priceCalculationCache.value.clear()
@@ -357,7 +290,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     } catch (err: any) {
       logger.debug('ℹ️ Error loading pricing rules:', err)
       pricingError.value = err.message || 'Fehler beim Laden der Preisregeln'
-      await createFallbackPricingRules()
+      await createFallbackPricingRules('api_error: ' + (err?.message || 'unknown'), explicitTenantId)
     } finally {
       isLoadingPrices.value = false
       _sharedLoadingPromise = null
@@ -394,18 +327,20 @@ export const usePricing = (options: UsePricingOptions = {}) => {
   }
 
   // ✅ Admin-Fee genau 1x pro Kategorie verrechnen
-  const shouldApplyAdminFee = async (userId: string, categoryCode: string): Promise<boolean> => {
+  const shouldApplyAdminFee = async (userId: string, categoryCode: string, adminFeeAppliesFrom: number = 2): Promise<boolean> => {
     const appointmentCount = await getAppointmentCount(userId, categoryCode)
     const adminFeeAlreadyPaid = await hasAdminFeeBeenPaid(userId, categoryCode)
     
-    // Admin-Fee ab dem 2. Termin, aber nur wenn noch nie bezahlt für diese Kategorie
-    const shouldApply = appointmentCount >= 2 && !adminFeeAlreadyPaid
+    // ✅ Schwelle kommt aus der Preisregel (admin_fee_applies_from), statt aus einer
+    // separat gepflegten Motorrad-Kategorie-Liste (Motorräder: admin_fee_applies_from: 999)
+    const shouldApply = appointmentCount >= adminFeeAppliesFrom && !adminFeeAlreadyPaid
     
     logger.debug(`🎯 Admin fee decision for ${categoryCode}:`, {
       appointmentCount,
+      adminFeeAppliesFrom,
       adminFeeAlreadyPaid,
       shouldApply,
-      reason: adminFeeAlreadyPaid ? 'Bereits bezahlt' : (appointmentCount < 2 ? 'Erst 1. Termin' : 'Noch nie bezahlt → verrechnen')
+      reason: adminFeeAlreadyPaid ? 'Bereits bezahlt' : (appointmentCount < adminFeeAppliesFrom ? 'Schwelle noch nicht erreicht' : 'Noch nie bezahlt → verrechnen')
     })
     
     return shouldApply
@@ -597,6 +532,11 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       const THEORY_BASE_DURATION_MIN = 45
       scaledPriceRappen = roundToNearestFranken(Math.round((THEORY_BASE_RAPPEN / THEORY_BASE_DURATION_MIN) * durationVal))
       logger.warn(`⚠️ Keine Theorie-Preisregel für Kategorie "${categoryCode}" gefunden - Verwende Standardpreis (85 CHF/45min)`)
+      logFallbackUsed(
+        'pricing',
+        `Keine Theorie-Preisregel für Kategorie "${categoryCode}" konfiguriert – Standardpreis (85 CHF/45min) verwendet.`,
+        { categoryCode, tenantId: theoryTenantId || null }
+      )
     }
 
     const result: CalculatedPrice = {
@@ -698,6 +638,12 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     const rule = getPricingRule(categoryCode)
     if (!rule) {
       logger.warn(`⚠️ Keine Preisregel für Kategorie "${categoryCode}" gefunden - Verwende 0 CHF`)
+      logFallbackUsed(
+        'pricing',
+        `Keine Preisregel für Kategorie "${categoryCode}" gefunden – Preis wurde auf 0 CHF gesetzt.`,
+        { categoryCode, tenantId: actualTenantId || null },
+        'error'
+      )
       return {
         base_price_rappen: 0,
         admin_fee_rappen: 0,
@@ -715,18 +661,19 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     let basePriceRappen = Math.round(Number(rule.price_per_minute_rappen) * durationValue)
     basePriceRappen = roundToNearestFranken(basePriceRappen)
 
-    // ✅ NEUE LOGIK: Admin-Fee basierend auf tatsächlichen Zahlungen
-    const motorcycleCategories = ['A', 'A1', 'A35kW']
-    const isMotorcycle = motorcycleCategories.includes(categoryCode)
+    // ✅ Admin-Fee basierend auf tatsächlichen Zahlungen + admin_fee_applies_from der
+    // Preisregel (Motorräder haben admin_fee_applies_from: 999 und sind damit faktisch
+    // ausgenommen, ohne eine separate Kategorie-Liste pflegen zu müssen).
+    const adminFeeAppliesFrom = rule.admin_fee_applies_from ?? 2
     
     let adminFeeRappen = 0
     
     // ✅ KORRIGIERT: Im Edit-Mode wird Admin-Fee bereits aus der Datenbank geladen
     if (!isEditMode && rule) {
       // Create-Mode: Admingebühr basierend auf Regeln berechnen
-      if (!isMotorcycle && userId) {
+      if (userId) {
         // Prüfe ob Admin-Fee bereits bezahlt wurde
-        const shouldApply = await shouldApplyAdminFee(userId, categoryCode)
+        const shouldApply = await shouldApplyAdminFee(userId, categoryCode, adminFeeAppliesFrom)
         
         if (shouldApply) {
           adminFeeRappen = rule.admin_fee_rappen
@@ -761,7 +708,7 @@ export const usePricing = (options: UsePricingOptions = {}) => {
         duration: Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes,
         originalDuration: durationMinutes,
         appointmentNumber: appointmentNumber,
-        isMotorcycle: motorcycleCategories.includes(categoryCode),
+        adminFeeAppliesFrom,
         adminFee: adminFeeRappen > 0 ? `${(adminFeeRappen / 100).toFixed(2)} CHF` : 'Keine',
         total: result.total_chf
       })
@@ -835,7 +782,8 @@ export const usePricing = (options: UsePricingOptions = {}) => {
         category: categoryCode,
         duration: durationValue,
         isLoading: false,
-        error: error.message || 'Fehler bei Preisberechnung (Offline-Fallback aktiv)'
+        error: error.message || 'Fehler bei Preisberechnung (Offline-Fallback aktiv)',
+        isFallback: true
       }
     }
   }
@@ -904,6 +852,8 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     availableCategories,
     hasTheoryPricing,
     theoryEnabledCategories,
+    // True while pricingRules were populated from COMPLETE_FALLBACK_RULES instead of the tenant's real data.
+    isFallbackActive,
 
     // Dynamic Pricing State
     dynamicPricing: computed(() => dynamicPricing.value),

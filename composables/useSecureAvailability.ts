@@ -48,6 +48,9 @@ interface FetchSlotsOptions {
   vehicle_mode?: string | null
   /** When true, filter out slots where no school vehicle is available at the location */
   requires_school_vehicle?: boolean
+  /** Booking service type (fahrstunde/theorie/beratung) — resolves the admin-configured
+   *  room rule; slots are filtered out when required and no room is free. */
+  service_type?: 'fahrstunde' | 'theorie' | 'beratung' | null
 }
 
 interface ReserveSlotOptions {
@@ -69,6 +72,9 @@ interface CreateAppointmentOptions {
   customer_pickup_address?: string | null
   /** Vehicle option key chosen by student (e.g. 'school_all', 'own_trailer', …) */
   vehicle_mode?: string | null
+  /** Booking service type (fahrstunde/theorie/beratung) — resolves the admin-configured
+   *  room rule server-side; the room itself is auto-assigned, never chosen by the customer. */
+  service_type?: 'fahrstunde' | 'theorie' | 'beratung' | null
   /** Cross-domain marketing session ID (from drivingteam.ch). */
   marketing_session_id?: string
   /** Customer-selected payment method — 'wallee' (default) or 'invoice' (only honored if tenant allows it). */
@@ -112,6 +118,7 @@ export const useSecureAvailability = () => {
       if (options.category_code) params.append('category_code', options.category_code)
       if (options.vehicle_mode) params.append('vehicle_mode', options.vehicle_mode)
       if (options.requires_school_vehicle) params.append('requires_school_vehicle', '1')
+      if (options.service_type) params.append('service_type', options.service_type)
 
       const response = await $fetch<{ success: boolean; slots: AvailableSlot[]; count: number }>(
         `/api/booking/get-available-slots?${params.toString()}`
@@ -193,6 +200,7 @@ export const useSecureAvailability = () => {
           customer_pickup_plz: options.customer_pickup_plz ?? null,
           customer_pickup_address: options.customer_pickup_address ?? null,
           vehicle_mode: options.vehicle_mode ?? null,
+          service_type: options.service_type ?? null,
           marketing_session_id: options.marketing_session_id,
           marketing_attribution: options.marketing_attribution,
           payment_method: options.payment_method,

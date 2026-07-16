@@ -11,6 +11,9 @@ import {
   throwValidationError
 } from '~/server/utils/validators'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
+import { getFallbackRule } from '~/utils/fallbackPricingRules'
+import { logFallbackUsed } from '~/server/utils/log-fallback'
+import { recordAndSendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -182,6 +185,7 @@ export default defineEventHandler(async (event) => {
     let result
     // Declared here so it's accessible both inside the create branch and after the if/else block
     let paymentPromise: Promise<void> | null = null
+    let capiPromise: Promise<void> | null = null
 
     if (mode === 'edit' && eventId) {
       // Update existing appointment
@@ -299,8 +303,15 @@ export default defineEventHandler(async (event) => {
             
             if (!finalBasePrice || finalBasePrice <= 0) {
               const durationMins = appointmentData.duration_minutes || 45
-              const pricePerMin = 2.11
+              const fallbackRule = getFallbackRule(appointmentData.type || 'B')
+              const pricePerMin = fallbackRule?.price_per_minute_chf || (95 / 45)
               finalBasePrice = Math.round(durationMins * pricePerMin * 100)
+              logFallbackUsed({
+                source: 'pricing',
+                message: `Kein Preis vom Client übermittelt beim Bearbeiten von Termin ${eventId} – Fallback-Preis für Kategorie "${appointmentData.type}" verwendet.`,
+                tenantId: callerProfile.tenant_id,
+                details: { category_code: appointmentData.type, appointmentId: eventId }
+              })
             }
             
             if (finalTotalAmount === undefined || finalTotalAmount === null) {
@@ -400,8 +411,15 @@ export default defineEventHandler(async (event) => {
         
         if (!finalBasePrice || finalBasePrice <= 0) {
           const durationMins = appointmentData.duration_minutes || 45
-          const pricePerMin = 2.11
+          const fallbackRule = getFallbackRule(appointmentData.type || 'B')
+          const pricePerMin = fallbackRule?.price_per_minute_chf || (95 / 45)
           finalBasePrice = Math.round(durationMins * pricePerMin * 100)
+          logFallbackUsed({
+            source: 'pricing',
+            message: `Kein Preis vom Client übermittelt beim Erstellen eines Termins – Fallback-Preis für Kategorie "${appointmentData.type}" verwendet.`,
+            tenantId: callerProfile.tenant_id,
+            details: { category_code: appointmentData.type }
+          })
         }
         
         if (finalTotalAmount === undefined || finalTotalAmount === null) {
@@ -410,7 +428,42 @@ export default defineEventHandler(async (event) => {
         
         finalTotalAmount = Math.max(0, Math.round(finalTotalAmount))
         const remainingAmountRappen = Math.max(0, finalTotalAmount - (creditUsedRappen || 0))
-        
+
+        // ── Meta CAPI: report the booking as a Purchase, mirroring the online
+        // self-service flows (create-appointment / guest-book) which fire at the
+        // moment of booking commitment regardless of payment method/timing. No
+        // fbclid/fbc/fbp here — staff-entered clients have no ad-click history —
+        // and deliberately no client_ip/user_agent, since those would be the
+        // staff member's browser, not the customer's (would pollute Meta's
+        // device-matching graph). Only hashed email/phone are sent.
+        capiPromise = (async () => {
+          try {
+            if (!result.user_id) return
+            const { data: capiUser } = await supabase
+              .from('users')
+              .select('email, phone')
+              .eq('id', result.user_id)
+              .maybeSingle()
+
+            const hashedEmail = capiUser?.email ? await sha256Hex(capiUser.email.trim().toLowerCase()) : null
+            const normalizedPhone = (capiUser?.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+            const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+            if (!hashedEmail && !hashedPhone) return
+
+            await recordAndSendCapiEvent({
+              appointment_id: result.id,
+              tenant_id: appointmentData.tenant_id,
+              event_name: 'Purchase',
+              conversion_value_chf: finalTotalAmount / 100,
+              conversion_date_time: new Date(),
+              hashed_email: hashedEmail,
+              hashed_phone: hashedPhone,
+            })
+          } catch (capiErr: any) {
+            logger.warn('⚠️ Meta CAPI upload failed for admin-created appointment (non-critical):', capiErr?.message ?? capiErr)
+          }
+        })()
+
         const paymentData = {
           appointment_id: result.id,
           user_id: result.user_id,
@@ -472,6 +525,8 @@ export default defineEventHandler(async (event) => {
       await Promise.all([
         // 1. Create payment (critical - but non-blocking for response)
         paymentPromise,
+        // 1b. Meta CAPI Purchase report (fire-and-forget, non-critical)
+        capiPromise,
         // 2. Mark overlapping availability slots
         (async () => {
           try {
@@ -584,6 +639,25 @@ export default defineEventHandler(async (event) => {
         }
 
         // ── Room bookings ─────────────────────────────────────────────────
+        // Server-side conflict re-check (rooms are auto-assigned client-side
+        // from a live availability snapshot, but re-verify here too — mirrors
+        // the vehicle conflict check above — to close the race window).
+        if (room_id) {
+          const { data: rConflicts } = await supabase
+            .from('room_bookings')
+            .select('id')
+            .eq('room_id', room_id)
+            .neq('status', 'cancelled')
+            .lt('start_time', resourceEnd)
+            .gt('end_time', resourceStart)
+            .neq('appointment_id', appointmentId)
+            .limit(1)
+
+          if ((rConflicts?.length ?? 0) > 0 && !body.force_resource_override) {
+            logger.warn('⚠️ Room conflict detected on save (not blocking — staff override required):', room_id)
+          }
+        }
+
         await supabase.from('room_bookings')
           .delete()
           .eq('appointment_id', appointmentId)

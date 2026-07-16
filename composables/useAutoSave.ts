@@ -219,23 +219,23 @@ export const useAutoSave = <T>(
           formId: config.formId,
           tableName: config.tableName,
           draftId: draftId.value,
-          draftData,
+          data: draftData,
           isShopOrder: config.formId === 'shop-order'
         }
       }) as any
       
-      if (!response?.success || !response?.data) {
+      if (!response?.success || !response?.draftId) {
         throw new Error(response?.message || 'Failed to save draft')
       }
       
-      draftId.value = response.data.id
+      draftId.value = response.draftId
       lastSaved.value = new Date()
       saveStatus.value = 'saved'
       
       // Update localStorage with draft ID
       saveToLocalStorage()
       
-      finalConfig.onSave?.(response.data)
+      finalConfig.onSave?.(draftData)
       logger.debug(`✅ Database draft saved: ${config.formId} -> ${draftId.value}`)
       
     } catch (error: any) {
@@ -284,9 +284,9 @@ export const useAutoSave = <T>(
         }
       }) as any
       
-      if (!response?.success || !response?.data) return null
+      if (!response?.success || !response?.draft) return null
       
-      const data = response.data
+      const data = response.draft
       
       // Transform data for restoration
       return finalConfig.transformForRestore 
@@ -351,8 +351,8 @@ export const useAutoSave = <T>(
           }
         }) as any
         
-        if (response?.success && response?.data) {
-          const data = response.data
+        if (response?.success && response?.draft) {
+          const data = response.draft
           const transformedData = finalConfig.transformForRestore 
             ? finalConfig.transformForRestore(data)
             : data
@@ -432,14 +432,14 @@ export const useAutoSave = <T>(
         }
       }) as any
       
-      if (!response?.success || !response?.data) {
+      if (!response?.success || !response?.record) {
         throw new Error(response?.message || 'Failed to finalize draft')
       }
       
       // Clear draft after successful finalization
       clearDraft()
       
-      return response.data
+      return response.record
       
     } catch (error) {
       finalConfig.onError?.(error)

@@ -1427,6 +1427,75 @@
             </div>
           </div>
 
+          <!-- Payment Reminder Settings -->
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-1">Zahlungserinnerungen</h2>
+            <p class="text-sm text-gray-500 mb-5">
+              Steuern Sie pro Zahlungsmethode, ob und an wen automatische Erinnerungen für offene Zahlungen verschickt werden.
+            </p>
+
+            <div class="space-y-6">
+              <!-- Direct customer reminders -->
+              <div>
+                <h3 class="text-sm font-semibold text-gray-800 mb-1">Direkte Erinnerung an Kunden</h3>
+                <p class="text-xs text-gray-500 mb-3">
+                  Kunden erhalten automatisch E-Mails 3, 7 und 14 Tage nach dem Termin, danach wöchentlich — solange die Zahlung offen ist.
+                </p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <label v-for="method in paymentMethodOptions" :key="'cust-' + method.key"
+                    class="flex items-center justify-between gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                    :class="paymentReminderSettings.customer_reminders[method.key] ? '' : 'border-gray-200'"
+                    :style="paymentReminderSettings.customer_reminders[method.key] ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
+                    <span class="text-sm font-medium text-gray-700">{{ method.label }}</span>
+                    <input type="checkbox" v-model="paymentReminderSettings.customer_reminders[method.key]" class="rounded" />
+                  </label>
+                </div>
+              </div>
+
+              <!-- Weekly admin report -->
+              <div class="border-t pt-4">
+                <div class="flex items-center justify-between gap-3 mb-1">
+                  <h3 class="text-sm font-semibold text-gray-800">Wochenbericht an die Fahrschule</h3>
+                  <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                    <input type="checkbox" v-model="paymentReminderSettings.admin_report.enabled" class="sr-only peer" />
+                    <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                  </label>
+                </div>
+                <p class="text-xs text-gray-500 mb-3">
+                  Jeden Montagmorgen eine Zusammenfassung aller offenen Zahlungen an die Rechnungs-E-Mail-Adresse der Fahrschule.
+                </p>
+                <div v-if="paymentReminderSettings.admin_report.enabled" class="flex flex-wrap gap-4 pl-1">
+                  <label v-for="method in paymentMethodOptions" :key="'admin-' + method.key"
+                    class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" v-model="paymentReminderSettings.admin_report[method.key]" class="rounded" />
+                    {{ method.label }}
+                  </label>
+                </div>
+              </div>
+
+              <!-- Weekly staff report -->
+              <div class="border-t pt-4">
+                <div class="flex items-center justify-between gap-3 mb-1">
+                  <h3 class="text-sm font-semibold text-gray-800">Wochenbericht an Mitarbeiter</h3>
+                  <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                    <input type="checkbox" v-model="paymentReminderSettings.staff_report.enabled" class="sr-only peer" />
+                    <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                  </label>
+                </div>
+                <p class="text-xs text-gray-500 mb-3">
+                  Jeden Montagmorgen erhält jeder Mitarbeiter eine Liste seiner Schüler mit offenen Zahlungen.
+                </p>
+                <div v-if="paymentReminderSettings.staff_report.enabled" class="flex flex-wrap gap-4 pl-1">
+                  <label v-for="method in paymentMethodOptions" :key="'staff-' + method.key"
+                    class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" v-model="paymentReminderSettings.staff_report[method.key]" class="rounded" />
+                    {{ method.label }}
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- Reglemente Tab -->
@@ -2200,30 +2269,38 @@ const saveInvoiceSettings = async () => {
   }
 }
 
-// Reminder Settings (NEW: Payment Confirmation Reminders)
-const reminderSettings = ref({
-  is_enabled: false,
-  reminder_email_count: 3,
-  reminder_email_interval_days: 2,
-  reminder_sms_enabled: false,
-  reminder_sms_after_emails: true,
-  first_after_hours: 24,
-  second_after_hours: 48,
-  final_after_hours: 72,
-  first_email: true,
-  first_push: false,
-  first_sms: false,
-  second_email: true,
-  second_push: false,
-  second_sms: false,
-  final_email: true,
-  final_push: false,
-  final_sms: false,
-  auto_delete_enabled: false,
-  auto_delete: false,
-  auto_delete_after_hours: 72,
-  auto_delete_hours_after_auth_deadline: 72,
-  notify_staff_on_auto_delete: true
+const paymentMethodOptions = [
+  { key: 'wallee', label: 'Online (Wallee)' },
+  { key: 'invoice', label: 'Rechnung' },
+  { key: 'cash', label: 'Bar' },
+  { key: 'twint', label: 'TWINT' },
+] as const
+
+// Payment Reminder Settings: per payment method, controls both the direct
+// customer reminders (day 3/7/14 + weekly overdue) and the weekly admin/staff
+// summary reports. Defaults match today's hardcoded cron behavior exactly,
+// so existing tenants see no change until they explicitly opt in/out.
+const paymentReminderSettings = ref({
+  customer_reminders: {
+    wallee: true,
+    invoice: false,
+    cash: false,
+    twint: false,
+  },
+  admin_report: {
+    enabled: true,
+    wallee: true,
+    invoice: true,
+    cash: true,
+    twint: true,
+  },
+  staff_report: {
+    enabled: true,
+    wallee: true,
+    invoice: true,
+    cash: true,
+    twint: true,
+  },
 })
 
 // SARI Integration Settings (VKU/PGS – bestehend)
@@ -2604,7 +2681,7 @@ const loadData = async () => {
       await loadSessionSettings(tenantId)
       await loadPaymentSettings(tenantId)
       await loadInvoiceSettings(tenantId)
-      await loadReminderSettings(tenantId)
+      await loadPaymentReminderSettings(tenantId)
       await loadSARISettings(tenantId)
       await loadInstructorConfirmationSetting()
       await loadTemplates(tenantId)
@@ -2764,53 +2841,52 @@ const savePaymentSettings = async () => {
   }
 }
 
-// Load Reminder Settings
-const loadReminderSettings = async (_tenantId: string) => {
+// Load Payment Reminder Settings
+const loadPaymentReminderSettings = async (_tenantId: string) => {
   try {
     const data = await $fetch<any[]>('/api/admin/tenant-settings')
-    const reminderSetting = data.find(
-      (s: any) => s.category === 'payment' && s.setting_key === 'reminder_settings'
+    const setting = data.find(
+      (s: any) => s.category === 'payment' && s.setting_key === 'payment_reminder_settings'
     )
 
-    if (reminderSetting?.setting_value) {
-      const parsed = typeof reminderSetting.setting_value === 'string'
-        ? JSON.parse(reminderSetting.setting_value)
-        : reminderSetting.setting_value
+    if (setting?.setting_value) {
+      const parsed = typeof setting.setting_value === 'string'
+        ? JSON.parse(setting.setting_value)
+        : setting.setting_value
 
-      reminderSettings.value = {
-        ...reminderSettings.value,
-        ...parsed
+      paymentReminderSettings.value = {
+        customer_reminders: { ...paymentReminderSettings.value.customer_reminders, ...parsed.customer_reminders },
+        admin_report: { ...paymentReminderSettings.value.admin_report, ...parsed.admin_report },
+        staff_report: { ...paymentReminderSettings.value.staff_report, ...parsed.staff_report },
       }
-      logger.debug('✅ Reminder settings loaded:', reminderSettings.value)
+      logger.debug('✅ Payment reminder settings loaded:', paymentReminderSettings.value)
     }
   } catch (error) {
-    console.warn('Warning loading reminder settings:', error)
+    console.warn('Warning loading payment reminder settings:', error)
   }
 }
 
-// Save Reminder Settings
-const saveReminderSettings = async () => {
+// Save Payment Reminder Settings
+const savePaymentReminderSettings = async () => {
   try {
-    logger.debug('💾 Saving reminder settings...')
-    isSaving.value = true
+    logger.debug('💾 Saving payment reminder settings...')
+    showAutoSaving()
 
     await $fetch('/api/admin/tenant-settings', {
       method: 'POST',
       body: {
         category: 'payment',
-        setting_key: 'reminder_settings',
-        setting_value: reminderSettings.value,
+        setting_key: 'payment_reminder_settings',
+        setting_value: JSON.stringify(paymentReminderSettings.value),
         setting_type: 'json'
       }
     })
 
-    logger.debug('✅ Reminder settings saved')
-    showSuccess('Erinnerungs-Einstellungen gespeichert')
+    logger.debug('✅ Payment reminder settings saved')
+    showAutoSaveSuccess('Gespeichert')
   } catch (error: any) {
-    console.error('Error saving reminder settings:', error)
-    showError('Fehler beim Speichern der Erinnerungs-Einstellungen')
-  } finally {
-    isSaving.value = false
+    console.error('Error saving payment reminder settings:', error)
+    showAutoSaveError('Speicherfehler')
   }
 }
 
@@ -3480,12 +3556,12 @@ let reminderSaveTimeout: NodeJS.Timeout | null = null
 let paymentSaveTimeout: NodeJS.Timeout | null = null
 let templateSaveTimeout: NodeJS.Timeout | null = null
 
-// Watch Reminder Settings (auto-save after 1 second)
-watch(reminderSettings, () => {
+// Watch Payment Reminder Settings (auto-save after 1 second)
+watch(paymentReminderSettings, () => {
   if (isInitialLoad.value) return
   if (reminderSaveTimeout) clearTimeout(reminderSaveTimeout)
   reminderSaveTimeout = setTimeout(() => {
-    saveReminderSettings()
+    savePaymentReminderSettings()
   }, 1000)
 }, { deep: true })
 

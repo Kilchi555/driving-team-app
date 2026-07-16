@@ -3520,19 +3520,11 @@ async function submitCashDeposit() {
 
   isSubmittingDeposit.value = true
   try {
-    // Get token from localStorage session cache
-    let token: string | undefined
-    try {
-      const sessionCacheRaw = typeof localStorage !== 'undefined' ? localStorage.getItem('supabase-session-cache') : null
-      if (sessionCacheRaw) {
-        token = JSON.parse(sessionCacheRaw)?.access_token
-      }
-    } catch { /* ignore */ }
-    if (!token) {
-      const supabaseClient = getSupabase()
-      const { data: { session } } = await supabaseClient.auth.getSession()
-      token = session?.access_token
-    }
+    // Bearer token straight from the Supabase client session (no raw tokens
+    // in localStorage — httpOnly cookies + fetch-interceptor cover the rest).
+    const supabaseClient = getSupabase()
+    const { data: { session } } = await supabaseClient.auth.getSession()
+    const token = session?.access_token
     await $fetch('/api/student-credits/deposit', {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -3682,16 +3674,9 @@ function onInvoiceSentFromModal(result: { invoice_id: string; invoice_number: st
 async function onViewInvoiceFromModal(invoice_id: string) {
   showInvoicePreview.value = false
   try {
-    let token: string | undefined
-    try {
-      const sessionCacheRaw = typeof localStorage !== 'undefined' ? localStorage.getItem('supabase-session-cache') : null
-      if (sessionCacheRaw) token = JSON.parse(sessionCacheRaw)?.access_token
-    } catch { /* ignore */ }
-    if (!token) {
-      const supabaseClient = getSupabase()
-      const { data: { session } } = await supabaseClient.auth.getSession()
-      token = session?.access_token
-    }
+    const supabaseClient = getSupabase()
+    const { data: { session } } = await supabaseClient.auth.getSession()
+    const token = session?.access_token
     const res = await $fetch<{ success: boolean; data: any }>('/api/invoices/get', {
       query: { invoice_id },
       headers: token ? { Authorization: `Bearer ${token}` } : {},

@@ -4,9 +4,15 @@
 // unpaid past appointments assigned to that staff member.
 //
 // Schedule: every Monday at 06:10 UTC (after admin report)
-// Covers:   ALL payment methods (wallee, cash, invoice, twint)
+// Covers:   payment methods (wallee, cash, invoice, twint)
 // Groups:   one email per staff member, sorted by oldest first
 // Dedup:    max once per staff per week (7-day window)
+//
+// Whether the report is sent at all, and which payment methods it
+// includes, is configurable per tenant (Admin > Zahlungen >
+// Zahlungserinnerungen), stored in tenant_settings (category='payment',
+// setting_key='payment_reminder_settings'). Defaults to enabled with
+// all methods, matching the previous hardcoded behavior.
 //
 // Test mode: ?test_staff_id=<UUID>
 // ============================================================
@@ -14,6 +20,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader, getQuery } from 'h3'
+import { loadPaymentReminderSettingsByTenant } from '~/server/utils/payment-reminder-settings'
 
 const RESEND_DAYS = 7
 
@@ -78,13 +85,26 @@ export default defineEventHandler(async (event) => {
   const appointmentMap = new Map((appointments as any[]).map((a: any) => [a.id, a]))
 
   // Keep only payments with a past appointment that has a staff_id
-  const eligiblePayments = (payments as any[]).filter((p: any) => {
+  const withStaffPayments = (payments as any[]).filter((p: any) => {
     const apt = appointmentMap.get(p.appointment_id)
     return apt && apt.staff_id
   })
 
-  if (eligiblePayments.length === 0) {
+  if (withStaffPayments.length === 0) {
     return { success: true, queued: 0, duration_ms: Date.now() - startTime, message: 'No eligible payments with assigned staff' }
+  }
+
+  // ── 2b. Filter by tenant-configured reminder settings (report on/off + methods) ─
+  const candidateTenantIds = [...new Set(withStaffPayments.map((p: any) => p.tenant_id).filter(Boolean))]
+  const reminderSettingsByTenant = await loadPaymentReminderSettingsByTenant(supabase, candidateTenantIds)
+
+  const eligiblePayments = withStaffPayments.filter((p: any) => {
+    const settings = reminderSettingsByTenant.get(p.tenant_id)
+    return settings?.staff_report?.enabled === true && settings.staff_report[p.payment_method] === true
+  })
+
+  if (eligiblePayments.length === 0) {
+    return { success: true, queued: 0, duration_ms: Date.now() - startTime, message: 'No payments with staff report enabled for their payment method' }
   }
 
   // ── 3. Group payments by staff_id ────────────────────────────

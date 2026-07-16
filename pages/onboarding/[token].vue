@@ -815,8 +815,10 @@ import { generateStrongPassword } from '~/composables/usePasswordStrength'
 import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholders'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { saveCredentials } from '~/utils/save-credentials'
+import { useFallbackLogger } from '~/composables/useFallbackLogger'
 
 const { primaryColor, loadTenantBrandingById } = useTenantBranding()
+const { logFallbackUsed } = useFallbackLogger()
 
 const route = useRoute()
 const token = route.params.token as string
@@ -1654,11 +1656,10 @@ const completeOnboarding = async () => {
       if (tenantSlug) {
         logger.debug('✅ Redirecting to tenant login:', `/${tenantSlug}`)
         await navigateTo(`/${tenantSlug}`)
-      } else if (userData.value?.tenant_id === '64259d68-195a-4c68-8875-f1b44d962830') {
-        // Fallback: Known Driving Team tenant
-        logger.debug('✅ Redirecting to driving-team login')
-        await navigateTo('/driving-team')
       } else {
+        // ✅ Kein Fallback mehr auf einen bestimmten (driving-team) Tenant:
+        // ohne bekannten Slug geht es auf eine neutrale Login-Seite.
+        logFallbackUsed('tenant-slug', 'Kein tenant_slug nach Onboarding-Abschluss verfügbar – neutrale Login-Seite verwendet.', { context: 'onboarding/[token].completeOnboarding' }, 'error')
         logger.debug('✅ Redirecting to login')
         const { getLoginPath } = await import('~/utils/redirect-to-login')
         await navigateTo(getLoginPath())

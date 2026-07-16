@@ -2,6 +2,7 @@ import { defineEventHandler, getHeader, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getEffectiveCreditBalanceRappen } from '~/server/utils/effective-credit-balance'
+import { logFallbackUsed } from '~/server/utils/log-fallback'
 
 /**
  * GET /api/affiliate/stats
@@ -153,8 +154,18 @@ export default defineEventHandler(async (event) => {
       .select('slug')
       .eq('id', userProfile.tenant_id)
       .single()
-    const tenantSlug = tenant?.slug ?? 'driving-team'
-    shareLink = `https://app.simy.ch/ref/${tenantSlug}?ref=${affiliateCode.code}`
+    if (tenant?.slug) {
+      shareLink = `https://app.simy.ch/ref/${tenant.slug}?ref=${affiliateCode.code}`
+    } else {
+      // ✅ Kein Fallback-Slug mehr: lieber keinen (falschen) Share-Link anzeigen.
+      await logFallbackUsed({
+        source: 'tenant-slug',
+        message: `Kein Tenant-Slug für Affiliate-Share-Link gefunden (tenant_id=${userProfile.tenant_id}).`,
+        tenantId: userProfile.tenant_id,
+        level: 'error',
+        details: { context: 'affiliate/stats.get' }
+      })
+    }
   }
 
   // Load tenant affiliate enabled setting

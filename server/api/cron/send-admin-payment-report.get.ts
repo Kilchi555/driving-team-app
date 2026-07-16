@@ -4,8 +4,14 @@
 //
 // Schedule: every Monday at 06:00 UTC
 // Recipient: tenant.contact_email
-// Shows ALL pending payments (wallee, cash, invoice, twint)
-// for past appointments, grouped by payment method.
+// Shows pending payments (wallee, cash, invoice, twint) for past
+// appointments, grouped by payment method.
+//
+// Whether the report is sent at all, and which payment methods it
+// includes, is configurable per tenant (Admin > Zahlungen >
+// Zahlungserinnerungen), stored in tenant_settings (category='payment',
+// setting_key='payment_reminder_settings'). Defaults to enabled with
+// all methods, matching the previous hardcoded behavior.
 //
 // Test mode: ?test_tenant_id=<UUID>
 // ============================================================
@@ -13,6 +19,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader, getQuery } from 'h3'
+import { loadPaymentReminderSettingsByTenant } from '~/server/utils/payment-reminder-settings'
 
 // Swiss rounding: nearest 0.05 CHF
 function chf(rappen: number): string {
@@ -116,12 +123,24 @@ export default defineEventHandler(async (event) => {
   const tenantMap = new Map((tenants || []).map((t: any) => [t.id, t]))
   const userMap   = new Map((users   || []).map((u: any) => [u.id, u]))
 
+  // ── 4b. Load per-tenant reminder settings (report on/off + methods) ─
+  const reminderSettingsByTenant = await loadPaymentReminderSettingsByTenant(supabase, tenantIds)
+
   // ── 5. Build and send one email per tenant ───────────────────
   const toInsert: any[] = []
 
-  for (const [tenantId, tenantPayments] of paymentsByTenant) {
+  for (const [tenantId, allTenantPayments] of paymentsByTenant) {
     const tenant = tenantMap.get(tenantId)
     if (!tenant?.contact_email) continue
+
+    const reminderSettings = reminderSettingsByTenant.get(tenantId)
+    if (!reminderSettings?.admin_report?.enabled) {
+      logger.debug(`⏭️ Admin payment report disabled for tenant ${tenantId}`)
+      continue
+    }
+
+    const tenantPayments = allTenantPayments.filter((p: any) => reminderSettings.admin_report[p.payment_method] === true)
+    if (tenantPayments.length === 0) continue
 
     const tenantName   = tenant.name || 'Ihre Fahrschule'
     const primaryColor = tenant.primary_color || '#2563eb'
