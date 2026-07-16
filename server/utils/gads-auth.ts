@@ -20,6 +20,7 @@
 
 import { getHeader, createError } from 'h3'
 import type { H3Event } from 'h3'
+import { GoogleAdsApi } from 'google-ads-api'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
@@ -149,8 +150,6 @@ export function buildGadsHeaders(creds: GadsCredentials, accessToken: string): R
  * Use for endpoints that rely on the google-ads-api library (GAQL queries, mutateResources).
  */
 export function buildGadsCustomer(creds: GadsCredentials) {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { GoogleAdsApi } = require('google-ads-api') as typeof import('google-ads-api')
   const client = new GoogleAdsApi({
     client_id: creds.clientId,
     client_secret: creds.clientSecret,
