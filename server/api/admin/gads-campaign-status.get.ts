@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
     const { campaign_id } = getQuery(event)
 
     if (campaign_id && typeof campaign_id === 'string') {
-      const [campaignRows, adGroupRows, keywordRows] = await Promise.all([
+      const [campaignRows, adGroupRows, keywordRows, adRows] = await Promise.all([
         customer.query(`
           SELECT campaign.id, campaign.name, campaign.status,
                  campaign.advertising_channel_type
@@ -43,6 +43,13 @@ export default defineEventHandler(async (event) => {
           FROM ad_group_criterion
           WHERE campaign.id = ${campaign_id} AND ad_group_criterion.type = 'KEYWORD'
         `).catch(() => []),
+        customer.query(`
+          SELECT ad_group.name, ad_group_ad.ad.responsive_search_ad.headlines,
+                 ad_group_ad.ad.responsive_search_ad.descriptions,
+                 ad_group_ad.ad.final_urls, ad_group_ad.status
+          FROM ad_group_ad
+          WHERE campaign.id = ${campaign_id}
+        `).catch((err: any) => ({ __error: err?.message ?? String(err) })),
       ])
 
       return {
@@ -58,6 +65,15 @@ export default defineEventHandler(async (event) => {
           match_type: r.ad_group_criterion?.keyword?.match_type,
           status: r.ad_group_criterion?.status,
         })),
+        ads: Array.isArray(adRows)
+          ? (adRows as any[]).map(r => ({
+              ad_group: r.ad_group?.name,
+              status: r.ad_group_ad?.status,
+              headlines: (r.ad_group_ad?.ad?.responsive_search_ad?.headlines ?? []).map((h: any) => h.text),
+              descriptions: (r.ad_group_ad?.ad?.responsive_search_ad?.descriptions ?? []).map((d: any) => d.text),
+              final_urls: r.ad_group_ad?.ad?.final_urls ?? [],
+            }))
+          : adRows,
       }
     }
 
