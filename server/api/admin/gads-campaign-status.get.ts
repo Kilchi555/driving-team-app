@@ -18,26 +18,35 @@ export default defineEventHandler(async (event) => {
 
   const customer = buildGadsCustomer(gads)
 
-  const response = await customer.query(`
-    SELECT
-      campaign.id,
-      campaign.name,
-      campaign.status,
-      campaign.serving_status,
-      campaign_budget.amount_micros,
-      campaign.bidding_strategy_type
-    FROM campaign
-    ORDER BY campaign.name
-  `)
+  try {
+    const response = await customer.query(`
+      SELECT
+        campaign.id,
+        campaign.name,
+        campaign.status,
+        campaign.serving_status,
+        campaign_budget.amount_micros,
+        campaign.bidding_strategy_type
+      FROM campaign
+      ORDER BY campaign.name
+    `)
 
-  const campaigns = (response as any[]).map(row => ({
-    id: row.campaign?.id ?? '',
-    name: row.campaign?.name ?? '',
-    status: row.campaign?.status ?? '',
-    serving_status: row.campaign?.serving_status ?? '',
-    daily_budget_chf: row.campaign_budget?.amount_micros ? Number(row.campaign_budget.amount_micros) / 1_000_000 : null,
-    bidding_strategy_type: row.campaign?.bidding_strategy_type ?? '',
-  }))
+    const campaigns = (response as any[]).map(row => ({
+      id: row.campaign?.id ?? '',
+      name: row.campaign?.name ?? '',
+      status: row.campaign?.status ?? '',
+      serving_status: row.campaign?.serving_status ?? '',
+      daily_budget_chf: row.campaign_budget?.amount_micros ? Number(row.campaign_budget.amount_micros) / 1_000_000 : null,
+      bidding_strategy_type: row.campaign?.bidding_strategy_type ?? '',
+    }))
 
-  return { total: campaigns.length, campaigns }
+    return { total: campaigns.length, campaigns }
+  }
+  catch (err: any) {
+    return {
+      ok: false,
+      error: err?.message ?? String(err),
+      details: err?.errors ?? err?.response?.data ?? null,
+    }
+  }
 })
