@@ -1,8 +1,8 @@
 <template>
   <div>
     <Head>
-      <Title>CZV Grundkurs Zürich | 5 Tage Ausbildung | Driving Team</Title>
-      <Meta name="description" content="CZV Grundkurs für Berufschauffeure Kategorien C1/C/CE und D1/D. Obligatorisch vor Berufsausübung. Fähigkeitsausweis. Kontaktiere uns für Firmenkurse." />
+      <Title>CZV Grundkurs Lachen | 5 Tage Ausbildung | Driving Team</Title>
+      <Meta name="description" content="CZV Grundkurs in Lachen für Berufschauffeure Kategorien C1/C/CE und D1/D. Obligatorisch vor Berufsausübung. Fähigkeitsausweis. Kontaktiere uns für Firmenkurse." />
       <Meta property="og:title" content="CZV Grundkurs – Berufliche Qualifikation | Driving Team" />
       <Meta property="og:description" content="Obligatorischer CZV Grundkurs für Berufschauffeure. Kategorien C1/C/CE und D1/D. Fähigkeitsausweis inklusive." />
       <Meta property="og:url" content="https://drivingteam.ch/czv-grundkurs/" />
