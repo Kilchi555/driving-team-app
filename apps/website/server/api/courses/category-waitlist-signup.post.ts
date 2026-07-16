@@ -7,10 +7,14 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { uploadInquiryConversionViaSimy, type WebsiteMarketingAttributionPayload } from '~/server/utils/google-ads-inquiry-upload'
+
+/** Waitlist signups are a soft, early-funnel signal — valued lower than a full inquiry/registration. */
+const WAITLIST_CONVERSION_VALUE_CHF = 15
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const { category_code, first_name, email, tenant_id } = body
+  const { category_code, first_name, email, tenant_id, marketing_attribution } = body
 
   if (!category_code || !first_name || !email || !tenant_id) {
     throw createError({ statusCode: 400, statusMessage: 'Fehlende Pflichtfelder' })
@@ -164,6 +168,16 @@ export default defineEventHandler(async (event) => {
   }
 
   await supabase.from('outbound_messages_queue').insert(toQueue)
+
+  // Server-side Google Ads inquiry conversion (fire-and-forget)
+  ;(async () => {
+    await uploadInquiryConversionViaSimy(event, {
+      entity_id: `waitlist_${entry.id}`,
+      marketing_attribution: (marketing_attribution ?? null) as WebsiteMarketingAttributionPayload | null,
+      email,
+      conversion_value_chf: WAITLIST_CONVERSION_VALUE_CHF,
+    })
+  })()
 
   return {
     success: true,

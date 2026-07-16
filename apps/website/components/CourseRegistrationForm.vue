@@ -611,6 +611,9 @@ async function handleSubmit() {
       course_dates,
       location: props.location,
       start_time: props.start_time,
+      marketing_attribution: typeof window !== 'undefined'
+        ? (window as any).__dtMarketingAttribution ?? null
+        : null,
     }
 
     const response = await fetch('/api/courses/register', {

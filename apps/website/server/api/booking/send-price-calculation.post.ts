@@ -2,6 +2,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { formatResendFrom } from '~/server/utils/format-resend-from'
 import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { uploadInquiryConversionViaSimy, type WebsiteMarketingAttributionPayload } from '~/server/utils/google-ads-inquiry-upload'
 
 const TENANT_ID = '64259d68-195a-4c68-8875-f1b44d962830'
 const TEAM_EMAIL = 'info@drivingteam.ch'
@@ -19,6 +20,7 @@ interface PriceCalculationPayload {
   externalCostsTotal?: number
   newsletterOptIn?: boolean
   sessionId?: string
+  marketing_attribution?: WebsiteMarketingAttributionPayload | null
 }
 
 export default defineEventHandler(async (event) => {
@@ -52,7 +54,7 @@ export default defineEventHandler(async (event) => {
     const teamEmail = tenant?.contact_email || TEAM_EMAIL
 
     // Save lead to database for follow-up
-    const { error: dbError } = await supabase
+    const { data: leadRow, error: dbError } = await supabase
       .from('price_calculation_leads')
       .insert({
         tenant_id: TENANT_ID,
@@ -65,11 +67,28 @@ export default defineEventHandler(async (event) => {
         newsletter_opt_in: body.newsletterOptIn ?? false,
         session_id: body.sessionId || null,
       })
+      .select('id')
+      .single()
 
     if (dbError) {
       console.error('❌ Failed to save price calculation lead:', dbError)
       // Don't fail the whole request if DB insert fails — still send email
     }
+
+    // Server-side Google Ads inquiry conversion (fire-and-forget). Uses the
+    // real, user-specific estimated course cost as the conversion value —
+    // instead of a flat placeholder — since the calculator already computed
+    // exactly what this lead's course would cost (CHF 499–6'500+ depending on
+    // category), so Smart Bidding can tell high-value leads apart from low ones.
+    const entityId = leadRow?.id ? `pricecalc_${leadRow.id}` : `pricecalc_${Date.now()}_${body.email.trim().toLowerCase()}`
+    ;(async () => {
+      await uploadInquiryConversionViaSimy(event, {
+        entity_id: entityId,
+        marketing_attribution: body.marketing_attribution ?? null,
+        email: body.email,
+        conversion_value_chf: body.totalCost,
+      })
+    })()
 
     // Send email via Resend
     try {

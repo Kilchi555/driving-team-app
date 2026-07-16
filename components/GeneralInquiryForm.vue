@@ -438,6 +438,8 @@ const submitInquiry = async () => {
       phone: phone.value.trim(),
       notes: message.value.trim(),
       _hp: honeypot.value || undefined,
+      marketing_session_id: (typeof window !== 'undefined' && (window as any).__analyticsSessionId) || undefined,
+      marketing_attribution: (typeof window !== 'undefined' && (window as any).__marketingAttribution) || undefined,
     }
 
     if (isSpecificRequest.value) {

@@ -198,7 +198,14 @@ async function submit() {
   try {
     await $fetch('/api/leadmagnet/subscribe', {
       method: 'POST',
-      body: { firstName: firstName.value, email: email.value, category: props.category },
+      body: {
+        firstName: firstName.value,
+        email: email.value,
+        category: props.category,
+        marketing_attribution: typeof window !== 'undefined'
+          ? (window as any).__dtMarketingAttribution ?? null
+          : null,
+      },
     })
     sentToEmail.value = email.value
     state.value = 'success'
