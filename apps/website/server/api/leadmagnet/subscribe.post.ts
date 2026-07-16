@@ -5,8 +5,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { formatResendFrom } from '~/server/utils/format-resend-from'
 import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { uploadInquiryConversionViaSimy, type WebsiteMarketingAttributionPayload } from '~/server/utils/google-ads-inquiry-upload'
 
 const TENANT_ID = '64259d68-195a-4c68-8875-f1b44d962830'
+
+/** Lead magnet downloads are the very top of the funnel — valued lower than a contact/registration inquiry. */
+const LEAD_MAGNET_CONVERSION_VALUE_CHF = 5
 
 export type LeadMagnetCategory = 'auto' | 'motorrad' | 'lastwagen' | 'anhaenger' | 'motorboot'
 
@@ -14,6 +18,7 @@ interface SubscribeBody {
   firstName: string
   email: string
   category: LeadMagnetCategory
+  marketing_attribution?: WebsiteMarketingAttributionPayload | null
 }
 
 const TENANT_NAME = 'Driving Team Fahrschule'
@@ -416,7 +421,7 @@ const TEMPLATES: Record<LeadMagnetCategory, {
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<SubscribeBody>(event)
-  const { firstName, email, category } = body ?? {}
+  const { firstName, email, category, marketing_attribution } = body ?? {}
 
   if (!firstName?.trim() || firstName.trim().length < 2) {
     throw createError({ statusCode: 400, statusMessage: 'Bitte gib deinen Vornamen ein.' })
@@ -448,15 +453,26 @@ export default defineEventHandler(async (event) => {
     const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
     if (supabaseUrl && supabaseServiceKey) {
       const supabase = createClient(supabaseUrl, supabaseServiceKey)
-      const { error: dbError } = await supabase.from('website_leads').insert({
+      const { data: leadRow, error: dbError } = await supabase.from('website_leads').insert({
         tenant_id: TENANT_ID,
         first_name: name,
         email: email.trim().toLowerCase(),
         category,
         source: 'lead_magnet',
         ip_hash: ip === 'unknown' ? null : ip,
-      })
+      }).select('id').single()
       if (dbError) console.error('⚠️ Lead DB insert error:', dbError.message)
+
+      // Server-side Google Ads inquiry conversion (fire-and-forget)
+      const entityId = leadRow?.id ? `leadmagnet_${leadRow.id}` : `leadmagnet_${Date.now()}_${email.trim().toLowerCase()}`
+      ;(async () => {
+        await uploadInquiryConversionViaSimy(event, {
+          entity_id: entityId,
+          marketing_attribution: marketing_attribution ?? null,
+          email,
+          conversion_value_chf: LEAD_MAGNET_CONVERSION_VALUE_CHF,
+        })
+      })()
     }
   } catch (dbErr: any) {
     console.error('⚠️ Lead DB error (non-fatal):', dbErr.message)

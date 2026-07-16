@@ -85,6 +85,34 @@ function persist(attribution: MarketingAttribution): void {
   }
 }
 
+/**
+ * Get-or-create the analytics session id (same localStorage key used by
+ * `analytics.client.ts`). This plugin runs with `enforce: 'pre'`, i.e.
+ * BEFORE the normal-priority `analytics.client.ts` plugin — so on a brand
+ * new visitor's very first pageview (the highest-value case: landing
+ * straight from a Google/Meta ad click), `window.__analyticsSessionId` and
+ * the `analytics_session_id` localStorage key don't exist yet. Previously
+ * this meant `/api/save-attribution` was silently skipped for exactly the
+ * first-touch sessions that matter most, so the gclid was never persisted
+ * to `marketing_attributions` and the eventual booking conversion upload
+ * failed with `no_click_id`. Creating the session id here (idempotently,
+ * same format/key `analytics.client.ts` uses) closes that gap.
+ */
+function getOrCreateSessionId(): string {
+  const key = 'analytics_session_id'
+  try {
+    let sessionId = localStorage.getItem(key)
+    if (!sessionId) {
+      sessionId = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+      localStorage.setItem(key, sessionId)
+    }
+    ;(window as any).__analyticsSessionId = sessionId
+    return sessionId
+  } catch {
+    return (window as any).__analyticsSessionId ?? `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+  }
+}
+
 export default defineNuxtPlugin({
   name: 'marketing-attribution',
   // Must run before enrich-booking-links and ga-events so they can read
@@ -135,15 +163,12 @@ export default defineNuxtPlugin({
 
       // Persist to DB immediately so we capture the visit even if the user
       // never clicks a booking link (fire-and-forget, never blocks rendering).
-      const sessionId = (window as any).__analyticsSessionId
-        ?? localStorage.getItem('analytics_session_id')
-      if (sessionId) {
-        fetch('/api/save-attribution', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId, attribution }),
-        }).catch(() => {})
-      }
+      const sessionId = getOrCreateSessionId()
+      fetch('/api/save-attribution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, attribution }),
+      }).catch(() => {})
     } else {
       const stored = readStored()
       if (stored) {

@@ -95,6 +95,9 @@ async function submit() {
         first_name: firstName.value,
         email: email.value,
         tenant_id: props.tenantId,
+        marketing_attribution: typeof window !== 'undefined'
+          ? (window as any).__dtMarketingAttribution ?? null
+          : null,
       },
     })
     success.value = true

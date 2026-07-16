@@ -681,6 +681,7 @@ const sendCalculationEmail = async () => {
         externalCostsTotal: externalCostsTotal.value,
         newsletterOptIn: newsletterOptIn.value,
         sessionId: window.__analyticsSessionId,
+        marketing_attribution: (window as any).__dtMarketingAttribution ?? null,
       }),
     })
 

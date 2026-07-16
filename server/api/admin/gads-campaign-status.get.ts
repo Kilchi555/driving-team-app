@@ -13,12 +13,12 @@
 import { resolveGadsAuth, buildGadsCustomer } from '~/server/utils/gads-auth'
 
 export default defineEventHandler(async (event) => {
-  const gads = await resolveGadsAuth(event)
-  if (!gads.ok) return gads
-
-  const customer = buildGadsCustomer(gads)
-
   try {
+    const gads = await resolveGadsAuth(event)
+    if (!gads.ok) return gads
+
+    const customer = buildGadsCustomer(gads)
+
     const response = await customer.query(`
       SELECT
         campaign.id,

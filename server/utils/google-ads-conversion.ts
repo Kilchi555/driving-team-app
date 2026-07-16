@@ -209,7 +209,10 @@ export async function uploadClickConversion(input: ConversionUploadInput): Promi
  */
 export async function recordAndUploadConversion(input: ConversionUploadInput): Promise<void> {
   const supabase = getSupabaseAdmin()
-  const conversionActionId = process.env.GOOGLE_ADS_CONVERSION_ACTION_ID ?? 'unknown'
+  // Trim: env vars pasted into Vercel occasionally carry a trailing newline. The
+  // actual API call already trims via readCreds(); trim here too so the audit
+  // row in google_ads_conversion_uploads doesn't store a polluted id like "123\n".
+  const conversionActionId = (input.conversion_action_id ?? process.env.GOOGLE_ADS_CONVERSION_ACTION_ID ?? 'unknown').trim()
 
   // 1. Record the pending upload (insert immediately so we have an audit trail
   //    even if the API call hangs / never returns).
@@ -270,8 +273,18 @@ export async function recordAndUploadConversion(input: ConversionUploadInput): P
   }
 }
 
-/** Default lead value for inquiry/proposal conversions (CHF). Override via env. */
-const INQUIRY_CONVERSION_VALUE_CHF = Number(process.env.GOOGLE_ADS_INQUIRY_CONVERSION_VALUE_CHF ?? '10')
+/**
+ * Default lead value for inquiry/proposal conversions (CHF). Override via env.
+ * NB: the env var has previously been set to an empty string ("") in Vercel,
+ * which is not `undefined`, so `?? '10'` never kicked in and every inquiry
+ * conversion silently uploaded with value 0. Guard against blank/invalid
+ * values explicitly instead of relying on `??`.
+ */
+function readInquiryDefaultValueChf(): number {
+  const raw = process.env.GOOGLE_ADS_INQUIRY_CONVERSION_VALUE_CHF?.trim()
+  const parsed = raw ? Number(raw) : NaN
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 10
+}
 
 /**
  * Upload a booking-proposal (inquiry) conversion to Google Ads.
@@ -289,7 +302,7 @@ export async function recordAndUploadInquiryConversion(input: {
   hashed_phone?: string | null
   tenant_id?: string | null
 }): Promise<void> {
-  const conversionActionId = process.env.GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID
+  const conversionActionId = process.env.GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID?.trim()
   if (!conversionActionId) {
     logger.warn('google-ads-conversion: skipping inquiry upload — GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID not set')
     return
@@ -309,7 +322,7 @@ export async function recordAndUploadInquiryConversion(input: {
       gclid: input.gclid ?? null,
       gbraid: input.gbraid ?? null,
       wbraid: input.wbraid ?? null,
-      conversion_value_chf: input.conversion_value_chf ?? INQUIRY_CONVERSION_VALUE_CHF,
+      conversion_value_chf: input.conversion_value_chf ?? readInquiryDefaultValueChf(),
       conversion_date_time: typeof conversionDateTime === 'string'
         ? conversionDateTime
         : conversionDateTime.toISOString(),
@@ -330,7 +343,7 @@ export async function recordAndUploadInquiryConversion(input: {
     gclid: input.gclid,
     gbraid: input.gbraid,
     wbraid: input.wbraid,
-    conversion_value_chf: input.conversion_value_chf ?? INQUIRY_CONVERSION_VALUE_CHF,
+    conversion_value_chf: input.conversion_value_chf ?? readInquiryDefaultValueChf(),
     conversion_date_time: conversionDateTime,
     hashed_email: input.hashed_email,
     hashed_phone: input.hashed_phone,

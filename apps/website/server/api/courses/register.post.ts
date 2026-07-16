@@ -2,6 +2,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { formatResendFrom } from '~/server/utils/format-resend-from'
 import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { uploadInquiryConversionViaSimy, type WebsiteMarketingAttributionPayload } from '~/server/utils/google-ads-inquiry-upload'
 
 const COURSE_TYPE_LABELS: Record<string, string> = {
   czv_grundkurs: 'CZV Grundkurs',
@@ -9,6 +10,10 @@ const COURSE_TYPE_LABELS: Record<string, string> = {
 }
 
 const PRIMARY_COLOR = '#019ee5'
+
+/** A definitive registration (specific course dates picked) is a much stronger signal than a bare interest signup. */
+const COURSE_REGISTRATION_VALUE_CHF = 50
+const COURSE_INTEREST_VALUE_CHF = 20
 
 interface CourseRegistrationPayload {
   tenant_id: string
@@ -32,6 +37,7 @@ interface CourseRegistrationPayload {
   location?: string
   start_time?: string
   course_title?: string
+  marketing_attribution?: WebsiteMarketingAttributionPayload | null
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -339,6 +345,21 @@ export default defineEventHandler(async (event) => {
       }
       data = participantRows
     }
+
+    // Server-side Google Ads inquiry conversion (fire-and-forget)
+    const isDefinitiveRegistration = uniqueIds.length > 0
+    const leadEntityId = isDefinitiveRegistration
+      ? `courseregistration_${uniqueIds[0]}_${Date.now()}`
+      : `courselead_${(data as Record<string, unknown>[])?.[0]?.id ?? Date.now()}`
+    ;(async () => {
+      await uploadInquiryConversionViaSimy(event, {
+        entity_id: leadEntityId,
+        marketing_attribution: body.marketing_attribution ?? null,
+        email: body.email ?? null,
+        phone: body.phone ?? null,
+        conversion_value_chf: isDefinitiveRegistration ? COURSE_REGISTRATION_VALUE_CHF : COURSE_INTEREST_VALUE_CHF,
+      })
+    })()
 
     try {
       const { Resend } = await import('resend')
