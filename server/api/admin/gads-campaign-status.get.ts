@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     if (campaign_id && typeof campaign_id === 'string') {
       const [campaignRows, adGroupRows, keywordRows] = await Promise.all([
         customer.query(`
-          SELECT campaign.id, campaign.name, campaign.status, campaign.start_date, campaign.end_date,
+          SELECT campaign.id, campaign.name, campaign.status,
                  campaign.advertising_channel_type
           FROM campaign
           WHERE campaign.id = ${campaign_id}
