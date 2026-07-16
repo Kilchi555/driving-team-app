@@ -1,6 +1,7 @@
 // composables/useTenant.ts
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/utils/supabase'
+import { useFallbackLogger } from '~/composables/useFallbackLogger'
 
 interface Tenant {
   id: string
@@ -182,9 +183,26 @@ export const useTenant = () => {
     }
   }
 
+  const { logFallbackUsed } = useFallbackLogger()
+
   // Computed Properties
   const tenantName = computed(() => currentTenant.value?.name || 'Driving Team')
-  const tenantSlug = computed(() => currentTenant.value?.slug || 'driving-team')
+  const tenantSlug = computed(() => {
+    const slug = currentTenant.value?.slug
+    if (!slug) {
+      // ✅ No more silent fallback to a hardcoded tenant slug: consumers must
+      // handle a missing slug explicitly (abort action / neutral error state)
+      // instead of risking cross-tenant data leaks or wrong links.
+      logFallbackUsed(
+        'tenant-slug',
+        'currentTenant.slug ist nicht verfügbar – kein Fallback-Slug wird mehr verwendet.',
+        { context: 'useTenant.tenantSlug' },
+        'error'
+      )
+      return null
+    }
+    return slug
+  })
   const tenantId = computed(() => currentTenant.value?.id || null)
   const tenantLogo = computed(() => getBestLogo('wide')) // Hauptlogo ist jetzt das breite Logo
   const tenantLogoSquare = computed(() => getBestLogo('square'))

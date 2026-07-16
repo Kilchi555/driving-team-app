@@ -39,6 +39,8 @@ import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-
 import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
 import { calculateAdminFee } from '~/server/utils/admin-fee'
 import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
+import { resolveRoomSettings, pickAvailableRoomId, type RoomServiceType } from '~/server/utils/room-availability'
+import { logFallbackUsed } from '~/server/utils/log-fallback'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -81,8 +83,10 @@ interface CreateAppointmentRequest {
   customer_pickup_address?: string | null
   /** Vehicle mode chosen by student: 'school' = rent school vehicle, 'own' = bring own vehicle */
   vehicle_mode?: 'school' | 'own' | null
-  /** Room selected by client in step 5.5 */
-  room_id?: string | null
+  /** Booking service type (Fahrstunde/Theorie/Beratung) — resolves the admin-configured room
+   *  rule for this category+location. The room itself is auto-assigned server-side, never
+   *  chosen by the customer. */
+  service_type?: RoomServiceType
   /** Customer-selected payment method. Only 'invoice' is honored, and only when the tenant has explicitly enabled it — otherwise falls back to 'wallee'. */
   payment_method?: 'wallee' | 'invoice'
 }
@@ -354,7 +358,7 @@ export default defineEventHandler(async (event: H3Event) => {
       tenant_id: tenantId
     })
 
-    const [pricingRuleRes, adminFeeRuleRes, locationVehicleRes, categoryVehicleRes] = await Promise.all([
+    const [pricingRuleRes, adminFeeRuleRes, locationSettingsRes, categorySettingsRes] = await Promise.all([
       supabase
         .from('pricing_rules')
         .select('price_per_minute_rappen, base_duration_minutes, duration_multiplier, weekend_multiplier, evening_multiplier')
@@ -366,7 +370,7 @@ export default defineEventHandler(async (event: H3Event) => {
         .maybeSingle(),
       supabase
         .from('pricing_rules')
-        .select('admin_fee_rappen')
+        .select('admin_fee_rappen, admin_fee_applies_from')
         .eq('category_code', body.category_code)
         .eq('tenant_id', tenantId)
         .eq('rule_type', 'admin_fee')
@@ -375,12 +379,12 @@ export default defineEventHandler(async (event: H3Event) => {
         .maybeSingle(),
       supabase
         .from('locations')
-        .select('category_vehicle_settings')
+        .select('category_vehicle_settings, category_room_settings')
         .eq('id', slot.location_id)
         .maybeSingle(),
       supabase
         .from('categories')
-        .select('vehicle_settings')
+        .select('vehicle_settings, room_settings')
         .eq('code', body.category_code)
         .eq('tenant_id', tenantId)
         .maybeSingle(),
@@ -389,12 +393,26 @@ export default defineEventHandler(async (event: H3Event) => {
     const pricingRule = pricingRuleRes.data
     const pricingError = pricingRuleRes.error
     const adminFeeRuleRappen = Number(adminFeeRuleRes.data?.admin_fee_rappen || 0)
+    const adminFeeAppliesFromRule = adminFeeRuleRes.data?.admin_fee_applies_from != null
+      ? Number(adminFeeRuleRes.data.admin_fee_applies_from)
+      : null
 
     // Resolve vehicle settings for this location + category
     const vehicleSettings = resolveVehicleSettings(
-      locationVehicleRes.data?.category_vehicle_settings,
-      categoryVehicleRes.data?.vehicle_settings,
+      locationSettingsRes.data?.category_vehicle_settings,
+      categorySettingsRes.data?.vehicle_settings,
       body.category_code
+    )
+
+    // Resolve room settings for this location + category + booking service type.
+    // Rooms are never chosen by the customer — the admin defines the rule, and a
+    // free room from the allowed pool gets auto-assigned further below.
+    const roomServiceType: RoomServiceType = body.service_type ?? 'fahrstunde'
+    const roomRule = resolveRoomSettings(
+      locationSettingsRes.data?.category_room_settings,
+      categorySettingsRes.data?.room_settings,
+      body.category_code,
+      roomServiceType
     )
 
     let totalAmountRappen = 0
@@ -433,7 +451,20 @@ export default defineEventHandler(async (event: H3Event) => {
 
       logger.debug('💰 Price calculated:', { totalAmountRappen, vehicle_mode: body.vehicle_mode, pricingRule })
     } else {
-      logger.warn('⚠️ No pricing rule found for category, defaulting to 0', { category_code: body.category_code, tenant_id: tenantId })
+      // ✅ No silent price fallback for real bookings: a request without a person
+      // present to notice a wrong price must fail safely instead of charging 0.
+      logger.warn('⚠️ No pricing rule found for category, aborting booking', { category_code: body.category_code, tenant_id: tenantId, pricingError: pricingError?.message })
+      await logFallbackUsed({
+        source: 'pricing',
+        message: `Buchung abgebrochen: keine aktive Preisregel für Kategorie "${body.category_code}" gefunden.`,
+        tenantId,
+        level: 'error',
+        details: { category_code: body.category_code, dbError: pricingError?.message || null }
+      })
+      throw createError({
+        statusCode: 503,
+        statusMessage: 'Der Preis für diese Kategorie konnte gerade nicht ermittelt werden. Bitte versuche es in Kürze erneut oder kontaktiere uns direkt.'
+      })
     }
 
     // ============ LAYER 6c: ADMIN FEE CALCULATION ============
@@ -445,6 +476,7 @@ export default defineEventHandler(async (event: H3Event) => {
       tenantId: tenantId!,
       categoryCode: body.category_code,
       adminFeeRappenFromRule: adminFeeRuleRappen,
+      adminFeeAppliesFromRule,
     })
     const adminFeeRappen = adminFeeResult.adminFeeRappen
     logger.debug('💼 Admin fee decision (booking flow):', {
@@ -485,6 +517,24 @@ export default defineEventHandler(async (event: H3Event) => {
       if (attrRow) marketingAttr = attrRow as MarketingAttributionPayload
     }
 
+    // Auto-assign a room (never chosen by the customer) — pick the first free
+    // room from the admin-configured pool for this category+location+service type.
+    let autoAssignedRoomId: string | null = null
+    if (roomRule.mode !== 'none' && roomRule.allowed_room_ids.length > 0) {
+      autoAssignedRoomId = await pickAvailableRoomId(supabase, {
+        allowedRoomIds: roomRule.allowed_room_ids,
+        startTime: slot.start_time,
+        endTime: slot.end_time,
+      })
+      if (!autoAssignedRoomId) {
+        logger.warn('⚠️ No free room available for auto-assignment (non-fatal):', {
+          category_code: body.category_code,
+          service_type: roomServiceType,
+          mode: roomRule.mode,
+        })
+      }
+    }
+
     const { data: newAppointment, error: createAppointmentError } = await supabase
       .from('appointments')
       .insert({
@@ -519,7 +569,7 @@ export default defineEventHandler(async (event: H3Event) => {
         customer_pickup_plz: body.customer_pickup_plz?.trim() || null,
         customer_pickup_address: body.customer_pickup_address?.trim() || null,
         vehicle_mode: body.vehicle_mode ?? null,
-        room_id: body.room_id ?? null,
+        room_id: autoAssignedRoomId,
       })
       .select()
       .single()
@@ -563,25 +613,26 @@ export default defineEventHandler(async (event: H3Event) => {
       }
     }
 
-    // Create room_booking if client selected a room in step 5.5
-    if (body.room_id) {
-      // Server-side conflict check
+    // Create room_booking for the auto-assigned room (see LAYER 7 above).
+    // Re-check for conflicts right before inserting to close the race window
+    // between the pick and this insert (e.g. a near-simultaneous booking).
+    if (autoAssignedRoomId) {
       const { data: roomConflicts } = await supabase
         .from('room_bookings')
         .select('id')
-        .eq('room_id', body.room_id)
+        .eq('room_id', autoAssignedRoomId)
         .neq('status', 'cancelled')
         .lt('start_time', slot.end_time)
         .gt('end_time', slot.start_time)
         .limit(1)
 
       if ((roomConflicts?.length ?? 0) > 0) {
-        logger.warn('⚠️ Room conflict detected on booking — skipping room_bookings insert:', body.room_id)
+        logger.warn('⚠️ Room conflict detected on booking — skipping room_bookings insert:', autoAssignedRoomId)
       } else {
         const { error: rbErr } = await supabase
           .from('room_bookings')
           .insert({
-            room_id: body.room_id,
+            room_id: autoAssignedRoomId,
             tenant_id: tenantId,
             start_time: slot.start_time,
             end_time: slot.end_time,
@@ -593,7 +644,7 @@ export default defineEventHandler(async (event: H3Event) => {
         if (rbErr) {
           logger.warn('⚠️ room_bookings creation failed (non-fatal):', rbErr.message)
         } else {
-          logger.debug('✅ room_bookings entry created for room:', body.room_id)
+          logger.debug('✅ room_bookings entry created for room:', autoAssignedRoomId)
         }
       }
     }

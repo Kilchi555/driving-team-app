@@ -13,6 +13,7 @@ import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure
 import { findExistingUserByContact } from '~/server/utils/user-matching'
 import { normalizePhoneNumber } from '~/server/utils/sms'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
+import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
 // crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
@@ -766,6 +767,53 @@ export default defineEventHandler(async (event) => {
                   logger.warn('⚠️ vehicle_bookings creation failed in webhook (non-fatal):', vE.message)
                 }
               })()
+
+              // ── Meta CAPI: report course purchases (webhook-confirmed only, so ──
+              // webhook retries for an already-processed payment never re-fire —
+              // `newRegs` only contains registrations created in THIS delivery).
+              // course_registrations has no FK to `appointments`, so this calls
+              // sendCapiEvent directly and skips the meta_capi_uploads audit table
+              // (its appointment_id column has a hard FK to appointments).
+              if (paymentStatus === 'completed') {
+                ;(async () => {
+                  try {
+                    const paymentsById = new Map(paymentsToUpdate.map((p: any) => [p.id, p]))
+                    for (let i = 0; i < registrationsToCreate.length && i < newRegs.length; i++) {
+                      const regData = registrationsToCreate[i] as any
+                      const newReg = newRegs[i] as any
+                      const payment = paymentsById.get(regData.payment_id)
+                      const marketingSessionId = payment?.metadata?.marketing_session_id
+
+                      const { data: attrRow } = marketingSessionId
+                        ? await supabase
+                            .from('marketing_attributions')
+                            .select('fbclid, fbc, fbp')
+                            .eq('session_id', marketingSessionId)
+                            .maybeSingle()
+                        : { data: null }
+
+                      const hashedEmail = regData.email ? await sha256Hex(String(regData.email).trim().toLowerCase()) : null
+                      const normalizedRegPhone = String(regData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+                      const hashedPhone = normalizedRegPhone.startsWith('+') ? await sha256Hex(normalizedRegPhone) : null
+
+                      await sendCapiEvent({
+                        appointment_id: `course_${newReg.id}`,
+                        tenant_id: regData.tenant_id,
+                        event_name: 'Purchase',
+                        conversion_value_chf: (regData.amount_paid_rappen || 0) / 100,
+                        conversion_date_time: new Date(),
+                        fbclid: attrRow?.fbclid ?? null,
+                        fbc: attrRow?.fbc ?? null,
+                        fbp: attrRow?.fbp ?? null,
+                        hashed_email: hashedEmail,
+                        hashed_phone: hashedPhone,
+                      })
+                    }
+                  } catch (capiErr: any) {
+                    logger.warn('⚠️ Meta CAPI upload failed for course registration (webhook, non-critical):', capiErr?.message ?? capiErr)
+                  }
+                })()
+              }
 
               // Increment discount usage_count for any discount codes used
               ;(async () => {

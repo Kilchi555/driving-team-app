@@ -477,7 +477,7 @@
                     placeholder="z.B. 2"
                   />
                   <p class="text-xs text-gray-500 mt-1">
-                    Bei Motorrädern (A, A1, A35kW) wird kein Admin-Fee berechnet
+                    Admin-Fee CHF auf 0 lassen (oder diesen Wert sehr hoch setzen), um eine Kategorie von der Admin-Fee auszunehmen.
                   </p>
                 </div>
               </div>
@@ -577,43 +577,57 @@
 
             <!-- ─── Raum-Konfiguration ─── -->
             <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h5 class="text-md font-medium text-blue-900 mb-3">Raum-Zuordnung</h5>
-              <p class="text-xs text-blue-700 mb-3">Lege fest ob für diese Kategorie Räume reserviert werden können.</p>
+              <h5 class="text-md font-medium text-blue-900 mb-1">Raum-Zuordnung</h5>
+              <p class="text-xs text-blue-700 mb-4">
+                Lege pro Eventtyp fest, ob ein Raum reserviert werden muss. Der Kunde bzw. Fahrlehrer wählt den Raum
+                nicht selbst aus — das System reserviert automatisch einen freien Raum aus der erlaubten Liste.
+              </p>
 
-              <div class="mb-3">
-                <label class="block text-xs font-medium text-gray-700 mb-2">Modus</label>
-                <div class="flex gap-3 flex-wrap">
-                  <label v-for="opt in [{ value: 'none', label: 'Deaktiviert' }, { value: 'optional', label: 'Optional' }, { value: 'required', label: 'Pflicht' }]"
-                    :key="opt.value" class="flex items-center gap-1.5 cursor-pointer">
-                    <input type="radio" v-model="categoryForm.room_mode" :value="opt.value" class="text-blue-500" />
-                    <span class="text-sm text-gray-700">{{ opt.label }}</span>
-                  </label>
+              <div
+                v-for="serviceType in visibleRoomServiceTypes"
+                :key="serviceType.key"
+                class="mb-4 pb-4 border-b border-blue-200 last:mb-0 last:pb-0 last:border-b-0"
+              >
+                <p class="text-sm font-semibold text-blue-900 mb-2">{{ serviceType.label }}</p>
+                <div class="mb-3">
+                  <label class="block text-xs font-medium text-gray-700 mb-2">Modus</label>
+                  <div class="flex gap-3 flex-wrap">
+                    <label v-for="opt in [{ value: 'none', label: 'Deaktiviert' }, { value: 'optional', label: 'Optional' }, { value: 'required', label: 'Pflicht' }]"
+                      :key="opt.value" class="flex items-center gap-1.5 cursor-pointer">
+                      <input type="radio" v-model="categoryForm.room_rules[serviceType.key].mode" :value="opt.value" class="text-blue-500" />
+                      <span class="text-sm text-gray-700">{{ opt.label }}</span>
+                    </label>
+                  </div>
                 </div>
-              </div>
 
-              <div v-if="categoryForm.room_mode !== 'none'" class="space-y-2">
-                <label class="block text-xs font-medium text-gray-700 mb-1">Verfügbare Räume</label>
-                <p v-if="isLoadingModalExtras" class="text-xs text-gray-400 flex items-center gap-1.5">
-                  <svg class="animate-spin h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                  </svg>
-                  Räume werden geladen…
-                </p>
-                <p v-else-if="availableRooms.length === 0" class="text-xs text-gray-400">Keine Räume konfiguriert. Füge zuerst Räume im Räume-Tab hinzu.</p>
-                <div v-else class="space-y-1 max-h-40 overflow-y-auto">
-                  <label v-for="room in availableRooms" :key="room.id"
-                    class="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-100 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      :value="room.id"
-                      :checked="categoryForm.room_allowed_ids.includes(room.id)"
-                      @change="(e) => { const v = (e.target as HTMLInputElement).checked; categoryForm.room_allowed_ids = v ? [...categoryForm.room_allowed_ids, room.id] : categoryForm.room_allowed_ids.filter(id => id !== room.id) }"
-                      class="rounded text-blue-500"
-                    />
-                    <span class="text-sm text-gray-800">{{ room.name }}</span>
-                    <span v-if="room.location" class="text-xs text-gray-400">— {{ room.location }}</span>
-                  </label>
+                <div v-if="categoryForm.room_rules[serviceType.key].mode !== 'none'" class="space-y-2">
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Erlaubte Räume (automatische Zuweisung)</label>
+                  <p v-if="isLoadingModalExtras" class="text-xs text-gray-400 flex items-center gap-1.5">
+                    <svg class="animate-spin h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    Räume werden geladen…
+                  </p>
+                  <p v-else-if="availableRooms.length === 0" class="text-xs text-gray-400">Keine Räume konfiguriert. Füge zuerst Räume im Räume-Tab hinzu.</p>
+                  <div v-else class="space-y-1 max-h-40 overflow-y-auto">
+                    <label v-for="room in availableRooms" :key="room.id"
+                      class="flex items-center gap-2 p-2 rounded-lg hover:bg-blue-100 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        :value="room.id"
+                        :checked="categoryForm.room_rules[serviceType.key].allowed_room_ids.includes(room.id)"
+                        @change="(e) => {
+                          const v = (e.target as HTMLInputElement).checked
+                          const rule = categoryForm.room_rules[serviceType.key]
+                          rule.allowed_room_ids = v ? [...rule.allowed_room_ids, room.id] : rule.allowed_room_ids.filter(id => id !== room.id)
+                        }"
+                        class="rounded text-blue-500"
+                      />
+                      <span class="text-sm text-gray-800">{{ room.name }}</span>
+                      <span v-if="room.location" class="text-xs text-gray-400">— {{ room.location }}</span>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -965,6 +979,51 @@ interface Category {
 }
 
 
+// ── Room rules per booking service type ────────────────────────────────────
+// Mirrors the customer-facing booking wizard's service type selection
+// (Fahrstunde/Theorie/Beratung). The admin defines per category + Eventtyp
+// whether a room must/can be reserved — the room itself is then picked
+// automatically by the system (no manual choice by staff or customer).
+type RoomServiceType = 'fahrstunde' | 'theorie' | 'beratung'
+const ROOM_SERVICE_TYPES: Array<{ key: RoomServiceType; label: string }> = [
+  { key: 'fahrstunde', label: 'Fahrstunde' },
+  { key: 'theorie', label: 'Theorie' },
+  { key: 'beratung', label: 'Beratung' },
+]
+
+// Only show room-config sections for event types this category actually offers.
+// "Fahrstunde" is always shown (base pricing is core to every category); Theorie/
+// Beratung follow the same enable toggles used just above in this same form.
+const visibleRoomServiceTypes = computed(() =>
+  ROOM_SERVICE_TYPES.filter(({ key }) => {
+    if (key === 'theorie') return categoryForm.value.theory_enabled
+    if (key === 'beratung') return categoryForm.value.consultation_enabled
+    return true
+  })
+)
+
+const emptyRoomRules = (): Record<RoomServiceType, { mode: 'none' | 'optional' | 'required'; allowed_room_ids: string[] }> => ({
+  fahrstunde: { mode: 'none', allowed_room_ids: [] },
+  theorie: { mode: 'none', allowed_room_ids: [] },
+  beratung: { mode: 'none', allowed_room_ids: [] },
+})
+
+// Parses category.room_settings into the per-service-type shape used by the form.
+const parseRoomRules = (rs: any) => {
+  const result = emptyRoomRules()
+  if (!rs || typeof rs !== 'object') return result
+  for (const { key } of ROOM_SERVICE_TYPES) {
+    const rule = rs[key]
+    if (rule?.mode) {
+      result[key] = {
+        mode: rule.mode,
+        allowed_room_ids: (Array.isArray(rule.allowed_room_ids) ? rule.allowed_room_ids : []).map(String),
+      }
+    }
+  }
+  return result
+}
+
 // ── Price Tabs ──────────────────────────────────────────────────────────────
 const priceTabs = [
   { key: 'kategorien', label: 'Kategorien' },
@@ -1044,8 +1103,13 @@ const categoryForm = ref({
   consultation_enabled: false,
   consultation_price_chf: 0,
   consultation_duration_minutes: 60,
-  room_mode: 'none' as 'none' | 'optional' | 'required',
-  room_allowed_ids: [] as string[],
+  // Raum-Zuordnung pro Buchungs-Eventtyp — der Kunde/Staff wählt den Raum nicht mehr
+  // selbst, das System reserviert automatisch einen freien Raum aus der erlaubten Liste.
+  room_rules: {
+    fahrstunde: { mode: 'none', allowed_room_ids: [] },
+    theorie: { mode: 'none', allowed_room_ids: [] },
+    beratung: { mode: 'none', allowed_room_ids: [] },
+  } as Record<RoomServiceType, { mode: 'none' | 'optional' | 'required'; allowed_room_ids: string[] }>,
 })
 
 // New lesson duration input
@@ -1385,8 +1449,7 @@ const openEditModal = (category: Category) => {
         is_default: !!o.is_default,
         requires_school_vehicle: !!o.requires_school_vehicle,
       })),
-      room_mode: rs?.mode ?? 'none',
-      room_allowed_ids: (Array.isArray(rs?.allowed_room_ids) ? rs.allowed_room_ids : []).map(String),
+      room_rules: parseRoomRules(rs),
     }
 
     // Open the modal immediately — don't block it behind network round-trips.
@@ -1435,8 +1498,7 @@ const closeModal = () => {
     consultation_duration_minutes: 60,
     vehicle_enabled: false,
     vehicle_options: [],
-    room_mode: 'none',
-    room_allowed_ids: [],
+    room_rules: emptyRoomRules(),
   }
   newLessonDuration.value = ''
 }
@@ -1498,12 +1560,15 @@ const saveCategory = async () => {
         }
       : null
 
-    // Build room_settings JSONB
-    const roomSettings = categoryForm.value.room_mode !== 'none'
-      ? {
-          mode: categoryForm.value.room_mode,
-          allowed_room_ids: categoryForm.value.room_allowed_ids,
-        }
+    // Build room_settings JSONB — one rule per booking service type
+    // (Fahrstunde/Theorie/Beratung). Omit entries left "Deaktiviert" and any
+    // event type this category doesn't even offer (Theorie/Beratung toggled off).
+    const roomSettingsEntries = visibleRoomServiceTypes.value
+      .map(({ key }) => [key, categoryForm.value.room_rules[key]] as const)
+      .filter(([, rule]) => rule.mode !== 'none')
+      .map(([key, rule]) => [key, { mode: rule.mode, allowed_room_ids: rule.allowed_room_ids }])
+    const roomSettings = roomSettingsEntries.length > 0
+      ? Object.fromEntries(roomSettingsEntries)
       : null
 
     await $fetch('/api/admin/categories', {

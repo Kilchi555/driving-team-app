@@ -4,6 +4,43 @@
     <!-- Grundpreis -->
     <div class="p-4 rounded-xl border" :style="{ ...primaryBgLight, borderColor: 'color-mix(in srgb, var(--color-primary, #111827) 20%, transparent)' }">
       <h3 class="text-base font-semibold mb-3" :style="primaryText">Preisübersicht</h3>
+
+      <!-- Dezenter Hinweis, wenn der Preis nicht automatisch aus der Datenbank berechnet werden konnte -->
+      <div v-if="props.isPriceFallback && !props.isCalculatingPrice" class="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+        <div class="flex items-start gap-2">
+          <svg class="w-4 h-4 text-amber-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-medium text-amber-800">Preis konnte nicht automatisch ermittelt werden</p>
+            <p class="text-xs text-amber-700 mt-0.5">Es wird ein geschätzter Preis angezeigt. Bitte prüfe ihn oder gib den korrekten Preis manuell ein.</p>
+            <div v-if="!props.priceManuallyEntered" class="mt-2 flex items-center gap-2">
+              <div class="relative">
+                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-amber-600">CHF</span>
+                <input
+                  v-model.number="manualPriceInput"
+                  type="number"
+                  min="0"
+                  step="0.05"
+                  placeholder="0.00"
+                  class="w-24 pl-9 pr-2 py-1.5 text-sm border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400"
+                >
+              </div>
+              <button
+                type="button"
+                @click="submitManualPrice"
+                :disabled="!manualPriceInput || manualPriceInput <= 0"
+                class="px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-600 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-amber-700"
+              >
+                Preis übernehmen
+              </button>
+            </div>
+            <div v-else class="mt-2 flex items-center gap-2">
+              <span class="text-xs font-medium text-amber-800">✓ Preis wurde manuell erfasst</span>
+              <button type="button" @click="$emit('manual-price-reset')" class="text-xs text-amber-700 underline hover:text-amber-900">ändern</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="space-y-2">
         <div class="flex justify-between">
           <span class="text-gray-700">{{ lessonType || 'Grundpreis' }} ({{ durationMinutes }} min)</span>
@@ -688,6 +725,11 @@ interface Props {
   isLoadingCredit?: boolean // ✅ NEU: Loading state for credit
   isCalculatingPrice?: boolean
   resourceSurcharges?: { label: string; rappen: number }[] // Raum- / Fahrzeugkosten
+  // True when pricePerMinute came from a hardcoded offline fallback instead of
+  // the tenant's live pricing_rules (see EventModal.vue calculateOfflinePrice()).
+  isPriceFallback?: boolean
+  // True once staff has manually overridden the fallback price for this session.
+  priceManuallyEntered?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -707,6 +749,8 @@ const props = withDefaults(defineProps<Props>(), {
   isLoadingCredit: false,
   isCalculatingPrice: false,
   resourceSurcharges: () => [],
+  isPriceFallback: false,
+  priceManuallyEntered: false,
 })
 
 // Emits
@@ -721,6 +765,8 @@ const emit = defineEmits<{
   'update:selectedPaymentMethod': [value: string] // ✅ NEU: v-model emit für payment method
   'payment-status-changed': [] // Emit wenn Bar-Zahlung bestätigt
   'cash-already-paid-changed': [value: boolean] // Emit wenn "bereits bezahlt" Toggle geändert
+  'manual-price-entered': [totalChf: number] // Staff hat den Fallback-Preis manuell korrigiert
+  'manual-price-reset': [] // Staff möchte den manuell erfassten Preis erneut ändern
 }>()
 
 // Composables
@@ -900,6 +946,14 @@ const formatStudentBillingAddress = (): string => {
 // ✅ NEU: Manueller Rabatt State
 const manualDiscountAmount = ref<number>(0)
 const manualDiscountReason = ref<string>('')
+
+// ✅ Manuelle Preiseingabe, wenn die automatische Berechnung fehlgeschlagen ist (Fallback aktiv)
+const manualPriceInput = ref<number | null>(null)
+const submitManualPrice = () => {
+  if (!manualPriceInput.value || manualPriceInput.value <= 0) return
+  emit('manual-price-entered', manualPriceInput.value)
+  manualPriceInput.value = null
+}
 
 // Rechnungsadresse State
 const invoiceData = ref({

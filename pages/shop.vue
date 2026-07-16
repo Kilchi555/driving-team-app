@@ -2445,7 +2445,10 @@ const handlePaymentCreated = async (payment: any) => {
 
 const handlePaymentFailed = (error: any) => {
   console.error('❌ Payment failed:', error)
-  alert('❌ Zahlung fehlgeschlagen. Bitte versuchen Sie es erneut oder wählen Sie eine andere Zahlungsmethode.')
+  const message = typeof error === 'string' && error.trim().length > 0
+    ? error
+    : 'Zahlung fehlgeschlagen. Bitte versuchen Sie es erneut oder wählen Sie eine andere Zahlungsmethode.'
+  alert(`❌ ${message}`)
 }
 </script>
 

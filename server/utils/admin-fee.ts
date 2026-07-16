@@ -8,22 +8,20 @@
  * non-staff contexts (customer booking flow).
  *
  * Rules summary:
- *   - Motorcycle categories (A, A1, A35kW) never charge an admin fee.
- *   - Admin fee applies starting at the 2nd appointment in a category group.
+ *   - Categories with a very high `admin_fee_applies_from` (e.g. motorcycles)
+ *     never reach the fee threshold in practice — no separate category list.
+ *   - Admin fee applies starting at the rule's `admin_fee_applies_from`'th
+ *     appointment in a category group.
  *   - Admin fee is charged at most once per category group — if a previous
  *     payment for the same group already includes admin_fee_rappen > 0, no
  *     new admin fee is added.
- *   - Category groups:
- *       * B-group:    'B' | 'B Schaltung' | 'B Automatik' (share fee + count)
- *       * Boot-group: 'Boot' | 'Motorboot' (share fee + count)
- *       * All others: standalone
+ *   - Category groups are resolved from `categories.parent_category_id`
+ *     (see `./category-groups`), e.g. 'B' + 'B Schaltung' + 'B Automatik'
+ *     share fee + count. Boot/Motorboot is a documented alias exception.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-
-const MOTORCYCLE_CATEGORIES = new Set(['A', 'A1', 'A35kW'])
-const B_CATEGORY_GROUP = new Set(['B', 'B Schaltung', 'B Automatik'])
-const BOOT_CATEGORY_GROUP = new Set(['Boot', 'Motorboot'])
+import { resolveCategoryGroup, isAdminFeeExempt, BOOT_ALIASES } from './category-groups'
 
 export type AdminFeeReason =
   | 'no_user'
@@ -48,10 +46,11 @@ interface CalculateAdminFeeInput {
   tenantId: string
   categoryCode: string
   /**
-   * Optional pre-loaded pricing rule. If absent, the function fetches the
-   * `admin_fee` rule itself.
+   * Optional pre-loaded pricing rule fields. If absent, the function fetches
+   * the `admin_fee` rule itself.
    */
   adminFeeRappenFromRule?: number
+  adminFeeAppliesFromRule?: number | null
 }
 
 /**
@@ -60,7 +59,7 @@ interface CalculateAdminFeeInput {
  * are grouped, B-categories are counted independently.
  */
 function getCountCategoryGroup(categoryCode: string): string[] {
-  if (BOOT_CATEGORY_GROUP.has(categoryCode)) return [...BOOT_CATEGORY_GROUP]
+  if (BOOT_ALIASES.includes(categoryCode)) return [...BOOT_ALIASES]
   return [categoryCode]
 }
 
@@ -69,22 +68,24 @@ function getCountCategoryGroup(categoryCode: string): string[] {
  * `server/api/staff/check-admin-fee-paid.get.ts`: both B-group and Boot-group
  * are treated as a single shared group for fee-already-paid purposes.
  */
-function getPaidCategoryGroup(categoryCode: string): string[] {
-  if (B_CATEGORY_GROUP.has(categoryCode)) return [...B_CATEGORY_GROUP]
-  if (BOOT_CATEGORY_GROUP.has(categoryCode)) return [...BOOT_CATEGORY_GROUP]
-  return [categoryCode]
-}
-
-async function fetchAdminFeeFromRule(
+async function getPaidCategoryGroup(
   supabase: SupabaseClient,
   tenantId: string,
   categoryCode: string,
-): Promise<number> {
+): Promise<string[]> {
+  return resolveCategoryGroup(supabase, tenantId, categoryCode)
+}
+
+async function fetchAdminFeeRuleFromDb(
+  supabase: SupabaseClient,
+  tenantId: string,
+  categoryCode: string,
+): Promise<{ adminFeeRappen: number; adminFeeAppliesFrom: number | null }> {
   // Same fallback chain as get-pricing.post.ts: try category-specific first,
   // then any tenant rule.
   const { data, error } = await supabase
     .from('pricing_rules')
-    .select('admin_fee_rappen')
+    .select('admin_fee_rappen, admin_fee_applies_from')
     .eq('tenant_id', tenantId)
     .eq('category_code', categoryCode)
     .eq('rule_type', 'admin_fee')
@@ -92,8 +93,11 @@ async function fetchAdminFeeFromRule(
     .limit(1)
     .maybeSingle()
 
-  if (error || !data) return 0
-  return Number(data.admin_fee_rappen) || 0
+  if (error || !data) return { adminFeeRappen: 0, adminFeeAppliesFrom: null }
+  return {
+    adminFeeRappen: Number(data.admin_fee_rappen) || 0,
+    adminFeeAppliesFrom: data.admin_fee_applies_from != null ? Number(data.admin_fee_applies_from) : null,
+  }
 }
 
 async function countActiveAppointments(
@@ -161,17 +165,26 @@ async function hasAdminFeeBeenPaid(
  *
  * Returns 0 (no fee) for any of the following cases:
  *   - Anonymous booking (no userId)
- *   - Motorcycle categories
+ *   - Category exempt via admin_fee_applies_from (e.g. motorcycles)
  *   - No admin_fee rule configured
- *   - First appointment in the category group
+ *   - First appointment(s) below the rule's admin_fee_applies_from threshold
  *   - Admin fee already paid in this category group
  */
 export async function calculateAdminFee(
   input: CalculateAdminFeeInput,
 ): Promise<AdminFeeResult> {
-  const { supabase, userId, tenantId, categoryCode, adminFeeRappenFromRule } = input
+  const { supabase, userId, tenantId, categoryCode, adminFeeRappenFromRule, adminFeeAppliesFromRule } = input
 
-  const isMotorcycle = MOTORCYCLE_CATEGORIES.has(categoryCode)
+  let ruleAdminFeeRappen = adminFeeRappenFromRule
+  let adminFeeAppliesFrom = adminFeeAppliesFromRule
+
+  if (ruleAdminFeeRappen === undefined || adminFeeAppliesFrom === undefined) {
+    const fetched = await fetchAdminFeeRuleFromDb(supabase, tenantId, categoryCode)
+    ruleAdminFeeRappen = ruleAdminFeeRappen ?? fetched.adminFeeRappen
+    adminFeeAppliesFrom = adminFeeAppliesFrom ?? fetched.adminFeeAppliesFrom
+  }
+
+  const isMotorcycle = isAdminFeeExempt(adminFeeAppliesFrom)
 
   // Anonymous bookings: cannot count history, cannot charge fee.
   if (!userId) {
@@ -196,9 +209,6 @@ export async function calculateAdminFee(
     }
   }
 
-  const ruleAdminFeeRappen =
-    adminFeeRappenFromRule ?? (await fetchAdminFeeFromRule(supabase, tenantId, categoryCode))
-
   if (!ruleAdminFeeRappen || ruleAdminFeeRappen <= 0) {
     return {
       adminFeeRappen: 0,
@@ -212,14 +222,14 @@ export async function calculateAdminFee(
 
   const [activeCount, alreadyPaid] = await Promise.all([
     countActiveAppointments(supabase, userId, tenantId, getCountCategoryGroup(categoryCode)),
-    hasAdminFeeBeenPaid(supabase, userId, tenantId, getPaidCategoryGroup(categoryCode)),
+    hasAdminFeeBeenPaid(supabase, userId, tenantId, await getPaidCategoryGroup(supabase, tenantId, categoryCode)),
   ])
 
   // Match `usePricing.ts → shouldApplyAdminFee` exactly:
   // appointmentNumber = activeCount + 1 (the upcoming one)
-  // applies if appointmentNumber >= 2 && !alreadyPaid
   const appointmentNumber = activeCount + 1
-  const applies = appointmentNumber >= 2 && !alreadyPaid
+  const threshold = adminFeeAppliesFrom ?? 2
+  const applies = appointmentNumber >= threshold && !alreadyPaid
 
   if (alreadyPaid) {
     return {

@@ -22,6 +22,7 @@ import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { isSchoolVehicleAvailable } from '~/server/utils/vehicle-availability'
+import { resolveRoomSettings, isAnyRoomAvailable, type RoomServiceType } from '~/server/utils/room-availability'
 
 interface AvailableSlot {
   id: string
@@ -47,6 +48,8 @@ interface GetAvailableSlotsQuery {
   vehicle_mode?: string // option key — passed through to vehicle_bookings check
   /** '1' or 'true' — tells the API that this option requires a school vehicle (capacity check) */
   requires_school_vehicle?: string
+  /** Booking service type — resolves the admin-configured room rule (category + location) */
+  service_type?: RoomServiceType
 }
 
 export default defineEventHandler(async (event: H3Event) => {
@@ -255,12 +258,79 @@ export default defineEventHandler(async (event: H3Event) => {
       })
     }
 
+    // ============ LAYER 5B: FILTER BY ROOM AVAILABILITY ============
+    // Rooms are never chosen manually — the admin defines per category +
+    // location + service type whether a room is required. When required,
+    // filter out slots where none of the allowed rooms are free (the actual
+    // room gets auto-assigned later, at booking creation time).
+    let roomUnavailableSlotIds = new Set<string>()
+
+    if (query.service_type && query.category_code && slots && slots.length > 0) {
+      const uniqueLocations = [...new Set(slots.map(s => s.location_id))]
+      const [categoryRes, locationsRes] = await Promise.all([
+        supabase.from('categories').select('room_settings').eq('code', query.category_code).eq('tenant_id', query.tenant_id).maybeSingle(),
+        supabase.from('locations').select('id, category_room_settings').in('id', uniqueLocations),
+      ])
+      const categoryRoomSettings = categoryRes.data?.room_settings ?? null
+      const locationRoomSettingsMap = new Map(
+        (locationsRes.data || []).map((l: any) => [l.id, l.category_room_settings])
+      )
+
+      // Collect unique location+time combinations (room pools can differ per location override)
+      const uniqueLocationTimes = new Map<string, { locationId: string; startTime: string; endTime: string; slotIds: string[] }>()
+      for (const slot of slots) {
+        const key = `${slot.location_id}:${slot.start_time}:${slot.end_time}`
+        if (!uniqueLocationTimes.has(key)) {
+          uniqueLocationTimes.set(key, {
+            locationId: slot.location_id,
+            startTime: slot.start_time,
+            endTime: slot.end_time,
+            slotIds: [],
+          })
+        }
+        uniqueLocationTimes.get(key)!.slotIds.push(slot.id)
+      }
+
+      const roomChecks = await Promise.all(
+        Array.from(uniqueLocationTimes.values()).map(async ({ locationId, startTime, endTime, slotIds }) => {
+          const rule = resolveRoomSettings(
+            locationRoomSettingsMap.get(locationId),
+            categoryRoomSettings,
+            query.category_code!,
+            query.service_type!
+          )
+          if (rule.mode !== 'required' || rule.allowed_room_ids.length === 0) {
+            return { available: true, slotIds }
+          }
+          const available = await isAnyRoomAvailable(supabase, { allowedRoomIds: rule.allowed_room_ids, startTime, endTime })
+          return { available, slotIds }
+        })
+      )
+
+      for (const { available, slotIds } of roomChecks) {
+        if (!available) {
+          for (const id of slotIds) roomUnavailableSlotIds.add(id)
+        }
+      }
+
+      logger.debug('🏠 Room availability check:', {
+        service_type: query.service_type,
+        total_slots: slots.length,
+        unavailable_due_to_room: roomUnavailableSlotIds.size,
+      })
+    }
+
     // Enrich slots with names and apply all filters
     const enrichedSlots = (slots || [])
       .filter(slot => {
         // Filter: vehicle fleet capacity
         if (vehicleUnavailableSlotIds.has(slot.id)) {
           logger.debug(`🔍 FILTERED OUT slot (no school vehicle): ${slot.id}`)
+          return false
+        }
+        // Filter: selected room already booked
+        if (roomUnavailableSlotIds.has(slot.id)) {
+          logger.debug(`🔍 FILTERED OUT slot (room unavailable): ${slot.id}`)
           return false
         }
         // Filter: is_online_bookable

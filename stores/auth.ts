@@ -6,6 +6,7 @@ import type { Ref } from 'vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { SESSION_STORAGE_KEY } from '~/utils/session-persistence'
 import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
 
 // Types
@@ -273,21 +274,10 @@ const isAdmin = computed(() => {
           try {
             const supabaseClient = getSupabase()
             if (supabaseClient) {
-              // Save to localStorage for token refresh interceptor
-              try {
-                if (typeof localStorage !== 'undefined') {
-                  const sessionData = {
-                    access_token: backendResponse.session.access_token,
-                    refresh_token: backendResponse.session.refresh_token,
-                    timestamp: Date.now()
-                  }
-                  localStorage.setItem('supabase-session-cache', JSON.stringify(sessionData))
-                  logger.debug('💾 Supabase session saved to localStorage')
-                }
-              } catch (storageErr) {
-                logger.warn('⚠️ Failed to save session to localStorage:', storageErr)
-              }
-
+              // NOTE: intentionally not persisting raw tokens to localStorage —
+              // httpOnly cookies (set server-side) are the real auth layer here.
+              // setSession() below only hydrates the in-memory/module-managed
+              // Supabase client session for client-side supabase-js calls.
               const { error: sessionError } = await supabaseClient.auth.setSession({
                 access_token: backendResponse.session.access_token,
                 refresh_token: backendResponse.session.refresh_token
@@ -394,19 +384,40 @@ const isAdmin = computed(() => {
         logger.warn('⚠️ Backend logout failed, continuing with local logout:', logoutError)
       }
       
-      const supabaseClient = getSupabase()
-      if (!supabaseClient) {
-        throw new Error('Failed to get Supabase client')
+      // IMPORTANT: every step below must run independently of the others.
+      // Supabase access tokens are stateless JWTs — signOut() only revokes the
+      // refresh token, it cannot retroactively invalidate an already-issued
+      // access token before its natural expiry. So if any of these cleanup
+      // steps were skipped (e.g. by an early `throw` when signOut() errored),
+      // a leftover token in localStorage/client memory could later be replayed
+      // (e.g. via /api/auth/sync-session or an Authorization header) and the
+      // server would still accept it — making a "logged out" user look
+      // authenticated again until that token expires.
+      try {
+        const supabaseClient = getSupabase()
+        const { error } = await supabaseClient.auth.signOut()
+        if (error) logger.warn('⚠️ Supabase signOut returned an error, continuing cleanup:', error.message)
+      } catch (signOutError: any) {
+        logger.warn('⚠️ Supabase signOut threw, continuing cleanup:', signOutError?.message)
       }
-      
-      const { error } = await supabaseClient.auth.signOut()
-      if (error) throw error
+
+      // Drop any cached/in-flight refreshed session so it can't be replayed
+      // to callers that arrive within the short reuse window.
+      try {
+        const { resetRefreshCache } = await import('~/utils/client-session-refresh')
+        resetRefreshCache()
+      } catch { /* non-fatal */ }
       
       // Clear session cache from localStorage
       if (process.client) {
         try {
           localStorage.removeItem('supabase-session-cache')
           localStorage.removeItem('last_token_refresh_time')
+          // HMR-recovery cache from 00-session-persist.client.ts — must be
+          // cleared too, otherwise the next page load restores authStore.user
+          // straight from this cache (valid up to 24h) without ever checking
+          // cookies or the Supabase session.
+          localStorage.removeItem(SESSION_STORAGE_KEY)
           // Clear Supabase's own localStorage keys
           Object.keys(localStorage).forEach(key => {
             if (key.startsWith('sb-') || key.startsWith('supabase-')) {

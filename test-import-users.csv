@@ -1,0 +1,10 @@
+first_name,last_name,email,phone,birthdate,street,street_nr,zip,city,lernfahrausweis_nr,category,Beruf,Kundennummer alt,Interne Notiz,Sprache
+Max,Müller,max.mueller@test.ch,079 123 45 67,15.03.1998,Bahnhofstrasse,12,8001,Zürich,LF-2024-001,B,Informatiker,K-001,VIP Kunde,de
+Anna,Meier,anna.meier@test.ch,+41791234568,22.07.2001,Hauptgasse,5,3011,Bern,,B;A,Studentin,K-002,,fr
+Luca,Rossi,,0791234569,10.11.1999,Via Roma,3,6900,Lugano,LF-2024-003,B,Mechaniker,K-003,Warteliste Kat A,it
+Sophie,Schmidt,sophie.schmidt@test.ch,079 999 88 77,,Seestrasse,8,8700,Küsnacht,,B,Lehrerin,K-004,,de
+Thomas,Bauer,UNGUELTIGE-EMAIL,079 111 22 33,05.05.2000,Dorfstrasse,1,4001,Basel,,,Bäcker,K-005,,de
+,,,,,,,,,,,,,,
+Peter,Weber,peter.weber@test.ch,+41791234570,30.01.1997,Musterweg,7,8400,Winterthur,LF-2024-006,B,Polizist,K-006,Stammkunde,de
+Pascal,Kilchenmann,pascal.usify@gmail.com,+41797157090,,Neue Strasse,5,8001,Zürich,,B; A,Unternehmer,K-007,Test Duplikat via Email,de
+Pascal,Kilchenmann,,079 715 70 90,,Testgasse,3,8001,Zürich,,B,Unternehmer,K-008,Test Duplikat via Telefon,de

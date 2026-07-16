@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
+import { logFallbackUsed } from '~/server/utils/log-fallback'
 
 /**
  * POST /api/affiliate/generate-code
@@ -68,7 +69,19 @@ export default defineEventHandler(async (event) => {
     .eq('id', userProfile.tenant_id)
     .single()
 
-  const tenantSlug = tenant?.slug ?? 'driving-team'
+  if (!tenant?.slug) {
+    // ✅ Kein Tenant-Rätselraten: ein Affiliate-Link mit falschem Slug könnte
+    // Anmeldungen versehentlich bei der falschen Fahrschule erzeugen.
+    await logFallbackUsed({
+      source: 'tenant-slug',
+      message: `Affiliate-Code-Generierung abgebrochen: kein Tenant-Slug für Tenant ${userProfile.tenant_id} gefunden.`,
+      tenantId: userProfile.tenant_id,
+      level: 'error',
+      details: { context: 'generate-code.post' }
+    })
+    throw createError({ statusCode: 500, message: 'Tenant konnte nicht ermittelt werden.' })
+  }
+  const tenantSlug = tenant.slug
 
   if (existing) {
     const shareLink = `https://app.simy.ch/ref/${tenantSlug}?ref=${existing.code}`

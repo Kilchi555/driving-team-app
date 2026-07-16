@@ -12,7 +12,7 @@
 
 import { getSupabaseServerWithSession } from '~/utils/supabase'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { SARIClient } from '~/utils/sariClient'
+import { SARIClient, isSariUnenrollIdempotent, isSariUnenrollBlocked, getSariUnenrollBlockedMessage } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { logger } from '~/utils/logger'
 import { sendTenantEmail, generateCourseTransferEmail } from '~/server/utils/email'
@@ -211,11 +211,14 @@ export default defineEventHandler(async (event) => {
       await sari.unenrollStudent(parseInt(sessionId), faberid)
       logger.debug(`✅ Unenrolled session ${sessionId}`)
     } catch (err: any) {
-      // Already not enrolled is fine (idempotent)
-      if (!err.message?.includes('PERSON_NOT_FOUND') && !err.message?.includes('PERSON_NOT_REGISTERED')) {
-        logger.error(`SARI unenroll failed for session ${sessionId}: ${err.message}`)
-        throw createError({ statusCode: 502, statusMessage: `SARI-Abmeldung (Session ${sessionId}) fehlgeschlagen: ${err.message}` })
+      // Already not enrolled is fine (idempotent) — nothing to roll back, no DB changes made yet.
+      if (isSariUnenrollIdempotent(err.message)) continue
+
+      logger.error(`SARI unenroll failed for session ${sessionId}: ${err.message}`)
+      if (isSariUnenrollBlocked(err.message)) {
+        throw createError({ statusCode: 409, statusMessage: getSariUnenrollBlockedMessage() })
       }
+      throw createError({ statusCode: 502, statusMessage: `SARI-Abmeldung (Session ${sessionId}) fehlgeschlagen: ${err.message}` })
     }
   }
 

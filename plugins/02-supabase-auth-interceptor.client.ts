@@ -5,19 +5,25 @@
  * This ensures users stay logged in with "Remember Me" enabled.
  * 
  * How it works:
- * 1. Restores Supabase session from localStorage on page load
+ * 1. Relies on the Supabase client's own session (module-managed) + httpOnly
+ *    cookies to restore auth on page load (see auth-restore.client.ts)
  * 2. Sets up an interval to check token expiry every 30 seconds
  * 3. When token is near expiry (< 5 min remaining), calls refresh API
  * 4. Updates Supabase session with new tokens
  * 5. Keeps user authenticated without re-login
+ *
+ * SECURITY: this plugin intentionally does NOT persist raw access/refresh
+ * tokens to localStorage. httpOnly cookies + the Supabase client's own
+ * storage are the auth layers here — anything written to plain localStorage
+ * is readable by injected/XSS scripts, which would defeat the point of
+ * httpOnly cookies. Only a non-secret timestamp is kept, to pace the
+ * proactive refresh interval below.
  */
 
 import { defineNuxtPlugin } from '#app'
 import { logger } from '~/utils/logger'
 import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
 import { isPublicOnlyPath } from '~/utils/public-paths'
-
-const SUPABASE_SESSION_KEY = 'supabase-session-cache'
 
 export default defineNuxtPlugin(async (nuxtApp) => {
   // Only run on client - check both process.client and !process.server
@@ -40,57 +46,10 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     let isRefreshing = false
     let refreshFailed = false  // set after a permanent 401 – stops all further attempts
 
-    // Restore session from localStorage (if exists)
-    const restoreSessionFromStorage = async () => {
-      try {
-        const stored = localStorage.getItem(SUPABASE_SESSION_KEY)
-        if (!stored) {
-          logger.debug('ℹ️ No stored Supabase session in localStorage')
-          return
-        }
-
-        const { access_token, refresh_token } = JSON.parse(stored)
-        if (!access_token || !refresh_token) {
-          logger.debug('ℹ️ Stored session missing tokens')
-          return
-        }
-
-        const supabase = getSupabase()
-        if (!supabase) {
-          logger.warn('⚠️ Supabase client not available')
-          return
-        }
-
-        logger.debug('🔄 Restoring Supabase session from localStorage')
-        const { error } = await supabase.auth.setSession({
-          access_token,
-          refresh_token
-        })
-
-        if (error) {
-          logger.warn('⚠️ Failed to restore session:', error.message)
-          localStorage.removeItem(SUPABASE_SESSION_KEY)
-        } else {
-          logger.debug('✅ Supabase session restored from localStorage')
-        }
-      } catch (err: any) {
-        logger.warn('⚠️ Error restoring session:', err.message)
-      }
-    }
-
-    // Save session to localStorage whenever it changes
-    const saveSessionToStorage = async (access_token: string, refresh_token: string) => {
-      try {
-        localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify({
-          access_token,
-          refresh_token,
-          timestamp: Date.now()
-        }))
-        logger.debug('💾 Supabase session saved to localStorage')
-      } catch (err: any) {
-        logger.warn('⚠️ Failed to save session to localStorage:', err.message)
-      }
-    }
+    // Session restore on load is handled by auth-restore.client.ts via the
+    // Supabase client's own (module-managed) storage + httpOnly cookies —
+    // nothing to do here. See the file header for why we don't duplicate
+    // tokens into plain localStorage.
 
     const startTokenRefreshCheck = async () => {
       if (refreshFailed) return
@@ -197,8 +156,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
             if (newAccessToken && newRefreshToken) {
               logger.debug('✅ Token refreshed successfully')
               
-              // Save to localStorage and record refresh time
-              await saveSessionToStorage(newAccessToken, newRefreshToken)
+              // Record refresh time only (no raw tokens in localStorage — see file header)
               localStorage.setItem('last_token_refresh_time', Date.now().toString())
               
               // Update Supabase session with new tokens (skip for affiliate — already done by refreshSession)
@@ -270,7 +228,6 @@ export default defineNuxtPlugin(async (nuxtApp) => {
                 
                 logger.debug('🔄 Redirecting to tenant login:', redirectPath)
                 authStore.clearAuthState()
-                localStorage.removeItem(SUPABASE_SESSION_KEY)
                 await navigateTo(redirectPath)
               } catch (redirectErr: any) {
                 logger.error('❌ Failed to redirect:', redirectErr.message)
@@ -297,9 +254,6 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         logger.warn('⚠️ Token refresh check error:', err.message)
       }
     }
-
-    // Restore session from localStorage first
-    await restoreSessionFromStorage()
 
     // Start the refresh check when plugin loads
     logger.debug('🔄 Starting Supabase token refresh interceptor')

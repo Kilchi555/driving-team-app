@@ -122,6 +122,33 @@ export default defineNuxtPlugin((nuxtApp: NuxtApp) => {
   }
 
   /**
+   * Record that a hardcoded/offline fallback value had to be used instead of
+   * the tenant's real data (e.g. pricing_rules or categories could not be
+   * loaded). Shows up in the "Error Monitoring" dashboard tagged with a
+   * `fallback:<source>` component, so a spike in fallback usage is visible
+   * to super-admins without needing a dedicated screen.
+   */
+  const logFallbackUsed = async (
+    source: string,
+    message: string,
+    details?: Record<string, any>,
+    level: 'warn' | 'error' = 'warn'
+  ) => {
+    try {
+      const errorData = {
+        type: `fallback:${source}`,
+        message,
+        severity: level === 'error' ? 'error' : 'warning',
+        browserName: getBrowserName(),
+        context: details,
+      }
+      await logErrorToSupabase(errorData)
+    } catch (err) {
+      console.error('Failed to log fallback usage:', err)
+    }
+  }
+
+  /**
    * Set user context
    */
   const setUser = (userId: string, email?: string, name?: string) => {
@@ -229,6 +256,7 @@ export default defineNuxtPlugin((nuxtApp: NuxtApp) => {
       errorLog: {
         captureException,
         captureMessage,
+        logFallbackUsed,
         setUser,
         clearUser,
         addBreadcrumb,

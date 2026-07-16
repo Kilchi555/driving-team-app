@@ -26,7 +26,7 @@
       <div class="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-600 text-sm text-center max-w-sm">
         <div class="text-3xl mb-3">⚠️</div>
         <p class="font-semibold mb-2">{{ tenantError }}</p>
-        <NuxtLink :to="`/${tenant.slug || 'driving-team'}`" class="text-red-700 underline hover:text-red-900">
+        <NuxtLink :to="tenant.slug ? `/${tenant.slug}` : '/login'" class="text-red-700 underline hover:text-red-900">
           Zurück zur Startseite →
         </NuxtLink>
       </div>

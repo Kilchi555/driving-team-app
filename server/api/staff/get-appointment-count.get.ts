@@ -2,6 +2,7 @@ import { defineEventHandler, createError, getQuery } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { BOOT_ALIASES } from '~/server/utils/category-groups'
 
 /**
  * ✅ GET /api/staff/get-appointment-count
@@ -87,7 +88,6 @@ export default defineEventHandler(async (event) => {
     // ✅ LAYER 4: Count active appointments
     // ✅ KORRIGIERT: Nur aktive Termine zählen (keine stornierten/abgebrochenen)
     // Boot / Motorboot: gleiche Ausbildung, Termine können type "Boot" oder UI "Motorboot" haben
-    const bootMotorbootTypes = ['Boot', 'Motorboot']
     let countQuery = supabaseAdmin
       .from('appointments')
       .select('*', { count: 'exact', head: true })
@@ -97,8 +97,8 @@ export default defineEventHandler(async (event) => {
       .not('status', 'eq', 'cancelled') // ✅ Stornierte Termine nicht zählen
       .not('status', 'eq', 'aborted')   // ✅ Abgebrochene Termine nicht zählen
 
-    if (bootMotorbootTypes.includes(categoryCode)) {
-      countQuery = countQuery.in('type', bootMotorbootTypes)
+    if (BOOT_ALIASES.includes(categoryCode)) {
+      countQuery = countQuery.in('type', BOOT_ALIASES)
     } else {
       countQuery = countQuery.eq('type', categoryCode)
     }

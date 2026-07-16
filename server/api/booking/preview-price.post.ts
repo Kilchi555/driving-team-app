@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
         .maybeSingle(),
       supabase
         .from('pricing_rules')
-        .select('admin_fee_rappen')
+        .select('admin_fee_rappen, admin_fee_applies_from')
         .eq('category_code', category_code)
         .eq('tenant_id', tenant_id)
         .eq('rule_type', 'admin_fee')
@@ -125,6 +125,7 @@ export default defineEventHandler(async (event) => {
       tenantId: tenant_id,
       categoryCode: category_code,
       adminFeeRappenFromRule: adminFeeRule?.admin_fee_rappen,
+      adminFeeAppliesFromRule: adminFeeRule?.admin_fee_applies_from,
     })
 
     const lessonPlusVehicle = Math.max(0, lessonPrice + rawVehicleCost)

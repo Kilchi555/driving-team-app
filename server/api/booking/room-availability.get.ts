@@ -12,6 +12,7 @@
  */
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { isRoomAvailable } from '~/server/utils/room-availability'
 
 export default defineEventHandler(async (event) => {
   const { room_id, start_time, end_time } = getQuery(event) as Record<string, string>
@@ -22,18 +23,7 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdmin()
 
-  const { data, error } = await supabase
-    .from('room_bookings')
-    .select('id')
-    .eq('room_id', room_id)
-    .neq('status', 'cancelled')
-    .lt('start_time', end_time)
-    .gt('end_time', start_time)
-    .limit(1)
+  const available = await isRoomAvailable(supabase, { roomId: room_id, startTime: start_time, endTime: end_time })
 
-  if (error) {
-    throw createError({ statusCode: 500, statusMessage: 'Availability check failed' })
-  }
-
-  return { available: (data?.length ?? 0) === 0 }
+  return { available }
 })

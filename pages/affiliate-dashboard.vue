@@ -406,11 +406,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { useFavicon } from '~/composables/useFavicon'
 import { getSupabase } from '~/utils/supabase'
+import { useFallbackLogger } from '~/composables/useFallbackLogger'
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const supabase = getSupabase()
 const { setFavicon } = useFavicon()
+const { logFallbackUsed } = useFallbackLogger()
 
 /** Partner-Seite für «Neuen Link» — Query, dann zuletzt bekannte Session/Tenant (localStorage). */
 const AFFILIATE_PARTNER_SLUG_KEY = 'affiliate_dashboard_partner_slug'
@@ -705,8 +707,15 @@ onMounted(async () => {
 })
 
 async function loadBranding() {
+  const slug = partnerPortalSlug.value
+  if (!slug) {
+    // ✅ Kein Fallback mehr auf 'driving-team': ohne bekannten Partner-Tenant
+    // bleibt das generische Standard-Branding aktiv, statt fremdes Branding zu laden.
+    logFallbackUsed('tenant-slug', 'Kein Partner-Tenant-Slug für Affiliate-Dashboard-Branding gefunden – Standard-Branding wird verwendet.', { context: 'affiliate-dashboard.loadBranding' }, 'error')
+    return
+  }
   try {
-    const branding = await $fetch<any>('/api/tenants/branding', { query: { slug: 'driving-team' } })
+    const branding = await $fetch<any>('/api/tenants/branding', { query: { slug } })
     if (branding?.data) {
       brandConfig.value = {
         name: branding.data.brand_name || branding.data.name,

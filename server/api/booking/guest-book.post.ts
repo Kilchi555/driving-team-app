@@ -109,7 +109,7 @@ export default defineEventHandler(async (event) => {
   // ── Resolve tenant + policy ──────────────────────────────────────────────
   const { data: tenant, error: tenantErr } = await supabase
     .from('tenants')
-    .select('id, name, slug, booking_policy, twilio_from_sender')
+    .select('id, name, slug, booking_policy, twilio_from_sender, primary_color, logo_wide_url, logo_url, logo_square_url')
     .eq('slug', body.tenant_slug)
     .eq('is_active', true)
     .single()
@@ -241,7 +241,7 @@ export default defineEventHandler(async (event) => {
   const [pricingResult, attrResult, locationResult] = await Promise.all([
     supabase
       .from('pricing_rules')
-      .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier, admin_fee_rappen')
+      .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier, admin_fee_rappen, admin_fee_applies_from')
       .eq('tenant_id', tenantId)
       .eq('category_code', body.category_code)
       .eq('is_active', true)
@@ -304,6 +304,7 @@ export default defineEventHandler(async (event) => {
     tenantId,
     categoryCode: body.category_code,
     adminFeeRappenFromRule: pricingRule?.admin_fee_rappen ?? undefined,
+    adminFeeAppliesFromRule: pricingRule?.admin_fee_applies_from ?? undefined,
   })
   const adminFeeRappen = adminFeeResult.adminFeeRappen
   const grossAmountRappen = totalAmountRappen + adminFeeRappen
@@ -428,7 +429,7 @@ export default defineEventHandler(async (event) => {
   // ── Trigger availability recalculation (fire-and-forget) ─────────────────
   $fetch('/api/availability/queue-recalc', {
     method: 'POST',
-    body: { staff_id: slot.staff_id, tenant_id: tenantId },
+    body: { staff_id: slot.staff_id, tenant_id: tenantId, trigger: 'appointment' },
   }).catch(() => {})
 
   // ── Send onboarding SMS + Email (fire-and-forget) ────────────────────────
@@ -443,6 +444,7 @@ export default defineEventHandler(async (event) => {
   // Email has priority: if email available and enabled, send email only
   if (email && emailEnabled) {
     const primaryColor = (tenant as any).primary_color || '#2563eb'
+    const logoUrl = (tenant as any).logo_wide_url || (tenant as any).logo_url || (tenant as any).logo_square_url || null
     const customerName = `${body.first_name || ''} ${body.last_name || ''}`.trim() || 'Kunde'
     const displayTenantName = tenant.name || 'Deine Fahrschule'
     
@@ -452,7 +454,7 @@ export default defineEventHandler(async (event) => {
     
     if (slot.staff_id) {
       try {
-        const { data: staffData } = await supabase.from('staff').select('first_name, last_name').eq('id', slot.staff_id).single()
+        const { data: staffData } = await supabase.from('users').select('first_name, last_name').eq('id', slot.staff_id).single()
         if (staffData?.first_name && staffData?.last_name) {
           staffName = `${staffData.first_name} ${staffData.last_name}`
         }
@@ -483,6 +485,7 @@ export default defineEventHandler(async (event) => {
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:40px 20px;">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+        ${logoUrl ? `<tr><td style="background:#fff;text-align:center;padding:20px 30px 16px;"><img src="${logoUrl}" alt="${displayTenantName}" style="height:44px;max-width:200px;object-fit:contain;display:block;margin:0 auto;"></td></tr>` : ''}
         <tr><td style="background-color:${primaryColor};padding:40px 30px;text-align:center;">
           <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:bold;">Termin bestätigt ✓</h1>
         </td></tr>
@@ -614,25 +617,27 @@ export default defineEventHandler(async (event) => {
     }
   })()
 
-  // ── Send appointment confirmation email (fire-and-forget) ──────────────────
-  ;(async () => {
-    try {
-      if (email) {
-        logger.debug('📧 Triggering confirmation email for guest appointment:', newAppointment.id)
-        await $fetch('/api/reminders/send-appointment-confirmation', {
-          method: 'POST',
-          body: {
-            appointmentId: newAppointment.id,
-            userId: newUserId,
-            tenantId: tenantId
-          }
-        })
-        logger.debug('✅ Confirmation email triggered for guest:', email)
-      }
-    } catch (err: any) {
-      logger.warn('⚠️ Confirmation email trigger failed (guest, non-critical):', err.message)
+  // ── Send appointment confirmation email (customer) + new-booking notification
+  // (staff). AWAITED on purpose: Vercel freezes the serverless function right
+  // after the response is returned, so a fire-and-forget call here was
+  // frequently cut off before either email actually went out — same root
+  // cause that broke staff "new online booking" notifications.
+  try {
+    if (email) {
+      logger.debug('📧 Triggering confirmation email for guest appointment:', newAppointment.id)
+      await $fetch('/api/reminders/send-appointment-confirmation', {
+        method: 'POST',
+        body: {
+          appointmentId: newAppointment.id,
+          userId: newUserId,
+          tenantId: tenantId
+        }
+      })
+      logger.debug('✅ Confirmation email triggered for guest:', email)
     }
-  })()
+  } catch (err: any) {
+    logger.warn('⚠️ Confirmation email trigger failed (guest, non-critical):', err.message)
+  }
 
   return {
     success: true,

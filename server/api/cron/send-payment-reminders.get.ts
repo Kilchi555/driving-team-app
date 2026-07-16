@@ -1,14 +1,21 @@
 // server/api/cron/send-payment-reminders.get.ts
 // ============================================================
-// Queues payment reminder emails for pending wallee payments
-// AFTER the appointment has taken place.
+// Queues payment reminder emails for pending payments AFTER the
+// appointment has taken place.
 //
 // Schedule: daily at 07:00 UTC
 // Reminder days: +3, +7, +14 days after appointment
 //
+// Which payment methods trigger a direct customer reminder is
+// configurable per tenant (Admin > Zahlungen > Zahlungserinnerungen),
+// stored in tenant_settings (category='payment',
+// setting_key='payment_reminder_settings'). Defaults to wallee-only,
+// matching the previous hardcoded behavior.
+//
 // Groups all open payments per student into ONE email (bulk).
 // Deduplication: per user_id + reminder_day (based on oldest open payment).
-// At day 14: additionally notifies the tenant admin.
+// Admins/staff are informed separately via the weekly summary reports
+// (send-admin-payment-report / send-staff-payment-report).
 //
 // Test mode: ?test_user_id=<UUID>&reminder_day=3
 // ============================================================
@@ -16,6 +23,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader, getQuery } from 'h3'
+import { loadPaymentReminderSettingsByTenant } from '~/server/utils/payment-reminder-settings'
 
 const REMINDER_DAYS = [3, 7, 14]
 
@@ -46,12 +54,12 @@ export default defineEventHandler(async (event) => {
     logger.debug(`🧪 TEST MODE: user=${testUserId}, reminder_day=${testReminderDay}`)
   }
 
-  // ── 1. Fetch pending wallee payments ───────────────────────
+  // ── 1. Fetch pending payments (all methods except free) ─────
   let paymentsQuery = supabase
     .from('payments')
     .select('id, appointment_id, user_id, tenant_id, total_amount_rappen, payment_status, payment_method')
-    .eq('payment_method', 'wallee')
     .in('payment_status', ['pending', 'failed'])
+    .not('payment_method', 'eq', 'free')
 
   if (testUserId) {
     paymentsQuery = paymentsQuery.eq('user_id', testUserId)
@@ -65,11 +73,24 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!allPayments || allPayments.length === 0) {
-    return { success: true, queued: 0, skipped: 0, duration_ms: Date.now() - startTime, message: 'No pending wallee payments' }
+    return { success: true, queued: 0, skipped: 0, duration_ms: Date.now() - startTime, message: 'No pending payments' }
+  }
+
+  // ── 1b. Filter by tenant-configured reminder settings per method ─
+  const candidateTenantIds = [...new Set((allPayments as any[]).map((p: any) => p.tenant_id).filter(Boolean))]
+  const reminderSettingsByTenant = await loadPaymentReminderSettingsByTenant(supabase, candidateTenantIds)
+
+  const methodFilteredPayments = (allPayments as any[]).filter((p: any) => {
+    const settings = reminderSettingsByTenant.get(p.tenant_id)
+    return settings?.customer_reminders?.[p.payment_method] === true
+  })
+
+  if (methodFilteredPayments.length === 0) {
+    return { success: true, queued: 0, skipped: 0, duration_ms: Date.now() - startTime, message: 'No payments with reminders enabled for their payment method' }
   }
 
   // ── 2. Fetch the corresponding appointments (past only) ─────
-  const appointmentIds = [...new Set((allPayments as any[]).map((p: any) => p.appointment_id).filter(Boolean))]
+  const appointmentIds = [...new Set(methodFilteredPayments.map((p: any) => p.appointment_id).filter(Boolean))]
   const { data: appointments, error: aptError } = await supabase
     .from('appointments')
     .select('id, start_time, type, event_type_code')
@@ -89,7 +110,7 @@ export default defineEventHandler(async (event) => {
   const appointmentMap = new Map((appointments as any[]).map((a: any) => [a.id, a]))
 
   // Keep only payments whose appointment is in the past
-  const eligiblePayments = (allPayments as any[]).filter((p: any) => appointmentMap.has(p.appointment_id))
+  const eligiblePayments = methodFilteredPayments.filter((p: any) => appointmentMap.has(p.appointment_id))
 
   // ── 3. Group payments by user ────────────────────────────────
   const paymentsByUser = new Map<string, any[]>()

@@ -221,25 +221,47 @@ export class SARISyncEngine {
         const hasActiveSession = courseSessionIds.some(id => activeSessionIdSet.has(id))
 
         if (!activeGroupIds.includes(course.sari_course_id) && !hasActiveSession) {
-          logger.warn(`🗑️  Deactivating deleted SARI course: "${course.name}" (SARI ID: ${course.sari_course_id})`)
+          // A course disappears from the SARI "active" feed for two very different reasons:
+          // 1) it already happened (all sessions are in the past) — SARI simply stops
+          //    listing finished courses, this is NOT a cancellation.
+          // 2) it was removed from SARI before taking place (real cancellation).
+          // Distinguish by checking course_sessions: if every session's end_time is
+          // already in the past, mark it 'completed' instead of 'cancelled'.
+          const { data: sessions } = await this.supabase
+            .from('course_sessions')
+            .select('end_time')
+            .eq('course_id', course.id)
 
-          // Soft delete: Set is_active to false and status to 'cancelled' (for SARI-deleted courses)
+          const now = new Date()
+          const hasSessions = !!sessions && sessions.length > 0
+          const allSessionsPast = hasSessions && sessions.every((s: any) => new Date(s.end_time) < now)
+
+          const newStatus = allSessionsPast ? 'completed' : 'cancelled'
+
+          if (newStatus === 'completed') {
+            logger.info(`✅ Marking finished SARI course as completed: "${course.name}" (SARI ID: ${course.sari_course_id})`)
+          } else {
+            logger.warn(`🗑️  Deactivating deleted SARI course: "${course.name}" (SARI ID: ${course.sari_course_id})`)
+          }
+
+          // Soft delete: no longer "active"/bookable. Only real, premature removals
+          // (no past sessions yet) are marked 'cancelled'; finished courses become 'completed'.
           const { error } = await this.supabase
             .from('courses')
             .update({
               is_active: false,
-              status: 'cancelled',
+              status: newStatus,
               status_changed_at: new Date().toISOString(),
-              status_changed_by: null, // System-initiated deletion
+              status_changed_by: null, // System-initiated
               updated_at: new Date().toISOString()
             })
             .eq('id', course.id)
 
           if (error) {
-            logger.error(`Failed to deactivate course ${course.id}: ${error.message}`)
+            logger.error(`Failed to update status for course ${course.id}: ${error.message}`)
           } else {
             deletedCount++
-            logger.info(`✅ Deactivated course ${course.id}: "${course.name}"`)
+            logger.info(`✅ Updated course ${course.id} ("${course.name}") → status: ${newStatus}`)
           }
         }
       }
@@ -473,6 +495,32 @@ export class SARISyncEngine {
     let sessionsUpserted = 0
     const sariSessionIds: string[] = []
 
+    // Phase 0: if SARI returns this course's sessions in a different order than what's
+    // currently stored (e.g. a session got reordered/reinserted upstream), assigning
+    // `session_number: i + 1` below can transiently collide with the UNIQUE
+    // (course_id, session_number) constraint — e.g. updating session A to number 2 while
+    // session B still holds number 2 and hasn't been re-numbered yet in this same pass.
+    // Bump all existing sessions for this course to out-of-range placeholder numbers first
+    // so the number space is guaranteed clear before we assign final values below.
+    const { data: existingSessionsForCourse } = await this.supabase
+      .from('course_sessions')
+      .select('id, sari_session_id, session_number')
+      .eq('course_id', courseId)
+
+    const existingSessionBySariId = new Map<string, { id: string }>()
+    if (existingSessionsForCourse && existingSessionsForCourse.length > 0) {
+      for (const row of existingSessionsForCourse) {
+        existingSessionBySariId.set(row.sari_session_id, { id: row.id })
+        const { error: bumpError } = await this.supabase
+          .from('course_sessions')
+          .update({ session_number: -(100000 + row.session_number) })
+          .eq('id', row.id)
+        if (bumpError) {
+          logger.warn(`⚠️ Failed to bump session_number placeholder for session ${row.id}: ${bumpError.message}`)
+        }
+      }
+    }
+
     for (let i = 0; i < sessions.length; i++) {
       const sariSession = sessions[i]
       const sariSessionIdStr = String(sariSession.id)
@@ -520,13 +568,9 @@ export class SARISyncEngine {
         updated_at: new Date().toISOString(),
       }
 
-      // Check if this session already exists for this course
-      const { data: existing } = await this.supabase
-        .from('course_sessions')
-        .select('id')
-        .eq('course_id', courseId)
-        .eq('sari_session_id', sariSessionIdStr)
-        .maybeSingle()
+      // Check if this session already exists for this course (using the pre-fetched map
+      // from Phase 0 above, rather than an extra query per session)
+      const existing = existingSessionBySariId.get(sariSessionIdStr)
 
       if (existing) {
         // Update — keep instructor fields as-is

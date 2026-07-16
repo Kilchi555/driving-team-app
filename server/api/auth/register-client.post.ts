@@ -254,6 +254,9 @@ export default defineEventHandler(async (event) => {
     const userRole = isAdmin ? 'tenant_admin' : 'client'
     const categoryArray = Array.isArray(categories) ? categories : (categories ? [categories] : [])
     logger.debug('Register', '📋 Category array for DB:', categoryArray)
+    // Tracks whether the users row was newly INSERTed (fires the
+    // create_student_credit_trigger) vs. UPDATEd for an invited user (no trigger).
+    const wasNewUserInsert = !(existingUser && existingUser.id)
 
     if (existingUser && existingUser.id) {
       // UPDATE existing user (from invitation)
@@ -424,24 +427,38 @@ export default defineEventHandler(async (event) => {
     }
 
     // 3. Create student_credits record for new client
-    if (userRole === 'client') {
-      logger.debug('Register', '💰 Creating student_credits record...')
-      const { data: studentCredit, error: creditError } = await serviceSupabase
+    // Note: DB trigger `create_student_credit_trigger` (AFTER INSERT ON users
+    // WHEN NEW.role = 'client') already creates this row when a brand-new
+    // user is inserted (the `wasNewUserInsert` branch above). Only the
+    // "update existing/invited user" path needs an explicit check here,
+    // since no INSERT (and thus no trigger) fires in that case.
+    if (userRole === 'client' && !wasNewUserInsert) {
+      const { data: existingCredit } = await serviceSupabase
         .from('student_credits')
-        .insert({
-          user_id: userProfile.id,
-          tenant_id: tenantId,
-          balance_rappen: 0,
-          notes: 'Automatisch erstellt bei Schüler-Registrierung'
-        })
-        .select()
-        .single()
+        .select('id')
+        .eq('user_id', userProfile.id)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
 
-      if (creditError) {
-        console.warn('⚠️ Error creating student_credits (non-critical):', creditError)
-        // Don't fail the whole registration if this fails
-      } else {
-        logger.debug('Register', '✅ student_credits record created:', studentCredit.id)
+      if (!existingCredit) {
+        logger.debug('Register', '💰 Creating student_credits record for invited user...')
+        const { data: studentCredit, error: creditError } = await serviceSupabase
+          .from('student_credits')
+          .insert({
+            user_id: userProfile.id,
+            tenant_id: tenantId,
+            balance_rappen: 0,
+            notes: 'Automatisch erstellt bei Schüler-Registrierung'
+          })
+          .select()
+          .single()
+
+        if (creditError) {
+          console.warn('⚠️ Error creating student_credits (non-critical):', creditError)
+          // Don't fail the whole registration if this fails
+        } else {
+          logger.debug('Register', '✅ student_credits record created:', studentCredit.id)
+        }
       }
     }
 

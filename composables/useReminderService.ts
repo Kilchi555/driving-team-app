@@ -1,7 +1,9 @@
 // composables/useReminderService.ts
 import { logger } from '~/utils/logger'
+import { useFallbackLogger } from '~/composables/useFallbackLogger'
 
 export const useReminderService = () => {
+  const { logFallbackUsed } = useFallbackLogger()
 
   /**
    * Process template variables with actual data
@@ -287,7 +289,7 @@ export const useReminderService = () => {
 
       // Get user details separately
       let userData: any = null
-      let tenantSlug: string = 'driving-team' // fallback
+      let tenantSlug: string | null = null
       if (payment.user_id) {
         const { data: userInfo, error: userError } = await supabase
           .from('users')
@@ -308,10 +310,10 @@ export const useReminderService = () => {
           // Extract tenant slug from the joined data
           if (userInfo.tenants && Array.isArray(userInfo.tenants)) {
             // @ts-ignore
-            tenantSlug = userInfo.tenants[0]?.slug || 'driving-team'
+            tenantSlug = userInfo.tenants[0]?.slug || null
           } else if (userInfo.tenants) {
             // @ts-ignore
-            tenantSlug = userInfo.tenants.slug || 'driving-team'
+            tenantSlug = userInfo.tenants.slug || null
           }
         }
       }
@@ -325,6 +327,19 @@ export const useReminderService = () => {
       if (!appointmentData || !userData) {
         console.error('❌ Missing data:', { hasAppointment: !!appointmentData, hasUser: !!userData })
         throw new Error('Missing appointment or user data')
+      }
+
+      if (!tenantSlug) {
+        // ✅ Kein Tenant-Rätselraten mehr: statt einer SMS/E-Mail mit falschem
+        // (driving-team-)Tenant-Link wird der Versand sicher abgebrochen.
+        console.error('❌ Kein Tenant-Slug für Payment-Reminder gefunden, Versand wird abgebrochen', { paymentId, userId: payment.user_id })
+        await logFallbackUsed(
+          'tenant-slug',
+          `Payment-Reminder abgebrochen: kein Tenant-Slug für User ${payment.user_id} gefunden.`,
+          { context: 'useReminderService.sendPaymentReminder', paymentId, userId: payment.user_id },
+          'error'
+        )
+        return { success: false, error: 'Tenant slug missing, reminder aborted' }
       }
 
       // Format appointment data
@@ -345,13 +360,10 @@ export const useReminderService = () => {
       // Create login URL with redirect to dashboard (shows all open payments)
       const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
       const dashboardUrl = encodeURIComponent(`${baseUrl}/customer-dashboard`)
-      // Use dynamically loaded tenant slug (with fallback)
-      const finalTenantSlug = tenantSlug || 'driving-team'
-      const paymentLink = `${baseUrl}/${finalTenantSlug}?redirect=${dashboardUrl}`
+      const paymentLink = `${baseUrl}/${tenantSlug}?redirect=${dashboardUrl}`
       
       logger.debug('🔗 Payment link constructed:', {
         tenantSlug,
-        finalTenantSlug,
         dashboardUrl,
         paymentLink
       })
@@ -516,9 +528,18 @@ export const useReminderService = () => {
         timeZone: 'Europe/Zurich'
       })
 
-      // Create confirmation link with token
+      // Create confirmation link with token (token-based, tenant-agnostic URL)
       const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
-      const tenantSlug = Array.isArray(userData.tenants) ? userData.tenants[0]?.slug : userData.tenants?.slug || 'driving-team'
+      const tenantSlug = (Array.isArray(userData.tenants) ? userData.tenants[0]?.slug : userData.tenants?.slug) || null
+      if (!tenantSlug) {
+        // Only used for debug logging below - not part of the confirmation link itself,
+        // so we log the missing slug but don't need to abort the reminder.
+        logFallbackUsed(
+          'tenant-slug',
+          `Kein Tenant-Slug für Termin ${appointmentId} gefunden (nur für Logging relevant).`,
+          { context: 'useReminderService.sendConfirmationReminder', appointmentId }
+        )
+      }
       const confirmationLink = `${baseUrl}/confirm/${appointment.confirmation_token}`
 
       logger.debug('🔗 Confirmation link constructed:', {

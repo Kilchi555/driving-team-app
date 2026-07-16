@@ -8,6 +8,8 @@ import { toLocalTimeString, localTimeToUTC } from '~/utils/dateUtils'
 import { useEventTypes } from '~/composables/useEventTypes'
 import { useCategoryWithFallback } from '~/composables/useCategoryWithFallback'
 import type { CategoryWithParent, EvaluationCriteria } from '~/composables/useCategoryWithFallback'
+import { getFallbackRule } from '~/utils/fallbackPricingRules'
+import { useFallbackLogger } from '~/composables/useFallbackLogger'
 
 // Types (können später in separates types file)
 interface AppointmentData {
@@ -70,6 +72,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
   cashAlreadyPaid?: any, // ✅ Bar bereits bezahlt Toggle
   resourceSurcharges?: any, // Resource surcharges (room + vehicle costs)
 }) => {
+  
+  const { logFallbackUsed } = useFallbackLogger()
   
   // ============ STATE ============
   const formData = ref<AppointmentData>({
@@ -921,7 +925,16 @@ const useEventModalForm = (currentUser?: any, refs?: {
           // ✅ Berechne Preis basierend auf Duration und pricePerMinute
           // Diese sind IMMER verfügbar, im Gegensatz zu formData.base_price_rappen
           const durationMinutes = formData.value.duration_minutes || 45
-          const pricePerMinute = refs?.dynamicPricing?.value?.pricePerMinute || 2.11 // Default: CHF 2.11/min
+          let pricePerMinute = refs?.dynamicPricing?.value?.pricePerMinute
+          if (!pricePerMinute || pricePerMinute <= 0) {
+            const fallbackRule = getFallbackRule(formData.value.type || 'B')
+            pricePerMinute = fallbackRule?.price_per_minute_chf || (95 / 45)
+            logFallbackUsed(
+              'pricing',
+              `Keine dynamische Preisberechnung beim Speichern verfügbar – Fallback-Preis für Kategorie "${formData.value.type}" verwendet.`,
+              { categoryCode: formData.value.type, durationMinutes }
+            )
+          }
           
           // Berechne die Einzelkomponenten
           basePriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
@@ -1234,9 +1247,16 @@ const useEventModalForm = (currentUser?: any, refs?: {
         } else {
           // Fallback: Default price per minute (sollte nicht passieren)
           console.warn('⚠️ No dynamic pricing available, using fallback')
-          const pricePerMinute = 2.11
+          const fallbackRule = getFallbackRule(formData.value.type || 'B')
+          const pricePerMinute = fallbackRule?.price_per_minute_chf || (95 / 45)
           const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
           lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
+          logFallbackUsed(
+            'pricing',
+            `Keine dynamische Preisberechnung verfügbar – Fallback-Preis für Kategorie "${formData.value.type}" wird für Kreditberechnung verwendet.`,
+            { categoryCode: formData.value.type, durationMinutes },
+            'error'
+          )
         }
       }
       
@@ -1522,10 +1542,17 @@ const useEventModalForm = (currentUser?: any, refs?: {
             logger.debug('💾 Fallback: Using pricing rule from DB:', { category: formData.value.type, price: lessonPriceRappen })
           } else {
             // Last resort: Use generic calculation
-            const pricePerMinute = 2.11
+            const fallbackRule = getFallbackRule(formData.value.type || 'B')
+            const pricePerMinute = fallbackRule?.price_per_minute_chf || (95 / 45)
             const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
             lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
             logger.warn('💾 Fallback: Using generic price per minute calculation:', { pricePerMinute, duration: durationMinutes, price: lessonPriceRappen })
+            logFallbackUsed(
+              'pricing',
+              `Keine Preisregel in DB gefunden – generischer Fallback-Preis für Kategorie "${formData.value.type}" verwendet.`,
+              { categoryCode: formData.value.type, durationMinutes },
+              'error'
+            )
           }
           }
         }

@@ -8,16 +8,27 @@
  * option that isn't actually admin-enabled would let a customer avoid
  * paying online.
  */
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, type Ref } from 'vue'
 
-export function useInvoicePaymentSettings() {
+/**
+ * @param slug Optional tenant slug (or ref/getter). Pass this on public pages
+ *   where the caller may not be authenticated yet (e.g. the guest booking
+ *   flow), so the server can resolve the tenant without a login.
+ */
+export function useInvoicePaymentSettings(slug?: string | Ref<string | undefined | null> | (() => string | undefined | null)) {
   const enabled = ref(false)
   const loaded = ref(false)
+
+  function resolveSlug(): string | undefined {
+    const value = typeof slug === 'function' ? slug() : (slug && 'value' in slug ? slug.value : slug)
+    return value || undefined
+  }
 
   async function load() {
     try {
       const res = await $fetch<{ invoice_payments_enabled: boolean }>(
-        '/api/settings/invoice-payment-settings'
+        '/api/settings/invoice-payment-settings',
+        { query: { slug: resolveSlug() } }
       )
       enabled.value = !!res.invoice_payments_enabled
     } catch {

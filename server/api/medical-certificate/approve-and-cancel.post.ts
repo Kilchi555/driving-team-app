@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendSMS } from '~/server/utils/sms'
 import { sendTenantEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
+import { cancelResourceBookingsForAppointment } from '~/server/utils/resource-bookings'
 
 /**
  * POST /api/medical-certificate/approve-and-cancel
@@ -48,6 +49,11 @@ export default defineEventHandler(async (event) => {
   // 3. Cancel payment without cost (set to cancelled if not already completed)
   if (payment && payment.payment_status !== 'completed') {
     await supabase.from('payments').update({ payment_status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', payment.id)
+  }
+
+  // 3b. Release vehicle/room reservations tied to this appointment
+  if (appt.status !== 'cancelled') {
+    await cancelResourceBookingsForAppointment(supabase, appointmentId, appt.tenant_id)
   }
 
   // 4. Send notification

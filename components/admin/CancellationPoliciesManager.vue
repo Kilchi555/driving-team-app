@@ -75,10 +75,18 @@
                 Bearbeiten
               </button>
               <button
+                v-if="policy.is_active"
                 @click="deletePolicy(policy.id)"
                 class="px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
               >
                 Löschen
+              </button>
+              <button
+                v-else
+                @click="reactivatePolicy(policy.id)"
+                class="px-3 py-1.5 text-xs font-medium bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+              >
+                ↩️ Reaktivieren
               </button>
             </div>
           </div>
@@ -485,6 +493,14 @@ const setAsDefault = async (policyId: string) => {
     await setDefaultPolicy(policyId)
   } catch (err) {
     console.error('Error setting default policy:', err)
+  }
+}
+
+const reactivatePolicy = async (policyId: string) => {
+  try {
+    await updatePolicy(policyId, { is_active: true })
+  } catch (err) {
+    console.error('Error reactivating policy:', err)
   }
 }
 

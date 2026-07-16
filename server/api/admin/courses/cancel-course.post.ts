@@ -1,8 +1,9 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { SARIClient } from '~/utils/sariClient'
+import { SARIClient, isSariUnenrollIdempotent, isSariUnenrollBlocked, getSariUnenrollBlockedMessage } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
+import { cancelResourceBookingsForCourse } from '~/server/utils/resource-bookings'
 import { logger } from '~/utils/logger'
 
 /**
@@ -76,10 +77,15 @@ export default defineEventHandler(async (event) => {
 
   logger.debug('✅ Course cancelled:', courseId)
 
+  // Release vehicle/room reservations tied to this course's sessions
+  await cancelResourceBookingsForCourse(supabase, courseId, profile.tenant_id)
+
   // ── SARI: Unenroll all participants ──────────────────────────────────────
   const tenant = (course as any).tenants
   let sariUnenrolled = 0
   let sariError: string | null = null
+  let sariFailedCount = 0
+  let sariBlockedCount = 0
   const isSariManaged = !!(course as any).sari_managed && !!tenant?.sari_enabled
 
   if (isSariManaged) {
@@ -115,26 +121,50 @@ export default defineEventHandler(async (event) => {
         .not('users.faberid', 'is', null)
 
       let unenrolled = 0
+      const failuresForLog: Array<{ faberid: string; sessionId: number; error: string }> = []
+
       for (const reg of regs || []) {
         const faberid = (reg as any).users?.faberid
         if (!faberid) continue
+        let regFailed = false
         for (const sariSessionId of sariSessionIds) {
           try {
             await sariClient.unenrollStudent(sariSessionId, faberid)
             unenrolled++
           } catch (err: any) {
-            // Non-fatal: student may already have been removed or wasn't in SARI
-            logger.warn(`⚠️ SARI unenroll skipped for faberid ${faberid} / session ${sariSessionId}: ${err.message}`)
+            if (isSariUnenrollIdempotent(err.message)) {
+              // Already not enrolled — this is the goal state, not a failure.
+              continue
+            }
+            regFailed = true
+            if (isSariUnenrollBlocked(err.message)) sariBlockedCount++
+            failuresForLog.push({ faberid, sessionId: sariSessionId, error: err.message })
+            logger.warn(`⚠️ SARI unenroll failed for faberid ${faberid} / session ${sariSessionId}: ${err.message}`)
           }
         }
-        // Mark local registration as sari_synced
+        if (regFailed) sariFailedCount++
+        // Only mark as synced if every session for this registration actually succeeded
+        // (or was already unenrolled) — previously this was set unconditionally, which
+        // masked real de-enrollment failures (e.g. COURSEMEMBER_ALREADY_CONFIRMED).
         await supabase
           .from('course_registrations')
-          .update({ sari_synced: true, sari_synced_at: now })
+          .update({ sari_synced: !regFailed, sari_synced_at: regFailed ? null : now })
           .eq('id', reg.id)
       }
-      logger.info(`✅ SARI: unenrolled ${unenrolled} participant-session(s) for cancelled course ${courseId}`)
-      sariUnenrolled = (regs || []).filter((r: any) => r.users?.faberid).length
+
+      if (failuresForLog.length > 0) {
+        await supabase.from('sari_sync_logs').insert({
+          tenant_id: profile.tenant_id,
+          operation: 'UNENROLL_STUDENT_CANCEL_COURSE',
+          status: sariFailedCount === (regs || []).length ? 'error' : 'partial',
+          result: { failures: failuresForLog },
+          error_message: sariBlockedCount > 0 ? getSariUnenrollBlockedMessage() : `${failuresForLog.length} SARI-Abmeldung(en) fehlgeschlagen`,
+          metadata: { courseId },
+        })
+      }
+
+      logger.info(`✅ SARI: unenrolled ${unenrolled} participant-session(s) for cancelled course ${courseId} (${sariFailedCount} participant(s) failed)`)
+      sariUnenrolled = (regs || []).filter((r: any) => r.users?.faberid).length - sariFailedCount
     } catch (sariErr: any) {
       // Non-fatal: log but don't fail the overall cancellation
       logger.error(`⚠️ SARI unenrollment failed during course cancellation: ${sariErr.message}`)
@@ -197,7 +227,13 @@ export default defineEventHandler(async (event) => {
   return {
     success: true,
     sari: isSariManaged
-      ? { unenrolled: sariUnenrolled, error: sariError }
+      ? {
+          unenrolled: sariUnenrolled,
+          error: sariError,
+          failedCount: sariFailedCount,
+          blockedCount: sariBlockedCount,
+          blockedMessage: sariBlockedCount > 0 ? getSariUnenrollBlockedMessage() : undefined,
+        }
       : null,
   }
 })

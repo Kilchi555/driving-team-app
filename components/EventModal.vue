@@ -175,7 +175,7 @@
               v-if="formData.type || formData.appointment_type === 'theory'"
               v-model="formData.duration_minutes"
               :available-durations="Array.isArray(availableDurations) ? availableDurations : [45]"
-              :price-per-minute="dynamicPricing.isLoading ? 0 : (dynamicPricing.pricePerMinute || 2.11)"
+              :price-per-minute="dynamicPricing.isLoading ? 0 : (dynamicPricing.pricePerMinute || fallbackPricePerMinute)"
               :disabled="props?.mode === 'edit' && isPastAppointment"
               :show-buttons="!(props?.mode === 'edit' && isPastAppointment)"
               :is-past-appointment="props?.mode === 'edit' && isPastAppointment"
@@ -430,31 +430,29 @@
               <!-- Divider -->
               <div v-if="resourceVehicles.length > 0 && resourceRooms.length > 0" class="border-t border-gray-100" />
 
-              <!-- Rooms -->
+              <!-- Rooms — auto-assigned by the system, never chosen manually. The admin
+                   defines per Kategorie + Eventtyp ob ein Raum reserviert werden muss. -->
               <div v-if="resourceRooms.length > 0" class="p-3">
                 <div class="flex items-center gap-2 mb-2">
                   <svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                   </svg>
                   <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Raum</span>
+                  <span v-if="roomMode === 'required'" class="text-xs text-gray-400">(erforderlich)</span>
+                  <span v-else class="text-xs text-gray-400">(optional)</span>
+                  <span v-if="isCheckingAvailability" class="ml-auto">
+                    <svg class="w-3.5 h-3.5 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                  </span>
                 </div>
-                <div class="space-y-1.5">
-                  <label class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input type="radio" :value="null" v-model="formData.room_id" class="text-blue-500" />
-                    <span class="text-sm text-gray-600">Kein Raum</span>
-                  </label>
-                  <label v-for="r in resourceRooms" :key="r.id"
-                    class="flex items-center justify-between gap-2.5 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
-                    :class="{ 'opacity-50': !r.is_available && formData.room_id !== r.id }">
-                    <div class="flex items-center gap-2.5 min-w-0">
-                      <input type="radio" :value="r.id" v-model="formData.room_id" class="text-blue-500 flex-shrink-0" />
-                      <span class="text-sm text-gray-800 truncate">{{ r.name }}</span>
-                    </div>
-                    <span v-if="r.is_available" class="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex-shrink-0">frei</span>
-                    <span v-else class="text-xs font-medium text-red-500 bg-red-50 px-2 py-0.5 rounded-full flex-shrink-0">
-                      {{ r.conflicts[0] ? formatConflict(r.conflicts[0]) : 'belegt' }}
-                    </span>
-                  </label>
+                <div v-if="formData.room_id" class="flex items-center justify-between gap-2.5 p-2 rounded-lg bg-blue-50">
+                  <span class="text-sm text-gray-800 truncate">{{ resourceRooms.find(r => r.id === formData.room_id)?.name }}</span>
+                  <span class="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">automatisch zugewiesen</span>
+                </div>
+                <div v-else class="p-2 text-xs text-red-500">
+                  Kein Raum verfügbar — alle erlaubten Räume sind im gewählten Zeitfenster belegt.
                 </div>
                 <div v-if="selectedRoomConflict" class="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
                   ⚠️ Dieser Raum ist im gewählten Zeitfenster bereits reserviert. Trotzdem speichern?
@@ -468,7 +466,7 @@
             <PriceDisplay
               ref="priceDisplayRef"
               :duration-minutes="formData.duration_minutes || 45"
-              :price-per-minute="dynamicPricing.isLoading ? 0 : (dynamicPricing.pricePerMinute || 2.11)"
+              :price-per-minute="dynamicPricing.isLoading ? 0 : (dynamicPricing.pricePerMinute || fallbackPricePerMinute)"
               :lesson-type="currentLessonTypeText"
               :discount="formData.discount || 0"
               :discount-reason="formData.discount_reason || ''"
@@ -488,6 +486,8 @@
               :is-loading-credit="isLoadingStudentCredit"
               :is-calculating-price="dynamicPricing.isLoading"
               :resource-surcharges="resourceSurcharges"
+              :is-price-fallback="dynamicPricing.isFallback || false"
+              :price-manually-entered="dynamicPricing.manuallyEntered || false"
               @discount-changed="handleDiscountChanged"
               @product-removed="handleProductRemoved"
               @product-added="handleProductAdded"
@@ -497,6 +497,8 @@
               @products-changed="handleProductsChanged"
               @price-changed="handlePriceChanged"
               @cash-already-paid-changed="handleCashAlreadyPaidChanged"
+              @manual-price-entered="applyManualPrice"
+              @manual-price-reset="dynamicPricing.manuallyEntered = false"
             />
           </div>
 
@@ -944,6 +946,8 @@ import { useEventModalHandlers} from '~/composables/useEventModalHandlers'
 import { useTimeCalculations } from '~/composables/useTimeCalculations'
 import { useEventModalForm } from '~/composables/useEventModalForm'
 import { usePricing } from '~/composables/usePricing'
+import { getFallbackRule } from '~/utils/fallbackPricingRules'
+import { useFallbackLogger } from '~/composables/useFallbackLogger'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useProductSale } from '~/composables/useProductSale'
 import { useProducts } from '~/composables/useProducts'
@@ -1015,6 +1019,7 @@ logger.debug('🚀 EventModal initialized with props:', {
 })
 
 const { currentUser: composableCurrentUser } = useCurrentUser()
+const { logFallbackUsed } = useFallbackLogger()
 
 // Cancellation Reasons
 const { 
@@ -1245,7 +1250,12 @@ const dynamicPricing = ref({
   category: '',
   duration: 45,
   isLoading: false,
-  error: ''
+  error: '',
+  // True when this price came from the hardcoded offline fallback table
+  // instead of the tenant's live pricing_rules (see calculateOfflinePrice()).
+  isFallback: false,
+  // Set once staff enters a price manually because the fallback was shown.
+  manuallyEntered: false
 })
 
 const currentUser = computed(() => {
@@ -1949,7 +1959,11 @@ const handleSaveAppointment = async () => {
     if (props.mode === 'create' && bgSelectedStudent && bgStudentCredit && bgStudentCredit.balance_rappen > 0) {
       Promise.resolve().then(async () => {
         try {
-          const lessonPrice = (bgFormData.duration_minutes || 45) * (bgDynamicPricing.pricePerMinute || 2.11) * 100
+          const lessonPrice = getSafeLessonPriceRappen(bgDynamicPricing, bgFormData.duration_minutes)
+          if (lessonPrice === null) {
+            logger.warn('⚠️ Background credit apply skipped – lesson price unavailable')
+            return
+          }
           let productsPrice = 0
           if (bgSelectedProducts && bgSelectedProducts.length > 0) {
             productsPrice = bgSelectedProducts.reduce((sum: number, p: any) => {
@@ -2385,10 +2399,35 @@ watchEffect(() => {
   resourceSurcharges.value = surcharges
 })
 
+/** Maps the internal event type to the room-rule key configured on the category.
+ *  There's no internal 'beratung' appointment type (only lesson/exam/theory), and
+ *  exams share the same room pool as regular lessons. */
+function roomServiceTypeFor(eventType: string): 'fahrstunde' | 'theorie' {
+  return eventType === 'theory' ? 'theorie' : 'fahrstunde'
+}
+
+/** Room mode currently in effect (used to show a small "erforderlich"/"optional" hint). */
+const roomMode = ref<'none' | 'optional' | 'required'>('none')
+
+/** Rooms are never chosen manually — auto-assign the first free room from the
+ *  allowed pool. Keeps an already-assigned room if it's still allowed and free
+ *  (e.g. when editing an existing appointment) instead of silently swapping it. */
+function autoAssignRoom() {
+  if (resourceRooms.value.length === 0) {
+    if (formData.value.room_id) formData.value.room_id = null
+    return
+  }
+  const current = resourceRooms.value.find(r => r.id === formData.value.room_id)
+  if (current?.is_available) return
+  const free = resourceRooms.value.find(r => r.is_available)
+  formData.value.room_id = free ? free.id : null
+}
+
 async function loadCategoryResources(categoryCode: string | null) {
   if (!categoryCode || !isLessonType(formData.value.eventType)) {
     resourceVehicles.value = []
     resourceRooms.value = []
+    roomMode.value = 'none'
     return
   }
   try {
@@ -2406,14 +2445,19 @@ async function loadCategoryResources(categoryCode: string | null) {
       pricing_tiers: v.pricing_tiers ?? null,
     }))
 
-    // Load rooms for this category from category settings
-    // We load them from the categories API — the category should have room_settings
-    resourceRooms.value = [] // Will be populated after category load
+    // Load rooms for this category + event type from category settings — the
+    // admin defines whether a room is required/optional per booking service
+    // type (Fahrstunde/Theorie), the room itself always gets auto-assigned.
+    resourceRooms.value = []
+    roomMode.value = 'none'
     try {
+      const serviceType = roomServiceTypeFor(formData.value.eventType)
       const catRes: any = await $fetch('/api/admin/categories')
       const cat = (catRes.categories || []).find((c: any) => c.code === categoryCode)
-      if (cat?.room_settings?.mode && cat.room_settings.mode !== 'none') {
-        const allowedRoomIds: string[] = cat.room_settings.allowed_room_ids || []
+      const rule = cat?.room_settings?.[serviceType]
+      if (rule?.mode && rule.mode !== 'none') {
+        roomMode.value = rule.mode
+        const allowedRoomIds: string[] = rule.allowed_room_ids || []
         if (allowedRoomIds.length > 0) {
           const roomsRes: any = await $fetch('/api/admin/resources/rooms')
           const allowedRooms = (roomsRes.rooms || []).filter((r: any) => allowedRoomIds.includes(r.id))
@@ -2428,6 +2472,7 @@ async function loadCategoryResources(categoryCode: string | null) {
         }
       }
     } catch { /* silent */ }
+    autoAssignRoom()
   } catch { /* silent */ }
 
   // Check availability if we have time info
@@ -2466,6 +2511,7 @@ async function checkResourceAvailability() {
           const a = avail.rooms.find((x: any) => x.id === r.id)
           return a ? { ...r, is_available: a.is_available, conflicts: a.conflicts } : r
         })
+        autoAssignRoom()
       }
     } catch { /* silent */ } finally {
       isCheckingAvailability.value = false
@@ -2477,6 +2523,13 @@ async function checkResourceAvailability() {
 watch(
   [() => formData.value.startDate, () => formData.value.startTime, () => formData.value.endTime],
   () => { checkResourceAvailability() },
+)
+
+// Reload room pool when the event type changes (e.g. lesson → theory has a
+// different room rule) — category changes are already handled separately.
+watch(
+  () => formData.value.eventType,
+  () => { loadCategoryResources(formData.value.type) },
 )
 
 // Watch category change to reload vehicles/rooms
@@ -2949,7 +3002,11 @@ const calculatePriceForCurrentData = async (): Promise<void> => {
         category: capturedType,
         duration: capturedDuration,
         isLoading: false,
-        error: ''
+        error: '',
+        // ✅ Successful online calculation - not a fallback, and any previous
+        // manual override is no longer relevant since we have a fresh price.
+        isFallback: false,
+        manuallyEntered: false
       }
 
       logger.debug('💰 EventModal - Updated pricing data:', {
@@ -3688,7 +3745,11 @@ const useCreditForCurrentLesson = async () => {
     isUsingCredit.value = true
     
     // Berechne den vollständigen Preis inkl. Admin-Fee, Produkte und Rabatt
-    const lessonPrice = (formData.value.duration_minutes || 45) * (dynamicPricing.value.pricePerMinute || 2.11) * 100
+    const lessonPrice = getSafeLessonPriceRappen(dynamicPricing.value, formData.value.duration_minutes)
+    if (lessonPrice === null) {
+      console.error('❌ Cannot use credit - lesson price is unavailable, please wait for price calculation or enter it manually first')
+      return
+    }
     const productsPrice = selectedProducts.value.reduce((sum: number, p: any) => {
       return sum + ((p.product?.price || 0) * 100 * (p.quantity || 1))
     }, 0)
@@ -4050,53 +4111,97 @@ const showError = (title: string, message: string = '') => {
   })
 }
 
+// UI-only display fallback while dynamic pricing is still loading/unavailable -
+// same single source of truth as calculateOfflinePrice() below.
+const fallbackPricePerMinute = computed(() => {
+  const rule = getFallbackRule(formData.value.type || 'B') || getFallbackRule('B')
+  return rule?.price_per_minute_chf || (95 / 45)
+})
+
 const calculateOfflinePrice = (categoryCode: string, durationMinutes: number, appointmentNum: number = 1) => {
   logger.debug('💰 Calculating offline price:', { categoryCode, durationMinutes, appointmentNum })
-  
-  const offlinePrices: Record<string, { pricePerLesson: number, adminFee: number, adminFrom: number }> = {
-    'B': { pricePerLesson: 95, adminFee: 120, adminFrom: 2 },
-    'A1': { pricePerLesson: 95, adminFee: 0, adminFrom: 999 },
-    'A35kW': { pricePerLesson: 95, adminFee: 0, adminFrom: 999 },
-    'A': { pricePerLesson: 95, adminFee: 0, adminFrom: 999 },
-    'BE': { pricePerLesson: 120, adminFee: 120, adminFrom: 2 },
-    'C1': { pricePerLesson: 150, adminFee: 200, adminFrom: 2 },
-    'D1': { pricePerLesson: 150, adminFee: 200, adminFrom: 2 },
-    'C': { pricePerLesson: 170, adminFee: 200, adminFrom: 2 },
-    'CE': { pricePerLesson: 200, adminFee: 250, adminFrom: 2 },
-    'D': { pricePerLesson: 200, adminFee: 300, adminFrom: 2 },
-    'Motorboot': { pricePerLesson: 95, adminFee: 120, adminFrom: 2 },
-    'Boot': { pricePerLesson: 95, adminFee: 120, adminFrom: 2 },
-    'BPT': { pricePerLesson: 100, adminFee: 120, adminFrom: 2 }
-  }
-  
-  const priceData = offlinePrices[categoryCode] || offlinePrices['B']
-  const pricePerMinute = priceData.pricePerLesson / 45
+
+  // ✅ Single source of truth for fallback prices: usePricing.ts's COMPLETE_FALLBACK_RULES,
+  // instead of maintaining a second, independently-drifting hardcoded price table here.
+  const rule = getFallbackRule(categoryCode) || getFallbackRule('B')
+  const pricePerMinute = (rule?.price_per_minute_chf) || (95 / 45)
+  const adminFeeChf = rule?.admin_fee_chf || 0
+  const adminFrom = rule?.admin_fee_applies_from ?? 2
+
   const basePrice = pricePerMinute * durationMinutes
-  const adminFee = appointmentNum >= priceData.adminFrom ? priceData.adminFee : 0
+  const adminFee = appointmentNum >= adminFrom ? adminFeeChf : 0
   const totalPrice = basePrice + adminFee
-  
+
+  logFallbackUsed(
+    'pricing',
+    `Preis für Kategorie "${categoryCode}" konnte nicht online berechnet werden – Fahrlehrer sieht einen Offline-Fallback-Preis.`,
+    { categoryCode, durationMinutes, appointmentNum, context: 'EventModal' },
+    'warn'
+  )
+
   // Update dynamic pricing
   dynamicPricing.value = {
+    ...dynamicPricing.value,
     pricePerMinute: pricePerMinute,
     adminFeeChf: adminFee,
     adminFeeRappen: Math.round(adminFee * 100), // ✅ NEU: Admin-Fee in Rappen (offline)
-    adminFeeAppliesFrom: 2, // ✅ NEU: Standard-Wert für Offline-Berechnung
+    adminFeeAppliesFrom: adminFrom,
     appointmentNumber: appointmentNum,
     hasAdminFee: adminFee > 0,
     totalPriceChf: totalPrice.toFixed(2),
     category: categoryCode,
     duration: durationMinutes,
     isLoading: false,
-    error: ''
+    error: 'Preis konnte nicht automatisch ermittelt werden – bitte prüfen oder manuell eingeben.',
+    isFallback: true,
+    manuallyEntered: false
   }
-  
-        // Preis wird jetzt aus der Datenbank berechnet
-  
+
   logger.debug('✅ Offline price calculated:', {
     basePrice: basePrice.toFixed(2),
     adminFee: adminFee.toFixed(2),
     totalPrice: totalPrice.toFixed(2)
   })
+}
+
+/**
+ * Guards student-credit deductions from silently using a wrong per-minute
+ * price. Returns null (skip the deduction) if the price is unknown/zero –
+ * better to leave the credit untouched than to deduct the wrong amount.
+ */
+const getSafeLessonPriceRappen = (pricing: { pricePerMinute?: number }, durationMinutes?: number): number | null => {
+  const perMinute = pricing?.pricePerMinute
+  if (!perMinute || perMinute <= 0 || !durationMinutes) {
+    logFallbackUsed(
+      'pricing',
+      'Guthaben-Abzug übersprungen: Preis pro Minute war nicht verfügbar (0 oder unbekannt).',
+      { context: 'EventModal:credit' },
+      'error'
+    )
+    return null
+  }
+  return Math.round(durationMinutes * perMinute * 100)
+}
+
+/**
+ * Called from PriceDisplay.vue when staff manually overrides a price that
+ * could not be calculated automatically (isFallback / error state).
+ */
+const applyManualPrice = (totalChf: number) => {
+  dynamicPricing.value = {
+    ...dynamicPricing.value,
+    totalPriceChf: totalChf.toFixed(2),
+    pricePerMinute: formData.value.duration_minutes ? totalChf / formData.value.duration_minutes : dynamicPricing.value.pricePerMinute,
+    isLoading: false,
+    error: '',
+    manuallyEntered: true
+  }
+  logFallbackUsed(
+    'pricing',
+    `Preis für Kategorie "${dynamicPricing.value.category}" wurde manuell durch Fahrlehrer/Admin eingegeben, nachdem die automatische Berechnung fehlgeschlagen ist.`,
+    { categoryCode: dynamicPricing.value.category, totalChf, context: 'EventModal' },
+    'warn'
+  )
 }
 
 const handleTimeChanged = (timeData: { startDate: string, startTime: string, endTime: string }) => {

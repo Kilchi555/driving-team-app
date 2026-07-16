@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: userProfile, error: userErr } = await supabase
     .from('users')
-    .select('id')
+    .select('id, tenant_id')
     .eq('auth_user_id', authUser.id)
     .single()
 
@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
   // Queue slot recalculation so the new buffer takes effect immediately
   await $fetch('/api/availability/queue-recalc', {
     method: 'POST',
-    body: { staff_id: userProfile.id, trigger: 'settings_change' }
+    body: { staff_id: userProfile.id, tenant_id: userProfile.tenant_id, trigger: 'settings_change' }
   }).catch((e: any) => {
     logger.warn('⚠️ Could not queue recalc after settings update (non-critical):', e.message)
   })

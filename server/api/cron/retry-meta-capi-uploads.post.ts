@@ -100,9 +100,14 @@ export default defineEventHandler(async (event) => {
       hashed_phone: hashedPhone,
     })
 
+    // Meta rejects events older than 7 days with a permanent, non-retryable error
+    // (error_subcode 2804003) — mark these as 'expired' immediately instead of
+    // burning through MAX_ATTEMPTS retries that can never succeed.
+    const isExpiredTimestamp = result.meta_response?.error?.error_subcode === 2804003
     const newStatus = result.sent ? 'success'
-      : result.reason === 'no_user_signal' ? 'skipped_no_signal'
-        : 'failed'
+      : isExpiredTimestamp ? 'expired'
+        : result.reason === 'no_user_signal' ? 'skipped_no_signal'
+          : 'failed'
 
     await supabase
       .from('meta_capi_uploads')

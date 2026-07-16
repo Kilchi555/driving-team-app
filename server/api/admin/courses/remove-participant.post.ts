@@ -1,11 +1,22 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { SARIClient } from '~/utils/sariClient'
+import { SARIClient, isSariUnenrollIdempotent, isSariUnenrollBlocked, getSariUnenrollBlockedMessage } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
 import { generateCourseRegistrationCancellationEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
 import { processWalleeRefund } from '~/server/utils/wallee-refund'
+
+/** Outcome of the SARI de-enrollment attempt, returned to the admin UI so a failure is never silent. */
+interface SariSyncResult {
+  /** Whether SARI de-enrollment was attempted at all (false for non-SARI courses). */
+  attempted: boolean
+  /** True once every relevant session was either unenrolled or already in that state. */
+  success: boolean
+  /** True if SARI actively refused the removal (e.g. registration already confirmed) — needs manual action in the SARI portal. */
+  blocked: boolean
+  message?: string
+}
 
 /**
  * POST /api/admin/courses/remove-participant
@@ -89,7 +100,13 @@ export default defineEventHandler(async (event) => {
   const user   = reg.users as any
   const faberid = user?.faberid
 
+  const sariSync: SariSyncResult = { attempted: false, success: true, blocked: false }
+
   if (course?.sari_managed && course?.sari_course_id && faberid) {
+    sariSync.attempted = true
+    const failedSessions: string[] = []
+    let blockedByConfirmed = false
+
     try {
       const credentials = await getSARICredentialsSecure(profile.tenant_id, 'ADMIN_REMOVE_PARTICIPANT')
       if (!credentials) throw new Error('SARI not configured for this tenant')
@@ -122,13 +139,47 @@ export default defineEventHandler(async (event) => {
           await sari.unenrollStudent(numericId, faberid)
           logger.debug(`✅ SARI unenrolled session ${numericId} for ${faberid}`)
         } catch (sessionErr: any) {
-          // Non-fatal per session – log and continue
+          if (isSariUnenrollIdempotent(sessionErr.message)) {
+            // Already not enrolled — this is the goal state, not a failure.
+            logger.debug(`ℹ️ SARI session ${numericId} already unenrolled for ${faberid}`)
+            continue
+          }
+          if (isSariUnenrollBlocked(sessionErr.message)) {
+            blockedByConfirmed = true
+          }
+          failedSessions.push(`${numericId}: ${sessionErr.message}`)
           logger.warn(`⚠️ SARI unenroll failed for session ${numericId}:`, sessionErr.message)
         }
       }
     } catch (sariErr: any) {
-      logger.warn('⚠️ SARI de-enrollment failed (non-fatal):', sariErr.message)
+      failedSessions.push(sariErr.message)
+      logger.warn('⚠️ SARI de-enrollment failed:', sariErr.message)
     }
+
+    sariSync.success = failedSessions.length === 0
+    sariSync.blocked = blockedByConfirmed
+    if (!sariSync.success) {
+      sariSync.message = blockedByConfirmed
+        ? getSariUnenrollBlockedMessage()
+        : `SARI-Abmeldung teilweise/vollständig fehlgeschlagen: ${failedSessions.join('; ')}`
+    }
+
+    // Audit trail: record the outcome so failures are discoverable later, not just in server logs.
+    await supabase.from('sari_sync_logs').insert({
+      tenant_id: profile.tenant_id,
+      operation: 'UNENROLL_STUDENT_REMOVE_PARTICIPANT',
+      status: sariSync.success ? 'success' : 'error',
+      result: { failedSessions },
+      error_message: sariSync.message ?? null,
+      metadata: { enrollmentId, courseId: course.id, userId: reg.user_id, faberid },
+    })
+
+    // Only claim "synced" once SARI actually reflects the removal — an unconditional
+    // true here previously masked failed de-enrollments (see cancel-course.post.ts bug).
+    await supabase
+      .from('course_registrations')
+      .update({ sari_synced: sariSync.success, sari_synced_at: sariSync.success ? new Date().toISOString() : null })
+      .eq('id', enrollmentId)
   } else if (course?.sari_managed && !faberid) {
     logger.warn('⚠️ SARI-managed course but user has no faberid – skipping SARI de-enrollment')
   }
@@ -302,5 +353,5 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  return { success: true, refund: refundResult }
+  return { success: true, refund: refundResult, sariSync }
 })

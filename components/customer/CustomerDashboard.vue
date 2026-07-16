@@ -1057,6 +1057,7 @@
 <script setup lang="ts">
 
 import { logger } from '~/utils/logger'
+import { useFallbackLogger } from '~/composables/useFallbackLogger'
 import DOMPurify from 'isomorphic-dompurify'
 import { useStatusBar } from '~/composables/useStatusBar'
 
@@ -1324,6 +1325,20 @@ const displayToast = (type: 'success' | 'error' | 'warning' | 'info', title: str
   toastTitle.value = title
   toastMessage.value = message
   showToast.value = true
+}
+
+const { logFallbackUsed } = useFallbackLogger()
+
+// ✅ Kein Fallback-Slug mehr: liefert den echten Tenant-Slug oder bricht
+// die Navigation mit einem Hinweis ab, statt zur falschen Fahrschule zu leiten.
+const getTenantSlugOrAbort = (context: string): string | null => {
+  const slug = currentTenant.value?.slug
+  if (!slug) {
+    logFallbackUsed('tenant-slug', `Kein Tenant-Slug verfügbar (${context}) – Navigation abgebrochen.`, { context }, 'error')
+    displayToast('error', 'Aktion nicht möglich', 'Die Fahrschule konnte nicht ermittelt werden. Bitte lade die Seite neu.')
+    return null
+  }
+  return slug
 }
 
 // In CustomerDashboard.vue - vor dem Template:
@@ -1714,19 +1729,22 @@ const navigateToPayments = async () => {
 
 const navigateToLessonBooking = async () => {
   // Navigate to booking availability page with tenant slug
-  const tenantSlug = currentTenant.value?.slug || 'driving-team'
+  const tenantSlug = getTenantSlugOrAbort('navigateToLessonBooking')
+  if (!tenantSlug) return
   await navigateTo(`/booking/availability/${tenantSlug}`)
 }
 
 const navigateToCourseBooking = async () => {
   // Navigiere zur Kursbuchungsseite
-  const tenantSlug = currentTenant.value?.slug || 'driving-team'
+  const tenantSlug = getTenantSlugOrAbort('navigateToCourseBooking')
+  if (!tenantSlug) return
   await navigateTo(`/customer/courses/${tenantSlug}`)
 }
 
 const navigateToShop = async () => {
   // Navigiere zum Shop mit Tenant-Parameter
-  const tenantSlug = currentTenant.value?.slug || 'driving-team'
+  const tenantSlug = getTenantSlugOrAbort('navigateToShop')
+  if (!tenantSlug) return
   await navigateTo(`/shop?tenant=${tenantSlug}`)
 }
 

@@ -16,7 +16,7 @@ import { logger } from '~/utils/logger'
 interface StaffRecalcRequest {
   staff_id: string
   tenant_id: string
-  trigger: 'working_hours' | 'external_event' | 'appointment'
+  trigger: 'working_hours' | 'external_event' | 'appointment' | 'appointment_edit' | 'settings_change'
 }
 
 export default defineEventHandler(async (event) => {

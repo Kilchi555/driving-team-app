@@ -2221,6 +2221,11 @@ const shareCalendarLink = async () => {
 }
 
 const openLinkAction = (link: LinkAction) => {
+  // ✅ Sicherer Abbruch statt eines Links mit fehlendem Tenant-Slug (z.B. ".../shop?tenant=null")
+  if (!tenantSlug.value && /\/(null|undefined)(\?|\/|$)/.test(link.url)) {
+    showErrorToast('Link nicht verfügbar', 'Der Tenant konnte nicht ermittelt werden. Bitte Seite neu laden und erneut versuchen.')
+    return
+  }
   linkActionTarget.value = link
 }
 const linkActionOpen = () => {

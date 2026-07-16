@@ -141,7 +141,7 @@ export const useMFAFlow = () => {
   /**
    * Verify MFA code and complete login
    */
-  const verifyMFACode = async (password: string) => {
+  const verifyMFACode = async (password: string, rememberMe: boolean = false) => {
     if (!state.value.selectedOption || !state.value.code) {
       state.value.error = 'Bitte geben Sie den MFA-Code ein'
       return false
@@ -159,7 +159,8 @@ export const useMFAFlow = () => {
           email: state.value.email,
           password: password,
           code: state.value.code,
-          mfaType: state.value.selectedOption.type
+          mfaType: state.value.selectedOption.type,
+          rememberMe
         })
       })
 
@@ -181,6 +182,21 @@ export const useMFAFlow = () => {
       }
 
       logger.debug('✅ MFA verification successful')
+
+      // Hydrate the client-side Supabase session too (httpOnly cookies cover
+      // server-side /api/* auth, but client-side supabase-js calls elsewhere
+      // on the page need their own in-memory/module session).
+      if (session?.access_token && session?.refresh_token) {
+        try {
+          const { getSupabase } = await import('~/utils/supabase')
+          await getSupabase().auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token
+          })
+        } catch (setSessionErr) {
+          logger.debug('⚠️ Could not hydrate client Supabase session after MFA:', setSessionErr)
+        }
+      }
       
       // Clear state
       resetMFAState()

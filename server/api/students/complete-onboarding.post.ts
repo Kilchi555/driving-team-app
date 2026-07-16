@@ -461,7 +461,10 @@ export default defineEventHandler(async (event) => {
         try {
           await $fetch('/api/reminders/send-appointment-confirmation', {
             method: 'POST',
-            body: { appointmentId: appt.id, userId: user.id, tenantId: user.tenant_id }
+            // Staff were already notified immediately at booking time — this backfill call
+            // exists purely to send the customer confirmation that was held back while
+            // onboarding was pending. Don't notify staff a second time.
+            body: { appointmentId: appt.id, userId: user.id, tenantId: user.tenant_id, skipStaffNotification: true }
           })
           logger.debug(`✅ Backfilled appointment confirmation for ${appt.id}`)
         } catch (apptErr: any) {

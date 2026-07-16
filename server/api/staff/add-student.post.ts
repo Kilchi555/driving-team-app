@@ -20,6 +20,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { sendSMS } from '~/server/utils/sms'
 import { v4 as uuidv4 } from 'uuid'
+import { logFallbackUsed } from '~/server/utils/log-fallback'
 
 interface StudentData {
   first_name?: string
@@ -164,7 +165,7 @@ export default defineEventHandler(async (event) => {
       .single()
 
     let tenantName = tenant?.twilio_from_sender || tenant?.name || 'Ihre Fahrschule'
-    let tenantSlug = tenant?.slug || 'driving-team'
+    let tenantSlug: string | null = tenant?.slug || null
 
     // Serverseitige Policy: onboarding_sms_enabled (Standard: true)
     const onboardingSmsEnabled = (tenant?.booking_policy as any)?.onboarding_sms_enabled !== false
@@ -175,7 +176,20 @@ export default defineEventHandler(async (event) => {
     let smsSuccess = false
     let emailSuccess = false
     let onboardingLink = `https://app.simy.ch/onboarding/${onboardingToken}`
-    let loginLink = `https://app.simy.ch/${tenantSlug}`
+
+    if (!tenantSlug) {
+      // ✅ Kein Tenant-Rätselraten: statt eines Login-Links zur falschen
+      // (driving-team-)Fahrschule loggen wir den Fallback und lassen den
+      // Login-Link in der SMS weg (Onboarding-Link funktioniert unabhängig davon).
+      await logFallbackUsed({
+        source: 'tenant-slug',
+        message: `Kein Tenant-Slug für Onboarding-SMS gefunden (tenant_id=${userProfile.tenant_id}) – Login-Link wird weggelassen.`,
+        tenantId: userProfile.tenant_id,
+        level: 'error',
+        details: { context: 'add-student.post', studentId: newStudentId }
+      })
+    }
+    const loginLink = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : null
 
     // Send SMS if phone exists and policy allows it
     if (body.phone && !skipSms) {
@@ -185,7 +199,8 @@ export default defineEventHandler(async (event) => {
         // Format phone number (ensure +41 format)
         const formattedPhone = formatSwissPhoneNumber(body.phone)
         
-        const message = `Hallo ${body.first_name}!\n\nWillkommen bei ${tenantName}. Vervollständige deine Registrierung unter:\n${onboardingLink}\n\nNach der Registrierung kannst du dich hier anmelden:\n${loginLink}\n\n(Link 30 Tage gültig)\n\nFreundliche Grüße\n${tenantName}`
+        const loginLine = loginLink ? `\n\nNach der Registrierung kannst du dich hier anmelden:\n${loginLink}` : ''
+        const message = `Hallo ${body.first_name}!\n\nWillkommen bei ${tenantName}. Vervollständige deine Registrierung unter:\n${onboardingLink}${loginLine}\n\n(Link 30 Tage gültig)\n\nFreundliche Grüße\n${tenantName}`
         
         await sendSMS({
           to: formattedPhone,

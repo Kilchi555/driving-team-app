@@ -1,5 +1,6 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
@@ -34,7 +35,17 @@ export default defineEventHandler(async (event) => {
     .select()
     .single()
 
-  if (error) throw createError({ statusCode: 500, message: 'Failed to update' })
+  if (error) {
+    logger.error('❌ DB error updating cancellation reason:', error)
+    if (error.code === '23505') {
+      throw createError({
+        statusCode: 409,
+        message: 'Ein Absage-Grund mit diesem Code existiert für diesen Mandanten bereits.',
+        data: { code: '23505' }
+      })
+    }
+    throw createError({ statusCode: 500, message: 'Failed to update', data: { code: error.code } })
+  }
 
   return { success: true, data }
 })
