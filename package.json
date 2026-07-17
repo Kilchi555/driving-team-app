@@ -8,7 +8,7 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "clean:local-supabase": "rm -rf supabase/ && rm -f supabase_*.tar.gz && echo '✅ Local Supabase files cleaned'",
+    "clean:local-supabase": "sh scripts/backup-local-supabase.sh",
     "check:cloud-only": "npm run clean:local-supabase && echo '🎯 Only Cloud Supabase allowed!'",
     "predev": "npm run clean:local-supabase",
     "import:reviews": "npx tsx server/scripts/import-website-reviews.ts",
