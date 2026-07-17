@@ -6,6 +6,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { Wallee } from 'wallee'
 import { getWalleeConfigForTenant, getWalleeConfigBySpace, getWalleeSDKConfig } from '~/server/utils/wallee-config'
+import { notifyGenuineWalleeFailure } from '~/server/utils/wallee-failure-notify'
 
 const STATUS_MAPPING: Record<string, string> = {
   'PENDING': 'pending',
@@ -108,11 +109,12 @@ export default defineEventHandler(async (event) => {
             logger.info(`🔄 Phase 1: Wallee ${walleeState} for pending payment ${payment.id} — keeping as pending (retryable)`)
             mappedStatus = 'pending'
 
-            // Tag the genuine failure on the payment + alert the tenant so staff know
-            // a customer's card was actually declined — not just an abandoned checkout.
+            // Tag the genuine failure on the payment + alert the tenant AND the
+            // customer, so staff know a card was actually declined (not just an
+            // abandoned checkout) and the customer knows they can retry.
             // Without this, Phase 4 later cancels the row 3h on with a misleading
-            // "checkout abandoned" note and nobody at the driving school ever finds out.
-            await tagAndNotifyGenuineFailure(supabase, payment, walleeState!)
+            // "checkout abandoned" note and nobody ever finds out.
+            await notifyGenuineWalleeFailure(payment.id, walleeState!)
           }
 
           logger.info(`📊 Phase 1 payment ${payment.id}: Wallee tx=${payment.wallee_transaction_id} state=${walleeState} → ${mappedStatus}`)
@@ -474,6 +476,12 @@ export default defineEventHandler(async (event) => {
               failedReset++
               if (mappedStatus === 'completed' || mappedStatus === 'authorized') {
                 recovered++
+              } else if (mappedStatus === 'pending') {
+                // Genuine failure (the webhook already marked this 'failed' earlier,
+                // e.g. Wallee DECLINE/FAILED) — tag + notify staff/customer here too,
+                // since this payment never went through Phase 1 (it wasn't 'pending'
+                // long enough to be picked up there; it was already 'failed').
+                await notifyGenuineWalleeFailure(payment.id, walleeState ?? 'FAILED')
               }
               try {
                 await supabase.from('webhook_logs').insert({
@@ -619,91 +627,7 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-// ============ HELPER: tag + alert on a genuine Wallee failure ============
-// Called from Phase 1 when Wallee confirms a transaction actually FAILED/was
-// DECLINEd/CANCELED/VOIDED (as opposed to still being pending/in-flight).
-// We keep the payment retryable ('pending'), but:
-//  1. Tag the payment metadata so Phase 4's 3h cleanup can write an accurate
-//     cancellation note instead of always saying "checkout abandoned".
-//  2. Email the tenant once (guarded by the same tag) so staff can proactively
-//     reach out to the customer — e.g. for a course enrollment, the customer
-//     may not realize their spot was never actually booked.
-async function tagAndNotifyGenuineFailure(supabase: any, payment: any, walleeState: string) {
-  // Already tagged/notified for this payment — nothing to do.
-  if (payment.metadata?.wallee_failure_state) return
-
-  const updatedMetadata = {
-    ...(payment.metadata || {}),
-    wallee_failure_state: walleeState,
-    wallee_failure_detected_at: new Date().toISOString()
-  }
-
-  try {
-    await supabase
-      .from('payments')
-      .update({ metadata: updatedMetadata })
-      .eq('id', payment.id)
-  } catch (e: any) {
-    logger.warn(`⚠️ Could not tag genuine Wallee failure on payment ${payment.id}:`, e.message)
-  }
-
-  // Only course-enrollment payments have enough metadata (name/email/course)
-  // to build a useful staff notification right now.
-  const meta = payment.metadata || {}
-  if (!meta.course_id) return
-
-  try {
-    const { data: tenant } = await supabase
-      .from('tenants')
-      .select('contact_email')
-      .eq('id', payment.tenant_id)
-      .maybeSingle()
-
-    if (!tenant?.contact_email) return
-
-    const { sendTenantEmail } = await import('~/server/utils/email')
-    const customerName = [meta.firstname, meta.lastname].filter(Boolean).join(' ') || 'Unbekannt'
-    const amountChf = ((payment.total_amount_rappen || 0) / 100).toFixed(2)
-
-    await sendTenantEmail(payment.tenant_id, {
-      to: tenant.contact_email,
-      subject: `⚠️ Online-Zahlung fehlgeschlagen: ${meta.course_name || 'Kursanmeldung'}`,
-      html: `
-        <p>Eine Kursanmeldung konnte nicht abgeschlossen werden, weil die Wallee-Zahlung fehlgeschlagen ist (Status: <strong>${walleeState}</strong>).</p>
-        <p>Der/die Kunde/in wurde <strong>nicht</strong> automatisch benachrichtigt und weiss möglicherweise nicht, dass die Anmeldung nicht zustande kam. Bitte bei Bedarf direkt Kontakt aufnehmen.</p>
-        <ul>
-          <li><strong>Kurs:</strong> ${meta.course_name || '–'}</li>
-          <li><strong>Name:</strong> ${customerName}</li>
-          <li><strong>E-Mail:</strong> ${meta.email || '–'}</li>
-          <li><strong>Telefon:</strong> ${meta.phone || '–'}</li>
-          <li><strong>Betrag:</strong> CHF ${amountChf}</li>
-          <li><strong>Zeitpunkt:</strong> ${new Date().toLocaleString('de-CH')}</li>
-          <li><strong>Payment-ID:</strong> ${payment.id}</li>
-        </ul>
-      `
-    })
-
-    try {
-      await supabase.from('admin_notifications').insert({
-        notification_type: 'course_payment_failed',
-        tenant_id: payment.tenant_id,
-        recipients: [tenant.contact_email],
-        details: {
-          payment_id: payment.id,
-          course_id: meta.course_id,
-          course_name: meta.course_name,
-          customer_name: customerName,
-          customer_email: meta.email,
-          amount_rappen: payment.total_amount_rappen,
-          wallee_state: walleeState
-        }
-      })
-    } catch (logErr: any) {
-      logger.warn('⚠️ Could not log course_payment_failed admin notification:', logErr.message)
-    }
-
-    logger.info(`📧 Notified tenant ${payment.tenant_id} of failed course payment ${payment.id}`)
-  } catch (notifyErr: any) {
-    logger.warn(`⚠️ Could not send genuine-failure notification for payment ${payment.id}:`, notifyErr.message)
-  }
-}
+// The tag-and-notify helper (staff + customer emails, idempotent via
+// metadata.wallee_failure_state) now lives in
+// ~/server/utils/wallee-failure-notify.ts so the webhook handler can share
+// it too — see notifyGenuineWalleeFailure import above.
