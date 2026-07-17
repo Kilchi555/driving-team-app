@@ -922,13 +922,25 @@ const openSessionCustomizer = (course: any) => {
   // The modal will automatically show the session customizer on mount
 }
 
-// Check for success params on mount (after Wallee payment redirect)
+// Check for success/failure params on mount (after Wallee payment redirect)
 const checkSuccessParams = () => {
   if (route.query.success === 'true') {
     logger.debug('✅ Success params found - payment completed')
     // Show success via global UI store
     const uiStore = useUIStore()
     uiStore.showSuccess('Anmeldung erfolgreich!', 'Die Bestätigungsmail wurde versendet.')
+    // Clean up the URL
+    window.history.replaceState({}, '', route.path)
+  } else if (route.query.failed === 'true') {
+    logger.debug('❌ Failed params found - payment did not go through')
+    // ⚠️ Without this branch the customer is silently dropped back on this
+    // page with zero feedback after a declined/failed Wallee payment — they
+    // have no idea the enrollment did not happen and no prompt to retry.
+    const uiStore = useUIStore()
+    uiStore.showError(
+      'Zahlung fehlgeschlagen',
+      'Deine Zahlung konnte nicht abgeschlossen werden. Die Anmeldung wurde daher nicht übernommen. Bitte versuche es erneut oder wähle eine andere Zahlungsmethode/Karte.'
+    )
     // Clean up the URL
     window.history.replaceState({}, '', route.path)
   }
