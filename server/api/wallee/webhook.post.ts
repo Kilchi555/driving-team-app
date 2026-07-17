@@ -14,6 +14,7 @@ import { findExistingUserByContact } from '~/server/utils/user-matching'
 import { normalizePhoneNumber } from '~/server/utils/sms'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
+import { notifyGenuineWalleeFailure } from '~/server/utils/wallee-failure-notify'
 // crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
@@ -538,7 +539,22 @@ export default defineEventHandler(async (event) => {
     }
     
     logger.info(`✅ Updated ${paymentsToUpdate.length} payment(s) to: ${paymentStatus}`)
-    
+
+    // ============ LAYER 8: NOTIFY ON GENUINE FAILURE (fast path) ============
+    // Wallee just told us in real time that the payment actually failed/was
+    // cancelled (card declined etc.) — this is the fastest possible place to
+    // alert staff + the customer, rather than waiting for a cron cycle to
+    // notice later. Idempotent (guarded by metadata.wallee_failure_state), so
+    // if the cron also reaches this payment first for some reason, nothing is
+    // sent twice.
+    if (isTerminalFailure) {
+      for (const p of paymentsToUpdate) {
+        notifyGenuineWalleeFailure(p.id, walleeState).catch((e: any) => {
+          logger.warn(`⚠️ notifyGenuineWalleeFailure failed for payment ${p.id}:`, e.message)
+        })
+      }
+    }
+
     // ============ LAYER 9: HANDLE COURSE REGISTRATIONS (CREATE or UPDATE) ============
     // ✅ NEW LOGIC: Since we no longer create pending registrations in enroll-wallee,
     // we need to CREATE them here when payment is confirmed
