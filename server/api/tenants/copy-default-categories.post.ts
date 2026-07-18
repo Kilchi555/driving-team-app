@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
     // 1. Prüfen ob der Tenant existiert
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('id, name')
+      .select('id, name, business_type')
       .eq('id', tenant_id)
       .single()
 
@@ -26,12 +26,18 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 2. Standard-Templates für den Tenant kopieren
-    const { data: standardCategories, error: fetchError } = await supabase
+    // 2. Standard-Templates für den Tenant kopieren (nur passend zur Branche des Tenants)
+    const standardCategoriesQuery = supabase
       .from('categories')
       .select('*')
       .is('tenant_id', null)  // Standard-Templates haben tenant_id = null
       .eq('is_active', true)
+    if (tenant.business_type) {
+      standardCategoriesQuery.eq('business_type', tenant.business_type)
+    } else {
+      standardCategoriesQuery.is('business_type', null)
+    }
+    const { data: standardCategories, error: fetchError } = await standardCategoriesQuery
 
     if (fetchError) {
       throw createError({

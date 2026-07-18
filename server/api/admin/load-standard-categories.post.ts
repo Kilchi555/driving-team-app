@@ -15,12 +15,26 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'selectedIds must be a non-empty array' })
   }
 
+  // Look up the tenant's business_type so we only ever load matching templates,
+  // even if selectedIds were somehow sourced from a cross-vertical picker.
+  const { data: tenantRow } = await supabase
+    .from('tenants')
+    .select('business_type')
+    .eq('id', profile.tenant_id)
+    .single()
+
   // Get selected standard templates
-  const { data: standardTemplates, error: fetchError } = await supabase
+  const standardTemplatesQuery = supabase
     .from('categories')
     .select('*')
     .is('tenant_id', null)
     .in('id', selectedIds)
+  if (tenantRow?.business_type) {
+    standardTemplatesQuery.eq('business_type', tenantRow.business_type)
+  } else {
+    standardTemplatesQuery.is('business_type', null)
+  }
+  const { data: standardTemplates, error: fetchError } = await standardTemplatesQuery
 
   if (fetchError) throw createError({ statusCode: 500, statusMessage: fetchError.message })
 

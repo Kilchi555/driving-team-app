@@ -53,8 +53,8 @@ export default defineEventHandler(async (event) => {
   const endDt = new Date(rental.end_time)
   const durationHours = (endDt.getTime() - startDt.getTime()) / 3_600_000
   const totalChf = (rental.hourly_rate_rappen * durationHours / 100).toFixed(2)
-  const dateLabel = startDt.toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })
-  const timeLabel = `${startDt.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}–${endDt.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}`
+  const dateLabel = startDt.toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Zurich' })
+  const timeLabel = `${startDt.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })}–${endDt.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })}`
 
   // ── CONFIRM ────────────────────────────────────────────────────────────────
   if (action === 'confirm') {

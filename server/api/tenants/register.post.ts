@@ -897,12 +897,19 @@ async function copyDefaultDataToTenant(
 
   // ── 1. Categories ──────────────────────────────────────────────────────────
   try {
-    const { data: allTemplates, error: fetchError } = await supabase
+    const categoriesQuery = supabase
       .from('categories')
       .select('id, code, name, description, color, is_active, exam_duration_minutes, lesson_duration_minutes, theory_durations, document_requirements, parent_category_id, icon_svg')
       .is('tenant_id', null)
       .eq('is_active', true)
       .order('code', { ascending: true })
+    // Only copy templates matching this tenant's business_type (mirrors evaluation_categories filter below)
+    if (businessType) {
+      categoriesQuery.eq('business_type', businessType)
+    } else {
+      categoriesQuery.is('business_type', null)
+    }
+    const { data: allTemplates, error: fetchError } = await categoriesQuery
 
     if (fetchError || !allTemplates?.length) {
       logger.warn('⚠️ No template categories found')
@@ -1009,10 +1016,17 @@ async function copyDefaultDataToTenant(
 
   // ── 2. Event Types ─────────────────────────────────────────────────────────
   try {
-    const { data: etTemplates, error: etErr } = await supabase
+    const eventTypesQuery = supabase
       .from('event_types')
       .select('*')
       .is('tenant_id', null)
+    // Only copy templates matching this tenant's business_type (mirrors categories/evaluation_categories filters)
+    if (businessType) {
+      eventTypesQuery.eq('business_type', businessType)
+    } else {
+      eventTypesQuery.is('business_type', null)
+    }
+    const { data: etTemplates, error: etErr } = await eventTypesQuery
 
     if (!etErr && etTemplates?.length) {
       // Determine if the tenant explicitly enabled the "theory" pricing row.
@@ -1027,7 +1041,7 @@ async function copyDefaultDataToTenant(
       } catch { /* non-critical — default to inactive */ }
 
       const { error: etInsertErr } = await supabase.from('event_types').insert(
-        etTemplates.map(et => ({
+        etTemplates.map(({ business_type: _templateBusinessType, ...et }) => ({
           ...et,
           id: crypto.randomUUID(),
           tenant_id: tenantId,
