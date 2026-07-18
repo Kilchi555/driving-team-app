@@ -26,6 +26,12 @@
         </button>
       </div>
 
+      <!-- While the "just booked" banner is showing, hide the booking wizard
+           entirely — otherwise it's fully interactive underneath the banner
+           and a customer could pick + confirm another slot before (or
+           instead of) the auto-redirect to the dashboard fires. -->
+      <template v-if="!justCompletedBooking">
+
       <!-- Back Button & Header -->
       <div class="mb-4 flex items-center gap-4">
         <button 
@@ -1130,6 +1136,7 @@
       </div>
     </div>
   </div>
+      </template>
 
   <!-- Guest Form Modal (when registration_required = false) -->
   <div v-if="showGuestForm" class="fixed inset-0 bg-black bg-opacity-60 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
@@ -1166,6 +1173,25 @@
           </span>
           <span v-else>Slot reserviert: noch <strong>{{ getCountdownText }}</strong></span>
         </div>
+
+        <!-- Gast / Einloggen Tabs — logging in keeps the reservation alive
+             (see switchToLoginKeepingReservation) instead of losing it. -->
+        <div class="flex border-b border-gray-200 -mx-5 mt-4 px-5">
+          <button
+            type="button"
+            class="flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors"
+            :style="{ color: getBrandPrimary(), borderColor: getBrandPrimary() }"
+          >
+            Als Gast buchen
+          </button>
+          <button
+            type="button"
+            class="flex-1 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-colors"
+            @click="switchToLoginKeepingReservation"
+          >
+            Einloggen
+          </button>
+        </div>
       </div>
 
       <!-- Form -->
@@ -1174,10 +1200,10 @@
         <div v-if="guestFormError" class="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
           {{ guestFormError }}
           <button
-            v-if="guestFormError.includes('registriert')"
+            v-if="guestFormError.includes('registriert') || guestFormError.includes('Konto')"
             type="button"
             class="block mt-2 text-xs font-medium underline"
-            @click="showGuestForm = false; showLoginModal = true; loginModalTab = 'login'"
+            @click="switchToLoginKeepingReservation"
           >
             Zum Login wechseln →
           </button>
@@ -1227,12 +1253,20 @@
             autocomplete="tel"
             :required="isBookingFieldRequired('phone')"
             placeholder="+41 79 123 45 67"
-            @blur="validateGuestPhone"
             class="w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition"
-            :class="guestPhoneError ? 'border-red-300' : 'border-gray-200'"
+            :class="guestPhoneError || guestPhoneCheckStatus === 'taken' ? 'border-red-300' : 'border-gray-200'"
             :style="{ '--tw-ring-color': getBrandPrimary() }"
+            @input="checkGuestPhoneAvailability"
+            @blur="validateGuestPhone(); checkGuestPhoneAvailability()"
           />
           <p v-if="guestPhoneError" class="mt-1 text-xs text-red-500">{{ guestPhoneError }}</p>
+          <div v-else-if="guestPhoneCheckStatus === 'taken'" class="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+            <p class="text-xs text-amber-800">Diese Telefonnummer ist bereits registriert.</p>
+            <button type="button" class="mt-1 text-xs font-semibold underline" :style="{ color: getBrandPrimary() }" @click="switchToLoginKeepingReservation">
+              Stattdessen anmelden →
+            </button>
+          </div>
+          <p v-else-if="guestPhoneCheckStatus === 'checking'" class="mt-1 text-xs text-gray-400">Wird geprüft…</p>
         </div>
 
         <!-- Email -->
@@ -1247,9 +1281,19 @@
             autocomplete="email"
             :required="isBookingFieldRequired('email')"
             placeholder="max.muster@gmail.com"
-            class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition"
+            class="w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition"
+            :class="guestEmailCheckStatus === 'taken' ? 'border-red-300' : 'border-gray-200'"
             :style="{ '--tw-ring-color': getBrandPrimary() }"
+            @input="checkGuestEmailAvailability"
+            @blur="checkGuestEmailAvailability"
           />
+          <div v-if="guestEmailCheckStatus === 'taken'" class="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+            <p class="text-xs text-amber-800">Diese E-Mail-Adresse ist bereits registriert.</p>
+            <button type="button" class="mt-1 text-xs font-semibold underline" :style="{ color: getBrandPrimary() }" @click="switchToLoginKeepingReservation">
+              Stattdessen anmelden →
+            </button>
+          </div>
+          <p v-else-if="guestEmailCheckStatus === 'checking'" class="mt-1 text-xs text-gray-400">Wird geprüft…</p>
         </div>
 
         <!-- Birthdate -->
@@ -1369,25 +1413,13 @@
         <!-- Submit -->
         <button
           type="submit"
-          :disabled="isSubmittingGuestForm"
+          :disabled="isSubmittingGuestForm || guestEmailCheckStatus === 'taken' || guestPhoneCheckStatus === 'taken'"
           class="w-full py-3 rounded-xl font-semibold text-white text-sm transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
           :style="{ backgroundColor: getBrandPrimary() }"
         >
           <span v-if="isSubmittingGuestForm" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
           <span>{{ isSubmittingGuestForm ? 'Buchung wird erstellt…' : 'Jetzt verbindlich buchen →' }}</span>
         </button>
-
-        <!-- Switch to login -->
-        <p class="text-center text-xs text-gray-400">
-          Bereits ein Konto?
-          <button
-            type="button"
-            class="underline font-medium text-gray-600"
-            @click="showGuestForm = false; showLoginModal = true; loginModalTab = 'login'"
-          >
-            Einloggen
-          </button>
-        </p>
       </form>
     </div>
   </div>
@@ -1396,6 +1428,7 @@
   <LoginRegisterModal 
     v-if="showLoginModal"
     :initial-tab="loginModalTab"
+    :initial-login-email="loginModalPrefillEmail"
     :selected-staff-id="selectedInstructor?.id"
     :selected-category="selectedCategory?.code"
     :tenant-id="currentTenant?.id"
@@ -1582,7 +1615,7 @@
       </div>
 
       <button
-        @click="currentStep = 0; guestBookingSuccess = false"
+        @click="clearReservationState(); selectedSlot = null; currentStep = 0; guestBookingSuccess = false"
         class="w-full py-3 rounded-xl font-semibold text-white text-sm"
         :style="{ backgroundColor: getBrandPrimary() }"
       >
@@ -2029,6 +2062,19 @@ const guestZip = ref('')
 const guestCity = ref('')
 const guestProfession = ref('')
 const guestPhoneError = ref<string | null>(null)
+
+// Real-time email/phone ownership check — lets us catch "you already have an
+// account" BEFORE the guest fills in the whole form and hits submit, instead
+// of only surfacing it as a 409 on the final POST. Mirrors the same check
+// used in the register modal (components/booking/LoginRegisterModal.vue).
+type ContactCheckStatus = 'idle' | 'checking' | 'available' | 'taken'
+const guestEmailCheckStatus = ref<ContactCheckStatus>('idle')
+const guestPhoneCheckStatus = ref<ContactCheckStatus>('idle')
+let guestEmailCheckTimer: ReturnType<typeof setTimeout> | null = null
+let guestPhoneCheckTimer: ReturnType<typeof setTimeout> | null = null
+let guestEmailCheckSeq = 0
+let guestPhoneCheckSeq = 0
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // New flow state
 const currentStep = ref(0)
@@ -4003,6 +4049,7 @@ const validatePickupAddress = () => {
 const showLoginModal = ref(false)
 const showProposalForm = ref(false) // Show proposal form when no slots available
 const loginModalTab = ref<'login' | 'register'>('register') // Default to register for booking flow
+const loginModalPrefillEmail = ref('') // Carries over an email the guest already typed, so they don't retype it
 const showDocumentUploadModal = ref(false)
 const requiredDocuments = ref<any[]>([])
 const isCreatingBooking = ref(false)
@@ -4405,6 +4452,80 @@ const validateGuestPhone = () => {
   return valid
 }
 
+// Debounced: does this email already belong to a REAL, activated account
+// (has auth_user_id → a password) in this tenant? Guest bookings intentionally
+// don't block on "pending" shadow accounts (from earlier guest bookings that
+// were never activated) — those get auto-merged server-side — only on
+// accounts that can actually log in.
+const checkGuestEmailAvailability = () => {
+  if (guestEmailCheckTimer) clearTimeout(guestEmailCheckTimer)
+  const email = guestEmail.value.trim().toLowerCase()
+
+  if (!email || !EMAIL_REGEX.test(email) || !currentTenant.value?.id) {
+    guestEmailCheckStatus.value = 'idle'
+    return
+  }
+
+  guestEmailCheckStatus.value = 'checking'
+  const seq = ++guestEmailCheckSeq
+
+  guestEmailCheckTimer = setTimeout(async () => {
+    try {
+      const res = await $fetch('/api/students/check-email', {
+        method: 'POST',
+        body: { email, tenantId: currentTenant.value?.id },
+      }) as { available: boolean }
+
+      if (seq !== guestEmailCheckSeq) return // stale response, user kept typing
+      guestEmailCheckStatus.value = res.available ? 'available' : 'taken'
+    } catch {
+      // Network/server hiccup must never block a guest booking — fail open.
+      if (seq !== guestEmailCheckSeq) return
+      guestEmailCheckStatus.value = 'idle'
+    }
+  }, 500)
+}
+
+// Debounced: same idea for phone — only an already-ACTIVE account (or
+// staff/admin) blocks; a "pending" shadow account is fine to continue with.
+const checkGuestPhoneAvailability = () => {
+  if (guestPhoneCheckTimer) clearTimeout(guestPhoneCheckTimer)
+  const digits = guestPhone.value.replace(/\D/g, '')
+
+  if (digits.length < 9 || !currentTenant.value?.id) {
+    guestPhoneCheckStatus.value = 'idle'
+    return
+  }
+
+  guestPhoneCheckStatus.value = 'checking'
+  const seq = ++guestPhoneCheckSeq
+
+  guestPhoneCheckTimer = setTimeout(async () => {
+    try {
+      const res = await $fetch('/api/auth/check-phone-exists', {
+        method: 'POST',
+        body: { phone: guestPhone.value.trim(), tenantId: currentTenant.value?.id },
+      }) as { exists: boolean; isActive?: boolean; isStaffOrAdmin?: boolean }
+
+      if (seq !== guestPhoneCheckSeq) return
+      guestPhoneCheckStatus.value = (res.isActive || res.isStaffOrAdmin) ? 'taken' : 'available'
+    } catch {
+      if (seq !== guestPhoneCheckSeq) return
+      guestPhoneCheckStatus.value = 'idle'
+    }
+  }, 500)
+}
+
+// Opens the login modal without touching the slot reservation/countdown —
+// the reservation stays valid, and handleAuthSuccess() picks it back up and
+// completes the booking automatically once login succeeds.
+const switchToLoginKeepingReservation = () => {
+  showGuestForm.value = false
+  loginModalPrefillEmail.value = guestEmail.value.trim()
+  showLoginModal.value = true
+  loginModalTab.value = 'login'
+}
+
 const submitGuestBooking = async () => {
   guestFormError.value = null
 
@@ -4512,6 +4633,13 @@ const submitGuestBooking = async () => {
     guestCity.value = ''
     guestProfession.value = ''
     guestPhoneError.value = null
+    guestEmailCheckStatus.value = 'idle'
+    guestPhoneCheckStatus.value = 'idle'
+
+    // The slot is now a real appointment, not a pending reservation anymore —
+    // clear the countdown/reservation state so it doesn't keep ticking (and
+    // showing "Termin reserviert") if the user starts another booking below.
+    clearReservationState()
 
     showGuestForm.value = false
     guestBookingSuccess.value = true
@@ -4718,6 +4846,22 @@ const reserveSlotSecure = async (userId?: string) => {
 
 // Keep old function name for backwards compatibility
 const reserveSlot_OLD = reserveSlotSecure
+
+// Clears local reservation/countdown state WITHOUT calling release-reservation.
+// Use this after a booking has succeeded — the slot is now a real appointment,
+// not a reservation to release. (Using cancelReservation() here would be wrong:
+// it targets the just-booked slot via the release-reservation API.)
+const clearReservationState = () => {
+  currentReservationId.value = null
+  reservedUntil.value = null
+  reservationExpiry.value = null
+  remainingSeconds.value = 0
+
+  if (countdownInterval.value) {
+    clearInterval(countdownInterval.value)
+    countdownInterval.value = null
+  }
+}
 
 const cancelReservation = async (silent: boolean = false) => {
   if (!currentReservationId.value) {

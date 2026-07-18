@@ -79,7 +79,33 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ LAYER 4: DATABASE QUERY with Tenant Isolation and Role-based Filtering
-    
+
+    // ✅ Direct ID lookup (used e.g. by EventModal to resolve a previously saved
+    // location - standard OR pickup - that may not be part of the current
+    // role-based list, such as another student's pickup point on an existing
+    // appointment). Scoped to the caller's tenant; intentionally not filtered
+    // by is_active so historical appointments still resolve correctly.
+    if (locationIds && locationIds.length > 0) {
+      const { data: locationsById, error: byIdError } = await supabaseAdmin
+        .from('locations')
+        .select('id, name, address, formatted_address, postal_code, canton, city, tenant_id, location_type, user_id, is_active, public_bookable')
+        .eq('tenant_id', tenantId)
+        .in('id', locationIds)
+
+      if (byIdError) {
+        logger.error('❌ Error fetching locations by id:', byIdError)
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Failed to fetch locations by id'
+        })
+      }
+
+      return {
+        success: true,
+        data: locationsById || []
+      }
+    }
+
     // Filter based on user role
     if (userProfile.role === 'staff') {
       // Staff sees:
