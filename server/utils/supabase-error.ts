@@ -1,4 +1,4 @@
-import { createError } from 'h3'
+import { createError, isError } from 'h3'
 import type { H3Error } from 'h3'
 
 interface SupabaselikeError {
@@ -18,8 +18,10 @@ interface SupabaselikeError {
  * safely wrap any error without double-wrapping.
  */
 export function mapSupabaseError(error: unknown, context?: string): H3Error {
-  // Already a proper H3 error — pass through unchanged
-  if (isH3Error(error)) {
+  // Already a proper H3 error — pass through unchanged (e.g. a deliberate
+  // createError({ statusCode: 401, ... }) thrown earlier in the same
+  // try/catch must never be re-mapped into a generic 503 "Database error").
+  if (isError(error)) {
     return error as H3Error
   }
 
@@ -80,13 +82,4 @@ export function mapSupabaseError(error: unknown, context?: string): H3Error {
     statusMessage: `${prefix}Database error`,
     data: process.dev ? { code, message } : undefined
   })
-}
-
-/** Type guard: is this value an H3Error? */
-function isH3Error(value: unknown): boolean {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    '__h3_error__' in value
-  )
 }

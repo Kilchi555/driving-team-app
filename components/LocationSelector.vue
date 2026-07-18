@@ -107,7 +107,14 @@
           {{ location.address }}
         </option>
       </optgroup>
-      
+
+      <!-- ✅ Fallback: bereits gespeicherte Location, die nicht Teil der Standard-/Pickup-Listen ist -->
+      <optgroup label="Gespeicherter Standort" v-if="directLookupLocations.length > 0" class="text-black bg-white">
+        <option v-for="location in directLookupLocations" :key="`direct-${location.id}`" :value="location.id" class="text-black bg-white">
+          {{ location.address }}
+        </option>
+      </optgroup>
+
       <!-- Loading State -->
       <option v-if="isLoadingLocations" disabled class="text-black bg-white">Lade Standorte...</option>
     </select>
@@ -249,14 +256,54 @@ const error = ref<string | null>(null)
 // Location Data
 const standardLocations = ref<Location[]>([])
 const studentPickupLocations = ref<Location[]>([])
+// ✅ Fallback: previously saved location (standard OR pickup) that isn't part of
+// the current role-based lists above, e.g. an appointment's location loaded in
+// edit mode before the matching pickup/standard list has finished loading.
+const directLookupLocations = ref<Location[]>([])
 
 // Computed
+const allKnownLocations = computed(() => [
+  ...standardLocations.value,
+  ...studentPickupLocations.value,
+  ...directLookupLocations.value
+])
+
 const currentSelectedLocation = computed(() => {
   if (!selectedLocationId.value) return null
-  
-  return [...standardLocations.value, ...studentPickupLocations.value]
-    .find(loc => loc.id === selectedLocationId.value)
+
+  return allKnownLocations.value.find(loc => loc.id === selectedLocationId.value)
 })
+
+// ✅ Ensures a previously selected location (props.modelValue) is always shown
+// correctly, even if it isn't present in standardLocations/studentPickupLocations
+// (e.g. due to load timing, or because it belongs to a different owner than the
+// currently loaded lists cover). Fetches the location directly by ID as a fallback.
+const ensureSelectedLocationLoaded = async (locationId: string | null) => {
+  if (!locationId || locationId.includes('temp_') || locationId.includes('manual_')) {
+    return
+  }
+
+  const alreadyKnown = allKnownLocations.value.some(loc => loc.id === locationId)
+  if (alreadyKnown) return
+
+  try {
+    const response = await $fetch('/api/staff/get-locations', {
+      query: { location_ids: locationId }
+    }) as any
+
+    if (response?.data?.length) {
+      directLookupLocations.value = [
+        ...directLookupLocations.value.filter((loc: Location) => loc.id !== locationId),
+        ...response.data.map((item: any) => ({ ...item, address: item.address || '', source: 'standard' as const }))
+      ]
+      logger.debug('✅ Fallback: directly loaded previously saved location:', locationId)
+    } else {
+      logger.debug('⚠️ Fallback: could not resolve previously saved location by id:', locationId)
+    }
+  } catch (err: any) {
+    logger.debug('⚠️ Error in fallback location lookup:', err.message)
+  }
+}
 
 // Google Places Service
 let placesLibrary: any = null
@@ -989,11 +1036,12 @@ watch(() => props.modelValue, (newValue) => {
       useStandardLocations.value = true
       selectedCustomLocation.value = null
       logger.debug('🔍 LocationSelector: Standard location, showing standard tab')
+      ensureSelectedLocationLoaded(newValue)
     }
     
     logger.debug('✅ LocationSelector: Location updated from modelValue:', newValue)
   }
-})
+}, { immediate: true })
 
 // ✅ NEW: Watch for customLocationAddress prop changes
 watch(() => props.customLocationAddress, (newAddress) => {
@@ -1055,6 +1103,13 @@ onMounted(async () => {
     if (props.modelValue && !selectedLocationId.value) {
       logger.debug('🎯 onMounted: Location bereits gesetzt, zeige sie an:', props.modelValue)
       selectedLocationId.value = props.modelValue
+    }
+
+    // ✅ Defensive fallback: falls die gesetzte Location (noch) nicht in den
+    // geladenen Listen ist (z.B. Timing, andere Ownership als aktuell geladen),
+    // direkt per ID nachladen, damit sie im Dropdown korrekt angezeigt wird.
+    if (selectedLocationId.value) {
+      await ensureSelectedLocationLoaded(selectedLocationId.value)
     }
     
     // ✅ AUTO-SELECT DEFAULT LOCATION:
