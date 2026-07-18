@@ -88,7 +88,7 @@ export default defineEventHandler(async (event) => {
     // ✅ LAYER 4: DATABASE QUERY with Tenant Isolation
     let queryBuilder = supabaseAdmin
       .from('payments')
-      .select('id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, total_amount_rappen, credit_used_rappen, payment_status, payment_method, wallee_transaction_id, appointment_id, user_id, tenant_id, created_at')
+      .select('id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, total_amount_rappen, amount_paid_rappen, credit_used_rappen, payment_status, payment_method, wallee_transaction_id, appointment_id, user_id, tenant_id, created_at')
       .eq('tenant_id', tenantId)
 
     if (paymentId) {

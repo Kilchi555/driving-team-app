@@ -186,13 +186,30 @@
             <span>CHF {{ (roundToNearestFranken(Math.round(calculatePriceBeforeCredit() * 100)) / 100).toFixed(2) }}</span>
           </div>
           
-          <!-- Gesamtpreis (nach Guthaben) -->
-          <div class="flex justify-between text-lg font-bold">
+          <!-- ✅ Bereits bezahlt vs. noch offen - NUR bei echter Dauer-Erhöhung (neuer Preis höher als
+               bereits Bezahltes) relevant. Bei einer Dauer-Verkürzung übersteigt "bereits bezahlt" den
+               neuen Preis; dieser Fall wird beim Speichern separat über den bestehenden
+               Guthaben-Gutschrift-Mechanismus behandelt (siehe DurationSelector.vue / EventModal.vue) -
+               hier zusätzlich "Bereits bezahlt CHF X / Noch zu bezahlen CHF 0.00" anzuzeigen wäre
+               irreführend (sieht nach einer nie erwähnten Überzahlung aus). -->
+          <template v-if="showPaidVsOutstandingBreakdown">
+            <div class="flex justify-between text-sm text-gray-500 mb-1">
+              <span>Bereits bezahlt</span>
+              <span>CHF {{ alreadyPaidChf.toFixed(2) }}</span>
+            </div>
+            <div class="flex justify-between text-lg font-bold">
+              <span class="text-gray-700">Noch zu bezahlen</span>
+              <span v-if="props.isCalculatingPrice" class="text-gray-400 text-base italic font-normal">wird berechnet...</span>
+              <span v-else :style="primaryText">CHF {{ (roundToNearestFranken(Math.round(outstandingChf * 100)) / 100).toFixed(2) }}</span>
+            </div>
+          </template>
+          <!-- Gesamtpreis (nach Guthaben) - Standardfall (Neuanlage, unveränderte/verkürzte Dauer) -->
+          <div v-else class="flex justify-between text-lg font-bold">
             <span class="text-gray-700">Zu bezahlen</span>
             <span v-if="props.isCalculatingPrice" class="text-gray-400 text-base italic font-normal">wird berechnet...</span>
             <span v-else :style="primaryText">CHF {{ (roundToNearestFranken(Math.round(calculateTotalPrice * 100)) / 100).toFixed(2) }}</span>
           </div>
-          
+
           <!-- Gratis Info wenn vollständig durch Guthaben gedeckt -->
           <div v-if="props.studentCredit && props.studentCredit.balance_rappen / 100 >= calculatePriceBeforeCredit()" class="text-center mt-2">
             <span class="text-sm font-medium px-3 py-1 rounded-full" :style="{ ...primaryBgLight, ...primaryText }">
@@ -381,13 +398,13 @@
                 {{ new Date(existingPayment.paid_at).toLocaleDateString('de-CH') }}
               </span>
 
-              <!-- Toggle: Als Bar bezahlt markieren (nur wenn pending + Staff) -->
+              <!-- Toggle: Als Bar bezahlt markieren (nur wenn pending/partial + Staff) -->
               <div
-                v-if="existingPayment?.payment_status === 'pending' && isStaffUser"
+                v-if="['pending', 'partial'].includes(existingPayment?.payment_status) && isStaffUser"
                 class="flex items-center gap-1.5 ml-1"
-                :title="isMarkingAsPaid ? 'Wird verarbeitet…' : 'Als bar bezahlt markieren'"
+                :title="isMarkingAsPaid ? 'Wird verarbeitet…' : (existingPayment?.payment_status === 'partial' ? `Restbetrag (CHF ${outstandingChf.toFixed(2)}) als bar bezahlt markieren` : 'Als bar bezahlt markieren')"
               >
-                <span class="text-xs text-gray-500">Bar bezahlt</span>
+                <span class="text-xs text-gray-500">{{ existingPayment?.payment_status === 'partial' ? 'Rest bar bezahlt' : 'Bar bezahlt' }}</span>
                 <button
                   type="button"
                   @click="markAsCashPaid"
@@ -401,7 +418,7 @@
                 </button>
               </div>
             </div>
-            
+
             <!-- Rechnungsadresse für Invoice -->
             <div v-if="existingPayment?.payment_method === 'invoice' && hasInvoiceAddress" 
                  class="bg-gray-50 p-3 rounded-lg border border-gray-200">
@@ -478,12 +495,12 @@
               <button
                 type="button"
                 @click.stop="cashAlreadyPaid = !cashAlreadyPaid"
-                class="relative w-10 h-6 rounded-full transition-colors focus:outline-none"
+                class="relative inline-flex w-10 h-6 items-center rounded-full transition-colors focus:outline-none"
                 :style="cashAlreadyPaid ? primaryBg : {}"
                 :class="cashAlreadyPaid ? '' : 'bg-gray-300'"
               >
                 <span :class="[
-                  'absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200',
+                  'inline-block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200',
                   cashAlreadyPaid ? 'translate-x-5' : 'translate-x-1'
                 ]"></span>
               </button>
@@ -796,6 +813,9 @@ const codeError = ref<string | null>(null)
 
 // ✅ NEU: Payment State für Edit-Modus
 const existingPayment = ref<any>(null)
+// Unveränderter Snapshot des Payments zum Ladezeitpunkt (siehe loadExistingPayment) -
+// existingPayment.value wird bei Live-Preisänderungen mutiert, dieser Snapshot nicht.
+const originalPaymentSnapshot = ref<{ amount_paid_rappen?: number; total_amount_rappen?: number; credit_used_rappen?: number; payment_status?: string } | null>(null)
 const isLoadingPayment = ref(false)
 const isMarkingAsPaid = ref(false)
 const cashAlreadyPaid = ref(false)
@@ -1394,6 +1414,44 @@ const calculateTotalPrice = computed(() => {
   return Math.max(0, totalBeforeCredit - creditUsed)
 })
 
+// ✅ Bereits bezahlter Betrag (Edit-Modus) - für Anzeige "bereits bezahlt" vs. "noch offen"
+// Konvention (siehe auch EnhancedStudentModal.vue, process-bulk-payment.post.ts,
+// server/api/appointments/save.post.ts): amount_paid_rappen = tatsächlich via Bar/Online
+// eingezogener Betrag, EXKLUSIVE Guthaben. Guthaben wird separat über credit_used_rappen
+// geführt und vom Bruttototal abgezogen. Fällt zurück auf (total - credit), wenn
+// amount_paid_rappen nicht getrackt wurde (ältere 'completed'-Payments ohne Tracking →
+// galten als vollständig eingezogen).
+const alreadyPaidChf = computed(() => {
+  // ⚠️ Bewusst originalPaymentSnapshot statt existingPayment verwenden: Letzteres wird bei
+  // Duration-/Preisänderungen live auf den NEUEN Preis umgeschrieben (siehe watch oben),
+  // der Snapshot bleibt der beim Laden tatsächlich hinterlegte (bezahlte) Betrag.
+  const payment = originalPaymentSnapshot.value
+  if (!payment || !props.isEditMode) return 0
+  if (!['completed', 'authorized', 'partial'].includes(payment.payment_status || '')) return 0
+
+  const paidRappen = (typeof payment.amount_paid_rappen === 'number' && payment.amount_paid_rappen > 0)
+    ? payment.amount_paid_rappen
+    : Math.max(0, (payment.total_amount_rappen || 0) - (payment.credit_used_rappen || 0))
+
+  return (paidRappen || 0) / 100
+})
+
+// Noch offener Betrag = neuer Preis nach Guthabenabzug minus bereits (netto, ohne Guthaben)
+// Bezahltes. calculateTotalPrice zieht das (unverändert "damals" genutzte) Guthaben bereits
+// einmal ab - das ist korrekt, da alreadyPaidChf das Guthaben NICHT mehr enthält.
+const outstandingChf = computed(() => {
+  if (alreadyPaidChf.value <= 0) return calculateTotalPrice.value
+  return Math.max(0, calculateTotalPrice.value - alreadyPaidChf.value)
+})
+
+// Nur bei einer echten Dauer-ERHÖHUNG zeigen wir "Bereits bezahlt" / "Noch zu bezahlen" an
+// (neuer Preis > bereits bezahlter Betrag → es entsteht eine neue Forderung). Bei einer
+// Dauer-VERKÜRZUNG ist alreadyPaidChf > neuer Preis - das ist erwartet und wird über die
+// bestehende Guthaben-Gutschrift beim Speichern korrekt aufgelöst, nicht über diese Anzeige.
+const showPaidVsOutstandingBreakdown = computed(() => {
+  return alreadyPaidChf.value > 0 && calculateTotalPrice.value > alreadyPaidChf.value
+})
+
 const calculatePriceBeforeCredit = () => {
   const basePrice = getBasePrice()
   const discountAmount = getDiscountAmount()
@@ -1604,6 +1662,7 @@ const loadExistingPayment = async () => {
   
   // 🔄 Reset state to avoid leaking previous appointment data
   existingPayment.value = null
+  originalPaymentSnapshot.value = null
   
   isLoadingPayment.value = true
   try {
@@ -1619,6 +1678,18 @@ const loadExistingPayment = async () => {
     if (paymentData) {
       // Initialize with empty products array to avoid stale data
       existingPayment.value = { ...paymentData, products: [] }
+
+      // ✅ Unveränderlicher Snapshot des ursprünglich geladenen Payments.
+      // existingPayment.value wird weiter unten bei Duration-/Preis-Änderungen live
+      // überschrieben (lesson_price_rappen/total_amount_rappen), damit die Preisvorschau
+      // aktuell bleibt. Für "bereits bezahlt" brauchen wir aber den unveränderten Wert
+      // von vor der Bearbeitung - sonst zeigt "bereits bezahlt" fälschlich den neuen Preis.
+      originalPaymentSnapshot.value = {
+        amount_paid_rappen: paymentData.amount_paid_rappen,
+        total_amount_rappen: paymentData.total_amount_rappen,
+        credit_used_rappen: paymentData.credit_used_rappen,
+        payment_status: paymentData.payment_status
+      }
       logger.debug('✅ PriceDisplay - Existing payment loaded:', {
         payment_method: paymentData.payment_method,
         payment_status: paymentData.payment_status,
@@ -1757,6 +1828,15 @@ const markAsCashPaid = async () => {
       await nextTick()
       existingPayment.value = updated
     }
+    // ✅ Snapshot ebenfalls aktualisieren, damit "Bereits bezahlt"/"Noch zu bezahlen" sofort
+    // (ohne Reload) korrekt anzeigen, dass jetzt alles bezahlt ist (kein offener Rest mehr).
+    if (originalPaymentSnapshot.value) {
+      originalPaymentSnapshot.value = {
+        ...originalPaymentSnapshot.value,
+        amount_paid_rappen: (originalPaymentSnapshot.value.total_amount_rappen || 0) - (originalPaymentSnapshot.value.credit_used_rappen || 0),
+        payment_status: 'completed'
+      }
+    }
     emit('payment-status-changed')
   } catch (e) {
     console.error('Fehler beim Markieren als bar bezahlt', e)
@@ -1772,6 +1852,7 @@ const paymentStatusBadge = computed(() => {
   const statusMap: Record<string, { label: string; class: string }> = {
     completed: { label: 'Bezahlt', class: 'bg-green-100 text-green-800' },
     pending: { label: 'Offen', class: 'bg-yellow-100 text-yellow-800' },
+    partial: { label: 'Teilzahlung', class: 'bg-orange-100 text-orange-800' },
     failed: { label: 'Fehlgeschlagen', class: 'bg-red-100 text-red-800' },
     authorized: { label: 'Autorisiert', class: 'bg-blue-100 text-blue-800' },
     refunded: { label: 'Rückerstattet', class: 'bg-green-100 text-green-800' },

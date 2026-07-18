@@ -1588,6 +1588,55 @@
               </p>
             </div>
 
+            <!-- Bearbeitbarkeit vergangener Termine -->
+            <div class="border border-amber-100 rounded-xl p-5 bg-amber-50/50 space-y-4">
+              <div class="flex items-start gap-3">
+                <div class="mt-0.5 w-8 h-8 flex-shrink-0 rounded-full bg-amber-100 flex items-center justify-center">
+                  <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 10-8 0v4h8z"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-gray-900">Bearbeitbarkeit vergangener Termine</p>
+                  <p class="mt-1 text-xs text-gray-500 leading-relaxed">
+                    Legt fest, ab wann ein Termin im Kalender für Mitarbeitende nicht mehr bearbeitet werden kann,
+                    sobald sein Start-Zeitpunkt vorbei ist.
+                  </p>
+                </div>
+              </div>
+
+              <div class="pl-11 space-y-2">
+                <label class="flex items-start gap-2 cursor-pointer">
+                  <input type="radio" value="immediately" v-model="bookingSettings.appointment_edit_lock_mode" class="mt-1" />
+                  <span class="text-sm text-gray-700">
+                    <span class="font-medium text-gray-900">Sofort sperren</span> – nicht mehr bearbeitbar, sobald der Termin begonnen hat
+                  </span>
+                </label>
+                <label class="flex items-start gap-2 cursor-pointer">
+                  <input type="radio" value="after_hours" v-model="bookingSettings.appointment_edit_lock_mode" class="mt-1" />
+                  <span class="text-sm text-gray-700">
+                    <span class="font-medium text-gray-900">Nach Zeitraum sperren</span> – noch bearbeitbar bis
+                  </span>
+                </label>
+                <div v-if="bookingSettings.appointment_edit_lock_mode === 'after_hours'" class="flex items-center gap-3 pl-6">
+                  <input
+                    type="number"
+                    v-model.number="bookingSettings.appointment_edit_lock_hours"
+                    min="0"
+                    max="8760"
+                    class="w-24 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                  />
+                  <span class="text-sm text-gray-700">Stunden nach Terminbeginn</span>
+                </div>
+                <label class="flex items-start gap-2 cursor-pointer">
+                  <input type="radio" value="never" v-model="bookingSettings.appointment_edit_lock_mode" class="mt-1" />
+                  <span class="text-sm text-gray-700">
+                    <span class="font-medium text-gray-900">Nie sperren</span> – vergangene Termine bleiben immer bearbeitbar
+                  </span>
+                </label>
+              </div>
+            </div>
+
             <!-- Save button -->
             <div class="flex items-center gap-3">
               <button @click="saveBookingSettings" :disabled="bookingSaving"
@@ -3476,14 +3525,24 @@ async function loadRentalPortalSlug() {
 }
 
 // ─── Booking Settings ───────────────────────────────────────────────────────
-const bookingSettings = ref({ minimum_booking_lead_time_hours: 12 })
+const bookingSettings = ref({
+  minimum_booking_lead_time_hours: 12,
+  appointment_edit_lock_mode: 'immediately' as 'immediately' | 'after_hours' | 'never',
+  appointment_edit_lock_hours: 0,
+})
 const bookingSaving = ref(false)
 const bookingSaved = ref(false)
 
 async function loadBookingSettings() {
   try {
-    const data = await $fetch<{ minimum_booking_lead_time_hours: number }>('/api/admin/booking-settings')
+    const data = await $fetch<{
+      minimum_booking_lead_time_hours: number
+      appointment_edit_lock_mode: 'immediately' | 'after_hours' | 'never'
+      appointment_edit_lock_hours: number
+    }>('/api/admin/booking-settings')
     bookingSettings.value.minimum_booking_lead_time_hours = data.minimum_booking_lead_time_hours
+    bookingSettings.value.appointment_edit_lock_mode = data.appointment_edit_lock_mode
+    bookingSettings.value.appointment_edit_lock_hours = data.appointment_edit_lock_hours
   } catch {}
 }
 
@@ -3493,7 +3552,11 @@ async function saveBookingSettings() {
   try {
     await $fetch('/api/admin/booking-settings', {
       method: 'POST',
-      body: { minimum_booking_lead_time_hours: bookingSettings.value.minimum_booking_lead_time_hours }
+      body: {
+        minimum_booking_lead_time_hours: bookingSettings.value.minimum_booking_lead_time_hours,
+        appointment_edit_lock_mode: bookingSettings.value.appointment_edit_lock_mode,
+        appointment_edit_lock_hours: bookingSettings.value.appointment_edit_lock_hours,
+      }
     })
     bookingSaved.value = true
     setTimeout(() => { bookingSaved.value = false }, 3000)
