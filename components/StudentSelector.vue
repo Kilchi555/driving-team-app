@@ -194,12 +194,6 @@ import { logger } from '~/utils/logger'
 import { ref, computed, watch, onMounted } from 'vue'
 const { primaryBg, primaryText, primaryBorder, primaryBgLight } = usePrimaryColor()
 // import { getSupabase } from '~/utils/supabase'
-import { 
-  cacheStudents, 
-  getCachedStudents, 
-  isCacheValid, 
-  getCacheStatus 
-} from '~/utils/studentCache'
 import AddStudentModal from '~/components/AddStudentModal.vue'
 
 // Student Interface
@@ -309,153 +303,52 @@ const loadStudents = async (editStudentId?: string | null) => {
   loadTime.value = Date.now()
 
   try {
-    // ✅ 1. Cache prüfen (nur für Staff-spezifische Abfragen)
-    if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value && staffId) { 
-      const cacheStatus = getCacheStatus(staffId)
-      logger.debug('📦 Cache status:', cacheStatus)
-      
-      if (cacheStatus.isValid && cacheStatus.count > 0) {
-        logger.debug('📦 Using cached students')
-        const cachedStudents = getCachedStudents(staffId)
-        
-        const typedStudents: Student[] = cachedStudents.map((student) => ({
-          id: student.id,
-          first_name: student.first_name,
-          last_name: student.last_name,
-          email: student.email,
-          phone: student.phone,
-          category: student.category,
-          assigned_staff_id: student.assigned_staff_id,
-          preferred_location_id: undefined
-        }))
-        
-        availableStudents.value = typedStudents
-        logger.debug('✅ Students loaded from cache:', availableStudents.value.length)
-        
-        // Background refresh falls online
-        if (navigator.onLine) {
-          logger.debug('🔄 Cache valid, but trying to refresh in background...')
-          setTimeout(() => {
-            loadStudentsFromDB(editStudentId, true) // Background refresh
-          }, 100)
-        }
-        
-        isLoading.value = false
-        return
-      }
-    }
-
-    // ✅ 2. Von DB laden
-    await loadStudentsFromDB(editStudentId, false)
-
+    await loadStudentsFromDB()
   } catch (err: any) {
     console.error('❌ Error in loadStudents:', err)
-    
-    // ✅ 3. Bei Netzwerk-Fehler: Fallback auf Cache
-    if ((err.message?.includes('fetch') || err.message?.includes('network')) && 
-        props.currentUser?.role === 'staff' && !showAllStudentsLocal.value) {
-      
-      logger.debug('📦 Network error - trying cache as fallback')
-      if (staffId) { 
-      const cachedStudents = getCachedStudents(staffId)
-      
-      if (cachedStudents.length > 0) {
-        const typedStudents: Student[] = cachedStudents.map((student) => ({
-          id: student.id,
-          first_name: student.first_name,
-          last_name: student.last_name,
-          email: student.email,
-          phone: student.phone,
-          category: student.category,
-          assigned_staff_id: student.assigned_staff_id,
-          preferred_location_id: undefined
-        }))
-        
-        availableStudents.value = typedStudents
-        logger.debug('✅ Students loaded from expired cache (offline fallback):', availableStudents.value.length)
-        error.value = '' // Kein Fehler anzeigen wenn Cache verfügbar
-      } else {
-        error.value = 'Offline - keine Schüler im Cache. Versuchen Sie es online.'
-        availableStudents.value = []
-      }
-    } else {
-      error.value = err.message || 'Fehler beim Laden der Schüler'
-      availableStudents.value = []
-    }
-        } else {
-      error.value = err.message || 'Fehler beim Laden der Schüler'
-      availableStudents.value = []
-        }
+    error.value = err.message || 'Fehler beim Laden der Schüler'
+    availableStudents.value = []
   } finally {
     isLoading.value = false
   }
 }
 
 // ✅ Backend API: Load students via API endpoint (bypasses RLS)
-const loadStudentsFromDB = async (editStudentId?: string | null, isBackgroundRefresh: boolean = false) => {
-  try {
-    console.log('📚 StudentSelector: Loading students via API...')
-    logger.debug('📚 StudentSelector: Loading students via API...')
+// Immer live laden - kein Caching, damit die Liste jederzeit mit anderen Ansichten
+// (z.B. Kundenliste) übereinstimmt.
+const loadStudentsFromDB = async () => {
+  logger.debug('📚 StudentSelector: Loading students via API...')
 
-    // Call backend API to fetch students (bypasses RLS)
-    // No need to manually pass auth token - cookies are sent automatically
-    const params = new URLSearchParams()
-    params.append('showAllStudents', showAllStudentsLocal.value.toString())
+  // Call backend API to fetch students (bypasses RLS)
+  // No need to manually pass auth token - cookies are sent automatically
+  const params = new URLSearchParams()
+  params.append('showAllStudents', showAllStudentsLocal.value.toString())
 
-    logger.debug('📡 Calling get-students API...')
-    const response = await $fetch(`/api/admin/get-students?${params.toString()}`, {
-      method: 'GET'
-      // Cookies are automatically sent by the browser
-    }) as any
+  logger.debug('📡 Calling get-students API...')
+  const response = await $fetch(`/api/admin/get-students?${params.toString()}`, {
+    method: 'GET'
+    // Cookies are automatically sent by the browser
+  }) as any
 
-    if (!response?.success || !response?.data) {
-      throw new Error('Failed to load students from API')
-    }
-
-    const studentsToCache = response.data
-
-    if (!isBackgroundRefresh) {
-      const typedStudents: Student[] = (studentsToCache || []).map((user: any) => ({
-        id: user.id,
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        category: user.category || '',
-        assigned_staff_id: user.assigned_staff_id || '',
-        preferred_location_id: user.preferred_location_id || undefined,
-        is_active: user.is_active,
-        onboarding_status: user.onboarding_status
-      }))
-
-      availableStudents.value = typedStudents
-      logger.debug('✅ Students loaded via API:', availableStudents.value.length)
-      
-      // DEBUG: Log first student to check data
-      if (typedStudents.length > 0) {
-        console.log('🔍 DEBUG First student:', {
-          name: typedStudents[0].first_name,
-          phone: typedStudents[0].phone,
-          category: typedStudents[0].category,
-          categoryType: typeof typedStudents[0].category,
-          categoryIsArray: Array.isArray(typedStudents[0].category),
-          rawData: typedStudents[0]
-        })
-      }
-
-      // Cache for staff-specific loads
-      const staffId = props.currentUser?.id
-      if (props.currentUser?.role === 'staff' && !showAllStudentsLocal.value && studentsToCache.length > 0 && staffId) {
-        cacheStudents(studentsToCache, staffId)
-      }
-    }
-
-  } catch (err: any) {
-    console.error('❌ StudentSelector: Error loading from API:', err)
-    if (!isBackgroundRefresh) {
-      throw err
-    }
+  if (!response?.success || !response?.data) {
+    throw new Error('Failed to load students from API')
   }
+
+  const typedStudents: Student[] = (response.data || []).map((user: any) => ({
+    id: user.id,
+    first_name: user.first_name || '',
+    last_name: user.last_name || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    category: user.category || '',
+    assigned_staff_id: user.assigned_staff_id || '',
+    preferred_location_id: user.preferred_location_id || undefined,
+    is_active: user.is_active,
+    onboarding_status: user.onboarding_status
+  }))
+
+  availableStudents.value = typedStudents
+  logger.debug('✅ Students loaded via API:', availableStudents.value.length)
 }
 
 const handleSwitchToOther = () => {

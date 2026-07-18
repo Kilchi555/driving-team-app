@@ -98,8 +98,8 @@
             </label>
           </div>
 
-          <!-- All Students Toggle (nur für Staff) -->
-          <div v-if="currentUser.role === 'staff' || 'admin'" class="flex items-center gap-3 rounded-lg">
+          <!-- All Students Toggle (nur für Staff - Admins sehen immer alle Schüler) -->
+          <div v-if="currentUser.role === 'staff'" class="flex items-center gap-3 rounded-lg">
             <span class="text-sm font-medium text-gray-700">
               {{ showAllStudents ? 'Alle' : 'Meine' }}
             </span>
@@ -123,7 +123,7 @@
 
         <!-- Statistics -->
         <div class="flex gap-3 text-xs sm:text-sm text-gray-600">
-          <span v-if="!showAllStudents">Meine: {{ students.length }}</span>
+          <span v-if="currentUser.role === 'staff' && !showAllStudents">Meine: {{ students.length }}</span>
           <span v-else>Alle: {{ students.length }}</span>
           <span>Aktiv: {{ students.filter(s => s.is_active).length }}</span>
           <span>Inaktiv: {{ students.filter(s => !s.is_active).length }}</span>
@@ -577,13 +577,6 @@ const isCategoryPassed = (student: any, cat: string): boolean => {
   return passed.some(p => p === cat || p === normalizedCat)
 }
 
-// A student is "completed" if they have enrolled categories and ALL are passed
-const isStudentCompleted = (student: any): boolean => {
-  const categories: string[] = student.category || []
-  if (!categories.length) return false
-  return categories.every(cat => isCategoryPassed(student, cat))
-}
-
 // Mobile optimization methods
 const formatPhone = (phone: string) => {
   if (!phone) return ''
@@ -721,90 +714,31 @@ const loadStudents = async (loadAppointments = true) => {
   
   try {
     logger.debug('Current user role:', currentUser.value.role)
-    
-    // Use the new backend API endpoint that bypasses RLS
-    // Authentication is handled via HTTP-Only cookies (sent automatically)
-    const response = await $fetch('/api/admin/get-tenant-users', {
+
+    // ✅ Gleicher Endpoint & gleiche Filterlogik wie der StudentSelector im EventModal
+    // (server/utils/get-filtered-students.ts), damit beide Ansichten immer exakt
+    // dieselben Schüler zeigen. Kein Client-seitiges Nachfiltern mehr nötig.
+    const params = new URLSearchParams()
+    params.append('showAllStudents', showAllStudents.value.toString())
+    params.append('showInactive', showInactive.value.toString())
+
+    const response = await $fetch(`/api/admin/get-students?${params.toString()}`, {
       method: 'GET'
       // No Authorization header needed - cookies are sent automatically
     }) as any
 
     if (!response?.success || !response?.data) {
-      throw new Error('Failed to load users from API')
+      throw new Error('Failed to load students from API')
     }
 
-    logger.debug('✅ Users loaded successfully via API:', response.data.length)
-    
-    // Filter for clients only
-    let data = (response.data as any[]).filter((u: any) => u.role === 'client')
-    
-    logger.debug('📚 Filtered to client users:', data.length)
-    
-    if (!data) {
+    logger.debug('✅ Students loaded successfully via API:', response.data.length)
+
+    const studentsToProcess = response.data as any[]
+
+    if (!studentsToProcess.length) {
       students.value = []
       logger.debug('ℹ️ No students found')
       return
-    }
-
-    // ✅ Client-seitige Filterung für active/inactive/completed users
-    let filteredData = data
-    if (showInactive.value) {
-      // Show INACTIVE students (deactivated) AND COMPLETED students (all categories passed)
-      filteredData = data.filter((student: any) => {
-        const deactivated = student.is_active === false && student.auth_user_id !== null
-        const completed = student.is_active === true && isStudentCompleted(student)
-        return deactivated || completed
-      })
-      logger.debug(`📊 Client-side filtering (INACTIVE + COMPLETED): ${data.length} total → ${filteredData.length}`)
-    } else {
-      // Show ACTIVE students who have NOT completed all their categories, OR pending users
-      filteredData = data.filter((student: any) => {
-        if (student.auth_user_id === null) return true // always show pending
-        return student.is_active === true && !isStudentCompleted(student)
-      })
-      logger.debug(`📊 Client-side filtering (ACTIVE, not completed): ${data.length} total → ${filteredData.length}`)
-    }
-
-    // ✅ NEU: Intelligente Filterung basierend auf showAllStudents
-    let studentsToProcess = filteredData as any[]
-    
-    // ✅ DEBUG: Zeige alle geladenen Schüler
-    logger.debug('🔍 All loaded students:', studentsToProcess.map((s: any) => ({ 
-      id: s.id, 
-      name: `${s.first_name} ${s.last_name}`, 
-      is_active: s.is_active,
-      email: s.email 
-    })))
-    
-    // ✅ DEBUG: Zeige is_active Status aller Schüler
-    const activeCount = studentsToProcess.filter((s: any) => s.is_active).length
-    const inactiveCount = studentsToProcess.filter((s: any) => !s.is_active).length
-    logger.debug(`📊 Students status: ${activeCount} active, ${inactiveCount} inactive`)
-    
-    
-    if (!showAllStudents.value) {
-      // "Meine" - Filter by assigned staff (check both assigned_staff_id and assigned_staff_ids array)
-      logger.debug('👤 Filter: Show only MY students (assigned to me)')
-      logger.debug('🔍 Current user details:', {
-        id: currentUser.value.id,
-        email: currentUser.value.email,
-        role: currentUser.value.role,
-        first_name: currentUser.value.first_name
-      })
-      
-      // ✅ Filter to only students assigned to current user (single or multiple staff)
-      studentsToProcess = studentsToProcess.filter((s: any) => {
-        // Check both assigned_staff_id (single) and assigned_staff_ids (array)
-        const isSingleAssigned = s.assigned_staff_id === currentUser.value.id
-        const isArrayAssigned = (s.assigned_staff_ids || []).includes(currentUser.value.id)
-        return isSingleAssigned || isArrayAssigned
-      })
-      logger.debug(`✅ Filtered to ${studentsToProcess.length} students assigned to me`)
-    } else {
-      // "Alle" - Show all students in tenant
-      logger.debug('👑 Filter: Show ALL students in tenant')
-      // studentsToProcess already contains all filtered data (active/inactive)
-      logger.debug(`✅ Showing all ${studentsToProcess.length} students in tenant`)
     }
 
     // ✅ OPTIMIERT: Lade alle Fahrlehrer-Daten via API Endpoint
