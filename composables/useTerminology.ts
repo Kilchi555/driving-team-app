@@ -46,6 +46,18 @@ const TERMS: Record<string, Terminology> = {
     appointmentsPlural: 'Fahrstunden',
     bookAction: 'Fahrstunde buchen'
   },
+  // 'mental_coach' is the actual business_type code used by business_types /
+  // tenant-register.vue. 'coaching' is kept as an alias for any legacy data.
+  mental_coach: {
+    client: 'Klient',
+    clientsPlural: 'Klienten',
+    clientPossessive: 'Klient',
+    staff: 'Coach',
+    staffPlural: 'Coaches',
+    appointment: 'Sitzung',
+    appointmentsPlural: 'Sitzungen',
+    bookAction: 'Sitzung buchen'
+  },
   coaching: {
     client: 'Klient',
     clientsPlural: 'Klienten',

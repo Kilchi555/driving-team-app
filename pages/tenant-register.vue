@@ -207,8 +207,7 @@
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Geschäftstyp</label>
                 <select v-model="formData.business_type"
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
-                  <option value="driving_school">Fahrschule</option>
-                  <option value="mental_coach">Coaching</option>
+                  <option v-for="bt in businessTypes" :key="bt.code" :value="bt.code">{{ bt.name }}</option>
                 </select>
               </div>
               <div>
@@ -1605,6 +1604,20 @@ const formData = ref({
   twilio_from_sender: '',
 })
 
+// ─── Business Types ────────────────────────────────────────────────────────
+interface BusinessTypeOption { code: string; name: string; description?: string }
+const businessTypes = ref<BusinessTypeOption[]>([])
+
+const loadBusinessTypes = async () => {
+  try {
+    const res = await $fetch<{ businessTypes: BusinessTypeOption[] }>('/api/tenants/business-types')
+    businessTypes.value = res.businessTypes || []
+  } catch {
+    // Fallback keeps the form usable even if the endpoint is unreachable
+    businessTypes.value = [{ code: 'driving_school', name: 'Fahrschule' }]
+  }
+}
+
 // ─── Categories ────────────────────────────────────────────────────────────
 interface TemplateCategory {
   id: number
@@ -2519,6 +2532,8 @@ const pageBackground = computed(() => {
 
 onMounted(async () => {
   const q = route.query
+
+  loadBusinessTypes()
 
   // Restore any previously saved progress first
   loadFromStorage()

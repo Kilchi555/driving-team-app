@@ -123,77 +123,35 @@ export default defineEventHandler(async (event) => {
       if (presetRow) presets = presetRow
     }
 
-    // Inline fallback defaults per business type (minimal starter set)
-    const defaultsByType: Record<string, { eventTypes: any[]; categories: any[]; pricingRules: any[]; uiLabels: Record<string, string>; featureFlags: Record<string, string> }> = {
-      driving_school: {
-        eventTypes: [
-          { code: 'lesson',   name: 'Fahrstunde', require_payment: true,  public_bookable: true,  default_duration_minutes: 45 },
-          { code: 'exam',     name: 'Prüfung',    require_payment: true,  public_bookable: false, default_duration_minutes: 45 },
-          { code: 'theory',   name: 'Theorie',    require_payment: true,  public_bookable: true,  default_duration_minutes: 45 },
-          { code: 'vacation', name: 'Ferien',      require_payment: false, public_bookable: false, default_duration_minutes: 480, emoji: '🏖️',  default_color: '#94a3b8', display_order: 98 },
-          { code: 'course',   name: 'Kurs',        require_payment: false, public_bookable: false, default_duration_minutes: 480, emoji: '📚', default_color: '#6366f1', display_order: 99 },
-        ],
-        categories: [
-          { code: 'B', name: 'Kategorie B', color: '#90EE90', is_active: true },
-        ],
-        pricingRules: [],
-        uiLabels: {
-          term_lesson: 'Fahrstunde',
-          term_exam: 'Prüfung',
-          term_category: 'Kategorie',
-          verb_book: 'Buchen'
-        },
-        featureFlags: {
-          booking_public_enabled: 'true',
-          invoices_enabled: 'true',
-          packages_enabled: 'false',
-          product_sales_enabled: 'false',
-          courses_enabled: 'true'
-        }
-      },
-      mental_coach: {
-        eventTypes: [
-          { code: 'intake', name: 'Erstgespräch', require_payment: false, public_bookable: true, default_duration_minutes: 30 },
-          { code: 'session', name: 'Sitzung', require_payment: true, public_bookable: true, default_duration_minutes: 60 },
-          { code: 'package', name: 'Paket', require_payment: true, public_bookable: false, default_duration_minutes: 60 },
-        ],
-        categories: [
-          { code: 'stress', name: 'Stress', color: '#7C3AED', is_active: true },
-          { code: 'focus', name: 'Fokus', color: '#0EA5E9', is_active: true },
-        ],
-        pricingRules: [],
-        uiLabels: {
-          term_lesson: 'Sitzung',
-          term_exam: 'Erstgespräch',
-          term_category: 'Themenbereich',
-          verb_book: 'Buchen'
-        },
-        featureFlags: {
-          booking_public_enabled: 'true',
-          invoices_enabled: 'true',
-          packages_enabled: 'true',
-          product_sales_enabled: 'false',
-          courses_enabled: 'true'
-        }
-      }
-    }
+    // Structural defaults (event types, categories) live as template rows
+    // (tenant_id IS NULL) on the real tables, tagged with business_type — the
+    // same source register.post.ts uses for new signups. This keeps a single
+    // source of truth instead of duplicating them here as inline literals.
+    // `business_type_presets.defaults` can still override/extend with simple
+    // JSON-only data that has no relational table equivalent (e.g. suggested
+    // pricing rules).
+    const [{ data: templateCategories }, { data: templateEventTypes }] = await Promise.all([
+      supabase
+        .from('categories')
+        .select('code, name, description, color, is_active')
+        .is('tenant_id', null)
+        .eq('business_type', businessType)
+        .eq('is_active', true),
+      supabase
+        .from('event_types')
+        .select('code, name, emoji, description, default_duration_minutes, default_color, is_active, require_payment, public_bookable')
+        .is('tenant_id', null)
+        .eq('business_type', businessType),
+    ])
 
-    // Build effective defaults object from presets or fallback
-    const defaults = (() => {
-      if (presets) {
-        const featureFlags = presets.feature_flags || {}
-        const uiLabels = presets.ui_labels || {}
-        const defs = presets.defaults || {}
-        return {
-          eventTypes: defs.event_types || [],
-          categories: defs.categories || [],
-          pricingRules: defs.pricing_rules || [],
-          uiLabels: uiLabels,
-          featureFlags: featureFlags
-        }
-      }
-      return defaultsByType[businessType] || defaultsByType['driving_school']
-    })()
+    const presetDefaults = presets?.defaults || {}
+    const defaults = {
+      eventTypes: presetDefaults.event_types?.length ? presetDefaults.event_types : (templateEventTypes || []),
+      categories: presetDefaults.categories?.length ? presetDefaults.categories : (templateCategories || []),
+      pricingRules: presetDefaults.pricing_rules || [],
+      uiLabels: presets?.ui_labels || {},
+      featureFlags: presets?.feature_flags || {},
+    }
 
     // 3) Upsert categories and event_types (respect tenant scope)
     // Categories: check existing by (tenant_id, code)
