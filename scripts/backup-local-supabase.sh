@@ -1,14 +1,21 @@
 #!/bin/sh
 # scripts/backup-local-supabase.sh
 #
-# This repo enforces "Cloud Supabase only" — a local `supabase/` directory
-# (from `supabase init`/`supabase start`, or Edge Function drafts, etc.) must
-# never be committed. Previously this was enforced by unconditionally running
-# `rm -rf supabase/`, which permanently destroyed uncommitted work with no
-# way to recover it (this happened once — see incident below — and must
-# never happen again).
+# This repo enforces "Cloud Supabase only" — a local Supabase CLI dev stack
+# (from `supabase init`/`supabase start`: config.toml, seed.sql, .branches/,
+# .temp/, etc.) must never be committed. Previously this was enforced by
+# unconditionally running `rm -rf supabase/`, which permanently destroyed
+# uncommitted work with no way to recover it (this happened once — see
+# incident below — and must never happen again).
 #
-# This script instead MOVES any local `supabase/` directory (and stray
+# EXCEPTION: `supabase/functions/` and `supabase/migrations/` are legitimate,
+# intentionally version-controlled source (Edge Function code, SQL migrations)
+# that must survive in the working tree and in git — see incident response
+# plan in pages/tenant-admin/backup.vue, which relies on these being restorable
+# via a plain `git checkout`. Only the local-dev-only files/dirs below are
+# moved away; functions/ and migrations/ are left untouched.
+#
+# This script MOVES any offending local Supabase dev files (and stray
 # `supabase_*.tar.gz` archives) to a timestamped backup folder OUTSIDE the
 # repo. Nothing is ever deleted. If you didn't mean for this to run, your
 # files are safe in $BACKUP_ROOT below.
@@ -23,16 +30,23 @@ BACKUP_ROOT="$HOME/.driving-team-app-local-backups/supabase"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 MOVED=0
 
-echo "🔍 Checking for local Supabase files..."
+# Local-dev-only Supabase CLI artifacts. Deliberately does NOT include
+# `functions` or `migrations` — those are meant to be committed.
+LOCAL_DEV_ENTRIES="config.toml seed.sql .branches .temp .env .env.local"
+
+echo "🔍 Checking for local Supabase dev files..."
 
 if [ -d "supabase" ]; then
-  BACKUP_DIR="$BACKUP_ROOT/$TIMESTAMP"
-  mkdir -p "$BACKUP_DIR"
-  echo "⚠️  Local 'supabase/' directory found — moving it (NOT deleting)."
-  mv supabase "$BACKUP_DIR/supabase"
-  echo "📦 Backed up to: $BACKUP_DIR/supabase"
-  echo "   Restore with: mv \"$BACKUP_DIR/supabase\" ./supabase"
-  MOVED=1
+  for entry in $LOCAL_DEV_ENTRIES; do
+    [ -e "supabase/$entry" ] || continue
+    BACKUP_DIR="$BACKUP_ROOT/$TIMESTAMP/supabase"
+    mkdir -p "$BACKUP_DIR"
+    echo "⚠️  Local 'supabase/$entry' found — moving it (NOT deleting)."
+    mv "supabase/$entry" "$BACKUP_DIR/$entry"
+    echo "📦 Backed up to: $BACKUP_DIR/$entry"
+    echo "   Restore with: mv \"$BACKUP_DIR/$entry\" ./supabase/$entry"
+    MOVED=1
+  done
 fi
 
 # Use a glob loop instead of `[ -f "supabase_*.tar.gz" ]` (that never matched —
@@ -46,8 +60,12 @@ for archive in supabase_*.tar.gz; do
   MOVED=1
 done
 
-if [ -d "supabase" ] || ls supabase_*.tar.gz >/dev/null 2>&1; then
-  echo "❌ ERROR: Local Supabase files still present after backup attempt."
+STILL_PRESENT=0
+for entry in $LOCAL_DEV_ENTRIES; do
+  [ -e "supabase/$entry" ] && STILL_PRESENT=1
+done
+if [ "$STILL_PRESENT" = "1" ] || ls supabase_*.tar.gz >/dev/null 2>&1; then
+  echo "❌ ERROR: Local Supabase dev files still present after backup attempt."
   echo "🚫 Please check $BACKUP_ROOT and remove manually if needed."
   exit 1
 fi
