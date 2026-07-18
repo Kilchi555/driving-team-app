@@ -394,7 +394,7 @@
                 {{ copyInviteLinkStatus || 'Link kopieren' }}
               </button>
             </div>
-            <div class="text-xs text-yellow-700">Hinweis: Der Link ist 7 Tage gültig.</div>
+            <div class="text-xs text-yellow-700">Hinweis: Der Link ist 30 Tage gültig.</div>
           </div>
 
           <!-- Actions -->

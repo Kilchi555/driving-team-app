@@ -156,7 +156,7 @@ export default defineEventHandler(async (event) => {
     // Einladungs-Token generieren
     const token = generateToken()
     const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 7)
+    expiresAt.setDate(expiresAt.getDate() + 30)
 
     // Placeholder-E-Mail falls keine angegeben (DB-Constraint erfordert E-Mail)
     const inviteEmail = email || `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${Date.now()}@onboarding.simy.ch`
@@ -254,7 +254,7 @@ function buildInviteEmailHtml({ firstName, lastName, tenantName, inviteLink }: {
       <a href="${inviteLink}" style="background:#2563eb;color:#fff;padding:14px 36px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">Jetzt registrieren</a>
     </p>
     <p style="font-size:13px;color:#666">Oder Link kopieren: <a href="${inviteLink}">${inviteLink}</a></p>
-    <p style="font-size:12px;color:#999">Einladung gültig 7 Tage.</p>
+    <p style="font-size:12px;color:#999">Einladung gültig 30 Tage.</p>
   </td></tr>
 </table></body></html>`
 }
