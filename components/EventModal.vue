@@ -184,6 +184,7 @@
               :appointment-id="props.eventData?.id"
               :original-duration="props.eventData?.duration_minutes"
               @duration-changed="handleDurationChanged"
+              @duration-change-rejected="handleDurationChangeRejected"
             />
             
 
@@ -1311,12 +1312,22 @@ const appointmentPickupAddress = computed(() => {
   return props.eventData?.extendedProps?.customer_pickup_address || null
 })
 
+// ✅ Admin-konfigurierbar (Einstellungen → Online-Buchung): Ab wann gilt ein Termin als
+// "gesperrt" für Bearbeitung? 'immediately' (Default) | 'after_hours' | 'never'
+const appointmentEditLockMode = ref<'immediately' | 'after_hours' | 'never'>('immediately')
+const appointmentEditLockHours = ref(0)
+
 const isPastAppointment = computed(() => {
   // Bei neuen Terminen (create mode) ist es nie ein vergangener Termin
   if (props.mode === 'create') {
     return false
   }
-  
+
+  // Admin hat "nie sperren" konfiguriert → Termin gilt nie als gesperrt
+  if (appointmentEditLockMode.value === 'never') {
+    return false
+  }
+
   if (!formData.value.startDate || !formData.value.startTime) {
     logger.debug('🚫 isPastAppointment: Kein Datum/Zeit gesetzt:', { 
       startDate: formData.value.startDate, 
@@ -1324,21 +1335,29 @@ const isPastAppointment = computed(() => {
     })
     return false
   }
-  
+
   const appointmentDateTime = new Date(`${formData.value.startDate}T${formData.value.startTime}`)
   const now = new Date()
-  
-  const isPast = appointmentDateTime < now
-  
+
+  // Bei 'after_hours' wird die Sperre erst nach der konfigurierten Anzahl Stunden nach
+  // Terminbeginn wirksam. Bei 'immediately' (Default) ist die Grace-Period 0 Stunden.
+  const graceHours = appointmentEditLockMode.value === 'after_hours' ? appointmentEditLockHours.value : 0
+  const lockThreshold = new Date(appointmentDateTime.getTime() + graceHours * 60 * 60 * 1000)
+
+  const isPast = lockThreshold < now
+
   logger.debug('⏰ isPastAppointment Check:', {
     mode: props.mode,
     startDate: formData.value.startDate,
     startTime: formData.value.startTime,
     appointmentDateTime: appointmentDateTime.toISOString(),
+    editLockMode: appointmentEditLockMode.value,
+    graceHours,
+    lockThreshold: lockThreshold.toISOString(),
     now: now.toISOString(),
     isPast: isPast
   })
-  
+
   return isPast
 })
 
@@ -1844,6 +1863,26 @@ const handleSaveAppointment = async () => {
       } catch (creditError: any) {
         logger.error('EventModal', 'Error processing duration reduction:', creditError)
         // Don't block appointment close if credit fails
+      }
+    } else if (
+      props.mode === 'edit' && originalAppointmentData &&
+      formData.value.duration_minutes > originalAppointmentData.duration_minutes &&
+      originalPaymentData && ['completed', 'authorized', 'partial'].includes(originalPaymentData.payment_status)
+    ) {
+      // ✅ Duration was increased on an already-paid appointment: the server (save.post.ts) already
+      // turned the remainder into an outstanding ("partial") balance instead of silently inflating a
+      // completed payment. Re-fetch the payment here just to tell staff how much is now open.
+      try {
+        const updatedPayment = await eventModalApi.getPaymentByAppointment(savedAppointment.id)
+        if (updatedPayment?.payment_status === 'partial') {
+          const outstandingRappen = Math.max(0, (updatedPayment.total_amount_rappen || 0) - (updatedPayment.amount_paid_rappen || 0))
+          showSuccess(
+            'Dauer erhöht – Betrag offen',
+            `Für die zusätzliche Zeit ist noch CHF ${(outstandingRappen / 100).toFixed(2)} offen. Der Termin wurde als "Teilzahlung" markiert.`
+          )
+        }
+      } catch (err: any) {
+        logger.warn('⚠️ Could not verify outstanding amount after duration increase:', err.message)
       }
     }
     
@@ -4024,7 +4063,11 @@ const handlePriceChanged = (price: number) => {
   logger.debug('💰 Price changed in EventModal:', price)
 }
 
-const handleDurationChanged = async (newDuration: number) => {
+// ✅ Die Bezahlt-Prüfung (Dauer erhöhen blockieren / Dauer verringern → Guthaben-Info)
+// läuft zentral in DurationSelector.vue (Buttons UND externe Änderungen wie der
+// Zeit-Picker sind dort per watch(modelValue) abgedeckt). Hier nur noch die
+// UI-Folgeaktionen für einen bereits als erlaubt bestätigten Wert.
+const handleDurationChanged = (newDuration: number) => {
   logger.debug('⏱️ Duration changed to:', newDuration)
   
   // ❌ Vergangene Termine können nicht mehr geändert werden
@@ -4033,37 +4076,17 @@ const handleDurationChanged = async (newDuration: number) => {
     return
   }
   
-  const oldDuration = formData.value.duration_minutes
-  
-  // ✅ NEW: If this is edit mode with paid payment, check if duration increase is attempted
-  if (props.mode === 'edit' && props.eventData?.id && oldDuration !== newDuration) {
-    // Get payment status via secure API
-    const payment = await eventModalApi.getPaymentByAppointment(props.eventData.id)
-    
-    // If paid and trying to INCREASE duration, show error and reset
-    if (payment && (payment.payment_status === 'completed' || payment.payment_status === 'authorized')) {
-      if (newDuration > oldDuration) {
-        logger.warn('🚫 Cannot increase duration on paid appointment')
-        showError(
-          'Dauer-Erhöhung nicht möglich',
-          'Da dieser Termin bereits bezahlt ist, können Sie die Dauer nicht erhöhen. Bitte erstellen Sie einen neuen Termin für die zusätzliche Zeit.'
-        )
-        // Reset to original duration
-        formData.value.duration_minutes = oldDuration
-        calculateEndTime()
-        return
-      } else if (newDuration < oldDuration) {
-        // Duration decreased - will be credited on save
-        logger.debug('✅ Duration decreased - difference will be credited to student', {
-          old: oldDuration,
-          new: newDuration
-        })
-      }
-    }
-  }
-  
-  // Update form UI
   formData.value.duration_minutes = newDuration
+  calculateEndTime()
+}
+
+// ✅ Wird ausgelöst, wenn eine Dauer-Erhöhung auf einem bereits bezahlten Termin
+// abgelehnt wurde (z.B. weil die Endzeit manuell im Zeit-Picker geändert wurde,
+// statt über die Dauer-Buttons). Dauer UND Endzeit müssen konsistent zurück auf
+// die ursprüngliche Dauer gesetzt werden - die reine Meldung übernimmt DurationSelector.vue.
+const handleDurationChangeRejected = (originalDuration: number) => {
+  logger.debug('🚫 Duration change rejected (paid appointment), reverting to:', originalDuration)
+  formData.value.duration_minutes = originalDuration
   calculateEndTime()
 }
 
@@ -6504,6 +6527,14 @@ watch(() => props.isVisible, async (newVisible) => {
       } else if (tenantData?.name) {
         tenantName.value = tenantData.name
         logger.debug('🏢 Tenant name loaded via API:', tenantName.value)
+      }
+
+      // ✅ Admin-konfigurierbare Sperrfrist für vergangene Termine übernehmen
+      if (tenantData?.appointment_edit_lock_mode) {
+        appointmentEditLockMode.value = tenantData.appointment_edit_lock_mode
+      }
+      if (typeof tenantData?.appointment_edit_lock_hours === 'number') {
+        appointmentEditLockHours.value = tenantData.appointment_edit_lock_hours
       }
     } catch (error) {
       console.warn('⚠️ Could not load tenant name:', error)

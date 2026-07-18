@@ -116,6 +116,7 @@ export default defineEventHandler(async (event) => {
         products_price_rappen,
         discount_amount_rappen,
         total_amount_rappen,
+        amount_paid_rappen,
         payment_method,
         payment_status,
         currency,

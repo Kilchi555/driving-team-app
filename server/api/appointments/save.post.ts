@@ -191,7 +191,7 @@ export default defineEventHandler(async (event) => {
       // Update existing appointment
       const { data: oldAppointment, error: fetchError } = await supabase
         .from('appointments')
-        .select('start_time, end_time, staff_id, tenant_id')
+        .select('start_time, end_time, staff_id, tenant_id, duration_minutes')
         .eq('id', eventId)
         .single()
 
@@ -202,6 +202,14 @@ export default defineEventHandler(async (event) => {
           statusMessage: 'Could not fetch appointment for editing'
         })
       }
+
+      // ✅ Was the duration increased on an appointment that already had money collected against
+      // it? Used further below (payment-update block) to correctly create an outstanding balance
+      // ("partial" payment) for the extra time instead of silently inflating a `completed` payment.
+      const isDurationIncrease =
+        typeof appointmentData.duration_minutes === 'number' &&
+        typeof oldAppointment.duration_minutes === 'number' &&
+        appointmentData.duration_minutes > oldAppointment.duration_minutes
 
       const { data, error: updateError } = await supabase
         .from('appointments')
@@ -292,7 +300,7 @@ export default defineEventHandler(async (event) => {
           // Check if payment exists
           const { data: existingPayment } = await supabase
             .from('payments')
-            .select('id, payment_status, total_amount_rappen')
+            .select('id, payment_status, total_amount_rappen, amount_paid_rappen, metadata')
             .eq('appointment_id', eventId)
             .maybeSingle()
           
@@ -344,10 +352,55 @@ export default defineEventHandler(async (event) => {
               updated_at: new Date().toISOString()
             }
             
-            // ✅ Update payment_status based on remaining amount
-            // WICHTIG: NIEMALS 'completed' auf 'pending' zurücksetzen! 
-            // Bereits bezahlte Termine bleiben bezahlt (Preis wird angepasst, aber nicht der Status)
-            if (existingPayment.payment_status === 'pending') {
+            // ✅ Was money already collected against the OLD (shorter) duration, and is the
+            // duration now being increased? Then the extra time is a genuinely NEW charge - we
+            // must NOT silently bump total_amount_rappen while keeping payment_status='completed'
+            // (that would falsely claim the extra time was paid for). Instead: keep track of what
+            // was actually collected via amount_paid_rappen and mark the remainder as 'partial'
+            // (same mechanism already used elsewhere in the app for partial/outstanding payments),
+            // so it shows up as an open balance for staff to collect (e.g. EnhancedStudentModal,
+            // invoices) rather than disappearing into a silently-inflated "completed" payment.
+            const wasAlreadyPaidOrPartial = ['completed', 'authorized', 'partial'].includes(existingPayment.payment_status)
+            
+            if (isDurationIncrease && wasAlreadyPaidOrPartial) {
+              // ⚠️ Konvention im ganzen Codebase (siehe EnhancedStudentModal.vue, process-bulk-payment.post.ts):
+              // amount_paid_rappen = tatsächlich via Bar/Online eingezogener Betrag, EXKLUSIVE Guthaben.
+              // credit_used_rappen wird separat geführt und vom Bruttototal abgezogen, um den
+              // "netto geschuldeten" Betrag zu erhalten. total_amount_rappen ist immer brutto (vor Guthaben).
+              const creditUsedForThisPayment = creditUsedRappen || 0
+              const previousNetDueRappen = Math.max(0, (existingPayment.total_amount_rappen || 0) - creditUsedForThisPayment)
+
+              const previouslyPaidRappen = (typeof existingPayment.amount_paid_rappen === 'number' && existingPayment.amount_paid_rappen > 0)
+                ? existingPayment.amount_paid_rappen
+                : previousNetDueRappen // 'completed'/'authorized' ohne amount_paid_rappen-Tracking → altes Netto-Total galt als vollständig eingezogen
+
+              const newNetDueRappen = Math.max(0, finalTotalAmount - creditUsedForThisPayment)
+              const outstandingRappen = Math.max(0, newNetDueRappen - previouslyPaidRappen)
+
+              paymentUpdateData.amount_paid_rappen = Math.min(previouslyPaidRappen, newNetDueRappen)
+              paymentUpdateData.payment_status = outstandingRappen === 0 ? 'completed' : 'partial'
+              paymentUpdateData.metadata = {
+                ...(existingPayment.metadata || {}),
+                duration_extension: {
+                  old_duration_minutes: oldAppointment.duration_minutes,
+                  new_duration_minutes: appointmentData.duration_minutes,
+                  previous_total_rappen: existingPayment.total_amount_rappen,
+                  previously_collected_rappen: previouslyPaidRappen,
+                  outstanding_rappen: outstandingRappen,
+                  extended_at: new Date().toISOString(),
+                  extended_by: callerProfile.id
+                }
+              }
+              
+              logger.warn('💳 Duration increased on already-paid appointment - marking remainder as outstanding (partial) instead of silently inflating a completed payment', {
+                appointmentId: eventId,
+                oldDuration: oldAppointment.duration_minutes,
+                newDuration: appointmentData.duration_minutes,
+                previouslyPaidRappen,
+                newTotalRappen: finalTotalAmount,
+                outstandingRappen
+              })
+            } else if (existingPayment.payment_status === 'pending') {
               // Nur bei 'pending' den Status basierend auf remainingAmount ändern
               paymentUpdateData.payment_status = remainingAmountRappen === 0 ? 'completed' : 'pending'
               
@@ -356,10 +409,17 @@ export default defineEventHandler(async (event) => {
                 paymentUpdateData.paid_at = new Date().toISOString()
               }
             } else if (existingPayment.payment_status === 'completed') {
-              // Bei bereits bezahlten Payments: Status BEIBEHALTEN!
+              // Bei bereits bezahlten Payments (Dauer unverändert oder verkürzt): Status BEIBEHALTEN!
               // Der Preis wird angepasst, aber der Status bleibt 'completed'
               paymentUpdateData.payment_status = 'completed'
               logger.debug('✅ Preserving completed payment status')
+            } else if (existingPayment.payment_status === 'partial') {
+              // Dauer unverändert/verkürzt bei einer bereits als 'partial' markierten Zahlung:
+              // amount_paid_rappen bleibt wie es war, Status wird anhand des neuen Netto-Totals
+              // (Brutto minus Guthaben) neu bestimmt - amount_paid_rappen ist exklusive Guthaben.
+              const collectedSoFarRappen = existingPayment.amount_paid_rappen || 0
+              const netDueRappen = finalTotalAmount - (creditUsedRappen || 0)
+              paymentUpdateData.payment_status = (netDueRappen - collectedSoFarRappen) <= 0 ? 'completed' : 'partial'
             }
             
             const { error: updatePaymentError } = await supabase

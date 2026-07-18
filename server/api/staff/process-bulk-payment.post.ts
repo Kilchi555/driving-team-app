@@ -93,6 +93,7 @@ export default defineEventHandler(async (event) => {
         amount_paid_rappen,
         payment_status,
         metadata,
+        created_at,
         appointments(id, status, cancellation_charge_percentage, type)
       `)
       .in('id', payment_ids)
@@ -184,6 +185,19 @@ export default defineEventHandler(async (event) => {
           // Append to partial_payments history in metadata
           const existingMeta = (paymentDueData as any)?.metadata || {}
           const existingHistory: any[] = existingMeta.partial_payments || []
+
+          // ✅ Falls bereits vorher etwas bezahlt wurde (already_paid_rappen > 0, z.B. direkt bei
+          // der Terminerstellung), aber noch nie in der partial_payments-Historie erfasst wurde,
+          // zuerst rückwirkend einen Eintrag dafür anlegen - sonst würde diese (neue) Zahlung
+          // fälschlich als "1. Zahlung" angezeigt, obwohl es schon eine frühere gab.
+          const alreadyPaidRappen = paymentDueData?.already_paid_rappen || 0
+          if (existingHistory.length === 0 && alreadyPaidRappen > 0) {
+            existingHistory.push({
+              amount_rappen: alreadyPaidRappen,
+              paid_at: paymentDueData?.created_at || now
+            })
+          }
+
           existingHistory.push({ amount_rappen: decision.new_amount, paid_at: now })
           updateData.metadata = { ...existingMeta, partial_payments: existingHistory }
         }

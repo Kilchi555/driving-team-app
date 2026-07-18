@@ -74,8 +74,11 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'update:modelValue', value: number): void
-  (e: 'duration-changed', duration: number): void
+  // 'duration-change-rejected': Eine Dauer-Änderung (egal ob über Buttons oder z.B.
+  // den Zeit-Picker) wurde abgelehnt, weil der Termin bereits bezahlt ist. Der
+  // Elternteil muss die Dauer (und ggf. abhängige Felder wie die Endzeit) auf den
+  // mitgegebenen Wert (die ursprüngliche Dauer) zurücksetzen.
+  (e: 'update:modelValue' | 'duration-changed' | 'duration-change-rejected', value: number): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -202,6 +205,48 @@ const formattedDurations = computed(() => {
   return result
 })
 
+// ✅ Zeigt eine Info/Fehlermeldung an, die bis zur nächsten relevanten Änderung
+// sichtbar bleibt (kein automatisches Ausblenden mehr) - der Nutzer soll sie
+// bis zum Speichern lesen können.
+const setDurationMessage = (message: string | null) => {
+  error.value = message
+}
+
+// ✅ Prüft, ob eine Dauer-Änderung bei einem bereits bezahlten Termin erlaubt ist, und zeigt
+// eine passende Info an. Wird sowohl bei Klick auf die Dauer-Buttons als auch bei jeder anderen
+// Änderung von modelValue (z.B. über den Zeit-Picker/Endzeit) aufgerufen - siehe watch() unten.
+// Sowohl Erhöhung als auch Verkürzung sind erlaubt (return ist daher immer true) - der Rückgabewert
+// bleibt bestehen, damit ein zukünftiger Blockierungsfall (z.B. Änderung nicht möglich) weiterhin
+// über denselben Mechanismus (inkl. Revert via 'duration-change-rejected') abgebildet werden könnte.
+const evaluatePaidDurationChange = async (newDuration: number): Promise<boolean> => {
+  if (props.mode !== 'edit' || !props.originalDuration || newDuration === props.originalDuration) {
+    setDurationMessage(null)
+    return true
+  }
+
+  const isPaid = await checkIfPaid()
+  if (!isPaid) {
+    setDurationMessage(null)
+    return true
+  }
+
+  if (newDuration > props.originalDuration) {
+    // Dauer erhöht - erlaubt. Der Server erstellt beim Speichern einen offenen Restbetrag
+    // ("Teilzahlung") für die zusätzliche Zeit, statt die bereits bezahlte Zahlung stillschweigend
+    // zu überschreiben (siehe server/api/appointments/save.post.ts).
+    logger.info('ℹ️ Duration increased on paid appointment - additional amount will be due on save')
+    const durationIncrease = newDuration - props.originalDuration
+    setDurationMessage(`ℹ️ Dieser Termin ist bereits bezahlt. Für die zusätzlichen ${durationIncrease} Minuten wird beim Speichern ein offener Betrag erstellt, den der Kunde noch bezahlen muss.`)
+    return true
+  }
+
+  // Dauer verringert - erlaubt, Guthaben-Info anzeigen (bleibt sichtbar bis zum Speichern)
+  logger.info('ℹ️ Duration decreased on paid appointment - will credit difference')
+  const durationReduction = props.originalDuration - newDuration
+  setDurationMessage(`ℹ️ Dieser Termin ist bereits bezahlt. Die Differenz von ${durationReduction} Minuten wird Ihrem Guthaben gutgeschrieben.`)
+  return true
+}
+
 // ✅ NEU: Prüfe ob Termin bezahlt ist
 const checkIfPaid = async (): Promise<boolean> => {
   if (!props.appointmentId || props.mode !== 'edit') {
@@ -239,46 +284,32 @@ const selectDuration = async (duration: number) => {
     return
   }
   
-  // ✅ NEU: Prüfe ob Dauer geändert wird und Termin bereits bezahlt ist
-  if (props.mode === 'edit' && props.originalDuration && duration !== props.originalDuration) {
-    const isPaid = await checkIfPaid()
-    
-    if (isPaid) {
-      if (duration > props.originalDuration) {
-        // Dauer erhöht - nicht erlaubt
-        logger.error('🚫 Cannot increase duration on paid appointment')
-        error.value = 'Dieser Termin ist bereits bezahlt. Die Dauer kann nicht erhöht werden. Bitte erstellen Sie einen zusätzlichen Termin für die weitere Zeit.'
-        
-        // Fehlermeldung nach 8 Sekunden ausblenden
-        setTimeout(() => {
-          error.value = null
-        }, 8000)
-        
-        return // Verhindere die Änderung
-      } else if (duration < props.originalDuration) {
-        // Dauer verringert - erlaubt, aber Info anzeigen
-        logger.info('ℹ️ Duration decreased on paid appointment - will credit difference')
-        const durationReduction = props.originalDuration - duration
-        error.value = `ℹ️ Dieser Termin ist bereits bezahlt. Die Differenz von ${durationReduction} Minuten wird Ihrem Guthaben gutgeschrieben.`
-        
-        // Info-Meldung nach 6 Sekunden ausblenden
-        setTimeout(() => {
-          error.value = null
-        }, 6000)
-        
-        // Erlaube die Änderung (kein return)
-      }
-    }
-  }
-  
-  // Clear any previous errors if duration matches original
-  if (props.mode === 'edit' && props.originalDuration && duration === props.originalDuration) {
-    error.value = null
+  // ✅ Prüfe ob Dauer-Änderung bei bereits bezahltem Termin erlaubt ist
+  // (synchron VOR dem Emit, damit bei "erhöhen" gar kein kurzes Aufblitzen der
+  // neuen Dauer entsteht - siehe watch(modelValue) unten für Änderungen, die
+  // NICHT über diese Buttons erfolgen, z.B. via Zeit-Picker)
+  const allowed = await evaluatePaidDurationChange(duration)
+  if (!allowed) {
+    return // Verhindere die Änderung
   }
   
   emit('update:modelValue', duration)
   emit('duration-changed', duration)
 }
+
+// ✅ NEU: Deckt Dauer-Änderungen ab, die NICHT über die Buttons oben laufen,
+// z.B. wenn die Endzeit manuell im Zeit-Picker geändert wird. Ohne diesen
+// Watcher gab es dafür weder die Bezahlt-Prüfung noch eine Hinweismeldung.
+watch(() => props.modelValue, async (newValue, oldValue) => {
+  if (oldValue === undefined || newValue === oldValue) return
+
+  const allowed = await evaluatePaidDurationChange(newValue)
+  if (!allowed) {
+    // Änderung von "aussen" (nicht über selectDuration, z.B. Zeit-Picker) rückgängig
+    // machen. Das Elternteil kümmert sich um abhängige Felder (z.B. Endzeit).
+    emit('duration-change-rejected', oldValue)
+  }
+})
 
 // Watchers
 watch(() => props.availableDurations, async (newDurations) => {

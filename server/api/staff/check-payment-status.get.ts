@@ -118,7 +118,10 @@ export default defineEventHandler(async (event) => {
       // Continue with unpaid status - payment may not exist
     }
 
-    const isPaid = payment && (payment.payment_status === 'completed' || payment.payment_status === 'authorized')
+    // ✅ 'partial' counts as "paid" here too: money has already been collected against this
+    // appointment (e.g. after a previous duration-increase created an outstanding balance), so
+    // further duration changes must still go through the same credit/outstanding-balance logic.
+    const isPaid = payment && ['completed', 'authorized', 'partial'].includes(payment.payment_status)
 
     logger.debug('💳 Payment status checked:', {
       appointmentId,

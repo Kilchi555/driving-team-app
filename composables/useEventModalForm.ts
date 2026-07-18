@@ -1449,6 +1449,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
   const updatePaymentEntry = async (appointmentId: string, discountSaleId?: string) => {
     try {
       const supabase = getSupabase()
+      // ✅ Get tenant_id from authStore (not from direct DB query!)
+      const authStore = useAuthStore()
       
       // Check if payment already exists
       const { data: existingPayment, error: fetchError } = await supabase
@@ -1487,7 +1489,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
       let lessonPriceRappen: number
       const appointmentType = formData.value.appointment_type || 'lesson'
       
-      // ✅ Get tenant_id from authStore (not from direct DB query!)
       const staffTenantId = authStore.userProfile?.tenant_id
       if (!staffTenantId) {
         throw new Error('Staff user has no tenant assigned')
