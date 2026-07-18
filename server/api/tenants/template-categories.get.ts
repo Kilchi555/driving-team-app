@@ -10,12 +10,15 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdmin()
 
-  // Load all template categories (tenant_id IS NULL)
+  // Load template categories (tenant_id IS NULL) matching this business_type.
+  // NOTE: this previously ignored the business_type param entirely, so every
+  // signup (regardless of chosen business type) saw the driving_school list.
   const { data: categories, error } = await supabase
     .from('categories')
     .select('id, name, code, description, color, parent_category_id, icon_svg')
     .is('tenant_id', null)
     .eq('is_active', true)
+    .eq('business_type', businessType)
     .order('code', { ascending: true })
 
   if (error) {

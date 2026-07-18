@@ -2,16 +2,12 @@
 // ✅ SECURITY HARDENED: Rate limiting, XSS protection, audit logging
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { sendWelcomeEmail } from '~/server/utils/send-welcome-email'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
 import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
 import { generateRegistrationToken } from '~/server/utils/registration-token'
-
-const VALID_BUSINESS_TYPES = new Set([
-  'driving_school', 'motorcycle_school', 'truck_school', 'other'
-])
+import { resolveBusinessType, applyCategoryAndEventTypeDefaults, applyEvaluationDefaults } from '~/server/utils/business-type-presets'
 
 interface TenantRegistrationData {
   name: string
@@ -282,6 +278,10 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       }
     }
     
+    // Validate against the live business_types table (not a hardcoded list) so
+    // new types added via the super-admin dashboard are usable immediately.
+    const resolvedBusinessType = await resolveBusinessType(supabase, data.business_type)
+
     const { data: newTenant, error: insertError } = await supabase
       .from('tenants')
       .insert({
@@ -296,7 +296,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         contact_email: data.contact_email.toLowerCase().trim(),
         contact_phone: sanitizedPhone,
         address: `${sanitizedStreet} ${sanitizedStreetNr}, ${data.zip} ${sanitizedCity}`,
-        business_type: VALID_BUSINESS_TYPES.has(data.business_type) ? data.business_type : 'driving_school',
+        business_type: resolvedBusinessType,
         primary_color: data.primary_color,
         secondary_color: data.secondary_color,
         // Standard-Farben setzen
@@ -374,7 +374,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       const selectedIds = data.selected_category_ids
         ? data.selected_category_ids.split(',').map(id => id.trim()).filter(Boolean)
         : undefined
-      await copyDefaultDataToTenant(tenantId, data.business_type, selectedIds, data.pricing_json)
+      await copyDefaultDataToTenant(tenantId, resolvedBusinessType, selectedIds, data.pricing_json)
       logger.debug('✅ Default data copied to tenant')
 
       // Set all feature flags explicitly for trial plan
@@ -533,21 +533,14 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       logger.warn('⚠️ Failed to notify super admins (non-critical):', notifyError)
     }
 
-    // ✅ LAYER 6b: Send welcome email to new tenant admin
-    try {
-      await sendWelcomeEmail({
-        role: 'admin',
-        to: newTenant.contact_email,
-        firstName: sanitizedFirstName,
-        tenantId: newTenant.id,
-        tenantName: newTenant.name,
-        tenantSlug: newTenant.slug,
-        tenantPrimaryColor: newTenant.primary_color,
-      })
-      logger.debug('✅ Welcome email sent to new tenant admin')
-    } catch (emailErr: any) {
-      logger.warn('⚠️ Welcome email failed (non-critical):', emailErr)
-    }
+    // NOTE: The welcome email is intentionally NOT sent here. It used to be
+    // sent at this point (role: 'admin', via sendWelcomeEmail()) AND again by
+    // the frontend after admin-user-creation/staff-invites via
+    // POST /api/tenants/send-welcome-email — resulting in every new tenant
+    // getting the welcome email twice with two different templates. That
+    // second call has the richer, contextually-accurate content (mentions
+    // the SMS invite / Wallee setup that only exist by then), so it's kept
+    // as the single source and this earlier duplicate was removed.
 
     // ✅ LAYER 5: Audit logging - Success
     await logAudit({
@@ -895,237 +888,32 @@ async function copyDefaultDataToTenant(
   const supabase = getSupabaseAdmin()
   const now = new Date().toISOString()
 
-  // ── 1. Categories ──────────────────────────────────────────────────────────
+  // ── 1+2. Categories & Event Types ────────────────────────────────────────
+  // Delegates to the shared business-type-presets util so registration and
+  // any future admin "reseed tenant" action apply identical logic.
+  let theoryEnabled = false
   try {
-    const categoriesQuery = supabase
-      .from('categories')
-      .select('id, code, name, description, color, is_active, exam_duration_minutes, lesson_duration_minutes, theory_durations, document_requirements, parent_category_id, icon_svg')
-      .is('tenant_id', null)
-      .eq('is_active', true)
-      .order('code', { ascending: true })
-    // Only copy templates matching this tenant's business_type (mirrors evaluation_categories filter below)
-    if (businessType) {
-      categoriesQuery.eq('business_type', businessType)
-    } else {
-      categoriesQuery.is('business_type', null)
+    if (pricingJson?.trim()) {
+      const pricingItems = JSON.parse(pricingJson)
+      theoryEnabled = Array.isArray(pricingItems) && pricingItems.some((p: any) => p.rule_type === 'theory')
     }
-    const { data: allTemplates, error: fetchError } = await categoriesQuery
+  } catch { /* non-critical — default to inactive */ }
 
-    if (fetchError || !allTemplates?.length) {
-      logger.warn('⚠️ No template categories found')
-    } else {
-      // Filter to selected IDs if provided (always include parents of selected children)
-      const templateIds = new Set(allTemplates.map(c => c.id))
+  await applyCategoryAndEventTypeDefaults(supabase, tenantId, businessType, {
+    selectedCategoryIds,
+    theoryEnabled,
+  })
 
-      // Only include rows whose parent_category_id points to another template (or is null)
-      const validTemplates = allTemplates.filter(c =>
-        !c.parent_category_id || templateIds.has(c.parent_category_id)
-      )
-
-      const filtered = selectedCategoryIds?.length
-        ? validTemplates.filter(c => {
-            if (!c.parent_category_id) {
-              // Top-level: nur einschliessen wenn explizit ausgewählt
-              return selectedCategoryIds.includes(String(c.id))
-            } else {
-              const parentSelected = selectedCategoryIds.includes(String(c.parent_category_id))
-              if (!parentSelected) return false
-
-              // Check if any specific children of this parent were individually selected
-              const hasSpecificChildSelected = validTemplates.some(sibling =>
-                sibling.parent_category_id === c.parent_category_id &&
-                selectedCategoryIds.includes(String(sibling.id))
-              )
-
-              if (hasSpecificChildSelected) {
-                // Only include explicitly selected children
-                return selectedCategoryIds.includes(String(c.id))
-              } else {
-                // Parent selected but no specific child → include all children
-                return true
-              }
-            }
-          })
-        : validTemplates
-
-      const parentCats = filtered.filter(c => !c.parent_category_id)
-      const leafCats   = filtered.filter(c =>  c.parent_category_id)
-
-      // Insert parents and capture new auto-generated IDs
-      const oldToNewId = new Map<number, number>()
-
-      if (parentCats.length > 0) {
-        const { data: insertedParents, error: pErr } = await supabase
-          .from('categories')
-          .insert(
-            parentCats.map(cat => ({
-              tenant_id: tenantId,
-              code: cat.code,
-              name: cat.name,
-              description: cat.description,
-              color: cat.color,
-              is_active: cat.is_active,
-              exam_duration_minutes: cat.exam_duration_minutes,
-              lesson_duration_minutes: cat.lesson_duration_minutes,
-              theory_durations: cat.theory_durations,
-              document_requirements: cat.document_requirements,
-              icon_svg: cat.icon_svg,
-              parent_category_id: null,
-              created_at: now,
-              updated_at: now,
-            }))
-          )
-          .select('id')
-
-        if (pErr) { logger.warn('⚠️ Parent category insert error:', pErr) }
-        else if (insertedParents) {
-          parentCats.forEach((cat, i) => {
-            if (insertedParents[i]) oldToNewId.set(cat.id, insertedParents[i].id)
-          })
-          logger.debug(`✅ Copied ${parentCats.length} parent categories`)
-        }
-      }
-
-      // Insert leaf categories with mapped parent IDs
-      if (leafCats.length > 0) {
-        const { error: lErr } = await supabase
-          .from('categories')
-          .insert(
-            leafCats.map(cat => ({
-              tenant_id: tenantId,
-              code: cat.code,
-              name: cat.name,
-              description: cat.description,
-              color: cat.color,
-              is_active: cat.is_active,
-              exam_duration_minutes: cat.exam_duration_minutes,
-              lesson_duration_minutes: cat.lesson_duration_minutes,
-              theory_durations: cat.theory_durations,
-              document_requirements: cat.document_requirements,
-              icon_svg: cat.icon_svg,
-              parent_category_id: cat.parent_category_id ? (oldToNewId.get(cat.parent_category_id) ?? null) : null,
-              created_at: now,
-              updated_at: now,
-            }))
-          )
-        if (lErr) logger.warn('⚠️ Leaf category insert error:', lErr)
-        else logger.debug(`✅ Copied ${leafCats.length} leaf categories`)
-      }
-    }
-  } catch (err) { logger.warn('⚠️ Category copy failed:', err) }
-
-  // ── 2. Event Types ─────────────────────────────────────────────────────────
-  try {
-    const eventTypesQuery = supabase
-      .from('event_types')
-      .select('*')
-      .is('tenant_id', null)
-    // Only copy templates matching this tenant's business_type (mirrors categories/evaluation_categories filters)
-    if (businessType) {
-      eventTypesQuery.eq('business_type', businessType)
-    } else {
-      eventTypesQuery.is('business_type', null)
-    }
-    const { data: etTemplates, error: etErr } = await eventTypesQuery
-
-    if (!etErr && etTemplates?.length) {
-      // Determine if the tenant explicitly enabled the "theory" pricing row.
-      // If not, the theory event type is created but set inactive so it doesn't
-      // clutter the calendar for schools that don't offer theory lessons.
-      let theoryEnabled = false
-      try {
-        if (pricingJson?.trim()) {
-          const pricingItems = JSON.parse(pricingJson)
-          theoryEnabled = Array.isArray(pricingItems) && pricingItems.some((p: any) => p.rule_type === 'theory')
-        }
-      } catch { /* non-critical — default to inactive */ }
-
-      const { error: etInsertErr } = await supabase.from('event_types').insert(
-        etTemplates.map(({ business_type: _templateBusinessType, ...et }) => ({
-          ...et,
-          id: crypto.randomUUID(),
-          tenant_id: tenantId,
-          created_at: now,
-          updated_at: now,
-          // Deactivate theory event type unless tenant enabled it in the pricing step
-          ...(et.code === 'theory' && !theoryEnabled ? { is_active: false } : {}),
-        }))
-      )
-      if (etInsertErr) logger.warn('⚠️ Event types insert failed:', etInsertErr)
-      else logger.debug(`✅ Copied ${etTemplates.length} event types (theory active: ${theoryEnabled})`)
-    }
-  } catch (err) { logger.warn('⚠️ Event type copy failed:', err) }
-
-  // ── 3. Evaluation Categories ───────────────────────────────────────────────
-  try {
-    // Get tenant's business_type to filter matching templates
-    const { data: tenantRow } = await supabase
-      .from('tenants')
-      .select('business_type')
-      .eq('id', tenantId)
-      .single()
-    const businessType = tenantRow?.business_type || null
-
-    const evalCatsQuery = supabase
-      .from('evaluation_categories')
-      .select('*')
-      .is('tenant_id', null)
-    // Only copy templates that match the tenant's business_type (or have no type set)
-    if (businessType) {
-      evalCatsQuery.eq('business_type', businessType)
-    } else {
-      evalCatsQuery.is('business_type', null)
-    }
-    const { data: evalCats, error: ecErr } = await evalCatsQuery
-
-    if (!ecErr && evalCats?.length) {
-      const ecIdMap = new Map<string, string>()
-      for (const ec of evalCats) ecIdMap.set(ec.id, crypto.randomUUID())
-
-      await supabase.from('evaluation_categories').insert(
-        evalCats.map(ec => ({ ...ec, id: ecIdMap.get(ec.id)!, tenant_id: tenantId, created_at: now, updated_at: now }))
-      )
-      logger.debug(`✅ Copied ${evalCats.length} evaluation categories`)
-
-      // ── 3a. Evaluation Criteria ──────────────────────────────────────────
-      const { data: criteria, error: criErr } = await supabase
-        .from('evaluation_criteria')
-        .select('*')
-        .in('category_id', evalCats.map(ec => ec.id))
-
-      if (!criErr && criteria?.length) {
-        const criIdMap = new Map<string, string>()
-        for (const c of criteria) criIdMap.set(c.id, crypto.randomUUID())
-
-        await supabase.from('evaluation_criteria').insert(
-          criteria.map(c => ({
-            ...c,
-            id: criIdMap.get(c.id)!,
-            tenant_id: tenantId,
-            category_id: ecIdMap.get(c.category_id) ?? c.category_id,
-            created_at: now,
-            updated_at: now,
-          }))
-        )
-        logger.debug(`✅ Copied ${criteria.length} evaluation criteria`)
-      }
-
-      // ── 3b. Evaluation Scale ─────────────────────────────────────────────
-      const { data: scale, error: scErr } = await supabase
-        .from('evaluation_scale')
-        .select('*')
-        .is('tenant_id', null)
-
-      if (!scErr && scale?.length) {
-        await supabase.from('evaluation_scale').insert(
-          scale.map(s => ({ ...s, id: crypto.randomUUID(), tenant_id: tenantId, created_at: now, updated_at: now }))
-        )
-        logger.debug(`✅ Copied ${scale.length} evaluation scale entries`)
-      }
-    }
-  } catch (err) { logger.warn('⚠️ Evaluation copy failed:', err) }
+  // ── 3. Evaluation Categories (+ Criteria + Scale) ────────────────────────
+  await applyEvaluationDefaults(supabase, tenantId, businessType)
 
   // ── 4. Cancellation Policies ───────────────────────────────────────────────
+  await copyGenericTemplates(supabase, tenantId, now)
+}
+
+/** Copies business-type-agnostic templates (cancellation policies/reasons, payment methods). */
+async function copyGenericTemplates(supabase: ReturnType<typeof getSupabaseAdmin>, tenantId: string, now: string): Promise<void> {
+  // ── Cancellation Policies ─────────────────────────────────────────────────
   try {
     const { data: policies, error: polErr } = await supabase
       .from('cancellation_policies')
