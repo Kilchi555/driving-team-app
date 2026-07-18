@@ -650,11 +650,11 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <div class="rounded-xl border border-red-100 bg-red-50 p-4">
           <div class="font-semibold text-red-800 mb-1">🎯 Ziel: App in &lt; 2.5h wieder live</div>
-          <div class="text-sm text-red-700">backup.dump via pg_restore auf neue Supabase-Instanz importieren, GitHub Secrets + Vercel Env aktualisieren, Redeploy.</div>
+          <div class="text-sm text-red-700">Zuerst PITR im gleichen Projekt prüfen (schnellste Option). Nur bei Totalverlust: backup.dump via pg_restore auf neue Supabase-Instanz importieren, GitHub Secrets + Vercel Env aktualisieren, Redeploy.</div>
         </div>
         <div class="rounded-xl border border-amber-100 bg-amber-50 p-4">
           <div class="font-semibold text-amber-800 mb-1">⚠️ Datenverlust-Fenster</div>
-          <div class="text-sm text-amber-700">Max. ~24h (tägl. Backup um 02:00 UTC). Supabase hat zusätzlich PITR. Dateien in Storage sind <strong>nicht</strong> im Backup enthalten!</div>
+          <div class="text-sm text-amber-700">Max. ~24h (tägl. Backup um 02:00 UTC) bei Vollrestore. Supabase PITR (Pro-Plan) erlaubt feingranulareres Rollback im gleichen Projekt. Dateien in Storage sind <strong>nicht</strong> im pg_dump enthalten, aber täglich separat nach R2 gesichert.</div>
         </div>
         <div class="rounded-xl border border-blue-100 bg-blue-50 p-4">
           <div class="font-semibold text-blue-800 mb-1">📦 Backup-Format</div>
@@ -724,79 +724,78 @@ const incidentSteps = [
     link: 'https://status.supabase.com',
   },
   {
+    title: 'Recovery-Strategie wählen: PITR vs. neues Projekt',
+    time: '5–10 min',
+    critical: true,
+    description: 'Ist das Projekt im Supabase Dashboard noch erreichbar und nur Daten sind betroffen (z.B. versehentlich gelöschte Zeilen, fehlerhafte Migration)? → Point-in-Time-Recovery (PITR) im GLEICHEN Projekt nutzen (Settings → Database → Backups → PITR). Das ist meist in < 15 Min erledigt, URL/Keys bleiben gleich, Schritte 3–11 entfallen komplett. NUR wenn Projekt/Account komplett unerreichbar oder zerstört ist (z.B. Account-Kompromittierung, Supabase löscht Projekt) → weiter mit neuem Projekt.',
+  },
+  {
     title: 'Neues Supabase-Projekt erstellen',
-    time: '5–15 min',
+    time: '10–20 min',
     critical: false,
-    description: 'Auf supabase.com neues Projekt anlegen. Gleiche Organisation. Region: Europe West (Frankfurt). Plan: Pro. Starkes Passwort notieren. Project-Ref notieren (aus URL: app.supabase.com/project/[REF]).',
+    description: 'Nur falls PITR nicht möglich (siehe Schritt 2). Auf supabase.com neues Projekt anlegen. Gleiche Organisation. Region: Europe West (Frankfurt). Plan: Pro. Starkes Passwort notieren. Project-Ref notieren (aus URL: app.supabase.com/project/[REF]).',
     link: 'https://app.supabase.com/new/project',
   },
   {
     title: 'Backup von Cloudflare R2 herunterladen',
-    time: '15–20 min',
+    time: '20–25 min',
     critical: true,
     description: 'R2 → driving-team-backups → neuestes Datum-Ordner → backup.dump (Vollbackup) + schema.sql (zur Referenz) herunterladen. backup.dump ist das pg_dump --format=custom Archiv mit Schema + Daten.',
     link: 'https://dash.cloudflare.com/?to=/:account/r2/default/buckets/driving-team-backups',
   },
   {
     title: 'Schema + Daten via pg_restore importieren',
-    time: '20–50 min',
+    time: '25–55 min',
     critical: true,
     description: 'pg_restore mit Session-Mode Pooler URL des NEUEN Projekts. --disable-triggers ist nötig wegen FK-Constraints. Extension-Fehler (hypopg, supabase_vault) sind normal und können ignoriert werden.',
     command: '# Session Pooler URL aus: neues Projekt → Settings → Database → Session Pooler\npg_restore \\\n  --host=[NEUE_HOST] --port=5432 \\\n  --username=postgres.NEUE_REF \\\n  --dbname=postgres \\\n  --no-owner --no-privileges \\\n  --disable-triggers \\\n  backup.dump',
   },
   {
     title: 'Wichtige Extensions manuell aktivieren',
-    time: '50–55 min',
+    time: '55–60 min',
     critical: false,
     description: 'Im Supabase SQL-Editor des neuen Projekts: Extensions aktivieren die pg_restore nicht installieren konnte (Supabase-spezifische Extensions werden automatisch bereitgestellt, aber pgcrypto und uuid-ossp müssen evtl. manuell aktiviert werden).',
     command: '-- Im Supabase SQL-Editor ausführen:\nCREATE EXTENSION IF NOT EXISTS "uuid-ossp";\nCREATE EXTENSION IF NOT EXISTS "pgcrypto";\nCREATE EXTENSION IF NOT EXISTS "pg_trgm";',
   },
   {
     title: 'Supabase Storage Buckets wiederherstellen',
-    time: '55–65 min',
+    time: '60–70 min',
     critical: false,
-    description: '⚠️ WICHTIG: Dateien (Lernfahrausweise, Dokumente) liegen in Supabase Storage und sind NICHT im pg_dump enthalten! Im alten Projekt (falls noch lesbar): Storage → Download. Oder rclone zwischen alten und neuen Storage Buckets synchronisieren. Bucket-Namen und Public/Private-Einstellungen neu konfigurieren.',
-    command: '# Falls altes Projekt noch lesbar:\nrclone copy supabase-old:driving-team supabase-new:driving-team',
+    description: '⚠️ WICHTIG: Dateien (Lernfahrausweise, Dokumente) liegen in Supabase Storage und sind NICHT im pg_dump enthalten! Primärer Weg: Der tägliche Storage-Sync liegt bereits vollständig in Cloudflare R2 (r2:driving-team-backups/storage/) – von dort ins neue Projekt zurückspielen. Das alte Projekt als Quelle NICHT verlassen darauf, dass es im Ausfall noch erreichbar ist. Bucket-Namen und Public/Private-Einstellungen im neuen Projekt neu konfigurieren.',
+    command: '# Primär: aus dem R2-Backup wiederherstellen (immer verfügbar, unabhängig vom alten Projekt)\nrclone copy r2:driving-team-backups/storage supabase-new:driving-team\n\n# Nur falls das alte Projekt ausnahmsweise noch lesbar UND aktueller als R2 ist:\n# rclone copy supabase-old:driving-team supabase-new:driving-team',
   },
   {
     title: 'RLS Policies und Auth bestätigen',
-    time: '65–70 min',
+    time: '70–75 min',
     critical: false,
-    description: 'RLS Policies werden mit schema.sql importiert. Im neuen Projekt unter Authentication → Policies prüfen ob alle Tabellen RLS enabled haben. Besonders: users, appointments, payments, tenants.',
+    description: 'RLS Policies werden mit schema.sql importiert. Im neuen Projekt unter Authentication → Policies prüfen ob alle Tabellen RLS enabled haben. Besonders: users, appointments, payments, tenants. Bei Multi-Tenant-Setup zusätzlich prüfen, dass tenant_id-basierte Policies korrekt greifen (kein Datenleck zwischen Tenants).',
   },
   {
     title: 'GitHub Secrets updaten (Backups!)',
-    time: '70–75 min',
+    time: '75–80 min',
     critical: true,
-    description: 'GitHub → Settings → Secrets → Actions: SUPABASE_DB_URL auf Session Pooler URL des NEUEN Projekts setzen. Sonst läuft das tägliche Backup weiterhin gegen das alte (kaputte) Projekt.',
+    description: 'GitHub → Settings → Secrets → Actions: SUPABASE_DB_URL auf Session Pooler URL des NEUEN Projekts setzen. Zusätzlich SUPABASE_S3_ACCESS_KEY_ID + SUPABASE_S3_SECRET_ACCESS_KEY im neuen Projekt neu generieren (Storage → S3 Access Keys) und ebenfalls aktualisieren – sonst läuft der Storage-Sync-Teil des nächsten täglichen Backups weiterhin gegen das alte (kaputte) Projekt.',
     link: 'https://github.com/Kilchi555/driving-team-app/settings/secrets/actions',
   },
   {
     title: 'Nuxt / Vercel Env Variables aktualisieren',
-    time: '75–85 min',
+    time: '80–90 min',
     critical: true,
-    description: 'Vercel → Settings → Environment Variables aktualisieren: SUPABASE_URL (neues Projekt), SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY. Danach Redeploy triggern (oder automatisch nach Env-Änderung).',
+    description: '⚠️ ENCRYPTION_KEY und IBAN_ENCRYPTION_KEY NICHT neu generieren – exakt unverändert aus dem alten Projekt übernehmen, sonst werden bereits verschlüsselte Daten (z.B. IBANs) dauerhaft unlesbar! Vercel → Settings → Environment Variables aktualisieren: SUPABASE_URL (neues Projekt), SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY. Danach Redeploy triggern (oder automatisch nach Env-Änderung).',
     link: 'https://vercel.com/dashboard',
   },
   {
     title: 'Edge Functions neu deployen',
-    time: '85–95 min',
+    time: '90–100 min',
     critical: false,
-    description: 'Supabase Edge Functions (send-email, send-payment-reminder etc.) auf neues Projekt deployen. Supabase CLI lokal installiert vorausgesetzt.',
+    description: 'Supabase Edge Functions (send-email, send-staff-invitation-email, send-payment-reminder) auf neues Projekt deployen. Sourcen liegen im Repo unter supabase/functions/. Supabase CLI lokal installiert vorausgesetzt.',
     command: 'supabase login\nsupabase link --project-ref [NEUE_PROJECT_REF]\nsupabase functions deploy',
   },
   {
-    title: 'OAuth & Auth konfigurieren',
-    time: '95–110 min',
-    critical: false,
-    description: 'Neues Projekt → Authentication → Providers: Google OAuth Client ID + Secret aus Google Cloud Console eintragen. Redirect URLs auf neue Supabase-URL anpassen. Auch in Google Cloud Console die neue Supabase-Auth-URL als Authorized Redirect URI eintragen.',
-    link: 'https://console.cloud.google.com/apis/credentials',
-  },
-  {
     title: 'Smoke Test',
-    time: '110–130 min',
+    time: '100–120 min',
     critical: true,
-    description: 'Login (Email + Google OAuth), Kalender laden, Termin erstellen, Schüler suchen, Zahlung erstellen, PDF generieren, Backup-Dashboard prüfen. Erst wenn alle kritischen Flows grün sind: Recovery als abgeschlossen melden.',
+    description: 'Login mit bestehendem (nicht neu angelegtem) Test-User via Passwort. Hinweis: Google-OAuth-Login existiert in dieser App nicht (Google wird nur für Ads/GBP/Maps-Integrationen genutzt, nicht für den Auth-Login) – daher hier nicht nötig. Danach: Kalender laden, Termin erstellen, Schüler suchen, Zahlung erstellen, PDF generieren, Backup-Dashboard prüfen. Falls bestehende Passwort-Logins fehlschlagen: Mass-Password-Reset-E-Mail an alle Nutzer als Plan B. Erst wenn alle kritischen Flows grün sind: Recovery als abgeschlossen melden.',
   },
   {
     title: 'Restore-Test nach Recovery manuell triggern',
