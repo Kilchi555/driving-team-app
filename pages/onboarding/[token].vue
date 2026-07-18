@@ -125,7 +125,18 @@
           </div>
         </div>
 
-        <form @submit.prevent="handleNextStep">
+        <!--
+          Only the LAST step's button is type="submit" (see button below), so this
+          form's `submit` event fires exactly once — on the successful, final
+          registration. Steps 0-2 advance via a plain type="button" + @click instead.
+          This matters for Safari's password-save heuristic: it correlates a save
+          prompt with "a form was submitted and shortly after led to success". If we
+          fired 4 prevented submits per wizard run (one per step) with only the last
+          one actually succeeding, the heuristic had little chance of ever firing.
+          The @keydown.enter below restores "press Enter to advance" on steps 0-2,
+          since there's no type="submit" control there anymore to trigger it natively.
+        -->
+        <form @submit.prevent="handleNextStep" @keydown.enter="onEnterKey">
           <!-- iOS/Android credential mirrors: always in DOM so the browser can save them on submit -->
           <div aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;top:-9999px;left:-9999px">
             <input type="email" name="username" autocomplete="username" :value="form.email" tabindex="-1">
@@ -669,7 +680,8 @@
             <div v-else class="hidden sm:block"></div>
 
             <button
-              type="submit"
+              :type="step === 3 ? 'submit' : 'button'"
+              @click="step < 3 ? handleNextStep() : undefined"
               :disabled="isSubmitting || (step === 0 && (passwordTooShort || passwordMismatch || hibpStatus === 'checking'))"
               class="w-full sm:w-auto px-6 py-3 text-white rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed transition-all font-medium hover:opacity-90"
               :style="!(isSubmitting || (step === 0 && (passwordTooShort || passwordMismatch || hibpStatus === 'checking'))) ? { backgroundColor: primaryColor } : {}"
@@ -1453,6 +1465,18 @@ const isFormValid = computed(() => {
   )
 })
 
+// Restores "press Enter to advance" for steps 0-2, where the button is now
+// type="button" (not a submit control) so the browser won't do this natively.
+// Step 3 is left alone so the real <form> submit (and its single genuine
+// submit event) still happens the normal, native way.
+const onEnterKey = (e: KeyboardEvent) => {
+  if (e.target instanceof HTMLTextAreaElement) return // allow multi-line newlines
+  if (step.value < 3) {
+    e.preventDefault()
+    handleNextStep()
+  }
+}
+
 // Handle next step
 const handleNextStep = async () => {
   // Validate current step
@@ -1645,10 +1669,14 @@ const completeOnboarding = async () => {
     // Success - show success message and redirect
     showSuccessMessage('Registrierung erfolgreich abgeschlossen! Du wirst zum Login weitergeleitet...')
 
-    // Save credentials for Android/Chrome; iOS relies on mirror inputs + form submit
+    // Save credentials for Android/Chrome; iOS relies on mirror inputs + form submit.
+    // Call this as early as possible after success — the longer we wait before
+    // navigating away, the less likely Safari's save-password heuristic fires.
     await saveCredentials(form.email, form.password, `${form.firstName || ''} ${form.lastName || ''}`.trim())
-    
-    // Auto-redirect to login after 2 seconds
+
+    // Short delay just long enough to show the success modal briefly; kept minimal
+    // on purpose (see saveCredentials comment above). The modal also has a manual
+    // "Zum Login" button for anyone who wants to read the message longer.
     setTimeout(async () => {
       // Get tenant slug from userData or extract from token API response
       const tenantSlug = userData.value?.tenant_slug || (data.value as any)?.tenant_slug
@@ -1664,7 +1692,7 @@ const completeOnboarding = async () => {
         const { getLoginPath } = await import('~/utils/redirect-to-login')
         await navigateTo(getLoginPath())
       }
-    }, 2000)
+    }, 500)
 
   } catch (err: any) {
     console.error('❌ Onboarding completion error:', err)

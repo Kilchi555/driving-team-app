@@ -27,7 +27,7 @@
           Anmelden
         </button>
         <button
-          @click="activeTab = 'register'"
+          @click="activeTab = 'register'; showForgotPassword = false"
           class="flex-1 py-3 px-4 text-sm font-medium transition-colors"
           :class="activeTab === 'register' ? '' : 'text-gray-600 hover:text-gray-900'"
           :style="activeTab === 'register' ? { color: primaryColor, borderBottom: `2px solid ${primaryColor}` } : {}"
@@ -39,7 +39,7 @@
       <!-- Content -->
       <div class="p-6">
         <!-- Login Form -->
-        <form v-if="activeTab === 'login'" @submit.prevent="handleLogin" class="space-y-4">
+        <form v-if="activeTab === 'login' && !showForgotPassword" @submit.prevent="handleLogin" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
               E-Mail <span class="text-red-500">*</span>
@@ -56,9 +56,18 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Passwort <span class="text-red-500">*</span>
-            </label>
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-sm font-medium text-gray-700">
+                Passwort <span class="text-red-500">*</span>
+              </label>
+              <button
+                type="button"
+                class="text-xs font-medium underline text-gray-500 hover:text-gray-700"
+                @click="openForgotPassword"
+              >
+                Passwort vergessen?
+              </button>
+            </div>
             <div class="relative">
               <input
                 v-model="loginForm.password"
@@ -95,6 +104,57 @@
             :style="{ backgroundColor: primaryColor }"
           >
             {{ isLoading ? 'Wird angemeldet...' : 'Anmelden' }}
+          </button>
+        </form>
+
+        <!-- Forgot Password Form -->
+        <form v-if="activeTab === 'login' && showForgotPassword" class="space-y-4" @submit.prevent="handleForgotPassword">
+          <button
+            type="button"
+            class="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+            @click="showForgotPassword = false; forgotPasswordMessage = ''; forgotPasswordError = ''"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Zurück zum Login
+          </button>
+
+          <p class="text-sm text-gray-600">
+            Gib deine E-Mail-Adresse ein — wir senden dir einen Link zum Zurücksetzen deines Passworts.
+          </p>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              E-Mail <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model="forgotPasswordEmail"
+              type="email"
+              required
+              :disabled="forgotPasswordLoading || !!forgotPasswordMessage"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 transition-colors disabled:bg-gray-50 disabled:text-gray-500"
+              :style="{ '--tw-ring-color': primaryColor }"
+              placeholder="ihre@email.com"
+            >
+          </div>
+
+          <div v-if="forgotPasswordError" class="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p class="text-sm text-red-800">{{ forgotPasswordError }}</p>
+          </div>
+
+          <div v-if="forgotPasswordMessage" class="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p class="text-sm text-green-800">{{ forgotPasswordMessage }}</p>
+          </div>
+
+          <button
+            v-if="!forgotPasswordMessage"
+            type="submit"
+            :disabled="forgotPasswordLoading"
+            class="w-full py-3 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            :style="{ backgroundColor: primaryColor }"
+          >
+            {{ forgotPasswordLoading ? 'Wird gesendet...' : 'Link senden' }}
           </button>
         </form>
 
@@ -449,6 +509,7 @@ const emit = defineEmits(['close', 'success'])
 
 interface Props {
   initialTab?: 'login' | 'register'
+  initialLoginEmail?: string
   selectedStaffId?: string
   selectedCategory?: string
   tenantId?: string
@@ -457,6 +518,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   initialTab: 'login',
+  initialLoginEmail: '',
   selectedStaffId: undefined,
   selectedCategory: undefined,
   tenantId: undefined,
@@ -493,9 +555,26 @@ const isUploadingDocument = ref(false)
 const documentUploadError = ref('')
 
 const loginForm = ref({
-  email: '',
+  email: props.initialLoginEmail || '',
   password: ''
 })
+
+// Forgot-password: kept entirely inside this modal (no navigation away) so
+// it works from the booking flow too — the slot reservation behind this
+// modal is completely untouched while this is open.
+const showForgotPassword = ref(false)
+const forgotPasswordEmail = ref('')
+const forgotPasswordLoading = ref(false)
+const forgotPasswordError = ref('')
+const forgotPasswordMessage = ref('')
+
+const openForgotPassword = () => {
+  error.value = ''
+  forgotPasswordError.value = ''
+  forgotPasswordMessage.value = ''
+  forgotPasswordEmail.value = loginForm.value.email.trim()
+  showForgotPassword.value = true
+}
 
 const registerForm = ref({
   first_name: '',
@@ -680,6 +759,53 @@ const handleLogin = async () => {
     error.value = err.message || 'Fehler beim Anmelden. Bitte überprüfen Sie Ihre Zugangsdaten.'
   } finally {
     isLoading.value = false
+  }
+}
+
+const handleForgotPassword = async () => {
+  forgotPasswordError.value = ''
+  forgotPasswordMessage.value = ''
+
+  const email = forgotPasswordEmail.value.trim()
+  if (!email) {
+    forgotPasswordError.value = 'Bitte gib deine E-Mail-Adresse ein.'
+    return
+  }
+
+  forgotPasswordLoading.value = true
+  try {
+    const response = await $fetch('/api/auth/password-reset-request', {
+      method: 'POST',
+      body: {
+        contact: email,
+        method: 'email',
+        tenantId: props.tenantId || null
+      }
+    }) as any
+
+    if (response?.success) {
+      if (response?.code === 'ACCOUNT_PENDING') {
+        forgotPasswordMessage.value = response.hasSms
+          ? 'Dein Konto ist noch nicht aktiviert. Wir haben dir einen Registrierungslink per SMS gesendet.'
+          : 'Dein Konto ist noch nicht aktiviert. Bitte kontaktiere deine Fahrschule für einen Registrierungslink.'
+      } else if (response?.warning) {
+        forgotPasswordError.value = response.message
+      } else {
+        forgotPasswordMessage.value = `Ein Link zum Zurücksetzen wurde an ${email} gesendet. Bitte überprüfe deinen Posteingang.`
+      }
+    } else if (response?.code === 'NOT_FOUND') {
+      // Deliberately vague — avoid confirming/denying whether an email exists in the system.
+      forgotPasswordMessage.value = `Falls ein Konto mit ${email} existiert, wurde ein Link zum Zurücksetzen gesendet.`
+    } else if (response?.code === 'NO_EMAIL') {
+      forgotPasswordError.value = 'Dein Konto hat keine E-Mail-Adresse hinterlegt. Bitte kontaktiere deine Fahrschule.'
+    } else {
+      forgotPasswordError.value = response?.message || 'Fehler beim Senden des Links. Bitte versuche es später erneut.'
+    }
+  } catch (err: any) {
+    logger.error('❌ Forgot-password error:', err)
+    forgotPasswordError.value = err?.data?.statusMessage || err?.message || 'Fehler beim Senden des Links. Bitte versuche es später erneut.'
+  } finally {
+    forgotPasswordLoading.value = false
   }
 }
 

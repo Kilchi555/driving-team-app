@@ -174,7 +174,7 @@ export default defineEventHandler(async (event) => {
     // Generate invitation token
     const token = generateToken()
     const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 7) // 7 days expiration
+    expiresAt.setDate(expiresAt.getDate() + 30) // 30 days expiration
 
     logger.debug('🎫 Creating invitation with token:', token.substring(0, 10) + '...')
 

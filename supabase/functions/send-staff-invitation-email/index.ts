@@ -86,7 +86,7 @@ serve(async (req) => {
               <code style="background: #e5e7eb; padding: 4px 8px; border-radius: 4px;">${inviteLink}</code>
             </p>
             <p style="color: #ef4444; font-size: 14px;">
-              Diese Einladung ist 7 Tage gültig.
+              Diese Einladung ist 30 Tage gültig.
             </p>
           </div>
           <div class="footer">

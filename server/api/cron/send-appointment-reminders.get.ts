@@ -20,6 +20,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getQuery } from 'h3'
+import { getAccountAccessLink } from '~/server/utils/account-access-link'
 
 const FALLBACK_EVENT_TYPE_LABELS: Record<string, string> = {
   lesson:     'Fahrstunde',
@@ -85,7 +86,10 @@ export default defineEventHandler(async (event) => {
       user:users!appointments_user_id_fkey (
         id,
         email,
-        first_name
+        first_name,
+        onboarding_status,
+        onboarding_token,
+        onboarding_token_expires
       ),
       staff:users!appointments_staff_id_fkey (
         first_name,
@@ -216,7 +220,10 @@ export default defineEventHandler(async (event) => {
     const tenantName   = tenant?.name || 'Ihre Fahrschule'
     const primaryColor = tenant?.primary_color || '#2563eb'
     const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
-    const loginLink    = tenant?.slug ? `https://app.simy.ch/${tenant.slug}` : 'https://app.simy.ch'
+    // Guest bookings can leave a user "pending" (no password ever set) — a
+    // plain login link is a dead end for them, so route the "pay now" CTA
+    // through their onboarding/activation link instead.
+    const { url: loginLink, isActivationLink } = await getAccountAccessLink(supabase, user, tenant?.slug || '')
 
     // Date/time formatting
     const aptDate = new Date(apt.start_time)
@@ -259,7 +266,7 @@ export default defineEventHandler(async (event) => {
     const BILLABLE_TYPES = new Set(['lesson', 'exam', 'theory'])
     const isBillable = !apt.event_type_code || BILLABLE_TYPES.has(apt.event_type_code)
     const payment = isBillable ? (paymentMap.get(apt.id) || null) : null
-    const paymentHtml = payment ? buildPaymentSection(payment, primaryColor, loginLink) : ''
+    const paymentHtml = payment ? buildPaymentSection(payment, primaryColor, loginLink, isActivationLink) : ''
 
     const html = buildEmailHtml({
       firstName:    user.first_name || 'Hallo',
@@ -323,7 +330,7 @@ export default defineEventHandler(async (event) => {
 
 // ── Email builders ─────────────────────────────────────────────
 
-function buildPaymentSection(payment: any, primaryColor: string, loginLink: string): string {
+function buildPaymentSection(payment: any, primaryColor: string, loginLink: string, isActivationLink: boolean): string {
   const amountCHF = (payment.total_amount_rappen / 100).toFixed(2)
   const methodLabel = PAYMENT_METHOD_LABELS[payment.payment_method] || payment.payment_method
 
@@ -337,7 +344,7 @@ function buildPaymentSection(payment: any, primaryColor: string, loginLink: stri
       : { bg: '#fef2f2', border: '#fca5a5', labelColor: '#991b1b', dot: '#ef4444', text: 'Fehlgeschlagen' }
 
   const actionHtml = isPending && payment.payment_method === 'wallee'
-    ? `<div style="margin-top:12px"><a href="${loginLink}" style="display:inline-block;padding:10px 24px;background:${primaryColor};color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Jetzt online zahlen →</a></div>`
+    ? `<div style="margin-top:12px"><a href="${loginLink}" style="display:inline-block;padding:10px 24px;background:${primaryColor};color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">${isActivationLink ? 'Konto aktivieren & bezahlen →' : 'Jetzt online zahlen →'}</a></div>`
     : isPending && payment.payment_method === 'cash'
       ? `<p style="margin:8px 0 0;font-size:13px;color:#92400e">Bitte bringen Sie den Betrag in bar mit.</p>`
       : isPending && payment.payment_method === 'invoice'

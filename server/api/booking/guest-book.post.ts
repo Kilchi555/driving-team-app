@@ -165,20 +165,28 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 409, statusMessage: 'Die Reservierung ist abgelaufen. Bitte wähle erneut einen Zeitslot.' })
   }
 
-  // ── Check for duplicate phone/email in parallel ──────────────────────────
+  // ── Resolve identity by phone/email match ─────────────────────────────────
+  // Loads the full account (not just existence) so we can tell a REAL,
+  // activated account (onboarding_status 'completed', has a password) apart
+  // from a "shadow" account created by an earlier guest booking that was
+  // never activated (onboarding_status 'pending', no password/login at all).
   const phone = body.phone?.trim() || null
   const email = body.email?.trim() || null
 
   const [phoneCheckResult, emailCheckResult] = await Promise.all([
     phone
-      ? supabase.from('users').select('id').eq('phone', phone).eq('tenant_id', tenantId).maybeSingle()
+      ? supabase.from('users').select('id, onboarding_status, category').eq('phone', phone).eq('tenant_id', tenantId).maybeSingle()
       : Promise.resolve({ data: null }),
     email
-      ? supabase.from('users').select('id').eq('email', email).eq('tenant_id', tenantId).maybeSingle()
+      ? supabase.from('users').select('id, onboarding_status, category').eq('email', email).eq('tenant_id', tenantId).maybeSingle()
       : Promise.resolve({ data: null }),
   ])
 
-  if (phoneCheckResult.data) {
+  // A match against a REAL, already-activated account is always a hard block —
+  // that person has a password and must log in normally. Otherwise anyone who
+  // merely knows someone else's phone/email could attach a booking to their
+  // account without proving identity.
+  if (phoneCheckResult.data?.onboarding_status === 'completed') {
     throw createError({
       statusCode: 409,
       statusMessage: 'Diese Telefonnummer ist bereits mit einem Konto verbunden. Bitte melde dich an.',
@@ -186,7 +194,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (emailCheckResult.data) {
+  if (emailCheckResult.data?.onboarding_status === 'completed') {
     throw createError({
       statusCode: 409,
       statusMessage: 'Diese E-Mail-Adresse ist bereits mit einem Konto verbunden. Bitte melde dich an.',
@@ -194,48 +202,97 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // ── Create guest user (pending onboarding, no Supabase Auth account) ──────
-  const newUserId = uuidv4()
+  // A match against a still-PENDING "shadow" account is NOT blocked. This
+  // tenant explicitly allows password-less booking (registration_required =
+  // false), so a repeat guest booking under the same contact details should
+  // reuse that same identity instead of spawning yet another duplicate
+  // account. Prefer the email match — that's the identifier the existing
+  // onboarding/activation link is already tied to; the (rare) case where
+  // phone and email each match a *different* pending account is an edge case
+  // we don't try to reconcile automatically, we just merge into the email one.
+  const existingPendingUser =
+    (emailCheckResult.data?.onboarding_status === 'pending' ? emailCheckResult.data : null) ||
+    (phoneCheckResult.data?.onboarding_status === 'pending' ? phoneCheckResult.data : null)
+
+  const newUserId = existingPendingUser?.id ?? uuidv4()
   const onboardingToken = uuidv4()
   const tokenExpiry = new Date()
   tokenExpiry.setDate(tokenExpiry.getDate() + 30)
 
-  const { error: insertUserErr } = await supabase
-    .from('users')
-    .insert({
-      id: newUserId,
-      first_name: body.first_name?.trim() || '',
-      last_name: body.last_name?.trim() || '',
-      phone,
-      email,
-      birthdate: body.birthdate?.trim() || null,
-      street: body.street?.trim() || null,
-      street_nr: body.street_nr?.trim() || null,
-      zip: body.zip?.trim() || null,
-      city: body.city?.trim() || null,
-      profession: body.profession?.trim() || null,
-      category: [body.category_code],
-      role: 'client',
-      tenant_id: tenantId,
-      is_active: true,
-      onboarding_status: 'pending',
+  const mergedCategories = Array.from(new Set([...(existingPendingUser?.category ?? []), body.category_code]))
+
+  if (existingPendingUser) {
+    // Reuse the existing shadow account: refresh whichever contact/address
+    // fields were actually provided this time (never clobber previously
+    // saved data with a blank just because this booking's form didn't ask
+    // for that field again), extend the activation window by another 30
+    // days, and merge in the newly booked category.
+    const updatePayload: Record<string, any> = {
+      category: mergedCategories,
       onboarding_token: onboardingToken,
       onboarding_token_expires: tokenExpiry.toISOString(),
-    })
-
-  if (insertUserErr) {
-    logger.error('❌ Guest user creation failed:', insertUserErr)
-    if (insertUserErr.code === '23505') {
-      throw createError({
-        statusCode: 409,
-        statusMessage: 'Diese Kontaktdaten sind bereits registriert. Bitte melde dich an.',
-        data: { code: 'DUPLICATE' },
-      })
     }
-    throw createError({ statusCode: 500, statusMessage: 'Benutzerkonto konnte nicht erstellt werden' })
-  }
+    if (body.first_name?.trim()) updatePayload.first_name = body.first_name.trim()
+    if (body.last_name?.trim()) updatePayload.last_name = body.last_name.trim()
+    if (phone) updatePayload.phone = phone
+    if (email) updatePayload.email = email
+    if (body.birthdate?.trim()) updatePayload.birthdate = body.birthdate.trim()
+    if (body.street?.trim()) updatePayload.street = body.street.trim()
+    if (body.street_nr?.trim()) updatePayload.street_nr = body.street_nr.trim()
+    if (body.zip?.trim()) updatePayload.zip = body.zip.trim()
+    if (body.city?.trim()) updatePayload.city = body.city.trim()
+    if (body.profession?.trim()) updatePayload.profession = body.profession.trim()
 
-  logger.debug('✅ Guest user created:', newUserId)
+    const { error: updateUserErr } = await supabase
+      .from('users')
+      .update(updatePayload)
+      .eq('id', newUserId)
+
+    if (updateUserErr) {
+      logger.error('❌ Guest user update (merge into existing pending account) failed:', updateUserErr)
+      throw createError({ statusCode: 500, statusMessage: 'Benutzerkonto konnte nicht aktualisiert werden' })
+    }
+
+    logger.debug('✅ Reused existing pending guest account for new booking:', newUserId)
+  } else {
+    // ── Create guest user (pending onboarding, no Supabase Auth account) ────
+    const { error: insertUserErr } = await supabase
+      .from('users')
+      .insert({
+        id: newUserId,
+        first_name: body.first_name?.trim() || '',
+        last_name: body.last_name?.trim() || '',
+        phone,
+        email,
+        birthdate: body.birthdate?.trim() || null,
+        street: body.street?.trim() || null,
+        street_nr: body.street_nr?.trim() || null,
+        zip: body.zip?.trim() || null,
+        city: body.city?.trim() || null,
+        profession: body.profession?.trim() || null,
+        category: mergedCategories,
+        role: 'client',
+        tenant_id: tenantId,
+        is_active: true,
+        onboarding_status: 'pending',
+        onboarding_token: onboardingToken,
+        onboarding_token_expires: tokenExpiry.toISOString(),
+      })
+
+    if (insertUserErr) {
+      logger.error('❌ Guest user creation failed:', insertUserErr)
+      if (insertUserErr.code === '23505') {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Diese Kontaktdaten sind bereits registriert. Bitte melde dich an.',
+          data: { code: 'DUPLICATE' },
+        })
+      }
+      throw createError({ statusCode: 500, statusMessage: 'Benutzerkonto konnte nicht erstellt werden' })
+    }
+
+    logger.debug('✅ Guest user created:', newUserId)
+  }
 
   // ── Parallel: pricing + marketing attribution + location name ────────────
   const [pricingResult, attrResult, locationResult] = await Promise.all([
@@ -358,10 +415,15 @@ export default defineEventHandler(async (event) => {
 
   if (apptErr || !newAppointment) {
     logger.error('❌ Appointment creation failed (guest):', apptErr)
-    // Best-effort cleanup: delete the user we just created
-    supabase.from('users').delete().eq('id', newUserId).then(({ error }) => {
-      if (error) logger.warn('⚠️ Could not clean up orphaned guest user:', newUserId, error.message)
-    })
+    // Best-effort cleanup: only delete the user if we just created a brand-new
+    // one. If we reused an existing pending account (existingPendingUser), it
+    // has its own booking history — never delete it just because *this*
+    // booking attempt failed.
+    if (!existingPendingUser) {
+      supabase.from('users').delete().eq('id', newUserId).then(({ error }) => {
+        if (error) logger.warn('⚠️ Could not clean up orphaned guest user:', newUserId, error.message)
+      })
+    }
     throw createError({ statusCode: 500, statusMessage: 'Termin konnte nicht erstellt werden' })
   }
 
@@ -475,8 +537,11 @@ export default defineEventHandler(async (event) => {
     }
     
     const appointmentDate = new Date(newAppointment.start_time)
-    const formattedDate = appointmentDate.toLocaleDateString('de-CH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-    const formattedTime = appointmentDate.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+    // Server (Vercel) runs in UTC — without an explicit timeZone these would render
+    // the raw UTC time instead of Swiss local time (e.g. 08:30 UTC shown as "08:30"
+    // instead of the correct 10:30 during CEST).
+    const formattedDate = appointmentDate.toLocaleDateString('de-CH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Europe/Zurich' })
+    const formattedTime = appointmentDate.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
     
     const emailHtml = `<!DOCTYPE html>
 <html>

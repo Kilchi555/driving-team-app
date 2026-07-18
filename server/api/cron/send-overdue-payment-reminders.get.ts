@@ -21,6 +21,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader, getQuery } from 'h3'
 import { loadPaymentReminderSettingsByTenant } from '~/server/utils/payment-reminder-settings'
+import { getAccountAccessLink } from '~/server/utils/account-access-link'
 
 const OVERDUE_DAYS   = 15   // appointment must be at least this many days in the past
 const RESEND_DAYS    = 7    // re-send at most once per week
@@ -124,7 +125,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: users }   = await supabase
     .from('users')
-    .select('id, first_name, last_name, email, phone')
+    .select('id, first_name, last_name, email, phone, onboarding_status, onboarding_token, onboarding_token_expires')
     .in('id', userIds)
 
   const { data: tenants } = await supabase
@@ -166,9 +167,18 @@ export default defineEventHandler(async (event) => {
     const tenant       = tenantMap.get(userPayments[0].tenant_id)
     const tenantName   = tenant?.name   || 'Ihre Fahrschule'
     const tenantSlug   = tenant?.slug   || ''
-    const loginLink    = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : 'https://app.simy.ch'
     const primaryColor = tenant?.primary_color || '#2563eb'
     const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+
+    // Guest bookings can leave a user "pending" (no password ever set) — a
+    // plain login link is a dead end for them, so route them through their
+    // onboarding/activation link instead. Completed accounts get the
+    // regular login link, unchanged.
+    const { url: loginLink, isActivationLink } = await getAccountAccessLink(supabase, user, tenantSlug)
+    const ctaText = isActivationLink ? 'Konto aktivieren & bezahlen →' : 'Jetzt bezahlen →'
+    const loginHintText = isActivationLink
+      ? `Aktiviere dein Konto unter <a href="${loginLink}" style="color:#dc2626">${loginLink}</a>.`
+      : `Melde dich unter <a href="${loginLink}" style="color:#dc2626">${loginLink}</a> an.`
 
     const totalRappen = userPayments.reduce((s: number, p: any) => s + (p.total_amount_rappen || 0), 0)
     const totalCHF    = chf(totalRappen)
@@ -177,8 +187,8 @@ export default defineEventHandler(async (event) => {
       const apt = appointmentMap.get(p.appointment_id)
       if (!apt) return ''
       const d       = new Date(apt.start_time)
-      const dateStr = d.toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short' })
-      const timeStr = d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+      const dateStr = d.toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Zurich' })
+      const timeStr = d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
       const amtCHF  = chf(p.total_amount_rappen || 0)
       const daysAgo = Math.round((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
       return `
@@ -233,12 +243,12 @@ export default defineEventHandler(async (event) => {
 
             <div style="text-align:center;margin:24px 0">
               <a href="${loginLink}" style="display:inline-block;padding:14px 32px;background:#dc2626;color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">
-                Jetzt bezahlen →
+                ${ctaText}
               </a>
             </div>
 
             <p style="margin:16px 0 0;font-size:13px;color:#9ca3af;text-align:center">
-              Melde dich unter <a href="${loginLink}" style="color:#dc2626">${loginLink}</a> an.
+              ${loginHintText}
             </p>
           </div>
           <div style="background:#f9fafb;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb">

@@ -24,6 +24,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader, getQuery } from 'h3'
 import { loadPaymentReminderSettingsByTenant } from '~/server/utils/payment-reminder-settings'
+import { getAccountAccessLink } from '~/server/utils/account-access-link'
 
 const REMINDER_DAYS = [3, 7, 14]
 
@@ -126,7 +127,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: users }   = await supabase
     .from('users')
-    .select('id, first_name, last_name, email, phone, tenant_id')
+    .select('id, first_name, last_name, email, phone, tenant_id, onboarding_status, onboarding_token, onboarding_token_expires')
     .in('id', userIds)
 
   const { data: tenants } = await supabase
@@ -174,9 +175,18 @@ export default defineEventHandler(async (event) => {
     const tenant    = tenantMap.get(userPayments[0].tenant_id)
     const tenantName = tenant?.name || 'Ihre Fahrschule'
     const tenantSlug = tenant?.slug || ''
-    const loginLink  = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : 'https://app.simy.ch'
     const primaryColor = tenant?.primary_color || '#2563eb'
     const logoUrl    = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+
+    // Guest bookings can leave a user "pending" (no password ever set) — a
+    // plain login link is a dead end for them, so route them through their
+    // onboarding/activation link instead. Completed accounts get the
+    // regular login link, unchanged.
+    const { url: loginLink, isActivationLink } = await getAccountAccessLink(supabase, user, tenantSlug)
+    const ctaText = isActivationLink ? 'Konto aktivieren & bezahlen →' : 'Jetzt online zahlen →'
+    const loginHintText = isActivationLink
+      ? `Aktiviere dein Konto unter <a href="${loginLink}" style="color:${primaryColor}">${loginLink}</a> und bezahle dort deine offenen Beträge.`
+      : `Melde dich unter <a href="${loginLink}" style="color:${primaryColor}">${loginLink}</a> an und bezahle dort deine offenen Beträge.`
 
     const effectiveDays = testUserId ? [testReminderDay!] : REMINDER_DAYS
 
@@ -261,12 +271,12 @@ export default defineEventHandler(async (event) => {
 
             <div style="text-align:center;margin:24px 0">
               <a href="${loginLink}" style="display:inline-block;padding:14px 32px;background:${primaryColor};color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">
-                Jetzt online zahlen →
+                ${ctaText}
               </a>
             </div>
 
             <p style="margin:16px 0 0;font-size:13px;color:#9ca3af;text-align:center">
-              Melde dich unter <a href="${loginLink}" style="color:${primaryColor}">${loginLink}</a> an und bezahle dort deine offenen Beträge.
+              ${loginHintText}
             </p>
           </div>
           <div style="background:#f9fafb;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb">
