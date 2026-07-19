@@ -1181,13 +1181,6 @@ const loadCategories = async () => {
       '/api/admin/categories'
     )
 
-    if (response.businessType !== 'driving_school') {
-      logger.debug('🚫 Categories not available for business_type:', response.businessType)
-      categories.value = []
-      pricingCache.value = {}
-      return
-    }
-
     categories.value = response.categories
     buildPricingCache(response.pricingRules)
     logger.debug('✅ Categories loaded:', categories.value.length)
@@ -1202,11 +1195,16 @@ const loadCategories = async () => {
 const buildPricingCache = (pricingRules: any[]) => {
   const cache: Record<string, any> = {}
   for (const rule of pricingRules) {
-    if (!cache[rule.category_code]) cache[rule.category_code] = {}
-    if (rule.rule_type === 'base_price') cache[rule.category_code].basePriceRule = rule
-    else if (rule.rule_type === 'admin_fee') cache[rule.category_code].adminFeeRule = rule
-    else if (rule.rule_type === 'theory') cache[rule.category_code].theoryRule = rule
-    else if (rule.rule_type === 'consultation') cache[rule.category_code].consultationRule = rule
+    // event_price rules (e.g. mental_coach 'session'/'package') have no category_code –
+    // key them by event_type_code instead so they still land in the cache.
+    const key = rule.category_code || rule.event_type_code
+    if (!key) continue
+    if (!cache[key]) cache[key] = {}
+    if (rule.rule_type === 'base_price') cache[key].basePriceRule = rule
+    else if (rule.rule_type === 'admin_fee') cache[key].adminFeeRule = rule
+    else if (rule.rule_type === 'theory') cache[key].theoryRule = rule
+    else if (rule.rule_type === 'consultation') cache[key].consultationRule = rule
+    else if (rule.rule_type === 'event_price') cache[key].eventPriceRule = rule
   }
   pricingCache.value = cache
 }

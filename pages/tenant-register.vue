@@ -576,12 +576,18 @@
         <!-- ═══ STEP 2: Preise ═══ -->
         <div v-if="currentStep === 2" class="space-y-5">
           <div>
-            <h2 class="text-base font-semibold text-gray-900 mb-0.5">Was kostet eine Fahrstunde bei dir?</h2>
-            <p class="text-sm text-gray-500">Preis & Dauer pro Kategorie – als Standardwert für neue Lektionen, jederzeit anpassbar.</p>
+            <h2 class="text-base font-semibold text-gray-900 mb-0.5">
+              {{ pricingMode === 'per_event_type' ? 'Was kosten deine Leistungen?' : 'Was kostet eine Fahrstunde bei dir?' }}
+            </h2>
+            <p class="text-sm text-gray-500">
+              {{ pricingMode === 'per_event_type'
+                ? 'Preis & Dauer pro Leistung – als Standardwert, jederzeit anpassbar.'
+                : 'Preis & Dauer pro Kategorie – als Standardwert für neue Lektionen, jederzeit anpassbar.' }}
+            </p>
           </div>
 
           <div class="space-y-4">
-            <div v-for="cat in effectiveCategoryList" :key="cat.id"
+            <div v-for="cat in pricingGroups" :key="cat.id"
               class="rounded-xl border border-gray-200 bg-white overflow-hidden">
               <!-- Category header -->
               <div class="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-100">
@@ -628,7 +634,8 @@
             <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <span>Kurse (VKU, Theorie, Nothilfe, etc.) können nach dem Login im Adminbereich unter <strong>Kurse</strong> erstellt werden. Alle Preise sind jederzeit anpassbar.</span>
+            <span v-if="pricingMode === 'per_event_type'">Weitere Leistungen und Preise kannst du jederzeit nach dem Login im Adminbereich anpassen.</span>
+            <span v-else>Kurse (VKU, Theorie, Nothilfe, etc.) können nach dem Login im Adminbereich unter <strong>Kurse</strong> erstellt werden. Alle Preise sind jederzeit anpassbar.</span>
           </div>
         </div>
 
@@ -1261,7 +1268,7 @@
             <div class="rounded-2xl bg-violet-50 border border-violet-100 p-4 sm:col-span-2">
               <p class="text-xs font-bold text-violet-400 uppercase tracking-wide mb-2.5">Preise</p>
               <div class="space-y-2">
-                <div v-for="cat in effectiveCategoryList" :key="cat.id">
+                <div v-for="cat in pricingGroups" :key="cat.id">
                   <p class="text-xs font-semibold text-gray-600 mb-1">{{ cat.name }}</p>
                   <div class="grid grid-cols-3 gap-1 text-xs">
                     <span v-for="row in pricingRows.filter(r => r.catId === cat.id && r.enabled)" :key="row.type" class="text-gray-500">
@@ -1663,18 +1670,50 @@ interface PricingRow {
   catName: string
   catCode: string | undefined
   catColor: string | undefined
-  type: 'driving' | 'exam' | 'theory'
+  type: string
   typeLabel: string
   price_chf: number
   duration_minutes: number
   enabled: boolean
 }
 
-const PRICING_TYPES = [
-  { key: 'driving' as const, label: 'Fahrstunde', defaultPrice: 95,  defaultDuration: 45, defaultEnabled: true  },
-  { key: 'exam'    as const, label: 'Prüfung',    defaultPrice: 160, defaultDuration: 60, defaultEnabled: true  },
-  { key: 'theory'  as const, label: 'Theorie',    defaultPrice: 85,  defaultDuration: 45, defaultEnabled: false },
-]
+// Dynamic, business-type-aware event types for the pricing step (replaces the
+// old hardcoded Fahrstunde/Prüfung/Theorie array – see GET /api/tenants/template-event-types).
+interface EventTypeTemplate {
+  code: string
+  name: string
+  price_chf: number
+  duration_minutes: number
+  default_enabled: boolean
+}
+const eventTypeTemplates = ref<EventTypeTemplate[]>([])
+// 'per_category': price varies per selected category (driving_school: Fahrstunde/Prüfung/Theorie
+//   priced individually for e.g. category B vs A1). 'per_event_type': one tenant-wide price per
+//   event type, independent of category (e.g. mental_coach Sitzung/Paket).
+const pricingMode = ref<'per_category' | 'per_event_type'>('per_category')
+const eventTypesLoading = ref(false)
+
+const loadEventTypeTemplates = async () => {
+  if (eventTypesLoading.value || eventTypeTemplates.value.length > 0) return
+  eventTypesLoading.value = true
+  try {
+    const res = await $fetch<{ eventTypes: EventTypeTemplate[]; pricingMode: 'per_category' | 'per_event_type' }>(
+      '/api/tenants/template-event-types',
+      { query: { business_type: formData.value.business_type } }
+    )
+    eventTypeTemplates.value = res.eventTypes || []
+    pricingMode.value = res.pricingMode || 'per_category'
+  } catch {
+    // Fallback keeps the step usable even if the endpoint is unreachable
+    eventTypeTemplates.value = [
+      { code: 'lesson', name: 'Fahrstunde', price_chf: 95, duration_minutes: 45, default_enabled: true },
+      { code: 'theory', name: 'Theorie', price_chf: 85, duration_minutes: 45, default_enabled: false },
+    ]
+    pricingMode.value = 'per_category'
+  } finally {
+    eventTypesLoading.value = false
+  }
+}
 
 const pricingRows = ref<PricingRow[]>([])
 
@@ -1708,23 +1747,56 @@ const effectiveCategoryList = computed((): TemplateCategory[] => {
   return result
 })
 
-// Rebuild flat pricingRows whenever selected categories change, preserving existing values
-watch(effectiveCategoryList, (cats) => {
+// Pricing "groups" – in per_category mode these are the selected categories
+// (price grid = category × event type). In per_event_type mode there is no
+// category dimension, so each event type becomes its own single-row group.
+const pricingGroups = computed((): TemplateCategory[] => {
+  if (pricingMode.value === 'per_event_type') {
+    return eventTypeTemplates.value.map((e, i) => ({ id: -(i + 1), name: e.name, code: e.code }))
+  }
+  return effectiveCategoryList.value
+})
+
+// Rebuild flat pricingRows whenever selected categories/event-types change, preserving existing values
+watch([pricingGroups, eventTypeTemplates], ([groups, types]) => {
   const updated: PricingRow[] = []
-  for (const cat of cats) {
-    for (const t of PRICING_TYPES) {
-      const existing = pricingRows.value.find(r => r.catId === cat.id && r.type === t.key)
-      updated.push(existing ? { ...existing, catName: cat.name, catCode: cat.code, catColor: cat.color } : {
-        catId: cat.id,
-        catName: cat.name,
-        catCode: cat.code,
-        catColor: cat.color,
-        type: t.key,
-        typeLabel: t.label,
-        price_chf: t.defaultPrice,
-        duration_minutes: t.defaultDuration,
-        enabled: t.defaultEnabled,
+  if (pricingMode.value === 'per_event_type') {
+    // One row per event type, no category crossing.
+    for (const group of groups) {
+      const template = types.find(t => t.code === group.code)
+      if (!template) continue
+      const existing = pricingRows.value.find(r => r.catId === group.id && r.type === template.code)
+      updated.push(existing ? { ...existing, catName: group.name, catCode: group.code } : {
+        catId: group.id,
+        catName: group.name,
+        catCode: group.code,
+        catColor: undefined,
+        type: template.code,
+        typeLabel: template.name,
+        price_chf: template.price_chf,
+        duration_minutes: template.duration_minutes,
+        enabled: template.default_enabled,
       })
+    }
+  } else {
+    const pricingTypes = types.length > 0
+      ? types
+      : [{ code: 'lesson', name: 'Fahrstunde', price_chf: 95, duration_minutes: 45, default_enabled: true }]
+    for (const cat of groups) {
+      for (const t of pricingTypes) {
+        const existing = pricingRows.value.find(r => r.catId === cat.id && r.type === t.code)
+        updated.push(existing ? { ...existing, catName: cat.name, catCode: cat.code, catColor: cat.color } : {
+          catId: cat.id,
+          catName: cat.name,
+          catCode: cat.code,
+          catColor: cat.color,
+          type: t.code,
+          typeLabel: t.name,
+          price_chf: t.price_chf,
+          duration_minutes: t.duration_minutes,
+          enabled: t.default_enabled,
+        })
+      }
     }
   }
   pricingRows.value = updated
@@ -2087,6 +2159,7 @@ const nextStep = () => {
   if (!canProceed.value || currentStep.value >= 7) return
   const next = currentStep.value + 1
   if (next === 1) loadTemplateCategories()
+  if (next === 2) loadEventTypeTemplates()
   if (next === 3) prefillFirstLocation()
   currentStep.value = next
 }
@@ -2291,14 +2364,41 @@ const submitRegistration = async () => {
       fd.append('custom_categories_json', JSON.stringify(customJson))
     }
 
-    // Pricing rules from flat pricingRows array
-    fd.append('pricing_json', JSON.stringify(pricingRows.value.filter(r => r.enabled).map(r => ({
-      label: `${r.catName} – ${r.typeLabel}`,
-      rule_type: r.type === 'driving' ? 'base_price' : r.type,
-      category_code: r.catCode || r.catName.toUpperCase().replace(/\s+/g, '_'),
-      price_chf: r.price_chf,
-      duration_minutes: r.duration_minutes,
-    }))))
+    // Pricing rules from flat pricingRows array.
+    // per_category mode (driving_school-style): price varies per license category,
+    //   so rows map to the legacy rule_type enum the pricing engine reads
+    //   (base_price / theory). Event types without a wired-up rule_type (e.g.
+    //   'exam' – see server/api/pricing/calculate.post.ts, no rule_type='exam'
+    //   read path exists anywhere) are intentionally skipped instead of writing
+    //   pricing_rules rows that would never be used.
+    // per_event_type mode (mental_coach-style): one tenant-wide price per event
+    //   type, stored via rule_type='event_price' + event_type_code (no category).
+    const CATEGORY_MODE_RULE_TYPE: Record<string, string> = { lesson: 'base_price', theory: 'theory' }
+    const pricingJson = pricingRows.value
+      .filter(r => r.enabled)
+      .map(r => {
+        if (pricingMode.value === 'per_event_type') {
+          return {
+            label: r.typeLabel,
+            rule_type: 'event_price',
+            event_type_code: r.type,
+            category_code: null,
+            price_chf: r.price_chf,
+            duration_minutes: r.duration_minutes,
+          }
+        }
+        const ruleType = CATEGORY_MODE_RULE_TYPE[r.type]
+        if (!ruleType) return null
+        return {
+          label: `${r.catName} – ${r.typeLabel}`,
+          rule_type: ruleType,
+          category_code: r.catCode || r.catName.toUpperCase().replace(/\s+/g, '_'),
+          price_chf: r.price_chf,
+          duration_minutes: r.duration_minutes,
+        }
+      })
+      .filter((p): p is NonNullable<typeof p> => p !== null)
+    fd.append('pricing_json', JSON.stringify(pricingJson))
 
     // Locations as JSON
     const locs = validLocations.value
@@ -2581,7 +2681,8 @@ onMounted(async () => {
   }
 
   if (adminSameAsCompany.value) applyAdminFromCompany()
-  // Pre-load categories if already past step 0
+  // Pre-load categories/event-types if a saved draft resumes past those steps
   if (currentStep.value >= 1) await loadTemplateCategories()
+  if (currentStep.value >= 2) await loadEventTypeTemplates()
 })
 </script>

@@ -16,10 +16,10 @@ export default defineEventHandler(async (event) => {
 
   if (tenantError) throw createError({ statusCode: 500, statusMessage: tenantError.message })
 
-  if (tenant?.business_type !== 'driving_school') {
-    return { categories: [], pricingRules: [], businessType: tenant?.business_type ?? null }
-  }
-
+  // NOTE: previously gated to business_type === 'driving_school' only, returning
+  // empty data otherwise. Categories/pricing_rules are generic per-tenant tables
+  // usable by any business type (e.g. mental_coach categories like stress/focus),
+  // so we always fetch them now.
   const [categoriesResult, pricingResult] = await Promise.all([
     supabase
       .from('categories')

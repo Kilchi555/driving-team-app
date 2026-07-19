@@ -487,7 +487,11 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
               tenant_id: tenantId,
               rule_type: p.rule_type,
               rule_name: p.label,
-              category_code: p.category_code || p.rule_type.toUpperCase(),
+              // event_price rows (business types priced per event type, e.g.
+              // mental_coach) have no category – keep category_code NULL rather
+              // than inventing one, and carry the event_type_code instead.
+              category_code: p.rule_type === 'event_price' ? null : (p.category_code || p.rule_type.toUpperCase()),
+              event_type_code: p.event_type_code || null,
               price_per_minute_rappen: (p.price_chf * 100) / p.duration_minutes,
               base_duration_minutes: p.duration_minutes,
               admin_fee_rappen: 0,

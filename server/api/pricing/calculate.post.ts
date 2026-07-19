@@ -8,6 +8,8 @@ interface CalculatePricingBody {
   code?: string
   tenantId?: string
   categoryCode?: string
+  /** For business types without category-scoped pricing (e.g. mental_coach 'session'/'package') */
+  eventTypeCode?: string
   userId?: string
   durationMinutes?: number
   appointmentNumber?: number
@@ -148,12 +150,18 @@ export default defineEventHandler(async (event) => {
 
       // If getting all rules (no specific category), combine by category
       if (!body.categoryCode) {
-        // Combine rules by category_code (merge base and admin_fee rules)
+        // Combine rules by category_code (merge base and admin_fee rules).
+        // event_price rules (e.g. mental_coach 'session'/'package') have no
+        // category_code, so they're grouped by event_type_code instead – the
+        // client then looks them up the same way it looks up a category rule.
         const rulesByCategory = rawRules.reduce((acc, rule) => {
-          if (!acc[rule.category_code]) {
-            acc[rule.category_code] = {
-              category_code: rule.category_code,
-              rule_name: rule.rule_name || `${rule.category_code} - Regel`,
+          const key = rule.category_code || rule.event_type_code
+          if (!key) return acc
+          if (!acc[key]) {
+            acc[key] = {
+              category_code: key,
+              event_type_code: rule.event_type_code || null,
+              rule_name: rule.rule_name || `${key} - Regel`,
               price_per_minute_rappen: 0,
               admin_fee_rappen: 0,
               admin_fee_applies_from: 2,
@@ -171,34 +179,48 @@ export default defineEventHandler(async (event) => {
           // Combine values based on rule_type
           if (rule.rule_type === 'base' || rule.rule_type === 'pricing' || rule.rule_type === 'base_price' || !rule.rule_type) {
             if (rule.price_per_minute_rappen) {
-              acc[rule.category_code].price_per_minute_rappen = rule.price_per_minute_rappen
+              acc[key].price_per_minute_rappen = rule.price_per_minute_rappen
             }
             if (rule.base_duration_minutes) {
-              acc[rule.category_code].base_duration_minutes = rule.base_duration_minutes
+              acc[key].base_duration_minutes = rule.base_duration_minutes
             }
-            if (rule.rule_name && !acc[rule.category_code].rule_name.includes('Admin-Fee')) {
-              acc[rule.category_code].rule_name = rule.rule_name
+            if (rule.rule_name && !acc[key].rule_name.includes('Admin-Fee')) {
+              acc[key].rule_name = rule.rule_name
+            }
+          }
+
+          // Business types without category-scoped pricing (mental_coach etc.)
+          // store their price directly on an 'event_price' rule keyed by event_type_code.
+          if (rule.rule_type === 'event_price') {
+            if (rule.price_per_minute_rappen) {
+              acc[key].price_per_minute_rappen = rule.price_per_minute_rappen
+            }
+            if (rule.base_duration_minutes) {
+              acc[key].base_duration_minutes = rule.base_duration_minutes
+            }
+            if (rule.rule_name) {
+              acc[key].rule_name = rule.rule_name
             }
           }
 
           if (rule.rule_type === 'admin_fee') {
             if (rule.admin_fee_rappen !== undefined) {
-              acc[rule.category_code].admin_fee_rappen = rule.admin_fee_rappen
+              acc[key].admin_fee_rappen = rule.admin_fee_rappen
             }
             if (rule.admin_fee_applies_from !== undefined) {
-              acc[rule.category_code].admin_fee_applies_from = rule.admin_fee_applies_from
+              acc[key].admin_fee_applies_from = rule.admin_fee_applies_from
             }
             if (rule.rule_name) {
-              acc[rule.category_code].rule_name = rule.rule_name
+              acc[key].rule_name = rule.rule_name
             }
           }
 
           if (rule.rule_type === 'theory') {
             if (rule.price_per_minute_rappen) {
-              acc[rule.category_code].theory_price_per_minute_rappen = rule.price_per_minute_rappen
+              acc[key].theory_price_per_minute_rappen = rule.price_per_minute_rappen
             }
             if (rule.base_duration_minutes) {
-              acc[rule.category_code].theory_base_duration_minutes = rule.base_duration_minutes
+              acc[key].theory_base_duration_minutes = rule.base_duration_minutes
             }
           }
 
@@ -327,8 +349,8 @@ export default defineEventHandler(async (event) => {
 
     // ========== CALCULATE PRICE ==========
     if (action === 'calculate-price') {
-      if (!body.categoryCode || body.durationMinutes === undefined) {
-        throw new Error('Category code and duration required')
+      if ((!body.categoryCode && !body.eventTypeCode) || body.durationMinutes === undefined) {
+        throw new Error('Category code (or event type code) and duration required')
       }
 
       logger.debug('💰 Calculating price:', {
@@ -346,17 +368,38 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      // Get pricing rule
-      const { data: rules, error: rulesError } = await supabaseAdmin
-        .from('pricing_rules')
-        .select('*')
-        .eq('category_code', body.categoryCode)
-        .eq('tenant_id', tenantId)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(1)
+      // Get pricing rule – prefer categoryCode (driving_school-style), fall back to
+      // eventTypeCode (business types like mental_coach that price per event type
+      // instead of per category, e.g. rule_type='event_price').
+      let rule: any = null
 
-      if (rulesError || !rules || rules.length === 0) {
+      if (body.categoryCode) {
+        const { data: rules, error: rulesError } = await supabaseAdmin
+          .from('pricing_rules')
+          .select('*')
+          .eq('category_code', body.categoryCode)
+          .eq('tenant_id', tenantId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        if (!rulesError && rules && rules.length > 0) rule = rules[0]
+      }
+
+      if (!rule && body.eventTypeCode) {
+        const { data: eventRules, error: eventRulesError } = await supabaseAdmin
+          .from('pricing_rules')
+          .select('*')
+          .eq('event_type_code', body.eventTypeCode)
+          .eq('tenant_id', tenantId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        if (!eventRulesError && eventRules && eventRules.length > 0) rule = eventRules[0]
+      }
+
+      if (!rule) {
         // Return null to signal client should use fallback
         logger.debug('ℹ️ No pricing rule found, client will use fallback')
         return {
@@ -364,8 +407,6 @@ export default defineEventHandler(async (event) => {
           data: null
         }
       }
-
-      const rule = rules[0]
 
       // Calculate base price
       const baseDuration = Math.max(body.durationMinutes, rule.base_duration_minutes)
