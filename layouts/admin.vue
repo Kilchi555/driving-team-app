@@ -132,6 +132,8 @@
               class="drawer-link" :class="isActive('/admin/payment-overview') ? 'drawer-active' : ''">Zahlungen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/invoices" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/invoices') ? 'drawer-active' : ''">Rechnungen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/dunning" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/dunning') ? 'drawer-active' : ''">Mahnwesen</NuxtLink>
 
             <NuxtLink to="/admin/accounting" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/accounting') ? 'drawer-active' : ''">Buchhaltung</NuxtLink>
@@ -237,6 +239,8 @@
               class="drawer-link" :class="isActive('/admin/payment-overview') ? 'drawer-active' : ''">Zahlungen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/invoices"
               class="drawer-link" :class="isActive('/admin/invoices') ? 'drawer-active' : ''">Rechnungen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/dunning"
+              class="drawer-link" :class="isActive('/admin/dunning') ? 'drawer-active' : ''">Mahnwesen</NuxtLink>
             <NuxtLink to="/admin/accounting"
               class="drawer-link" :class="isActive('/admin/accounting') ? 'drawer-active' : ''">Buchhaltung</NuxtLink>
             <NuxtLink to="/admin/payroll"

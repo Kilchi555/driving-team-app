@@ -68,6 +68,18 @@
                 </svg>
                 <span class="hidden sm:inline">Zahlung erfassen</span>
               </button>
+              <!-- Mahnung senden -->
+              <button
+                v-if="canSendDunning"
+                class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-transparent rounded-lg text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                @click="showDunningDialog = true"
+                title="Zahlungserinnerung / Mahnung senden"
+              >
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                <span class="hidden sm:inline">Mahnung</span>
+              </button>
               <!-- Cancel invoice -->
               <button
                 class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-transparent rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -372,6 +384,37 @@
               </div>
             </div>
 
+            <!-- ── Mahnwesen ── -->
+            <div v-if="canSendDunning || dunningLevel > 0 || dunningLog.length > 0" class="bg-gray-50 rounded-xl p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Mahnwesen</h4>
+                <div class="flex items-center gap-3">
+                  <span v-if="dunningLevel > 0" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                    :style="dunningLevelBadgeStyle">
+                    {{ dunningLevelLabel }}
+                  </span>
+                  <button v-if="canSendDunning || dunningLevel > 0" @click="toggleDunningPause" class="text-xs text-gray-500 hover:text-gray-700 underline">
+                    {{ dunningPaused ? 'Mahnwesen reaktivieren' : 'Mahnwesen pausieren' }}
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="dunningLog.length === 0" class="text-sm text-gray-400 italic">Noch keine Mahnung versendet.</div>
+              <div v-else class="space-y-2">
+                <div v-for="entry in dunningLog" :key="entry.id" class="flex items-center justify-between gap-3 bg-white rounded-lg px-3 py-2.5 border border-gray-100">
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium text-gray-900">{{ dunningStageLabel(entry.stage) }}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">{{ formatDateTime(entry.sent_at) }} · an {{ entry.sent_to }}</p>
+                  </div>
+                  <div class="text-right flex-shrink-0">
+                    <span v-if="entry.status === 'sent'" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Versendet</span>
+                    <span v-else class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Fehlgeschlagen</span>
+                    <p v-if="entry.fee_rappen > 0" class="text-xs text-gray-400 mt-0.5">+{{ formatCurrency(entry.fee_rappen) }} Gebühr</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- ── Rechnungsübersicht ── -->
             <div class="bg-gray-50 rounded-xl p-4">
               <div class="flex items-center justify-between mb-4">
@@ -627,6 +670,16 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- ── Mahnung senden Dialog ── -->
+    <DunningSendDialog
+      :show="showDunningDialog"
+      :invoice-id="invoice?.id || null"
+      :invoice-number="invoice?.invoice_number"
+      :current-level="dunningLevel"
+      @close="showDunningDialog = false"
+      @sent="onDunningSent"
+    />
   </div>
 
 </template>
@@ -636,6 +689,7 @@
 import { defineProps, defineEmits, ref, watch, computed, nextTick } from 'vue'
 import InvoiceStatusBadge from './InvoiceStatusBadge.vue'
 import PaymentStatusBadge from './PaymentStatusBadge.vue'
+import DunningSendDialog from './DunningSendDialog.vue'
 // ProductSelectorModal entfernt (Rechnung ist read-only bzgl. Positionen)
 import type { InvoiceStatus, PaymentStatus } from '~/types/invoice'
 
@@ -693,6 +747,10 @@ interface Invoice {
   billing_city?: string
   billing_country?: string
   billing_email?: string
+  // Mahnwesen
+  dunning_level?: number
+  dunning_paused?: boolean
+  last_dunning_sent_at?: string
   // Appointment information
   appointment_id?: string
   appointment_title?: string
@@ -825,6 +883,61 @@ const confirmMarkAsPaid = async () => {
   }
 }
 
+// ── Mahnwesen ──
+// Hinweis: invoice_level/dunning_paused kommen NICHT aus der invoice-Prop (die Liste
+// lädt über die ältere invoices_with_details-View ohne die neuen dunning_*-Spalten),
+// sondern werden separat & aktuell über /api/invoices/dunning-log geladen.
+const showDunningDialog = ref(false)
+const dunningLog = ref<any[]>([])
+const dunningLevel = ref(0)
+const dunningPaused = ref(false)
+
+const canSendDunning = computed(() => {
+  const inv = props.invoice
+  if (!inv) return false
+  return inv.status !== 'draft' && inv.status !== 'cancelled' && inv.payment_status !== 'paid'
+})
+
+const DUNNING_STAGE_LABELS: Record<number, string> = { 1: 'Zahlungserinnerung', 2: '1. Mahnung', 3: '2. / letzte Mahnung' }
+const DUNNING_STAGE_COLORS: Record<number, string> = { 1: '#2563eb', 2: '#d97706', 3: '#dc2626' }
+
+const dunningStageLabel = (stage: number) => DUNNING_STAGE_LABELS[stage] || `Stufe ${stage}`
+
+const dunningLevelLabel = computed(() => dunningStageLabel(dunningLevel.value))
+const dunningLevelBadgeStyle = computed(() => {
+  const color = DUNNING_STAGE_COLORS[dunningLevel.value] || '#6b7280'
+  return { background: color + '1a', color }
+})
+
+const loadDunningLog = async () => {
+  if (!props.invoice?.id) return
+  try {
+    const res = await $fetch<any>('/api/invoices/dunning-log', { query: { invoice_id: props.invoice.id } })
+    dunningLog.value = res?.entries || []
+    dunningLevel.value = res?.dunning_level || 0
+    dunningPaused.value = !!res?.dunning_paused
+  } catch (e) {
+    console.error('Fehler beim Laden der Mahnhistorie:', e)
+  }
+}
+
+const toggleDunningPause = async () => {
+  if (!props.invoice?.id) return
+  const newPaused = !dunningPaused.value
+  try {
+    await $fetch('/api/invoices/toggle-dunning-pause', { method: 'POST', body: { invoiceId: props.invoice.id, paused: newPaused } })
+    dunningPaused.value = newPaused
+  } catch (e) {
+    console.error('Fehler beim Pausieren des Mahnwesens:', e)
+  }
+}
+
+const onDunningSent = async (_invoiceId: string) => {
+  showDunningDialog.value = false
+  await loadDunningLog()
+  if (props.invoice?.id) emit('updated', props.invoice.id)
+}
+
 // Reactive state für detaillierte Zahlungsdaten
 const paymentTermsRef = ref<HTMLTextAreaElement | null>(null)
 
@@ -938,6 +1051,7 @@ const loadDetailedData = async () => {
     // ✅ Lade alle Payments für diese Rechnung
     await loadInvoicePayments();
     await loadInvoicePaymentsHistory();
+    await loadDunningLog();
     
     // ✅ Lade detaillierte Daten via API
     if (props.invoice.user_id) {
