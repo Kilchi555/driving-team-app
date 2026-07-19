@@ -1,5 +1,6 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 /**
@@ -19,6 +20,18 @@ interface WorkingHourRequest {
 
 export default defineEventHandler(async (event) => {
   try {
+    // ✅ SECURITY: this previously had NO auth check at all — any caller could
+    // read/write any staff member's working hours by supplying an arbitrary
+    // staffId. Require auth, and only allow acting on your own record unless
+    // you're an admin/super_admin (and then only within your own tenant).
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) {
+      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    }
+    const callerRole: string = authUser.role || authUser.profile?.role || ''
+    const callerTenantId: string = authUser.tenant_id || authUser.profile?.tenant_id || ''
+    const callerDbUserId: string = authUser.db_user_id || authUser.profile?.id || ''
+
     const body = await readBody<WorkingHourRequest>(event)
 
     if (!body.staffId) {
@@ -35,18 +48,26 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get Supabase client
-    const supabaseUrl = process.env.SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const supabase = getSupabaseAdmin()
 
-    if (!supabaseUrl || !serviceRoleKey) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
+    const isSelf = !!callerDbUserId && callerDbUserId === body.staffId
+    const isSuperAdmin = callerRole === 'super_admin'
+    const isTenantAdmin = callerRole === 'admin' || callerRole === 'tenant_admin'
+
+    if (!isSelf && !isSuperAdmin) {
+      if (!isTenantAdmin) {
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+      }
+      // Tenant admin acting on someone else's record — verify same tenant.
+      const { data: targetUser, error: targetError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', body.staffId)
+        .single()
+      if (targetError || !targetUser || targetUser.tenant_id !== callerTenantId) {
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+      }
     }
-
-    const supabase = createClient(supabaseUrl, serviceRoleKey)
 
     logger.debug('📊 Working hours API:', { action: body.action, staffId: body.staffId })
 
