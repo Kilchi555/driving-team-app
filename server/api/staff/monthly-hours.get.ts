@@ -6,18 +6,18 @@
  */
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getYearlyWorkingDaysBreakdown } from '~/server/utils/swiss-holidays'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
     const supabase = getSupabaseAdmin()
-    const authHeader = event.node.req.headers.authorization
-    if (!authHeader?.startsWith('Bearer ')) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-
-    const token = authHeader.substring(7)
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    // Uses the shared cookie + refresh-token fallback (not just a bare Bearer
+    // header check) so a merely-expired-but-recoverable access token doesn't
+    // 401 here while other endpoints on the same page recover fine.
+    const user = await getAuthenticatedUser(event)
+    if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
     const query = getQuery(event)
     const year = parseInt(query.year as string) || new Date().getFullYear()
