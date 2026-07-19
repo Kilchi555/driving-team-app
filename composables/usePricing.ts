@@ -13,6 +13,8 @@ import { COMPLETE_FALLBACK_RULES, getFallbackRule } from '~/utils/fallbackPricin
 interface PricingRule {
   id: string
   category_code: string
+  /** Set instead of category_code for event-price rules (e.g. mental_coach 'session'/'package') */
+  event_type_code?: string | null
   price_per_minute_rappen: number
   admin_fee_rappen: number
   admin_fee_applies_from: number
@@ -411,7 +413,11 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     appointmentType?: string, // ✅ NEU: appointment_type Parameter hinzugefügt
     isEditMode?: boolean, // ✅ NEU: Edit-Mode flag
     appointmentId?: string, // ✅ NEU: Appointment ID für Edit-Mode
-    tenantId?: string // ✅ NEU: Tenant ID für Event-Type lookup
+    tenantId?: string, // ✅ NEU: Tenant ID für Event-Type lookup
+    // For business types without category-scoped pricing (e.g. mental_coach
+    // 'session'/'package'): used as a fallback lookup key when no pricing_rules
+    // row matches categoryCode directly.
+    eventTypeCode?: string
   ): Promise<CalculatedPrice> => {
     
     // ✅ DEBUG: Log parameters to trace caching issue
@@ -635,7 +641,10 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       await loadPricingRules(false, actualTenantIdForPricing)
     }
 
-    const rule = getPricingRule(categoryCode)
+    // Prefer category-scoped rule (driving_school-style). Fall back to an
+    // event-type-scoped rule (e.g. mental_coach 'session'/'package', which have
+    // no category_code) when no category rule exists.
+    const rule = getPricingRule(categoryCode) || (eventTypeCode ? getPricingRule(eventTypeCode) : null)
     if (!rule) {
       logger.warn(`⚠️ Keine Preisregel für Kategorie "${categoryCode}" gefunden - Verwende 0 CHF`)
       logFallbackUsed(
@@ -732,7 +741,8 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     appointmentType?: string,
     isEditMode?: boolean,
     appointmentId?: string,
-    tenantId?: string
+    tenantId?: string,
+    eventTypeCode?: string
   ) => {
     dynamicPricing.value.isLoading = true
     dynamicPricing.value.error = ''
@@ -748,7 +758,8 @@ export const usePricing = (options: UsePricingOptions = {}) => {
         appointmentType,
         isEditMode,
         appointmentId,
-        tenantId
+        tenantId,
+        eventTypeCode
       )
       
       dynamicPricing.value = {

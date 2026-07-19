@@ -130,7 +130,7 @@ export default defineEventHandler(async (event) => {
     // `business_type_presets.defaults` can still override/extend with simple
     // JSON-only data that has no relational table equivalent (e.g. suggested
     // pricing rules).
-    const [{ data: templateCategories }, { data: templateEventTypes }] = await Promise.all([
+    const [{ data: templateCategories }, { data: templateEventTypes }, { data: templatePricingRules }] = await Promise.all([
       supabase
         .from('categories')
         .select('code, name, description, color, is_active')
@@ -142,13 +142,24 @@ export default defineEventHandler(async (event) => {
         .select('code, name, emoji, description, default_duration_minutes, default_color, is_active, require_payment, public_bookable')
         .is('tenant_id', null)
         .eq('business_type', businessType),
+      // event_price template rows only (e.g. mental_coach 'session'/'package').
+      // driving_school-style category-scoped prices (base_price/theory) aren't
+      // seeded here since they legitimately vary per tenant/category and are
+      // set explicitly during registration or in the admin categories editor.
+      supabase
+        .from('pricing_rules')
+        .select('rule_type, rule_name, event_type_code, price_per_minute_rappen, base_duration_minutes, admin_fee_rappen, admin_fee_applies_from')
+        .is('tenant_id', null)
+        .eq('business_type', businessType)
+        .eq('rule_type', 'event_price')
+        .eq('is_active', true),
     ])
 
     const presetDefaults = presets?.defaults || {}
     const defaults = {
       eventTypes: presetDefaults.event_types?.length ? presetDefaults.event_types : (templateEventTypes || []),
       categories: presetDefaults.categories?.length ? presetDefaults.categories : (templateCategories || []),
-      pricingRules: presetDefaults.pricing_rules || [],
+      pricingRules: presetDefaults.pricing_rules?.length ? presetDefaults.pricing_rules : (templatePricingRules || []),
       uiLabels: presets?.ui_labels || {},
       featureFlags: presets?.feature_flags || {},
     }
@@ -242,6 +253,42 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // 3b) Event-price pricing rules (business types priced per event type
+    // instead of per category, e.g. mental_coach 'session'/'package').
+    const { data: existingPriceRules } = await supabase
+      .from('pricing_rules')
+      .select('event_type_code')
+      .eq('tenant_id', tenant_id)
+      .eq('rule_type', 'event_price')
+
+    const existingPriceEventCodes = new Set((existingPriceRules || []).map((r: any) => r.event_type_code))
+    const now = new Date().toISOString()
+
+    const pricingRulesToInsert = (defaults.pricingRules || [])
+      .filter((p: any) => p.event_type_code && (overwrite_existing ? true : !existingPriceEventCodes.has(p.event_type_code)))
+      .map((p: any) => ({
+        tenant_id,
+        rule_type: 'event_price',
+        rule_name: p.rule_name || p.event_type_code,
+        category_code: null,
+        event_type_code: p.event_type_code,
+        price_per_minute_rappen: p.price_per_minute_rappen,
+        base_duration_minutes: p.base_duration_minutes || 60,
+        admin_fee_rappen: p.admin_fee_rappen || 0,
+        admin_fee_applies_from: p.admin_fee_applies_from ?? 999,
+        is_active: true,
+        valid_from: now,
+        created_at: now,
+        updated_at: now,
+      }))
+
+    if (pricingRulesToInsert.length > 0) {
+      const { error: priceInsertErr } = await supabase.from('pricing_rules').insert(pricingRulesToInsert)
+      if (priceInsertErr) {
+        throw createError({ statusCode: 500, statusMessage: `Insert pricing rules failed: ${priceInsertErr.message}` })
+      }
+    }
+
     // 4) Feature flags and UI labels into tenant_settings
     const settingsToUpsert: Array<{ category: string; key: string; value: string; type: string; description?: string }> = []
     for (const [key, value] of Object.entries(defaults.featureFlags)) {
@@ -273,7 +320,8 @@ export default defineEventHandler(async (event) => {
       business_type: businessType,
       inserted: {
         categories: categoriesToInsert.length,
-        event_types: eventTypesToInsert.length
+        event_types: eventTypesToInsert.length,
+        pricing_rules: pricingRulesToInsert.length
       }
     }
   } catch (error: any) {
