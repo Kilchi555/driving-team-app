@@ -43,6 +43,12 @@ export interface Invoice {
   accounto_sync_status: AccountoSyncStatus
   accounto_sync_error?: string
   accounto_last_sync?: string
+
+  // Mahnwesen (Dunning) — 0 = keine Mahnung, 1 = Zahlungserinnerung, 2 = 1. Mahnung, 3 = 2./letzte Mahnung
+  dunning_level?: number
+  last_dunning_sent_at?: string
+  dunning_paused?: boolean
+  dunning_fees_rappen?: number
   
   // Metadaten
   notes?: string

@@ -10,6 +10,13 @@
         </p>
       </div>
       <div class="flex items-center gap-2">
+        <NuxtLink to="/admin/dunning"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <span class="hidden sm:inline">Mahnwesen</span>
+        </NuxtLink>
         <button @click="showCamtModal = true"
           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -49,11 +56,11 @@
         <span class="text-gray-500 text-xs">Ausstehend</span>
         <span class="font-semibold text-amber-600">{{ formatCurrency(summary.pending_amount) }}</span>
       </span>
-      <span class="flex items-center gap-1.5">
+      <NuxtLink to="/admin/dunning" class="flex items-center gap-1.5 hover:opacity-75 transition-opacity" title="Zum Mahnwesen">
         <span class="w-2 h-2 rounded-full inline-block" :class="(summary.overdue_amount || 0) > 0 ? 'bg-red-500' : 'bg-gray-200'"></span>
         <span class="text-gray-500 text-xs">Überfällig</span>
         <span class="font-semibold" :class="(summary.overdue_amount || 0) > 0 ? 'text-red-600' : 'text-gray-400'">{{ formatCurrency(summary.overdue_amount) }}</span>
-      </span>
+      </NuxtLink>
     </div>
 
     <!-- ═══ FILTER BAR ═══ -->
