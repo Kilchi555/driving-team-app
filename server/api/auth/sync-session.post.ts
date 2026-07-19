@@ -44,18 +44,20 @@ export default defineEventHandler(async (event) => {
   if (!verifyResponse.ok) {
     logger.debug('⚠️ sync-session: access_token invalid or expired, trying refresh...')
 
-    // Access token expired — try to refresh using the provided refresh token
-    const { createClient } = await import('@supabase/supabase-js')
-    const supabase = createClient(supabaseUrl, supabaseKey)
-    const { data, error } = await supabase.auth.refreshSession({ refresh_token })
+    // Access token expired — try to refresh using the provided refresh token.
+    // Use the cross-instance-coordinated refresh (not a raw refreshSession call)
+    // so this doesn't race with the other server endpoints that may be
+    // refreshing the very same (single-use) refresh token at the same time.
+    const { refreshSessionDeduped } = await import('~/server/utils/token-refresh')
+    const session = await refreshSessionDeduped(refresh_token)
 
-    if (error || !data.session) {
+    if (!session) {
       logger.warn('⚠️ sync-session: refresh also failed — session truly expired')
       throw createError({ statusCode: 401, statusMessage: 'Session expired. Please log in again.' })
     }
 
     logger.debug('✅ sync-session: refreshed via refresh_token, setting new cookies')
-    setAuthCookies(event, data.session.access_token, data.session.refresh_token)
+    setAuthCookies(event, session.access_token, session.refresh_token)
     // Return new tokens so the client can update its Supabase session via setSession().
     // Without this, the browser still holds the old (rotated/invalidated) refresh token
     // and the next sync-session call (e.g. after a page reload) fails with "already used".
@@ -63,8 +65,8 @@ export default defineEventHandler(async (event) => {
       success: true,
       refreshed: true,
       session: {
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
       },
     }
   }
