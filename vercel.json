@@ -31,11 +31,11 @@
     },
     {
       "path": "/api/cron/sync-external-calendars",
-      "schedule": "*/15 * * * *"
+      "schedule": "4,19,34,49 * * * *"
     },
     {
       "path": "/api/cron/sync-sari-courses",
-      "schedule": "*/15 * * * *"
+      "schedule": "8,23,38,53 * * * *"
     },
     {
       "path": "/api/cron/process-affiliate-rewards",
@@ -43,7 +43,7 @@
     },
     {
       "path": "/api/cron/process-outbound-messages",
-      "schedule": "*/5 * * * *"
+      "schedule": "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
     },
     {
       "path": "/api/cron/send-onboarding-reminders",
@@ -163,7 +163,7 @@
     },
     {
       "path": "/api/cron/recover-pending-wallee-payments",
-      "schedule": "*/10 * * * *"
+      "schedule": "6,16,26,36,46,56 * * * *"
     },
     {
       "path": "/api/cron/review-vercel-logs",

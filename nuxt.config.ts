@@ -78,6 +78,21 @@ export default defineNuxtConfig({
     externals: {
       external: ['puppeteer-core', '@sparticuz/chromium']
     },
+    // Nuxt/Nitro's `vercel` preset bundles ALL server routes (every /api/**
+    // endpoint, including all cron jobs) into a single shared Serverless
+    // Function. Any invocation — even a tiny cron — loads that entire bundle,
+    // and concurrent invocations (e.g. multiple crons firing in the same
+    // minute) share that function's memory pool. The platform default
+    // (1024 MB) was getting exceeded under load ("instance was killed
+    // because it ran out of available memory"), so we raise both the memory
+    // ceiling and the max execution time here. 3009 MB is the Vercel Pro
+    // plan maximum for a Node.js function.
+    vercel: {
+      functions: {
+        memory: 3009,
+        maxDuration: 60
+      }
+    },
     headers: {
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'SAMEORIGIN',
