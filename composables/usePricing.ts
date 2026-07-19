@@ -370,7 +370,12 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     }
   }
 
-  const getPricingRule = (categoryCode: string): PricingRule | null => {
+  // Looks up a pricing_rules row by category_code (with case-insensitive and
+  // Boot/Motorboot-alias fallbacks), WITHOUT logging when nothing matches.
+  // Used for speculative lookups (e.g. trying eventTypeCode before falling
+  // back to the real categoryCode) where a miss is expected/normal and
+  // shouldn't be surfaced as a warning.
+  const findPricingRuleSilent = (categoryCode: string): PricingRule | null => {
     // Zuerst exakte Übereinstimmung versuchen
     let rule = pricingRules.value.find(rule => rule.category_code === categoryCode)
     
@@ -394,12 +399,15 @@ export const usePricing = (options: UsePricingOptions = {}) => {
         logger.debug(`✅ Found pricing rule via Boot/Motorboot alias: "${categoryCode}" → "${rule.category_code}"`)
       }
     }
-    
+
+    return rule || null
+  }
+
+  const getPricingRule = (categoryCode: string): PricingRule | null => {
+    const rule = findPricingRuleSilent(categoryCode)
     if (!rule) {
       logger.warn(`⚠️ No pricing rule found for category: ${categoryCode}`)
-      return null
     }
-    
     return rule
   }
 
@@ -642,9 +650,23 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     }
 
     // Prefer category-scoped rule (driving_school-style). Fall back to an
-    // event-type-scoped rule (e.g. mental_coach 'session'/'package', which have
-    // no category_code) when no category rule exists.
-    const rule = getPricingRule(categoryCode) || (eventTypeCode ? getPricingRule(eventTypeCode) : null)
+    // event-type-scoped rule (e.g. mental_coach 'session'/'package', or a
+    // tenant's own custom event type, none of which have a category_code)
+    // when no category rule exists.
+    //
+    // Exception: if a *genuine* event_price rule exists for eventTypeCode
+    // (i.e. server/api/pricing/calculate.post.ts combined it from a row with
+    // category_code=NULL), it takes priority over the category match. This
+    // matters because a custom event type is still assigned a license
+    // category in the calendar UI (e.g. "Simulatorstunde" under category B)
+    // — without this, it would silently inherit category B's lesson price
+    // instead of its own configured price.
+    // Silent: for category-scoped business types (e.g. driving_school's
+    // lesson/exam/theory), eventTypeCode intentionally has no matching
+    // category_code row — that's expected and not worth a console warning.
+    const eventTypeRule = eventTypeCode ? findPricingRuleSilent(eventTypeCode) : null
+    const isGenuineEventPriceRule = !!eventTypeRule && eventTypeRule.event_type_code === eventTypeCode
+    const rule = (isGenuineEventPriceRule ? eventTypeRule : null) || getPricingRule(categoryCode) || eventTypeRule
     if (!rule) {
       logger.warn(`⚠️ Keine Preisregel für Kategorie "${categoryCode}" gefunden - Verwende 0 CHF`)
       logFallbackUsed(

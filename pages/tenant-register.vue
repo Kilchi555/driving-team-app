@@ -630,6 +630,85 @@
             </div>
           </div>
 
+          <!-- ── Custom event types (own services, priced tenant-wide) ── -->
+          <div v-if="customEventTypes.length" class="space-y-2">
+            <div v-for="ce in customEventTypes" :key="ce.tempCode"
+              class="rounded-xl border border-gray-200 bg-white overflow-hidden px-4 py-3 transition-opacity"
+              :class="ce.enabled ? '' : 'opacity-40'">
+              <div class="flex items-center gap-2 mb-2.5">
+                <button type="button" @click="ce.enabled = !ce.enabled"
+                  class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+                  :style="ce.enabled ? { background: formData.primary_color || '#2563EB' } : {}"
+                  :class="!ce.enabled ? 'bg-gray-200' : ''">
+                  <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                    :class="ce.enabled ? 'translate-x-3' : 'translate-x-0'" />
+                </button>
+                <span class="text-sm font-semibold text-gray-700">{{ ce.name }}</span>
+                <span class="text-xs text-gray-400 font-mono ml-auto">eigene Leistung</span>
+                <button type="button" @click="removeCustomEventType(ce.tempCode)"
+                  class="w-5 h-5 rounded-full bg-gray-100 hover:bg-red-100 hover:text-red-500 text-gray-400 flex items-center justify-center transition-colors text-xs leading-none">
+                  ✕
+                </button>
+              </div>
+              <div class="flex items-center gap-3 pl-10">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-medium text-gray-400">CHF</span>
+                  <input
+                    v-model.number="ce.price_chf"
+                    type="number" min="0" step="5"
+                    :disabled="!ce.enabled"
+                    class="w-24 px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  />
+                </div>
+                <DurationPicker v-model="ce.duration_minutes" :disabled="!ce.enabled" />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <button type="button" @click="showAddEventTypeForm = !showAddEventTypeForm"
+              class="w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 py-3 text-sm font-semibold text-gray-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50 transition-all duration-150">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              Eigene Leistung hinzufügen
+            </button>
+
+            <transition enter-active-class="transition-all duration-300 ease-out" enter-from-class="opacity-0 -translate-y-2 scale-98" enter-to-class="opacity-100 translate-y-0 scale-100"
+              leave-active-class="transition-all duration-200 ease-in" leave-from-class="opacity-100 translate-y-0 scale-100" leave-to-class="opacity-0 -translate-y-2 scale-98">
+              <div v-if="showAddEventTypeForm" class="mt-3 rounded-2xl border-2 border-blue-200 bg-blue-50 p-4 space-y-4">
+                <p class="text-xs font-bold uppercase tracking-wide text-blue-700">Neue Leistung</p>
+
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">Bezeichnung <span class="text-red-400">*</span></label>
+                  <input v-model="newEventType.name" type="text" placeholder="z.B. Simulatorstunde" maxlength="50"
+                    class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white" />
+                </div>
+
+                <div class="flex items-center gap-3">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-xs font-medium text-gray-500">CHF</span>
+                    <input v-model.number="newEventType.price_chf" type="number" min="0" step="5"
+                      class="w-24 px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white" />
+                  </div>
+                  <DurationPicker v-model="newEventType.duration_minutes" />
+                </div>
+
+                <div class="flex gap-2 pt-1">
+                  <button type="button" @click="addCustomEventType" :disabled="!newEventType.name.trim()"
+                    class="flex-1 py-2 rounded-xl text-sm font-semibold text-white transition-all"
+                    :class="newEventType.name.trim() ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-200 cursor-not-allowed'">
+                    Hinzufügen
+                  </button>
+                  <button type="button" @click="showAddEventTypeForm = false; newEventType.name = ''"
+                    class="px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 bg-white border border-gray-200 hover:bg-gray-50 transition-all">
+                    Abbrechen
+                  </button>
+                </div>
+              </div>
+            </transition>
+          </div>
+
           <div class="flex items-start gap-3 bg-blue-50 rounded-xl p-3.5 text-sm text-blue-700">
             <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -1276,6 +1355,14 @@
                     </span>
                   </div>
                 </div>
+                <div v-if="customEventTypes.some(c => c.enabled)" class="pt-1">
+                  <p class="text-xs font-semibold text-gray-600 mb-1">Eigene Leistungen</p>
+                  <div class="grid grid-cols-3 gap-1 text-xs">
+                    <span v-for="ce in customEventTypes.filter(c => c.enabled)" :key="ce.tempCode" class="text-gray-500">
+                      {{ ce.name }}: <strong>CHF {{ ce.price_chf }}</strong> / {{ ce.duration_minutes }} Min.
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1801,6 +1888,57 @@ watch([pricingGroups, eventTypeTemplates], ([groups, types]) => {
   }
   pricingRows.value = updated
 }, { immediate: true, flush: 'sync' })
+
+// ─── Custom event types (tenant-defined services beyond the template list) ──
+// Always priced tenant-wide via rule_type='event_price' + event_type_code
+// (never crossed with categories, even in per_category mode) — this keeps
+// them on the same, already-functional pricing path used by per_event_type
+// business types like mental_coach, instead of inventing a new dead-end
+// rule_type. A matching event_types row is created by the backend so it's
+// immediately selectable when creating appointments after login.
+interface CustomEventType {
+  tempCode: string
+  name: string
+  price_chf: number
+  duration_minutes: number
+  enabled: boolean
+}
+const customEventTypes = ref<CustomEventType[]>([])
+const showAddEventTypeForm = ref(false)
+const newEventType = ref({ name: '', price_chf: 0, duration_minutes: 60 })
+
+const slugifyEventTypeCode = (name: string): string => {
+  const base = name
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // strip accents (ä→a etc.)
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 30) || 'leistung'
+  const reserved = new Set([...eventTypeTemplates.value.map(t => t.code), ...customEventTypes.value.map(c => c.tempCode)])
+  let code = base
+  let i = 2
+  while (reserved.has(code)) { code = `${base}_${i}`; i++ }
+  return code
+}
+
+const addCustomEventType = () => {
+  const name = newEventType.value.name.trim()
+  if (!name) return
+  customEventTypes.value.push({
+    tempCode: slugifyEventTypeCode(name),
+    name,
+    price_chf: newEventType.value.price_chf || 0,
+    duration_minutes: newEventType.value.duration_minutes || 60,
+    enabled: true,
+  })
+  newEventType.value = { name: '', price_chf: 0, duration_minutes: 60 }
+  showAddEventTypeForm.value = false
+}
+
+const removeCustomEventType = (tempCode: string) => {
+  customEventTypes.value = customEventTypes.value.filter(c => c.tempCode !== tempCode)
+}
+
 const categoriesLoading = ref(false)
 
 const allTemplateCategoryIds = computed(() => {
@@ -2373,7 +2511,7 @@ const submitRegistration = async () => {
     //   pricing_rules rows that would never be used.
     // per_event_type mode (mental_coach-style): one tenant-wide price per event
     //   type, stored via rule_type='event_price' + event_type_code (no category).
-    const CATEGORY_MODE_RULE_TYPE: Record<string, string> = { lesson: 'base_price', theory: 'theory' }
+    const CATEGORY_MODE_RULE_TYPE: Record<string, string> = { lesson: 'base_price', theory: 'theory', consultation: 'consultation' }
     const pricingJson = pricingRows.value
       .filter(r => r.enabled)
       .map(r => {
@@ -2398,7 +2536,25 @@ const submitRegistration = async () => {
         }
       })
       .filter((p): p is NonNullable<typeof p> => p !== null)
-    fd.append('pricing_json', JSON.stringify(pricingJson))
+
+    // Custom, tenant-defined services (added via "Eigene Leistung hinzufügen").
+    // Always flat-priced tenant-wide via event_price + event_type_code, in
+    // both pricing modes — the backend also creates the matching event_types
+    // row (is_custom: true) so it's immediately usable when creating
+    // appointments, not just a pricing_rules row without a bookable type.
+    const customEventTypeJson = customEventTypes.value
+      .filter(c => c.enabled && c.name.trim())
+      .map(c => ({
+        label: c.name,
+        rule_type: 'event_price',
+        event_type_code: c.tempCode,
+        category_code: null,
+        price_chf: c.price_chf,
+        duration_minutes: c.duration_minutes,
+        is_custom: true,
+      }))
+
+    fd.append('pricing_json', JSON.stringify([...pricingJson, ...customEventTypeJson]))
 
     // Locations as JSON
     const locs = validLocations.value
@@ -2576,6 +2732,7 @@ const saveToStorage = () => {
     selectedCategoryIds: Array.from(selectedCategoryIds.value),
     customCategories: customCategories.value,
     pricingItems: pricingRows.value,
+    customEventTypes: customEventTypes.value,
   }))
 }
 
@@ -2607,11 +2764,12 @@ const loadFromStorage = () => {
     if (Array.isArray(d.selectedCategoryIds)) selectedCategoryIds.value = new Set<number>(d.selectedCategoryIds)
     if (Array.isArray(d.customCategories)) customCategories.value = d.customCategories
     if (d.pricingItems && typeof d.pricingItems === 'object') pricingRows.value = d.pricingItems
+    if (Array.isArray(d.customEventTypes)) customEventTypes.value = d.customEventTypes
     if (adminSameAsCompany.value) applyAdminFromCompany()
   } catch { /* ignore */ }
 }
 
-watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, staffList, staffAdminIsSelf, selectedCategoryIds, pricingRows, logoPreview, logoSquarePreview], saveToStorage, { deep: true })
+watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, staffList, staffAdminIsSelf, selectedCategoryIds, pricingRows, customEventTypes, logoPreview, logoSquarePreview], saveToStorage, { deep: true })
 
 const route = useRoute()
 const isWebsiteMode = computed(() => route.query.mode === 'website')

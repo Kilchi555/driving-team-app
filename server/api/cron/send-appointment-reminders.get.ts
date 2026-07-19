@@ -81,6 +81,8 @@ export default defineEventHandler(async (event) => {
       location_id,
       custom_location_name,
       custom_location_address,
+      exam_location_name,
+      exam_location_address,
       customer_pickup_address,
       tenant_id,
       user:users!appointments_user_id_fkey (
@@ -262,6 +264,13 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // Exam location (Prüfungsort) — independent from the meeting point above
+    let examLocation = ''
+    if (apt.event_type_code === 'exam' && (apt as any).exam_location_name) {
+      examLocation = (apt as any).exam_location_name
+      if ((apt as any).exam_location_address) examLocation += `, ${(apt as any).exam_location_address}`
+    }
+
     // Payment section — only for billable event types (lesson, exam)
     const BILLABLE_TYPES = new Set(['lesson', 'exam', 'theory'])
     const isBillable = !apt.event_type_code || BILLABLE_TYPES.has(apt.event_type_code)
@@ -278,6 +287,7 @@ export default defineEventHandler(async (event) => {
       staffName,
       staffPhone,
       meetingPoint,
+      examLocation,
       meetingType,
       meetingLink,
       tenantName,
@@ -373,6 +383,7 @@ interface EmailData {
   staffName: string | null
   staffPhone: string | null
   meetingPoint: string
+  examLocation?: string
   meetingType?: 'in_person' | 'phone' | 'online'
   meetingLink?: string
   tenantName: string
@@ -404,6 +415,7 @@ function buildEmailHtml(d: EmailData): string {
       ? ['Meeting-Link', `<a href="${d.meetingLink}" style="color:${d.primaryColor}">${d.meetingLink}</a>`]
       : null,
     d.meetingPoint  ? ['Treffpunkt',   d.meetingPoint] : null,
+    d.examLocation  ? ['Prüfungsort',  d.examLocation] : null,
   ].filter(Boolean) as [string, string][]
 
   const rowsHtml = rows.map(([label, value]) => `

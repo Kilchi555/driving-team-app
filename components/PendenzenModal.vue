@@ -531,6 +531,7 @@ import { usePendingTasks } from '~/composables/usePendingTasks'
 const { primaryBg } = usePrimaryColor()
 import { usePendencies } from '~/composables/usePendencies'
 import { useCategoryData } from '~/composables/useCategoryData'
+import { useEventTypes } from '~/composables/useEventTypes'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useCalendarCache } from '~/composables/useCalendarCache'
 import EvaluationModal from '~/components/EvaluationModal.vue'
@@ -577,6 +578,19 @@ const { invalidate: invalidateCache } = useCalendarCache()
 
 // Get current user
 const { currentUser } = useCurrentUser()
+
+// ✅ DB-driven (event_types.require_payment) chargeable check — shared cache
+// with EventModal.vue/useEventModalForm.ts, so custom tenant event types are
+// recognized here too instead of only the hardcoded ['lesson','exam','theory'].
+const eventTypesComposable = useEventTypes()
+eventTypesComposable.loadEventTypes([], true)
+const LEGACY_CHARGEABLE_TYPES = ['lesson', 'exam', 'theory']
+const isChargeableEventType = (code: string | null | undefined): boolean => {
+  if (!code) return false
+  const cached = eventTypesComposable.eventTypesFullCache.value.find((et: any) => et.code === code)
+  if (cached && typeof cached.require_payment === 'boolean') return cached.require_payment
+  return LEGACY_CHARGEABLE_TYPES.includes(code)
+}
 
 // Pendencies composable
 const { 
@@ -1150,12 +1164,8 @@ const onCancelAppointment = async (appointment: any) => {
   logger.debug('🚫 PendenzenModal - cancel requested for appointment:', appointment?.id)
   closeEvaluationModal()
   
-  const isLessonType = (eventType: string) => {
-    return ['lesson', 'exam', 'theory'].includes(eventType)
-  }
-  
   const appointmentType = appointment.event_type_code || appointment.type || 'unknown'
-  const isPayableAppointment = isLessonType(appointmentType)
+  const isPayableAppointment = isChargeableEventType(appointmentType)
   
   logger.debug('🗑️ Appointment type:', appointmentType, 'isPayable:', isPayableAppointment)
   

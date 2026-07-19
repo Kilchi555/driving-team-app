@@ -62,6 +62,7 @@ export default defineEventHandler(async (event) => {
     lesson: 95,
     exam: 160,
     theory: 85,
+    consultation: 60,
   }
 
   // Data-driven signal for the client: does this business type have dedicated
