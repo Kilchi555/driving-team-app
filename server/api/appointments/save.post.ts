@@ -14,6 +14,7 @@ import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { getFallbackRule } from '~/utils/fallbackPricingRules'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
 import { recordAndSendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
+import { isChargeableEventType } from '~/server/utils/event-type-charge'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -156,6 +157,13 @@ export default defineEventHandler(async (event) => {
     if (appointmentData.custom_location_address) {
       appointmentData.custom_location_address = sanitizeString(appointmentData.custom_location_address, 500)
     }
+    // ✅ Exam location (Prüfungsort) — independent from custom_location_*
+    if (appointmentData.exam_location_name) {
+      appointmentData.exam_location_name = sanitizeString(appointmentData.exam_location_name, 255)
+    }
+    if (appointmentData.exam_location_address) {
+      appointmentData.exam_location_address = sanitizeString(appointmentData.exam_location_address, 500)
+    }
 
     // ✅ Validate location_id - reject temporary location IDs
     if (appointmentData.location_id === '') {
@@ -292,10 +300,11 @@ export default defineEventHandler(async (event) => {
       }
       
       // ============ UPDATE PAYMENT FOR EDITED APPOINTMENT ============
-      // ✅ If this is a lesson/exam/theory appointment, update the existing payment
-      const isChargeableEventType = ['lesson', 'exam', 'theory'].includes(appointmentData.event_type_code || 'lesson')
+      // ✅ If this is a chargeable appointment (require_payment=true event type),
+      // update the existing payment — DB-driven so custom tenant event types work too
+      const isChargeable = await isChargeableEventType(supabase, oldAppointment.tenant_id, appointmentData.event_type_code)
       
-      if (isChargeableEventType && (totalAmountRappenForPayment !== undefined || productsPriceRappen !== undefined || discountAmountRappen !== undefined)) {
+      if (isChargeable && (totalAmountRappenForPayment !== undefined || productsPriceRappen !== undefined || discountAmountRappen !== undefined)) {
         try {
           // Check if payment exists
           const { data: existingPayment } = await supabase
@@ -462,10 +471,12 @@ export default defineEventHandler(async (event) => {
       
       // ============ ALL POST-CREATE OPERATIONS IN PARALLEL ============
       // Payment + Slot blocking + Queue recalc all run at the same time
-      const isChargeableEventType = ['lesson', 'exam', 'theory'].includes(appointmentData.event_type_code || 'lesson')
+      // DB-driven (event_types.require_payment) so a tenant's own custom
+      // chargeable event types get a payment row too, not just lesson/exam/theory.
+      const isChargeable = await isChargeableEventType(supabase, appointmentData.tenant_id, appointmentData.event_type_code)
       
       // Prepare payment data synchronously (no DB calls needed)
-      if (isChargeableEventType) {
+      if (isChargeable) {
         let finalTotalAmount = totalAmountRappenForPayment ?? 0
         let finalBasePrice = basePriceRappen || 0
         

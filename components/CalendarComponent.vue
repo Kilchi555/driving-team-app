@@ -1182,6 +1182,8 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
         location_id: apt.location_id,
         custom_location_name: (apt as any).custom_location_name || null,
         custom_location_address: (apt as any).custom_location_address || null,
+        exam_location_name: (apt as any).exam_location_name || null,
+        exam_location_address: (apt as any).exam_location_address || null,
         duration_minutes: apt.duration_minutes,
         status: apt.status,
         // ✅ Merge classNames from API (e.g., reserved-slot-event) with local ones

@@ -64,7 +64,7 @@ export async function applyCategoryAndEventTypeDefaults(
   supabase: SupabaseAdmin,
   tenantId: string,
   businessType: string,
-  opts: { selectedCategoryIds?: string[]; theoryEnabled?: boolean; skipExistingCodes?: boolean } = {}
+  opts: { selectedCategoryIds?: string[]; theoryEnabled?: boolean; consultationEnabled?: boolean; skipExistingCodes?: boolean } = {}
 ): Promise<{ categoriesCopied: number; eventTypesCopied: number }> {
   const now = new Date().toISOString()
   let categoriesCopied = 0
@@ -187,9 +187,11 @@ export async function applyCategoryAndEventTypeDefaults(
             tenant_id: tenantId,
             created_at: now,
             updated_at: now,
-            // Theory is created but inactive unless the tenant explicitly enabled it
-            // during onboarding, so it doesn't clutter the calendar by default.
+            // Theory/Beratung are created but inactive unless the tenant explicitly
+            // enabled+priced them during onboarding, so they don't clutter the
+            // calendar's type dropdown by default with an unpriced option.
             ...(et.code === 'theory' && !opts.theoryEnabled ? { is_active: false } : {}),
+            ...(et.code === 'consultation' && !opts.consultationEnabled ? { is_active: false } : {}),
           }))
         )
         if (etInsertErr) logger.warn('⚠️ Event types insert failed:', etInsertErr)

@@ -1150,7 +1150,7 @@ const staffSelectorRef = ref()
 const invitedStaffIds = ref([] as string[])
 const defaultBillingAddress = ref(null)
 const selectedCategory = ref<any | null>(null)
-const selectedExamLocation = ref(null)
+const selectedExamLocation = ref<{ name?: string; address?: string } | null>(null)
 const showDeleteConfirmation = ref(false)
 const showPaymentStatusModal = ref(false)
 const showRefundOptionsModal = ref(false)
@@ -2197,6 +2197,7 @@ const {
   saveAppointment,
   loadExistingPayment,
   isPopulating,
+  isChargeableEventType,
 } = modalForm
 
 watch(() => formData.value.type, async (newType) => {
@@ -2356,11 +2357,11 @@ const handleProductAdded = (product: any) => {
 }
 
 // ============ COMPUTED ============
-// Hilfsfunktion um zu prüfen, ob es sich um einen "lesson"-Typ handelt
-const isLessonType = (eventType: string) => {
-  const lessonTypes = ['lesson', 'exam', 'theory']
-  return lessonTypes.includes(eventType)
-}
+// Hilfsfunktion um zu prüfen, ob es sich um einen "lesson"-Typ handelt.
+// Delegates to the DB-driven (event_types.require_payment) check from
+// useEventModalForm so newly added chargeable event types (custom or
+// template-based) get the same treatment as lesson/exam/theory automatically.
+const isLessonType = (eventType: string) => isChargeableEventType(eventType)
 
 // ──────────────────────────────────────────────────────────────
 // Resource picker: vehicle and room assignment with availability
@@ -2589,15 +2590,23 @@ const translateEventTypeCode = (code: string): string => {
 
 const eventTypeForTitle = computed((): 'lesson' | 'staff_meeting' | 'other' | 'meeting' | 'break' | 'training' | 'maintenance' | 'admin' | 'team_invite' | 'nothelfer' | 'vku' => {
   const eventType = formData.value.eventType
-  const validEventTypes: ('lesson' | 'staff_meeting' | 'other' | 'meeting' | 'break' | 'training' | 'maintenance' | 'admin' | 'team_invite' | 'nothelfer' | 'vku')[] = ['lesson', 'staff_meeting', 'other', 'meeting', 'break', 'training', 'maintenance', 'admin', 'team_invite', 'nothelfer', 'vku']
   
-  // Nur gültige Typen zurückgeben
-  if (validEventTypes.includes(eventType as any)) {
-    return eventType as 'lesson' | 'staff_meeting' | 'other' | 'meeting' | 'break' | 'training' | 'maintenance' | 'admin' | 'team_invite' | 'nothelfer' | 'vku'
+  // Types with their own dedicated branch inside TitleInput's
+  // shouldShow/labelText/placeholder logic
+  if (eventType === 'lesson' || eventType === 'staff_meeting' || eventType === 'nothelfer' || eventType === 'vku') {
+    return eventType
   }
   
-  // Fallback für ungültige Werte
-  return 'lesson'
+  // ✅ Everything else — known "other" codes (meeting, break, training, ...)
+  // AND any newly added/custom/tenant-specific event type (e.g. "sonstiges",
+  // "intake", a tenant's own event type) — is mapped to the generic "other"
+  // bucket. Previously, any code not in a hardcoded whitelist silently fell
+  // back to 'lesson', which made TitleInput hide the title field entirely
+  // for "other" appointments without a student (shouldShow checked
+  // selectedStudent for eventType 'lesson'). TitleInput already handles
+  // "other" generically via selectedSpecialType, so this covers all
+  // current and future codes without needing this list to stay in sync.
+  return eventType ? 'other' : 'lesson'
 })
 
 const shouldAutoLoadStudents = computed(() => {
@@ -3008,7 +3017,15 @@ const calculatePriceForCurrentData = async (): Promise<void> => {
         capturedUserId || undefined,
         capturedAppointmentType,
         props.mode === 'edit',
-        props.eventData?.id
+        props.eventData?.id,
+        // tenantId + eventTypeCode enable the event_price fallback lookup
+        // (server/api/pricing/calculate.post.ts) for chargeable event types
+        // that aren't priced per license category (e.g. a tenant's own
+        // custom service, or mental_coach-style event types) — categoryCode
+        // still takes priority when a matching base_price/theory/consultation
+        // rule exists, so this is additive for the existing driving_school flow.
+        props.currentUser?.tenant_id,
+        capturedAppointmentType
       )
 
       // Discard if a newer call has started since we began
@@ -3438,9 +3455,12 @@ const testManualTimeChange = () => {
 
 const handleExamLocationSelected = (location: any) => {
   selectedExamLocation.value = location
-  // Persist into formData so it's included in the appointments save payload
-  formData.value.custom_location_name = location?.name || null
-  formData.value.custom_location_address = typeof location?.address === 'string'
+  // ✅ Persist into dedicated exam_location_* fields — NOT into
+  // custom_location_name/address, which represent the appointment's
+  // meeting point (Treffpunkt) and are shown by LocationSelector.
+  // The exam location has nothing to do with where staff/student meet.
+  formData.value.exam_location_name = location?.name || null
+  formData.value.exam_location_address = typeof location?.address === 'string'
     ? location.address
     : (location?.address ? JSON.stringify(location.address) : null)
   logger.debug('🏛️ Exam location selected in modal:', location)
@@ -4439,6 +4459,7 @@ const handleClose = () => {
   logger.debug('✅ Cache invalidated on modal close')
   
   resetForm()
+  selectedExamLocation.value = null
   emit('close')
 }
 
@@ -4518,15 +4539,13 @@ const handleDelete = async () => {
     return
   }
   
-  // ✅ PRÜFE ZUERST: Ist das ein bezahlbarer Termin (Lektion)?
-  const isLessonType = (eventType: string) => {
-    return ['lesson', 'exam', 'theory'].includes(eventType)
-  }
-  
   // ✅ Verwende event_type_code aus props.eventData
   const appointmentType = props.eventData.event_type_code || props.eventData.type || 'unknown'
   
-  const isPayableAppointment = isLessonType(appointmentType)
+  // ✅ PRÜFE ZUERST: Ist das ein bezahlbarer Termin (Lektion)? DB-driven
+  // (require_payment) instead of a hardcoded array, so custom chargeable
+  // event types also go through the cancellation-reason flow.
+  const isPayableAppointment = isChargeableEventType(appointmentType)
   
   logger.debug('🗑️ FULL EVENT DATA:', props.eventData)
   logger.debug('🗑️ AVAILABLE FIELDS:', Object.keys(props.eventData || {}))
@@ -4676,7 +4695,7 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
     
     // ✅ SCHRITT 3: SOFT DELETE via secure API: Termin als gelöscht markieren
     const eventType = props.eventData.type || props.eventData.event_type_code
-    const isOtherEventType = !['lesson', 'exam', 'theory'].includes(eventType)
+    const isOtherEventType = !isChargeableEventType(eventType)
     
     const updateData = {
       deleted_at: new Date().toISOString(),
@@ -4853,7 +4872,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     // ✅ SCHRITT 1: Alle zugehörigen Zahlungsdaten löschen (nur für Lektionen)
     // ✅ WICHTIG: Use event_type_code first (lesson/exam/theory), not type (B/A/C - Fahrkategorie)
     const eventType = props.eventData.event_type_code || props.eventData.type
-    const isLessonType = ['lesson', 'exam', 'theory'].includes(eventType)
+    const isChargeableAppointment = isChargeableEventType(eventType)
     
     // ✅ SCHRITT 0: SECURE API CALL - Get payment info from backend (NOT direct Supabase query!)
     let lessonPriceRappen = 0
@@ -4866,7 +4885,7 @@ const performSoftDeleteWithReason = async (deletionReason: string, cancellationR
     
     logger.debug('🔍 Proceeding with cancellation (using secure cancel API)')
     
-    if (isLessonType) {
+    if (isChargeableAppointment) {
       // ✅ IMPORTANT: Use the cancellation policy to determine charge percentage
       // Do NOT hardcode 100% - the policy decides based on time until appointment
       // ✅ CRITICAL FIX: Use ?? to check for null/undefined separately
@@ -5044,7 +5063,7 @@ const confirmDelete = async () => {
     return
   }
 
-  const isOtherEventType = !['lesson', 'exam', 'theory'].includes(eventType)
+  const isOtherEventType = !isChargeableEventType(eventType)
   
   const deletionReason = isOtherEventType 
     ? `Other Event Type gelöscht durch ${props.currentUser?.first_name || 'Benutzer'} (${props.currentUser?.email || 'unbekannt'})`
@@ -5834,14 +5853,23 @@ const initializeFormData = async () => {
     // ✅ Pre-fill exam location selector when editing an exam appointment
     if (
       formData.value.appointment_type === 'exam' &&
-      formData.value.custom_location_name &&
       !selectedExamLocation.value
     ) {
-      selectedExamLocation.value = {
-        name: formData.value.custom_location_name,
-        address: formData.value.custom_location_address || undefined,
+      if (formData.value.exam_location_name) {
+        selectedExamLocation.value = {
+          name: formData.value.exam_location_name,
+          address: formData.value.exam_location_address || undefined,
+        }
+        logger.debug('🏛️ Exam location pre-filled from appointment data:', selectedExamLocation.value)
+      } else if (formData.value.custom_location_name) {
+        // ✅ Legacy fallback: appointments saved before exam_location_* existed
+        // stored the exam location in custom_location_name/address instead.
+        selectedExamLocation.value = {
+          name: formData.value.custom_location_name,
+          address: formData.value.custom_location_address || undefined,
+        }
+        logger.debug('🏛️ Exam location pre-filled from legacy custom_location fields:', selectedExamLocation.value)
       }
-      logger.debug('🏛️ Exam location pre-filled from appointment data:', selectedExamLocation.value)
     }
     
     // ✅ SCHRITT 1.5: Ursprüngliche Duration zu availableDurations hinzufügen
@@ -6487,8 +6515,29 @@ const initializePastedAppointment = async () => {
 
 // ============ WATCHERS ============
 // Direkt nach initializeFormData in der watch-Funktion:
-watch(() => props.isVisible, async (newVisible) => {
-  if (newVisible) {
+watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, oldValue) => {
+  const [newVisible, newEventId] = newValue
+  const [oldVisible, oldEventId] = oldValue || [false, undefined]
+  // ✅ Re-initialize not only when the modal transitions to visible, but also
+  // when the underlying appointment (eventData.id) changes while the modal
+  // stays open — e.g. tapping a different calendar event without the modal
+  // being closed in between. Previously this watcher only keyed off
+  // isVisible, so isVisible staying `true` across two different
+  // appointments meant the OLD appointment's data (event type, location,
+  // price section, etc.) kept being shown instead of the newly clicked one.
+  if (newVisible && !(oldVisible && newEventId === oldEventId)) {
+    // ✅ Switching directly from one appointment to a different one while
+    // the modal stays open (isVisible never toggled false in between): clear
+    // per-appointment UI state first. Several guards below only set state
+    // "if not already set" (student, exam location, lesson type, ...), which
+    // would otherwise keep showing the PREVIOUS appointment's data.
+    if (oldVisible && newEventId !== oldEventId) {
+      logger.debug('🔄 Switching to a different appointment while modal stays open - resetting UI state first')
+      resetForm()
+      selectedExamLocation.value = null
+      selectedLessonType.value = 'lesson'
+      showEventTypeSelection.value = false
+    }
     isInitializing.value = true
     // Store mode in formData so composables can read it without needing props
     formData.value._mode = props.mode
@@ -6644,6 +6693,7 @@ watch(() => props.isVisible, async (newVisible) => {
         
         // ✅ DANN: resetForm aufrufen, aber mit korrekten Werten überschreiben
         resetForm()
+        selectedExamLocation.value = null
         
         // ✅ SOFORT: Kalenderdaten setzen (bevor andere Funktionen sie überschreiben)
         formData.value.startDate = startDate
@@ -6808,6 +6858,7 @@ watch(() => props.mode, (newMode, oldMode) => {
   if (newMode === 'create' && (oldMode === 'edit' || oldMode === 'view') && !isPasteOperation) {
     logger.debug('🔄 Switching to create mode - resetting form')
     resetForm()
+    selectedExamLocation.value = null
   } else if (isPasteOperation) {
     logger.debug('📋 Mode change ignored - this is a paste operation')
   }

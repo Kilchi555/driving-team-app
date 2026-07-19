@@ -66,6 +66,8 @@ export default defineEventHandler(async (event) => {
         location_id,
         custom_location_name,
         custom_location_address,
+        exam_location_name,
+        exam_location_address,
         customer_pickup_plz,
         customer_pickup_address,
         user_id,

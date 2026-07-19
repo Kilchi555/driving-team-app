@@ -507,6 +507,47 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
             if (priceErr) logger.warn('⚠️ Pricing rules creation failed (non-critical):', priceErr)
             else logger.debug(`✅ Created ${pricingRows.length} pricing rule(s)`)
           }
+
+          // Custom services the tenant defined during registration (not part of
+          // the business_type templates) need their own event_types row so
+          // they're immediately selectable when creating appointments — the
+          // template copy in applyCategoryAndEventTypeDefaults only knows about
+          // tenant_id IS NULL rows, which these are not.
+          const customEventTypeItems = pricingItems.filter((p: any) => p.is_custom && p.event_type_code)
+          if (customEventTypeItems.length > 0) {
+            const { data: existingEts } = await supabase.from('event_types').select('code').eq('tenant_id', tenantId)
+            const existingCodes = new Set((existingEts || []).map((e: any) => e.code))
+            const CUSTOM_EVENT_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6']
+            const customEtRows = customEventTypeItems
+              .filter((p: any) => !existingCodes.has(p.event_type_code))
+              .map((p: any, i: number) => ({
+                id: crypto.randomUUID(),
+                tenant_id: tenantId,
+                code: p.event_type_code,
+                name: p.label,
+                emoji: '✨',
+                description: null,
+                default_duration_minutes: p.duration_minutes || 60,
+                default_color: CUSTOM_EVENT_COLORS[i % CUSTOM_EVENT_COLORS.length],
+                is_active: true,
+                display_order: 10,
+                allowed_roles: ['staff', 'admin'],
+                requires_team_invite: false,
+                auto_generate_title: true,
+                require_payment: true,
+                // Not exposed on the public booking page by default — the tenant
+                // can opt in later once they've verified the flow.
+                public_bookable: false,
+                is_default: false,
+                created_at: now,
+                updated_at: now,
+              }))
+            if (customEtRows.length > 0) {
+              const { error: etErr } = await supabase.from('event_types').insert(customEtRows)
+              if (etErr) logger.warn('⚠️ Custom event type creation failed (non-critical):', etErr)
+              else logger.debug(`✅ Created ${customEtRows.length} custom event type(s)`)
+            }
+          }
         }
       } catch (priceParseErr) {
         logger.warn('⚠️ pricing_json parse error (non-critical):', priceParseErr)
@@ -896,16 +937,19 @@ async function copyDefaultDataToTenant(
   // Delegates to the shared business-type-presets util so registration and
   // any future admin "reseed tenant" action apply identical logic.
   let theoryEnabled = false
+  let consultationEnabled = false
   try {
     if (pricingJson?.trim()) {
       const pricingItems = JSON.parse(pricingJson)
       theoryEnabled = Array.isArray(pricingItems) && pricingItems.some((p: any) => p.rule_type === 'theory')
+      consultationEnabled = Array.isArray(pricingItems) && pricingItems.some((p: any) => p.rule_type === 'consultation')
     }
   } catch { /* non-critical — default to inactive */ }
 
   await applyCategoryAndEventTypeDefaults(supabase, tenantId, businessType, {
     selectedCategoryIds,
     theoryEnabled,
+    consultationEnabled,
   })
 
   // ── 3. Evaluation Categories (+ Criteria + Scale) ────────────────────────

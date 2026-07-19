@@ -36,6 +36,10 @@ interface AppointmentData {
   // ✅ Additional missing fields
   custom_location_address?: any
   custom_location_name?: string
+  // ✅ Exam location (Prüfungsort) — independent from custom_location_*,
+  // which represents the appointment's meeting point (Treffpunkt).
+  exam_location_name?: string | null
+  exam_location_address?: string | null
   google_place_id?: string
   _mode?: string
   // Resource assignment
@@ -92,6 +96,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
     // ✅ Additional missing fields
     custom_location_address: undefined,
     custom_location_name: undefined,
+    exam_location_name: undefined,
+    exam_location_address: undefined,
     google_place_id: undefined,
     vehicle_id: null,
     room_id: null,
@@ -112,6 +118,29 @@ const useEventModalForm = (currentUser?: any, refs?: {
   const categoryData = useCategoryData()
   const eventTypes = useEventTypes()
   const { getCategoryWithParent } = useCategoryWithFallback()
+
+  // Warm the shared event_types cache as early as possible so
+  // isChargeableEventType() has real require_payment data by the time the
+  // form is validated/saved, instead of relying only on the legacy fallback.
+  // Cheap no-op if another component (LessonTypeSelector/EventTypeSelector)
+  // already loaded it — same shared, module-level cache.
+  eventTypes.loadEventTypes([], true)
+
+  // ✅ Generic "is this event type chargeable" check, driven by the
+  // event_types.require_payment DB flag instead of a hardcoded
+  // ['lesson','exam','theory'] array. This lets tenants add their own
+  // chargeable event types (e.g. via tenant registration or later the admin
+  // dashboard) and get full price/payment treatment automatically, without
+  // any code change. Falls back to the legacy array only if the cache
+  // doesn't (yet) know the code — keeps existing behavior unchanged for the
+  // three built-in types even before the cache has loaded.
+  const LEGACY_CHARGEABLE_TYPES = ['lesson', 'exam', 'theory']
+  const isChargeableEventType = (code: string | null | undefined): boolean => {
+    if (!code) return false
+    const cached = eventTypes.eventTypesFullCache.value.find((et: any) => et.code === code)
+    if (cached && typeof cached.require_payment === 'boolean') return cached.require_payment
+    return LEGACY_CHARGEABLE_TYPES.includes(code)
+  }
 
   // ============ COMPUTED ============
   const isFormValid = computed(() => {
@@ -196,6 +225,10 @@ const useEventModalForm = (currentUser?: any, refs?: {
 
   const populateFormFromAppointment = async (appointment: any) => {
     isPopulating.value = true
+    // Ensure require_payment data is available before classifying the
+    // appointment's event type below (avoids a race with the fire-and-forget
+    // warm-up call fired when this composable was set up).
+    await eventTypes.loadEventTypes([], true)
     logger.debug('📝 Populating form from appointment:', appointment?.id)
     logger.debug('🔍 Full appointment data:', appointment)
     logger.debug('🔍 Appointment event_type_code check:', {
@@ -247,7 +280,10 @@ const useEventModalForm = (currentUser?: any, refs?: {
       }
     }
 
-    const isOtherEvent = appointmentType && otherEventTypes.includes(appointmentType.toLowerCase())
+    // Legacy hardcoded list OR'd with the DB-driven require_payment check —
+    // covers both known "other" codes and any newly added custom event type
+    // that isn't chargeable, without needing this array to stay in sync.
+    const isOtherEvent = !!appointmentType && (otherEventTypes.includes(appointmentType.toLowerCase()) || !isChargeableEventType(appointmentType.toLowerCase()))
     
     // Zeit-Verarbeitung: Convert UTC from DB to Zurich local time for display
     const startDateTime = new Date(appointment.start_time || appointment.start)
@@ -305,6 +341,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // ✅ Additional missing fields
       custom_location_address: appointment.custom_location_address || appointment.extendedProps?.custom_location_address || null,
       custom_location_name: appointment.custom_location_name || appointment.extendedProps?.custom_location_name || null,
+      exam_location_name: appointment.exam_location_name || appointment.extendedProps?.exam_location_name || null,
+      exam_location_address: appointment.exam_location_address || appointment.extendedProps?.exam_location_address || null,
       google_place_id: appointment.google_place_id || appointment.extendedProps?.google_place_id || null,
       vehicle_mode: appointment.vehicle_mode || appointment.extendedProps?.vehicle_mode || null,
       vehicle_id: appointment.vehicle_id || appointment.extendedProps?.vehicle_id || null,
@@ -349,10 +387,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   }
 
   // ✅ Helper function to check if event type is a lesson type
-  const isLessonType = (eventType: string) => {
-    const lessonTypes = ['lesson', 'exam', 'theory']
-    return lessonTypes.includes(eventType)
-  }
+  const isLessonType = (eventType: string) => isChargeableEventType(eventType)
 
   // ✅ Load student by ID for existing appointments
   const loadStudentById = async (userId: string) => {
@@ -834,7 +869,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       logger.debug('📋 Appointment user_id:', userId, 'eventType:', formData.value.eventType)
       
       // Determine if this is a chargeable lesson-type appointment
-      const isChargeableLesson = (formData.value.appointment_type || 'lesson') && ['lesson', 'exam', 'theory'].includes(formData.value.appointment_type || 'lesson')
+      const isChargeableLesson = isChargeableEventType(formData.value.appointment_type || 'lesson')
       // Generate confirmation token for chargeable appointments
       const confirmationToken = isChargeableLesson ? crypto.randomUUID?.() || Math.random().toString(36).slice(2) : null
 
@@ -978,7 +1013,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
 
       // ✅ Determine if this is an "other event type" (non-lesson)
       const eventTypeCode = formData.value.appointment_type || 'lesson'
-      const isOtherEventType = !['lesson', 'exam', 'theory'].includes(eventTypeCode)
+      const isOtherEventType = !isChargeableEventType(eventTypeCode)
 
       const appointmentData = {
         title: formData.value.title,
@@ -996,6 +1031,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
         event_type_code: eventTypeCode,
         custom_location_address: formData.value.custom_location_address || undefined,
         custom_location_name: formData.value.custom_location_name || undefined,
+        exam_location_name: formData.value.exam_location_name || undefined,
+        exam_location_address: formData.value.exam_location_address || undefined,
         vehicle_mode: formData.value.vehicle_mode ?? null,
         vehicle_id: formData.value.vehicle_id ?? null,
         room_id: formData.value.room_id ?? null,
@@ -1110,7 +1147,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       // ✅ Create or update payment entry nur für Lektionen (lesson, exam, theory)
       const appointmentType = formData.value.appointment_type || 'lesson' // Fallback zu 'lesson' wenn undefined
-      const isLessonType = ['lesson', 'exam', 'theory'].includes(appointmentType)
+      const isLessonType = isChargeableEventType(appointmentType)
       if (isLessonType) {
         if (mode === 'create') {
           logger.debug('🚀 Creating new payment entry for lesson type (pending_confirmation flow):', appointmentType)
@@ -1771,6 +1808,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
     // Composables
     categoryData,
     eventTypes,
+    isChargeableEventType,
   }
 }
 
