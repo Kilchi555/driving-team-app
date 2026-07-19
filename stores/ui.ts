@@ -26,6 +26,12 @@ export const useUIStore = defineStore('ui', () => {
     read: boolean
   }>>([])
 
+  // How long a duplicate (same type/title/message) notification is suppressed for.
+  // Prevents the same toast stacking many times when several parallel requests
+  // fail for the same underlying reason (e.g. a burst of 401s all showing
+  // "Sitzung abgelaufen" at once).
+  const DUPLICATE_SUPPRESS_WINDOW_MS = 4000
+
   // Loading states for different operations
   const loadingStates = ref<Record<string, boolean>>({})
 
@@ -156,20 +162,38 @@ export const useUIStore = defineStore('ui', () => {
     type: 'success' | 'error' | 'warning' | 'info'
     title: string
     message: string
+    duration?: number
   }) => {
-    const id = Date.now().toString()
+    // Suppress exact duplicates that landed within the suppress window (e.g. several
+    // parallel API calls failing for the same reason at nearly the same time).
+    const now = Date.now()
+    const recentDuplicate = notifications.value.find(n =>
+      n.type === notification.type &&
+      n.title === notification.title &&
+      n.message === notification.message &&
+      (now - n.timestamp.getTime()) < DUPLICATE_SUPPRESS_WINDOW_MS
+    )
+    if (recentDuplicate) {
+      return recentDuplicate.id
+    }
+
+    const id = now.toString()
     notifications.value.unshift({
       id,
-      ...notification,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
       timestamp: new Date(),
       read: false
     })
 
-    // Auto-remove success notifications after 5 seconds
-    if (notification.type === 'success') {
+    // Auto-remove after an explicit duration, or after 5s for success (default
+    // behavior kept for callers that never passed a duration).
+    const autoRemoveAfter = notification.duration ?? (notification.type === 'success' ? 5000 : undefined)
+    if (autoRemoveAfter) {
       setTimeout(() => {
         removeNotification(id)
-      }, 5000)
+      }, autoRemoveAfter)
     }
 
     return id

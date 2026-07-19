@@ -645,11 +645,19 @@ const loadDashboardSummary = async () => {
     logger.debug('✅ Dashboard summary loaded successfully')
   } catch (error: any) {
     logger.error('❌ Error loading dashboard summary:', error)
-    uiStore.addNotification({
-      type: 'error',
-      title: 'Fehler',
-      message: 'Dashboard-Daten konnten nicht geladen werden'
-    })
+    // A 401 here means the session expired/is being recovered — the global
+    // fetch interceptor already shows "Sitzung abgelaufen" and handles the
+    // redirect. Showing a second, contradictory "Dashboard-Daten konnten
+    // nicht geladen werden" toast on top of that is just confusing noise.
+    const status = error?.statusCode || error?.status || error?.data?.statusCode
+    if (status !== 401) {
+      uiStore.addNotification({
+        type: 'error',
+        title: 'Fehler',
+        message: 'Dashboard-Daten konnten nicht geladen werden',
+        duration: 6000
+      })
+    }
   } finally {
     isLoading.value = false
   }
