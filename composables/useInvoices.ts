@@ -326,14 +326,8 @@ export const useInvoices = () => {
       })
 
       if (response.success && response.pdfUrl) {
-        // PDF herunterladen
-        const link = document.createElement('a')
-        link.href = response.pdfUrl
-        link.download = `rechnung-${id}.pdf`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        
+        const { openPdf } = await import('~/utils/openPdf')
+        await openPdf(response.pdfUrl, `rechnung-${id}.pdf`)
         return { success: true, pdfUrl: response.pdfUrl }
       } else {
         return { success: false, error: response.error || 'Fehler beim Generieren der PDF' }

@@ -2449,7 +2449,8 @@ const downloadInvoice = async (appointment: Appointment) => {
     })
     
     if (result?.pdfUrl) {
-      window.open(result.pdfUrl, '_blank')
+      const { openPdf } = await import('~/utils/openPdf')
+      await openPdf(result.pdfUrl, `Rechnung_${payment.invoice_number}.pdf`)
       logger.debug('✅ Invoice downloaded')
     } else {
       showErrorToast('Fehler', 'PDF konnte nicht generiert werden')
@@ -3243,14 +3244,8 @@ const generateInvoicePDF = async (invoiceData: InvoiceData): Promise<PDFResult> 
     }) as { success: boolean; pdfUrl?: string; error?: string }
     
     if (response.success && response.pdfUrl) {
-      // PDF herunterladen
-      const link = document.createElement('a')
-      link.href = response.pdfUrl
-      link.download = `rechnung-${invoiceData.invoice_number}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      
+      const { openPdf } = await import('~/utils/openPdf')
+      await openPdf(response.pdfUrl, `rechnung-${invoiceData.invoice_number}.pdf`)
       return { success: true, pdfUrl: response.pdfUrl }
     } else {
       return { success: false, error: response.error || 'PDF-Generierung fehlgeschlagen' }
