@@ -471,10 +471,6 @@ const confirmCancellation = async () => {
       message: notificationMessage
     })
 
-    // Gesamten Kalender-Cache löschen damit Termine neu geladen werden
-    const { clearCache } = useCalendarCache()
-    clearCache()
-
     emit('cancelled', props.appointment?.id)
     emit('close')
   } catch (err: any) {

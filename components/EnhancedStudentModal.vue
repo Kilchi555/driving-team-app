@@ -1742,7 +1742,6 @@ import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 import { useTerminology } from '~/composables/useTerminology'
 
 const { t } = useTerminology()
-import { useCalendarCache } from '~/composables/useCalendarCache'
 import EvaluationModal from '~/components/EvaluationModal.vue'
 import ExamResultModal from '~/components/ExamResultModal.vue'
 import ConfirmationDialog from '~/components/ConfirmationDialog.vue'
@@ -1815,7 +1814,6 @@ const primaryGradient = computed(() => {
   const base = primaryColor.value || '#1E40AF'
   return `linear-gradient(135deg, ${base} 0%, ${adjustBrightness(base, 40)} 100%)`
 })
-const { invalidate: invalidateCache } = useCalendarCache()
 
 // Reactive state
 const activeTab = ref<'details' | 'progress' | 'payments' | 'documents'>(props.initialTab || 'details')
@@ -2789,9 +2787,6 @@ const closeExamResultModal = () => {
 const onEvaluationSaved = async () => {
   logger.debug('✅ Evaluation saved, refreshing lessons')
 
-  invalidateCache('/api/admin/get-pending-appointments')
-  invalidateCache('/api/calendar/get-appointments')
-
   // Reload via secure backend API (admin client bypasses RLS on notes table)
   await loadLessons()
 
@@ -2799,10 +2794,6 @@ const onEvaluationSaved = async () => {
 }
 
 const onExamResultSaved = async () => {
-  // Ensure pending/exam related views fetch fresh data after save
-  invalidateCache('/api/admin/get-pending-appointments')
-  invalidateCache('/api/calendar/get-appointments')
-
   await loadExamResults()
   await loadLessons()
   closeExamResultModal()

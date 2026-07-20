@@ -1093,37 +1093,6 @@ useStatusBar({
 })
 const { currentTenant, loadTenant, setTenant } = useTenant()
 
-// ===== DASHBOARD CACHE =====
-const CACHE_TTL = 2 * 60 * 1000 // 2 minutes
-const CACHE_PREFIX = 'cdb_'
-
-function getCached<T>(key: string): T | null {
-  try {
-    const raw = sessionStorage.getItem(CACHE_PREFIX + key)
-    if (!raw) return null
-    const { data, ts } = JSON.parse(raw)
-    if (Date.now() - ts > CACHE_TTL) {
-      sessionStorage.removeItem(CACHE_PREFIX + key)
-      return null
-    }
-    return data as T
-  } catch { return null }
-}
-
-function setCache(key: string, data: any) {
-  try {
-    sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ data, ts: Date.now() }))
-  } catch { /* storage full or unavailable */ }
-}
-
-function clearDashboardCache() {
-  try {
-    Object.keys(sessionStorage)
-      .filter(k => k.startsWith(CACHE_PREFIX))
-      .forEach(k => sessionStorage.removeItem(k))
-  } catch { /* ignore */ }
-}
-
 // State
 const isLoading = ref(true)
 const error = ref<string | null>(null)
@@ -1560,7 +1529,6 @@ const totalUnpaidAmount = computed(() => {
 const refreshData = async () => {
   isLoading.value = true
   error.value = null
-  clearDashboardCache()
   try {
     await loadAllData()
     
@@ -1945,20 +1913,8 @@ const getPaymentMethodLabel = (method: string) => {
   return labels[method] || method
 }
 
-const loadAppointments = async (skipCache = false) => {
+const loadAppointments = async () => {
   if (!currentUser.value?.id) return
-
-  // Check cache first (unless explicitly skipped)
-  if (!skipCache) {
-    const cached = getCached<any[]>('appointments')
-    if (cached) {
-      logger.debug('⚡ Appointments loaded from cache')
-      appointments.value = cached
-      return
-    }
-  } else {
-    logger.debug('🔄 Refreshing appointments (cache skipped)')
-  }
 
   try {
     const response = await $fetch('/api/customer/get-appointments', {
@@ -2131,7 +2087,6 @@ const loadAppointments = async (skipCache = false) => {
     logger.debug('✅ Final lessons with evaluations:', lessonsWithEvaluations.length)
 
     appointments.value = lessonsWithEvaluations
-    setCache('appointments', lessonsWithEvaluations)
     
     // ✅ Initialize lessons with appointments (will be merged with course sessions later)
     lessons.value = lessonsWithEvaluations
@@ -2150,29 +2105,18 @@ const loadAppointments = async (skipCache = false) => {
 }
 
 const loadLocations = async () => {
-  const cached = getCached<any[]>('locations')
-  if (cached) {
-    locations.value = cached
-    return
-  }
   try {
     const response = await $fetch('/api/customer/get-locations', {
       method: 'GET'
     }) as any
     
     locations.value = response?.data || response?.locations || []
-    setCache('locations', locations.value)
   } catch (err: any) {
     console.error('❌ Error loading locations:', err)
   }
 }
 
 const loadStaff = async () => {
-  const cached = getCached<any[]>('staff')
-  if (cached) {
-    staff.value = cached
-    return
-  }
   try {
     const response = await $fetch('/api/customer/get-staff-names', {
       method: 'GET'
@@ -2180,7 +2124,6 @@ const loadStaff = async () => {
     
     if (response?.success && response?.data) {
       staff.value = response.data
-      setCache('staff', staff.value)
       logger.debug('✅ Staff loaded via API:', staff.value.length)
     } else {
       throw new Error('Invalid API response')
@@ -2192,14 +2135,6 @@ const loadStaff = async () => {
 }
 
 const loadCourseRegistrations = async () => {
-  const cached = getCached<any[]>('courseRegistrations')
-  if (cached) {
-    lessons.value = [
-      ...(appointments.value || []),
-      ...cached
-    ]
-    return
-  }
   try {
     const response = await $fetch('/api/customer/upcoming-course-registrations', {
       method: 'GET'
@@ -2255,7 +2190,6 @@ const loadCourseRegistrations = async () => {
       return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
     })
 
-    setCache('courseRegistrations', courseLessons)
     logger.debug('✅ Course registrations loaded:', courseRegistrations.length, 'Total lessons:', lessons.value.length)
   } catch (err: any) {
     logger.error('❌ Error loading course registrations:', err)
@@ -2444,7 +2378,6 @@ onMounted(async () => {
       logger.debug('💳 Payment success detected, refreshing data...')
       // Small delay to ensure webhook processed
       await new Promise(resolve => setTimeout(resolve, 2000))
-      clearDashboardCache()
     }
     
     // Einfacher: Warte auf Auth-Store Initialisierung

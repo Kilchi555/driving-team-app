@@ -1,11 +1,11 @@
 /**
  * GET /api/customer/user-data
- * 
+ *
  * 3-Layer Architecture:
  * Layer 1: Auth + Input Validation
  * Layer 2: Business Logic + Transform
- * Layer 3: DB Query + Caching
- * 
+ * Layer 3: DB Query
+ *
  * Security: Session-based auth, RLS enforcement, field sanitization
  */
 
@@ -14,31 +14,6 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
 
-// Cache configuration
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
-const userDataCache = new Map<string, { data: any; timestamp: number }>()
-
-/**
- * LAYER 1: Authentication & Input Validation
- */
-const validateRequest = (userId: string, authUserId: string): boolean => {
-  // Ensure user is requesting their own data
-  if (!userId || !authUserId) {
-    logger.warn('❌ Missing userId or authUserId')
-    return false
-  }
-  
-  if (userId !== authUserId) {
-    logger.warn(`❌ User ${userId} attempted to access data for user ${authUserId}`)
-    return false
-  }
-  
-  return true
-}
-
-/**
- * LAYER 2: Business Logic & Data Transformation
- */
 const transformUserData = (rawData: any): any => {
   if (!rawData) return null
 
@@ -60,15 +35,12 @@ const transformUserData = (rawData: any): any => {
   }
 }
 
-/**
- * LAYER 3: Database Query + Caching
- */
 const fetchUserDataFromDb = async (userId: string): Promise<any | null> => {
   const supabase = getSupabaseAdmin()
-  
+
   try {
     logger.debug(`📊 Fetching user data from DB for: ${userId}`)
-    
+
     const { data, error } = await supabase
       .from('users')
       .select(`
@@ -90,12 +62,12 @@ const fetchUserDataFromDb = async (userId: string): Promise<any | null> => {
       `)
       .eq('id', userId)
       .single()
-    
+
     if (error) {
       logger.error(`❌ Database error fetching user ${userId}:`, error)
       return null
     }
-    
+
     logger.debug(`✅ User data fetched from DB: ${userId}`)
     return data
   } catch (err: any) {
@@ -104,40 +76,10 @@ const fetchUserDataFromDb = async (userId: string): Promise<any | null> => {
   }
 }
 
-/**
- * Cache management
- */
-const getCachedUserData = (userId: string): any | null => {
-  const cached = userDataCache.get(userId)
-  if (!cached) return null
-  
-  const age = Date.now() - cached.timestamp
-  if (age > CACHE_DURATION) {
-    userDataCache.delete(userId)
-    logger.debug(`🗑️ Cache expired for user ${userId}`)
-    return null
-  }
-  
-  logger.debug(`⚡ Cache HIT for user ${userId} (${Math.round(age / 1000)}s old)`)
-  return cached.data
-}
-
-const setCachedUserData = (userId: string, data: any): void => {
-  userDataCache.set(userId, {
-    data,
-    timestamp: Date.now()
-  })
-  logger.debug(`💾 Cached user data for ${userId} (expires in ${CACHE_DURATION / 1000}s)`)
-}
-
-/**
- * Main Handler
- */
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
-  
+
   try {
-    // ========== LAYER 1: AUTH & VALIDATION ==========
     const auth = await verifyAuth(event)
     if (!auth) {
       throw createError({
@@ -146,28 +88,11 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const { userId, authUserId, tenantId } = auth
+    const { userId } = auth
     logger.debug(`🔐 Request authenticated for user: ${userId}`)
 
-    // ========== LAYER 2+3: CACHE CHECK & DB FETCH ==========
-    
-    // Try cache first
-    let cachedData = getCachedUserData(userId)
-    if (cachedData) {
-      const duration = Date.now() - startTime
-      logger.debug(`✅ Returned cached data in ${duration}ms`)
-      
-      return {
-        success: true,
-        data: cachedData,
-        cached: true,
-        duration
-      }
-    }
-
-    // Fetch from DB
     const rawData = await fetchUserDataFromDb(userId)
-    
+
     if (!rawData) {
       throw createError({
         statusCode: 404,
@@ -175,25 +100,19 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Transform data
     const transformedData = transformUserData(rawData)
-
-    // Cache the result
-    setCachedUserData(userId, transformedData)
-
     const duration = Date.now() - startTime
     logger.debug(`✅ Request completed in ${duration}ms`)
 
     return {
       success: true,
       data: transformedData,
-      cached: false,
       duration
     }
 
   } catch (error: any) {
     const duration = Date.now() - startTime
-    
+
     if (error.statusCode) {
       logger.warn(`⚠️ API error (${duration}ms):`, error.statusMessage)
       throw error
@@ -206,4 +125,3 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-

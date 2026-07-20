@@ -15,10 +15,11 @@ export default defineEventHandler(async (event) => {
   // ✅ Get query params
   const query = getQuery(event)
   const invoiceNumber = query.invoice_number as string
-  const userId = query.user_id as string
+  const invoiceId = query.invoice_id as string
+  let userId = query.user_id as string
 
-  if (!invoiceNumber && !userId) {
-    throw createError({ statusCode: 400, message: 'invoice_number or user_id required' })
+  if (!invoiceNumber && !userId && !invoiceId) {
+    throw createError({ statusCode: 400, message: 'invoice_number, invoice_id or user_id required' })
   }
 
   try {
@@ -30,12 +31,34 @@ export default defineEventHandler(async (event) => {
       totalExcludingCancelled: 0
     }
 
+    // Resolve user_id from invoice when only invoice_id/number was provided
+    if (!userId && (invoiceId || invoiceNumber)) {
+      let invoiceQuery = supabase
+        .from('invoices')
+        .select('id, user_id, invoice_number')
+        .eq('tenant_id', userData.tenant_id)
+
+      if (invoiceId) invoiceQuery = invoiceQuery.eq('id', invoiceId)
+      else invoiceQuery = invoiceQuery.eq('invoice_number', invoiceNumber)
+
+      const { data: invoiceRow } = await invoiceQuery.maybeSingle()
+      if (invoiceRow?.user_id) {
+        userId = invoiceRow.user_id
+      }
+      if (!invoiceNumber && invoiceRow?.invoice_number) {
+        // allow payments lookup below
+        ;(query as any)._resolvedInvoiceNumber = invoiceRow.invoice_number
+      }
+    }
+
+    const resolvedInvoiceNumber = invoiceNumber || (query as any)._resolvedInvoiceNumber
+
     // ✅ Load all payments for this invoice (including deleted)
-    if (invoiceNumber) {
+    if (resolvedInvoiceNumber) {
       const { data: payments, error: paymentsError } = await supabase
         .from('payments')
         .select('*')
-        .eq('invoice_number', invoiceNumber)
+        .eq('invoice_number', resolvedInvoiceNumber)
         .eq('tenant_id', userData.tenant_id)
         .order('created_at', { ascending: true })
 
@@ -91,12 +114,13 @@ export default defineEventHandler(async (event) => {
 
       // Load customer data — independent of whether a payment record exists,
       // e.g. invoices created directly in the admin area without a linked payment.
+      // Do not require tenant_id match on users: soft-moved/shared profiles can
+      // still be the invoice's customer; tenant scope is enforced via the invoice.
       const { data: customer, error: customerError } = await supabase
         .from('users')
         .select('first_name, last_name, email, phone, street, street_nr, zip, city')
         .eq('id', userId)
-        .eq('tenant_id', userData.tenant_id)
-        .single()
+        .maybeSingle()
 
       if (!customerError && customer) {
         result.customerData = customer
@@ -109,4 +133,3 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: 'Failed to load invoice details' })
   }
 })
-

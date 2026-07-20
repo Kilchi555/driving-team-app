@@ -1,10 +1,10 @@
 /**
  * GET /api/customer/locations
- * 
+ *
  * Fetch all locations for tenant
- * 3-Layer: Auth + Validation → Transform → DB Query + Caching
- * 
- * Security: Session auth, tenant isolation, rate limiting
+ * 3-Layer: Auth + Validation → Transform → DB Query
+ *
+ * Security: Session auth, tenant isolation
  */
 
 import { defineEventHandler, createError } from 'h3'
@@ -12,12 +12,6 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
 
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
-const locationsCache = new Map<string, { data: any; timestamp: number }>()
-
-/**
- * LAYER 2: Data Transformation
- */
 const transformLocations = (locations: any[]): any[] => {
   return locations.map(loc => ({
     id: loc.id,
@@ -31,15 +25,12 @@ const transformLocations = (locations: any[]): any[] => {
   }))
 }
 
-/**
- * LAYER 3: Database + Cache
- */
 const fetchLocationsFromDb = async (tenantId: string): Promise<any[]> => {
   const supabase = getSupabaseAdmin()
-  
+
   try {
     logger.debug(`📍 Fetching locations for tenant: ${tenantId}`)
-    
+
     const { data, error } = await supabase
       .from('locations')
       .select(`
@@ -56,12 +47,12 @@ const fetchLocationsFromDb = async (tenantId: string): Promise<any[]> => {
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .order('name')
-    
+
     if (error) {
       logger.error(`❌ Database error fetching locations:`, error)
       return []
     }
-    
+
     logger.debug(`✅ Fetched ${data?.length || 0} locations`)
     return data || []
   } catch (err: any) {
@@ -70,32 +61,10 @@ const fetchLocationsFromDb = async (tenantId: string): Promise<any[]> => {
   }
 }
 
-const getCachedLocations = (tenantId: string): any[] | null => {
-  const cached = locationsCache.get(tenantId)
-  if (!cached) return null
-  
-  const age = Date.now() - cached.timestamp
-  if (age > CACHE_DURATION) {
-    locationsCache.delete(tenantId)
-    return null
-  }
-  
-  logger.debug(`⚡ Cache HIT for locations (${Math.round(age / 1000)}s old)`)
-  return cached.data
-}
-
-const setCachedLocations = (tenantId: string, data: any[]): void => {
-  locationsCache.set(tenantId, { data, timestamp: Date.now() })
-}
-
-/**
- * Main Handler
- */
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
-  
+
   try {
-    // ========== LAYER 1: AUTH & VALIDATION ==========
     const auth = await verifyAuth(event)
     if (!auth) {
       throw createError({
@@ -107,27 +76,8 @@ export default defineEventHandler(async (event) => {
     const { tenantId } = auth
     logger.debug(`🔐 Locations request for tenant: ${tenantId}`)
 
-    // ========== LAYER 2+3: CACHE CHECK & DB FETCH ==========
-    
-    // Try cache
-    let cachedData = getCachedLocations(tenantId)
-    if (cachedData) {
-      const duration = Date.now() - startTime
-      return {
-        success: true,
-        data: cachedData,
-        cached: true,
-        count: cachedData.length,
-        duration
-      }
-    }
-
-    // Fetch from DB
     const rawLocations = await fetchLocationsFromDb(tenantId)
     const transformedLocations = transformLocations(rawLocations)
-
-    // Cache
-    setCachedLocations(tenantId, transformedLocations)
 
     const duration = Date.now() - startTime
     logger.debug(`✅ Locations request completed in ${duration}ms`)
@@ -135,23 +85,22 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       data: transformedLocations,
-      cached: false,
       count: transformedLocations.length,
       duration
     }
 
   } catch (error: any) {
     const duration = Date.now() - startTime
-    
+
     if (error.statusCode) {
+      logger.warn(`⚠️ API error (${duration}ms):`, error.statusMessage)
       throw error
     }
 
-    logger.error(`❌ Locations API error (${duration}ms):`, error.message)
+    logger.error(`❌ Unexpected error (${duration}ms):`, error.message)
     throw createError({
       statusCode: 500,
       statusMessage: 'Internal server error'
     })
   }
 })
-

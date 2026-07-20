@@ -4,8 +4,8 @@ import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
-  // Working hours change rarely → cache for 2 minutes
-  setHeader(event, 'Cache-Control', 'private, max-age=120')
+  // Working hours must never be browser-cached — Settings changes need to show immediately
+  setHeader(event, 'Cache-Control', 'private, no-cache, no-store, must-revalidate')
 
   try {
     // Get authenticated user with database ID
