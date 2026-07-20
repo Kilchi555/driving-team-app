@@ -585,7 +585,9 @@
         </div>
 
       </div><!-- end space-y-2 settings -->
-      </div><!-- end overflow-y-auto -->
+      </div><!-- end px-4 pb-6 -->
+    </div><!-- end sheet panel -->
+  </div><!-- end overlay -->
   </Teleport>
 
     <!-- Links Sheet -->
@@ -599,7 +601,7 @@
         leave-to-class="opacity-0 translate-y-4"
       >
         <div v-if="showLinksSheet" class="fixed inset-0 z-[500] bg-black/50 flex items-end justify-center" @click.self="showLinksSheet = false">
-          <div class="bg-white rounded-t-3xl w-full max-w-md shadow-2xl pb-safe">
+          <div class="bg-white rounded-t-3xl w-full max-w-md shadow-2xl pb-safe" @click.stop>
             <!-- Handle -->
             <div class="flex justify-center pt-3 pb-1">
               <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
@@ -735,7 +737,7 @@
         leave-to-class="opacity-0 translate-y-2"
       >
         <div v-if="linkActionTarget" class="fixed inset-0 z-[600] bg-black/50 flex items-end justify-center" @click.self="linkActionTarget = null">
-          <div class="bg-white rounded-t-3xl w-full max-w-md shadow-2xl pb-safe">
+          <div class="bg-white rounded-t-3xl w-full max-w-md shadow-2xl pb-safe" @click.stop>
             <div class="flex justify-center pt-3 pb-1">
               <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
             </div>
@@ -2221,17 +2223,57 @@ const shareCalendarLink = async () => {
 }
 
 const openLinkAction = (link: LinkAction) => {
-  // ✅ Sicherer Abbruch statt eines Links mit fehlendem Tenant-Slug (z.B. ".../shop?tenant=null")
-  if (!tenantSlug.value && /\/(null|undefined)(\?|\/|$)/.test(link.url)) {
+  const url = String(link?.url || '')
+  // ✅ Sicherer Abbruch bei fehlendem Tenant-Slug
+  if (!tenantSlug.value || /\/(null|undefined)(\?|\/|$)/.test(url) || /[?&]tenant=(null|undefined)(?:&|$)/.test(url)) {
     showErrorToast('Link nicht verfügbar', 'Der Tenant konnte nicht ermittelt werden. Bitte Seite neu laden und erneut versuchen.')
     return
   }
-  linkActionTarget.value = link
+  if (!url || url === 'undefined' || url === 'null') {
+    showErrorToast('Link nicht verfügbar', 'Keine gültige URL vorhanden.')
+    return
+  }
+  linkActionTarget.value = { ...link, url }
 }
-const linkActionOpen = () => {
+
+/** Open URL in system browser (Capacitor) or new tab (web). window.open is often blocked in WebViews. */
+const openExternalUrl = async (url: string) => {
+  try {
+    const { Capacitor } = await import('@capacitor/core')
+    if (Capacitor.isNativePlatform()) {
+      const { Browser } = await import('@capacitor/browser')
+      await Browser.open({ url, presentationStyle: 'popover' })
+      return
+    }
+  } catch {
+    // Capacitor not available — web fallback
+  }
+
+  let opened = false
+  try {
+    const win = window.open(url, '_blank', 'noopener,noreferrer')
+    opened = !!win && !win.closed
+  } catch {
+    opened = false
+  }
+
+  if (!opened) {
+    const a = document.createElement('a')
+    a.href = url
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+}
+
+const linkActionOpen = async () => {
   if (!linkActionTarget.value) return
-  window.open(linkActionTarget.value.url, '_blank', 'noopener,noreferrer')
+  const url = linkActionTarget.value.url
   linkActionTarget.value = null
+  showLinksSheet.value = false
+  await openExternalUrl(url)
 }
 const linkActionCopy = async () => {
   if (!linkActionTarget.value) return
