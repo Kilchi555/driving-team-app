@@ -4,27 +4,17 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import { sendTenantEmail, generateMedicalCertUploadedAdminEmail } from '~/server/utils/email'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Get current user from Authorization header
+    // Get current user
     const supabase = getSupabaseAdmin()
-    const authHeader = getHeader(event, 'authorization')
-    
-    if (!authHeader) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Authentication required'
-      })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid token'
       })
     }
 

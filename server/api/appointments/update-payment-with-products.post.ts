@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { getHeader } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -17,16 +17,8 @@ export default defineEventHandler(async (event) => {
     })
     
     const supabaseAdmin = getSupabaseAdmin()
-    const authorization = getHeader(event, 'authorization')
-    const token = authorization?.replace('Bearer ', '')
-    
-    if (!token) {
-      throw new Error('No authorization token')
-    }
-    
-    // 1. Get current user from token
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
-    if (userError || !user) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw new Error('Unauthorized')
     }
     

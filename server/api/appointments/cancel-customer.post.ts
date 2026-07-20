@@ -11,6 +11,7 @@ import { generateCustomerCancelledAdminEmail } from '~/server/utils/email'
 import { processWalleeRefund } from '~/server/utils/wallee-refund'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { calculateCancellationCharges } from '~/utils/policyCalculations'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -22,26 +23,15 @@ export default defineEventHandler(async (event) => {
   
   try {
     // ============ LAYER 1: AUTHENTICATION ============
-    const authHeader = getHeader(event, 'authorization')
-    
-    if (!authHeader) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw createError({
         statusCode: 401,
         message: 'Authentication required'
       })
     }
 
-    const token = authHeader.replace('Bearer ', '')
     const supabase = getSupabaseAdmin()
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user) {
-      console.error('❌ Auth error:', authError)
-      throw createError({
-        statusCode: 401,
-        message: 'Invalid token'
-      })
-    }
 
     authenticatedUserId = user.id
     logger.debug('✅ Authenticated user:', user.id, user.email)

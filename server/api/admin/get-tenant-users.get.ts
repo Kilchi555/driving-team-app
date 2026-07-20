@@ -1,6 +1,7 @@
 import { defineEventHandler, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   const supabaseUrl = process.env.SUPABASE_URL
@@ -17,19 +18,8 @@ export default defineEventHandler(async (event) => {
   const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
   try {
-    // Get authenticated user from Authorization header
-    const authHeader = event.node.req.headers.authorization
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw createError({ statusCode: 401, statusMessage: 'Missing authorization header' })
-    }
-
-    const token = authHeader.substring(7)
-    
-    // Verify token and get user
-    const { data: { user: authUser }, error: authError } = await serviceSupabase.auth.getUser(token)
-    
-    if (authError || !authUser) {
-      logger.warn(`⚠️ Invalid token: ${authError?.message}`)
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) {
       throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
     }
 

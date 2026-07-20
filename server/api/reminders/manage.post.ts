@@ -1,7 +1,7 @@
 // server/api/reminders/manage.post.ts
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { getHeader } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 interface ManageRemindersBody {
   action: 'log-sent' | 'log-failed' | 'schedule' | 'get-logs' | 'mark-sent'
@@ -24,16 +24,8 @@ export default defineEventHandler(async (event) => {
     logger.debug('🔔 Reminders action:', action)
 
     const supabaseAdmin = getSupabaseAdmin()
-    const authorization = getHeader(event, 'authorization')
-    const token = authorization?.replace('Bearer ', '')
-
-    if (!token) {
-      throw new Error('No authorization token')
-    }
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
-    if (userError || !user) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw new Error('Unauthorized')
     }
 
