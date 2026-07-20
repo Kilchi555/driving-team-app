@@ -33,6 +33,22 @@ export default defineEventHandler(async (event) => {
   })
 
   const stage = Number(body.stage)
+  const currentLevelBefore = prepared.invoice.dunning_level || 0
+  const MAX_STAGE = 3
+
+  // Mahnstufen dürfen nicht übersprungen oder wiederholt werden — erlaubt ist nur
+  // die nächsthöhere Stufe, bzw. ein erneuter Versand der höchsten Stufe (3), falls
+  // diese bereits erreicht ist (z.B. für eine weitere Inkasso-Erinnerung). Die UI
+  // (DunningSendDialog.availableStages) blendet unzulässige Stufen bereits aus,
+  // aber wir validieren hier serverseitig noch einmal, damit das nicht umgehbar ist.
+  const isAllowed = stage > currentLevelBefore || (currentLevelBefore >= MAX_STAGE && stage === MAX_STAGE)
+  if (!isAllowed) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: `Für diese Rechnung wurde bereits Mahnstufe ${currentLevelBefore} versendet. Es kann nur eine höhere Stufe (oder erneut Stufe ${MAX_STAGE}) versendet werden.`
+    })
+  }
+
   const tenantName = (prepared.tenant as any)?.name || ''
 
   let sendError: string | null = null
@@ -71,9 +87,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 502, statusMessage: `Mahnung konnte nicht versendet werden: ${sendError}` })
   }
 
-  const currentLevel = prepared.invoice.dunning_level || 0
   const invoiceUpdate: Record<string, any> = {
-    dunning_level: Math.max(currentLevel, stage),
+    dunning_level: Math.max(currentLevelBefore, stage),
     last_dunning_sent_at: new Date().toISOString(),
   }
 
@@ -119,6 +134,6 @@ export default defineEventHandler(async (event) => {
     sentTo: prepared.billingEmail,
     stage,
     feeAddedRappen: prepared.settings.add_fee_to_invoice_total ? prepared.feeRappen : 0,
-    newDunningLevel: Math.max(currentLevel, stage),
+    newDunningLevel: Math.max(currentLevelBefore, stage),
   }
 })
