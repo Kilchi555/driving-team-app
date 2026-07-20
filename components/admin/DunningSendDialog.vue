@@ -143,19 +143,17 @@ const errorMsg = ref('')
 const editedSubject = ref('')
 const editedBody = ref('')
 
-// Mahnstufen müssen strikt sequenziell durchlaufen werden (siehe
-// suggestedNextStage() in server/utils/invoice-dunning.ts und die serverseitige
-// Validierung in send-dunning.post.ts): egal wie lange eine Rechnung überfällig
-// ist, es ist immer nur genau currentLevel + 1 zulässig — nie eine höhere Stufe
-// überspringen. Nur an der letzten Stufe darf dieselbe Stufe erneut gewählt
-// werden. Daher bietet dieser Dialog auch nur genau eine Option an, statt aller
-// theoretisch höheren Stufen.
+// Eine bereits versendete (oder niedrigere) Stufe darf nicht erneut gewählt
+// werden (z.B. keine zweite "Zahlungserinnerung", nachdem schon eine
+// versendet wurde) — siehe serverseitige Validierung in send-dunning.post.ts.
+// Der Admin darf aber frei zwischen allen höheren Stufen wählen (z.B. direkt
+// "2. Mahnung" statt "1. Mahnung", falls gewünscht). Ist die höchste Stufe
+// bereits erreicht, darf nur noch diese erneut gewählt werden.
 const availableStages = computed(() => {
   const currentLevel = props.currentLevel || 0
   const maxStageDef = STAGE_DEFS[STAGE_DEFS.length - 1]
-  const nextDef = STAGE_DEFS.find(d => d.stage === currentLevel + 1)
-  if (nextDef) return [nextDef]
-  return [maxStageDef]
+  const higher = STAGE_DEFS.filter(d => d.stage > currentLevel)
+  return higher.length > 0 ? higher : [maxStageDef]
 })
 const stageColor = computed(() => STAGE_DEFS.find(d => d.stage === stage.value)?.color || '#2563eb')
 const stageLabel = computed(() => STAGE_DEFS.find(d => d.stage === stage.value)?.label || 'Mahnung')

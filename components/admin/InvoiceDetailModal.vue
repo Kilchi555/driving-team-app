@@ -992,10 +992,8 @@ const downloadPdf = async () => {
       body: { invoiceId: props.invoice.id },
     })
     if (res?.pdfUrl) {
-      const link = document.createElement('a')
-      link.href = res.pdfUrl
-      link.download = `Rechnung_${props.invoice.invoice_number}.pdf`
-      link.click()
+      const { openPdf } = await import('~/utils/openPdf')
+      await openPdf(res.pdfUrl, res.filename || `Rechnung_${props.invoice.invoice_number}.pdf`)
     }
     if (res?.newStatus) {
       emit('statusChanged', props.invoice.id, res.newStatus)
@@ -1016,10 +1014,8 @@ const downloadDunningPdf = async (logId?: string) => {
       body: { invoiceId: props.invoice.id, logId: logId || undefined },
     })
     if (res?.pdfUrl) {
-      const link = document.createElement('a')
-      link.href = res.pdfUrl
-      link.download = res.filename || `${dunningLevelLabel.value}_${props.invoice.invoice_number}.pdf`
-      link.click()
+      const { openPdf } = await import('~/utils/openPdf')
+      await openPdf(res.pdfUrl, res.filename || `${dunningLevelLabel.value}_${props.invoice.invoice_number}.pdf`)
     }
   } catch (e) {
     console.error('Dunning PDF download failed:', e)

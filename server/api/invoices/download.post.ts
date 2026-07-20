@@ -5,6 +5,7 @@
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { generateInvoicePdf } from '~/server/utils/invoice-pdf'
+import { uploadPdfAndGetPublicUrl } from '~/server/utils/upload-pdf-public'
 
 export default defineEventHandler(async (event) => {
   const { invoiceId } = await readBody(event)
@@ -224,7 +225,13 @@ export default defineEventHandler(async (event) => {
     footerText: (invoice as any).footer_text || (tenant as any)?.invoice_footer_text || null,
   })
 
-  const pdfBase64 = pdfBuffer.toString('base64')
+  // HTTPS URL required for native Capacitor Browser.open() (data: URLs do not work)
+  const filename = `Rechnung_${invoice.invoice_number}.pdf`
+  const { pdfUrl } = await uploadPdfAndGetPublicUrl(supabase, {
+    folder: 'invoices',
+    filename,
+    pdfBuffer,
+  })
 
   // Downloading the PDF moves a draft out of "Entwurf" into "PDF erstellt" —
   // distinct from "Versendet", which only applies once actually emailed.
@@ -237,5 +244,5 @@ export default defineEventHandler(async (event) => {
     if (!statusError) newStatus = 'pdf_created'
   }
 
-  return { success: true, pdfUrl: `data:application/pdf;base64,${pdfBase64}`, newStatus }
+  return { success: true, pdfUrl, filename, newStatus }
 })

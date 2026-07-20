@@ -1,15 +1,15 @@
 /**
  * Reliably opens or downloads a PDF across all platforms:
- * - Native app (Capacitor iOS/Android): opens via system browser / PDF viewer
- * - Web (Safari/Chrome): falls back to <a download> if window.open is blocked
- *   by the popup blocker (which happens when called after a long async chain)
+ * - Native app (Capacitor iOS/Android): opens via @capacitor/browser (HTTPS only)
+ * - Web (Safari/Chrome): window.open / <a download>
  *
- * Accepts both HTTP URLs and base64 data: URLs.
+ * Prefer HTTPS public storage URLs. Data URLs work on web via blob conversion;
+ * on native they cannot be opened (Browser.open requires http/https).
  */
 export async function openPdf(url: string, filename: string = 'dokument.pdf'): Promise<void> {
   if (typeof window === 'undefined') return
 
-  // Convert base64 data URL to blob URL first
+  // Convert base64 data URL to blob URL first (web fallback for legacy APIs)
   let blobUrl: string | null = null
   const isDataUrl = url.startsWith('data:')
   if (isDataUrl) {
@@ -25,37 +25,33 @@ export async function openPdf(url: string, filename: string = 'dokument.pdf'): P
   }
 
   const resolvedUrl = blobUrl || url
+  const isHttpUrl = /^https?:\/\//i.test(url)
 
   // ── Native app (Capacitor) ────────────────────────────────────────────────
   try {
     const { Capacitor } = await import('@capacitor/core')
     if (Capacitor.isNativePlatform()) {
-      if (blobUrl) {
-        // Blob URLs can't be opened in SFSafariViewController.
-        // Trigger a download via hidden <a> – the native WebView will handle it
-        // and offer to open in the system PDF viewer / Files app.
-        const a = document.createElement('a')
-        a.href = blobUrl
-        a.download = filename
-        a.rel = 'noopener'
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        setTimeout(() => URL.revokeObjectURL(blobUrl!), 30_000)
-        return
+      if (!isHttpUrl) {
+        // Browser.open cannot display data:/blob: URLs.
+        console.warn('[openPdf] Native requires an https URL; got non-http URL for', filename)
+        throw new Error('PDF-URL nicht kompatibel mit der App. Bitte erneut versuchen.')
       }
-      // For real HTTP URLs: open in SFSafariViewController (iOS) / Chrome Custom Tab (Android)
       const { Browser } = await import('@capacitor/browser')
-      await Browser.open({ url: resolvedUrl, presentationStyle: 'fullscreen' })
+      await Browser.open({ url, presentationStyle: 'fullscreen' })
       return
     }
-  } catch {
-    // Capacitor not available – continue with web path
+  } catch (e) {
+    // If Capacitor Browser failed on native, rethrow; otherwise continue with web path
+    try {
+      const { Capacitor } = await import('@capacitor/core')
+      if (Capacitor.isNativePlatform()) throw e
+    } catch (inner) {
+      if (inner === e) throw e
+    }
   }
 
   // ── Web ───────────────────────────────────────────────────────────────────
   if (!blobUrl && !isDataUrl) {
-    // Fetch the PDF as a blob so we have a local reference
     try {
       const pdfResponse = await fetch(url)
       if (pdfResponse.ok) {

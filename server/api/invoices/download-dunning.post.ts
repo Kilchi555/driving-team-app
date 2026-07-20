@@ -1,12 +1,13 @@
 // server/api/invoices/download-dunning.post.ts
 // Erzeugt das PDF-Mahnschreiben zur letzten (oder einer bestimmten) Mahnung
-// und liefert es als Base64-Data-URL zum Download im Admin-UI.
+// und liefert eine HTTPS-URL (für Native Browser.open + Web-Download).
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getStageDef, daysOverdue } from '~/server/utils/invoice-dunning'
 import { generateDunningPdf, dunningPdfFilename, extractDunningLetterText } from '~/server/utils/dunning-pdf'
+import { uploadPdfAndGetPublicUrl } from '~/server/utils/upload-pdf-public'
 
 async function loadTenantLogo(logoDataUrl: string | null | undefined): Promise<string | null> {
   if (!logoDataUrl) return null
@@ -155,9 +156,15 @@ export default defineEventHandler(async (event) => {
   })
 
   const filename = dunningPdfFilename(stageDef.label, invoice.invoice_number)
+  const { pdfUrl } = await uploadPdfAndGetPublicUrl(supabase, {
+    folder: 'dunning',
+    filename,
+    pdfBuffer,
+  })
+
   return {
     success: true,
     filename,
-    pdfUrl: `data:application/pdf;base64,${pdfBuffer.toString('base64')}`,
+    pdfUrl,
   }
 })

@@ -38,17 +38,17 @@ export default defineEventHandler(async (event) => {
   const currentLevelBefore = prepared.invoice.dunning_level || 0
   const MAX_STAGE = 3
 
-  // Mahnstufen müssen strikt sequenziell durchlaufen werden — nie überspringen.
-  // Es ist egal, wie lange eine Rechnung schon überfällig ist: ohne vorherige
-  // Zahlungserinnerung (Stufe 1) ist einzig Stufe 1 zulässig, nicht direkt
-  // Stufe 2 oder 3. Einzige Ausnahme: an der höchsten Stufe darf dieselbe
-  // Stufe erneut versendet werden (z.B. für eine weitere Inkasso-Erinnerung).
-  const isAllowed = stage === currentLevelBefore + 1 || (currentLevelBefore >= MAX_STAGE && stage === MAX_STAGE)
+  // Eine bereits versendete (oder niedrigere) Stufe darf nicht erneut gewählt
+  // werden (z.B. keine zweite "Zahlungserinnerung" nach einer bereits
+  // versendeten). Der Admin darf aber frei zwischen allen höheren Stufen
+  // wählen (z.B. direkt "2. Mahnung" statt "1. Mahnung", falls gewünscht).
+  // Einzige Ausnahme: an der höchsten Stufe darf dieselbe Stufe erneut
+  // versendet werden (z.B. für eine weitere Inkasso-Erinnerung).
+  const isAllowed = stage > currentLevelBefore || (currentLevelBefore >= MAX_STAGE && stage === MAX_STAGE)
   if (!isAllowed) {
-    const expected = currentLevelBefore >= MAX_STAGE ? MAX_STAGE : currentLevelBefore + 1
     throw createError({
       statusCode: 409,
-      statusMessage: `Für diese Rechnung wurde bereits Mahnstufe ${currentLevelBefore} versendet. Es kann nur Stufe ${expected} versendet werden.`
+      statusMessage: `Für diese Rechnung wurde bereits Mahnstufe ${currentLevelBefore} versendet. Es kann nur eine höhere Stufe (oder erneut Stufe ${MAX_STAGE}) versendet werden.`
     })
   }
 
