@@ -452,6 +452,9 @@
               <p class="text-2xl font-black" style="color: var(--brand-primary)">
                 {{ pricesLoading ? '…' : pricesAvailable ? totalPrice : '–' }}
               </p>
+              <p v-if="hasActiveSubscription" class="text-xs text-gray-500 mt-1 max-w-[220px]">
+                Änderungen werden anteilsmässig bis zur nächsten Rechnung verrechnet — nicht der volle Monatsbetrag erneut.
+              </p>
             </div>
             <div class="text-right text-xs text-gray-400">
               <p>Monatlich kündbar</p>
@@ -487,7 +490,7 @@
             >
               Kostenlos starten → Account erstellen
             </a>
-            <!-- Logged in: Stripe Checkout -->
+            <!-- Logged in: update existing sub (proration) or Stripe Checkout for first subscribe -->
             <button
               v-else
               @click="startCheckout"
@@ -502,12 +505,15 @@
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                 </svg>
-                Weiterleitung zu Stripe…
+                {{ hasActiveSubscription ? 'Wird aktualisiert…' : 'Weiterleitung zu Stripe…' }}
               </span>
-              <span v-else>Jetzt Abo buchen →</span>
+              <span v-else>{{ hasActiveSubscription ? 'Änderung speichern →' : 'Jetzt Abo buchen →' }}</span>
             </button>
             <p v-if="!isLoggedIn" class="text-center text-xs text-gray-400 mt-3">
               Bereits ein Konto? <a href="/login" class="underline">Einloggen</a>
+            </p>
+            <p v-else-if="hasActiveSubscription" class="text-center text-xs text-gray-400 mt-3">
+              Anteilsmässige Verrechnung · Nächste volle Rechnung am Periodenende
             </p>
             <p v-else class="text-center text-xs text-gray-400 mt-3">
               🔒 Sichere Zahlung via Stripe · Monatlich kündbar
@@ -521,13 +527,17 @@
         </div>
 
         <!-- Pre-fill hint for logged-in trial users -->
-        <div v-if="isLoggedIn && prefillHint" class="mt-4 bg-blue-50 border border-blue-100 rounded-2xl p-4 text-xs text-blue-700 space-y-1">
+        <div v-if="isLoggedIn && prefillHint && !hasActiveSubscription" class="mt-4 bg-blue-50 border border-blue-100 rounded-2xl p-4 text-xs text-blue-700 space-y-1">
           <p class="font-semibold text-blue-800 mb-1.5">Basierend auf deinem Trial erkannt:</p>
           <p>👥 {{ prefillHint.staffCount }} aktive Fahrlehrer
             → {{ addonSeats > 0 ? `${addonSeats} Add-on Seat(s) vorgewählt` : 'im gewählten Plan inklusive' }}
           </p>
           <p v-if="prefillHint.courses">📚 Kursbuchungsseite wird bereits genutzt → Add-on vorgewählt</p>
           <p v-if="prefillHint.affiliate">🤝 Affiliate-Programm wird bereits genutzt → Add-on vorgewählt</p>
+        </div>
+        <div v-else-if="isLoggedIn && hasActiveSubscription" class="mt-4 bg-blue-50 border border-blue-100 rounded-2xl p-4 text-xs text-blue-700">
+          <p class="font-semibold text-blue-800 mb-1">Bestehendes Abonnement</p>
+          <p>Du passt dein aktuelles Abo an. Nur die Differenz wird anteilsmässig bis zur nächsten Abrechnung verrechnet.</p>
         </div>
 
         <!-- Seat conflict: staff selection -->
@@ -807,6 +817,8 @@ interface StaffMember { id: string; name: string; role: string }
 
 const isLoggedIn = ref(false)
 const showAuthPrompt = ref(false)
+const hasActiveSubscription = ref(false)
+const updateSuccess = ref<string | null>(null)
 const prefillHint = ref<{ staffCount: number; courses: boolean; affiliate: boolean } | null>(null)
 const staffList = ref<StaffMember[]>([])
 // IDs of staff to KEEP active — initialized with all staff
@@ -896,6 +908,29 @@ onMounted(async () => {
         const prefillHeaders: Record<string, string> = token
           ? { Authorization: `Bearer ${token}` }
           : {}
+
+        // Existing paid/trialing Stripe subscription → update + proration path
+        try {
+          const billing = await $fetch<{
+            plan: string
+            is_trial: boolean
+            addon_seats: number
+            addon_courses_enabled: boolean
+            addon_affiliate_enabled: boolean
+            addon_gbp_enabled: boolean
+            has_stripe_subscription: boolean
+          }>('/api/admin/billing-status', { headers: prefillHeaders })
+
+          if (billing.has_stripe_subscription && ['starter', 'professional', 'enterprise'].includes(billing.plan)) {
+            hasActiveSubscription.value = true
+            selectedPlan.value = billing.plan
+            addonSeats.value = Math.min(MAX_ADDON_SEATS, billing.addon_seats ?? 0)
+            addonCourses.value = !!billing.addon_courses_enabled
+            addonAffiliate.value = !!billing.addon_affiliate_enabled
+            addonGbp.value = !!billing.addon_gbp_enabled
+          }
+        } catch { /* non-admin or no billing — fall through to trial prefill */ }
+
         const prefill = await $fetch<{ activeStaffCount: number; staffList: StaffMember[]; hasCourseSessions: boolean; hasAffiliateCodes: boolean; hasUid: boolean }>(
           '/api/tenants/upgrade-prefill',
           { headers: prefillHeaders }
@@ -909,23 +944,25 @@ onMounted(async () => {
           affiliate:  prefill.hasAffiliateCodes,
         }
 
-        // Auto-select plan based on active staff count
-        const count = prefill.activeStaffCount
-        if (count <= 1) {
-          selectedPlan.value = 'starter'
-          addonSeats.value = 0
-        } else if (count <= 5) {
-          selectedPlan.value = 'professional'
-          addonSeats.value = 0
-        } else {
-          // Enterprise is cheaper than stacking many addon seats
-          selectedPlan.value = 'enterprise'
-          addonSeats.value = 0
-        }
+        // Trial / first subscribe: auto-select plan from staff count
+        if (!hasActiveSubscription.value) {
+          const count = prefill.activeStaffCount
+          if (count <= 1) {
+            selectedPlan.value = 'starter'
+            addonSeats.value = 0
+          } else if (count <= 5) {
+            selectedPlan.value = 'professional'
+            addonSeats.value = 0
+          } else {
+            // Enterprise is cheaper than stacking many addon seats
+            selectedPlan.value = 'enterprise'
+            addonSeats.value = 0
+          }
 
-        // Pre-select add-ons based on current usage
-        if (prefill.hasCourseSessions)  addonCourses.value   = true
-        if (prefill.hasAffiliateCodes)  addonAffiliate.value = true
+          // Pre-select add-ons based on current usage
+          if (prefill.hasCourseSessions)  addonCourses.value   = true
+          if (prefill.hasAffiliateCodes)  addonAffiliate.value = true
+        }
       } catch { /* non-critical */ }
     }
   } catch { /* not critical */ }
@@ -990,6 +1027,9 @@ const totalPrice = computed(() => {
 watch(selectedPlan, () => {
   if (planIncludesCourses.value) addonCourses.value = false
   if (planIncludesAffiliate.value) addonAffiliate.value = false
+  // Existing subscribers keep their chosen seat count when switching plans;
+  // trial users get seats inferred from active staff.
+  if (hasActiveSubscription.value) return
   if (prefillHint.value) {
     // Re-calculate required extra seats for the newly selected plan
     const planDef = PLANS.find(p => p.id === selectedPlan.value)
@@ -1060,17 +1100,71 @@ const createCheckout = (token: string) =>
     body: buildCheckoutBody(),
   })
 
+const updateSubscription = (token: string) =>
+  $fetch<{ success: boolean; message?: string; unchanged?: boolean }>('/api/stripe/update-subscription', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: {
+      plan: selectedPlan.value,
+      addons: {
+        seats: addonSeats.value,
+        courses: addonCourses.value && !planIncludesCourses.value,
+        affiliate: addonAffiliate.value && !planIncludesAffiliate.value,
+        gbp: addonGbp.value,
+      },
+      staffToDeactivate: staffToDeactivate.value.map(s => s.id),
+    },
+  })
+
 const startCheckout = async () => {
   loading.value = true
   error.value = null
+  updateSuccess.value = null
   try {
     let token = await resolveFreshToken()
     if (!token) { showAuthPrompt.value = true; return }
+
+    // Existing Stripe subscription → prorated update (no full Checkout)
+    if (hasActiveSubscription.value) {
+      let result
+      try {
+        result = await updateSubscription(token)
+      } catch (err: any) {
+        if (err?.status === 401 || err?.statusCode === 401) {
+          const freshToken = await forceServerRefresh()
+          if (!freshToken) { showAuthPrompt.value = true; return }
+          result = await updateSubscription(freshToken)
+        } else if (err?.data?.code === 'subscription_canceled') {
+          // Stale/canceled sub → fall back to a fresh Checkout
+          hasActiveSubscription.value = false
+          const session = await createCheckout(token)
+          if (session?.url) { window.location.href = session.url; return }
+          throw new Error('Keine Checkout-URL erhalten')
+        } else {
+          throw err
+        }
+      }
+
+      updateSuccess.value = result?.message
+        || (result?.unchanged
+          ? 'Keine Änderungen erkannt.'
+          : 'Abonnement aktualisiert. Anteilsmässige Verrechnung erfolgt auf der nächsten Rechnung.')
+      await navigateTo('/admin/billing?updated=1')
+      return
+    }
 
     let session
     try {
       session = await createCheckout(token)
     } catch (err: any) {
+      // Already subscribed (race / stale UI) → switch to update path
+      if (err?.status === 409 || err?.statusCode === 409 || err?.data?.code === 'existing_subscription') {
+        hasActiveSubscription.value = true
+        const result = await updateSubscription(token)
+        updateSuccess.value = result?.message || 'Abonnement aktualisiert.'
+        await navigateTo('/admin/billing?updated=1')
+        return
+      }
       // The token was rejected (e.g. client session out of sync / rotated). Force a
       // fresh server refresh and retry once before giving up.
       if (err?.status === 401 || err?.statusCode === 401) {

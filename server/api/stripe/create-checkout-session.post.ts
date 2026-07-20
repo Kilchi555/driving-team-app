@@ -105,11 +105,32 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabaseAdmin()
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('stripe_customer_id, name, contact_email, wallee_onboarding_status')
+      .select('stripe_customer_id, name, contact_email, wallee_onboarding_status, stripe_subscription_id')
       .eq('id', tenantId)
       .single()
 
     wallleeAlreadyActive = tenant?.wallee_onboarding_status === 'active'
+
+    // Prevent a second full subscription when the tenant already pays via Stripe.
+    // Mid-cycle plan/seat changes go through /api/stripe/update-subscription (proration).
+    if (tenant?.stripe_subscription_id) {
+      try {
+        const existingSub = await stripe.subscriptions.retrieve(tenant.stripe_subscription_id)
+        if (['active', 'trialing', 'past_due', 'paused'].includes(existingSub.status)) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Du hast bereits ein aktives Abonnement. Änderungen werden anteilsmässig verrechnet — bitte die Upgrade-Seite erneut laden.',
+            data: { code: 'existing_subscription' },
+          })
+        }
+      } catch (existingErr: any) {
+        if (existingErr?.statusCode === 409) throw existingErr
+        // Missing/stale subscription id → allow a fresh Checkout
+        if (existingErr?.code !== 'resource_missing') {
+          console.warn('⚠️ Could not verify existing subscription before checkout:', existingErr?.message)
+        }
+      }
+    }
 
     if (tenant?.stripe_customer_id) {
       // Verify the customer actually exists in the current Stripe mode (live vs test)
@@ -148,6 +169,7 @@ export default defineEventHandler(async (event) => {
         .eq('id', tenantId)
     }
   } catch (err: any) {
+    if (err?.statusCode === 409) throw err
     console.error('⚠️ Could not resolve tenant customer:', err?.message)
   }
 
