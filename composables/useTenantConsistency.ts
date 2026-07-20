@@ -146,6 +146,14 @@ export const useTenantConsistency = () => {
       // ✅ OPTIMIZED: Check consistency in-memory first
       // The auth store is the source of truth after HTTP-only cookie auth
       const storeTenantId = authStore.userProfile?.tenant_id
+      const role = authStore.userProfile?.role || authStore.userRole
+
+      // Platform operators (super_admin) are not bound to a tenant — missing
+      // tenant_id is expected, not an inconsistency.
+      if (role === 'super_admin' || role === 'superadmin') {
+        logger.debug('✅ Tenant consistency skipped (super_admin has no tenant)')
+        return true
+      }
       
       if (!storeTenantId) {
         console.error('🚨 TENANT INCONSISTENCY DETECTED! No tenant_id in auth store')

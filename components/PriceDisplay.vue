@@ -1128,28 +1128,14 @@ watch(() => invoiceData.value, (newData: any) => {
 }, { deep: true })
 */
 
-// ✅ NEU: Watcher für Toggle - füllt Formular mit Kundendaten wenn ON
-watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
+// ✅ Watcher für Toggle - füllt Formular mit Kundendaten (users-Profil) wenn ON
+watch(() => useCustomBillingAddressInModal.value, async (isOn: boolean) => {
   try {
     logger.debug('🔄 Toggle watcher triggered, isOn:', isOn)
-    
-    if (isOn && studentBillingAddress.value) {
-      logger.debug('✅ Toggle ON - filling form with customer billing address')
-      invoiceData.value = {
-        company_name: studentBillingAddress.value.company_name || '',
-        contact_person: studentBillingAddress.value.contact_person || '',
-        email: studentBillingAddress.value.email || '',
-        phone: studentBillingAddress.value.phone || '',
-        street: studentBillingAddress.value.street || '',
-        street_number: studentBillingAddress.value.street_number || '',
-        zip: studentBillingAddress.value.zip || '',
-        city: studentBillingAddress.value.city || '',
-        country: studentBillingAddress.value.country || 'Schweiz',
-        vat_number: studentBillingAddress.value.vat_number || '',
-        company_register_number: studentBillingAddress.value.company_register_number || '',
-        notes: studentBillingAddress.value.notes || ''
-      }
-    } else if (!isOn) {
+
+    if (isOn) {
+      await fillInvoiceFromCustomerAddress()
+    } else {
       logger.debug('✅ Toggle OFF - clearing form')
       invoiceData.value = {
         company_name: '',
@@ -1168,9 +1154,58 @@ watch(() => useCustomBillingAddressInModal.value, (isOn: boolean) => {
     }
   } catch (watchError: any) {
     console.warn('⚠️ Error in toggle watcher:', watchError.message)
-    // Don't break the app if watcher fails
   }
 })
+
+/**
+ * Map selected student's profile address → invoice form («Gleich wie Kundenadresse»).
+ * StudentSelector often only has name/email/phone — fetch full address when missing.
+ */
+const fillInvoiceFromCustomerAddress = async () => {
+  let student = props.selectedStudent
+  if (!student?.id) {
+    logger.debug('⚠️ Toggle ON but no selectedStudent — cannot fill customer address')
+    return
+  }
+
+  const hasAddress = !!(student.street || student.zip || student.city || student.street_nr || student.street_number)
+  if (!hasAddress) {
+    try {
+      logger.debug('📡 Fetching full customer address for toggle fill:', student.id)
+      const res = await $fetch<{ user: any }>('/api/admin/get-user-for-edit', {
+        query: { user_id: student.id },
+      })
+      if (res?.user) {
+        student = { ...student, ...res.user }
+      }
+    } catch (err: any) {
+      console.warn('⚠️ Could not load customer address for billing toggle:', err?.message)
+    }
+  }
+
+  const contactPerson = [student.first_name, student.last_name].filter(Boolean).join(' ').trim()
+  invoiceData.value = {
+    company_name: student.company_name || '',
+    contact_person: contactPerson,
+    email: student.email || '',
+    phone: student.phone || '',
+    street: student.street || '',
+    street_number: student.street_nr || student.street_number || '',
+    zip: student.zip || '',
+    city: student.city || '',
+    country: student.country || 'Schweiz',
+    vat_number: '',
+    company_register_number: '',
+    notes: ''
+  }
+  logger.debug('✅ Toggle ON - filled form from customer address:', {
+    contact_person: contactPerson,
+    street: invoiceData.value.street,
+    zip: invoiceData.value.zip,
+    city: invoiceData.value.city,
+    hasAddressFields: !!(invoiceData.value.street || invoiceData.value.zip),
+  })
+}
 
 // ✅ SIMPLE: Watcher für Duration- ODER PricePerMinute-Änderung - nur Preis aktualisieren
 watch(() => ({ duration: props.durationMinutes, price: props.pricePerMinute }), ({ duration: newDuration, price: newPrice }, { duration: oldDuration, price: oldPrice }) => {

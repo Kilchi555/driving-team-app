@@ -132,7 +132,7 @@
       </Transition>
     </Teleport>
 
-    <!-- Templates Modal (categories + event types new tenants of this type receive at signup) -->
+    <!-- Templates Modal: Terminarten first; categories only when paid Terminarten exist -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showTemplatesModal" class="sa-modal-backdrop" @click.self="closeTemplatesModal">
@@ -141,50 +141,84 @@
               <h3 class="sa-modal-title">Signup-Templates: {{ templatesType?.name }}</h3>
               <p class="sa-modal-sub">{{ templatesType?.code }} — das erhält jeder neue Tenant dieses Typs automatisch</p>
             </div>
-            <div class="sa-modal-body">
+            <div class="sa-modal-body space-y-6">
               <div v-if="templatesLoading" class="sa-empty">Lade…</div>
-              <div v-else class="sa-preset-grid">
-                <!-- Categories -->
+              <template v-else>
+                <p class="sa-flow-hint">
+                  <strong>Ablauf:</strong> Terminarten ausfüllen — Änderungen werden automatisch gespeichert.
+                  Nur wenn eine Terminart <em>kostenpflichtig</em> ist, brauchst du mindestens eine Kategorie
+                  (für Preise &amp; Buchung). Bei nur einer Kategorie wird sie automatisch wie die Terminart benannt — änderbar.
+                </p>
+
+                <!-- 1. Terminarten (primary) -->
                 <div>
                   <div class="flex items-center justify-between mb-2">
-                    <p class="sa-section-label" style="margin-bottom:0">Kategorien ({{ templateCategories.length }})</p>
-                    <button @click="addCategoryRow" class="sa-action-btn">+ Hinzufügen</button>
-                  </div>
-                  <div v-if="templateCategories.length === 0" class="sa-empty-inline">
-                    Keine Kategorien — Signups dieses Typs bekommen aktuell 0 Kategorien.
-                  </div>
-                  <div v-for="cat in templateCategories" :key="cat.id" class="sa-template-row">
-                    <input v-model="cat.code" class="sa-input sa-input-sm" placeholder="Code" style="width:5rem" />
-                    <input v-model="cat.name" class="sa-input sa-input-sm" placeholder="Name" />
-                    <input v-model="cat.color" type="color" class="sa-color-input" />
-                    <button @click="saveCategoryRow(cat)" :disabled="savingRowId === cat.id" class="sa-action-btn">Speichern</button>
-                    <button @click="deleteCategoryRow(cat)" class="sa-action-btn-danger">✕</button>
-                  </div>
-                </div>
-                <!-- Event Types -->
-                <div>
-                  <div class="flex items-center justify-between mb-2">
-                    <p class="sa-section-label" style="margin-bottom:0">Terminarten ({{ templateEventTypes.length }})</p>
-                    <button @click="addEventTypeRow" class="sa-action-btn">+ Hinzufügen</button>
+                    <p class="sa-section-label" style="margin-bottom:0">1. Terminarten ({{ templateEventTypes.length }})</p>
+                    <button type="button" @click="addEventTypeRow" class="sa-action-btn">+ Hinzufügen</button>
                   </div>
                   <div v-if="templateEventTypes.length === 0" class="sa-empty-inline">
-                    Keine Terminarten — Signups dieses Typs bekommen aktuell 0 Terminarten.
+                    Noch keine Terminarten — z.B. «Beratung», «Meeting», «Workshop».
+                  </div>
+                  <div v-if="templateEventTypes.length > 0" class="sa-template-headers">
+                    <span style="width:5rem">Code</span>
+                    <span class="flex-1">Anzeigename</span>
+                    <span style="width:3rem">Min.</span>
+                    <span style="width:7.5rem">Kostenpflichtig</span>
+                    <span style="width:1.5rem"></span>
                   </div>
                   <div v-for="et in templateEventTypes" :key="et.id" class="sa-template-row">
-                    <input v-model="et.code" class="sa-input sa-input-sm" placeholder="Code" style="width:5rem" />
-                    <input v-model="et.name" class="sa-input sa-input-sm" placeholder="Name" />
-                    <input v-model.number="et.default_duration_minutes" type="number" class="sa-input sa-input-sm" style="width:4.5rem" placeholder="Min." />
-                    <label class="sa-check-label sa-check-label-sm">
-                      <input type="checkbox" v-model="et.require_payment" class="sa-check" /> Bezahlung
+                    <input v-model="et.code" class="sa-input sa-input-sm" placeholder="z.B. consult" style="width:5rem" title="Interner Code" @blur="autosaveEventType(et)" />
+                    <input v-model="et.name" class="sa-input sa-input-sm" placeholder="z.B. Beratung" title="Anzeigename für Kalender & Buchung" @blur="onEventTypeNameBlur(et)" />
+                    <input v-model.number="et.default_duration_minutes" type="number" class="sa-input sa-input-sm" style="width:3rem" placeholder="45" title="Standarddauer in Minuten" @blur="autosaveEventType(et)" />
+                    <label class="sa-check-label sa-check-label-sm" title="Kostenpflichtig → braucht Kategorie(n) für Preise">
+                      <input type="checkbox" :checked="!!et.require_payment" class="sa-check" @change="onPaymentToggle(et, $event)" />
+                      kostenpflichtig
                     </label>
-                    <button @click="saveEventTypeRow(et)" :disabled="savingRowId === et.id" class="sa-action-btn">Speichern</button>
-                    <button @click="deleteEventTypeRow(et)" class="sa-action-btn-danger">✕</button>
+                    <span v-if="savingRowId === et.id" class="sa-save-dot" title="Speichert…" />
+                    <button type="button" @click="deleteEventTypeRow(et)" class="sa-action-btn-danger">✕</button>
+                  </div>
+                  <p v-if="paidEventTypes.length > 0 && templateCategories.length === 0" class="sa-error mt-2">
+                    Mindestens eine Kategorie nötig — kostenpflichtige Terminarten ohne Kategorie können nicht sinnvoll gebucht/verrechnet werden.
+                  </p>
+                </div>
+
+                <!-- 2. Kategorien — only when at least one paid Terminart -->
+                <div v-if="hasPaidEventTypes" class="sa-cat-panel">
+                  <div class="flex items-center justify-between mb-2">
+                    <div>
+                      <p class="sa-section-label" style="margin-bottom:0">2. Kategorien für kostenpflichtige Terminarten ({{ templateCategories.length }})</p>
+                      <p class="sa-hint" style="margin-top:.25rem">
+                        {{ categoryHint }}
+                      </p>
+                    </div>
+                    <button type="button" @click="addCategoryRow" class="sa-action-btn">+ Kategorie</button>
+                  </div>
+                  <div v-if="templateCategories.length === 0" class="sa-empty-inline">
+                    Pflicht: lege mindestens eine Kategorie an (oder aktiviere «kostenpflichtig» erneut — dann wird eine vorausgefüllt).
+                  </div>
+                  <div v-if="templateCategories.length > 0" class="sa-template-headers">
+                    <span style="width:5rem">Code</span>
+                    <span class="flex-1">Anzeigename</span>
+                    <span style="width:2.25rem">Farbe</span>
+                    <span style="width:1.5rem"></span>
+                  </div>
+                  <div v-for="cat in templateCategories" :key="cat.id" class="sa-template-row">
+                    <input v-model="cat.code" class="sa-input sa-input-sm" placeholder="z.B. standard" style="width:5rem" title="Interner Code" @blur="autosaveCategory(cat)" />
+                    <input v-model="cat.name" class="sa-input sa-input-sm" placeholder="Anzeigename" title="Anzeigename — vorbelegt mit Terminart, änderbar" @input="cat._autoNamed = false" @blur="autosaveCategory(cat)" />
+                    <input v-model="cat.color" type="color" class="sa-color-input" title="Farbe" @change="autosaveCategory(cat)" />
+                    <span v-if="savingRowId === cat.id" class="sa-save-dot" title="Speichert…" />
+                    <button type="button" @click="deleteCategoryRow(cat)" class="sa-action-btn-danger" :disabled="paidEventTypes.length > 0 && templateCategories.length <= 1" :title="paidEventTypes.length > 0 && templateCategories.length <= 1 ? 'Mindestens eine Kategorie behalten' : 'Löschen'">✕</button>
                   </div>
                 </div>
-              </div>
+                <div v-else class="sa-cat-skipped">
+                  <p class="sa-section-label">2. Kategorien</p>
+                  <p class="sa-hint">Noch nicht nötig — erscheint erst, wenn mindestens eine Terminart als <strong>kostenpflichtig</strong> markiert ist.</p>
+                </div>
+              </template>
             </div>
             <div class="sa-modal-footer">
-              <button @click="closeTemplatesModal" class="sa-btn-ghost">Schliessen</button>
+              <span class="sa-autosave-hint" :class="{ 'sa-autosave-error': !!lastSaveError }">{{ templatesSaveHint }}</span>
+              <button type="button" @click="closeTemplatesModal" class="sa-btn-ghost">Schliessen</button>
             </div>
           </div>
         </div>
@@ -195,11 +229,19 @@
 
 <script setup lang="ts">
 definePageMeta({ layout: 'tenant-admin' })
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 
 interface BusinessType { code: string; name: string; description?: string; is_active: boolean }
-interface TemplateCategory { id: number; code: string; name: string; color?: string; is_active?: boolean }
+interface TemplateCategory {
+  id: number
+  code: string
+  name: string
+  color?: string
+  is_active?: boolean
+  /** true while name was auto-filled from a Terminart and not manually edited */
+  _autoNamed?: boolean
+}
 interface TemplateEventType { id: string; code: string; name: string; default_duration_minutes?: number; require_payment?: boolean; is_active?: boolean }
 
 const isLoading = ref(false)
@@ -223,6 +265,86 @@ const templatesLoading = ref(false)
 const templateCategories = ref<TemplateCategory[]>([])
 const templateEventTypes = ref<TemplateEventType[]>([])
 const savingRowId = ref<string | number | null>(null)
+const templatesSaveHint = ref('Wird beim Verlassen eines Feldes automatisch gespeichert')
+const lastSaveError = ref('')
+
+const paidEventTypes = computed(() => templateEventTypes.value.filter(e => e.require_payment))
+const hasPaidEventTypes = computed(() => paidEventTypes.value.length > 0)
+const categoryHint = computed(() => {
+  if (templateCategories.value.length <= 1 && paidEventTypes.value.length === 1) {
+    const et = paidEventTypes.value[0]
+    return `Eine Kategorie reicht — vorausgefüllt als «${et.name || et.code || 'Terminart'}», jederzeit änderbar.`
+  }
+  if (templateCategories.value.length <= 1) {
+    return 'Eine Kategorie = Standard für alle kostenpflichtigen Terminarten. Mehrere Kategorien = z.B. verschiedene Angebote/Preisstufen.'
+  }
+  return 'Mehrere Kategorien = Kunden wählen bei der Buchung z.B. Angebot A/B oder Lizenzklasse.'
+})
+
+const slugifyCode = (raw: string) =>
+  raw.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 32) || 'standard'
+
+const markSaving = (msg = 'Speichert…') => { templatesSaveHint.value = msg; lastSaveError.value = '' }
+const markSaved = () => { templatesSaveHint.value = 'Gespeichert'; lastSaveError.value = '' }
+const markSaveError = (msg: string) => {
+  lastSaveError.value = msg
+  templatesSaveHint.value = msg
+}
+
+/** Ensure ≥1 category when payment is on; prefill name from Terminart if single/auto. */
+const ensureDefaultCategoryForPaid = (et: TemplateEventType) => {
+  const label = (et.name || et.code || 'Standard').trim()
+  if (!label) return
+
+  if (templateCategories.value.length === 0) {
+    templateCategories.value.push({
+      id: -Date.now(),
+      code: slugifyCode(et.code || et.name || 'standard'),
+      name: label,
+      color: '#6366f1',
+      is_active: true,
+      _autoNamed: true,
+    })
+    return
+  }
+
+  if (templateCategories.value.length === 1) {
+    const only = templateCategories.value[0]
+    if (only._autoNamed || !only.name?.trim()) {
+      only.name = label
+      only._autoNamed = true
+      if (!only.code?.trim()) only.code = slugifyCode(et.code || et.name || 'standard')
+    }
+  }
+}
+
+const onPaymentToggle = async (et: TemplateEventType, event: Event) => {
+  const checked = !!(event.target as HTMLInputElement)?.checked
+  et.require_payment = checked
+  if (checked) ensureDefaultCategoryForPaid(et)
+  await autosaveEventType(et)
+}
+
+/** Keep auto-named single category in sync when Terminart name changes. */
+const syncDefaultCategoryName = (et: TemplateEventType) => {
+  if (!et.require_payment) return
+  if (templateCategories.value.length !== 1) return
+  const only = templateCategories.value[0]
+  if (!only._autoNamed) return
+  const label = (et.name || et.code || '').trim()
+  if (label) only.name = label
+}
+
+const onEventTypeNameBlur = async (et: TemplateEventType) => {
+  syncDefaultCategoryName(et)
+  await autosaveEventType(et)
+  if (et.require_payment && templateCategories.value.length === 1) {
+    const only = templateCategories.value[0]
+    if (only._autoNamed && only.name?.trim() && only.code?.trim()) {
+      await autosaveCategory(only)
+    }
+  }
+}
 
 const featureFlags = [
   { key: 'booking_public_enabled', label: 'Öffentliche Buchung' },
@@ -241,11 +363,16 @@ const authHeaders = async () => {
 const loadBusinessTypes = async () => {
   isLoading.value = true
   try {
-    const sb = getSupabase()
-    const { data, error } = await sb.from('business_types').select('code, name, description, is_active').order('name')
-    if (error) throw error
-    businessTypes.value = (data || []) as BusinessType[]
-  } catch (e) { console.error(e) } finally { isLoading.value = false }
+    const res = await $fetch<{ businessTypes: BusinessType[] }>('/api/tenant-admin/business-types', {
+      headers: await authHeaders(),
+    })
+    businessTypes.value = res.businessTypes || []
+  } catch (e) {
+    console.error(e)
+    businessTypes.value = []
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const openCreateType = () => {
@@ -261,18 +388,19 @@ const saveType = async () => {
   if (!typeForm.value.name || (!editingType.value && !typeForm.value.code)) return
   isSaving.value = true
   try {
-    const sb = getSupabase()
     const isNew = !editingType.value
-    if (editingType.value) {
-      const { error } = await sb.from('business_types').update({ name: typeForm.value.name, description: typeForm.value.description, is_active: typeForm.value.is_active }).eq('code', editingType.value.code)
-      if (error) throw error
-    } else {
-      const { error } = await sb.from('business_types').insert({ code: typeForm.value.code, name: typeForm.value.name, description: typeForm.value.description, is_active: typeForm.value.is_active })
-      if (error) throw error
-    }
+    await $fetch('/api/tenant-admin/business-types', {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: {
+        code: editingType.value?.code || typeForm.value.code,
+        name: typeForm.value.name,
+        description: typeForm.value.description,
+        is_active: typeForm.value.is_active,
+        isUpdate: !isNew,
+      },
+    })
 
-    // Clone defaults from an existing type so the new type never starts out
-    // completely empty (the exact bug this whole feature exists to prevent).
     if (isNew && cloneFromCode.value) {
       await $fetch('/api/tenant-admin/business-type-templates/clone', {
         method: 'POST',
@@ -283,15 +411,26 @@ const saveType = async () => {
 
     showTypeModal.value = false
     await loadBusinessTypes()
-  } catch (e) { console.error(e) } finally { isSaving.value = false }
+  } catch (e: any) {
+    console.error(e)
+    alert(e?.data?.statusMessage || e?.statusMessage || e?.message || 'Speichern fehlgeschlagen')
+  } finally {
+    isSaving.value = false
+  }
 }
 
 const openEditPreset = async (bt: BusinessType) => {
   presetType.value = bt
   uiLabelsError.value = ''
-  const sb = getSupabase()
-  const { data } = await sb.from('business_type_presets').select('feature_flags, ui_labels, defaults').eq('business_type_code', bt.code).maybeSingle()
-  presetForm.value = data || { feature_flags: {}, ui_labels: {}, defaults: {} }
+  try {
+    const res = await $fetch<{ preset: any }>('/api/tenant-admin/business-type-presets', {
+      query: { business_type_code: bt.code },
+      headers: await authHeaders(),
+    })
+    presetForm.value = res.preset || { feature_flags: {}, ui_labels: {}, defaults: {} }
+  } catch {
+    presetForm.value = { feature_flags: {}, ui_labels: {}, defaults: {} }
+  }
   uiLabelsJson.value = JSON.stringify(presetForm.value.ui_labels || {}, null, 2)
   showPresetModal.value = true
 }
@@ -302,11 +441,23 @@ const savePreset = async () => {
   catch { uiLabelsError.value = 'Ungültiges JSON'; return }
   isSaving.value = true
   try {
-    const sb = getSupabase()
-    const { error } = await sb.from('business_type_presets').upsert({ business_type_code: presetType.value?.code, feature_flags: presetForm.value.feature_flags || {}, ui_labels: presetForm.value.ui_labels || {}, defaults: presetForm.value.defaults || {} }, { onConflict: 'business_type_code' })
-    if (error) throw error
+    await $fetch('/api/tenant-admin/business-type-presets', {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: {
+        business_type_code: presetType.value?.code,
+        feature_flags: presetForm.value.feature_flags || {},
+        ui_labels: presetForm.value.ui_labels || {},
+        defaults: presetForm.value.defaults || {},
+      },
+    })
     showPresetModal.value = false
-  } catch (e) { console.error(e) } finally { isSaving.value = false }
+  } catch (e: any) {
+    console.error(e)
+    alert(e?.data?.statusMessage || e?.statusMessage || e?.message || 'Preset speichern fehlgeschlagen')
+  } finally {
+    isSaving.value = false
+  }
 }
 
 // ─── Templates (categories + event types copied to new tenants at signup) ──
@@ -314,12 +465,14 @@ const openTemplates = async (bt: BusinessType) => {
   templatesType.value = bt
   showTemplatesModal.value = true
   templatesLoading.value = true
+  templatesSaveHint.value = 'Wird beim Verlassen eines Feldes automatisch gespeichert'
+  lastSaveError.value = ''
   try {
     const res = await $fetch<{ categories: TemplateCategory[]; eventTypes: TemplateEventType[] }>('/api/tenant-admin/business-type-templates', {
       query: { business_type: bt.code },
       headers: await authHeaders(),
     })
-    templateCategories.value = res.categories || []
+    templateCategories.value = (res.categories || []).map(c => ({ ...c, _autoNamed: false }))
     templateEventTypes.value = res.eventTypes || []
   } catch (e) {
     console.error(e)
@@ -332,50 +485,142 @@ const openTemplates = async (bt: BusinessType) => {
 const closeTemplatesModal = () => { showTemplatesModal.value = false }
 
 const addCategoryRow = () => {
-  templateCategories.value.push({ id: -Date.now(), code: '', name: '', color: '#6366f1', is_active: true })
+  const seedFrom = paidEventTypes.value[0]
+  const label = seedFrom?.name || seedFrom?.code || ''
+  templateCategories.value.push({
+    id: -Date.now(),
+    code: slugifyCode(seedFrom?.code || label || `cat_${templateCategories.value.length + 1}`),
+    name: templateCategories.value.length === 0 && label ? label : '',
+    color: '#6366f1',
+    is_active: true,
+    _autoNamed: templateCategories.value.length === 0 && !!label,
+  })
 }
-const saveCategoryRow = async (cat: TemplateCategory) => {
+const saveCategoryRow = async (cat: TemplateCategory, opts: { quietIncomplete?: boolean } = {}) => {
+  if (!cat.code?.trim() || !cat.name?.trim()) {
+    if (!opts.quietIncomplete) markSaveError('Code und Anzeigename der Kategorie sind Pflicht.')
+    return false
+  }
   savingRowId.value = cat.id
+  markSaving()
   try {
     const res = await $fetch<{ category: TemplateCategory }>('/api/tenant-admin/business-type-templates', {
       method: 'POST',
       headers: await authHeaders(),
       body: { kind: 'category', id: cat.id > 0 ? cat.id : undefined, business_type: templatesType.value?.code, code: cat.code, name: cat.name, color: cat.color, is_active: cat.is_active ?? true },
     })
-    Object.assign(cat, res.category)
-  } catch (e) { console.error(e) } finally { savingRowId.value = null }
+    Object.assign(cat, res.category, { _autoNamed: false })
+    markSaved()
+    return true
+  } catch (e: any) {
+    console.error(e)
+    const msg = e?.data?.statusMessage || e?.statusMessage || e?.message || 'Kategorie speichern fehlgeschlagen'
+    markSaveError(msg)
+    return false
+  } finally {
+    savingRowId.value = null
+  }
 }
+
+const autosaveCategory = async (cat: TemplateCategory) => {
+  await saveCategoryRow(cat, { quietIncomplete: true })
+}
+
 const deleteCategoryRow = async (cat: TemplateCategory) => {
+  if (paidEventTypes.value.length > 0 && templateCategories.value.length <= 1) {
+    markSaveError('Mindestens eine Kategorie behalten — kostenpflichtige Terminarten brauchen eine Kategorie.')
+    return
+  }
   if (cat.id < 0) { templateCategories.value = templateCategories.value.filter(c => c !== cat); return }
   if (!confirm(`Kategorie "${cat.name}" wirklich löschen? Betrifft nur künftige Signups.`)) return
   try {
     await $fetch('/api/tenant-admin/business-type-templates', { method: 'DELETE', headers: await authHeaders(), query: { kind: 'category', id: cat.id } })
     templateCategories.value = templateCategories.value.filter(c => c !== cat)
-  } catch (e) { console.error(e) }
+    markSaved()
+  } catch (e: any) {
+    console.error(e)
+    markSaveError(e?.data?.statusMessage || e?.statusMessage || e?.message || 'Löschen fehlgeschlagen')
+  }
 }
 
 const addEventTypeRow = () => {
   templateEventTypes.value.push({ id: `new-${Date.now()}`, code: '', name: '', default_duration_minutes: 45, require_payment: false, is_active: true })
 }
-const saveEventTypeRow = async (et: TemplateEventType) => {
+
+/** Persist any draft categories (negative ids) before a paid Terminart can be saved. */
+const savePendingCategories = async (): Promise<boolean> => {
+  const pending = templateCategories.value.filter(c => c.id < 0)
+  for (const cat of pending) {
+    if (!cat.code?.trim() || !cat.name?.trim()) {
+      markSaveError('Bitte Code und Anzeigename der Kategorie ausfüllen.')
+      return false
+    }
+    const ok = await saveCategoryRow(cat)
+    if (!ok) return false
+  }
+  return true
+}
+
+const saveEventTypeRow = async (et: TemplateEventType, opts: { quietIncomplete?: boolean } = {}) => {
+  if (!et.code?.trim() || !et.name?.trim()) {
+    if (!opts.quietIncomplete) markSaveError('Code und Anzeigename der Terminart sind Pflicht.')
+    return false
+  }
+  if (et.require_payment) {
+    if (templateCategories.value.length === 0) ensureDefaultCategoryForPaid(et)
+    const catsOk = await savePendingCategories()
+    if (!catsOk) return false
+    if (templateCategories.value.length === 0) {
+      markSaveError('Kostenpflichtige Terminart braucht mindestens eine Kategorie.')
+      return false
+    }
+  }
   savingRowId.value = et.id
+  markSaving()
   try {
     const isNew = String(et.id).startsWith('new-')
     const res = await $fetch<{ eventType: TemplateEventType }>('/api/tenant-admin/business-type-templates', {
       method: 'POST',
       headers: await authHeaders(),
-      body: { kind: 'event_type', id: isNew ? undefined : et.id, business_type: templatesType.value?.code, code: et.code, name: et.name, default_duration_minutes: et.default_duration_minutes, require_payment: et.require_payment, is_active: et.is_active ?? true },
+      body: {
+        kind: 'event_type',
+        id: isNew ? undefined : et.id,
+        business_type: templatesType.value?.code,
+        code: et.code,
+        name: et.name,
+        default_duration_minutes: et.default_duration_minutes,
+        require_payment: et.require_payment,
+        is_active: et.is_active ?? true,
+      },
     })
+    if (!res?.eventType) throw new Error('Keine Terminart in der Server-Antwort')
     Object.assign(et, res.eventType)
-  } catch (e) { console.error(e) } finally { savingRowId.value = null }
+    markSaved()
+    return true
+  } catch (e: any) {
+    console.error(e)
+    markSaveError(e?.data?.statusMessage || e?.statusMessage || e?.message || 'Terminart speichern fehlgeschlagen')
+    return false
+  } finally {
+    savingRowId.value = null
+  }
 }
+
+const autosaveEventType = async (et: TemplateEventType) => {
+  await saveEventTypeRow(et, { quietIncomplete: true })
+}
+
 const deleteEventTypeRow = async (et: TemplateEventType) => {
   if (String(et.id).startsWith('new-')) { templateEventTypes.value = templateEventTypes.value.filter(e => e !== et); return }
   if (!confirm(`Terminart "${et.name}" wirklich löschen? Betrifft nur künftige Signups.`)) return
   try {
     await $fetch('/api/tenant-admin/business-type-templates', { method: 'DELETE', headers: await authHeaders(), query: { kind: 'event_type', id: et.id } })
     templateEventTypes.value = templateEventTypes.value.filter(e => e !== et)
-  } catch (e) { console.error(e) }
+    markSaved()
+  } catch (e: any) {
+    console.error(e)
+    markSaveError(e?.data?.statusMessage || e?.statusMessage || e?.message || 'Löschen fehlgeschlagen')
+  }
 }
 
 onMounted(loadBusinessTypes)
@@ -410,6 +655,11 @@ onMounted(loadBusinessTypes)
 .sa-action-btn-danger:hover { color:#fca5a5; }
 .sa-empty { text-align:center;padding:3rem;color:#475569;font-size:.8rem; }
 .sa-empty-inline { padding:.75rem;color:#f59e0b;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;font-size:.72rem;margin-bottom:.5rem; }
+.sa-flow-hint { font-size:.78rem;line-height:1.45;color:#94a3b8;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:.75rem .9rem; }
+.sa-flow-hint strong { color:#c7d2fe; }
+.sa-flow-hint em { color:#a5b4fc;font-style:normal;font-weight:600; }
+.sa-cat-panel { padding:1rem;border-radius:12px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.18); }
+.sa-cat-skipped { padding:.85rem 1rem;border-radius:12px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.1); }
 
 /* Modals */
 .sa-modal-backdrop { position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1.5rem; }
@@ -420,7 +670,11 @@ onMounted(loadBusinessTypes)
 .sa-modal-title  { font-size:1.1rem;font-weight:700;color:#f1f5f9; }
 .sa-modal-sub    { font-size:.78rem;color:#64748b;margin-top:.2rem; }
 .sa-modal-body   { padding:1.25rem 1.5rem; }
-.sa-modal-footer { padding:1rem 1.5rem 1.5rem;display:flex;gap:.75rem;border-top:1px solid rgba(255,255,255,.06); }
+.sa-modal-footer { padding:1rem 1.5rem 1.5rem;display:flex;gap:.75rem;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,.06); }
+.sa-autosave-hint { font-size:.72rem;color:#64748b; }
+.sa-autosave-error { color:#f87171; }
+.sa-save-dot { width:.45rem;height:.45rem;border-radius:999px;background:#6366f1;flex-shrink:0;animation:sa-pulse 1s ease infinite; }
+@keyframes sa-pulse { 50% { opacity:.35; } }
 
 .sa-label { display:block;font-size:.75rem;font-weight:500;color:#94a3b8;margin-bottom:.375rem; }
 .sa-input { width:100%;padding:.5rem .75rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;font-size:.8rem;color:#e2e8f0;transition:border-color .15s; }
@@ -446,6 +700,8 @@ onMounted(loadBusinessTypes)
 .sa-code-input { width:100%;padding:.625rem .75rem;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:8px;font-family:monospace;font-size:.72rem;color:#a5b4fc;resize:vertical; }
 .sa-code-input:focus { outline:none;border-color:#6366f1; }
 .sa-template-row { display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem; }
+.sa-template-headers { display:flex;align-items:center;gap:.4rem;margin-bottom:.35rem;padding:0 .1rem; }
+.sa-template-headers span { font-size:.65rem;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em; }
 
 .modal-enter-active,.modal-leave-active { transition:all .2s ease; }
 .modal-enter-from,.modal-leave-to { opacity:0;transform:scale(.97); }

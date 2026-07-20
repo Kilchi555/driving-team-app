@@ -65,6 +65,26 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         const { data: { session } } = await supabase.auth.getSession()
         
         if (!session?.expires_at) {
+          // Cookie login can leave authStore populated while the supabase-js
+          // client has no session yet (auth-restore only runs on first load).
+          // Hydrate once via the refresh cookie so RLS / getSession() work.
+          const authStore = useAuthStore()
+          if (authStore.user && !refreshFailed) {
+            logger.debug('ℹ️ No Supabase session but user in store — hydrating via cookie…')
+            try {
+              const { refreshClientSession } = await import('~/utils/client-session-refresh')
+              const refreshed = await refreshClientSession()
+              if (refreshed?.access_token) {
+                logger.debug('✅ Supabase client session hydrated from cookie')
+                refreshCheckInterval = setTimeout(() => {
+                  startTokenRefreshCheck()
+                }, 30 * 1000)
+                return
+              }
+            } catch (hydrateErr: any) {
+              logger.debug('⚠️ Cookie hydrate failed:', hydrateErr?.message)
+            }
+          }
           logger.debug('ℹ️ No Supabase session - checking again in 30s')
           // No session - probably not logged in yet
           // Schedule next check in 30 seconds
