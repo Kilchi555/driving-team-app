@@ -2,33 +2,22 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
-import { getHeader } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   const ipAddress = getClientIP(event)
   let authenticatedUserId: string | undefined
 
   try {
-    // Layer 1: Authentication - Verify JWT token
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader) {
+    // Layer 1: Authentication
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Authentication required'
       })
     }
-
-    const token = authHeader.replace('Bearer ', '')
     const supabaseAdmin = getSupabaseAdmin()
-
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-
-    if (authError || !user) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid or expired token'
-      })
-    }
     authenticatedUserId = user.id
 
     // Layer 3: Input Validation
