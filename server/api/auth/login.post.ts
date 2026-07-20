@@ -790,9 +790,10 @@ Diese E-Mail ist eine automatische Sicherheitsmitteilung von ${tenantName}.
       console.warn('⚠️ Failed to fetch user profile:', profileFetchError.message)
     }
 
-    // Return user data including tokens for client-side Supabase session
-    // Tokens are ALSO in HTTP-Only cookies for server-side API calls
-    // We return them here so the client Supabase can make direct queries
+    // Return user data + session tokens for client-side supabase-js hydration.
+    // Tokens are ALSO in HTTP-Only cookies for server-side /api/* auth.
+    // Returning them here (same pattern as MFA verify) avoids a post-login
+    // refresh-token rotation race that can wipe the brand-new session.
     return {
       success: true,
       user: {
@@ -802,8 +803,9 @@ Diese E-Mail ist eine automatische Sicherheitsmitteilung von ${tenantName}.
       },
       // User profile from database (for frontend state)
       profile: userProfile,
-      // Session timing info only — tokens are in httpOnly cookies, not in body
       session: {
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
         expires_in: sessionDuration,
         expires_at: Math.floor(Date.now() / 1000) + sessionDuration
       },

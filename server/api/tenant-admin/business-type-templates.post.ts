@@ -50,7 +50,12 @@ export default defineEventHandler(async (event) => {
       return { category: data }
     } else {
       const { data, error } = await supabase.from('categories').insert({ ...row, created_at: now }).select().single()
-      if (error) throw createError({ statusCode: 500, statusMessage: `Insert failed: ${error.message}` })
+      if (error) {
+        const msg = error.code === '23505'
+          ? `Kategorie-Code «${code}» existiert bereits als Template`
+          : `Insert failed: ${error.message}`
+        throw createError({ statusCode: 500, statusMessage: msg })
+      }
       return { category: data }
     }
   }
@@ -83,7 +88,12 @@ export default defineEventHandler(async (event) => {
     return { eventType: data }
   } else {
     const { data, error } = await supabase.from('event_types').insert({ ...row, created_at: now }).select().single()
-    if (error) throw createError({ statusCode: 500, statusMessage: `Insert failed: ${error.message}` })
+    if (error) {
+      const msg = error.code === '23505'
+        ? `Terminart-Code «${code}» existiert bereits als Template (tenant_id NULL). Bitte anderen Code wählen.`
+        : `Insert failed: ${error.message}`
+      throw createError({ statusCode: 500, statusMessage: msg })
+    }
     return { eventType: data }
   }
 })

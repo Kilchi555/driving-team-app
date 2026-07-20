@@ -958,17 +958,29 @@ const handleLogin = async () => {
     // Normales Login erfolgreich
     logger.debug('✅ Login successful')
 
-    // Session tokens are now in HTTP-Only cookies (set by backend) — never
-    // duplicated into localStorage (XSS-readable). The client-side Supabase
-    // session gets hydrated separately by auth-restore.client.ts via the
-    // cookie-based refresh endpoint.
-    
     // Reset failed login attempts on success
     failedLoginAttempts.value = 0
-    
-    // Session tokens are now in HTTP-Only cookies (set by backend)
-    // No need to call setSession - cookies are automatically sent with requests
+
+    // Session tokens are in HTTP-Only cookies (set by backend) AND returned in
+    // the response body so we can hydrate supabase-js without rotating the
+    // brand-new refresh token (force-refresh caused 401 races after login).
     logger.debug('🔐 Session stored in httpOnly cookie (secure)')
+    if (response.session?.access_token && response.session?.refresh_token) {
+      try {
+        const { getSupabase } = await import('~/utils/supabase')
+        const { error: setErr } = await getSupabase().auth.setSession({
+          access_token: response.session.access_token,
+          refresh_token: response.session.refresh_token,
+        })
+        if (setErr) {
+          logger.warn('⚠️ Could not hydrate client Supabase session after login:', setErr.message)
+        } else {
+          logger.debug('✅ Client Supabase session hydrated after login')
+        }
+      } catch (hydrateErr: any) {
+        logger.warn('⚠️ Session hydrate after login failed (non-fatal):', hydrateErr?.message)
+      }
+    }
     
     // Speichere User in Auth Store
     const authStore = useAuthStore()
