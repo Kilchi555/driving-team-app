@@ -4270,25 +4270,40 @@ const clearWorkingHours = async () => {
 }
 
 // Lifecycle
+// isSettingsMounted guards the long chain of sequential awaits below: if the
+// user closes this modal (e.g. by logging out via handleLogout(), which emits
+// 'close' — unmounting this v-if'd component — before its own await resolves)
+// mid-load, the still-running onMounted() continuation would otherwise keep
+// firing the remaining fetches with an already-cleared session, spamming the
+// console with a cascade of 401s. Bail out of the chain as soon as we're
+// unmounted instead.
+const isSettingsMounted = ref(true)
+onBeforeUnmount(() => {
+  isSettingsMounted.value = false
+})
+
 onMounted(async () => {
   try {
     await loadData()
   } catch (err) {
     logger.warn('ℹ️ loadData failed (non-fatal):', err)
   }
-  
+  if (!isSettingsMounted.value) return
+
   try {
     await loadWorkingHoursData()
   } catch (err) {
     logger.warn('ℹ️ loadWorkingHoursData failed (non-fatal):', err)
   }
-  
+  if (!isSettingsMounted.value) return
+
   try {
     await loadExamLocations()
   } catch (err) {
     logger.warn('ℹ️ loadExamLocations failed (non-fatal):', err)
   }
-  
+  if (!isSettingsMounted.value) return
+
   // Load working hours from composable
   if (props.currentUser?.id) {
     try {
@@ -4296,6 +4311,7 @@ onMounted(async () => {
     } catch (err) {
       logger.warn('ℹ️ loadWorkingHours failed (non-fatal):', err)
     }
+    if (!isSettingsMounted.value) return
   }
   
   // Initialize working hours form after data is loaded
@@ -4303,9 +4319,11 @@ onMounted(async () => {
   
   // Load calendar token for calendar integration
   await loadCalendarToken()
+  if (!isSettingsMounted.value) return
   
   // Initialize Google Places for address autocomplete
   await initGooglePlaces()
+  if (!isSettingsMounted.value) return
 
   // Load staff availability settings (buffer_minutes etc.)
   try {
@@ -4315,6 +4333,7 @@ onMounted(async () => {
       staffMaxTravelMinutes.value = settingsResp.settings.max_travel_minutes ?? 0
     }
   } catch { /* non-fatal */ }
+  if (!isSettingsMounted.value) return
 
   // Load affiliate enabled state so button is hidden if system is disabled
   try {
@@ -4324,6 +4343,7 @@ onMounted(async () => {
   } catch { /* non-fatal */ } finally {
     affiliateStatusLoaded.value = true
   }
+  if (!isSettingsMounted.value) return
 
   // Load extra tenant info for Links sheet (website url)
   try {
@@ -4333,11 +4353,13 @@ onMounted(async () => {
       tenantWebsiteUrl.value = brandingResp?.social?.website ?? brandingResp?.website_url ?? null
     }
   } catch { /* non-fatal */ }
+  if (!isSettingsMounted.value) return
 
   // Load monthly hours (visible for monthly-salary staff)
   try {
     await loadMonthlyHours()
   } catch { /* non-fatal */ }
+  if (!isSettingsMounted.value) return
 
   // Load vacation appointments for hourly staff overview
   try {
