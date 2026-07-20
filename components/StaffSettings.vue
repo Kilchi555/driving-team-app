@@ -131,8 +131,8 @@
           </div>
         </div>
 
-        <!-- Nur Arbeitsstunden für 4 Monate - KEINE lessons mehr! -->
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <!-- Arbeitsstunden – full width on large screens -->
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden min-[550px]:col-span-2 min-[1100px]:col-span-3">
           <div class="w-full px-3 py-3 flex items-center gap-2.5">
             <button
               @click="toggleSection('workingStats')"
@@ -147,122 +147,98 @@
           </div>
           
           <div v-if="openSections.workingStats" class="px-4 pb-4 border-t border-gray-100">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              
-              <!-- Kommender Monat - Geplant -->
-              <div class="bg-orange-50 p-4 rounded-lg border-2 border-orange-200">
-                <h4 class="font-semibold text-orange-900 mb-3 text-center">{{ nextMonthName }}</h4>
-                <div class="text-center">
-                  <div class="text-sm text-orange-700 font-medium mb-1">Geplant</div>
-                  <div class="text-2xl font-bold text-orange-800">
-                    {{ monthlyStats.nextMonth.planned.toFixed(2) }}h
-                  </div>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+              <p class="text-xs text-gray-500">
+                Terminstunden (live). Absagen und Ferien sind ausgewiesen; Ferien zählen im Soll/Ist-Saldo mit.
+              </p>
+              <button
+                @click="showMonthlyDetailModal = true; loadMonthlyHours()"
+                class="self-start sm:self-auto text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:opacity-80 whitespace-nowrap"
+                :style="{ background: `${primaryColor}15`, color: primaryColor }"
+              >Monatsübersicht (Soll/Ist) →</button>
+            </div>
+
+            <!-- Desktop: wide row · Mobile: stacked -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+              <!-- Kommender Monat -->
+              <div class="rounded-xl border border-orange-200 bg-orange-50/80 p-4 flex flex-col min-h-[140px]">
+                <div class="text-[11px] font-semibold uppercase tracking-wide text-orange-700/80 mb-1">{{ nextMonthName }}</div>
+                <div class="text-xs text-orange-700 mb-1">Geplant</div>
+                <div class="text-2xl font-bold text-orange-900 tabular-nums leading-none">
+                  {{ monthlyStats.nextMonth.planned.toFixed(1) }}<span class="text-base font-semibold ml-0.5">h</span>
+                </div>
+                <div v-if="(monthlyStats.nextMonth.vacationHours ?? 0) > 0" class="mt-auto pt-3 text-xs text-emerald-700 font-medium">
+                  +{{ monthlyStats.nextMonth.vacationHours.toFixed(1) }}h Ferien
+                  <span v-if="monthlyStats.nextMonth.vacationDays" class="opacity-70">({{ monthlyStats.nextMonth.vacationDays }} T)</span>
                 </div>
               </div>
-              
-              <!-- Aktueller Monat - Kombiniert -->
-              <div class="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border-2 border-blue-200">
-                <h4 class="font-semibold text-gray-800 mb-4 text-center">{{ currentMonthName }}</h4>
-                <div class="grid grid-cols-2 gap-4">
-                  <div class="text-center">
-                    <div class="text-sm text-blue-700 font-medium mb-1">Gearbeitet</div>
-                    <div class="text-2xl font-bold text-blue-800">
-                      {{ monthlyStats.currentMonth.worked.toFixed(2) }}h
+
+              <!-- Aktueller Monat -->
+              <div class="rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-emerald-50 p-4 flex flex-col min-h-[140px] sm:col-span-2 xl:col-span-1">
+                <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">{{ currentMonthName }}</div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <div class="text-xs text-blue-700 mb-0.5">Gearbeitet</div>
+                    <div class="text-xl font-bold text-blue-900 tabular-nums leading-none">
+                      {{ monthlyStats.currentMonth.worked.toFixed(1) }}<span class="text-sm font-semibold ml-0.5">h</span>
                     </div>
                   </div>
-                  <div class="text-center">
-                    <div class="text-sm text-green-700 font-medium mb-1">Geplant</div>
-                    <div class="text-2xl font-bold text-green-800">
-                      {{ monthlyStats.currentMonth.planned.toFixed(2) }}h
-                    </div>
-                  </div>
-                </div>
-                <div class="mt-3 pt-3 border-t border-gray-300">
-                  <div class="text-center">
-                    <div class="text-xs text-gray-600 font-medium mb-1">Total</div>
-                    <div class="text-lg font-bold text-gray-800">
-                      {{ (monthlyStats.currentMonth.worked + monthlyStats.currentMonth.planned).toFixed(2) }}h
+                  <div>
+                    <div class="text-xs text-emerald-700 mb-0.5">Geplant</div>
+                    <div class="text-xl font-bold text-emerald-800 tabular-nums leading-none">
+                      {{ monthlyStats.currentMonth.planned.toFixed(1) }}<span class="text-sm font-semibold ml-0.5">h</span>
                     </div>
                   </div>
                 </div>
-                <div v-if="monthlyStats.currentMonth.cancellations.total > 0" class="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500 space-y-0.5">
+                <div class="mt-3 pt-2 border-t border-blue-100/80 flex items-baseline justify-between gap-2">
+                  <span class="text-[11px] text-gray-500 uppercase tracking-wide">Total</span>
+                  <span class="text-base font-bold text-gray-900 tabular-nums">
+                    {{ (monthlyStats.currentMonth.worked + monthlyStats.currentMonth.planned).toFixed(1) }}h
+                  </span>
+                </div>
+                <div v-if="(monthlyStats.currentMonth.vacationHours ?? 0) > 0" class="mt-2 text-xs text-emerald-700 font-medium">
+                  +{{ monthlyStats.currentMonth.vacationHours.toFixed(1) }}h Ferien
+                  <span v-if="monthlyStats.currentMonth.vacationDays" class="opacity-70">({{ monthlyStats.currentMonth.vacationDays }} T)</span>
+                </div>
+                <div v-if="monthlyStats.currentMonth.cancellations.total > 0" class="mt-auto pt-2 text-xs text-gray-500 space-y-0.5">
                   <div class="flex items-center gap-1">
                     <span class="text-red-400">✕</span>
                     <span>{{ monthlyStats.currentMonth.cancellations.total }} Absagen</span>
                   </div>
                   <div v-if="monthlyStats.currentMonth.cancellations.charged > 0" class="flex items-center gap-1 text-green-600 font-medium">
                     <span>✓</span>
-                    <span>{{ monthlyStats.currentMonth.cancellations.charged }} verrechnet (+{{ monthlyStats.currentMonth.cancellations.chargedHours.toFixed(2) }}h)</span>
+                    <span>{{ monthlyStats.currentMonth.cancellations.charged }} verrechnet (+{{ monthlyStats.currentMonth.cancellations.chargedHours.toFixed(1) }}h)</span>
                   </div>
                   <div v-else class="text-gray-400 italic">Keine verrechnet</div>
                 </div>
               </div>
-              
-              <!-- Vormonat -->
-              <div class="bg-gray-50 p-4 rounded-lg">
-                <h4 class="font-semibold text-gray-700 mb-3">{{ previousMonthName }}</h4>
-                <div class="text-2xl font-bold text-gray-800">
-                  {{ monthlyStats.previousMonth.worked.toFixed(2) }}h
+
+              <!-- Vergangene Monate -->
+              <div
+                v-for="card in pastWorkingHoursCards"
+                :key="card.key"
+                class="rounded-xl border border-gray-200 bg-gray-50/80 p-4 flex flex-col min-h-[140px]"
+              >
+                <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1">{{ card.name }}</div>
+                <div class="text-2xl font-bold text-gray-900 tabular-nums leading-none">
+                  {{ card.worked.toFixed(1) }}<span class="text-base font-semibold text-gray-600 ml-0.5">h</span>
                 </div>
-                <div v-if="monthlyStats.previousMonth.cancellations.total > 0" class="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500 space-y-0.5">
+                <div v-if="card.vacationHours > 0" class="mt-2 text-xs text-emerald-700 font-medium">
+                  +{{ card.vacationHours.toFixed(1) }}h Ferien
+                  <span v-if="card.vacationDays" class="opacity-70">({{ card.vacationDays }} T)</span>
+                </div>
+                <div v-if="card.cancellations.total > 0" class="mt-auto pt-3 text-xs text-gray-500 space-y-0.5">
                   <div class="flex items-center gap-1">
                     <span class="text-red-400">✕</span>
-                    <span>{{ monthlyStats.previousMonth.cancellations.total }} Absagen</span>
+                    <span>{{ card.cancellations.total }} Absagen</span>
                   </div>
-                  <div v-if="monthlyStats.previousMonth.cancellations.charged > 0" class="flex items-center gap-1 text-green-600 font-medium">
+                  <div v-if="card.cancellations.charged > 0" class="flex items-center gap-1 text-green-600 font-medium leading-snug">
                     <span>✓</span>
-                    <span>{{ monthlyStats.previousMonth.cancellations.charged }} verrechnet (+{{ monthlyStats.previousMonth.cancellations.chargedHours.toFixed(2) }}h)</span>
+                    <span>{{ card.cancellations.charged }} verrechnet (+{{ card.cancellations.chargedHours.toFixed(1) }}h)</span>
                   </div>
                   <div v-else class="text-gray-400 italic">Keine verrechnet</div>
                 </div>
               </div>
-              
-              <!-- 2 Monate zurück -->
-              <div class="bg-gray-50 p-4 rounded-lg">
-                <h4 class="font-semibold text-gray-700 mb-3">{{ twoMonthsAgoName }}</h4>
-                <div class="text-2xl font-bold text-gray-800">
-                  {{ monthlyStats.twoMonthsAgo.worked.toFixed(2) }}h
-                </div>
-                <div v-if="monthlyStats.twoMonthsAgo.cancellations.total > 0" class="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500 space-y-0.5">
-                  <div class="flex items-center gap-1">
-                    <span class="text-red-400">✕</span>
-                    <span>{{ monthlyStats.twoMonthsAgo.cancellations.total }} Absagen</span>
-                  </div>
-                  <div v-if="monthlyStats.twoMonthsAgo.cancellations.charged > 0" class="flex items-center gap-1 text-green-600 font-medium">
-                    <span>✓</span>
-                    <span>{{ monthlyStats.twoMonthsAgo.cancellations.charged }} verrechnet (+{{ monthlyStats.twoMonthsAgo.cancellations.chargedHours.toFixed(2) }}h)</span>
-                  </div>
-                  <div v-else class="text-gray-400 italic">Keine verrechnet</div>
-                </div>
-              </div>
-              
-              <!-- 3 Monate zurück -->
-              <div class="bg-gray-50 p-4 rounded-lg">
-                <h4 class="font-semibold text-gray-700 mb-3">{{ threeMonthsAgoName }}</h4>
-                <div class="text-2xl font-bold text-gray-800">
-                  {{ monthlyStats.threeMonthsAgo.worked.toFixed(2) }}h
-                </div>
-                <div v-if="monthlyStats.threeMonthsAgo.cancellations.total > 0" class="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500 space-y-0.5">
-                  <div class="flex items-center gap-1">
-                    <span class="text-red-400">✕</span>
-                    <span>{{ monthlyStats.threeMonthsAgo.cancellations.total }} Absagen</span>
-                  </div>
-                  <div v-if="monthlyStats.threeMonthsAgo.cancellations.charged > 0" class="flex items-center gap-1 text-green-600 font-medium">
-                    <span>✓</span>
-                    <span>{{ monthlyStats.threeMonthsAgo.cancellations.charged }} verrechnet (+{{ monthlyStats.threeMonthsAgo.cancellations.chargedHours.toFixed(2) }}h)</span>
-                  </div>
-                  <div v-else class="text-gray-400 italic">Keine verrechnet</div>
-                </div>
-              </div>
-              
-            </div>
-            <!-- Detailansicht Button -->
-            <div class="mt-3 flex justify-end">
-              <button
-                @click="showMonthlyDetailModal = true; loadMonthlyHours()"
-                class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:opacity-80"
-                :style="{ background: `${primaryColor}15`, color: primaryColor }"
-              >Detaillierte Übersicht →</button>
             </div>
           </div>
         </div>
@@ -517,8 +493,6 @@
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
       <!-- Gutschein & Rabattcodes (nur Admin) -->
       <div v-if="props.currentUser?.role === 'admin' || props.currentUser?.role === 'tenant_admin'" class="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -544,7 +518,7 @@
           <div class="grid grid-cols-2 gap-2">
             <!-- Links -->
             <button
-              @click="showLinksSheet = true"
+              @click="showLinksSheet = true; ensureTenantSlug()"
               class="bg-white rounded-2xl px-3 py-2 flex items-center gap-2.5 active:opacity-60 transition-opacity shadow-sm"
             >
               <div class="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -652,7 +626,7 @@
 
               <!-- Buchungsseite -->
               <button
-                @click="openLinkAction({ url: `${appBaseUrl}/booking/availability/${tenantSlug}`, title: 'Buchungsseite' })"
+                @click="openLinkAction({ url: bookingPageLink, title: 'Buchungsseite' })"
                 class="w-full bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity"
               >
                 <div class="w-9 h-9 bg-violet-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -669,7 +643,7 @@
 
               <!-- Shop -->
               <button
-                @click="openLinkAction({ url: `${appBaseUrl}/shop?tenant=${tenantSlug}`, title: 'Shop' })"
+                @click="openLinkAction({ url: shopLink, title: 'Shop' })"
                 class="w-full bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity"
               >
                 <div class="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -686,7 +660,7 @@
 
               <!-- Kurse -->
               <button
-                @click="openLinkAction({ url: `${appBaseUrl}/customer/courses/${tenantSlug}`, title: 'Kurse' })"
+                @click="openLinkAction({ url: coursesLink, title: 'Kurse' })"
                 class="w-full bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity"
               >
                 <div class="w-9 h-9 bg-teal-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -1734,7 +1708,8 @@
         <!-- Header -->
         <div class="flex items-center justify-between px-6 py-4 border-b">
           <div>
-            <h2 class="text-lg font-bold text-gray-900">Meine Arbeitsstunden</h2>
+            <h2 class="text-lg font-bold text-gray-900">Monatsübersicht (Soll/Ist)</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Abgeschlossene Monate · aktueller Monat ohne Überzeit</p>
             <div class="flex items-center gap-2 mt-0.5">
               <select
                 v-model="monthlyHoursYear"
@@ -1810,7 +1785,7 @@
                   <th v-if="hoursTableExpanded" class="px-2 py-2 text-right">Arbeits-<br>tage</th>
                   <th class="px-2 py-2 text-right">Soll</th>
                   <th class="px-2 py-2 text-right">Ist</th>
-                  <th v-if="hoursTableExpanded" class="px-2 py-2 text-right">Ferien</th>
+                  <th v-if="showVacationColumn" class="px-2 py-2 text-right">Ferien</th>
                   <th v-if="hoursTableExpanded" class="px-2 py-2 text-right">Krank</th>
                   <th v-if="hoursTableExpanded" class="px-2 py-2 text-right">Admin</th>
                   <th class="px-2 py-2 text-right">Diff</th>
@@ -1834,14 +1809,18 @@
                     <span v-if="m.actual_hours != null">{{ m.actual_hours.toFixed(1) }}h</span>
                     <span v-else class="text-gray-300">–</span>
                   </td>
-                  <td v-if="hoursTableExpanded" class="px-2 py-2 text-right text-emerald-600">
+                  <td v-if="showVacationColumn" class="px-2 py-2 text-right text-emerald-600">
                     <span v-if="m.vacation_hours != null && m.vacation_hours > 0">{{ m.vacation_hours.toFixed(1) }}h</span>
                     <span v-else class="text-gray-300">–</span>
                   </td>
                   <td v-if="hoursTableExpanded" class="px-2 py-2 text-right text-orange-600">{{ (m.sick_hours ?? 0) > 0 ? Number(m.sick_hours).toFixed(1) + 'h' : '–' }}</td>
                   <td v-if="hoursTableExpanded" class="px-2 py-2 text-right text-purple-600">{{ (m.admin_hours ?? 0) > 0 ? Number(m.admin_hours).toFixed(1) + 'h' : '–' }}</td>
-                  <td class="px-2 py-2 text-right font-semibold" :class="m.overtime_hours != null && (m.cumulative_overtime !== null || m.actual_hours > 0) ? getOvertimeColor(m.overtime_hours) : 'text-gray-300'">
-                    <span v-if="m.overtime_hours != null && (m.cumulative_overtime !== null || m.actual_hours > 0)">{{ formatMonthlyBalance(m.overtime_hours) }}</span>
+                  <td
+                    class="px-2 py-2 text-right font-semibold"
+                    :class="monthDiffVisible(m) ? getOvertimeColor(m.overtime_hours) : 'text-gray-300'"
+                    :title="(m.vacation_hours ?? 0) > 0 ? 'Diff = Ist + Ferien + Krank + Admin − Soll' : undefined"
+                  >
+                    <span v-if="monthDiffVisible(m)">{{ formatMonthlyBalance(m.overtime_hours) }}</span>
                     <span v-else>–</span>
                   </td>
                   <td class="px-2 py-2 text-right font-bold" :class="m.cumulative_overtime !== null ? getOvertimeColor(m.cumulative_overtime) : 'text-gray-300'">
@@ -1851,6 +1830,9 @@
                 </tr>
               </tbody>
             </table>
+            <p v-if="showVacationColumn" class="mt-2 text-[11px] text-gray-400">
+              Diff und Saldo enthalten bezogene Ferien (Ist + Ferien − Soll).
+            </p>
             </div>
           </div>
         </div>
@@ -1925,8 +1907,57 @@ const emit = defineEmits<{
   'settings-updated': []
 }>()
 
-// Tenant composable
-const { currentTenant, tenantSlug } = useTenant()
+// Tenant composable — on staff calendar (app host) currentTenant is often unset
+const { tenantSlug, loadTenant } = useTenant()
+const authStore = useAuthStore()
+const resolvedTenantSlug = ref<string | null>(null)
+
+/** Slug for share links: useTenant first, then profile / storage / API */
+const effectiveTenantSlug = computed(() => tenantSlug.value || resolvedTenantSlug.value || null)
+
+const ensureTenantSlug = async (): Promise<string | null> => {
+  if (tenantSlug.value) return tenantSlug.value
+  if (resolvedTenantSlug.value) return resolvedTenantSlug.value
+
+  const fromProfile =
+    (authStore.userProfile as any)?.tenant_slug ||
+    (authStore.userProfile as any)?.tenant?.slug ||
+    null
+  if (fromProfile) {
+    resolvedTenantSlug.value = fromProfile
+    try { await loadTenant(fromProfile) } catch { /* non-fatal */ }
+    return fromProfile
+  }
+
+  if (process.client) {
+    try {
+      const fromLs = localStorage.getItem('last_tenant_slug')?.trim()
+      if (fromLs) {
+        resolvedTenantSlug.value = fromLs
+        try { await loadTenant(fromLs) } catch { /* non-fatal */ }
+        return fromLs
+      }
+    } catch { /* ignore */ }
+  }
+
+  const tid = props.currentUser?.tenant_id || authStore.userProfile?.tenant_id
+  if (tid) {
+    try {
+      const res = await $fetch<{ data?: { slug?: string }; slug?: string }>(`/api/tenants/get-slug?id=${tid}`)
+      const slug = res?.data?.slug || res?.slug
+      if (slug) {
+        resolvedTenantSlug.value = slug
+        try { localStorage.setItem('last_tenant_slug', slug) } catch { /* ignore */ }
+        try { await loadTenant(slug) } catch { /* non-fatal */ }
+        return slug
+      }
+    } catch (err) {
+      logger.warn('ℹ️ Could not resolve tenant slug via API:', err)
+    }
+  }
+
+  return null
+}
 
 // Redirect to tenant login on expired/invalid session
 const handleSessionError = (err: any): boolean => {
@@ -1941,7 +1972,7 @@ const handleSessionError = (err: any): boolean => {
     message.includes('jwt') ||
     message.includes('token expired')
   if (isSessionError) {
-    navigateTo(tenantSlug.value ? `/${tenantSlug.value}` : '/login')
+    navigateTo(effectiveTenantSlug.value ? `/${effectiveTenantSlug.value}` : '/login')
     return true
   }
   return false
@@ -2222,10 +2253,18 @@ const shareCalendarLink = async () => {
   try { await navigator.share({ title: 'Kalender-Link', url: calendarTokenLink.value }) } catch { /* cancelled */ }
 }
 
-const openLinkAction = (link: LinkAction) => {
-  const url = String(link?.url || '')
-  // ✅ Sicherer Abbruch bei fehlendem Tenant-Slug
-  if (!tenantSlug.value || /\/(null|undefined)(\?|\/|$)/.test(url) || /[?&]tenant=(null|undefined)(?:&|$)/.test(url)) {
+const openLinkAction = async (link: LinkAction) => {
+  const slug = await ensureTenantSlug()
+  let url = String(link?.url || '')
+
+  // Rewrite URLs that were built before the slug was resolved
+  if (slug) {
+    url = url
+      .replace(/\/(null|undefined)(?=\/?(\?|$))/g, `/${slug}`)
+      .replace(/([?&])tenant=(null|undefined)(?=&|$)/g, `$1tenant=${slug}`)
+  }
+
+  if (!slug || /\/(null|undefined)(\?|\/|$)/.test(url) || /[?&]tenant=(null|undefined)(?:&|$)/.test(url)) {
     showErrorToast('Link nicht verfügbar', 'Der Tenant konnte nicht ermittelt werden. Bitte Seite neu laden und erneut versuchen.')
     return
   }
@@ -2332,19 +2371,19 @@ const newExamLocation = ref({
 
 // NEUE STATE für Arbeitszeit
 interface MonthCancellations {
-  total: number        // Alle Absagen dieses Monats
-  charged: number      // Davon verrechnet (charge % > 0) → Staff bekommt Stunden gutgeschrieben
-  chargedHours: number // Gutgeschriebene Stunden aus verrechneten Absagen
+  total: number        // Alle Absagen dieses Monats (ohne Ferien)
+  charged: number      // Davon mit gültiger Zahlung → Stunden in worked enthalten
+  chargedHours: number // Gutgeschriebene Stunden (bereits in worked)
 }
 
 const emptyCancellations = (): MonthCancellations => ({ total: 0, charged: 0, chargedHours: 0 })
 
 const monthlyStats = ref({
-  currentMonth: { worked: 0, planned: 0, cancellations: emptyCancellations() },
-  nextMonth: { planned: 0 },
-  previousMonth: { worked: 0, cancellations: emptyCancellations() },
-  twoMonthsAgo: { worked: 0, cancellations: emptyCancellations() },
-  threeMonthsAgo: { worked: 0, cancellations: emptyCancellations() }
+  currentMonth: { worked: 0, planned: 0, vacationHours: 0, vacationDays: 0, cancellations: emptyCancellations() },
+  nextMonth: { planned: 0, vacationHours: 0, vacationDays: 0 },
+  previousMonth: { worked: 0, vacationHours: 0, vacationDays: 0, cancellations: emptyCancellations() },
+  twoMonthsAgo: { worked: 0, vacationHours: 0, vacationDays: 0, cancellations: emptyCancellations() },
+  threeMonthsAgo: { worked: 0, vacationHours: 0, vacationDays: 0, cancellations: emptyCancellations() }
 })
 
 // ── Monatliche Stundenübersicht (Monatslohn) ──────────────────────────────────
@@ -2368,6 +2407,16 @@ const shortMonthNames = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug'
 
 const showMonthlyDetailModal = ref(false)
 const hoursTableExpanded = ref(false)
+
+/** Show Ferien column whenever any month has taken/planned vacation */
+const showVacationColumn = computed(() =>
+  hoursTableExpanded.value ||
+  (monthlyHoursData.value.months || []).some((m: any) => (m.vacation_hours ?? 0) > 0)
+)
+
+const monthDiffVisible = (m: any): boolean =>
+  m.overtime_hours != null &&
+  (m.cumulative_overtime !== null || (m.actual_hours ?? 0) > 0 || (m.vacation_hours ?? 0) > 0)
 
 const loadMonthlyHours = async () => {
   isLoadingMonthlyHours.value = true
@@ -2779,7 +2828,11 @@ const appBaseUrl = computed(() => {
   return 'https://app.simy.ch'
 })
 
-const registrationLink = computed(() => `${appBaseUrl.value}/services/${tenantSlug.value}`)
+const registrationLink = computed(() => `${appBaseUrl.value}/services/${effectiveTenantSlug.value}`)
+
+const bookingPageLink = computed(() => `${appBaseUrl.value}/booking/availability/${effectiveTenantSlug.value}`)
+const shopLink = computed(() => `${appBaseUrl.value}/shop?tenant=${effectiveTenantSlug.value}`)
+const coursesLink = computed(() => `${appBaseUrl.value}/customer/courses/${effectiveTenantSlug.value}`)
 
 const activeExamLocations = computed(() => {
   // Filtere basierend auf Namen-Matching (wie in StaffSettings)
@@ -2790,57 +2843,58 @@ const activeExamLocations = computed(() => {
   })
 })
 
-// computed properties:
-const currentMonthName = computed(() => {
-  const now = new Date()
-  const date = new Date(now.getFullYear(), now.getMonth(), 1)
-  return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
-})
+// computed properties (Monatsnamen in Europe/Zurich, wie die Stundenzählung):
+const ZURICH_TZ = 'Europe/Zurich'
 
-const previousMonthName = computed(() => {
+const zurichMonthLabel = (monthOffset: number) => {
   const now = new Date()
-  const date = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
-})
-
-const twoMonthsAgoName = computed(() => {
-  const now = new Date()
-  const date = new Date(now.getFullYear(), now.getMonth() - 2, 1)
-  return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
-})
-
-const threeMonthsAgoName = computed(() => {
-  const now = new Date()
-  const date = new Date(now.getFullYear(), now.getMonth() - 3, 1)
-  return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
-})
-
-const nextMonthName = computed(() => {
-  const now = new Date()
-  const date = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-  return date.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })
-})
-
-// Helper function für lokale Zeit-Parsing
-const parseLocalDateTime = (dateTimeStr: string): Date => {
-  // Entferne Timezone-Indikatoren (Z, +00:00, +00)
-  const cleanStr = dateTimeStr.replace('+00:00', '').replace('+00', '').replace('Z', '').trim()
-  
-  // Parse als lokale Zeit - unterstützt beide Formate (mit T oder Leerzeichen)
-  const parts = cleanStr.includes('T') ? cleanStr.split('T') : cleanStr.split(' ')
-  
-  if (parts.length < 2) {
-    console.warn('Invalid datetime format:', dateTimeStr)
-    return new Date()
-  }
-  
-  const [datePart, timePart] = parts
-  const [year, month, day] = datePart.split('-').map(Number)
-  const [hour, minute, second] = timePart.split(':').map(Number)
-  
-  // Erstelle Date-Objekt in lokaler Zeitzone
-  return new Date(year, month - 1, day, hour, minute, second || 0)
+  // Anchor mid-month in Zurich so DST/edge days don't shift the month label
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: ZURICH_TZ,
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(now)
+  const year = parseInt(parts.find((p) => p.type === 'year')!.value)
+  const month = parseInt(parts.find((p) => p.type === 'month')!.value) // 1-based
+  const idx = year * 12 + (month - 1) + monthOffset
+  const y = Math.floor(idx / 12)
+  const m = (idx % 12) + 1
+  const anchor = new Date(Date.UTC(y, m - 1, 15, 12, 0, 0))
+  return anchor.toLocaleDateString('de-CH', { month: 'long', year: 'numeric', timeZone: ZURICH_TZ })
 }
+
+const currentMonthName = computed(() => zurichMonthLabel(0))
+const previousMonthName = computed(() => zurichMonthLabel(-1))
+const twoMonthsAgoName = computed(() => zurichMonthLabel(-2))
+const threeMonthsAgoName = computed(() => zurichMonthLabel(-3))
+const nextMonthName = computed(() => zurichMonthLabel(1))
+
+const pastWorkingHoursCards = computed(() => [
+  {
+    key: 'previous',
+    name: previousMonthName.value,
+    worked: monthlyStats.value.previousMonth.worked,
+    vacationHours: monthlyStats.value.previousMonth.vacationHours ?? 0,
+    vacationDays: monthlyStats.value.previousMonth.vacationDays ?? 0,
+    cancellations: monthlyStats.value.previousMonth.cancellations,
+  },
+  {
+    key: 'twoMonthsAgo',
+    name: twoMonthsAgoName.value,
+    worked: monthlyStats.value.twoMonthsAgo.worked,
+    vacationHours: monthlyStats.value.twoMonthsAgo.vacationHours ?? 0,
+    vacationDays: monthlyStats.value.twoMonthsAgo.vacationDays ?? 0,
+    cancellations: monthlyStats.value.twoMonthsAgo.cancellations,
+  },
+  {
+    key: 'threeMonthsAgo',
+    name: threeMonthsAgoName.value,
+    worked: monthlyStats.value.threeMonthsAgo.worked,
+    vacationHours: monthlyStats.value.threeMonthsAgo.vacationHours ?? 0,
+    vacationDays: monthlyStats.value.threeMonthsAgo.vacationDays ?? 0,
+    cancellations: monthlyStats.value.threeMonthsAgo.cancellations,
+  },
+])
 
 // Methods
 // In StaffSettings.vue - ersetzen Sie die Funktion mit dieser typisierten Version:
@@ -3637,172 +3691,41 @@ const loadData = async () => {
    await loadExamLocations() 
 }
 
-// Debug-Version der loadWorkingHoursData Funktion:
-
-// Vollständige Debug-Version für alle 4 Monate:
-
+/** Live Terminstunden for cards — same counting rules as Soll/Ist (via shared server util). */
 const loadWorkingHoursData = async () => {
-  logger.debug('🔍 DEBUG: Starting loadWorkingHoursData')
-  
-  if (!props.currentUser?.id) {
-    logger.debug('❌ DEBUG: No currentUser.id found')
-    return
-  }
-  
+  if (!props.currentUser?.id) return
+
   try {
-    logger.debug('🔍 DEBUG: Querying appointments for staff_id:', props.currentUser.id)
-    
-    // Use the secure backend API instead of direct DB access
-    const now = new Date()
-    const threeMonthsAgoForQuery = new Date(now.getFullYear(), now.getMonth() - 3, 1)
-    const nextMonthEndForQuery = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59)
+    const response = await $fetch<{
+      currentMonth: { worked: number; planned: number; vacationHours?: number; vacationDays?: number; cancellations: MonthCancellations }
+      nextMonth: { planned: number; vacationHours?: number; vacationDays?: number }
+      previousMonth: { worked: number; vacationHours?: number; vacationDays?: number; cancellations: MonthCancellations }
+      twoMonthsAgo: { worked: number; vacationHours?: number; vacationDays?: number; cancellations: MonthCancellations }
+      threeMonthsAgo: { worked: number; vacationHours?: number; vacationDays?: number; cancellations: MonthCancellations }
+    }>('/api/staff/working-hours-stats')
 
-    const response = await $fetch<any>('/api/calendar/manage', {
-      method: 'POST',
-      body: {
-        action: 'get-existing-appointments',
-        staff_id: props.currentUser.id,
-        start_date: threeMonthsAgoForQuery.toISOString(),
-        end_date: nextMonthEndForQuery.toISOString()
-      }
-    })
-    
-    const appointments = response?.data || []
-    
-    logger.debug('🔍 DEBUG: Total appointments found:', appointments?.length || 0)
-    
-    if (!appointments || appointments.length === 0) {
-      logger.debug('⚠️ DEBUG: No appointments found')
-      return
-    }
-    
-    // Filter nicht-gelöschte Termine
-    const validAppointments = appointments.filter((apt: any) => 
-      !apt.deleted_at // Nur nicht gelöschte Termine
-    )
-    
-    // Filter Termine nach Zeitpunkt (in der Vergangenheit = gearbeitet, in der Zukunft = geplant)
-    const workedAppointments = validAppointments.filter((apt: any) => {
-      const appointmentDate = parseLocalDateTime(apt.appointment_datetime || apt.start_time)
-      return appointmentDate < now // Start-Zeit in der Vergangenheit = gearbeitet
-    })
-    
-    const plannedAppointments = validAppointments.filter((apt: any) => {
-      const appointmentDate = parseLocalDateTime(apt.appointment_datetime || apt.start_time)
-      return appointmentDate >= now // Start-Zeit in der Zukunft = geplant
-    })
-    
-    logger.debug('🔍 DEBUG: Worked appointments (in past):', workedAppointments.length)
-    logger.debug('🔍 DEBUG: Planned appointments (in future):', plannedAppointments.length)
-    
-    // Monatsgrenzen definieren
-    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
-    
-    const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
-    
-    const twoMonthsAgoStart = new Date(now.getFullYear(), now.getMonth() - 2, 1)
-    const twoMonthsAgoEnd = new Date(now.getFullYear(), now.getMonth() - 1, 0, 23, 59, 59)
-    
-    const threeMonthsAgoStart = new Date(now.getFullYear(), now.getMonth() - 3, 1)
-    const threeMonthsAgoEnd = new Date(now.getFullYear(), now.getMonth() - 2, 0, 23, 59, 59)
-    
-    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-    const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59)
-    
-    // Hilfsfunktion zum Berechnen
-    const calculateHoursFromAppointments = (appointments: any[]) => {
-      const totalMinutes = appointments.reduce((sum, apt) => {
-        const minutes = apt.duration_minutes || 45
-        return sum + minutes
-      }, 0)
-      
-      // Runde auf 0.05 genau (3 Minuten)
-      return Math.round((totalMinutes / 60) * 20) / 20
-    }
-    
-    // Hilfsfunktion zum Filtern nach Zeitraum
-    const filterByPeriod = (appointments: any[], startDate: Date, endDate: Date) => {
-      return appointments.filter(apt => {
-        const appointmentDate = parseLocalDateTime(apt.appointment_datetime || apt.start_time)
-        return appointmentDate >= startDate && appointmentDate <= endDate
-      })
-    }
-    
-    // Berechne GEARBEITETE Stunden (Vergangenheit) für alle Monate
-    const currentMonthWorked = calculateHoursFromAppointments(
-      filterByPeriod(workedAppointments, currentMonthStart, currentMonthEnd)
-    )
-    const previousMonthWorked = calculateHoursFromAppointments(
-      filterByPeriod(workedAppointments, previousMonthStart, previousMonthEnd)
-    )
-    const twoMonthsAgoWorked = calculateHoursFromAppointments(
-      filterByPeriod(workedAppointments, twoMonthsAgoStart, twoMonthsAgoEnd)
-    )
-    const threeMonthsAgoWorked = calculateHoursFromAppointments(
-      filterByPeriod(workedAppointments, threeMonthsAgoStart, threeMonthsAgoEnd)
-    )
-    
-    // Berechne GEPLANTE Stunden (Zukunft)
-    const currentMonthPlanned = calculateHoursFromAppointments(
-      filterByPeriod(plannedAppointments, currentMonthStart, currentMonthEnd)
-    )
-    const nextMonthPlanned = calculateHoursFromAppointments(
-      filterByPeriod(plannedAppointments, nextMonthStart, nextMonthEnd)
-    )
-    
-    logger.debug('🔍 DEBUG: Hours calculated:', {
-      currentMonthWorked,
-      currentMonthPlanned,
-      nextMonthPlanned,
-      previousMonthWorked,
-      twoMonthsAgoWorked,
-      threeMonthsAgoWorked
-    })
-    
-    // Setze alle Werte
-    monthlyStats.value.currentMonth.worked = currentMonthWorked
-    monthlyStats.value.currentMonth.planned = currentMonthPlanned
-    monthlyStats.value.nextMonth.planned = nextMonthPlanned
-    monthlyStats.value.previousMonth.worked = previousMonthWorked
-    monthlyStats.value.twoMonthsAgo.worked = twoMonthsAgoWorked
-    monthlyStats.value.threeMonthsAgo.worked = threeMonthsAgoWorked
-
-    // ── Abgesagte Lektionen laden ──────────────────────────────────────────
-    const cancelledResponse = await $fetch<any>('/api/calendar/manage', {
-      method: 'POST',
-      body: {
-        action: 'get-cancelled-appointments',
-        staff_id: props.currentUser.id,
-        start_date: threeMonthsAgoForQuery.toISOString(),
-        end_date: nextMonthEndForQuery.toISOString()
-      }
-    })
-
-    const cancelledApts: any[] = cancelledResponse?.data || []
-
-    const computeCancellations = (start: Date, end: Date): MonthCancellations => {
-      const inPeriod = cancelledApts.filter(apt => {
-        const d = parseLocalDateTime(apt.start_time)
-        return d >= start && d <= end && d < now
-      })
-      const charged = inPeriod.filter(apt => (apt.cancellation_charge_percentage || 0) > 0)
-      const chargedMinutes = charged.reduce((s: number, apt: any) => s + (apt.duration_minutes || 45), 0)
-      return {
-        total: inPeriod.length,
-        charged: charged.length,
-        chargedHours: Math.round((chargedMinutes / 60) * 20) / 20
-      }
-    }
-
-    monthlyStats.value.currentMonth.cancellations   = computeCancellations(currentMonthStart, currentMonthEnd)
-    monthlyStats.value.previousMonth.cancellations  = computeCancellations(previousMonthStart, previousMonthEnd)
-    monthlyStats.value.twoMonthsAgo.cancellations   = computeCancellations(twoMonthsAgoStart, twoMonthsAgoEnd)
-    monthlyStats.value.threeMonthsAgo.cancellations = computeCancellations(threeMonthsAgoStart, threeMonthsAgoEnd)
-    
+    monthlyStats.value.currentMonth.worked = response.currentMonth.worked
+    monthlyStats.value.currentMonth.planned = response.currentMonth.planned
+    monthlyStats.value.currentMonth.vacationHours = response.currentMonth.vacationHours ?? 0
+    monthlyStats.value.currentMonth.vacationDays = response.currentMonth.vacationDays ?? 0
+    monthlyStats.value.currentMonth.cancellations = response.currentMonth.cancellations
+    monthlyStats.value.nextMonth.planned = response.nextMonth.planned
+    monthlyStats.value.nextMonth.vacationHours = response.nextMonth.vacationHours ?? 0
+    monthlyStats.value.nextMonth.vacationDays = response.nextMonth.vacationDays ?? 0
+    monthlyStats.value.previousMonth.worked = response.previousMonth.worked
+    monthlyStats.value.previousMonth.vacationHours = response.previousMonth.vacationHours ?? 0
+    monthlyStats.value.previousMonth.vacationDays = response.previousMonth.vacationDays ?? 0
+    monthlyStats.value.previousMonth.cancellations = response.previousMonth.cancellations
+    monthlyStats.value.twoMonthsAgo.worked = response.twoMonthsAgo.worked
+    monthlyStats.value.twoMonthsAgo.vacationHours = response.twoMonthsAgo.vacationHours ?? 0
+    monthlyStats.value.twoMonthsAgo.vacationDays = response.twoMonthsAgo.vacationDays ?? 0
+    monthlyStats.value.twoMonthsAgo.cancellations = response.twoMonthsAgo.cancellations
+    monthlyStats.value.threeMonthsAgo.worked = response.threeMonthsAgo.worked
+    monthlyStats.value.threeMonthsAgo.vacationHours = response.threeMonthsAgo.vacationHours ?? 0
+    monthlyStats.value.threeMonthsAgo.vacationDays = response.threeMonthsAgo.vacationDays ?? 0
+    monthlyStats.value.threeMonthsAgo.cancellations = response.threeMonthsAgo.cancellations
   } catch (error) {
-    console.error('❌ DEBUG: Unexpected error:', error)
+    logger.error('❌ loadWorkingHoursData failed:', error)
   }
 }
 
@@ -4316,7 +4239,7 @@ onMounted(async () => {
 
   // Load extra tenant info for Links sheet (website url)
   try {
-    const slug = tenantSlug.value
+    const slug = await ensureTenantSlug()
     if (slug) {
       const brandingResp = await $fetch<any>('/api/tenants/branding', { query: { slug } })
       tenantWebsiteUrl.value = brandingResp?.social?.website ?? brandingResp?.website_url ?? null

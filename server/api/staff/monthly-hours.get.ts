@@ -111,12 +111,12 @@ export default defineEventHandler(async (event) => {
         }
       }
       const actual_hours = parseFloat(record.actual_hours)
-      // Always prefer appointments-based count (always current, reflects deletions immediately).
-      // Fall back to stored value only if no appointment data exists (legacy data).
-      const stored_vacation = parseFloat(record.vacation_hours)
-      const vacation_hours = plannedVacDays > 0 ? plannedVacHours : stored_vacation
-      const sick_hours = parseFloat(record.sick_hours ?? 0)
-      const admin_hours = parseFloat(record.admin_hours ?? 0)
+      // Prefer the higher of live appointment days vs stored — avoids undercounting
+      // when either source is stale, and keeps Diff/Saldo credited for taken vacation.
+      const stored_vacation = parseFloat(record.vacation_hours ?? 0) || 0
+      const vacation_hours = Math.max(plannedVacHours, stored_vacation)
+      const sick_hours = parseFloat(record.sick_hours ?? 0) || 0
+      const admin_hours = parseFloat(record.admin_hours ?? 0) || 0
       const target_hours = parseFloat(record.target_hours)
       const overtime_hours = actual_hours + vacation_hours + sick_hours + admin_hours - target_hours
       return {
