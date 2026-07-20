@@ -1,7 +1,7 @@
 // server/api/appointments/manage-products.post.ts
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { getHeader } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 interface ManageProductsBody {
   appointmentId: string
@@ -22,36 +22,9 @@ export default defineEventHandler(async (event) => {
     
     const supabaseAdmin = getSupabaseAdmin()
     
-    // Get current user from session (HTTP-only cookies)
-    // First try to get user from session
-    let user: any = null
-    let userError: any = null
-    
-    const sessionResult = await supabaseAdmin.auth.getUser()
-    if (!sessionResult.error && sessionResult.data?.user) {
-      user = sessionResult.data.user
-    } else {
-      // Try with auth header as fallback
-      userError = sessionResult.error
-      const authorization = getHeader(event, 'authorization')
-      const token = authorization?.replace('Bearer ', '')
-      
-      if (!token) {
-        logger.error('❌ No authentication available (no session, no Bearer token)')
-        throw new Error('No authentication available')
-      }
-      
-      logger.debug('🔑 Using Bearer token authentication')
-      const bearerResult = await supabaseAdmin.auth.getUser(token)
-      if (bearerResult.error || !bearerResult.data?.user) {
-        logger.error('❌ Bearer token invalid:', bearerResult.error?.message)
-        throw new Error('Invalid authentication')
-      }
-      user = bearerResult.data.user
-    }
-    
+    const user = await getAuthenticatedUser(event)
     if (!user) {
-      logger.error('❌ Failed to get user from session or Bearer token:', userError?.message)
+      logger.error('❌ Failed to get authenticated user')
       throw new Error('Unauthorized - no user found')
     }
     

@@ -1,7 +1,7 @@
 // server/api/payments/manage.post.ts
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { getHeader } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 interface ManagePaymentsBody {
   action: 'create' | 'mark-completed' | 'delete' | 'load-user' | 'load-appointment' | 'switch-to-invoice'
@@ -19,16 +19,8 @@ export default defineEventHandler(async (event) => {
     logger.debug('💳 Payments action:', action)
 
     const supabaseAdmin = getSupabaseAdmin()
-    const authorization = getHeader(event, 'authorization')
-    const token = authorization?.replace('Bearer ', '')
-
-    if (!token) {
-      throw new Error('No authorization token')
-    }
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
-    if (userError || !user) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw new Error('Unauthorized')
     }
 

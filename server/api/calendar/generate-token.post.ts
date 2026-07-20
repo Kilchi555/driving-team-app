@@ -1,6 +1,7 @@
-import { defineEventHandler, createError, getHeader } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   const supabaseUrl = process.env.SUPABASE_URL
@@ -12,23 +13,12 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    // Get auth token from header
-    const authHeader = getHeader(event, 'Authorization')
-    const accessToken = authHeader?.split(' ')[1]
-
-    if (!accessToken) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw createError({ statusCode: 401, statusMessage: 'Unauthorized: No access token provided' })
     }
 
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
-
-    // Verify access token and get user from Supabase Auth
-    const { data: { user }, error: authError } = await serviceSupabase.auth.getUser(accessToken)
-
-    if (authError || !user) {
-      logger.warn('🚫 Calendar token generation: Invalid access token or user not found', authError?.message)
-      throw createError({ statusCode: 401, statusMessage: 'Unauthorized: Invalid access token' })
-    }
 
     // Get user profile from public.users table
     const { data: userProfile, error: profileError } = await serviceSupabase

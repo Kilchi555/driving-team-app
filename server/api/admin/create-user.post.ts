@@ -1,5 +1,5 @@
-
 import { logger } from '~/utils/logger'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -18,24 +18,11 @@ export default defineEventHandler(async (event) => {
     // Use regular supabase client (will use service role if configured)
     const supabase = getSupabaseAdmin()
     
-    // Get the current user to determine tenant_id
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Authentication required'
-      })
-    }
-
-    // Extract token from "Bearer <token>"
-    const token = authHeader.replace('Bearer ', '')
-    
-    // Get user info from JWT
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid token'
       })
     }
 

@@ -10,17 +10,14 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   // ── Auth ──────────────────────────────────────────────────
-  const authHeader = getHeader(event, 'authorization')
-  const token = authHeader?.replace('Bearer ', '')
-  if (!token) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  const user = await getAuthenticatedUser(event)
+  if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
   const supabase = getSupabaseAdmin()
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !user) throw createError({ statusCode: 401, statusMessage: 'Invalid session' })
 
   const { data: me } = await supabase
     .from('users')

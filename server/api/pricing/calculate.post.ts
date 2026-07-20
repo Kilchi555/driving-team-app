@@ -1,7 +1,7 @@
 // server/api/pricing/calculate.post.ts
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { getHeader } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 interface CalculatePricingBody {
   action: 'get-event-type' | 'get-pricing-rules' | 'get-appointment-count' | 'check-admin-fee' | 'calculate-price' | 'should-apply-admin-fee'
@@ -23,40 +23,35 @@ export default defineEventHandler(async (event) => {
     logger.debug('💰 Pricing calculation:', action)
 
     const supabaseAdmin = getSupabaseAdmin()
-    const authorization = getHeader(event, 'authorization')
-    const token = authorization?.replace('Bearer ', '')
 
-    // IMPORTANT: Token is optional for most pricing actions
+    // IMPORTANT: Auth is optional for most pricing actions
     // We only need tenant_id for certain operations
     let user: any = null
     let tenantId: string | null = null
 
-    if (token) {
-      try {
-        // Get current user
-        const { data: { user: authUser }, error: userError } = await supabaseAdmin.auth.getUser(token)
-        if (!userError && authUser) {
-          user = authUser
+    try {
+      const authUser = await getAuthenticatedUser(event)
+      if (authUser) {
+        user = authUser
 
-          // Get user profile for tenant_id
-          const { data: userProfile, error: profileError } = await supabaseAdmin
-            .from('users')
-            .select('tenant_id')
-            .eq('auth_user_id', user.id)
-            .single()
+        // Get user profile for tenant_id
+        const { data: userProfile, error: profileError } = await supabaseAdmin
+          .from('users')
+          .select('tenant_id')
+          .eq('auth_user_id', user.id)
+          .single()
 
-          if (!profileError && userProfile?.tenant_id) {
-            tenantId = userProfile.tenant_id
-            logger.debug('👤 User authenticated:', { userId: user.id, tenantId })
-          } else {
-            logger.debug('👤 User authenticated but no tenant_id')
-          }
+        if (!profileError && userProfile?.tenant_id) {
+          tenantId = userProfile.tenant_id
+          logger.debug('👤 User authenticated:', { userId: user.id, tenantId })
+        } else {
+          logger.debug('👤 User authenticated but no tenant_id')
         }
-      } catch (err: any) {
-        logger.warn('⚠️ Failed to authenticate user, using fallback pricing')
+      } else {
+        logger.debug('ℹ️ No authorization token provided, using fallback pricing')
       }
-    } else {
-      logger.debug('ℹ️ No authorization token provided, using fallback pricing')
+    } catch (err: any) {
+      logger.warn('⚠️ Failed to authenticate user, using fallback pricing')
     }
 
     // ========== GET EVENT TYPE ==========

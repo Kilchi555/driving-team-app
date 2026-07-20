@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 const supabaseUrl = process.env.SUPABASE_URL!
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -14,22 +15,11 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     logger.debug('📝 Add student request:', { email: body.email, phone: body.phone })
 
-    // Get auth user from Authorization header
-    const token = getHeader(event, 'authorization')?.replace('Bearer ', '')
-    if (!token) {
+    const authUserData = await getAuthenticatedUser(event)
+    if (!authUserData) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Authentication required'
-      })
-    }
-
-    // Verify the token and get user
-    const { data: { user: authUserData }, error: authError } = await supabaseAdmin.auth.getUser(token)
-    
-    if (authError || !authUserData) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid authentication token'
       })
     }
 

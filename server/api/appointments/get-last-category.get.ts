@@ -1,7 +1,7 @@
 // server/api/appointments/get-last-category.get.ts
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { getHeader } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -11,16 +11,8 @@ export default defineEventHandler(async (event) => {
     logger.debug('🎯 Loading last appointment category', { student_id })
     
     const supabaseAdmin = getSupabaseAdmin()
-    const authorization = getHeader(event, 'authorization')
-    const token = authorization?.replace('Bearer ', '')
-    
-    if (!token) {
-      throw new Error('No authorization token')
-    }
-    
-    // Get current user (staff)
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
-    if (userError || !user) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw new Error('Unauthorized')
     }
     

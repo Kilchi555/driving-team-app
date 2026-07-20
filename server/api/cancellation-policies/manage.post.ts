@@ -1,7 +1,8 @@
 // server/api/cancellation-policies/manage.post.ts
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
-import { getHeader, defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, createError } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 interface ManageBody {
   action: 'list' | 'fetch-all' | 'create-policy' | 'update-policy' | 'delete-policy' | 'create-rule' | 'update-rule' | 'delete-rule' | 'set-default'
@@ -21,16 +22,8 @@ export default defineEventHandler(async (event) => {
     logger.debug('📋 Cancellation policy action:', action)
 
     const supabaseAdmin = getSupabaseAdmin()
-    const authorization = getHeader(event, 'authorization')
-    const token = authorization?.replace('Bearer ', '')
-
-    if (!token) {
-      throw new Error('No authorization token')
-    }
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
-    if (userError || !user) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw new Error('Unauthorized')
     }
 
