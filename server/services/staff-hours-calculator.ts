@@ -2,40 +2,16 @@
  * Shared recalculation logic for the staff_monthly_hours table.
  * Used by both the admin POST endpoint and the nightly cron job.
  *
- * Appointment counting rules:
- *  - Not cancelled → always count
- *  - Cancelled + has a payment that is NOT cancelled/refunded/failed → count
- *    (customer was still charged, e.g. no-show fee)
- *  - Cancelled + no payment OR payment cancelled/refunded → do NOT count
+ * Appointment counting rules: see ~/server/utils/staff-hours-counting.ts
  */
 import { getMonthlyTargetHours } from '~/server/utils/swiss-holidays'
 import { logger } from '~/utils/logger'
-
-const TIMEZONE = 'Europe/Zurich'
-
-/** payment_status values that mean "the appointment was effectively not paid for" */
-const VOID_PAYMENT_STATUSES = new Set(['cancelled', 'canceled', 'refunded', 'failed'])
-
-/** UTC ISO string → calendar month in Zurich (1-based). */
-function zurichMonth(isoString: string): number {
-  return parseInt(
-    new Intl.DateTimeFormat('en-US', { month: '2-digit', timeZone: TIMEZONE }).format(new Date(isoString))
-  )
-}
-
-/**
- * Returns true when an appointment should be counted toward a staff member's
- * actual working hours.
- */
-function shouldCountAppointment(apt: {
-  status: string
-  payments?: Array<{ payment_status: string }>
-}): boolean {
-  if (apt.status !== 'cancelled') return true
-  // Cancelled appointment: count only if a payment was collected (not voided)
-  const payments = apt.payments || []
-  return payments.some((p) => !VOID_PAYMENT_STATUSES.has(p.payment_status))
-}
+import {
+  STAFF_HOURS_TIMEZONE as TIMEZONE,
+  appointmentHours,
+  shouldCountAppointment,
+  zurichMonth,
+} from '~/server/utils/staff-hours-counting'
 
 /**
  * Recalculates staff_monthly_hours rows for a given tenant, year and subset of
@@ -131,8 +107,7 @@ export async function recalculateStaffHoursForTenant(
         grouped[apt.staff_id][m].vacation_days.add(dateStr)
       }
     } else {
-      const hours = (apt.duration_minutes || 0) / 60
-      grouped[apt.staff_id][m].actual += hours
+      grouped[apt.staff_id][m].actual += appointmentHours(apt)
     }
   })
 
@@ -178,18 +153,19 @@ export async function recalculateStaffHoursForTenant(
       const vacationDays = monthData.vacation_days.size
       const vacation = isMonthly ? vacationDays * dailyHours : 0
 
+      // Preserve manually entered admin/sick hours across recalculation
+      const { data: existing } = await supabase
+        .from('staff_monthly_hours')
+        .select('target_hours, admin_hours, sick_hours')
+        .eq('staff_id', staff.id)
+        .eq('tenant_id', tenantId)
+        .eq('year', year)
+        .eq('month', m)
+        .maybeSingle()
+
       // Monthly salary: respect manually set target override, otherwise calculate
       let targetHours = 0
       if (isMonthly) {
-        const { data: existing } = await supabase
-          .from('staff_monthly_hours')
-          .select('target_hours')
-          .eq('staff_id', staff.id)
-          .eq('tenant_id', tenantId)
-          .eq('year', year)
-          .eq('month', m)
-          .maybeSingle()
-
         // Skip months before the first employment month UNLESS:
         //   - forceTargetRecalc is set (admin explicitly chose this month range), OR
         //   - actual hours exist (appointments were booked, so they must be employed)
@@ -216,6 +192,8 @@ export async function recalculateStaffHoursForTenant(
         target_hours: Math.round(targetHours * 100) / 100,
         actual_hours: Math.round(actual * 100) / 100,
         vacation_hours: Math.round(vacation * 100) / 100,
+        admin_hours: parseFloat(existing?.admin_hours ?? 0) || 0,
+        sick_hours: parseFloat(existing?.sick_hours ?? 0) || 0,
         cumulative_overtime: 0, // recalculated below for monthly staff
       })
     }
@@ -288,8 +266,8 @@ export async function recalculateStaffHoursForTenant(
   }
 
   // ── 7. Delete stale current/future-month records ─────────────────────────
-  // Remove records for the current and future months – they are incomplete
-  // and would distort the cumulative saldo.
+  // Remove incomplete current/future months so they don't distort saldo —
+  // but keep rows that only exist for manually entered admin/sick hours.
   if (year === currentYear) {
     await supabase
       .from('staff_monthly_hours')
@@ -297,6 +275,8 @@ export async function recalculateStaffHoursForTenant(
       .eq('tenant_id', tenantId)
       .eq('year', year)
       .gte('month', currentMonth)
+      .eq('admin_hours', 0)
+      .eq('sick_hours', 0)
       .in('staff_id', staffToProcess.map((s) => s.id))
   }
 

@@ -121,8 +121,8 @@ export default defineEventHandler(async (event) => {
     .forEach((r: any) => {
       const plannedVacDays = vacDaysByMonth[r.month]?.size ?? 0
       const plannedVacHours = plannedVacDays * dailyHours
-      const stored_vacation = parseFloat(r.vacation_hours ?? 0)
-      const vacation_hours = plannedVacDays > 0 ? plannedVacHours : stored_vacation
+      const stored_vacation = parseFloat(r.vacation_hours ?? 0) || 0
+      const vacation_hours = Math.max(plannedVacHours, stored_vacation)
       const overtime = parseFloat(r.actual_hours) + vacation_hours
         + parseFloat(r.sick_hours ?? 0) + parseFloat(r.admin_hours ?? 0)
         - parseFloat(r.target_hours)
