@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { PLANS, ADDONS, type SubscriptionPlan } from '~/utils/planFeatures'
 import { sendEmail } from '~/server/utils/email'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
 
 interface UpdateBody {
   plan?: SubscriptionPlan
@@ -12,6 +13,7 @@ interface UpdateBody {
     affiliate?: boolean
     gbp?: boolean
   }
+  staffToDeactivate?: string[]
 }
 
 export default defineEventHandler(async (event) => {
@@ -43,6 +45,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody<UpdateBody>(event)
+  const staffToDeactivate = Array.isArray(body?.staffToDeactivate) ? body.staffToDeactivate : []
   const stripe = new Stripe(stripeSecret, { apiVersion: '2025-08-27.basil' })
 
   // ── Fetch current subscription from Stripe ──────────────────────────────────
@@ -50,8 +53,12 @@ export default defineEventHandler(async (event) => {
     expand: ['items.data.price'],
   })
 
-  if (sub.status === 'canceled') {
-    throw createError({ statusCode: 400, statusMessage: 'Subscription is already canceled' })
+  if (sub.status === 'canceled' || sub.status === 'incomplete_expired') {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Subscription is already canceled',
+      data: { code: 'subscription_canceled' },
+    })
   }
 
   // ── Resolve desired state ────────────────────────────────────────────────────
@@ -182,6 +189,25 @@ export default defineEventHandler(async (event) => {
       is_trial: false,
     })
     .eq('id', tenantId)
+
+  await syncFeatureFlags(supabase, tenantId, desiredPlan, {
+    courses: desiredCourses,
+    affiliate: desiredAffiliate,
+    gbp: desiredGbp,
+  })
+
+  if (staffToDeactivate.length > 0) {
+    const { error: deactivateError } = await supabase
+      .from('users')
+      .update({ is_active: false })
+      .in('id', staffToDeactivate)
+      .eq('tenant_id', tenantId)
+    if (deactivateError) {
+      console.error('⚠️ Failed to deactivate staff after subscription update:', deactivateError.message)
+    } else {
+      console.log(`🔒 Deactivated ${staffToDeactivate.length} staff for tenant ${tenantId}`)
+    }
+  }
 
   console.log(`✅ Subscription updated for tenant ${tenantId}: plan=${desiredPlan}, seats=+${desiredSeats}`)
 

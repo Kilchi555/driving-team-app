@@ -7,6 +7,15 @@
       <p class="text-sm text-gray-500 mt-0.5">Dein Simy-Plan, Add-ons und Rechnungen</p>
     </div>
 
+    <div v-if="showUpdatedBanner"
+      class="rounded-2xl border border-green-200 bg-green-50 px-5 py-3 flex items-start justify-between gap-3">
+      <div class="text-sm text-green-800">
+        <p class="font-semibold">Abonnement aktualisiert</p>
+        <p class="text-green-700 mt-0.5">Anteilsmässige Verrechnung erscheint auf der nächsten Rechnung — nicht der volle Monatsbetrag erneut.</p>
+      </div>
+      <button type="button" class="text-green-600 hover:text-green-800 text-lg leading-none" @click="showUpdatedBanner = false" aria-label="Schliessen">×</button>
+    </div>
+
     <!-- Loading -->
     <div v-if="loading" class="space-y-4">
       <div v-for="i in 3" :key="i" class="h-28 rounded-2xl bg-gray-100 animate-pulse" />
@@ -236,6 +245,15 @@ const actionLoading = ref(false)
 const portalLoading = ref(false)
 const error = ref<string | null>(null)
 const showCancelDialog = ref(false)
+const route = useRoute()
+const showUpdatedBanner = ref(route.query.updated === '1')
+
+if (import.meta.client && showUpdatedBanner.value) {
+  // Clean the query param without a full navigation
+  const url = new URL(window.location.href)
+  url.searchParams.delete('updated')
+  window.history.replaceState({}, '', url.pathname + url.search)
+}
 
 interface BillingStatus {
   plan: string
