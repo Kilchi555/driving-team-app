@@ -21,13 +21,13 @@ import { defineEventHandler, createError, getQuery } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { validateUUID } from '~/server/utils/validators'
-import { getAuthToken } from '~/server/utils/auth-helper'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
-    // 1. AUTHENTICATION - Supports Bearer header AND HTTP-Only cookies
-    const token = getAuthToken(event)
-    if (!token) {
+    // 1. AUTHENTICATION - Bearer header with HTTP-only-cookie fallback + refresh
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       logger.warn('❌ No auth token provided')
       throw createError({
         statusCode: 401,
@@ -36,16 +36,6 @@ export default defineEventHandler(async (event) => {
     }
     // Create Supabase admin client
     const supabaseAdmin = getSupabaseAdmin()
-
-    // Get current user using the auth token
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-    if (authError || !user) {
-      logger.warn('❌ Invalid auth token')
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid authentication'
-      })
-    }
 
     // Get query parameter
     const studentId = getQuery(event).studentId as string
