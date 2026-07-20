@@ -2,12 +2,13 @@
  * Parse ICS VEVENTs into busy intervals, expanding RRULE recurrence into concrete
  * occurrences within a time window. Shared by cron + manual external-calendar sync.
  */
-import { createRequire } from 'node:module'
-
-// rrule ships dual CJS/ESM; named ESM imports are unreliable under Nitro/tsx.
-const require = createRequire(import.meta.url)
-const RRuleLib = require('rrule') as typeof import('rrule')
-const { RRule, RRuleSet } = RRuleLib
+// rrule ships a UMD bundle; named ESM imports are unreliable across bundlers.
+// A default import lets Rollup/Nitro inline the module statically (unlike
+// createRequire(), whose dynamic require() call couldn't be traced into the
+// Vercel serverless function bundle, crashing the whole app at runtime with
+// "Cannot find module 'rrule'").
+import RRuleLib from 'rrule'
+const { RRule, RRuleSet } = RRuleLib as unknown as typeof import('rrule')
 
 export interface IcsBusyEvent {
   uid?: string
