@@ -15,14 +15,29 @@
 
 import { H3Event } from 'h3'
 
-const IP_REGEX = /^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-f:]+$/i
-
 function sanitizeIP(raw: string | null | undefined): string | null {
   if (!raw) return null
-  const candidate = raw.trim()
-  // Strip port suffix if present (e.g. "1.2.3.4:1234" or "[::1]:1234")
-  const withoutPort = candidate.replace(/:\d+$/, '').replace(/^\[/, '').replace(/\]$/, '')
-  return IP_REGEX.test(withoutPort) ? withoutPort : null
+  let candidate = raw.trim()
+
+  // Bracketed IPv6, optionally with a port: "[::1]:1234" or "[::1]"
+  const bracketMatch = candidate.match(/^\[([0-9a-f:.]+)\](?::\d+)?$/i)
+  if (bracketMatch) {
+    candidate = bracketMatch[1]
+  } else {
+    const parts = candidate.split(':')
+    // Only a bare "host:port" (IPv4-with-port, or a hostname) has exactly one
+    // colon. A bare (unbracketed) IPv6 address always has 2+ colons — never
+    // strip a trailing ":123" from those, since a numeric last hextet (e.g.
+    // "::1" or "2001:db8::1") would otherwise be mistaken for a port and
+    // stripped down to a bare ":" or truncated address.
+    if (parts.length === 2 && /^\d+$/.test(parts[1])) {
+      candidate = parts[0]
+    }
+  }
+
+  const isIPv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(candidate)
+  const isIPv6 = candidate.includes(':') && candidate !== ':' && candidate !== '::' && /^[0-9a-f:.]+$/i.test(candidate)
+  return (isIPv4 || isIPv6) ? candidate : null
 }
 
 export function getClientIP(event: H3Event): string {
