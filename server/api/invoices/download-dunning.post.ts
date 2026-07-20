@@ -6,18 +6,24 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getStageDef, daysOverdue } from '~/server/utils/invoice-dunning'
+import { generateDunningPdf, dunningPdfFilename, extractDunningLetterText } from '~/server/utils/dunning-pdf'
 
-function htmlToPlainText(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
+async function loadTenantLogo(logoDataUrl: string | null | undefined): Promise<string | null> {
+  if (!logoDataUrl) return null
+  if (logoDataUrl.startsWith('data:image/')) {
+    const match = logoDataUrl.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/)
+    return match?.[2] || null
+  }
+  if (logoDataUrl.startsWith('http')) {
+    try {
+      const logoRes = await fetch(logoDataUrl)
+      if (!logoRes.ok) return null
+      return Buffer.from(await logoRes.arrayBuffer()).toString('base64')
+    } catch {
+      return null
+    }
+  }
+  return null
 }
 
 export default defineEventHandler(async (event) => {
@@ -69,7 +75,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, legal_company_name, contact_email, primary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city')
+    .select('name, legal_company_name, contact_email, primary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, logo_wide_url')
     .eq('id', profile.tenant_id)
     .single()
 
@@ -80,7 +86,6 @@ export default defineEventHandler(async (event) => {
   const interest = log.interest_rappen || 0
   const totalDue = outstanding + fee + interest
 
-  // QR neu erzeugen (best effort) für aktuellen Gesamtbetrag
   let qrCodeDataUrl: string | null = null
   let scorRef: string | null = null
   if (tenant?.qr_iban) {
@@ -109,12 +114,13 @@ export default defineEventHandler(async (event) => {
     } catch { /* QR optional */ }
   }
 
-  const bodyText = (log as any).body_text
-    || htmlToPlainText(log.body_html || '')
+  const bodyText = extractDunningLetterText((log as any).body_text, log.body_html)
     || `${stageDef.label} zur Rechnung ${invoice.invoice_number}.`
 
   const customerName = invoice.billing_contact_person ||
     `${invoice.customer_first_name || ''} ${invoice.customer_last_name || ''}`.trim() || 'Kunde'
+
+  const tenantLogoBase64 = await loadTenantLogo((tenant as any)?.logo_wide_url)
 
   const pdfBuffer = await generateDunningPdf({
     stage: log.stage,
@@ -134,11 +140,13 @@ export default defineEventHandler(async (event) => {
     tenantZip: tenant?.invoice_zip || undefined,
     tenantCity: tenant?.invoice_city || undefined,
     tenantEmail: tenant?.contact_email || undefined,
+    tenantLogoBase64,
     customerName,
     billingCompanyName: invoice.billing_company_name || undefined,
     billingStreet: [invoice.billing_street, invoice.billing_street_number].filter(Boolean).join(' ').trim() || undefined,
     billingZip: invoice.billing_zip || undefined,
     billingCity: invoice.billing_city || undefined,
+    billingEmail: invoice.billing_email || invoice.customer_email || undefined,
     qrCodeDataUrl,
     qrIban: tenant?.qr_iban || null,
     scorRef,

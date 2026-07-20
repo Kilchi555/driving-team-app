@@ -10,131 +10,177 @@
                 flex flex-col overflow-hidden">
 
       <!-- ── Sticky Header ── -->
-      <div class="flex-none sticky top-0 z-10 bg-white border-b border-gray-200">
+      <div class="flex-none sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-gray-100">
         <!-- Mobile drag handle -->
         <div class="flex justify-center pt-3 pb-1 sm:hidden">
           <div class="w-10 h-1 bg-gray-300 rounded-full"/>
         </div>
 
-        <div class="flex items-center justify-between px-4 py-3 gap-2">
-          <h3 class="text-base font-semibold text-gray-900 truncate">
-            <span class="hidden sm:inline">{{ isEditing ? 'Rechnung bearbeiten' : 'Rechnungsdetails' }}</span>
-            <span class="sm:hidden">{{ invoice?.invoice_number || (isEditing ? 'Bearbeiten' : 'Details') }}</span>
-          </h3>
+        <div class="flex items-center justify-between gap-3 px-4 py-3">
+          <!-- Title block -->
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 min-w-0">
+              <h3 class="text-base font-semibold text-gray-900 truncate">
+                {{ isEditing ? 'Bearbeiten' : (invoice?.invoice_number || 'Rechnung') }}
+              </h3>
+              <span
+                v-if="!isEditing && invoice && effectiveDunningLevel > 0"
+                class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold flex-shrink-0"
+                :style="dunningLevelBadgeStyle"
+              >{{ dunningLevelLabel }}</span>
+              <InvoiceStatusBadge
+                v-else-if="!isEditing && invoice && effectiveDunningLevel === 0"
+                class="hidden sm:inline-flex flex-shrink-0"
+                :status="invoice.status"
+              />
+            </div>
+            <p v-if="!isEditing && invoice" class="text-xs text-gray-400 truncate mt-0.5">
+              {{ displayCustomer.name || '—' }}
+              <span v-if="invoice.total_amount_rappen != null"> · {{ formatCurrency(invoice.total_amount_rappen) }}</span>
+            </p>
+          </div>
 
-          <div class="flex items-center gap-1.5 flex-shrink-0">
-            <!-- View mode buttons -->
+          <!-- Actions -->
+          <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
             <template v-if="!isEditing">
-              <!-- PDF Download: Rechnung und ggf. Mahnung -->
-              <div class="relative inline-flex">
+              <!-- PDF dropdown -->
+              <div class="relative" ref="pdfMenuRef">
                 <button
-                  :disabled="isDownloadingPdf"
-                  class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50"
-                  :class="effectiveDunningLevel > 0 ? 'rounded-r-none border-r-0' : ''"
-                  @click="downloadPdf"
-                  title="Rechnungs-PDF"
+                  type="button"
+                  :disabled="isDownloadingPdf || isDownloadingDunningPdf"
+                  class="inline-flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 disabled:opacity-50 transition-colors"
+                  @click="togglePdfMenu"
+                  aria-haspopup="menu"
+                  :aria-expanded="showPdfMenu"
                 >
-                  <svg class="w-4 h-4 flex-shrink-0" :class="{ 'animate-spin': isDownloadingPdf }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path v-if="!isDownloadingPdf" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2zM12 3v6h6M9 13h6m-6 4h4" />
+                  <svg class="w-4 h-4 text-gray-500" :class="{ 'animate-spin': isDownloadingPdf || isDownloadingDunningPdf }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path v-if="!(isDownloadingPdf || isDownloadingDunningPdf)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2zM12 3v6h6" />
                     <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  <span class="hidden sm:inline">{{ effectiveDunningLevel > 0 ? 'Rechnung' : 'PDF' }}</span>
+                  <span class="hidden sm:inline">PDF</span>
+                  <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
-                <button
-                  v-if="effectiveDunningLevel > 0"
-                  :disabled="isDownloadingDunningPdf"
-                  class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-amber-300 rounded-lg rounded-l-none text-sm font-medium text-amber-800 bg-amber-50 hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
-                  @click="downloadDunningPdf()"
-                  :title="`${dunningLevelLabel}-PDF`"
+                <div
+                  v-if="showPdfMenu"
+                  class="absolute right-0 mt-1.5 w-56 rounded-xl border border-gray-100 bg-white shadow-xl shadow-gray-200/80 ring-1 ring-black/5 overflow-hidden z-30"
+                  role="menu"
                 >
-                  <svg class="w-4 h-4 flex-shrink-0" :class="{ 'animate-spin': isDownloadingDunningPdf }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path v-if="!isDownloadingDunningPdf" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zM12 15.75h.007v.008H12v-.008z" />
-                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  <span class="hidden sm:inline">{{ dunningLevelLabel }}</span>
-                </button>
+                  <button
+                    type="button"
+                    class="w-full flex items-start gap-3 px-3.5 py-2.5 text-left hover:bg-gray-50 transition-colors"
+                    role="menuitem"
+                    @click="onPdfMenuAction('invoice')"
+                  >
+                    <span class="mt-0.5 w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    </span>
+                    <span>
+                      <span class="block text-sm font-medium text-gray-900">Rechnung</span>
+                      <span class="block text-xs text-gray-400">Original-PDF herunterladen</span>
+                    </span>
+                  </button>
+                  <button
+                    v-if="effectiveDunningLevel > 0"
+                    type="button"
+                    class="w-full flex items-start gap-3 px-3.5 py-2.5 text-left hover:bg-amber-50/80 transition-colors border-t border-gray-50"
+                    role="menuitem"
+                    @click="onPdfMenuAction('dunning')"
+                  >
+                    <span class="mt-0.5 w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                      <svg class="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zM12 15.75h.007v.008H12v-.008z"/></svg>
+                    </span>
+                    <span>
+                      <span class="block text-sm font-medium text-gray-900">{{ dunningLevelLabel }}</span>
+                      <span class="block text-xs text-gray-400">Mahnschreiben-PDF</span>
+                    </span>
+                  </button>
+                </div>
               </div>
-              <!-- Edit – icon only on mobile -->
+
+              <!-- Primary CTA -->
               <button
-                class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                @click="startEditing"
-              >
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                <span class="hidden sm:inline">Bearbeiten</span>
-              </button>
-              <!-- Send -->
-              <button
-                class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                @click="emit('send', invoice?.id || '')"
-              >
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <span class="hidden sm:inline">Versenden</span>
-              </button>
-              <!-- Mark paid → opens dialog -->
-              <button
-                class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-transparent rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                type="button"
+                class="inline-flex items-center gap-1.5 h-9 px-3 sm:px-3.5 rounded-xl text-sm font-semibold text-white bg-emerald-600 shadow-sm shadow-emerald-600/25 hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-1 transition-colors"
                 @click="openMarkPaidDialog"
               >
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span class="hidden sm:inline">Zahlung erfassen</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="hidden sm:inline">Zahlung</span>
               </button>
-              <!-- Mahnung senden -->
-              <button
-                v-if="canSendDunning"
-                class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-transparent rounded-lg text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                @click="showDunningDialog = true"
-                title="Zahlungserinnerung / Mahnung senden"
-              >
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zM12 15.75h.007v.008H12v-.008z" />
-                </svg>
-                <span class="hidden sm:inline">Mahnung</span>
-              </button>
-              <!-- Cancel invoice -->
-              <button
-                class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-transparent rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                @click="emit('cancel', invoice?.id || '')"
-              >
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                <span class="hidden sm:inline">Stornieren</span>
-              </button>
+
+              <!-- Aktionen dropdown -->
+              <div class="relative" ref="actionsMenuRef">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 transition-colors"
+                  @click="toggleActionsMenu"
+                  aria-haspopup="menu"
+                  :aria-expanded="showActionsMenu"
+                >
+                  <span class="hidden sm:inline">Aktionen</span>
+                  <svg class="sm:hidden w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
+                  <svg class="hidden sm:block w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div
+                  v-if="showActionsMenu"
+                  class="absolute right-0 mt-1.5 w-60 rounded-xl border border-gray-100 bg-white shadow-xl shadow-gray-200/80 ring-1 ring-black/5 overflow-hidden z-30 py-1"
+                  role="menu"
+                >
+                  <button type="button" class="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50" role="menuitem" @click="onAction('edit')">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    Bearbeiten
+                  </button>
+                  <button type="button" class="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50" role="menuitem" @click="onAction('send')">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    Rechnung versenden
+                  </button>
+                  <button
+                    v-if="canSendDunning"
+                    type="button"
+                    class="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm text-gray-700 hover:bg-amber-50"
+                    role="menuitem"
+                    @click="onAction('dunning')"
+                  >
+                    <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zM12 15.75h.007v.008H12v-.008z"/></svg>
+                    {{ effectiveDunningLevel > 0 ? 'Nächste Mahnung senden' : 'Zahlungserinnerung senden' }}
+                  </button>
+                  <div class="my-1 border-t border-gray-100"></div>
+                  <button type="button" class="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm text-red-600 hover:bg-red-50" role="menuitem" @click="onAction('cancel')">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    Stornieren
+                  </button>
+                </div>
+              </div>
             </template>
 
-            <!-- Edit mode buttons -->
             <template v-else>
               <button
+                type="button"
                 :disabled="isSaving"
-                class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-transparent rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+                class="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-semibold text-white bg-emerald-600 shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                 @click="saveChanges"
               >
                 <svg v-if="isSaving" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                 </svg>
-                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-                {{ isSaving ? 'Speichern...' : 'Speichern' }}
+                {{ isSaving ? 'Speichern…' : 'Speichern' }}
               </button>
               <button
+                type="button"
                 :disabled="isSaving"
-                class="inline-flex items-center px-2.5 py-2 sm:px-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50"
+                class="inline-flex items-center h-9 px-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors"
                 @click="cancelEditing"
               >
                 Abbrechen
               </button>
             </template>
 
-            <!-- Close -->
-            <button class="p-1.5 text-gray-400 hover:text-gray-600 focus:outline-none ml-1" @click="closeModal">
+            <button
+              type="button"
+              class="inline-flex items-center justify-center w-9 h-9 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 transition-colors"
+              @click="closeModal"
+              aria-label="Schliessen"
+            >
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -154,194 +200,170 @@
 
           <template v-else>
 
-            <!-- ── Info Grid: 3 cards on desktop, stacked on mobile ── -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-              <!-- Rechnungsinformationen -->
-              <div class="bg-gray-50 rounded-xl p-4 space-y-2">
-                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Rechnungsinformationen</h4>
-                <dl class="space-y-1.5">
-                  <div class="flex items-center justify-between gap-2">
-                    <dt class="text-sm text-gray-500 flex-shrink-0">Nummer</dt>
-                    <dd class="text-sm font-medium text-gray-900 text-right">{{ invoice.invoice_number }}</dd>
-                  </div>
-                  <div class="flex items-center justify-between gap-2">
-                    <dt class="text-sm text-gray-500 flex-shrink-0">Status</dt>
-                    <dd class="flex flex-wrap items-center justify-end gap-1">
-                      <InvoiceStatusBadge :status="invoice.status" />
-                      <span
-                        v-if="effectiveDunningLevel > 0"
-                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                        :style="dunningLevelBadgeStyle"
-                      >
-                        {{ dunningLevelLabel }}
-                      </span>
-                    </dd>
-                  </div>
-                  <div class="flex items-center justify-between gap-2">
-                    <dt class="text-sm text-gray-500 flex-shrink-0">Zahlung</dt>
-                    <dd><PaymentStatusBadge :status="invoice.payment_status" /></dd>
-                  </div>
-                  <template v-if="invoice.paid_amount_rappen">
-                    <div class="flex items-center justify-between gap-2">
-                      <dt class="text-sm text-gray-500 flex-shrink-0">Bezahlt</dt>
-                      <dd class="text-sm font-semibold text-green-600">{{ formatCurrency(invoice.paid_amount_rappen) }}</dd>
-                    </div>
-                    <div v-if="invoice.paid_amount_rappen < invoice.total_amount_rappen" class="flex items-center justify-between gap-2">
-                      <dt class="text-sm text-gray-500 flex-shrink-0">Ausstehend</dt>
-                      <dd class="text-sm font-semibold text-amber-600">{{ formatCurrency(invoice.total_amount_rappen - invoice.paid_amount_rappen) }}</dd>
-                    </div>
-                    <div v-if="invoice.paid_amount_rappen < invoice.total_amount_rappen" class="col-span-2 mt-1">
-                      <div class="w-full bg-gray-200 rounded-full h-1.5">
-                        <div class="bg-green-500 h-1.5 rounded-full" :style="{ width: Math.min(100, (invoice.paid_amount_rappen / invoice.total_amount_rappen) * 100) + '%' }"></div>
-                      </div>
-                    </div>
-                    <div v-if="invoice.paid_at" class="flex items-center justify-between gap-2">
-                      <dt class="text-sm text-gray-500 flex-shrink-0">Bezahlt am</dt>
-                      <dd class="text-sm text-gray-900">{{ formatDate(invoice.paid_at) }}</dd>
-                    </div>
-                  </template>
-                  <div class="flex items-center justify-between gap-2">
-                    <dt class="text-sm text-gray-500 flex-shrink-0">Erstellt</dt>
-                    <dd class="text-sm text-gray-900">{{ formatDate(invoice.created_at) }}</dd>
-                  </div>
-                  <div class="flex items-center justify-between gap-2">
-                    <dt class="text-sm text-gray-500 flex-shrink-0">Fällig</dt>
-                    <dd class="text-sm font-medium text-right">
-                      <input
-                        v-if="isEditing"
-                        v-model="safeEditedInvoice.due_date"
-                        type="date"
-                        class="px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                      <template v-else-if="invoice.due_date">
-                        <span :class="isOverdue(effectiveDueDate) ? 'text-red-600' : 'text-gray-900'">
-                          {{ formatDate(effectiveDueDate) }}
-                        </span>
-                        <p v-if="invoice.dunning_due_date && effectiveDunningLevel > 0" class="text-xs text-blue-600 mt-0.5">
-                          Neues Zahlungsziel (Original: {{ formatDate(invoice.due_date) }})
-                        </p>
-                      </template>
-                      <span v-else class="text-gray-400">—</span>
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-
-              <!-- Kundeninformationen -->
-              <div class="bg-gray-50 rounded-xl p-4 space-y-2">
-                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Kundeninformationen</h4>
-                <dl class="space-y-1.5">
-                  <div class="flex items-center justify-between gap-2">
-                    <dt class="text-sm text-gray-500 flex-shrink-0">Name</dt>
-                    <dd class="text-sm font-medium text-gray-900 text-right">{{ displayCustomer.name || '—' }}</dd>
-                  </div>
-                  <div class="flex items-start justify-between gap-2">
-                    <dt class="text-sm text-gray-500 flex-shrink-0">E-Mail</dt>
-                    <dd class="text-sm text-gray-900 text-right break-all">{{ displayCustomer.email || '—' }}</dd>
-                  </div>
-                  <div class="flex items-center justify-between gap-2">
-                    <dt class="text-sm text-gray-500 flex-shrink-0">Telefon</dt>
-                    <dd class="text-sm text-gray-900">{{ displayCustomer.phone || '—' }}</dd>
-                  </div>
-                  <div class="flex items-center justify-between gap-2">
-                    <dt class="text-sm text-gray-500 flex-shrink-0">Adresse</dt>
-                    <dd class="text-sm text-gray-900 text-right">
-                      <template v-if="displayCustomer.addressLine1 || displayCustomer.addressLine2">
-                        <span v-if="displayCustomer.addressLine1">{{ displayCustomer.addressLine1 }}</span>
-                        <br v-if="displayCustomer.addressLine1 && displayCustomer.addressLine2">
-                        <span v-if="displayCustomer.addressLine2">{{ displayCustomer.addressLine2 }}</span>
-                      </template>
-                      <template v-else>—</template>
-                    </dd>
-                  </div>
-                </dl>
-
-                <!-- Versandhistorie: Erstellung, Rechnungsversand, Mahnungen -->
-                <div class="pt-2 mt-2 border-t border-gray-200 space-y-1.5">
-                  <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Versandhistorie</p>
-                  <div class="space-y-1">
-                    <div class="flex items-center gap-2 text-xs text-gray-500">
-                      <span class="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0"></span>
-                      <span>Erstellt</span>
-                      <span class="ml-auto text-gray-700">{{ formatDate(invoice.created_at) }}</span>
-                    </div>
-                    <div v-if="(invoice as any).sent_at" class="flex items-center gap-2 text-xs text-gray-500">
-                      <span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
-                      <span>Rechnung versendet</span>
-                      <span class="ml-auto text-gray-700">{{ formatDateTime((invoice as any).sent_at) }}</span>
-                    </div>
-                    <div v-else class="flex items-center gap-2 text-xs text-gray-400 italic">
-                      <span class="w-1.5 h-1.5 rounded-full bg-gray-200 flex-shrink-0"></span>
-                      <span>Rechnung noch nicht versendet</span>
-                    </div>
-                    <div
-                      v-for="entry in shippingDunningEntries"
-                      :key="entry.id"
-                      class="flex items-center gap-2 text-xs text-gray-500"
-                    >
-                      <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" :style="{ background: DUNNING_STAGE_COLORS[entry.stage] || '#6b7280' }"></span>
-                      <span class="truncate">{{ dunningStageLabel(entry.stage) }}</span>
-                      <button
-                        v-if="entry.id !== 'fallback-dunning'"
-                        class="text-amber-700 hover:underline font-medium"
-                        :disabled="isDownloadingDunningPdf"
-                        @click="downloadDunningPdf(entry.id)"
-                      >PDF</button>
-                      <span class="ml-auto text-gray-700 whitespace-nowrap">{{ formatDateTime(entry.sent_at) }}</span>
-                    </div>
-                  </div>
+            <!-- ── Betragsübersicht ── -->
+            <div class="rounded-2xl border border-gray-100 bg-gradient-to-br from-gray-50 to-white p-4 sm:p-5">
+              <div class="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p class="text-xs font-medium text-gray-400 uppercase tracking-wide">Rechnungsbetrag</p>
+                  <p class="text-2xl font-semibold text-gray-900 tracking-tight mt-0.5">{{ formatCurrency(invoice.total_amount_rappen) }}</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    v-if="effectiveDunningLevel > 0"
+                    class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                    :style="dunningLevelBadgeStyle"
+                  >{{ dunningLevelLabel }}</span>
+                  <InvoiceStatusBadge v-else :status="invoice.status" />
+                  <PaymentStatusBadge :status="invoice.payment_status" />
                 </div>
               </div>
 
-              <!-- Rechnungsadresse -->
-              <div class="bg-gray-50 rounded-xl p-4 space-y-3 sm:col-span-2 lg:col-span-1">
-                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Rechnungsadresse</h4>
-                <div class="grid grid-cols-1 gap-3">
+              <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="rounded-xl bg-white/80 border border-gray-100 px-3 py-2.5">
+                  <p class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Bezahlt</p>
+                  <p class="text-sm font-semibold text-emerald-600 mt-0.5">{{ formatCurrency(invoice.paid_amount_rappen || 0) }}</p>
+                </div>
+                <div class="rounded-xl bg-white/80 border border-gray-100 px-3 py-2.5">
+                  <p class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Offen</p>
+                  <p class="text-sm font-semibold mt-0.5" :class="outstandingAmountRappen > 0 ? 'text-amber-600' : 'text-gray-900'">
+                    {{ formatCurrency(outstandingAmountRappen) }}
+                  </p>
+                </div>
+                <div class="rounded-xl bg-white/80 border border-gray-100 px-3 py-2.5">
+                  <p class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Erstellt</p>
+                  <p class="text-sm font-medium text-gray-900 mt-0.5">{{ formatDate(invoice.created_at) }}</p>
+                </div>
+                <div class="rounded-xl bg-white/80 border border-gray-100 px-3 py-2.5">
+                  <p class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Fällig</p>
+                  <template v-if="isEditing">
+                    <input
+                      v-model="safeEditedInvoice.due_date"
+                      type="date"
+                      class="mt-0.5 w-full px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                  </template>
+                  <template v-else>
+                    <p class="text-sm font-medium mt-0.5" :class="isOverdue(effectiveDueDate) ? 'text-red-600' : 'text-gray-900'">
+                      {{ invoice.due_date || invoice.dunning_due_date ? formatDate(effectiveDueDate) : '—' }}
+                    </p>
+                    <p v-if="invoice.dunning_due_date && effectiveDunningLevel > 0 && invoice.due_date !== invoice.dunning_due_date" class="text-[11px] text-blue-600 mt-0.5">
+                      Original {{ formatDate(invoice.due_date) }}
+                    </p>
+                  </template>
+                </div>
+              </div>
 
-                  <!-- E-Mail -->
+              <div v-if="(invoice.paid_amount_rappen || 0) > 0 && invoice.total_amount_rappen > 0" class="mt-4">
+                <div class="flex items-center justify-between text-[11px] text-gray-400 mb-1.5">
+                  <span>Zahlungsfortschritt</span>
+                  <span>{{ Math.min(100, Math.round(((invoice.paid_amount_rappen || 0) / invoice.total_amount_rappen) * 100)) }}%</span>
+                </div>
+                <div class="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+                  <div
+                    class="h-full rounded-full bg-emerald-500 transition-all"
+                    :style="{ width: Math.min(100, ((invoice.paid_amount_rappen || 0) / invoice.total_amount_rappen) * 100) + '%' }"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Kunde & Adresse ── -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <!-- Kunde -->
+              <section class="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
+                <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Kunde</h4>
+                <p class="text-base font-semibold text-gray-900">{{ displayCustomer.name || '—' }}</p>
+                <div class="mt-3 space-y-2 text-sm">
+                  <a
+                    v-if="displayCustomer.email"
+                    :href="`mailto:${displayCustomer.email}`"
+                    class="flex items-start gap-2.5 text-gray-700 hover:text-blue-600 transition-colors min-w-0"
+                  >
+                    <svg class="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    <span class="break-all leading-snug">{{ displayCustomer.email }}</span>
+                  </a>
+                  <p v-else class="flex items-center gap-2.5 text-gray-400">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    Keine E-Mail
+                  </p>
+                  <a
+                    v-if="displayCustomer.phone"
+                    :href="`tel:${displayCustomer.phone}`"
+                    class="flex items-center gap-2.5 text-gray-700 hover:text-blue-600 transition-colors"
+                  >
+                    <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                    {{ displayCustomer.phone }}
+                  </a>
+                  <div v-if="displayCustomer.addressLine1 || displayCustomer.addressLine2" class="flex items-start gap-2.5 text-gray-700">
+                    <svg class="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <span class="leading-snug">
+                      <span v-if="displayCustomer.addressLine1">{{ displayCustomer.addressLine1 }}</span>
+                      <br v-if="displayCustomer.addressLine1 && displayCustomer.addressLine2">
+                      <span v-if="displayCustomer.addressLine2">{{ displayCustomer.addressLine2 }}</span>
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Rechnungsadresse -->
+              <section class="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
+                <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Rechnungsadresse</h4>
+
+                <template v-if="!isEditing">
+                  <p class="text-sm font-semibold text-gray-900">{{ invoice.billing_company_name || displayCustomer.name || '—' }}</p>
+                  <p v-if="invoice.billing_contact_person" class="text-sm text-gray-500 mt-0.5">{{ invoice.billing_contact_person }}</p>
+                  <div class="mt-3 text-sm text-gray-700 leading-relaxed space-y-0.5">
+                    <p v-if="invoice.billing_street || invoice.billing_street_number">
+                      {{ [invoice.billing_street, invoice.billing_street_number].filter(Boolean).join(' ') }}
+                    </p>
+                    <p v-if="invoice.billing_zip || invoice.billing_city">
+                      {{ [invoice.billing_zip, invoice.billing_city].filter(Boolean).join(' ') }}
+                    </p>
+                    <p v-if="invoice.billing_country" class="text-gray-500">{{ invoice.billing_country }}</p>
+                    <p v-if="!invoice.billing_street && !invoice.billing_zip && !invoice.billing_city" class="text-gray-400">Keine Adresse hinterlegt</p>
+                  </div>
+                  <a
+                    v-if="invoice.billing_email || invoice.customer_email"
+                    :href="`mailto:${invoice.billing_email || invoice.customer_email}`"
+                    class="mt-3 inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 break-all"
+                  >
+                    {{ invoice.billing_email || invoice.customer_email }}
+                  </a>
+                </template>
+
+                <div v-else class="grid grid-cols-1 gap-3">
                   <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1">Rechnungs-E-Mail</label>
                     <input
-                      v-if="isEditing"
                       v-model="safeEditedInvoice.billing_email"
                       type="email"
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       :placeholder="invoice.billing_email || invoice.customer_email || 'rechnung@firma.ch'"
                     >
-                    <span v-else class="text-sm text-gray-900">{{ invoice.billing_email || invoice.customer_email || '—' }}</span>
                   </div>
-
-                  <!-- Firma & Kontakt in 2 cols -->
                   <div class="grid grid-cols-2 gap-3">
                     <div>
                       <label class="block text-xs font-medium text-gray-500 mb-1">Firma</label>
                       <input
-                        v-if="isEditing"
                         v-model="safeEditedInvoice.billing_company_name"
                         type="text"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         :placeholder="invoice.billing_company_name || 'Firmenname'"
                       >
-                      <span v-else class="text-sm text-gray-900">{{ invoice.billing_company_name || '—' }}</span>
                     </div>
                     <div>
                       <label class="block text-xs font-medium text-gray-500 mb-1">Kontaktperson</label>
                       <input
-                        v-if="isEditing"
                         v-model="safeEditedInvoice.billing_contact_person"
                         type="text"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         :placeholder="invoice.billing_contact_person || 'Kontaktperson'"
                       >
-                      <span v-else class="text-sm text-gray-900">{{ invoice.billing_contact_person || '—' }}</span>
                     </div>
                   </div>
-
-                  <!-- Strasse & Nr -->
                   <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1">Strasse, Nr.</label>
-                    <div v-if="isEditing" class="flex gap-2 min-w-0">
+                    <div class="flex gap-2 min-w-0">
                       <input
                         v-model="safeEditedInvoice.billing_street"
                         type="text"
@@ -352,63 +374,161 @@
                         v-model="safeEditedInvoice.billing_street_number"
                         type="text"
                         class="w-16 shrink-0 px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        :placeholder="'Nr.'"
+                        placeholder="Nr."
                       >
                     </div>
-                    <span v-else class="text-sm text-gray-900">{{ invoice.billing_street || '' }} {{ invoice.billing_street_number || '' || '—' }}</span>
                   </div>
-
-                  <!-- PLZ / Ort / Land -->
                   <div class="grid grid-cols-3 gap-2">
                     <div>
                       <label class="block text-xs font-medium text-gray-500 mb-1">PLZ</label>
                       <input
-                        v-if="isEditing"
                         v-model="safeEditedInvoice.billing_zip"
                         type="text"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         :placeholder="invoice.billing_zip || 'PLZ'"
                       >
-                      <span v-else class="text-sm text-gray-900">{{ invoice.billing_zip || '—' }}</span>
                     </div>
                     <div>
                       <label class="block text-xs font-medium text-gray-500 mb-1">Ort</label>
                       <input
-                        v-if="isEditing"
                         v-model="safeEditedInvoice.billing_city"
                         type="text"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         :placeholder="invoice.billing_city || 'Ort'"
                       >
-                      <span v-else class="text-sm text-gray-900">{{ invoice.billing_city || '—' }}</span>
                     </div>
                     <div>
                       <label class="block text-xs font-medium text-gray-500 mb-1">Land</label>
                       <input
-                        v-if="isEditing"
                         v-model="safeEditedInvoice.billing_country"
                         type="text"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         :placeholder="invoice.billing_country || 'Land'"
                       >
-                      <span v-else class="text-sm text-gray-900">{{ invoice.billing_country || '—' }}</span>
                     </div>
                   </div>
                 </div>
-              </div>
+              </section>
             </div>
 
+            <!-- ── Verlauf (Versand + Mahnungen) ── -->
+            <section class="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
+              <div class="flex items-start justify-between gap-3 mb-4">
+                <div>
+                  <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Verlauf</h4>
+                  <p class="text-sm text-gray-500 mt-0.5">Versand &amp; Mahnwesen</p>
+                </div>
+                <button
+                  v-if="canSendDunning || effectiveDunningLevel > 0"
+                  type="button"
+                  class="text-xs font-medium text-gray-500 hover:text-gray-800 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0"
+                  @click="toggleDunningPause"
+                >
+                  {{ dunningPaused ? 'Reaktivieren' : 'Pausieren' }}
+                </button>
+              </div>
+
+              <ol class="relative space-y-0">
+                <!-- Erstellt -->
+                <li class="relative flex gap-3 pb-5">
+                  <div class="flex flex-col items-center">
+                    <span class="w-2.5 h-2.5 rounded-full bg-gray-300 ring-4 ring-white flex-shrink-0 mt-1.5" />
+                    <span class="w-px flex-1 bg-gray-100 mt-1" />
+                  </div>
+                  <div class="min-w-0 flex-1 pt-0.5">
+                    <div class="flex items-baseline justify-between gap-2">
+                      <p class="text-sm font-medium text-gray-900">Erstellt</p>
+                      <time class="text-xs text-gray-400 whitespace-nowrap">{{ formatDate(invoice.created_at) }}</time>
+                    </div>
+                  </div>
+                </li>
+
+                <!-- Rechnung versendet -->
+                <li class="relative flex gap-3" :class="shippingDunningEntries.length || dunningLog.length ? 'pb-5' : ''">
+                  <div class="flex flex-col items-center">
+                    <span
+                      class="w-2.5 h-2.5 rounded-full ring-4 ring-white flex-shrink-0 mt-1.5"
+                      :class="(invoice as any).sent_at ? 'bg-blue-500' : 'bg-gray-200'"
+                    />
+                    <span v-if="shippingDunningEntries.length || dunningLog.length" class="w-px flex-1 bg-gray-100 mt-1" />
+                  </div>
+                  <div class="min-w-0 flex-1 pt-0.5">
+                    <div class="flex items-baseline justify-between gap-2">
+                      <p class="text-sm font-medium" :class="(invoice as any).sent_at ? 'text-gray-900' : 'text-gray-400'">
+                        {{ (invoice as any).sent_at ? 'Rechnung versendet' : 'Noch nicht versendet' }}
+                      </p>
+                      <time v-if="(invoice as any).sent_at" class="text-xs text-gray-400 whitespace-nowrap">{{ formatDateTime((invoice as any).sent_at) }}</time>
+                    </div>
+                  </div>
+                </li>
+
+                <!-- Mahnungen -->
+                <li
+                  v-for="(entry, idx) in (dunningLog.length ? dunningLog : shippingDunningEntries)"
+                  :key="entry.id"
+                  class="relative flex gap-3"
+                  :class="idx < (dunningLog.length ? dunningLog : shippingDunningEntries).length - 1 ? 'pb-5' : ''"
+                >
+                  <div class="flex flex-col items-center">
+                    <span
+                      class="w-2.5 h-2.5 rounded-full ring-4 ring-white flex-shrink-0 mt-1.5"
+                      :style="{ background: DUNNING_STAGE_COLORS[entry.stage] || '#6b7280' }"
+                    />
+                    <span
+                      v-if="idx < (dunningLog.length ? dunningLog : shippingDunningEntries).length - 1"
+                      class="w-px flex-1 bg-gray-100 mt-1"
+                    />
+                  </div>
+                  <div class="min-w-0 flex-1 pt-0.5">
+                    <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate">{{ dunningStageLabel(entry.stage) }}</p>
+                        <span
+                          v-if="entry.status === 'sent'"
+                          class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-emerald-50 text-emerald-700"
+                        >OK</span>
+                        <span
+                          v-else-if="entry.status"
+                          class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-red-50 text-red-700"
+                        >Fehler</span>
+                      </div>
+                      <div class="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          v-if="entry.status === 'sent' && entry.id !== 'fallback-dunning'"
+                          type="button"
+                          class="text-xs font-medium text-gray-500 hover:text-gray-800 underline-offset-2 hover:underline disabled:opacity-50"
+                          :disabled="isDownloadingDunningPdf"
+                          @click="downloadDunningPdf(entry.id)"
+                        >PDF</button>
+                        <time class="text-xs text-gray-400 whitespace-nowrap">{{ formatDateTime(entry.sent_at) }}</time>
+                      </div>
+                    </div>
+                    <p v-if="entry.sent_to" class="text-xs text-gray-400 mt-0.5 truncate">an {{ entry.sent_to }}</p>
+                    <p v-if="entry.new_due_date" class="text-xs text-blue-600 mt-0.5">Neues Ziel: {{ formatDate(entry.new_due_date) }}</p>
+                    <p v-if="entry.fee_rappen > 0" class="text-xs text-gray-400 mt-0.5">+{{ formatCurrency(entry.fee_rappen) }} Gebühr</p>
+                  </div>
+                </li>
+
+                <li v-if="!shippingDunningEntries.length && !dunningLog.length && (canSendDunning || effectiveDunningLevel > 0)" class="relative flex gap-3 pt-1">
+                  <div class="flex flex-col items-center">
+                    <span class="w-2.5 h-2.5 rounded-full bg-gray-200 ring-4 ring-white flex-shrink-0 mt-1.5" />
+                  </div>
+                  <p class="text-sm text-gray-400 pt-0.5 italic">Noch keine Mahnung versendet</p>
+                </li>
+              </ol>
+            </section>
+
             <!-- ── Zahlungshistorie ── -->
-            <div v-if="invoicePaymentsHistory.length > 0" class="bg-gray-50 rounded-xl p-4">
-              <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Zahlungshistorie</h4>
+            <div v-if="invoicePaymentsHistory.length > 0" class="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
+              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Zahlungshistorie</h4>
               <div class="space-y-2">
                 <div
                   v-for="(payment, index) in invoicePaymentsHistory"
                   :key="payment.id"
-                  class="flex items-center justify-between gap-3 bg-white rounded-lg px-3 py-2.5 border border-gray-100"
+                  class="flex items-center justify-between gap-3 rounded-xl bg-gray-50 px-3 py-2.5"
                 >
                   <div class="flex items-center gap-2.5 min-w-0">
-                    <span class="w-5 h-5 rounded-full bg-green-100 text-green-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                    <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
                       {{ index + 1 }}
                     </span>
                     <div class="min-w-0">
@@ -419,64 +539,23 @@
                       </p>
                     </div>
                   </div>
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 flex-shrink-0">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 flex-shrink-0">
                     Bezahlt
                   </span>
                 </div>
-                <!-- Summe -->
-                <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 mt-1 pt-2">
+                <div class="flex items-center justify-between px-1 pt-2 border-t border-gray-100">
                   <span class="text-xs font-semibold text-gray-500">Total bezahlt</span>
-                  <span class="text-sm font-bold text-green-600">
+                  <span class="text-sm font-bold text-emerald-600">
                     {{ formatCurrency(invoicePaymentsHistory.reduce((sum, p) => sum + p.amount_rappen, 0)) }}
                   </span>
                 </div>
               </div>
             </div>
 
-            <!-- ── Mahnwesen ── -->
-            <div v-if="canSendDunning || effectiveDunningLevel > 0 || dunningLog.length > 0 || shippingDunningEntries.length > 0" class="bg-gray-50 rounded-xl p-4">
-              <div class="flex items-center justify-between mb-3">
-                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Mahnwesen</h4>
-                <div class="flex items-center gap-3">
-                  <span v-if="effectiveDunningLevel > 0" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                    :style="dunningLevelBadgeStyle">
-                    {{ dunningLevelLabel }}
-                  </span>
-                  <button v-if="canSendDunning || effectiveDunningLevel > 0" @click="toggleDunningPause" class="text-xs text-gray-500 hover:text-gray-700 underline">
-                    {{ dunningPaused ? 'Mahnwesen reaktivieren' : 'Mahnwesen pausieren' }}
-                  </button>
-                </div>
-              </div>
-
-              <div v-if="dunningLog.length === 0 && shippingDunningEntries.length === 0" class="text-sm text-gray-400 italic">Noch keine Mahnung versendet.</div>
-              <div v-else class="space-y-2">
-                <div v-for="entry in (dunningLog.length ? dunningLog : shippingDunningEntries)" :key="entry.id" class="flex items-center justify-between gap-3 bg-white rounded-lg px-3 py-2.5 border border-gray-100">
-                  <div class="min-w-0">
-                    <p class="text-sm font-medium text-gray-900">{{ dunningStageLabel(entry.stage) }}</p>
-                    <p class="text-xs text-gray-400 mt-0.5">{{ formatDateTime(entry.sent_at) }}<span v-if="entry.sent_to"> · an {{ entry.sent_to }}</span></p>
-                    <p v-if="entry.new_due_date" class="text-xs text-blue-600 mt-0.5">Zahlungsziel: {{ formatDate(entry.new_due_date) }}</p>
-                  </div>
-                  <div class="text-right flex-shrink-0 flex flex-col items-end gap-1">
-                    <span v-if="entry.status === 'sent'" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Versendet</span>
-                    <span v-else-if="entry.status" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Fehlgeschlagen</span>
-                    <p v-if="entry.fee_rappen > 0" class="text-xs text-gray-400">+{{ formatCurrency(entry.fee_rappen) }} Gebühr</p>
-                    <button
-                      v-if="entry.status === 'sent' && entry.id !== 'fallback-dunning'"
-                      class="text-xs font-medium text-amber-700 hover:text-amber-900 underline"
-                      :disabled="isDownloadingDunningPdf"
-                      @click="downloadDunningPdf(entry.id)"
-                    >
-                      PDF herunterladen
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <!-- ── Rechnungsübersicht ── -->
-            <div class="bg-gray-50 rounded-xl p-4">
+            <div class="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
               <div class="flex items-center justify-between mb-4">
-                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Rechnungsübersicht</h4>
+                <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Positionen</h4>
                 <div v-if="isLoadingDetails" class="flex items-center text-blue-600 text-xs gap-1.5">
                   <svg class="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
@@ -744,7 +823,7 @@
 
 <script setup lang="ts">
 
-import { defineProps, defineEmits, ref, watch, computed, nextTick } from 'vue'
+import { defineProps, defineEmits, ref, watch, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import InvoiceStatusBadge from './InvoiceStatusBadge.vue'
 import PaymentStatusBadge from './PaymentStatusBadge.vue'
 import DunningSendDialog from './DunningSendDialog.vue'
@@ -857,6 +936,52 @@ const props = defineProps<{
 // PDF download
 const isDownloadingPdf = ref(false)
 const isDownloadingDunningPdf = ref(false)
+const showPdfMenu = ref(false)
+const showActionsMenu = ref(false)
+const pdfMenuRef = ref<HTMLElement | null>(null)
+const actionsMenuRef = ref<HTMLElement | null>(null)
+
+const closeHeaderMenus = () => {
+  showPdfMenu.value = false
+  showActionsMenu.value = false
+}
+
+const togglePdfMenu = () => {
+  showActionsMenu.value = false
+  showPdfMenu.value = !showPdfMenu.value
+}
+
+const toggleActionsMenu = () => {
+  showPdfMenu.value = false
+  showActionsMenu.value = !showActionsMenu.value
+}
+
+const onPdfMenuAction = async (kind: 'invoice' | 'dunning') => {
+  closeHeaderMenus()
+  if (kind === 'invoice') await downloadPdf()
+  else await downloadDunningPdf()
+}
+
+const onAction = (kind: 'edit' | 'send' | 'dunning' | 'cancel') => {
+  closeHeaderMenus()
+  if (kind === 'edit') startEditing()
+  else if (kind === 'send') emit('send', props.invoice?.id || '')
+  else if (kind === 'dunning') showDunningDialog.value = true
+  else if (kind === 'cancel') emit('cancel', props.invoice?.id || '')
+}
+
+const onDocumentPointerDown = (e: Event) => {
+  const target = e.target as Node
+  if (showPdfMenu.value && pdfMenuRef.value && !pdfMenuRef.value.contains(target)) {
+    showPdfMenu.value = false
+  }
+  if (showActionsMenu.value && actionsMenuRef.value && !actionsMenuRef.value.contains(target)) {
+    showActionsMenu.value = false
+  }
+}
+
+onMounted(() => document.addEventListener('pointerdown', onDocumentPointerDown))
+onUnmounted(() => document.removeEventListener('pointerdown', onDocumentPointerDown))
 
 const downloadPdf = async () => {
   if (!props.invoice?.id || isDownloadingPdf.value) return
@@ -988,6 +1113,12 @@ const dunningStageLabel = (stage: number) => DUNNING_STAGE_LABELS[stage] || `Stu
 const effectiveDunningLevel = computed(() =>
   dunningLevel.value || props.invoice?.dunning_level || 0
 )
+
+const outstandingAmountRappen = computed(() => {
+  const inv = props.invoice
+  if (!inv) return 0
+  return Math.max(0, (inv.total_amount_rappen || 0) - (inv.paid_amount_rappen || 0))
+})
 
 const dunningLevelLabel = computed(() => dunningStageLabel(effectiveDunningLevel.value))
 const dunningLevelBadgeStyle = computed(() => {
@@ -1142,6 +1273,7 @@ const emit = defineEmits<{
 }>()
 
 const closeModal = () => {
+  closeHeaderMenus()
   emit('close')
 }
 
@@ -1251,6 +1383,7 @@ const loadDetailedData = async () => {
 // Watch für show prop um Daten zu laden
 watch(() => props.show, (newShow) => {
   if (newShow && props.invoice) {
+    closeHeaderMenus()
     customerData.value = null
     dunningLog.value = []
     dunningLevel.value = props.invoice.dunning_level || 0
@@ -1262,6 +1395,8 @@ watch(() => props.show, (newShow) => {
         startEditing()
       }, 300)
     }
+  } else if (!newShow) {
+    closeHeaderMenus()
   }
 })
 

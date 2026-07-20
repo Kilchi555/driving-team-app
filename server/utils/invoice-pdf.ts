@@ -63,6 +63,8 @@ export interface InvoicePdfData {
   invoiceNumber: string
   invoiceDate: string
   dueDate: string
+  /** Dokumenttitel im Header, Standard: RECHNUNG */
+  documentTitle?: string
   tenantName: string
   tenantStreet?: string
   tenantZip?: string
@@ -123,6 +125,22 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     const H = doc.page.height  // 842
     const margin = 50
 
+    // Der Swiss-QR-Zahlteil wird immer an einer fixen Position vom Seitenende
+    // aus gezeichnet (siehe unten), unabhängig davon, wie viel Inhalt darüber
+    // steht. Wir berechnen slipY schon hier, damit wir vor dem Zeichnen von
+    // "Zahlungsbedingungen"/Abschlusstext prüfen können, ob noch genug Platz
+    // bis zum Zahlteil bleibt — z.B. bei Mahnschreiben mit langem Brieftext
+    // (introText), der den restlichen Inhalt weiter nach unten schiebt als
+    // bei einer normalen Rechnung.
+    const mmToPt = (v: number) => v * 2.8346
+    const slipH = data.qrCodeDataUrl ? mmToPt(105) : 0
+    const slipY = H - slipH
+    // Unterste erlaubte Y-Position für Inhalt auf jeder Seite: entweder direkt
+    // über dem Zahlteil (falls vorhanden) oder über der Fusszeile am Seitenende.
+    // Wird von der Positionstabelle, der Total-Zeile und dem Zahlungsbedingungen-
+    // Block verwendet, um bei Bedarf rechtzeitig einen Seitenumbruch einzufügen.
+    const contentBottomLimit = (data.qrCodeDataUrl ? slipY : H - 40) - 16
+
     // ── Hero header strip ────────────────────────────────────────────────────
     doc.rect(0, 0, W, 100).fill(primary)
 
@@ -157,10 +175,12 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       } catch { /* Logo optional */ }
     }
 
-    // "RECHNUNG" title (nur wenn kein Logo)
+    // Dokumenttitel (nur wenn kein Logo)
     if (!data.tenantLogoBase64) {
-      doc.fontSize(28).fillColor('white').font('Helvetica-Bold')
-        .text('RECHNUNG', margin, 30, { characterSpacing: 4 })
+      const title = (data.documentTitle || 'RECHNUNG').toUpperCase()
+      const titleSize = title.length > 14 ? 18 : 28
+      doc.fontSize(titleSize).fillColor('white').font('Helvetica-Bold')
+        .text(title, margin, title.length > 14 ? 34 : 30, { characterSpacing: title.length > 14 ? 1.5 : 4 })
     }
 
     // Invoice number + total (rechts)
@@ -250,15 +270,17 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
     const tableWidth = tableRight - margin  // 495
 
-    // Table header
-    doc.rect(margin, tableTop, tableWidth, 24).fill(primary)
-    doc.fontSize(8).fillColor('white').font('Helvetica-Bold')
-
     const headers = ['POSITION', 'ANZ.', 'EINZELPREIS', 'TOTAL']
     const headerAligns: Array<'left' | 'center' | 'right'> = ['left', 'center', 'right', 'right']
-    headers.forEach((h, i) => {
-      doc.text(h, colPos[i] + 8, tableTop + 8, { width: colWidths[i], align: headerAligns[i], characterSpacing: 0.5 })
-    })
+    const drawTableHeader = (y: number) => {
+      doc.rect(margin, y, tableWidth, 24).fill(primary)
+      doc.fontSize(8).fillColor('white').font('Helvetica-Bold')
+      headers.forEach((h, i) => {
+        doc.text(h, colPos[i] + 8, y + 8, { width: colWidths[i], align: headerAligns[i], characterSpacing: 0.5 })
+      })
+    }
+
+    drawTableHeader(tableTop)
 
     let rowY = tableTop + 24
     data.items.forEach((item, idx) => {
@@ -295,6 +317,16 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       const breakdownH = breakdown.length > 0 ? breakdown.length * 14 + 4 : 0
       const totalRowH = rowH + breakdownH
       const bg = idx % 2 === 0 ? 'white' : '#f8fafc'
+
+      // Passt die Zeile nicht mehr auf die aktuelle Seite (z.B. bei sehr
+      // vielen Positionen), auf eine neue Seite umbrechen und den
+      // Tabellenkopf dort wiederholen, statt die Zeile mit dem Zahlteil
+      // oder der Fusszeile zu überschneiden.
+      if (rowY + totalRowH > contentBottomLimit) {
+        doc.addPage()
+        drawTableHeader(margin)
+        rowY = margin + 24
+      }
 
       doc.rect(margin, rowY, tableWidth, totalRowH).fill(bg)
 
@@ -335,6 +367,10 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     })
 
     // Total row — komplett innerhalb der Tabelle
+    if (rowY + 34 > contentBottomLimit) {
+      doc.addPage()
+      rowY = margin
+    }
     doc.rect(margin, rowY, tableWidth, 34).fill(primary)
     doc.fillOpacity(0.8).fontSize(10).fillColor('white').font('Helvetica')
       .text('Gesamtbetrag', margin + 8, rowY + 11, { width: tableWidth - colWidths[3] - 24, align: 'right' })
@@ -352,6 +388,17 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     doc.fontSize(9).fillColor('#374151').font('Helvetica')
     const paymentTextH = doc.heightOfString(paymentText, { width: tableWidth - 20 })
     const paymentBlockH = Math.max(36, paymentTextH + 26)
+    const footerTextH = data.footerText ? doc.heightOfString(data.footerText, { width: W - margin * 2 }) : 0
+    const remainingContentH = paymentBlockH + 10 + (data.footerText ? footerTextH + 10 : 0)
+
+    // Reicht der Platz bis zum (fix positionierten) Zahlteil bzw. der
+    // Seiten-Fusszeile nicht mehr aus — z.B. weil viele Positionen oder ein
+    // langer Mahntext den Inhalt weit nach unten verschoben haben — auf eine
+    // neue Seite umbrechen statt zu überlappen.
+    if (rowY + remainingContentH > contentBottomLimit) {
+      doc.addPage()
+      rowY = margin
+    }
 
     // Light tinted background
     doc.save().fillOpacity(0.07)
@@ -381,10 +428,10 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       if (base64Match) {
         const qrBuffer = Buffer.from(base64Match[1], 'base64')
 
-        // Dimensionen nach SPS 2.2 (1mm = 2.8346pt)
-        const mm = (v: number) => v * 2.8346
-        const slipH    = mm(105)          // 297.6pt
-        const slipY    = H - slipH        // Beginn des Einzahlungsscheins
+        // Dimensionen nach SPS 2.2 (1mm = 2.8346pt). slipH/slipY wurden schon
+        // oben berechnet (vor dem Zahlungsbedingungen-Block), damit dort
+        // rechtzeitig ein Seitenumbruch entschieden werden kann.
+        const mm = mmToPt
         const rcptW    = mm(62)           // Empfangsschein-Breite 62mm = 175.7pt
         const qrLeft   = mm(67)           // QR-Code links ab Seitenrand
         const qrTop    = slipY + mm(17)   // QR-Code oben
