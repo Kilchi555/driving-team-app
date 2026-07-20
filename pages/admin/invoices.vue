@@ -233,8 +233,9 @@
                 </div>
               </td>
               <td class="px-5 py-3.5">
-                <p class="text-sm text-gray-700">{{ formatDate(invoice.due_date) }}</p>
-                <p v-if="isOverdue(invoice.due_date, invoice.status, invoice.payment_status)" class="text-xs text-red-600 font-semibold mt-0.5">Überfällig</p>
+                <p class="text-sm text-gray-700">{{ formatDate(effectiveDueDate(invoice)) }}</p>
+                <p v-if="invoice.dunning_due_date && invoice.dunning_level > 0" class="text-xs text-blue-600 mt-0.5">Neues Zahlungsziel</p>
+                <p v-if="isOverdue(effectiveDueDate(invoice), invoice.status, invoice.payment_status)" class="text-xs text-red-600 font-semibold mt-0.5">Überfällig</p>
               </td>
             </tr>
           </tbody>
@@ -675,7 +676,12 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('de-CH')
 }
 
+/** Fälligkeit für Anzeige/Überfällig: nach Mahnung das neue Zahlungsziel, sonst Original */
+const effectiveDueDate = (invoice: { due_date?: string; dunning_due_date?: string | null }) =>
+  invoice.dunning_due_date || invoice.due_date || ''
+
 const isOverdue = (dueDate: string, status?: string, paymentStatus?: string) => {
+  if (!dueDate) return false
   if (status === 'paid' || status === 'cancelled' || paymentStatus === 'paid') return false
   return new Date(dueDate) < new Date()
 }

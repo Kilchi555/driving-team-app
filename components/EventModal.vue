@@ -963,7 +963,6 @@ import { useStudentCredits } from '~/composables/useStudentCredits'
 import { useCancellationReasons } from '~/composables/useCancellationReasons'
 import { useCancellationPolicies } from '~/composables/useCancellationPolicies'
 import { calculateCancellationCharges } from '~/utils/policyCalculations'
-import { useCalendarCache } from '~/composables/useCalendarCache'
 
 
 import { useAuthStore } from '~/stores/auth'
@@ -1890,11 +1889,6 @@ const handleSaveAppointment = async () => {
     // All post-save operations (credit, invites) run in background
     const totalTime = performance.now() - saveStartTime
     logger.info(`⏱️ TOTAL SAVE TIME: ${totalTime.toFixed(0)}ms (${(totalTime/1000).toFixed(1)}s)`)
-    
-    // Invalidate cache FIRST so refresh gets fresh data
-    const { clearCache } = useCalendarCache()
-    clearCache()
-    logger.debug('✅ Full calendar cache cleared')
     
     // ✅ Edit-Mode: Email versenden wenn Datum/Zeit geändert wurde
     if (props.mode === 'edit' && originalAppointmentData) {
@@ -4451,13 +4445,6 @@ const loadCategoryData = async (categoryCode: string) => {
 const handleClose = () => {
   logger.debug('🚪 Closing modal')
   
-  // ✅ NEW: Invalidate calendar cache on close to ensure fresh data
-  const { invalidate } = useCalendarCache()
-  invalidate('/api/staff/get-working-hours')
-  invalidate('/api/booking/get-available-slots')
-  invalidate('/api/calendar/get-appointments')
-  logger.debug('✅ Cache invalidated on modal close')
-  
   resetForm()
   selectedExamLocation.value = null
   emit('close')
@@ -4601,13 +4588,6 @@ const performSoftDeleteWithoutPaymentCleanup = async (deletionReason: string, st
     }
     
     logger.debug('✅ Appointment soft deleted successfully via API (without payment cleanup)')
-    
-    // ✅ NEW: Invalidate calendar cache on delete to ensure fresh data
-    const { invalidate } = useCalendarCache()
-    invalidate('/api/staff/get-working-hours')
-    invalidate('/api/booking/get-available-slots')
-    invalidate('/api/calendar/get-appointments')
-    logger.debug('✅ Cache invalidated after soft delete')
     
     // ✅ Schließe das Modal
     emit('close')

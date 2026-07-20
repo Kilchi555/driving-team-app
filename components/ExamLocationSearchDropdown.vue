@@ -29,7 +29,7 @@
     <!-- Dropdown Results -->
     <div
       v-if="isOpen && (filteredLocations.length > 0 || searchQuery.length > 0)"
-      class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-y-auto"
+      class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-[min(28rem,55vh)] overflow-y-auto"
     >
       <!-- No Results -->
       <div v-if="filteredLocations.length === 0 && searchQuery.length > 0" class="px-4 py-3 text-gray-500 text-sm">

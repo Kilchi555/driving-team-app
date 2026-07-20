@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: invoices, error } = await supabase
     .from('invoices')
-    .select('id, invoice_number, invoice_date, due_date, status, payment_status, total_amount_rappen, paid_amount_rappen, billing_email, billing_company_name, dunning_level, dunning_paused, last_dunning_sent_at, customer:users!user_id(first_name, last_name, email)')
+    .select('id, invoice_number, invoice_date, due_date, dunning_due_date, status, payment_status, total_amount_rappen, paid_amount_rappen, billing_email, billing_company_name, dunning_level, dunning_paused, last_dunning_sent_at, customer:users!user_id(first_name, last_name, email)')
     .eq('tenant_id', profile.tenant_id)
     .lt('due_date', todayIso)
     .not('status', 'in', '("paid","cancelled","draft")')
@@ -39,16 +39,20 @@ export default defineEventHandler(async (event) => {
 
   const candidates = (invoices || []).map((inv: any) => {
     const outstandingRappen = Math.max(0, (inv.total_amount_rappen || 0) - (inv.paid_amount_rappen || 0))
+    // Stufen-Fristen beziehen sich auf das Original-Fälligkeitsdatum; Anzeige nutzt das aktuelle Zahlungsziel
     const overdueDays = daysOverdue(inv.due_date)
     const currentLevel = inv.dunning_level || 0
     const nextStage = inv.dunning_paused ? 0 : suggestedNextStage(overdueDays, currentLevel, settings)
     const nextStageDef = nextStage ? getStageDef(nextStage) : null
     const currentStageDef = currentLevel ? getStageDef(currentLevel) : null
     const customer = inv.customer || {}
+    const effectiveDue = inv.dunning_due_date || inv.due_date
     return {
       id: inv.id,
       invoice_number: inv.invoice_number,
-      due_date: inv.due_date,
+      due_date: effectiveDue,
+      original_due_date: inv.due_date,
+      dunning_due_date: inv.dunning_due_date || null,
       invoice_date: inv.invoice_date,
       customer_name: `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || inv.billing_company_name || '—',
       billing_email: inv.billing_email || customer.email || null,

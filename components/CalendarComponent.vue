@@ -20,7 +20,6 @@ import MoveAppointmentModal from './MoveAppointmentModal.vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { useStaffWorkingHours } from '~/composables/useStaffWorkingHours'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
-import { useCalendarCache } from '~/composables/useCalendarCache'
 
 // ✅ GLOBALE FEHLERBEHANDLUNG
 onErrorCaptured((error, instance, info) => {
@@ -62,8 +61,7 @@ if (typeof window !== 'undefined') {
 }
 
 
-// ✅ Calendar cache for working hours and external busy times (rarely change)
-const { getOrFetch: getCachedOrFetch, clearCache } = useCalendarCache()
+
 
 // Neue refs für Confirmation Dialog
 const showConfirmation = ref(false)
@@ -551,22 +549,13 @@ const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate:
   try {
     logger.debug('🔒 Loading non-working hours blocks via Backend API...')
     
-    // Working hours via Backend API laden – mit Client-Cache (2 min TTL)
-    // Bei leerem Ergebnis (z.B. abgelaufener Auth-Token) nicht cachen sondern retry
+    // Working hours via Backend API laden (kein Client-Cache — Settings müssen sofort greifen)
     let response: { success: boolean, workingHours: any[], staffId: string }
     try {
-      response = await getCachedOrFetch(
-        '/api/staff/get-working-hours',
-        () => $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours'),
-        undefined,
-        2 * 60 * 1000
-      )
+      response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours')
     } catch (fetchError: any) {
       if (fetchError?.statusCode === 401 || fetchError?.status === 401) {
-        // Auth-Token abgelaufen → Cache invalidieren und einmal retry
-        logger.warn('⚠️ Working hours: 401 received, invalidating cache and retrying...')
-        const { invalidate } = useCalendarCache()
-        invalidate('/api/staff/get-working-hours')
+        logger.warn('⚠️ Working hours: 401 received, retrying...')
         await new Promise(resolve => setTimeout(resolve, 800))
         response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours')
       } else {
@@ -574,16 +563,12 @@ const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate:
       }
     }
     
-    // Wenn workingHours leer zurückkommt obwohl User eingeloggt → Cache invalidieren und sofort retry
+    // Wenn workingHours leer zurückkommt obwohl User eingeloggt → einmal retry
     if (response.success && (!response.workingHours || response.workingHours.length === 0)) {
-      logger.warn('⚠️ Working hours returned empty – invalidating cache and retrying once')
-      const { invalidate } = useCalendarCache()
-      invalidate('/api/staff/get-working-hours')
-      // Retry once after a short delay to allow for any propagation
+      logger.warn('⚠️ Working hours returned empty – retrying once')
       await new Promise(resolve => setTimeout(resolve, 800))
       try {
         response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours')
-        // Cache the fresh result
       } catch {
         // Retry failed – continue with empty result
       }
@@ -915,13 +900,7 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
   try {
     logger.debug('📅 Loading external busy times via Backend API...')
     
-    // External busy times via Backend API laden – mit Client-Cache (5 min TTL)
-    const response = await getCachedOrFetch(
-      '/api/staff/get-external-busy-times',
-      () => $fetch<{ success: boolean, busyTimes: any[], staffId: string }>('/api/staff/get-external-busy-times'),
-      undefined,
-      5 * 60 * 1000
-    )
+    const response = await $fetch<{ success: boolean, busyTimes: any[], staffId: string }>('/api/staff/get-external-busy-times')
     
     if (!response.success || !response.busyTimes || response.busyTimes.length === 0) {
       logger.debug('📅 No external busy times found via API')
@@ -1006,26 +985,7 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
       adminStaffFilter: props.adminStaffFilter
     })
 
-    // Call backend API – mit Client-Cache (30s TTL, gleich wie server-seitiger Cache)
-    const cacheParams = {
-      viewStart: viewStartDate?.toISOString(),
-      viewEnd: viewEndDate?.toISOString(),
-      adminStaffFilter: props.adminStaffFilter || null
-    }
-    
-    // ✅ If forceReload, invalidate the specific cache entry first
-    if (forceReload) {
-      const { invalidate: invalidateCache } = useCalendarCache()
-      invalidateCache('/api/calendar/get-appointments', cacheParams)
-      logger.debug('🗑️ Cache invalidated for appointments before reload')
-    }
-    
-    const response = await getCachedOrFetch(
-      '/api/calendar/get-appointments',
-      () => $fetch(`/api/calendar/get-appointments?${params.toString()}`, { method: 'GET' }),
-      cacheParams,
-      30 * 1000
-    ) as any
+    const response = await $fetch(`/api/calendar/get-appointments?${params.toString()}`, { method: 'GET' }) as any
 
     if (!response?.success || !response?.data) {
       throw new Error('Failed to load appointments from API')
@@ -1266,13 +1226,7 @@ const loadAppointments = async (forceReload = false) => {
   const viewEnd = currentView?.activeEnd || new Date()
   
   if (forceReload) {
-    // Only invalidate the current view's cache entry, not prefetched adjacent weeks
-    const { invalidate: invalidateCurrentView } = useCalendarCache()
-    invalidateCurrentView('/api/calendar/get-appointments', {
-      viewStart: viewStart.toISOString(),
-      viewEnd: viewEnd.toISOString(),
-      adminStaffFilter: props.adminStaffFilter || null,
-    })
+    logger.debug('🔄 Forced calendar reload (no client cache)')
   }
   
   isLoadingEvents.value = true
@@ -1310,9 +1264,6 @@ const loadAppointments = async (forceReload = false) => {
     
     // Set calendarEvents - the watcher handles FullCalendar update
     calendarEvents.value = allEvents
-
-    // Prefetch adjacent weeks silently in the background
-    prefetchAdjacentWeeks(viewStart, viewEnd)
   } catch (error) {
     console.error('❌ Error loading calendar events:', error)
     // ✅ Fehler nicht weiterwerfen, nur loggen
@@ -1320,44 +1271,6 @@ const loadAppointments = async (forceReload = false) => {
     isLoadingEvents.value = false
     isUpdating.value = false
   }
-}
-
-// Silently prefetch prev/next week into cache so navigation feels instant
-const prefetchAdjacentWeeks = (viewStart: Date, viewEnd: Date) => {
-  const weekMs = 7 * 24 * 60 * 60 * 1000
-
-  const ranges = [
-    { start: new Date(viewStart.getTime() - weekMs), end: new Date(viewEnd.getTime() - weekMs) },
-    { start: new Date(viewStart.getTime() + weekMs), end: new Date(viewEnd.getTime() + weekMs) },
-  ]
-
-  const schedule = typeof requestIdleCallback !== 'undefined' ? requestIdleCallback : (cb: () => void) => setTimeout(cb, 100)
-
-  schedule(() => {
-    for (const { start, end } of ranges) {
-      const params = new URLSearchParams()
-      params.append('viewStart', start.toISOString())
-      params.append('viewEnd', end.toISOString())
-      if (props.adminStaffFilter) params.append('adminStaffFilter', props.adminStaffFilter)
-
-      const cacheParams = {
-        viewStart: start.toISOString(),
-        viewEnd: end.toISOString(),
-        adminStaffFilter: props.adminStaffFilter || null,
-      }
-
-      getCachedOrFetch(
-        '/api/calendar/get-appointments',
-        () => $fetch(`/api/calendar/get-appointments?${params.toString()}`, { method: 'GET' }),
-        cacheParams,
-        5 * 60 * 1000
-      ).then(() => {
-        logger.debug('📦 Prefetched week:', start.toISOString().slice(0, 10), '→', end.toISOString().slice(0, 10))
-      }).catch(() => {
-        // Prefetch failures are silent — next load will fetch normally
-      })
-    }
-  })
 }
 
 // ✅ Helper-Funktion für Event-Farben
@@ -2017,7 +1930,8 @@ const refreshCalendar = async () => {
       logger.debug('⚠️ Calendar update already in progress, skipping refresh')
       return
     }
-    
+
+    // After Arbeitszeiten / settings changes, always reload fresh from the API
     const currentDate = calendar.value?.getApi()?.getDate()
     const refreshStart = currentDate
     

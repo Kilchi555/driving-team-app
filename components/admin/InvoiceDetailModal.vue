@@ -182,16 +182,21 @@
                   </div>
                   <div class="flex items-center justify-between gap-2">
                     <dt class="text-sm text-gray-500 flex-shrink-0">Fällig</dt>
-                    <dd class="text-sm font-medium">
+                    <dd class="text-sm font-medium text-right">
                       <input
                         v-if="isEditing"
                         v-model="safeEditedInvoice.due_date"
                         type="date"
                         class="px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
-                      <span v-else-if="invoice.due_date" :class="isOverdue(invoice.due_date) ? 'text-red-600' : 'text-gray-900'">
-                        {{ formatDate(invoice.due_date) }}
-                      </span>
+                      <template v-else-if="invoice.due_date">
+                        <span :class="isOverdue(effectiveDueDate) ? 'text-red-600' : 'text-gray-900'">
+                          {{ formatDate(effectiveDueDate) }}
+                        </span>
+                        <p v-if="invoice.dunning_due_date && dunningLevel > 0" class="text-xs text-blue-600 mt-0.5">
+                          Neues Zahlungsziel (Original: {{ formatDate(invoice.due_date) }})
+                        </p>
+                      </template>
                       <span v-else class="text-gray-400">—</span>
                     </dd>
                   </div>
@@ -204,27 +209,31 @@
                 <dl class="space-y-1.5">
                   <div class="flex items-center justify-between gap-2">
                     <dt class="text-sm text-gray-500 flex-shrink-0">Name</dt>
-                    <dd class="text-sm font-medium text-gray-900 text-right">{{ customerData?.first_name || '' }} {{ customerData?.last_name || '' }}</dd>
+                    <dd class="text-sm font-medium text-gray-900 text-right">{{ displayCustomer.name || '—' }}</dd>
                   </div>
                   <div class="flex items-start justify-between gap-2">
                     <dt class="text-sm text-gray-500 flex-shrink-0">E-Mail</dt>
-                    <dd class="text-sm text-gray-900 text-right break-all">{{ customerData?.email || '—' }}</dd>
+                    <dd class="text-sm text-gray-900 text-right break-all">{{ displayCustomer.email || '—' }}</dd>
                   </div>
                   <div class="flex items-center justify-between gap-2">
                     <dt class="text-sm text-gray-500 flex-shrink-0">Telefon</dt>
-                    <dd class="text-sm text-gray-900">{{ customerData?.phone || '—' }}</dd>
+                    <dd class="text-sm text-gray-900">{{ displayCustomer.phone || '—' }}</dd>
                   </div>
                   <div class="flex items-center justify-between gap-2">
                     <dt class="text-sm text-gray-500 flex-shrink-0">Adresse</dt>
                     <dd class="text-sm text-gray-900 text-right">
-                      {{ customerData?.street || '' }} {{ customerData?.street_nr || '' }}<br v-if="customerData?.zip || customerData?.city">
-                      {{ customerData?.zip || '' }} {{ customerData?.city || '' }}
+                      <template v-if="displayCustomer.addressLine1 || displayCustomer.addressLine2">
+                        <span v-if="displayCustomer.addressLine1">{{ displayCustomer.addressLine1 }}</span>
+                        <br v-if="displayCustomer.addressLine1 && displayCustomer.addressLine2">
+                        <span v-if="displayCustomer.addressLine2">{{ displayCustomer.addressLine2 }}</span>
+                      </template>
+                      <template v-else>—</template>
                     </dd>
                   </div>
                 </dl>
 
-                <!-- Versandhistorie -->
-                <div v-if="(invoice as any).sent_at || invoice.created_at" class="pt-2 mt-2 border-t border-gray-200 space-y-1.5">
+                <!-- Versandhistorie: Erstellung, Rechnungsversand, Mahnungen -->
+                <div class="pt-2 mt-2 border-t border-gray-200 space-y-1.5">
                   <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Versandhistorie</p>
                   <div class="space-y-1">
                     <div class="flex items-center gap-2 text-xs text-gray-500">
@@ -234,12 +243,21 @@
                     </div>
                     <div v-if="(invoice as any).sent_at" class="flex items-center gap-2 text-xs text-gray-500">
                       <span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
-                      <span>Versendet</span>
+                      <span>Rechnung versendet</span>
                       <span class="ml-auto text-gray-700">{{ formatDateTime((invoice as any).sent_at) }}</span>
                     </div>
                     <div v-else class="flex items-center gap-2 text-xs text-gray-400 italic">
                       <span class="w-1.5 h-1.5 rounded-full bg-gray-200 flex-shrink-0"></span>
-                      <span>Noch nicht versendet</span>
+                      <span>Rechnung noch nicht versendet</span>
+                    </div>
+                    <div
+                      v-for="entry in sentDunningEntries"
+                      :key="entry.id"
+                      class="flex items-center gap-2 text-xs text-gray-500"
+                    >
+                      <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" :style="{ background: DUNNING_STAGE_COLORS[entry.stage] || '#6b7280' }"></span>
+                      <span class="truncate">{{ dunningStageLabel(entry.stage) }}</span>
+                      <span class="ml-auto text-gray-700 whitespace-nowrap">{{ formatDateTime(entry.sent_at) }}</span>
                     </div>
                   </div>
                 </div>
@@ -405,6 +423,7 @@
                   <div class="min-w-0">
                     <p class="text-sm font-medium text-gray-900">{{ dunningStageLabel(entry.stage) }}</p>
                     <p class="text-xs text-gray-400 mt-0.5">{{ formatDateTime(entry.sent_at) }} · an {{ entry.sent_to }}</p>
+                    <p v-if="entry.new_due_date" class="text-xs text-blue-600 mt-0.5">Zahlungsziel: {{ formatDate(entry.new_due_date) }}</p>
                   </div>
                   <div class="text-right flex-shrink-0">
                     <span v-if="entry.status === 'sent'" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Versendet</span>
@@ -751,6 +770,7 @@ interface Invoice {
   dunning_level?: number
   dunning_paused?: boolean
   last_dunning_sent_at?: string
+  dunning_due_date?: string | null
   // Appointment information
   appointment_id?: string
   appointment_title?: string
@@ -909,6 +929,43 @@ const dunningLevelBadgeStyle = computed(() => {
   return { background: color + '1a', color }
 })
 
+const sentDunningEntries = computed(() =>
+  (dunningLog.value || [])
+    .filter((e: any) => e.status === 'sent')
+    .slice()
+    .sort((a: any, b: any) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime())
+)
+
+/** Kundendaten: API-Ergebnis oder Fallback aus invoices_with_details / Rechnungsadresse */
+const displayCustomer = computed(() => {
+  const inv = props.invoice as any
+  const c = customerData.value
+  const rawEmail = (c?.email || inv?.customer_email || '').trim()
+  const emailIsRemoved = !rawEmail || /@removed\.invalid$/i.test(rawEmail) || /^deleted-/i.test(rawEmail)
+
+  const first = c?.first_name || inv?.customer_first_name || ''
+  const last = c?.last_name || inv?.customer_last_name || ''
+  const nameFromUser = `${first} ${last}`.trim()
+
+  const street = (c?.street || '').trim()
+  const streetNr = (c?.street_nr || '').trim()
+  const zip = (c?.zip || '').trim()
+  const city = (c?.city || '').trim()
+  const hasUserAddress = !!(street || zip || city)
+
+  return {
+    name: nameFromUser || inv?.billing_contact_person || inv?.billing_company_name || '',
+    email: emailIsRemoved ? (inv?.billing_email || '') : rawEmail,
+    phone: c?.phone || inv?.customer_phone || '',
+    addressLine1: hasUserAddress
+      ? `${street} ${streetNr}`.trim()
+      : `${inv?.billing_street || ''} ${inv?.billing_street_number || ''}`.trim(),
+    addressLine2: hasUserAddress
+      ? `${zip} ${city}`.trim()
+      : `${inv?.billing_zip || ''} ${inv?.billing_city || ''}`.trim(),
+  }
+})
+
 const loadDunningLog = async () => {
   if (!props.invoice?.id) return
   try {
@@ -1018,27 +1075,25 @@ const loadInvoicePayments = async () => {
 }
 
 // ✅ Lade detaillierte Daten via secure API
-let _loadingDetailsCalled = false
+let _loadDetailsGeneration = 0
 const loadDetailedData = async () => {
   // Initialisiere editedInvoice wenn das Modal geöffnet wird
   if (props.invoice) {
-    editedInvoice.value = { ...props.invoice };
-  }
-  
-  if (!props.invoice || !props.show) {
-    return;
+    editedInvoice.value = { ...props.invoice }
   }
 
-  // Verhindere parallele Aufrufe
-  if (_loadingDetailsCalled) return;
-  _loadingDetailsCalled = true;
-  
-  isLoadingDetails.value = true;
-  
+  if (!props.invoice || !props.show) {
+    return
+  }
+
+  const generation = ++_loadDetailsGeneration
+  isLoadingDetails.value = true
+
   try {
     // ✅ Lade Tenant-Standardtexte für Platzhalter
     try {
       const settings = await $fetch<any>('/api/admin/invoice-settings')
+      if (generation !== _loadDetailsGeneration) return
       tenantInvoiceTexts.value = {
         invoice_intro_text: settings?.invoice_intro_text || null,
         invoice_payment_terms: settings?.invoice_payment_terms || null,
@@ -1048,77 +1103,87 @@ const loadDetailedData = async () => {
       // ignore
     }
 
-    // ✅ Lade alle Payments für diese Rechnung
-    await loadInvoicePayments();
-    await loadInvoicePaymentsHistory();
-    await loadDunningLog();
-    
-    // ✅ Lade detaillierte Daten via API
-    if (props.invoice.user_id) {
-      try {
-        const response = await $fetch('/api/admin/invoice-details', {
-          method: 'GET',
-          query: { user_id: props.invoice.user_id }
-        }) as any;
-        
-        if (response) {
-          // Latest payment
-          if (response.latestPayment) {
-            fallbackPayment.value = response.latestPayment;
-          }
-          
-          // Appointment details
-          if (response.appointmentDetails) {
-            appointmentStartTime.value = response.appointmentDetails.start_time;
-            appointmentEventTypeCode.value = response.appointmentDetails.event_type_code;
-            appointmentType.value = response.appointmentDetails.type;
-          }
-          
-          // Event type name
-          if (response.eventTypeName) {
-            appointmentEventTypeName.value = response.eventTypeName;
-          }
-          
-          // Customer data
-          if (response.customerData) {
-            customerData.value = response.customerData;
-            logger.debug('✅ Customer data loaded via API:', response.customerData);
-          }
+    // Payments, Zahlungshistorie und Mahnwesen parallel laden
+    await Promise.all([
+      loadInvoicePayments(),
+      loadInvoicePaymentsHistory(),
+      loadDunningLog(),
+    ])
+    if (generation !== _loadDetailsGeneration) return
+
+    // Kundendaten + Termin-Details: immer mit invoice_id (zuverlässiger als nur user_id)
+    try {
+      const response = await $fetch('/api/admin/invoice-details', {
+        method: 'GET',
+        query: {
+          invoice_id: props.invoice.id,
+          invoice_number: props.invoice.invoice_number,
+          user_id: props.invoice.user_id || undefined,
         }
-      } catch (e) {
-        console.warn('Could not load detailed data via API:', e);
+      }) as any
+
+      if (generation !== _loadDetailsGeneration) return
+
+      if (response) {
+        if (response.payments?.length) {
+          allInvoicePayments.value = response.payments
+          totalExcludingCancelled.value = response.totalExcludingCancelled || 0
+        }
+        if (response.latestPayment) {
+          fallbackPayment.value = response.latestPayment
+        }
+        if (response.appointmentDetails) {
+          appointmentStartTime.value = response.appointmentDetails.start_time
+          appointmentEventTypeCode.value = response.appointmentDetails.event_type_code
+          appointmentType.value = response.appointmentDetails.type
+        }
+        if (response.eventTypeName) {
+          appointmentEventTypeName.value = response.eventTypeName
+        }
+        if (response.customerData) {
+          customerData.value = response.customerData
+          logger.debug('✅ Customer data loaded via API:', response.customerData)
+        }
       }
+    } catch (e) {
+      console.warn('Could not load detailed data via API:', e)
     }
   } catch (error) {
-    console.error('Error loading detailed data:', error);
+    console.error('Error loading detailed data:', error)
   } finally {
-    isLoadingDetails.value = false;
-    _loadingDetailsCalled = false;
+    if (generation === _loadDetailsGeneration) {
+      isLoadingDetails.value = false
+    }
   }
-};
+}
 
 // Watch für show prop um Daten zu laden
 watch(() => props.show, (newShow) => {
   if (newShow && props.invoice) {
-    _loadingDetailsCalled = false;
-    loadDetailedData();
-    
+    customerData.value = null
+    dunningLog.value = []
+    dunningLevel.value = props.invoice.dunning_level || 0
+    dunningPaused.value = !!props.invoice.dunning_paused
+    loadDetailedData()
+
     if (props.startInEditMode) {
       setTimeout(() => {
-        startEditing();
-      }, 300);
+        startEditing()
+      }, 300)
     }
   }
-});
+})
 
 // Watch für invoice prop: nur neu laden wenn sich die Rechnungs-ID ändert (nicht wenn Items nachgeladen werden)
 watch(() => props.invoice?.id, (newId, oldId) => {
   if (newId && newId !== oldId && props.show) {
-    _loadingDetailsCalled = false;
-    loadDetailedData();
+    customerData.value = null
+    dunningLog.value = []
+    dunningLevel.value = props.invoice?.dunning_level || 0
+    dunningPaused.value = !!props.invoice?.dunning_paused
+    loadDetailedData()
   }
-});
-
+})
 
 // ✅ Status-Update-Funktionen via secure API
 const updateInvoiceStatus = async (action: string) => {
@@ -1192,6 +1257,13 @@ const formatTime = (dateString: string) => {
 const isOverdue = (dueDate: string) => {
   return new Date(dueDate) < new Date()
 }
+
+/** Nach Mahnung das neue Zahlungsziel anzeigen, sonst Original-Fälligkeit */
+const effectiveDueDate = computed(() => {
+  const inv = props.invoice
+  if (!inv) return ''
+  return inv.dunning_due_date || inv.due_date || ''
+})
 
 const getAppointmentsCount = () => {
   if (props.invoice?.appointmentDetails) return 1;

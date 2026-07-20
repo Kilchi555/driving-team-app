@@ -388,18 +388,18 @@
 
     <!-- Prüfungsstandorte Sheet -->
     <Teleport to="body">
-      <div v-if="showExamLocationsSheet" class="fixed inset-0 z-[500] bg-black/50 flex items-end md:items-center justify-center" @click.self="showExamLocationsSheet = false">
-        <div class="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-md md:max-w-2xl shadow-2xl max-h-[90vh] flex flex-col pb-safe" @click.stop>
+      <div v-if="showExamLocationsSheet" class="fixed inset-0 z-[500] bg-black/50 flex items-end md:items-center justify-center p-0 md:p-6" @click.self="showExamLocationsSheet = false">
+        <div class="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-xl md:max-w-3xl lg:max-w-4xl shadow-2xl max-h-[92vh] md:min-h-[60vh] flex flex-col pb-safe overflow-y-auto" @click.stop>
           <div class="flex justify-center pt-3 pb-1 md:hidden">
             <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
           </div>
-          <div class="flex items-center justify-between px-5 pt-2 pb-4 border-b border-gray-100">
+          <div class="flex items-center justify-between px-5 pt-2 pb-4 border-b border-gray-100 sticky top-0 bg-white z-10">
             <h2 class="text-base font-semibold text-gray-900">Prüfungsstandorte</h2>
             <button @click="showExamLocationsSheet = false" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
-          <div class="px-4 py-3 overflow-y-auto flex-1">
+          <div class="px-5 py-4 flex-1">
             <div class="space-y-4">
               <ExamLocationSearchDropdown
                 :current-staff-id="props.currentUser?.id || ''"

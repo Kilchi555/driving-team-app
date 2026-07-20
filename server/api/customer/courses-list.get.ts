@@ -1,9 +1,9 @@
 /**
  * GET /api/customer/courses-list
- * 
+ *
  * Fetch courses and categories for customer
- * 3-Layer: Auth → Transform → DB + Cache
- * 
+ * 3-Layer: Auth → Transform → DB
+ *
  * Security: Tenant isolation, RLS enforcement, field filtering
  */
 
@@ -11,9 +11,6 @@ import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
-
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
-const coursesCache = new Map<string, { data: any; timestamp: number }>()
 
 interface TransformedCourse {
   id: string
@@ -29,9 +26,6 @@ interface TransformedCourse {
   sessions: any[]
 }
 
-/**
- * LAYER 2: Data Transformation
- */
 const transformCourse = (course: any): TransformedCourse => ({
   id: course.id,
   name: course.name,
@@ -53,15 +47,12 @@ const transformCourse = (course: any): TransformedCourse => ({
     }))
 })
 
-/**
- * LAYER 3: Database + Cache
- */
 const fetchCoursesFromDb = async (tenantId: string): Promise<any> => {
   const supabase = getSupabaseAdmin()
-  
+
   try {
     logger.debug(`📚 Fetching courses for tenant: ${tenantId}`)
-    
+
     const { data: courses, error: coursesError } = await supabase
       .from('courses')
       .select(`
@@ -88,13 +79,12 @@ const fetchCoursesFromDb = async (tenantId: string): Promise<any> => {
       .eq('tenant_id', tenantId)
       .eq('status', 'active')
       .order('name')
-    
+
     if (coursesError) {
       logger.error(`❌ Database error fetching courses:`, coursesError)
       return { courses: [], categories: [] }
     }
 
-    // Fetch categories
     const { data: categories, error: categoriesError } = await supabase
       .from('course_categories')
       .select('id, name')
@@ -107,7 +97,7 @@ const fetchCoursesFromDb = async (tenantId: string): Promise<any> => {
     }
 
     logger.debug(`✅ Fetched ${courses?.length || 0} courses and ${categories?.length || 0} categories`)
-    
+
     return {
       courses: courses || [],
       categories: categories || []
@@ -118,32 +108,10 @@ const fetchCoursesFromDb = async (tenantId: string): Promise<any> => {
   }
 }
 
-const getCachedCourses = (tenantId: string): any | null => {
-  const cached = coursesCache.get(tenantId)
-  if (!cached) return null
-  
-  if (Date.now() - cached.timestamp > CACHE_DURATION) {
-    coursesCache.delete(tenantId)
-    return null
-  }
-  
-  logger.debug(`⚡ Cache HIT for courses (${Math.round((Date.now() - cached.timestamp) / 1000)}s old)`)
-  return cached.data
-}
-
-const setCachedCourses = (tenantId: string, data: any): void => {
-  coursesCache.set(tenantId, { data, timestamp: Date.now() })
-  logger.debug(`💾 Cached courses for ${tenantId}`)
-}
-
-/**
- * Main Handler
- */
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
-  
+
   try {
-    // ========== LAYER 1: AUTH & VALIDATION ==========
     const auth = await verifyAuth(event)
     if (!auth) {
       throw createError({
@@ -155,41 +123,13 @@ export default defineEventHandler(async (event) => {
     const { tenantId } = auth
     logger.debug(`🔐 Courses request for tenant: ${tenantId}`)
 
-    // ========== LAYER 2+3: CACHE CHECK & DB FETCH ==========
-    
-    // Try cache
-    let cachedData = getCachedCourses(tenantId)
-    if (cachedData) {
-      const duration = Date.now() - startTime
-      return {
-        success: true,
-        courses: cachedData.courses,
-        categories: cachedData.categories,
-        cached: true,
-        courseCount: cachedData.courses.length,
-        categoryCount: cachedData.categories.length,
-        duration
-      }
-    }
-
-    // Fetch from DB
     const { courses: rawCourses, categories: rawCategories } = await fetchCoursesFromDb(tenantId)
-    
-    // Transform courses
-    const transformedCourses = rawCourses.map(transformCourse)
 
-    // Transform categories
+    const transformedCourses = rawCourses.map(transformCourse)
     const transformedCategories = rawCategories.map((cat: any) => ({
       id: cat.id,
       name: cat.name
     }))
-
-    // Cache
-    const cacheData = {
-      courses: transformedCourses,
-      categories: transformedCategories
-    }
-    setCachedCourses(tenantId, cacheData)
 
     const duration = Date.now() - startTime
     logger.debug(`✅ Courses request completed in ${duration}ms`)
@@ -198,7 +138,6 @@ export default defineEventHandler(async (event) => {
       success: true,
       courses: transformedCourses,
       categories: transformedCategories,
-      cached: false,
       courseCount: transformedCourses.length,
       categoryCount: transformedCategories.length,
       duration
@@ -206,7 +145,7 @@ export default defineEventHandler(async (event) => {
 
   } catch (error: any) {
     const duration = Date.now() - startTime
-    
+
     if (error.statusCode) {
       logger.warn(`⚠️ API error (${duration}ms):`, error.statusMessage)
       throw error
@@ -219,4 +158,3 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-

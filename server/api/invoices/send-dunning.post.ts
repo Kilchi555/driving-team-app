@@ -90,6 +90,8 @@ export default defineEventHandler(async (event) => {
   const invoiceUpdate: Record<string, any> = {
     dunning_level: Math.max(currentLevelBefore, stage),
     last_dunning_sent_at: new Date().toISOString(),
+    // Neues Zahlungsziel aus der Mahnung (Original due_date bleibt für PDF/{faelligkeitsdatum})
+    dunning_due_date: prepared.newDueDateIso,
   }
 
   // Mahngebühr optional als Rechnungsposition + Totalanpassung übernehmen

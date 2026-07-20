@@ -49,6 +49,8 @@ export interface Invoice {
   last_dunning_sent_at?: string
   dunning_paused?: boolean
   dunning_fees_rappen?: number
+  /** Aktuelles Zahlungsziel aus der letzten Zahlungserinnerung/Mahnung (sonst due_date) */
+  dunning_due_date?: string | null
   
   // Metadaten
   notes?: string
