@@ -3,7 +3,7 @@ import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
-import { getAuthToken } from '~/server/utils/auth-helper'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { H3Event } from 'h3'
 import { sendSMS } from '~/server/utils/sms'
 import { v4 as uuidv4 } from 'uuid'
@@ -26,9 +26,8 @@ export default defineEventHandler(async (event: H3Event) => {
     }
     
     // ============ LAYER 1: AUTHENTICATION ============
-    // Supports both Authorization Bearer header and HTTP-Only cookies
-    const token = getAuthToken(event)
-    if (!token) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       await logAudit({
         action: 'resend_onboarding_sms',
         status: 'failed',
@@ -40,18 +39,6 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     const supabaseAdmin = getSupabaseAdmin()
-
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-
-    if (authError || !user) {
-      await logAudit({
-        action: 'resend_onboarding_sms',
-        status: 'failed',
-        error_message: 'Invalid or expired token',
-        ip_address: ipAddress
-      })
-      throw createError({ statusCode: 401, statusMessage: 'Invalid or expired token' })
-    }
 
     authenticatedUserId = user.id
     auditDetails.authenticated_user_id = authenticatedUserId
