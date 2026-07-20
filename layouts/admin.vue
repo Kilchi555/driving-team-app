@@ -535,8 +535,10 @@ const handleLogout = async () => {
   const loginPath = getLoginPath(slug)
 
   try {
-    logger.debug('🚪 Logging out user...')
-    await logout()
+    logger.debug('🚪 Logging out user...', { loginPath })
+    // Caller handles redirect — avoids logout() navigating to /login first
+    // and unmounting this layout before we can go to /{slug}.
+    await logout({ redirect: false })
     showSuccess('Abgemeldet', 'Sie wurden erfolgreich abgemeldet.')
     await navigateTo(loginPath)
   } catch (error) {

@@ -1,5 +1,6 @@
 import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import z from 'zod'
 
@@ -15,29 +16,18 @@ import z from 'zod'
  */
 export default defineEventHandler(async (event) => {
   try {
-    // 1. Extract and validate auth token
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      logger.warn('🔒 get-user-profile: Missing or invalid auth header')
+    // 1. Auth (cookie + Bearer + refresh fallback)
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
+      logger.warn('🔒 get-user-profile: Missing or invalid session')
       throw createError({
         statusCode: 401,
         statusMessage: 'Unauthorized'
       })
     }
 
-    const token = authHeader.slice(7)
-
-    // 2. Verify token and get user
+    // 2. Admin client for DB
     const supabaseAdmin = getSupabaseAdmin()
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-
-    if (authError || !user) {
-      logger.warn('🔒 get-user-profile: Invalid token', { error: authError?.message })
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid token'
-      })
-    }
 
     // 3. Rate limiting per user (10 requests per minute)
     const cacheKey = `rate:profile:${user.id}`

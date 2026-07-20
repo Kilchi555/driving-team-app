@@ -2,8 +2,9 @@
 // Creates a Wallee payment session for credit top-up (self-service by customer)
 // The Wallee webhook handles the actual credit deposit upon payment completion
 
-import { defineEventHandler, readBody, getHeader, createError } from 'h3'
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { logger } from '~/utils/logger'
 import { Wallee } from 'wallee'
@@ -12,14 +13,9 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
 
   try {
-    // ── Auth ──────────────────────────────────────────────
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
-    }
-    const token = authHeader.substring(7)
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) throw createError({ statusCode: 401, statusMessage: 'Invalid authentication' })
+    // ── Auth (cookie + Bearer + refresh fallback) ─────────
+    const user = await getAuthenticatedUser(event)
+    if (!user) throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
 
     // ── Get user profile ──────────────────────────────────
     const { data: userProfile } = await supabase

@@ -1,5 +1,6 @@
-import { defineEventHandler, readBody, createError, getHeader } from 'h3'
+import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 /**
@@ -35,26 +36,16 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const authHeader = getHeader(event, 'authorization') || ''
-    if (!authHeader.startsWith('Bearer ')) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw createError({ statusCode: 401, statusMessage: 'Nicht authentifiziert' })
     }
-    const accessToken = authHeader.substring(7)
 
     const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-    if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
+    if (!supabaseUrl || !serviceRoleKey) {
       throw createError({ statusCode: 500, statusMessage: 'Server configuration error' })
-    }
-
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${accessToken}` } }
-    })
-    const { data: { user }, error: authError } = await userClient.auth.getUser()
-    if (authError || !user) {
-      throw createError({ statusCode: 401, statusMessage: 'Nicht authentifiziert' })
     }
 
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)

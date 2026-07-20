@@ -1,5 +1,6 @@
 // server/api/customer/reglements.get.ts
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 
@@ -26,24 +27,15 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ LAYER 2: Authentication Check
-    const token = getHeader(event, 'authorization')?.replace('Bearer ', '')
-    if (!token) {
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Authentication required'
       })
     }
 
-    // Verify auth token
     const supabaseAdmin = getSupabaseAdmin()
-    const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(token)
-    
-    if (authError || !authUser) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid authentication token'
-      })
-    }
 
     // ✅ LAYER 3: Get user profile and tenant
     const { data: userProfile, error: userError } = await supabaseAdmin

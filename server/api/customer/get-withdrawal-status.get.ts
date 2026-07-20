@@ -1,21 +1,17 @@
 // server/api/customer/get-withdrawal-status.get.ts
 // Returns the customer's withdrawal preferences (masked IBAN) and pending withdrawal amount
 
-import { defineEventHandler, getHeader, createError } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
 
   try {
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
-    }
-    const token = authHeader.substring(7)
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) throw createError({ statusCode: 401, statusMessage: 'Invalid authentication' })
+    const user = await getAuthenticatedUser(event)
+    if (!user) throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
 
     const { data: userProfile } = await supabase
       .from('users')

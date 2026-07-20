@@ -9,17 +9,15 @@
  * GET /api/staff/get-staff-locations
  */
 
-import { defineEventHandler, createError, getHeader } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Get authenticated user
-    const authHeader = getHeader(event, 'authorization')
-    const token = authHeader?.replace('Bearer ', '')
-
-    if (!token) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Authentication required'
@@ -27,14 +25,6 @@ export default defineEventHandler(async (event) => {
     }
 
     const supabase = getSupabaseAdmin()
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
-    if (authError || !user) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid authentication'
-      })
-    }
 
     logger.debug(`📍 Fetching staff locations for staff`, {
       staff_id: user.id

@@ -1,65 +1,49 @@
 /**
- * Supabase Auth Helper for HTTP-Only Cookies
- * 
- * Extracts authentication token from either:
- * 1. Authorization Bearer header (for API calls with explicit token)
- * 2. HTTP-Only Supabase cookies (for browser-based requests)
- * 3. Cookie header (fallback)
+ * Thin wrappers around the shared auth helper in `~/server/utils/auth`.
+ *
+ * Historically this file reimplemented Bearer + cookie extraction and called
+ * `auth.getUser(token)` directly — without the refresh-token fallback. That
+ * caused recoverable expired-access-token requests to 401 while endpoints
+ * using `getAuthenticatedUser` recovered fine.
+ *
+ * All user-auth entry points here now delegate to `getAuthenticatedUser`
+ * (cookie + Bearer + refresh + cross-instance dedup).
  */
 
 import { getHeader, getCookie } from 'h3'
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 /**
- * Extract authentication token from request
- * Supports both Bearer header and HTTP-Only cookies
+ * Extract an access token from the request (Bearer header or sb-auth-token cookie).
+ * Does NOT return the refresh token — that is not valid for `auth.getUser()`.
  */
 export const getAuthToken = (event: any): string | null => {
-  // Try 1: Bearer token in Authorization header
   const authHeader = getHeader(event, 'authorization')
   if (authHeader?.startsWith('Bearer ')) {
     logger.debug('🔐 Auth token from Authorization header')
     return authHeader.slice(7)
   }
 
-  // Try 2: HTTP-Only cookie (matches cookies.ts COOKIE_NAME)
-  let token = getCookie(event, 'sb-auth-token')
+  const token = getCookie(event, 'sb-auth-token')
   if (token) {
     logger.debug('🔐 Auth token from sb-auth-token cookie')
     return token
   }
 
-  // Try 3: Refresh token cookie (for token refresh flow)
-  token = getCookie(event, 'sb-refresh-token')
-  if (token) {
-    logger.debug('🔐 Refresh token from sb-refresh-token cookie')
-    return token
-  }
-
-  logger.warn('❌ No authentication token found')
+  logger.warn('❌ No authentication access token found')
   return null
 }
 
 /**
- * Get authenticated user from request (for new APIs)
- * Returns the Supabase auth user object
+ * Get authenticated user from request.
+ * Returns `{ id, email }` where `id` is the Supabase auth user id.
  */
 export const getAuthUserFromRequest = async (event: any): Promise<{ id: string; email?: string } | null> => {
   try {
-    const token = getAuthToken(event)
-    if (!token) {
-      logger.warn('❌ No token provided')
-      return null
-    }
-
-    const supabase = getSupabaseAdmin()
-    
-    // Verify token and get user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user?.id) {
-      logger.warn('❌ Invalid token:', authError?.message)
+    const user = await getAuthenticatedUser(event)
+    if (!user?.id) {
+      logger.warn('❌ No authenticated user')
       return null
     }
 
@@ -75,51 +59,33 @@ export const getAuthUserFromRequest = async (event: any): Promise<{ id: string; 
 }
 
 /**
- * Verify auth token and get authenticated user
+ * Verify auth and resolve the database user + tenant.
  */
 export const verifyAuth = async (event: any): Promise<{ userId: string; authUserId: string; tenantId: string } | null> => {
   try {
-    const token = getAuthToken(event)
-    if (!token) {
-      logger.warn('❌ No token provided')
+    const user = await getAuthenticatedUser(event)
+    if (!user?.id) {
+      logger.warn('❌ No authenticated user')
       return null
     }
 
-    const supabase = getSupabaseAdmin()
-    
-    // Verify token
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user?.id) {
-      logger.warn('❌ Invalid token:', authError?.message)
+    const userId = user.db_user_id || user.profile?.id
+    const tenantId = user.tenant_id || user.profile?.tenant_id
+
+    if (!userId || !tenantId) {
+      logger.warn(`❌ User/tenant not resolved for auth_user_id: ${user.id}`)
       return null
     }
 
-    const authUserId = user.id
-    logger.debug(`✅ Token verified for auth user: ${authUserId}`)
-
-    // Get user from database
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, tenant_id')
-      .eq('auth_user_id', authUserId)
-      .single()
-
-    if (userError || !userData?.id) {
-      logger.warn(`❌ User not found for auth_user_id: ${authUserId}`)
-      return null
-    }
-
-    logger.debug(`✅ User found: ${userData.id} (tenant: ${userData.tenant_id})`)
+    logger.debug(`✅ User found: ${userId} (tenant: ${tenantId})`)
 
     return {
-      userId: userData.id,
-      authUserId,
-      tenantId: userData.tenant_id
+      userId,
+      authUserId: user.id,
+      tenantId
     }
   } catch (err: any) {
     logger.error('❌ Unexpected error in verifyAuth:', err)
     return null
   }
 }
-

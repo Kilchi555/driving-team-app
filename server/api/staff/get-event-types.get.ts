@@ -1,10 +1,10 @@
 import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Get authenticated user
     const authUser = await getAuthenticatedUser(event)
     if (!authUser) {
       throw createError({
@@ -41,26 +41,3 @@ export default defineEventHandler(async (event) => {
     throw error
   }
 })
-
-// Helper function to get authenticated user
-async function getAuthenticatedUser(event: any) {
-  try {
-    const supabase = getSupabaseAdmin()
-    const authHeader = event.node.req.headers.authorization
-    
-    if (!authHeader?.startsWith('Bearer ')) {
-      return null
-    }
-
-    const token = authHeader.substring(7)
-    const { data: { user }, error } = await supabase.auth.getUser(token)
-    
-    if (error || !user) {
-      return null
-    }
-
-    return user
-  } catch {
-    return null
-  }
-}

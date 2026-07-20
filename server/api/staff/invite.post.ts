@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { sendSMS } from '~/server/utils/sms'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
@@ -29,27 +30,12 @@ export default defineEventHandler(async (event) => {
 
     // Get current user and tenant
     const supabase = getSupabaseAdmin()
-    
-    // Get auth token from header
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader) {
+
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Authentication required'
-      })
-    }
-
-    // Extract token from "Bearer <token>"
-    const authToken = authHeader.replace('Bearer ', '')
-    
-    // Get user info from JWT
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authToken)
-    
-    if (authError || !user) {
-      console.error('Auth error:', authError)
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid token'
       })
     }
 

@@ -273,6 +273,14 @@ export const useTenantBranding = () => {
         invoice_footer_text: data.invoice_footer_text ?? null,
       }
 
+    // Persist slug so logout / auth middleware can redirect to /{slug}
+    // even after a session restore that never re-ran the login path.
+    if (process.client && data.slug) {
+      try {
+        localStorage.setItem('last_tenant_slug', data.slug)
+      } catch { /* non-fatal */ }
+    }
+
     // CSS-Variablen anwenden
     await applyBrandingStyles()
   }
