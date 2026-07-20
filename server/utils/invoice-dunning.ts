@@ -76,6 +76,14 @@ export function daysOverdue(dueDate: string | Date, reference: Date = new Date()
 /**
  * Ermittelt die vorgeschlagene nächste Mahnstufe für eine überfällige Rechnung.
  * Gibt 0 zurück, wenn (noch) keine weitere Stufe fällig ist.
+ *
+ * Stufen werden IMMER sequenziell durchlaufen (nie überspringen): die einzige
+ * jemals fällige Stufe ist currentLevel + 1. Es reicht nicht, dass die
+ * Rechnung insgesamt schon lange genug überfällig ist, um z.B. die 2. Mahnung
+ * zu rechtfertigen — wurde noch nie eine Zahlungserinnerung (Stufe 1)
+ * versendet, ist genau Stufe 1 die nächste, unabhängig davon, wie viele Tage
+ * bereits vergangen sind. Nur an der letzten definierten Stufe darf erneut
+ * dieselbe Stufe vorgeschlagen werden (z.B. für eine weitere Inkasso-Mahnung).
  */
 export function suggestedNextStage(
   overdueDays: number,
@@ -83,13 +91,12 @@ export function suggestedNextStage(
   settings: DunningSettingsRow
 ): DunningStage | 0 {
   if (!settings.is_enabled) return 0
-  for (const def of [...DUNNING_STAGES].reverse()) {
-    if (def.stage <= currentLevel) continue
-    if (overdueDays >= afterDaysForStage(settings, def.stage)) {
-      return def.stage
-    }
-  }
-  return 0
+
+  const maxStage = DUNNING_STAGES[DUNNING_STAGES.length - 1]
+  const nextDef = getStageDef(currentLevel + 1) ?? (currentLevel >= maxStage.stage ? maxStage : undefined)
+  if (!nextDef) return 0
+
+  return overdueDays >= afterDaysForStage(settings, nextDef.stage) ? nextDef.stage : 0
 }
 
 /** Einfache Zinsberechnung (linear, Bankjahr 360 Tage – üblich für Verzugszins CH). */

@@ -38,11 +38,17 @@ export default defineEventHandler(async (event) => {
   const currentLevelBefore = prepared.invoice.dunning_level || 0
   const MAX_STAGE = 3
 
-  const isAllowed = stage > currentLevelBefore || (currentLevelBefore >= MAX_STAGE && stage === MAX_STAGE)
+  // Mahnstufen müssen strikt sequenziell durchlaufen werden — nie überspringen.
+  // Es ist egal, wie lange eine Rechnung schon überfällig ist: ohne vorherige
+  // Zahlungserinnerung (Stufe 1) ist einzig Stufe 1 zulässig, nicht direkt
+  // Stufe 2 oder 3. Einzige Ausnahme: an der höchsten Stufe darf dieselbe
+  // Stufe erneut versendet werden (z.B. für eine weitere Inkasso-Erinnerung).
+  const isAllowed = stage === currentLevelBefore + 1 || (currentLevelBefore >= MAX_STAGE && stage === MAX_STAGE)
   if (!isAllowed) {
+    const expected = currentLevelBefore >= MAX_STAGE ? MAX_STAGE : currentLevelBefore + 1
     throw createError({
       statusCode: 409,
-      statusMessage: `Für diese Rechnung wurde bereits Mahnstufe ${currentLevelBefore} versendet. Es kann nur eine höhere Stufe (oder erneut Stufe ${MAX_STAGE}) versendet werden.`
+      statusMessage: `Für diese Rechnung wurde bereits Mahnstufe ${currentLevelBefore} versendet. Es kann nur Stufe ${expected} versendet werden.`
     })
   }
 
@@ -51,10 +57,22 @@ export default defineEventHandler(async (event) => {
   const tenantName = tenant?.name || ''
   const tenantStreet = [tenant?.invoice_street, tenant?.invoice_street_nr].filter(Boolean).join(' ').trim()
 
-  // Professionelles Mahnschreiben-PDF (Anhang)
+  // Professionelles Mahnschreiben-PDF (Anhang) — gleiche Vorlage wie Rechnungs-PDF
   let pdfBuffer: Buffer | null = null
   let pdfName = dunningPdfFilename(prepared.stageDef.label, invoice.invoice_number)
   try {
+    let tenantLogoBase64: string | null = null
+    const logoDataUrl = tenant?.logo_wide_url as string | undefined
+    if (logoDataUrl?.startsWith('data:image/')) {
+      const match = logoDataUrl.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/)
+      if (match) tenantLogoBase64 = match[2]
+    } else if (logoDataUrl?.startsWith('http')) {
+      try {
+        const logoRes = await fetch(logoDataUrl)
+        if (logoRes.ok) tenantLogoBase64 = Buffer.from(await logoRes.arrayBuffer()).toString('base64')
+      } catch { /* optional */ }
+    }
+
     pdfBuffer = await generateDunningPdf({
       stage,
       stageLabel: prepared.stageDef.label,
@@ -73,11 +91,13 @@ export default defineEventHandler(async (event) => {
       tenantZip: tenant?.invoice_zip || undefined,
       tenantCity: tenant?.invoice_city || undefined,
       tenantEmail: tenant?.contact_email || undefined,
+      tenantLogoBase64,
       customerName: prepared.customerName,
       billingCompanyName: invoice.billing_company_name || undefined,
       billingStreet: [invoice.billing_street, invoice.billing_street_number].filter(Boolean).join(' ').trim() || undefined,
       billingZip: invoice.billing_zip || undefined,
       billingCity: invoice.billing_city || undefined,
+      billingEmail: prepared.billingEmail,
       staffName: prepared.staffName,
       qrCodeDataUrl: prepared.qrCodeDataUrl,
       qrIban: tenant?.qr_iban || null,
@@ -147,7 +167,7 @@ export default defineEventHandler(async (event) => {
     await supabase.from('invoice_items').insert({
       invoice_id: body.invoiceId,
       product_name: `Mahngebühr – ${prepared.stageDef.label}`,
-      product_description: 'Automatisch durch das Mahnwesen hinzugefügt',
+      product_description: null,
       quantity: 1,
       unit_price_rappen: prepared.feeRappen,
       total_price_rappen: prepared.feeRappen,
