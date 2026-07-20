@@ -1,5 +1,6 @@
-import { defineEventHandler, readBody, createError, getHeader } from 'h3'
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -7,23 +8,8 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const { action, documentId, base64Data, documentType, categoryCode } = body
 
-    // Get auth token from HTTP-only cookie
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Nicht authentifiziert'
-      })
-    }
-
-    // Extract token from "Bearer <token>"
-    const authToken = authHeader.replace('Bearer ', '')
-
-    // Get authenticated user using admin client with token
-    const supabase = getSupabaseAdmin()
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authToken)
-
-    if (authError || !user) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Nicht authentifiziert'

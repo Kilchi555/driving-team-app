@@ -1,5 +1,6 @@
-import { defineEventHandler, createError, getHeader } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
@@ -15,8 +16,8 @@ export default defineEventHandler(async (event) => {
 
   try {
     // ============ LAYER 1: AUTHENTICATION ============
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       await logAudit({
         action: 'customer_get_payment_page_data',
         status: 'failed',
@@ -26,20 +27,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
-    const token = authHeader.replace('Bearer ', '')
     const supabaseAdmin = getSupabaseAdmin()
-
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-
-    if (authError || !user) {
-      await logAudit({
-        action: 'customer_get_payment_page_data',
-        status: 'failed',
-        error_message: 'Invalid or expired token',
-        ip_address: ipAddress
-      })
-      throw createError({ statusCode: 401, statusMessage: 'Invalid or expired token' })
-    }
 
     authenticatedUserId = user.id
     auditDetails.authenticated_user_id = authenticatedUserId

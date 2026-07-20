@@ -2329,26 +2329,24 @@ const handleLogout = async () => {
   try {
     isLoggingOut.value = true
     logger.debug('🚪 Logging out user...')
-    
-    await authStore.logout()
-    
-    logger.debug('✅ Logout successful, redirecting to tenant booking...')
+
     const { currentTenantBranding } = useTenantBranding()
     const slug = currentTenantBranding.value?.slug
+    const { getLoginPath } = await import('~/utils/redirect-to-login')
+    const redirectPath = getLoginPath(slug)
+
+    // Caller handles redirect — avoids race with logout()'s own navigateTo('/login')
+    await authStore.logout({ redirect: false })
     
-    // ✅ Redirect to tenant login page (/slug) or fallback to /login
-    // NEVER redirect to / or tenant homepage!
-    const redirectPath = slug ? `/${slug}` : '/login'
-    logger.debug('🔄 Logout redirect:', redirectPath)
+    logger.debug('✅ Logout successful, redirecting:', redirectPath)
     await navigateTo(redirectPath)
     
   } catch (err: any) {
     console.error('❌ Fehler beim Abmelden:', err)
     const { currentTenantBranding } = useTenantBranding()
     const slug = currentTenantBranding.value?.slug
-    
-    // ✅ On error, also redirect to /slug or /login, never to /
-    const redirectPath = slug ? `/${slug}` : '/login'
+    const { getLoginPath } = await import('~/utils/redirect-to-login')
+    const redirectPath = getLoginPath(slug)
     logger.error('🔄 Logout redirect on error:', redirectPath)
     await navigateTo(redirectPath)
   } finally {

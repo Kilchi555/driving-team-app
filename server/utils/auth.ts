@@ -138,16 +138,32 @@ export async function getAuthenticatedUser(event: H3Event) {
                   .eq('auth_user_id', authUser.id)
                   .single()
                 if (dbUser) {
-                  let tenantTrialData = null
+                  let tenantTrialData: { is_trial: boolean; trial_ends_at: string | null; subscription_plan: string | null; current_period_end: string | null; slug?: string | null } | null = null
                   if (dbUser.tenant_id) {
                     const { data: tenantRow } = await supabaseAdmin
                       .from('tenants')
-                      .select('is_trial, trial_ends_at, subscription_plan, current_period_end')
+                      .select('is_trial, trial_ends_at, subscription_plan, current_period_end, slug')
                       .eq('id', dbUser.tenant_id)
                       .single()
                     if (tenantRow) tenantTrialData = tenantRow
                   }
-                  return { ...authUser, tenant_id: dbUser.tenant_id, db_user_id: dbUser.id, role: dbUser.role, profile: { id: dbUser.id, tenant_id: dbUser.tenant_id, role: dbUser.role, email: dbUser.email || authUser.email, first_name: dbUser.first_name, last_name: dbUser.last_name, can_edit_guide: (dbUser as any).can_edit_guide ?? false, tenant: tenantTrialData } }
+                  return {
+                    ...authUser,
+                    tenant_id: dbUser.tenant_id,
+                    db_user_id: dbUser.id,
+                    role: dbUser.role,
+                    profile: {
+                      id: dbUser.id,
+                      tenant_id: dbUser.tenant_id,
+                      role: dbUser.role,
+                      email: dbUser.email || authUser.email,
+                      first_name: dbUser.first_name,
+                      last_name: dbUser.last_name,
+                      can_edit_guide: (dbUser as any).can_edit_guide ?? false,
+                      tenant_slug: tenantTrialData?.slug || null,
+                      tenant: tenantTrialData
+                    }
+                  }
                 }
               }
               return authUser
@@ -175,11 +191,11 @@ export async function getAuthenticatedUser(event: H3Event) {
       
       if (dbUser) {
         // Also fetch tenant trial/subscription status so middleware can check it synchronously
-        let tenantTrialData: { is_trial: boolean; trial_ends_at: string | null; subscription_plan: string | null; current_period_end: string | null } | null = null
+        let tenantTrialData: { is_trial: boolean; trial_ends_at: string | null; subscription_plan: string | null; current_period_end: string | null; slug?: string | null } | null = null
         if (dbUser.tenant_id) {
           const { data: tenantRow } = await supabase
             .from('tenants')
-            .select('is_trial, trial_ends_at, subscription_plan, current_period_end')
+            .select('is_trial, trial_ends_at, subscription_plan, current_period_end, slug')
             .eq('id', dbUser.tenant_id)
             .single()
           if (tenantRow) tenantTrialData = tenantRow
@@ -199,6 +215,7 @@ export async function getAuthenticatedUser(event: H3Event) {
             first_name: dbUser.first_name,
             last_name: dbUser.last_name,
             can_edit_guide: dbUser.can_edit_guide ?? false,
+            tenant_slug: tenantTrialData?.slug || null,
             tenant: tenantTrialData
           }
         }

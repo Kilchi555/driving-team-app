@@ -170,7 +170,7 @@ const handleLogout = async () => {
   const { getLoginPath } = await import('~/utils/redirect-to-login')
   const loginPath = getLoginPath()
   try {
-    await logout()
+    await logout({ redirect: false })
     showSuccess('Erfolgreich abgemeldet')
     await navigateTo(loginPath)
   } catch (error) {

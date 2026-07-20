@@ -1,5 +1,6 @@
-import { defineEventHandler, readBody, createError, getHeader } from 'h3'
+import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -22,49 +23,8 @@ export default defineEventHandler(async (event) => {
       profession
     } = body
 
-    // Get auth token from Authorization header (set by @nuxtjs/supabase module)
-    logger.debug('🔄 [update-profile] Getting auth header')
-    const authHeader = getHeader(event, 'authorization') || ''
-    let accessToken: string | null = null
-    
-    if (authHeader.startsWith('Bearer ')) {
-      accessToken = authHeader.substring(7)
-      logger.debug('🔄 [update-profile] Found Bearer token')
-    }
-
-    if (!accessToken) {
-      console.error('❌ No access token found')
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Nicht authentifiziert'
-      })
-    }
-
-    // Create Supabase client with the access token
-    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-    const supabaseKey = process.env.SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !supabaseKey) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
-    }
-
-    const userClient = createClient(supabaseUrl, supabaseKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      }
-    })
-
-    // Get authenticated user
-    logger.debug('🔄 [update-profile] Getting user from auth')
-    const { data: { user }, error: authError } = await userClient.auth.getUser()
-
-    if (authError || !user) {
-      console.error('❌ Auth error:', authError)
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Nicht authentifiziert'
@@ -73,10 +33,10 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('🔄 Updating profile for user:', user.id)
 
-    // Create service role client to bypass RLS
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-    if (!serviceRoleKey) {
+    if (!supabaseUrl || !serviceRoleKey) {
       throw createError({
         statusCode: 500,
         statusMessage: 'Server configuration error'

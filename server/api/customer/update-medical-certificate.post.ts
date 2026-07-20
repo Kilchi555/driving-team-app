@@ -8,8 +8,9 @@
  * tenant isolation, audit logging
  */
 
-import { defineEventHandler, createError, readBody, getHeader } from 'h3'
+import { defineEventHandler, createError, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 // Whitelist of allowed fields to update
@@ -130,25 +131,15 @@ export default defineEventHandler(async (event) => {
   try {
     // ========== LAYER 1: AUTH & VALIDATION ==========
     
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Unauthorized'
       })
     }
 
-    const token = authHeader.substring(7)
     const supabase = getSupabaseAdmin()
-
-    // Verify token
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid token'
-      })
-    }
 
     // Get user profile
     const { data: userProfile, error: profileError } = await supabase

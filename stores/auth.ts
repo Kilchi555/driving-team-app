@@ -347,19 +347,53 @@ const isAdmin = computed(() => {
     }
   }
 
-  const logout = async () => {
+  const resolveLogoutTenantSlug = (): string | null => {
+    if (!process.client) return null
+
+    try {
+      const fromStorage = localStorage.getItem('last_tenant_slug')
+      if (fromStorage) return fromStorage
+    } catch { /* ignore */ }
+
+    const fromProfile = (userProfile.value as any)?.tenant_slug
+      || (userProfile.value as any)?.tenant?.slug
+    if (fromProfile) return fromProfile
+
+    try {
+      const { currentTenantBranding } = useTenantBranding()
+      const fromBranding = currentTenantBranding.value?.slug
+      if (fromBranding) return fromBranding
+    } catch { /* branding composable unavailable */ }
+
+    return null
+  }
+
+  const persistTenantSlug = (slug: string | null | undefined) => {
+    if (!process.client || !slug) return
+    try {
+      localStorage.setItem('last_tenant_slug', slug)
+    } catch (e) {
+      console.warn('⚠️ Could not save tenant slug to localStorage:', e)
+    }
+  }
+
+  /**
+   * @param options.redirect - When false, caller handles navigation (avoids
+   *   race where logout navigates to /login and unmounts the layout before
+   *   the caller can navigate to /{slug}). Default true.
+   */
+  const logout = async (options?: { redirect?: boolean }) => {
+    const shouldRedirect = options?.redirect !== false
     loading.value = true
     errorMessage.value = null
 
-    try {
-      logger.debug('🚪 Logging out')
-      
-      // Get tenant slug from localStorage first (set on login) — avoids a DB call during logout
-      let tenantSlug: string | null = process.client
-        ? localStorage.getItem('last_tenant_slug')
-        : null
+    // Capture slug BEFORE any cleanup — branding/profile may still be available.
+    let tenantSlug: string | null = resolveLogoutTenantSlug()
 
-      // Fallback: query DB if not in localStorage
+    try {
+      logger.debug('🚪 Logging out', { tenantSlug, shouldRedirect })
+
+      // Fallback: query DB while cookies/session are still valid
       if (!tenantSlug && userProfile.value?.tenant_id) {
         try {
           const supabaseClient = getSupabase()
@@ -433,48 +467,32 @@ const isAdmin = computed(() => {
       clearAuthState()
       logger.debug('✅ Logout successful')
       
-      // Save tenant slug to localStorage for redirect after logout
-      if (process.client && tenantSlug) {
-        try {
-          localStorage.setItem('last_tenant_slug', tenantSlug)
-        } catch (e) {
-          console.warn('⚠️ Could not save tenant slug to localStorage:', e)
-        }
-      }
+      // Keep tenant slug for next login / middleware redirects
+      persistTenantSlug(tenantSlug)
       
-      // Redirect to tenant login page
-      if (process.client) {
+      if (shouldRedirect && process.client) {
         const { navigateTo } = await import('#app')
-        if (tenantSlug) {
-          await navigateTo(`/${tenantSlug}`)
-        } else {
-          await navigateTo('/login')
-        }
+        const { getLoginPath } = await import('~/utils/redirect-to-login')
+        await navigateTo(getLoginPath(tenantSlug))
       }
+
+      return { tenantSlug }
     } catch (err: any) {
       console.error('❌ Logout error:', err.message)
       errorMessage.value = err.message || 'Abmeldung fehlgeschlagen.'
-      
-      // Redirect anyway if we have tenant slug
-      if (process.client && userProfile.value?.tenant_id) {
+      persistTenantSlug(tenantSlug)
+
+      if (shouldRedirect && process.client) {
         try {
-          const supabaseClient = getSupabase()
-          if (supabaseClient) {
-            const { data: tenantData } = await supabaseClient
-              .from('tenants')
-              .select('slug')
-              .eq('id', userProfile.value.tenant_id)
-              .single()
-            const slug = tenantData?.slug || null
-            if (slug) {
-              const { navigateTo } = await import('#app')
-              await navigateTo(`/${slug}`)
-            }
-          }
+          const { navigateTo } = await import('#app')
+          const { getLoginPath } = await import('~/utils/redirect-to-login')
+          await navigateTo(getLoginPath(tenantSlug))
         } catch {
           // Ignore errors in fallback redirect
         }
       }
+
+      return { tenantSlug }
     } finally {
       loading.value = false
     }
@@ -514,6 +532,8 @@ const isAdmin = computed(() => {
       if (p.tenant) {
         tenantTrialInfo.value = p.tenant
       }
+      const slug = (p as any).tenant_slug || (p as any).tenant?.slug
+      if (slug) persistTenantSlug(slug)
       logger.debug('✅ User profile loaded:', {
         role: p.role,
         tenant_id: p.tenant_id,

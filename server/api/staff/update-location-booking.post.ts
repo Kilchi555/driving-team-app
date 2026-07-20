@@ -12,8 +12,9 @@
  * }
  */
 
-import { defineEventHandler, readBody, createError, getHeader } from 'h3'
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 interface TimeWindow {
@@ -42,11 +43,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get authenticated user
-    const authHeader = getHeader(event, 'authorization')
-    const token = authHeader?.replace('Bearer ', '')
-
-    if (!token) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Authentication required'
@@ -54,14 +52,6 @@ export default defineEventHandler(async (event) => {
     }
 
     const supabase = getSupabaseAdmin()
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
-    if (authError || !user) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid authentication'
-      })
-    }
 
     logger.debug(`📍 Updating location booking status for staff`, {
       staff_id: user.id,
