@@ -20,16 +20,17 @@ import { logAudit } from '~/server/utils/audit'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Layer 1: Authentication - Verify JWT token
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader) {
+    // Layer 1: Authentication
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
-    // Create Supabase client with user's token
+    // Create Supabase client for DB work
     const supabaseUrl = process.env.SUPABASE_URL || process.env.NUXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
     
@@ -38,14 +39,6 @@ export default defineEventHandler(async (event) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
-
-    // Verify user from token
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user) {
-      throw createError({ statusCode: 401, statusMessage: 'Invalid token' })
-    }
 
     // Get request body
     const body = await readBody(event)
