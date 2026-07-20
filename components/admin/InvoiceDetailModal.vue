@@ -25,19 +25,35 @@
           <div class="flex items-center gap-1.5 flex-shrink-0">
             <!-- View mode buttons -->
             <template v-if="!isEditing">
-              <!-- PDF Download -->
-              <button
-                :disabled="isDownloadingPdf"
-                class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50"
-                @click="downloadPdf"
-                title="PDF öffnen"
-              >
-                <svg class="w-4 h-4 flex-shrink-0" :class="{ 'animate-spin': isDownloadingPdf }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path v-if="!isDownloadingPdf" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2zM12 3v6h6M9 13h6m-6 4h4" />
-                  <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span class="hidden sm:inline">PDF</span>
-              </button>
+              <!-- PDF Download: Rechnung und ggf. Mahnung -->
+              <div class="relative inline-flex">
+                <button
+                  :disabled="isDownloadingPdf"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50"
+                  :class="effectiveDunningLevel > 0 ? 'rounded-r-none border-r-0' : ''"
+                  @click="downloadPdf"
+                  title="Rechnungs-PDF"
+                >
+                  <svg class="w-4 h-4 flex-shrink-0" :class="{ 'animate-spin': isDownloadingPdf }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path v-if="!isDownloadingPdf" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2zM12 3v6h6M9 13h6m-6 4h4" />
+                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span class="hidden sm:inline">{{ effectiveDunningLevel > 0 ? 'Rechnung' : 'PDF' }}</span>
+                </button>
+                <button
+                  v-if="effectiveDunningLevel > 0"
+                  :disabled="isDownloadingDunningPdf"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-amber-300 rounded-lg rounded-l-none text-sm font-medium text-amber-800 bg-amber-50 hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
+                  @click="downloadDunningPdf()"
+                  :title="`${dunningLevelLabel}-PDF`"
+                >
+                  <svg class="w-4 h-4 flex-shrink-0" :class="{ 'animate-spin': isDownloadingDunningPdf }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path v-if="!isDownloadingDunningPdf" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zM12 15.75h.007v.008H12v-.008z" />
+                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span class="hidden sm:inline">{{ dunningLevelLabel }}</span>
+                </button>
+              </div>
               <!-- Edit – icon only on mobile -->
               <button
                 class="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -151,7 +167,16 @@
                   </div>
                   <div class="flex items-center justify-between gap-2">
                     <dt class="text-sm text-gray-500 flex-shrink-0">Status</dt>
-                    <dd><InvoiceStatusBadge :status="invoice.status" /></dd>
+                    <dd class="flex flex-wrap items-center justify-end gap-1">
+                      <InvoiceStatusBadge :status="invoice.status" />
+                      <span
+                        v-if="effectiveDunningLevel > 0"
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                        :style="dunningLevelBadgeStyle"
+                      >
+                        {{ dunningLevelLabel }}
+                      </span>
+                    </dd>
                   </div>
                   <div class="flex items-center justify-between gap-2">
                     <dt class="text-sm text-gray-500 flex-shrink-0">Zahlung</dt>
@@ -193,7 +218,7 @@
                         <span :class="isOverdue(effectiveDueDate) ? 'text-red-600' : 'text-gray-900'">
                           {{ formatDate(effectiveDueDate) }}
                         </span>
-                        <p v-if="invoice.dunning_due_date && dunningLevel > 0" class="text-xs text-blue-600 mt-0.5">
+                        <p v-if="invoice.dunning_due_date && effectiveDunningLevel > 0" class="text-xs text-blue-600 mt-0.5">
                           Neues Zahlungsziel (Original: {{ formatDate(invoice.due_date) }})
                         </p>
                       </template>
@@ -251,12 +276,18 @@
                       <span>Rechnung noch nicht versendet</span>
                     </div>
                     <div
-                      v-for="entry in sentDunningEntries"
+                      v-for="entry in shippingDunningEntries"
                       :key="entry.id"
                       class="flex items-center gap-2 text-xs text-gray-500"
                     >
                       <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" :style="{ background: DUNNING_STAGE_COLORS[entry.stage] || '#6b7280' }"></span>
                       <span class="truncate">{{ dunningStageLabel(entry.stage) }}</span>
+                      <button
+                        v-if="entry.id !== 'fallback-dunning'"
+                        class="text-amber-700 hover:underline font-medium"
+                        :disabled="isDownloadingDunningPdf"
+                        @click="downloadDunningPdf(entry.id)"
+                      >PDF</button>
                       <span class="ml-auto text-gray-700 whitespace-nowrap">{{ formatDateTime(entry.sent_at) }}</span>
                     </div>
                   </div>
@@ -403,32 +434,40 @@
             </div>
 
             <!-- ── Mahnwesen ── -->
-            <div v-if="canSendDunning || dunningLevel > 0 || dunningLog.length > 0" class="bg-gray-50 rounded-xl p-4">
+            <div v-if="canSendDunning || effectiveDunningLevel > 0 || dunningLog.length > 0 || shippingDunningEntries.length > 0" class="bg-gray-50 rounded-xl p-4">
               <div class="flex items-center justify-between mb-3">
                 <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Mahnwesen</h4>
                 <div class="flex items-center gap-3">
-                  <span v-if="dunningLevel > 0" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                  <span v-if="effectiveDunningLevel > 0" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                     :style="dunningLevelBadgeStyle">
                     {{ dunningLevelLabel }}
                   </span>
-                  <button v-if="canSendDunning || dunningLevel > 0" @click="toggleDunningPause" class="text-xs text-gray-500 hover:text-gray-700 underline">
+                  <button v-if="canSendDunning || effectiveDunningLevel > 0" @click="toggleDunningPause" class="text-xs text-gray-500 hover:text-gray-700 underline">
                     {{ dunningPaused ? 'Mahnwesen reaktivieren' : 'Mahnwesen pausieren' }}
                   </button>
                 </div>
               </div>
 
-              <div v-if="dunningLog.length === 0" class="text-sm text-gray-400 italic">Noch keine Mahnung versendet.</div>
+              <div v-if="dunningLog.length === 0 && shippingDunningEntries.length === 0" class="text-sm text-gray-400 italic">Noch keine Mahnung versendet.</div>
               <div v-else class="space-y-2">
-                <div v-for="entry in dunningLog" :key="entry.id" class="flex items-center justify-between gap-3 bg-white rounded-lg px-3 py-2.5 border border-gray-100">
+                <div v-for="entry in (dunningLog.length ? dunningLog : shippingDunningEntries)" :key="entry.id" class="flex items-center justify-between gap-3 bg-white rounded-lg px-3 py-2.5 border border-gray-100">
                   <div class="min-w-0">
                     <p class="text-sm font-medium text-gray-900">{{ dunningStageLabel(entry.stage) }}</p>
-                    <p class="text-xs text-gray-400 mt-0.5">{{ formatDateTime(entry.sent_at) }} · an {{ entry.sent_to }}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">{{ formatDateTime(entry.sent_at) }}<span v-if="entry.sent_to"> · an {{ entry.sent_to }}</span></p>
                     <p v-if="entry.new_due_date" class="text-xs text-blue-600 mt-0.5">Zahlungsziel: {{ formatDate(entry.new_due_date) }}</p>
                   </div>
-                  <div class="text-right flex-shrink-0">
+                  <div class="text-right flex-shrink-0 flex flex-col items-end gap-1">
                     <span v-if="entry.status === 'sent'" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Versendet</span>
-                    <span v-else class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Fehlgeschlagen</span>
-                    <p v-if="entry.fee_rappen > 0" class="text-xs text-gray-400 mt-0.5">+{{ formatCurrency(entry.fee_rappen) }} Gebühr</p>
+                    <span v-else-if="entry.status" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Fehlgeschlagen</span>
+                    <p v-if="entry.fee_rappen > 0" class="text-xs text-gray-400">+{{ formatCurrency(entry.fee_rappen) }} Gebühr</p>
+                    <button
+                      v-if="entry.status === 'sent' && entry.id !== 'fallback-dunning'"
+                      class="text-xs font-medium text-amber-700 hover:text-amber-900 underline"
+                      :disabled="isDownloadingDunningPdf"
+                      @click="downloadDunningPdf(entry.id)"
+                    >
+                      PDF herunterladen
+                    </button>
                   </div>
                 </div>
               </div>
@@ -817,6 +856,8 @@ const props = defineProps<{
 
 // PDF download
 const isDownloadingPdf = ref(false)
+const isDownloadingDunningPdf = ref(false)
+
 const downloadPdf = async () => {
   if (!props.invoice?.id || isDownloadingPdf.value) return
   isDownloadingPdf.value = true
@@ -828,10 +869,9 @@ const downloadPdf = async () => {
     if (res?.pdfUrl) {
       const link = document.createElement('a')
       link.href = res.pdfUrl
-      link.download = `${props.invoice.invoice_number}.pdf`
+      link.download = `Rechnung_${props.invoice.invoice_number}.pdf`
       link.click()
     }
-    // Draft moves to "PDF erstellt" once a PDF has actually been generated
     if (res?.newStatus) {
       emit('statusChanged', props.invoice.id, res.newStatus)
     }
@@ -839,6 +879,27 @@ const downloadPdf = async () => {
     console.error('PDF download failed:', e)
   } finally {
     isDownloadingPdf.value = false
+  }
+}
+
+const downloadDunningPdf = async (logId?: string) => {
+  if (!props.invoice?.id || isDownloadingDunningPdf.value) return
+  isDownloadingDunningPdf.value = true
+  try {
+    const res: any = await $fetch('/api/invoices/download-dunning', {
+      method: 'POST',
+      body: { invoiceId: props.invoice.id, logId: logId || undefined },
+    })
+    if (res?.pdfUrl) {
+      const link = document.createElement('a')
+      link.href = res.pdfUrl
+      link.download = res.filename || `${dunningLevelLabel.value}_${props.invoice.invoice_number}.pdf`
+      link.click()
+    }
+  } catch (e) {
+    console.error('Dunning PDF download failed:', e)
+  } finally {
+    isDownloadingDunningPdf.value = false
   }
 }
 
@@ -923,9 +984,14 @@ const DUNNING_STAGE_COLORS: Record<number, string> = { 1: '#2563eb', 2: '#d97706
 
 const dunningStageLabel = (stage: number) => DUNNING_STAGE_LABELS[stage] || `Stufe ${stage}`
 
-const dunningLevelLabel = computed(() => dunningStageLabel(dunningLevel.value))
+/** Mahnstufe: API-Wert, sonst aus der Rechnung (invoices_with_details) */
+const effectiveDunningLevel = computed(() =>
+  dunningLevel.value || props.invoice?.dunning_level || 0
+)
+
+const dunningLevelLabel = computed(() => dunningStageLabel(effectiveDunningLevel.value))
 const dunningLevelBadgeStyle = computed(() => {
-  const color = DUNNING_STAGE_COLORS[dunningLevel.value] || '#6b7280'
+  const color = DUNNING_STAGE_COLORS[effectiveDunningLevel.value] || '#6b7280'
   return { background: color + '1a', color }
 })
 
@@ -935,6 +1001,24 @@ const sentDunningEntries = computed(() =>
     .slice()
     .sort((a: any, b: any) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime())
 )
+
+/** Versandhistorie-Einträge inkl. Fallback aus last_dunning_sent_at wenn Log noch leer */
+const shippingDunningEntries = computed(() => {
+  if (sentDunningEntries.value.length > 0) return sentDunningEntries.value
+
+  const inv = props.invoice as any
+  const level = effectiveDunningLevel.value
+  const sentAt = inv?.last_dunning_sent_at
+  if (level > 0 && sentAt) {
+    return [{
+      id: 'fallback-dunning',
+      stage: level,
+      sent_at: sentAt,
+      status: 'sent',
+    }]
+  }
+  return []
+})
 
 /** Kundendaten: API-Ergebnis oder Fallback aus invoices_with_details / Rechnungsadresse */
 const displayCustomer = computed(() => {
@@ -971,10 +1055,17 @@ const loadDunningLog = async () => {
   try {
     const res = await $fetch<any>('/api/invoices/dunning-log', { query: { invoice_id: props.invoice.id } })
     dunningLog.value = res?.entries || []
-    dunningLevel.value = res?.dunning_level || 0
-    dunningPaused.value = !!res?.dunning_paused
+    // Nie auf 0 zurücksetzen, wenn die Rechnung bereits eine Mahnstufe hat
+    const fromApi = res?.dunning_level || 0
+    const fromInvoice = props.invoice?.dunning_level || 0
+    dunningLevel.value = Math.max(fromApi, fromInvoice, dunningLevel.value || 0)
+    dunningPaused.value = res?.dunning_paused ?? !!props.invoice?.dunning_paused
   } catch (e) {
     console.error('Fehler beim Laden der Mahnhistorie:', e)
+    // Fallback: Stufe aus der Rechnung behalten, damit Badge/Historie nicht verschwinden
+    if (props.invoice?.dunning_level) {
+      dunningLevel.value = props.invoice.dunning_level
+    }
   }
 }
 

@@ -171,5 +171,9 @@ export async function prepareDunning(supabase: SupabaseClient, opts: PrepareDunn
     settings,
     placeholders,
     formattedTotalDue: formatChf(totalDueRappen),
+    staffName,
+    customerName,
+    qrCodeDataUrl,
+    scorRef,
   }
 }

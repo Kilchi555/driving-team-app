@@ -1,6 +1,7 @@
 // server/api/invoices/send-dunning.post.ts
 // Versendet eine Zahlungserinnerung/Mahnung für eine Rechnung, protokolliert
 // sie in invoice_dunning_log und aktualisiert den Mahnstatus der Rechnung.
+// Hängt ein professionelles Mahnschreiben-PDF an die E-Mail an.
 // Optional wird die Mahngebühr automatisch als Rechnungsposition hinzugefügt
 // und der Rechnungsbetrag entsprechend erhöht (siehe dunning_settings.add_fee_to_invoice_total).
 //
@@ -11,6 +12,7 @@ import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { prepareDunning } from '~/server/utils/invoice-dunning-send'
+import { generateDunningPdf, dunningPdfFilename } from '~/server/utils/dunning-pdf'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
@@ -36,11 +38,6 @@ export default defineEventHandler(async (event) => {
   const currentLevelBefore = prepared.invoice.dunning_level || 0
   const MAX_STAGE = 3
 
-  // Mahnstufen dürfen nicht übersprungen oder wiederholt werden — erlaubt ist nur
-  // die nächsthöhere Stufe, bzw. ein erneuter Versand der höchsten Stufe (3), falls
-  // diese bereits erreicht ist (z.B. für eine weitere Inkasso-Erinnerung). Die UI
-  // (DunningSendDialog.availableStages) blendet unzulässige Stufen bereits aus,
-  // aber wir validieren hier serverseitig noch einmal, damit das nicht umgehbar ist.
   const isAllowed = stage > currentLevelBefore || (currentLevelBefore >= MAX_STAGE && stage === MAX_STAGE)
   if (!isAllowed) {
     throw createError({
@@ -49,7 +46,48 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const tenantName = (prepared.tenant as any)?.name || ''
+  const tenant = prepared.tenant as any
+  const invoice = prepared.invoice
+  const tenantName = tenant?.name || ''
+  const tenantStreet = [tenant?.invoice_street, tenant?.invoice_street_nr].filter(Boolean).join(' ').trim()
+
+  // Professionelles Mahnschreiben-PDF (Anhang)
+  let pdfBuffer: Buffer | null = null
+  let pdfName = dunningPdfFilename(prepared.stageDef.label, invoice.invoice_number)
+  try {
+    pdfBuffer = await generateDunningPdf({
+      stage,
+      stageLabel: prepared.stageDef.label,
+      invoiceNumber: invoice.invoice_number,
+      invoiceDate: invoice.invoice_date,
+      originalDueDate: invoice.due_date,
+      newDueDate: prepared.newDueDateIso,
+      overdueDays: prepared.overdueDays,
+      bodyText: prepared.bodyText,
+      outstandingRappen: prepared.outstandingRappen,
+      feeRappen: prepared.feeRappen,
+      interestRappen: prepared.interestRappen,
+      totalDueRappen: prepared.totalDueRappen,
+      tenantName: tenant?.legal_company_name || tenantName,
+      tenantStreet: tenantStreet || undefined,
+      tenantZip: tenant?.invoice_zip || undefined,
+      tenantCity: tenant?.invoice_city || undefined,
+      tenantEmail: tenant?.contact_email || undefined,
+      customerName: prepared.customerName,
+      billingCompanyName: invoice.billing_company_name || undefined,
+      billingStreet: [invoice.billing_street, invoice.billing_street_number].filter(Boolean).join(' ').trim() || undefined,
+      billingZip: invoice.billing_zip || undefined,
+      billingCity: invoice.billing_city || undefined,
+      staffName: prepared.staffName,
+      qrCodeDataUrl: prepared.qrCodeDataUrl,
+      qrIban: tenant?.qr_iban || null,
+      scorRef: prepared.scorRef,
+      creditorName: tenant?.legal_company_name || tenantName,
+      primaryColor: tenant?.primary_color || undefined,
+    })
+  } catch (pdfErr: any) {
+    console.warn('⚠️ Mahnschreiben-PDF konnte nicht erzeugt werden (E-Mail geht ohne Anhang):', pdfErr?.message)
+  }
 
   let sendError: string | null = null
   try {
@@ -58,8 +96,11 @@ export default defineEventHandler(async (event) => {
       subject: prepared.subject,
       html: prepared.bodyHtml,
       fromName: tenantName,
-      fromEmail: (prepared.tenant as any)?.from_email ?? null,
-      domainVerified: (prepared.tenant as any)?.resend_domain_verified ?? false,
+      fromEmail: tenant?.from_email ?? null,
+      domainVerified: tenant?.resend_domain_verified ?? false,
+      attachments: pdfBuffer
+        ? [{ filename: pdfName, content: pdfBuffer }]
+        : undefined,
     })
   } catch (e: any) {
     sendError = e?.message || 'E-Mail-Versand fehlgeschlagen'
@@ -74,6 +115,7 @@ export default defineEventHandler(async (event) => {
     sent_to: prepared.billingEmail,
     subject: prepared.subject,
     body_html: prepared.bodyHtml,
+    body_text: prepared.bodyText,
     fee_rappen: prepared.feeRappen,
     interest_rappen: prepared.interestRappen,
     outstanding_amount_rappen: prepared.outstandingRappen,
@@ -90,11 +132,9 @@ export default defineEventHandler(async (event) => {
   const invoiceUpdate: Record<string, any> = {
     dunning_level: Math.max(currentLevelBefore, stage),
     last_dunning_sent_at: new Date().toISOString(),
-    // Neues Zahlungsziel aus der Mahnung (Original due_date bleibt für PDF/{faelligkeitsdatum})
     dunning_due_date: prepared.newDueDateIso,
   }
 
-  // Mahngebühr optional als Rechnungsposition + Totalanpassung übernehmen
   if (prepared.settings.add_fee_to_invoice_total && prepared.feeRappen > 0) {
     const { data: maxSortRow } = await supabase
       .from('invoice_items')
@@ -137,5 +177,6 @@ export default defineEventHandler(async (event) => {
     stage,
     feeAddedRappen: prepared.settings.add_fee_to_invoice_total ? prepared.feeRappen : 0,
     newDunningLevel: Math.max(currentLevelBefore, stage),
+    pdfAttached: !!pdfBuffer,
   }
 })

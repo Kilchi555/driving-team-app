@@ -26,11 +26,14 @@ export default defineEventHandler(async (event) => {
 
   const { data, error } = await supabase
     .from('invoice_dunning_log')
-    .select('id, stage, stage_key, sent_to, subject, fee_rappen, interest_rappen, outstanding_amount_rappen, new_due_date, status, error_message, sent_at, sent_by, users:sent_by(first_name, last_name)')
+    .select('id, stage, stage_key, sent_to, subject, fee_rappen, interest_rappen, outstanding_amount_rappen, new_due_date, status, error_message, sent_at, sent_by')
     .eq('invoice_id', invoiceId)
     .order('sent_at', { ascending: false })
 
-  if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+  if (error) {
+    console.error('invoice_dunning_log query failed:', error)
+    throw createError({ statusCode: 500, statusMessage: error.message })
+  }
 
   return {
     entries: data ?? [],
