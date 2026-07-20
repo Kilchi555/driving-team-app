@@ -6,7 +6,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
-import { getHeader } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -16,8 +16,8 @@ export default defineEventHandler(async (event) => {
 
   try {
     // ============ LAYER 1: AUTHENTICATION ============
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader) {
+    const user = await getAuthenticatedUser(event)
+    if (!user) {
       await logAudit({
         action: 'send_onboarding_sms',
         status: 'failed',
@@ -30,23 +30,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const token = authHeader.replace('Bearer ', '')
     const supabaseAdmin = getSupabaseAdmin()
-
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-
-    if (authError || !user) {
-      await logAudit({
-        action: 'send_onboarding_sms',
-        status: 'failed',
-        error_message: 'Invalid or expired token',
-        ip_address: ipAddress
-      })
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid or expired token'
-      })
-    }
 
     authenticatedUserId = user.id
 
