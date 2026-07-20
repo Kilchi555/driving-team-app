@@ -1,40 +1,27 @@
-import { createClient } from '@supabase/supabase-js'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
-  // ✅ Auth check
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
+  // ✅ Auth check — Bearer header with HTTP-only-cookie fallback + token
+  // refresh, instead of a raw Bearer-only check that would 401 whenever the
+  // client's access token had just expired.
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) {
     throw createError({ statusCode: 401, message: 'Unauthorized' })
   }
-  const token = authHeader.substring(7)
 
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NUXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw createError({ statusCode: 500, message: 'Server configuration error' })
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseKey)
-
-  // ✅ Verify user token and get user
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !user) {
-    throw createError({ statusCode: 401, message: 'Invalid token' })
-  }
+  const supabase = getSupabaseAdmin()
 
   // ✅ Check if user is admin/staff
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('role, tenant_id')
-    .eq('auth_user_id', user.id)
-    .single()
+  const userData = authUser.db_user_id
+    ? { role: authUser.role, tenant_id: authUser.tenant_id }
+    : null
 
-  if (userError || !userData) {
+  if (!userData) {
     throw createError({ statusCode: 403, message: 'User not found' })
   }
 
-  if (!['admin', 'staff', 'superadmin'].includes(userData.role)) {
+  if (!['admin', 'staff', 'super_admin'].includes(userData.role)) {
     throw createError({ statusCode: 403, message: 'Admin access required' })
   }
 
@@ -64,7 +51,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, message: 'Invoice not found' })
     }
 
-    if (existingInvoice.tenant_id !== userData.tenant_id && userData.role !== 'superadmin') {
+    if (existingInvoice.tenant_id !== userData.tenant_id && userData.role !== 'super_admin') {
       throw createError({ statusCode: 403, message: 'Access denied' })
     }
 

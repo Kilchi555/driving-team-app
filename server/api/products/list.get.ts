@@ -1,26 +1,19 @@
-import { defineEventHandler, getQuery, createError, getHeader } from 'h3'
+import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
 
-  // Get auth token from headers (optional for products)
-  const authHeader = getHeader(event, 'authorization')
-  let userProfile: any = null
-
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user: authUser } } = await supabase.auth.getUser(token)
-    
-    if (authUser) {
-      const { data: profile } = await supabase
-        .from('users')
-        .select('id, tenant_id')
-        .eq('auth_user_id', authUser.id)
-        .single()
-      userProfile = profile
-    }
-  }
+  // Auth is optional for products — but still resolve it via the shared
+  // helper (Bearer header + HTTP-only-cookie fallback + refresh) instead of
+  // a raw Bearer-only check, so a logged-in user with an expired-but-
+  // refreshable token still gets tenant-scoped results instead of silently
+  // falling back to the "no tenant" branch below.
+  const authUser = await getAuthenticatedUser(event)
+  const userProfile = authUser?.db_user_id
+    ? { id: authUser.db_user_id, tenant_id: authUser.tenant_id }
+    : null
 
   // Get query parameters
   const query = getQuery(event)

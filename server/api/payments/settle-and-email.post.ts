@@ -1,8 +1,9 @@
 // server/api/payments/settle-and-email.post.ts
 // SECURED: Settle appointments and send email with 10-layer security
 
-import { defineEventHandler, getHeader, createError, readBody } from 'h3'
+import { defineEventHandler, createError, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
@@ -85,8 +86,14 @@ export default defineEventHandler(async (event) => {
     logger.debug('🔄 Settle and email API called')
 
     // ============ LAYER 1: AUTHENTICATION ============
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
+    // getAuthenticatedUser() checks the Bearer header AND falls back to the
+    // HTTP-only session cookie (with token refresh) — a raw Bearer-only check
+    // here meant this endpoint 401'd whenever the client's access token had
+    // just expired and hadn't been refreshed yet.
+    const supabaseAdmin = getSupabaseAdmin()
+    const authUser = await getAuthenticatedUser(event)
+
+    if (!authUser) {
       await logAudit({
         action: 'settle_and_email',
         status: 'failed',
@@ -96,21 +103,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
-    const token = authHeader.substring(7)
-    const supabaseAdmin = getSupabaseAdmin()
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-
-    if (authError || !user) {
-      await logAudit({
-        action: 'settle_and_email',
-        status: 'failed',
-        error_message: 'Invalid authentication',
-        ip_address: ipAddress
-      })
-      throw createError({ statusCode: 401, statusMessage: 'Invalid authentication' })
-    }
-
-    authenticatedUserId = user.id
+    authenticatedUserId = authUser.id
     auditDetails.authenticated_user_id = authenticatedUserId
 
     // ============ LAYER 2: RATE LIMITING ============
@@ -168,13 +161,13 @@ export default defineEventHandler(async (event) => {
     auditDetails.invoice_number = body.invoiceNumber
 
     // ============ LAYER 4: AUTHORIZATION ============
-    const { data: requestingUser, error: reqUserError } = await supabaseAdmin
-      .from('users')
-      .select('id, role, tenant_id, auth_user_id')
-      .eq('auth_user_id', authenticatedUserId)
-      .single()
+    // getAuthenticatedUser() already resolved the DB user profile — no need
+    // for a second round-trip to `users`.
+    const requestingUser = authUser.db_user_id
+      ? { id: authUser.db_user_id, role: authUser.role, tenant_id: authUser.tenant_id }
+      : null
 
-    if (reqUserError || !requestingUser) {
+    if (!requestingUser) {
       await logAudit({
         user_id: authenticatedUserId,
         action: 'settle_and_email',

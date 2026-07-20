@@ -2,8 +2,9 @@
 // Generates an ISO 20022 Pain.001.001.03 XML file for all pending withdrawal requests
 // This file can be uploaded directly to any Swiss e-banking portal
 
-import { defineEventHandler, getHeader, createError, setHeader } from 'h3'
+import { defineEventHandler, createError, setHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { decryptIBAN } from '~/server/utils/iban-utils'
 
@@ -15,19 +16,15 @@ export default defineEventHandler(async (event) => {
 
   try {
     // ── Auth + Admin check ────────────────────────────────
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
-    }
-    const token = authHeader.substring(7)
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) throw createError({ statusCode: 401, statusMessage: 'Invalid authentication' })
+    // Bearer header with HTTP-only-cookie fallback + token refresh, instead
+    // of a raw Bearer-only check that would 401 whenever the client's
+    // access token had just expired.
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Invalid authentication' })
 
-    const { data: adminUser } = await supabase
-      .from('users')
-      .select('id, role, tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
+    const adminUser = authUser.db_user_id
+      ? { id: authUser.db_user_id, role: authUser.role, tenant_id: authUser.tenant_id }
+      : null
 
     if (!adminUser || !['admin', 'staff'].includes(adminUser.role)) {
       throw createError({ statusCode: 403, statusMessage: 'Nur Admins können Zahlungsfiles exportieren' })

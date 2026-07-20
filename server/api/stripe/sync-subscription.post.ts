@@ -1,5 +1,6 @@
 import Stripe from 'stripe'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { PLANS, type SubscriptionPlan } from '~/utils/planFeatures'
 import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
 
@@ -14,8 +15,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'Stripe not configured' })
   }
 
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
+  // Bearer header with HTTP-only-cookie fallback + token refresh, instead of
+  // a raw Bearer-only check that would 401 whenever the client's access
+  // token had just expired.
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
@@ -25,21 +29,9 @@ export default defineEventHandler(async (event) => {
   }
 
   const supabase = getSupabaseAdmin()
-  const token = authHeader.replace('Bearer ', '')
 
-  // Resolve tenant from the authenticated user
-  const { data: { user } } = await supabase.auth.getUser(token)
-  if (!user) {
-    throw createError({ statusCode: 401, statusMessage: 'Invalid token' })
-  }
-
-  const { data: userRow } = await supabase
-    .from('users')
-    .select('tenant_id')
-    .eq('auth_user_id', user.id)
-    .single()
-
-  const tenantId = userRow?.tenant_id
+  // Resolve tenant from the authenticated user (already resolved by getAuthenticatedUser)
+  const tenantId = authUser.db_user_id ? authUser.tenant_id : null
   if (!tenantId) {
     throw createError({ statusCode: 404, statusMessage: 'Tenant not found' })
   }

@@ -1,58 +1,22 @@
-import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { defineEventHandler, readBody, createError } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Verify user is super_admin
-    const supabaseUrl = process.env.SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!supabaseUrl || !serviceRoleKey) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
-    }
-
-    const adminSupabase = createClient(supabaseUrl, serviceRoleKey)
-
-    // Get auth header
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
+    // Verify user is super_admin. Bearer header with HTTP-only-cookie
+    // fallback + token refresh, instead of a raw Bearer-only check that
+    // would 401 whenever the client's access token had just expired.
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Unauthorized'
       })
     }
 
-    const token = authHeader.substring(7)
-    const supabase = createClient(supabaseUrl, process.env.SUPABASE_ANON_KEY || '', {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    })
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Unauthorized'
-      })
-    }
-
-    // Check if user is super_admin
-    const { data: userProfile, error: profileError } = await adminSupabase
-      .from('users')
-      .select('role')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (profileError || userProfile?.role !== 'super_admin') {
+    if (authUser.role !== 'super_admin') {
       throw createError({
         statusCode: 403,
         statusMessage: 'Only super_admin users can update security settings'

@@ -8,6 +8,7 @@
  */
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getYearlyWorkingDaysBreakdown } from '~/server/utils/swiss-holidays'
 import { FULLTIME_HOURS_DEFAULT, HR_CATEGORY, KEY_FULLTIME } from '~/server/api/admin/hr-settings.get'
 
@@ -15,19 +16,17 @@ const TIMEZONE = 'Europe/Zurich'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
-  const authHeader = event.node.req.headers.authorization
-  if (!authHeader?.startsWith('Bearer ')) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
-  const token = authHeader.substring(7)
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  // Bearer header with HTTP-only-cookie fallback + token refresh, instead of
+  // a raw Bearer-only check that would 401 whenever the client's access
+  // token had just expired.
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
-  // Resolve the calling user
-  const { data: callerData } = await supabase
-    .from('users')
-    .select('id, tenant_id, role')
-    .eq('auth_user_id', user.id)
-    .single()
+  // Resolve the calling user (already resolved by getAuthenticatedUser)
+  const callerData = authUser.db_user_id
+    ? { id: authUser.db_user_id, tenant_id: authUser.tenant_id, role: authUser.role }
+    : null
 
   if (!callerData?.tenant_id) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
 

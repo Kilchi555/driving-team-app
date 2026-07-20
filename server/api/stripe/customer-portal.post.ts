@@ -1,5 +1,6 @@
 import Stripe from 'stripe'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 // Creates a Stripe Billing Portal session so the tenant can:
 // - Update payment method / card
@@ -12,21 +13,16 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'Stripe not configured' })
   }
 
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  // Bearer header with HTTP-only-cookie fallback + token refresh, instead of
+  // a raw Bearer-only check that would 401 whenever the client's access
+  // token had just expired.
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
   const supabase = getSupabaseAdmin()
-  const token = authHeader.replace('Bearer ', '')
-  const { data: { user } } = await supabase.auth.getUser(token)
-  if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-
-  const { data: userRow } = await supabase
-    .from('users')
-    .select('tenant_id, role')
-    .eq('auth_user_id', user.id)
-    .single()
+  const userRow = authUser.db_user_id
+    ? { tenant_id: authUser.tenant_id, role: authUser.role }
+    : null
 
   if (!userRow?.tenant_id || userRow.role !== 'admin') {
     throw createError({ statusCode: 403, statusMessage: 'Only admins can access billing portal' })
