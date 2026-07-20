@@ -1,42 +1,16 @@
-import { createClient } from '@supabase/supabase-js'
+import { requireAdminProfile } from '~/server/utils/auth'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
-  // ✅ Auth check
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
-  }
-  const token = authHeader.substring(7)
-
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NUXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw createError({ statusCode: 500, message: 'Server configuration error' })
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseKey)
-
-  // ✅ Verify user token and get user
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !user) {
-    throw createError({ statusCode: 401, message: 'Invalid token' })
-  }
-
-  // ✅ Check if user is admin/staff
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('role, tenant_id')
-    .eq('auth_user_id', user.id)
-    .single()
-
-  if (userError || !userData) {
-    throw createError({ statusCode: 403, message: 'User not found' })
-  }
-
-  if (!['admin', 'staff', 'superadmin'].includes(userData.role)) {
-    throw createError({ statusCode: 403, message: 'Admin access required' })
-  }
+  // ✅ Auth check — uses the shared helper (Bearer header with HTTP-only-cookie
+  // fallback + refresh), same as the rest of the admin API. The previous
+  // Bearer-only check here meant this endpoint silently 401'd (caught and
+  // swallowed by the frontend) whenever the client's access token had just
+  // expired and hadn't been refreshed yet, leaving "Kundeninformationen" and
+  // the rest of this response blank in the UI even though the underlying
+  // data existed.
+  const userData = await requireAdminProfile(event)
+  const supabase = getSupabaseAdmin()
 
   // ✅ Get query params
   const query = getQuery(event)
@@ -121,6 +95,7 @@ export default defineEventHandler(async (event) => {
         .from('users')
         .select('first_name, last_name, email, phone, street, street_nr, zip, city')
         .eq('id', userId)
+        .eq('tenant_id', userData.tenant_id)
         .single()
 
       if (!customerError && customer) {
