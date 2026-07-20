@@ -222,6 +222,14 @@
                   >
                     {{ invoicePaymentStatusLabel(invoice.payment_status) }}
                   </span>
+                  <span
+                    v-if="invoice.dunning_level > 0"
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                    :style="dunningLevelBadgeStyle(invoice.dunning_level)"
+                    :title="invoice.dunning_paused ? 'Mahnwesen pausiert' : (invoice.last_dunning_sent_at ? `Zuletzt versendet am ${formatDate(invoice.last_dunning_sent_at)}` : '')"
+                  >
+                    {{ dunningLevelLabel(invoice.dunning_level) }}<span v-if="invoice.dunning_paused"> · pausiert</span>
+                  </span>
                 </div>
               </td>
               <td class="px-5 py-3.5">
@@ -670,6 +678,16 @@ const formatDate = (dateString: string) => {
 const isOverdue = (dueDate: string, status?: string, paymentStatus?: string) => {
   if (status === 'paid' || status === 'cancelled' || paymentStatus === 'paid') return false
   return new Date(dueDate) < new Date()
+}
+
+// Mahnwesen (Dunning): 0 = keine Mahnung, 1 = Zahlungserinnerung, 2 = 1. Mahnung, 3 = 2./letzte Mahnung
+const DUNNING_STAGE_LABELS: Record<number, string> = { 1: 'Zahlungserinnerung', 2: '1. Mahnung', 3: '2. Mahnung' }
+const DUNNING_STAGE_COLORS: Record<number, string> = { 1: '#2563eb', 2: '#d97706', 3: '#dc2626' }
+
+const dunningLevelLabel = (level: number) => DUNNING_STAGE_LABELS[level] || `Mahnstufe ${level}`
+const dunningLevelBadgeStyle = (level: number) => {
+  const color = DUNNING_STAGE_COLORS[level] || '#6b7280'
+  return { background: color + '1a', color }
 }
 
 // Dropdown helper functions
