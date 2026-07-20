@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Runs the build smoke test before allowing a push. We push straight to main
+# and Vercel auto-deploys from there, so this is the last line of defense
+# against shipping a build that crashes the whole serverless function (see
+# scripts/smoke-test.sh for what this specifically guards against).
+#
+# Skip in a genuine emergency with: SKIP_SMOKE_TEST=1 git push
+set -euo pipefail
+
+if [ "${SKIP_SMOKE_TEST:-0}" = "1" ]; then
+  echo "⚠️  Skipping pre-push smoke test (SKIP_SMOKE_TEST=1)"
+  exit 0
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+echo "🧪 Pre-push: smoke-testing the production build (skip with SKIP_SMOKE_TEST=1 git push)..."
+npm run smoke-test
