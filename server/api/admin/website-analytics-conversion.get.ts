@@ -1,6 +1,6 @@
-import { defineEventHandler, getQuery, getHeader, createError } from 'h3'
+import { defineEventHandler, getQuery, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 const EMPTY_RESPONSE = {
   period: { startDate: '', endDate: '', days: 7 },
@@ -23,27 +23,17 @@ export default defineEventHandler(async (event) => {
     return EMPTY_RESPONSE
   }
 
-  // ✅ SECURITY: Only super_admin can access analytics across all tenants
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
+  // ✅ SECURITY: Only super_admin can access analytics across all tenants.
+  // Bearer header with HTTP-only-cookie fallback + token refresh, instead of
+  // a raw Bearer-only check that would 401 whenever the client's access
+  // token had just expired.
+  const authUser = await getAuthenticatedUser(event)
+
+  if (!authUser) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
-  const token = authHeader.substring(7)
-  const adminClient = getSupabaseAdmin()
-  const { data: { user }, error: authError } = await adminClient.auth.getUser(token)
-
-  if (authError || !user) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
-
-  const { data: userData } = await adminClient
-    .from('users')
-    .select('role')
-    .eq('auth_user_id', user.id)
-    .single()
-
-  if (userData?.role !== 'super_admin') {
+  if (authUser.role !== 'super_admin') {
     throw createError({ statusCode: 403, statusMessage: 'Only super_admin can access this endpoint' })
   }
 

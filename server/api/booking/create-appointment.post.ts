@@ -28,6 +28,7 @@
 
 import { defineEventHandler, readBody, createError, getHeader, H3Event } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { roundToNearest5Rappen } from '~/utils/rounding'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
@@ -103,22 +104,19 @@ export default defineEventHandler(async (event: H3Event) => {
     logger.debug('📅 Create Appointment API called')
 
     // ============ LAYER 1: AUTHENTICATION ============
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      logger.warn('❌ No auth token provided')
+    // getAuthenticatedUser() checks the Bearer header AND falls back to the
+    // HTTP-only session cookie (with token refresh) — a raw Bearer-only check
+    // here meant this endpoint 401'd whenever the client's access token had
+    // just expired and hadn't been refreshed yet.
+    const supabase = getSupabaseAdmin()
+    const authUser = await getAuthenticatedUser(event)
+
+    if (!authUser) {
+      logger.warn('❌ No valid auth token/session provided')
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
-    const token = authHeader.substring(7)
-    const supabase = getSupabaseAdmin()
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
-    if (authError || !user) {
-      logger.warn('❌ Invalid auth token')
-      throw createError({ statusCode: 401, statusMessage: 'Invalid authentication' })
-    }
-
-    authenticatedUserId = user.id
+    authenticatedUserId = authUser.id
     auditDetails.authenticated_user_id = authenticatedUserId
 
     // ============ LAYER 2: RATE LIMITING ============

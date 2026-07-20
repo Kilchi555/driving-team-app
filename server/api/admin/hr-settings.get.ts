@@ -4,26 +4,21 @@
  *   - fulltime_weekly_hours: the tenant's 100%-workload reference (default 42.5h)
  */
 import { defineEventHandler, createError } from 'h3'
+import type { H3Event } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export const FULLTIME_HOURS_DEFAULT = 42.5
 export const HR_CATEGORY = 'hr'
 export const KEY_FULLTIME = 'fulltime_weekly_hours'
 
-async function getAuthenticatedAdmin(event: any) {
-  const supabase = getSupabaseAdmin()
-  const authHeader = event.node.req.headers.authorization
-  if (!authHeader?.startsWith('Bearer ')) return null
-  const token = authHeader.substring(7)
-  const { data: { user }, error } = await supabase.auth.getUser(token)
-  if (error || !user) return null
-  const { data } = await supabase
-    .from('users')
-    .select('tenant_id, role')
-    .eq('auth_user_id', user.id)
-    .single()
-  if (!data?.tenant_id || data.role !== 'admin') return null
-  return { user, tenantId: data.tenant_id }
+// Bearer header with HTTP-only-cookie fallback + token refresh, instead of a
+// raw Bearer-only check that would 401 whenever the client's access token
+// had just expired.
+export async function getAuthenticatedAdmin(event: H3Event) {
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser?.db_user_id || !authUser.tenant_id || authUser.role !== 'admin') return null
+  return { user: authUser, tenantId: authUser.tenant_id }
 }
 
 export default defineEventHandler(async (event) => {

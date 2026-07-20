@@ -1,6 +1,7 @@
 // server/api/appointments/cancel-staff.post.ts
 // SECURED: Staff appointment cancellation with full auth + authorization
-import { getSupabase, getSupabaseAdmin } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/utils/supabase'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
@@ -17,20 +18,13 @@ export default defineEventHandler(async (event) => {
   
   try {
     // ============ LAYER 1: AUTHENTICATION ============
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw createError({
-        statusCode: 401,
-        message: 'Authentication required'
-      })
-    }
-
-    const token = authHeader.slice(7)
-    const supabase = getSupabase(token)
-    
-    // Get authenticated user
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !authUser?.id) {
+    // getAuthenticatedUser() checks the Bearer header AND falls back to the
+    // HTTP-only session cookie (with token refresh) — a raw Bearer-only check
+    // here meant this endpoint 401'd whenever the client's access token had
+    // just expired and hadn't been refreshed yet.
+    const supabaseAdmin = getSupabaseAdmin()
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser?.id) {
       throw createError({
         statusCode: 401,
         message: 'Invalid or expired token'
@@ -40,14 +34,13 @@ export default defineEventHandler(async (event) => {
     authenticatedUserId = authUser.id
 
     // ============ LAYER 2: FETCH USER PROFILE + TENANT ============
-    const supabaseAdmin = getSupabaseAdmin()
-    const { data: userData, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('id, tenant_id, role')
-      .eq('auth_user_id', authenticatedUserId)
-      .single()
+    // Already resolved by getAuthenticatedUser — no need for a second
+    // round-trip to `users`.
+    const userData = authUser.db_user_id
+      ? { id: authUser.db_user_id, tenant_id: authUser.tenant_id, role: authUser.role }
+      : null
 
-    if (userError || !userData) {
+    if (!userData) {
       await logAudit({
         auth_user_id: authenticatedUserId,
         action: 'cancel_appointment_staff',

@@ -10,41 +10,31 @@
  * Authorization: Bearer [admin-token]
  */
 
-import { defineEventHandler, createError, getHeader } from 'h3'
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { defineEventHandler, createError } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { encryptAllPlaintextSecrets, checkEncryptionStatus } from '~/server/utils/encrypt-secrets-migration'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    // ✅ AUTHENTICATION - Admin only
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Unauthorized - Bearer token required'
-      })
-    }
+    // ✅ AUTHENTICATION - Admin only. Bearer header with HTTP-only-cookie
+    // fallback + token refresh, instead of a raw Bearer-only check that
+    // would 401 whenever the client's access token had just expired.
+    const authUser = await getAuthenticatedUser(event)
 
-    const token = authHeader.substring(7)
-    const supabaseAdmin = getSupabaseAdmin()
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-
-    if (authError || !user) {
+    if (!authUser) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Unauthorized - Invalid token'
       })
     }
 
-    // Get user profile and check if admin
-    const { data: userProfile, error: profileError } = await supabaseAdmin
-      .from('users')
-      .select('id, role, tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
+    // Get user profile and check if admin (already resolved by getAuthenticatedUser)
+    const userProfile = authUser.db_user_id
+      ? { id: authUser.db_user_id, role: authUser.role, tenant_id: authUser.tenant_id }
+      : null
 
-    if (profileError || !userProfile) {
+    if (!userProfile) {
       throw createError({
         statusCode: 403,
         statusMessage: 'Forbidden - User profile not found'
@@ -53,14 +43,14 @@ export default defineEventHandler(async (event) => {
 
     // Only super_admin can run this migration
     if (userProfile.role !== 'super_admin') {
-      logger.warn(`⚠️ Unauthorized encryption migration attempt by ${userProfile.role}:`, user.id)
+      logger.warn(`⚠️ Unauthorized encryption migration attempt by ${userProfile.role}:`, authUser.id)
       throw createError({
         statusCode: 403,
         statusMessage: 'Forbidden - Only super_admin can run this migration'
       })
     }
 
-    logger.info(`🔒 Starting encryption migration by admin: ${user.id}`)
+    logger.info(`🔒 Starting encryption migration by admin: ${authUser.id}`)
 
     // Check current status first
     const statusBefore = await checkEncryptionStatus()
@@ -73,7 +63,7 @@ export default defineEventHandler(async (event) => {
     const statusAfter = await checkEncryptionStatus()
     logger.info('📊 Encryption status after migration:', statusAfter)
 
-    logger.info(`✅ Encryption migration completed by admin: ${user.id}`)
+    logger.info(`✅ Encryption migration completed by admin: ${authUser.id}`)
 
     return {
       success: true,

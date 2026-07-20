@@ -1,6 +1,7 @@
 // server/api/students/[id]/payments.get.ts
 // SECURED: Load all payments for a specific student with full security checks
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
@@ -9,23 +10,13 @@ import { validateUUID } from '~/server/utils/validators'
 export default defineEventHandler(async (event) => {
   try {
     // ============ LAYER 1: AUTHENTICATION ============
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw createError({
-        statusCode: 401,
-        message: 'Authentication required'
-      })
-    }
-
-    const token = authHeader.slice(7)
-    
-    // ============ LAYER 1B: VERIFY TOKEN ============
-    // Import and use getSupabase to verify the token
-    const { getSupabase: getSupabaseClient } = await import('~/utils/supabase')
-    const supabaseUserClient = getSupabaseClient(token)
-    
-    const { data: { user: authUser }, error: authError } = await supabaseUserClient.auth.getUser(token)
-    if (authError || !authUser?.id) {
+    // getAuthenticatedUser() checks the Bearer header AND falls back to the
+    // HTTP-only session cookie (with token refresh) — a raw Bearer-only check
+    // here meant this endpoint 401'd whenever the client's access token had
+    // just expired and hadn't been refreshed yet.
+    const supabaseAdmin = getSupabaseAdmin()
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser?.id) {
       throw createError({
         statusCode: 401,
         message: 'Invalid or expired token'
@@ -33,14 +24,13 @@ export default defineEventHandler(async (event) => {
     }
 
     // ============ LAYER 2: GET USER PROFILE + TENANT ============
-    const supabaseAdmin = getSupabaseAdmin()
-    const { data: userProfile, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('id, tenant_id, role')
-      .eq('auth_user_id', authUser.id)
-      .single()
+    // Already resolved by getAuthenticatedUser — no need for a second
+    // round-trip to `users`.
+    const userProfile = authUser.db_user_id
+      ? { id: authUser.db_user_id, tenant_id: authUser.tenant_id, role: authUser.role }
+      : null
 
-    if (userError || !userProfile) {
+    if (!userProfile) {
       throw createError({
         statusCode: 401,
         message: 'User not found'

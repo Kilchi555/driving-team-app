@@ -1,5 +1,6 @@
 import { defineEventHandler, createError, getQuery } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
@@ -77,11 +78,14 @@ export default defineEventHandler(async (event): Promise<TenantBrandingResponse>
     let userTenantId: string | undefined
 
     if (!isAnonymous) {
-      // Only do full auth check when a token is actually present
+      // Only do full auth check when a token is actually present. Uses
+      // getAuthenticatedUser (Bearer header + token refresh) instead of a
+      // raw supabaseAdmin.auth.getUser(token) call, so a request with a
+      // stale-but-refreshable access token still resolves to an authenticated
+      // admin rather than silently falling back to the anonymous branch.
       try {
-        const token = authHeader!.substring(7)
-        const [{ data: { user }, error: authError }, rateLimitResult] = await Promise.all([
-          supabaseAdmin.auth.getUser(token),
+        const [authUser, rateLimitResult] = await Promise.all([
+          getAuthenticatedUser(event),
           checkRateLimit(ipAddress, 'get_tenant_branding_ip', 30, 60 * 1000),
         ])
 
@@ -89,19 +93,11 @@ export default defineEventHandler(async (event): Promise<TenantBrandingResponse>
           throw createError({ statusCode: 429, statusMessage: 'Too many requests from this IP. Please try again later.' })
         }
 
-        if (!authError && user) {
+        if (authUser?.db_user_id) {
           isAuthenticated = true
-          const { data: userProfile } = await supabaseAdmin
-            .from('users')
-            .select('id, tenant_id, role')
-            .eq('auth_user_id', user.id)
-            .single()
-
-          if (userProfile) {
-            userId = userProfile.id
-            userTenantId = userProfile.tenant_id
-            isAdmin = ['admin', 'staff', 'super_admin'].includes(userProfile.role)
-          }
+          userId = authUser.db_user_id
+          userTenantId = authUser.tenant_id
+          isAdmin = ['admin', 'staff', 'super_admin'].includes(authUser.role)
         }
       } catch (e: any) {
         if (e.statusCode) throw e

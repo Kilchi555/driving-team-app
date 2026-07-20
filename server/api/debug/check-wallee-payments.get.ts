@@ -2,30 +2,22 @@
 // Debug endpoint to find payments that are completed but have no wallee_transaction_id
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
-    // ✅ SECURITY: Only super_admin can access this debug endpoint
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
+    // ✅ SECURITY: Only super_admin can access this debug endpoint. Bearer
+    // header with HTTP-only-cookie fallback + token refresh, instead of a
+    // raw Bearer-only check that would 401 whenever the client's access
+    // token had just expired.
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) {
       throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
     }
 
-    const token = authHeader.substring(7)
     const supabase = getSupabaseAdmin()
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
 
-    if (authError || !user) {
-      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-    }
-
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (userData?.role !== 'super_admin') {
+    if (authUser.role !== 'super_admin') {
       throw createError({ statusCode: 403, statusMessage: 'Only super_admin can access this endpoint' })
     }
 

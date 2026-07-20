@@ -2,6 +2,7 @@
 // ✅ Payment Status API für Updates und Abfragen (mit Auth + Audit Logging)
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import { logAudit } from '~/server/utils/audit'
@@ -39,32 +40,23 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
 
     const supabase = getSupabaseAdmin()
     
-    // ✅ SECURITY: Get authenticated user from Bearer token
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
+    // ✅ SECURITY: Get authenticated user — Bearer header with HTTP-only-cookie
+    // fallback + token refresh, instead of a raw Bearer-only check that would
+    // 401 whenever the client's access token had just expired.
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) {
       throw createError({
         statusCode: 401,
         statusMessage: 'Unauthorized'
       })
     }
 
-    const token = authHeader.substring(7)
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Unauthorized'
-      })
-    }
+    // ✅ Get user data for tenant isolation (already resolved by getAuthenticatedUser)
+    const userData = authUser.db_user_id
+      ? { id: authUser.db_user_id, tenant_id: authUser.tenant_id }
+      : null
 
-    // ✅ Get user data for tenant isolation
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, tenant_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (userError || !userData) {
+    if (!userData) {
       throw createError({
         statusCode: 404,
         statusMessage: 'User data not found'

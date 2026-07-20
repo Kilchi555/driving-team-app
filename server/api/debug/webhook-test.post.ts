@@ -4,24 +4,19 @@
  * ⚠️  ONLY accessible by super_admin – never expose to public.
  */
 
-import { defineEventHandler, readBody, getHeader, createError } from 'h3'
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { defineEventHandler, readBody, createError } from 'h3'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
-  // ✅ SECURITY: Only super_admin may trigger test webhooks
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
-  const token = authHeader.substring(7)
-  const supabase = getSupabaseAdmin()
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  // ✅ SECURITY: Only super_admin may trigger test webhooks. Bearer header
+  // with HTTP-only-cookie fallback + token refresh, instead of a raw
+  // Bearer-only check that would 401 whenever the client's access token
+  // had just expired.
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
-  const { data: userData } = await supabase
-    .from('users').select('role').eq('auth_user_id', user.id).single()
-  if (userData?.role !== 'super_admin') {
+  if (authUser.role !== 'super_admin') {
     throw createError({ statusCode: 403, statusMessage: 'Only super_admin can trigger test webhooks' })
   }
 

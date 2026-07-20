@@ -1,32 +1,23 @@
-import { defineEventHandler, getQuery, createError, getHeader } from 'h3'
+import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
-  const supabase = getSupabaseAdmin()
-
-  // Get auth token from headers
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw createError({ statusCode: 401, message: 'Missing or invalid authorization header' })
-  }
-
-  const token = authHeader.replace('Bearer ', '')
-
-  // Get current user
-  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !authUser) {
+  // Bearer header with HTTP-only-cookie fallback + token refresh, instead of
+  // a raw Bearer-only check that would 401 whenever the client's access
+  // token had just expired.
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) {
     throw createError({ statusCode: 401, message: 'Unauthorized' })
   }
 
-  // Use admin client to bypass RLS for the users table lookup
+  // Use admin client to bypass RLS for the target users table lookup
   const adminSupabase = getSupabaseAdmin()
 
-  // Get current user's profile for tenant context
-  const { data: currentUserProfile } = await adminSupabase
-    .from('users')
-    .select('tenant_id')
-    .eq('auth_user_id', authUser.id)
-    .single()
+  // Current user's tenant context (already resolved by getAuthenticatedUser)
+  const currentUserProfile = authUser.db_user_id
+    ? { tenant_id: authUser.tenant_id }
+    : null
 
   if (!currentUserProfile) {
     throw createError({ statusCode: 403, message: 'Current user profile not found' })
