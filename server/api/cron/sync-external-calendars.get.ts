@@ -2,6 +2,7 @@
 // Called by Vercel scheduled cron (GET) or manual trigger with Bearer CRON_SECRET / x-api-key CRON_API_KEY
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { parseIcsBusyEvents } from '~/server/utils/parse-ics-busy-events'
 import { logger } from '~/utils/logger'
 import { sendEmail } from '~/server/utils/email'
 
@@ -208,32 +209,25 @@ export default defineEventHandler(async (event) => {
           continue
         }
 
-        // Parse ICS data
-        const rawEvents = parseICSData(icsData)
+        // Only sync relevant time window: now .. now + 1 year (RRULEs expanded inside)
+        const now = new Date()
+        const horizon = new Date(now)
+        horizon.setFullYear(horizon.getFullYear() + 1)
+
+        const rawEvents = parseIcsBusyEvents(icsData, { start: now, end: horizon })
 
         // ✅ SAFETY NET: Discard implausibly long events (e.g. accidental multi-month
         // entries from a mis-dragged end date in Apple Calendar). A single busy block
         // longer than MAX_BUSY_EVENT_DAYS would otherwise gray out the entire staff
         // calendar for that whole span, hiding all working hours.
         const MAX_BUSY_EVENT_MS = 14 * 24 * 60 * 60 * 1000 // 14 days
-        const events = rawEvents.filter(ev => {
+        const windowEvents = rawEvents.filter(ev => {
           const durationMs = new Date(ev.end).getTime() - new Date(ev.start).getTime()
           if (durationMs > MAX_BUSY_EVENT_MS) {
             logger.warn(`⚠️ Skipping implausibly long ICS event for ${calendar.calendar_name} (${Math.round(durationMs / 86400000)} days): "${ev.summary || 'untitled'}" ${ev.start} → ${ev.end}`)
             return false
           }
           return true
-        })
-        
-        // Only sync relevant time window: now .. now + 1 year
-        const now = new Date()
-        const horizon = new Date(now)
-        horizon.setFullYear(horizon.getFullYear() + 1)
-
-        const windowEvents = events.filter(ev => {
-          const evStart = new Date(ev.start)
-          const evEnd = new Date(ev.end)
-          return evEnd >= now && evStart <= horizon
         })
 
         if (windowEvents.length === 0) {
@@ -362,222 +356,3 @@ export default defineEventHandler(async (event) => {
     }
   }
 })
-
-// ============ ICS PARSER ============
-
-function parseICSData(icsData: string): Array<{
-  uid?: string
-  summary?: string
-  location?: string
-  start: string
-  end: string
-}> {
-  const events: Array<{
-    uid?: string
-    summary?: string
-    location?: string
-    start: string
-    end: string
-  }> = []
-
-  const rawLines = icsData.replace(/\r\n/g, '\n').split('\n')
-  const lines: string[] = []
-  for (const raw of rawLines) {
-    if (raw.startsWith(' ') || raw.startsWith('\t')) {
-      if (lines.length > 0) {
-        lines[lines.length - 1] += raw.slice(1)
-      }
-    } else {
-      lines.push(raw)
-    }
-  }
-
-  let currentEvent: any = {}
-  let inEvent = false
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim()
-    
-    if (line === 'BEGIN:VEVENT') {
-      inEvent = true
-      currentEvent = {}
-    } else if (line === 'END:VEVENT') {
-      if (inEvent && currentEvent.start && currentEvent.end && currentEvent.status !== 'CANCELLED') {
-        events.push({
-          uid: currentEvent.uid,
-          summary: currentEvent.summary,
-          location: currentEvent.location,
-          start: currentEvent.start,
-          end: currentEvent.end
-        })
-      }
-      inEvent = false
-      currentEvent = {}
-    } else if (inEvent) {
-      const colonIdx = line.indexOf(':')
-      if (colonIdx === -1) continue
-      const prop = line.substring(0, colonIdx)
-      const value = line.substring(colonIdx + 1)
-
-      const [name, ...params] = prop.split(';')
-      const upperName = name.toUpperCase()
-
-      switch (upperName) {
-        case 'UID':
-          currentEvent.uid = value
-          break
-        case 'SUMMARY':
-          currentEvent.summary = value
-          break
-        case 'LOCATION':
-          currentEvent.location = value
-          break
-        case 'STATUS':
-          currentEvent.status = value.toUpperCase()
-          break
-        case 'DTSTART': {
-          const tzidParam = params.find(p => p.toUpperCase().startsWith('TZID='))
-          const isDateOnly = params.some(p => p.toUpperCase().includes('VALUE=DATE'))
-          currentEvent.start = parseICSTimestamp(value, { tzid: tzidParam?.split('=')[1], dateOnly: isDateOnly })
-          break
-        }
-        case 'DTEND': {
-          const tzidParam = params.find(p => p.toUpperCase().startsWith('TZID='))
-          const isDateOnly = params.some(p => p.toUpperCase().includes('VALUE=DATE'))
-          currentEvent.end = parseICSTimestamp(value, { tzid: tzidParam?.split('=')[1], dateOnly: isDateOnly })
-          break
-        }
-        default:
-          break
-      }
-    }
-  }
-
-  return events
-}
-
-function parseICSTimestamp(timestamp: string, opts?: { tzid?: string, dateOnly?: boolean }): string {
-  const clean = timestamp.trim()
-  
-  if (opts?.dateOnly || (/^\d{8}$/.test(clean) && !clean.includes('T'))) {
-    const year = clean.substring(0, 4)
-    const month = clean.substring(4, 6)
-    const day = clean.substring(6, 8)
-    return `${year}-${month}-${day}T00:00:00`
-  }
-
-  if (/^\d{8}T\d{6}Z$/.test(clean)) {
-    const year = clean.substring(0, 4)
-    const month = clean.substring(4, 6)
-    const day = clean.substring(6, 8)
-    const hour = clean.substring(9, 11)
-    const minute = clean.substring(11, 13)
-    const second = clean.substring(13, 15)
-    return `${year}-${month}-${day}T${hour}:${minute}:${second}Z`
-  }
-
-  if (/^\d{8}T\d{6}$/.test(clean)) {
-    const year = clean.substring(0, 4)
-    const month = clean.substring(4, 6)
-    const day = clean.substring(6, 8)
-    const hour = clean.substring(9, 11)
-    const minute = clean.substring(11, 13)
-    const second = clean.substring(13, 15)
-    
-    const localTimeString = `${year}-${month}-${day}T${hour}:${minute}:${second}`
-    
-    if (opts?.tzid) {
-      try {
-        // Create a date assuming the local time string is in the target timezone
-        // The trick is to create a UTC date from the local time, then adjust
-        const localDate = new Date(`${localTimeString}Z`)
-        
-        // Get what UTC time corresponds to this local time in the timezone
-        const utcFormatter = new Intl.DateTimeFormat('en-US', {
-          timeZone: 'UTC',
-          year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit', second: '2-digit',
-          hour12: false
-        })
-        
-        const tzFormatter = new Intl.DateTimeFormat('en-US', {
-          timeZone: opts.tzid,
-          year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit', second: '2-digit',
-          hour12: false
-        })
-        
-        // Format the local date in both timezones
-        const utcFormatted = utcFormatter.format(localDate)
-        const tzFormatted = tzFormatter.format(localDate)
-        
-        // Parse to compare
-        const [utcY, utcM, utcD, utcH, utcMin, utcS] = utcFormatted.split(/\D+/).filter(Boolean).map(Number)
-        const [tzY, tzM, tzD, tzH, tzMin, tzS] = tzFormatted.split(/\D+/).filter(Boolean).map(Number)
-        
-        // Create UTC dates from these times
-        const utcMs = new Date(Date.UTC(utcY, utcM - 1, utcD, utcH, utcMin, utcS)).getTime()
-        const tzMs = new Date(Date.UTC(tzY, tzM - 1, tzD, tzH, tzMin, tzS)).getTime()
-        
-        // The offset is the difference
-        const offsetMs = utcMs - tzMs
-        
-        // Now apply the reverse: if local time is HH:MM in timezone, 
-        // the UTC time is HH:MM plus the offset (for positive offset timezones ahead of UTC)
-        const resultMs = localDate.getTime() + offsetMs
-        return new Date(resultMs).toISOString()
-      } catch (e) {
-        logger.warn(`⚠️ Failed to convert TZID ${opts.tzid}, falling back to UTC assumption`)
-      }
-    }
-    
-    return `${localTimeString}Z`
-  }
-
-  // Fallback: return current time (shouldn't normally happen with valid ICS)
-  logger.warn(`⚠️ Unparseable ICS timestamp: ${clean}`)
-  return new Date().toISOString()
-}
-
-function getUTCOffsetForTimezone(tzid: string, date: Date): number {
-  try {
-    // Get UTC representation of the date
-    const utcFormatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'UTC',
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      hour12: false
-    })
-    
-    // Get timezone representation of the date
-    const zoneFormatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: tzid,
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      hour12: false
-    })
-    
-    const utcString = utcFormatter.format(date)
-    const zoneString = zoneFormatter.format(date)
-    
-    // Parse the formatted strings correctly
-    const [utcY, utcM, utcD, utcH, utcMin, utcS] = utcString.split(/\D+/).filter(Boolean)
-    const [zoneY, zoneM, zoneD, zoneH, zoneMin, zoneS] = zoneString.split(/\D+/).filter(Boolean)
-    
-    const utcTime = new Date(Date.UTC(
-      parseInt(utcY), parseInt(utcM) - 1, parseInt(utcD),
-      parseInt(utcH), parseInt(utcMin), parseInt(utcS)
-    )).getTime()
-    
-    const zoneTime = new Date(Date.UTC(
-      parseInt(zoneY), parseInt(zoneM) - 1, parseInt(zoneD),
-      parseInt(zoneH), parseInt(zoneMin), parseInt(zoneS)
-    )).getTime()
-    
-    // Return the offset in milliseconds
-    return utcTime - zoneTime
-  } catch (e) {
-    logger.warn(`⚠️ Failed to calculate offset for ${tzid}`)
-    return 0
-  }
-}

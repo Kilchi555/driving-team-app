@@ -110,43 +110,184 @@
           ✅ Einstellungen erfolgreich gespeichert!
         </div>
 
-        <!-- Accordion Sections -->
-        <div class="grid grid-cols-1 min-[550px]:grid-cols-2 min-[1100px]:grid-cols-3 gap-2 max-w-5xl mx-auto items-start">
+        <!-- Settings Menu Grid -->
+        <div class="grid grid-cols-1 min-[550px]:grid-cols-2 min-[1100px]:grid-cols-3 gap-2 max-w-5xl mx-auto">
 
-        <!-- Externe Kalender Einstellungen -->
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <button  
-            @click="toggleSection('externalCalendars')" 
-            class="w-full px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
+          <!-- Externe Kalender -->
+          <button
+            @click="showExternalCalendarsSheet = true"
+            class="bg-white rounded-2xl shadow-sm px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
           >
             <div class="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             </div>
             <span class="text-sm font-medium text-gray-900 flex-1">Externe Kalender</span>
-            <svg class="w-3.5 h-3.5 text-gray-300 transition-transform" :class="openSections.externalCalendars ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
           </button>
-          
-          <div v-if="openSections.externalCalendars" class="px-4 pb-4 border-t">
+
+          <!-- Arbeitsstunden -->
+          <button
+            @click="showWorkingStatsSheet = true"
+            class="bg-white rounded-2xl shadow-sm px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
+          >
+            <div class="w-6 h-6 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-orange-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <span class="text-sm font-medium text-gray-900 flex-1">Arbeitsstunden</span>
+            <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </button>
+
+          <!-- Unterrichtsguide -->
+          <button
+            @click="showStaffGuide = true"
+            class="bg-white rounded-2xl shadow-sm px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
+          >
+            <div class="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/>
+              </svg>
+            </div>
+            <span class="text-sm font-medium text-gray-900 flex-1">Unterrichtsguide</span>
+            <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </button>
+
+          <!-- Prüfungsstandorte -->
+          <button
+            @click="showExamLocationsSheet = true"
+            class="bg-white rounded-2xl shadow-sm px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
+          >
+            <div class="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            </div>
+            <span class="text-sm font-medium text-gray-900 flex-1">Prüfungsstandorte</span>
+            <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </button>
+
+          <!-- Treffpunkte / Standorte -->
+          <button
+            @click="showLocationsSheet = true"
+            class="bg-white rounded-2xl shadow-sm px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
+          >
+            <div class="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <span class="text-sm font-medium text-gray-900 flex-1">Treffpunkte / Standorte</span>
+            <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </button>
+
+          <!-- Arbeitszeiten -->
+          <button
+            @click="showWorktimeSheet = true"
+            class="bg-white rounded-2xl shadow-sm px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
+          >
+            <div class="w-6 h-6 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-teal-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <span class="text-sm font-medium text-gray-900 flex-1">Arbeitszeiten</span>
+            <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </button>
+
+          <!-- Gutschein & Rabattcodes (nur Admin) -->
+          <button
+            v-if="props.currentUser?.role === 'admin' || props.currentUser?.role === 'tenant_admin'"
+            @click="showVoucherCodesSheet = true"
+            class="bg-white rounded-2xl shadow-sm px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
+          >
+            <div class="w-6 h-6 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-yellow-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+            </div>
+            <span class="text-sm font-medium text-gray-900 flex-1">Gutschein- & Rabattcodes</span>
+            <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </button>
+
+        </div><!-- end settings menu grid -->
+
+        <!-- Footer Actions -->
+        <div class="mt-2 space-y-2">
+          <!-- Links + Belege Upload nebeneinander -->
+          <div class="grid grid-cols-2 gap-2">
+            <!-- Links -->
+            <button
+              @click="showLinksSheet = true; ensureTenantSlug()"
+              class="bg-white rounded-2xl px-3 py-2 flex items-center gap-2.5 active:opacity-60 transition-opacity shadow-sm"
+            >
+              <div class="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                </svg>
+              </div>
+              <span class="text-xs font-medium text-gray-700">Links</span>
+            </button>
+
+            <!-- Belege Upload -->
+            <button
+              v-if="props.currentUser?.email === 'kilchi@drivingteam.ch'"
+              type="button"
+              @click="showExpensesSheet = true"
+              class="bg-white rounded-2xl px-3 py-2 flex items-center gap-2.5 active:opacity-60 transition-opacity shadow-sm"
+            >
+              <div class="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+                </svg>
+              </div>
+              <span class="text-xs font-medium text-gray-700">Belege Upload</span>
+            </button>
+          </div>
+
+          <button
+            @click="handleLogout"
+            class="w-full bg-white rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity shadow-sm"
+          >
+            <div class="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+              </svg>
+            </div>
+            <span class="text-sm font-medium text-red-600 flex-1 text-left">Abmelden</span>
+          </button>
+        </div>
+
+      </div><!-- end space-y-2 settings -->
+      </div><!-- end px-4 pb-6 -->
+    </div><!-- end sheet panel -->
+  </div><!-- end overlay -->
+  </Teleport>
+
+    <!-- Externe Kalender Sheet -->
+    <Teleport to="body">
+      <div v-if="showExternalCalendarsSheet" class="fixed inset-0 z-[500] bg-black/50 flex items-end md:items-center justify-center" @click.self="showExternalCalendarsSheet = false">
+        <div class="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-md md:max-w-2xl shadow-2xl max-h-[90vh] flex flex-col pb-safe" @click.stop>
+          <div class="flex justify-center pt-3 pb-1 md:hidden">
+            <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+          </div>
+          <div class="flex items-center justify-between px-5 pt-2 pb-4 border-b border-gray-100">
+            <h2 class="text-base font-semibold text-gray-900">Externe Kalender</h2>
+            <button @click="showExternalCalendarsSheet = false" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="px-4 py-3 overflow-y-auto flex-1">
             <ExternalCalendarSettings />
           </div>
         </div>
+      </div>
+    </Teleport>
 
-        <!-- Arbeitsstunden – full width on large screens -->
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden min-[550px]:col-span-2 min-[1100px]:col-span-3">
-          <div class="w-full px-3 py-3 flex items-center gap-2.5">
-            <button
-              @click="toggleSection('workingStats')"
-              class="flex items-center gap-2.5 flex-1 text-left active:opacity-60 transition-opacity"
-            >
-              <div class="w-6 h-6 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg class="w-3.5 h-3.5 text-orange-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              </div>
-              <span class="text-sm font-medium text-gray-900 flex-1">Arbeitsstunden</span>
-              <svg class="w-3.5 h-3.5 text-gray-300 transition-transform" :class="openSections.workingStats ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+    <!-- Arbeitsstunden Sheet -->
+    <Teleport to="body">
+      <div v-if="showWorkingStatsSheet" class="fixed inset-0 z-[500] bg-black/50 flex items-end md:items-center justify-center" @click.self="showWorkingStatsSheet = false">
+        <div class="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-md md:max-w-5xl shadow-2xl max-h-[90vh] flex flex-col pb-safe" @click.stop>
+          <div class="flex justify-center pt-3 pb-1 md:hidden">
+            <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+          </div>
+          <div class="flex items-center justify-between px-5 pt-2 pb-4 border-b border-gray-100">
+            <h2 class="text-base font-semibold text-gray-900">Arbeitsstunden</h2>
+            <button @click="showWorkingStatsSheet = false" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
-          
-          <div v-if="openSections.workingStats" class="px-4 pb-4 border-t border-gray-100">
+          <div class="px-4 py-3 overflow-y-auto flex-1">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
               <p class="text-xs text-gray-500">
                 Terminstunden (live). Absagen und Ferien sind ausgewiesen; Ferien zählen im Soll/Ist-Saldo mit.
@@ -242,327 +383,283 @@
             </div>
           </div>
         </div>
+      </div>
+    </Teleport>
 
-        <!-- Unterrichtsguide -->
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <button
-            @click="showStaffGuide = true"
-            class="w-full px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
-          >
-            <div class="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/>
-              </svg>
-            </div>
-            <span class="text-sm font-medium text-gray-900 flex-1">Unterrichtsguide</span>
-            <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </button>
-        </div>
-
-        <!-- 6. Prüfungsstandorte -->
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <button
-            @click="toggleSection('examLocations')"
-            class="w-full px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
-          >
-            <div class="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-            </div>
-            <span class="text-sm font-medium text-gray-900 flex-1">Prüfungsstandorte</span>
-            <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.examLocations ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-          </button>
-          
-          <div v-if="openSections.examLocations" class="px-4 pb-4 border-t border-gray-100">
-            <div class="space-y-4 mt-4">
-
-              <!-- New Search Dropdown -->
-              <div class="space-y-4">
-                <ExamLocationSearchDropdown
-                  :current-staff-id="props.currentUser?.id || ''"
-                  @locations-changed="handleExamLocationsChanged"
-                />
-              </div>
-
-            </div>
+    <!-- Prüfungsstandorte Sheet -->
+    <Teleport to="body">
+      <div v-if="showExamLocationsSheet" class="fixed inset-0 z-[500] bg-black/50 flex items-end md:items-center justify-center" @click.self="showExamLocationsSheet = false">
+        <div class="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-md md:max-w-2xl shadow-2xl max-h-[90vh] flex flex-col pb-safe" @click.stop>
+          <div class="flex justify-center pt-3 pb-1 md:hidden">
+            <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
           </div>
-        </div>
-
-          
-          <!-- 3. Treffpunkte/Standorte -->
-          <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <button
-              @click="toggleSection('locations')"
-              class="w-full px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
-            >
-              <div class="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-              </div>
-              <span class="text-sm font-medium text-gray-900 flex-1">Treffpunkte / Standorte</span>
-              <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.locations ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          <div class="flex items-center justify-between px-5 pt-2 pb-4 border-b border-gray-100">
+            <h2 class="text-base font-semibold text-gray-900">Prüfungsstandorte</h2>
+            <button @click="showExamLocationsSheet = false" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
-            
-            <div v-if="openSections.locations" class="px-4 pb-4 border-t border-gray-100">
-              <div class="space-y-4 mt-4">
-
-                <!-- Header mit Buttons -->
-                <div class="flex items-center gap-2">
-                  <button
-                    @click="showNewLocationModal = true"
-                    class="px-4 py-2 text-md font-medium text-white rounded transition-colors hover:opacity-90"
-                    :style="{ background: primaryColor }"
-                  >
-                    + Neuer Standort
-                  </button>
-                  <button
-                    @click="showBufferModal = true"
-                    class="px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded transition-colors flex items-center gap-1.5"
-                    title="Puffer nach Termin einstellen"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    Puffer
-                  </button>
-                </div>
-
-
-                <!-- Ihre registrierten Standorte -->
-                <div v-if="registeredLocations.length > 0" class="space-y-2">
-                  <button
-                    v-for="location in registeredLocations"
-                    :key="location.id"
-                    class="w-full text-left group relative bg-white border border-gray-200 rounded-xl p-3.5 hover:border-gray-300 hover:shadow-sm active:scale-[0.99] transition-all duration-150"
-                    @click="openLocationModal(location)"
-                  >
-                    <!-- Bookable indicator stripe on the left -->
-                    <span
-                      class="absolute left-0 top-3 bottom-3 w-1 rounded-full"
-                      :class="location.is_online_bookable !== false ? 'bg-green-400' : 'bg-red-300'"
-                    />
-
-                    <div class="pl-3 flex items-center justify-between gap-3">
-                      <!-- Info -->
-                      <div class="min-w-0">
-                        <p class="text-sm font-semibold text-gray-900 truncate">{{ location.name }}</p>
-                        <p class="text-xs text-gray-500 truncate mt-0.5">{{ location.address }}</p>
-                        <div class="flex items-center gap-2 mt-1.5">
-                          <!-- PLZ chip -->
-                          <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600 font-medium">
-                            <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/>
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                            {{ location.postal_code || 'PLZ fehlt' }}
-                          </span>
-                          <!-- Buchbar badge -->
-                          <span
-                            class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                            :class="location.is_online_bookable !== false
-                              ? 'bg-green-50 text-green-700'
-                              : 'bg-red-50 text-red-600'"
-                          >
-                            {{ location.is_online_bookable !== false ? 'Buchbar' : 'Gesperrt' }}
-                          </span>
-                        </div>
-                      </div>
-
-                      <!-- Settings arrow -->
-                      <svg class="w-4 h-4 text-gray-300 group-hover:text-gray-500 flex-shrink-0 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-                      </svg>
-                    </div>
-                  </button>
-                </div>
-
-
-                <!-- Keine Standorte -->
-                <div v-if="registeredLocations.length === 0" class="text-center py-6 text-gray-500">
-                  <p class="text-sm">Keine Standorte ausgewählt</p>
-                </div>
-              </div>
+          </div>
+          <div class="px-4 py-3 overflow-y-auto flex-1">
+            <div class="space-y-4">
+              <ExamLocationSearchDropdown
+                :current-staff-id="props.currentUser?.id || ''"
+                @locations-changed="handleExamLocationsChanged"
+              />
             </div>
           </div>
-
-          <!-- 4. Arbeitszeiten -->
-          <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <button
-              @click="toggleSection('worktime')"
-              class="w-full px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
-            >
-              <div class="w-6 h-6 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg class="w-3.5 h-3.5 text-teal-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              </div>
-              <span class="text-sm font-medium text-gray-900 flex-1">Arbeitszeiten</span>
-              <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.worktime ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-            </button>
-            
-            <div v-if="openSections.worktime" class="px-2 pb-4 border-t border-gray-100">
-              <div class="space-y-4 mt-4">
-                
-                <!-- Info Text -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-2">
-                  <p class="text-sm text-blue-800">
-                    💡 <strong>Arbeitszeiten:</strong> Sie können mehrere Arbeitszeit-Blöcke pro Tag erstellen (z.B. Vormittag und Nachmittag mit Mittagspause). Nicht-Arbeitszeiten werden automatisch als "gesperrt" im Kalender angezeigt.
-                  </p>
-                </div>
-
-                <!-- Arbeitszeiten pro Wochentag -->
-                <div class="space-y-4">
-                  <div
-                    v-for="day in weekdays"
-                    :key="day.value"
-                    class="border border-gray-200 rounded-lg p-2"
-                  >
-                    <!-- Wochentag Header -->
-                    <div class="flex items-center justify-between mb-3">
-                      <h4 class="text-sm font-medium text-gray-700">{{ day.label }}</h4>
-                      
-                      <!-- Aktiv/Inaktiv Toggle Switch -->
-                      <label class="relative inline-flex items-center cursor-pointer">
-                        <input 
-                          type="checkbox" 
-                          v-model="workingDayForm[day.value].is_active"
-                          @change="autoSaveWorkingDay(day.value)"
-                          class="sr-only peer"
-                        />
-                        <div class="tenant-toggle relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                      </label>
-                    </div>
-                    
-                    <!-- Arbeitszeit-Blöcke -->
-                    <div v-if="workingDayForm[day.value].is_active" class="space-y-3">
-                      <div
-                        v-for="(block, blockIndex) in workingDayForm[day.value].blocks"
-                        :key="blockIndex"
-                        class="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg"
-                      >
-                        <!-- Start Zeit -->
-                        <div class="flex-1">
-                          <label class="block text-xs text-gray-500 mb-1">Von</label>
-                          <input
-                            v-model="block.start_time"
-                            type="time"
-                            @change="autoSaveWorkingDay(day.value)"
-                            class="tenant-focus w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2"
-                          >
-                        </div>
-                        
-                        <!-- End Zeit -->
-                        <div class="flex-1">
-                          <label class="block text-xs text-gray-500 mb-1">Bis</label>
-                          <input
-                            v-model="block.end_time"
-                            type="time"
-                            @change="autoSaveWorkingDay(day.value)"
-                            class="tenant-focus w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2"
-                          >
-                        </div>
-                        
-                        <!-- Block löschen Button -->
-                        <div class="flex-shrink-0 pt-5">
-                          <button
-                            @click="removeWorkingBlock(day.value, blockIndex)"
-                            class="text-red-600 hover:text-red-800 text-sm font-medium"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-                      
-                      <!-- Block hinzufügen Button -->
-                      <button
-                        @click="addWorkingBlock(day.value)"
-                        class="w-full py-2 px-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-700 text-sm font-medium"
-                      >
-                        + Arbeitszeit-Block hinzufügen
-                      </button>
-                    </div>
-                    
-                    <!-- Inaktiv Zustand -->
-                    <div v-else class="text-sm text-gray-500 text-center py-4">
-                      Tag ist inaktiv
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Auto-Save Indicator -->
-                <div v-if="isSavingWorkingHours" class="text-sm pt-2" :style="{ color: primaryColor }">
-                  💾 Speichere...
-                </div>
-
-              </div>
-            </div>
-          </div>
-
-      <!-- Gutschein & Rabattcodes (nur Admin) -->
-      <div v-if="props.currentUser?.role === 'admin' || props.currentUser?.role === 'tenant_admin'" class="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <button
-          @click="toggleSection('voucherCodes')"
-          class="w-full px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
-        >
-          <div class="w-6 h-6 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg class="w-3.5 h-3.5 text-yellow-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-          </div>
-          <span class="text-sm font-medium text-gray-900 flex-1">Gutschein- & Rabattcodes</span>
-          <svg class="w-4 h-4 text-gray-300 transition-transform" :class="openSections.voucherCodes ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-        </button>
-        <div v-if="openSections.voucherCodes" class="px-4 pb-4 border-t border-gray-100">
-          <p class="mt-4 text-sm text-gray-500">Gutschein- & Rabattcodes werden in Kürze verfügbar sein.</p>
         </div>
       </div>
-      </div><!-- end accordion wrapper -->
+    </Teleport>
 
-        <!-- Footer Actions -->
-        <div class="mt-2 space-y-2">
-          <!-- Links + Belege Upload nebeneinander -->
-          <div class="grid grid-cols-2 gap-2">
-            <!-- Links -->
-            <button
-              @click="showLinksSheet = true; ensureTenantSlug()"
-              class="bg-white rounded-2xl px-3 py-2 flex items-center gap-2.5 active:opacity-60 transition-opacity shadow-sm"
-            >
-              <div class="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
-                </svg>
-              </div>
-              <span class="text-xs font-medium text-gray-700">Links</span>
-            </button>
-
-            <!-- Belege Upload -->
-            <NuxtLink
-              v-if="props.currentUser?.email === 'kilchi@drivingteam.ch'"
-              to="/staff/expenses"
-              @click="$emit('close')"
-              class="bg-white rounded-2xl px-3 py-2 flex items-center gap-2.5 active:opacity-60 transition-opacity shadow-sm"
-            >
-              <div class="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
-                </svg>
-              </div>
-              <span class="text-xs font-medium text-gray-700">Belege Upload</span>
-            </NuxtLink>
+    <!-- Treffpunkte / Standorte Sheet -->
+    <Teleport to="body">
+      <div v-if="showLocationsSheet" class="fixed inset-0 z-[500] bg-black/50 flex items-end md:items-center justify-center" @click.self="showLocationsSheet = false">
+        <div class="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-md md:max-w-2xl shadow-2xl max-h-[90vh] flex flex-col pb-safe" @click.stop>
+          <div class="flex justify-center pt-3 pb-1 md:hidden">
+            <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
           </div>
+          <div class="flex items-center justify-between px-5 pt-2 pb-4 border-b border-gray-100">
+            <h2 class="text-base font-semibold text-gray-900">Treffpunkte / Standorte</h2>
+            <button @click="showLocationsSheet = false" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="px-4 py-3 overflow-y-auto flex-1">
+            <div class="space-y-4">
 
-          <button
-            @click="handleLogout"
-            class="w-full bg-white rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity shadow-sm"
-          >
-            <div class="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-              </svg>
+              <!-- Header mit Buttons -->
+              <div class="flex items-center gap-2">
+                <button
+                  @click="showNewLocationModal = true"
+                  class="px-4 py-2 text-md font-medium text-white rounded transition-colors hover:opacity-90"
+                  :style="{ background: primaryColor }"
+                >
+                  + Neuer Standort
+                </button>
+                <button
+                  @click="showBufferModal = true"
+                  class="px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded transition-colors flex items-center gap-1.5"
+                  title="Puffer nach Termin einstellen"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  Puffer
+                </button>
+              </div>
+
+
+              <!-- Ihre registrierten Standorte -->
+              <div v-if="registeredLocations.length > 0" class="space-y-2">
+                <button
+                  v-for="location in registeredLocations"
+                  :key="location.id"
+                  class="w-full text-left group relative bg-white border border-gray-200 rounded-xl p-3.5 hover:border-gray-300 hover:shadow-sm active:scale-[0.99] transition-all duration-150"
+                  @click="openLocationModal(location)"
+                >
+                  <!-- Bookable indicator stripe on the left -->
+                  <span
+                    class="absolute left-0 top-3 bottom-3 w-1 rounded-full"
+                    :class="location.is_online_bookable !== false ? 'bg-green-400' : 'bg-red-300'"
+                  />
+
+                  <div class="pl-3 flex items-center justify-between gap-3">
+                    <!-- Info -->
+                    <div class="min-w-0">
+                      <p class="text-sm font-semibold text-gray-900 truncate">{{ location.name }}</p>
+                      <p class="text-xs text-gray-500 truncate mt-0.5">{{ location.address }}</p>
+                      <div class="flex items-center gap-2 mt-1.5">
+                        <!-- PLZ chip -->
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600 font-medium">
+                          <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                          </svg>
+                          {{ location.postal_code || 'PLZ fehlt' }}
+                        </span>
+                        <!-- Buchbar badge -->
+                        <span
+                          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                          :class="location.is_online_bookable !== false
+                            ? 'bg-green-50 text-green-700'
+                            : 'bg-red-50 text-red-600'"
+                        >
+                          {{ location.is_online_bookable !== false ? 'Buchbar' : 'Gesperrt' }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Settings arrow -->
+                    <svg class="w-4 h-4 text-gray-300 group-hover:text-gray-500 flex-shrink-0 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                    </svg>
+                  </div>
+                </button>
+              </div>
+
+
+              <!-- Keine Standorte -->
+              <div v-if="registeredLocations.length === 0" class="text-center py-6 text-gray-500">
+                <p class="text-sm">Keine Standorte ausgewählt</p>
+              </div>
             </div>
-            <span class="text-sm font-medium text-red-600 flex-1 text-left">Abmelden</span>
-          </button>
+          </div>
         </div>
+      </div>
+    </Teleport>
 
-      </div><!-- end space-y-2 settings -->
-      </div><!-- end px-4 pb-6 -->
-    </div><!-- end sheet panel -->
-  </div><!-- end overlay -->
-  </Teleport>
+    <!-- Arbeitszeiten Sheet -->
+    <Teleport to="body">
+      <div v-if="showWorktimeSheet" class="fixed inset-0 z-[500] bg-black/50 flex items-end md:items-center justify-center" @click.self="showWorktimeSheet = false">
+        <div class="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-md md:max-w-2xl shadow-2xl max-h-[90vh] flex flex-col pb-safe" @click.stop>
+          <div class="flex justify-center pt-3 pb-1 md:hidden">
+            <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+          </div>
+          <div class="flex items-center justify-between px-5 pt-2 pb-4 border-b border-gray-100">
+            <h2 class="text-base font-semibold text-gray-900">Arbeitszeiten</h2>
+            <button @click="showWorktimeSheet = false" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="px-4 py-3 overflow-y-auto flex-1">
+            <div class="space-y-4">
+              
+              <!-- Info Text -->
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-2">
+                <p class="text-sm text-blue-800">
+                  💡 <strong>Arbeitszeiten:</strong> Sie können mehrere Arbeitszeit-Blöcke pro Tag erstellen (z.B. Vormittag und Nachmittag mit Mittagspause). Nicht-Arbeitszeiten werden automatisch als "gesperrt" im Kalender angezeigt.
+                </p>
+              </div>
+
+              <!-- Arbeitszeiten pro Wochentag -->
+              <div class="space-y-4">
+                <div
+                  v-for="day in weekdays"
+                  :key="day.value"
+                  class="border border-gray-200 rounded-lg p-2"
+                >
+                  <!-- Wochentag Header -->
+                  <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-sm font-medium text-gray-700">{{ day.label }}</h4>
+                    
+                    <!-- Aktiv/Inaktiv Toggle Switch -->
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        v-model="workingDayForm[day.value].is_active"
+                        @change="autoSaveWorkingDay(day.value)"
+                        class="sr-only peer"
+                      />
+                      <div class="tenant-toggle relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                    </label>
+                  </div>
+                  
+                  <!-- Arbeitszeit-Blöcke -->
+                  <div v-if="workingDayForm[day.value].is_active" class="space-y-3">
+                    <div
+                      v-for="(block, blockIndex) in workingDayForm[day.value].blocks"
+                      :key="blockIndex"
+                      class="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg"
+                    >
+                      <!-- Start Zeit -->
+                      <div class="flex-1">
+                        <label class="block text-xs text-gray-500 mb-1">Von</label>
+                        <input
+                          v-model="block.start_time"
+                          type="time"
+                          @change="autoSaveWorkingDay(day.value)"
+                          class="tenant-focus w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2"
+                        >
+                      </div>
+                      
+                      <!-- End Zeit -->
+                      <div class="flex-1">
+                        <label class="block text-xs text-gray-500 mb-1">Bis</label>
+                        <input
+                          v-model="block.end_time"
+                          type="time"
+                          @change="autoSaveWorkingDay(day.value)"
+                          class="tenant-focus w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2"
+                        >
+                      </div>
+                      
+                      <!-- Block löschen Button -->
+                      <div class="flex-shrink-0 pt-5">
+                        <button
+                          @click="removeWorkingBlock(day.value, blockIndex)"
+                          class="text-red-600 hover:text-red-800 text-sm font-medium"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <!-- Block hinzufügen Button -->
+                    <button
+                      @click="addWorkingBlock(day.value)"
+                      class="w-full py-2 px-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-700 text-sm font-medium"
+                    >
+                      + Arbeitszeit-Block hinzufügen
+                    </button>
+                  </div>
+                  
+                  <!-- Inaktiv Zustand -->
+                  <div v-else class="text-sm text-gray-500 text-center py-4">
+                    Tag ist inaktiv
+                  </div>
+                </div>
+              </div>
+
+              <!-- Auto-Save Indicator -->
+              <div v-if="isSavingWorkingHours" class="text-sm pt-2" :style="{ color: primaryColor }">
+                💾 Speichere...
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Gutschein- & Rabattcodes Sheet -->
+    <Teleport to="body">
+      <div v-if="showVoucherCodesSheet" class="fixed inset-0 z-[500] bg-black/50 flex items-end md:items-center justify-center" @click.self="showVoucherCodesSheet = false">
+        <div class="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-md md:max-w-2xl shadow-2xl max-h-[90vh] flex flex-col pb-safe" @click.stop>
+          <div class="flex justify-center pt-3 pb-1 md:hidden">
+            <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+          </div>
+          <div class="flex items-center justify-between px-5 pt-2 pb-4 border-b border-gray-100">
+            <h2 class="text-base font-semibold text-gray-900">Gutschein- & Rabattcodes</h2>
+            <button @click="showVoucherCodesSheet = false" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="px-4 py-3 overflow-y-auto flex-1">
+            <p class="text-sm text-gray-500">Gutschein- & Rabattcodes werden in Kürze verfügbar sein.</p>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Belege Upload Sheet -->
+    <Teleport to="body">
+      <div v-if="showExpensesSheet" class="fixed inset-0 z-[600] bg-black/50 flex items-end md:items-center justify-center" @click.self="showExpensesSheet = false">
+        <div class="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-md md:max-w-lg shadow-2xl max-h-[90vh] flex flex-col pb-safe" @click.stop>
+          <div class="flex justify-center pt-3 pb-1 md:hidden">
+            <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+          </div>
+          <div class="flex items-center justify-between px-5 pt-2 pb-4 border-b border-gray-100">
+            <h2 class="text-base font-semibold text-gray-900">Beleg einreichen</h2>
+            <button type="button" @click="showExpensesSheet = false" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="px-4 py-3 overflow-y-auto flex-1">
+            <StaffExpenseSubmit />
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- Links Sheet -->
     <Teleport to="body">
@@ -1327,7 +1424,7 @@
     </Teleport>
 
     <!-- Location Settings Modal -->
-    <div v-if="showLocationSettingsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300]">
+    <div v-if="showLocationSettingsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[600]">
       <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4">
         <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 class="text-base font-semibold text-gray-900">Standort-Einstellungen</h3>
@@ -1482,7 +1579,7 @@
     </div>
 
     <!-- Buffer Settings Modal -->
-    <div v-if="showBufferModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300]">
+    <div v-if="showBufferModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[600]">
       <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4">
         <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 class="text-base font-semibold text-gray-900">Puffer nach Termin</h3>
@@ -1556,7 +1653,7 @@
     </div>
 
     <!-- New Location Modal -->
-    <div v-if="showNewLocationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[300]">
+    <div v-if="showNewLocationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[600]">
       <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
           <h3 class="text-lg font-semibold">Neuen Standort erstellen</h3>
@@ -1701,7 +1798,7 @@
   <Teleport to="body">
     <div
       v-if="showMonthlyDetailModal"
-      class="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      class="fixed inset-0 z-[600] flex items-center justify-center bg-black/40 backdrop-blur-sm"
       @click.self="showMonthlyDetailModal = false"
     >
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
@@ -1852,7 +1949,7 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted, onBeforeUnmount, reactive, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { logger } from '~/utils/logger'
 import { navigateTo } from '#app/composables/router'
 // ✅ Removed direct Supabase import - using secure APIs via useDatabaseQuery
@@ -2233,6 +2330,15 @@ const showCalendarIntegration = ref(false)
 // Links Sheet
 const showLinksSheet = ref(false)
 
+// Settings section sheets
+const showExternalCalendarsSheet = ref(false)
+const showWorkingStatsSheet = ref(false)
+const showExamLocationsSheet = ref(false)
+const showLocationsSheet = ref(false)
+const showWorktimeSheet = ref(false)
+const showVoucherCodesSheet = ref(false)
+const showExpensesSheet = ref(false)
+
 // Tenant extra data for links
 const tenantWebsiteUrl = ref<string | null>(null)
 
@@ -2346,20 +2452,6 @@ const staffExamLocations = ref<StaffExamLocation[]>([])
 const isLoadingExamLocations = ref(false)
 const isSavingExamLocation = ref(false)
 
-
-// Accordion State
-const openSections = reactive({
-  externalCalendars: false,
-  locations: false,
-  categories: false,
-  durations: false,
-  worktime: false,
-  notifications: false,
-  workingStats: false,
-  examLocations: false,
-  deviceManager: false,
-  voucherCodes: false
-})
 
 // NEUE STATE für Prüfungsstandorte
 const examLocations = ref<any[]>([])
@@ -3093,10 +3185,6 @@ const removeExamLocation = async (location: any) => {
   }
 }
 
-
-const toggleSection = (section: keyof typeof openSections) => {
-  openSections[section] = !openSections[section]
-}
 
 const getAllPossibleDurations = () => {
   const durations = [45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240]
