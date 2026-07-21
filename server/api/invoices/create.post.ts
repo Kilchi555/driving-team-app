@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 
 export default defineEventHandler(async (event) => {
   // ✅ Use authenticated user
@@ -29,27 +30,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    // Generate invoice number (tenant prefix + year + sequential counter).
-    // Uses the persisted tenants.next_invoice_number counter (same approach as
-    // send-draft.post.ts / resources/block.post.ts) instead of COUNT(*), which
-    // breaks whenever there's a gap in existing invoice numbers (e.g. a deleted
-    // invoice) and produces a number that collides with an existing one.
-    const { data: tenantData } = await supabaseAdmin
-      .from('tenants')
-      .select('invoice_number_prefix, next_invoice_number')
-      .eq('id', userProfile.tenant_id)
-      .single()
-
-    const prefix = tenantData?.invoice_number_prefix || 'RE'
-    const nextNum = tenantData?.next_invoice_number || 1
-    const year = new Date().getFullYear()
-    const invoiceNumber = `${prefix}-${year}-${String(nextNum).padStart(4, '0')}`
-
-    // Reserve the invoice number before inserting
-    await supabaseAdmin
-      .from('tenants')
-      .update({ next_invoice_number: nextNum + 1 })
-      .eq('id', userProfile.tenant_id)
+    const invoiceNumber = await allocateInvoiceNumber(supabaseAdmin, userProfile.tenant_id)
 
     const toRappen = (value: unknown): number => {
       const num = Number(value) || 0
@@ -75,6 +56,9 @@ export default defineEventHandler(async (event) => {
       total_amount_rappen: totalRappen,
       status: 'draft',
       payment_status: 'pending',
+      notes: invoiceData.notes || null,
+      payment_terms: invoiceData.payment_terms || null,
+      footer_text: invoiceData.footer_text || null,
       // company invoices have no user_id — coerce empty strings to null (uuid columns)
       user_id: invoiceData.user_id || null,
       company_id: invoiceData.company_id || null,

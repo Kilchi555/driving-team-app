@@ -12,6 +12,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { generateInvoicePdf } from '~/server/utils/invoice-pdf'
 import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
+import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 
 
 function generateAdminInvoiceNotification(data: {
@@ -73,7 +74,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'Tenant mismatch' })
   }
 
-  // Tenant laden (für Rechnungsnummer + Admin-Mail + Farben)
+  // Tenant laden (für Branding / Admin-Mail)
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
     .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city')
@@ -92,16 +93,7 @@ export default defineEventHandler(async (event) => {
     tenantData = { ...tenantBasic, invoice_number_prefix: 'RE', next_invoice_number: 1 }
   }
 
-  // Nächste Rechnungsnummer atomar reservieren (mit Jahr)
-  const prefix = tenantData.invoice_number_prefix || 'RE'
-  const nextNum = tenantData.next_invoice_number || 1
-  const year = new Date().getFullYear()
-  const invoiceNumber = `${prefix}-${year}-${String(nextNum).padStart(4, '0')}`
-
-  await supabase
-    .from('tenants')
-    .update({ next_invoice_number: nextNum + 1 })
-    .eq('id', staffUser.tenant_id)
+  const invoiceNumber = await allocateInvoiceNumber(supabase, staffUser.tenant_id)
 
   const now = new Date().toISOString()
 
