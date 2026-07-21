@@ -388,8 +388,9 @@
                               @click="useCustomBillingAddress = !useCustomBillingAddress"
                               :class="[
                                 'relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors',
-                                useCustomBillingAddress ? 'bg-blue-600' : 'bg-gray-300'
+                                useCustomBillingAddress ? '' : 'bg-gray-300'
                               ]"
+                              :style="useCustomBillingAddress ? { background: primaryColor } : undefined"
                             >
                               <span
                                 :class="[
@@ -1085,7 +1086,7 @@ v-if="(appointment.credit_used || 0) > 0"
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from '#app'
 import { useInvoices } from '~/composables/useInvoices'
-import { useTenant } from '~/composables/useTenant'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 import Toast from '~/components/Toast.vue'
 import { logger } from '~/utils/logger'
 import { useAuthStore } from '~/stores/auth'
@@ -1093,9 +1094,24 @@ import { getSupabase } from '~/utils/supabase'
 
 const authStore = useAuthStore()
 const supabase = getSupabase()
-const { tenantPrimaryColor } = useTenant()
-const primaryColor = tenantPrimaryColor
-const primaryGradient = computed(() => `linear-gradient(135deg, ${primaryColor.value}, ${primaryColor.value}dd)`)
+const {
+  primaryColor: brandingPrimaryColor,
+  brandName,
+  invoiceIntroText,
+  invoicePaymentTerms,
+  invoiceFooterText,
+} = useTenantBranding()
+const primaryColor = computed(() => brandingPrimaryColor.value || '#1E40AF')
+const primaryGradient = computed(() => {
+  const hex = primaryColor.value.replace('#', '')
+  const num = parseInt(hex, 16)
+  if (Number.isNaN(num)) return primaryColor.value
+  const r = Math.max(0, Math.min(255, (num >> 16) + 40))
+  const g = Math.max(0, Math.min(255, ((num >> 8) & 0xff) + 40))
+  const b = Math.max(0, Math.min(255, (num & 0xff) + 40))
+  const end = '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')
+  return `linear-gradient(135deg, ${primaryColor.value} 0%, ${end} 100%)`
+})
 
 // Secure helper: all payment/appointment write operations go through server API
 const paymentOp = async (action: string, params: Record<string, any> = {}) => {
@@ -2757,7 +2773,14 @@ const invoiceSelectedAppointments = async () => {
     
     invoiceEmail.value = companyBillingAddress.value?.email || displayEmail.value
     invoiceSubject.value = `Rechnung für ${selectedAppointments.value.length} Fahrstunde${selectedAppointments.value.length > 1 ? 'n' : ''}`
-    invoiceMessage.value = `Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie die Rechnung für die durchgeführten Fahrstunden.\n\nMit freundlichen Grüßen\nIhr Driving Team`
+    // Nur Intro in die Nachricht — Zahlungsbedingungen/Footer gehen separat auf die Rechnung
+    const intro = (invoiceIntroText.value || '').trim()
+    if (intro) {
+      invoiceMessage.value = intro
+    } else {
+      const tenantLabel = brandName.value || 'Ihre Fahrschule'
+      invoiceMessage.value = `Guten Tag\n\nVielen Dank für Ihren Auftrag, welchen wir wie folgt in Rechnung stellen:\n\nFreundliche Grüsse\n${tenantLabel}`
+    }
     
     // Zeige das Rechnungs-Modal
     showInvoiceModal.value = true
@@ -2823,7 +2846,9 @@ const buildInvoicePayload = (internalNotes: string) => {
     subtotal_rappen: chfToRappen(selectedAppointmentsTotal.value),
     vat_rate: 7.70,
     discount_amount_rappen: 0,
-    notes: invoiceMessage.value || undefined,
+    notes: invoiceMessage.value || invoiceIntroText.value || undefined,
+    payment_terms: invoicePaymentTerms.value || undefined,
+    footer_text: invoiceFooterText.value || undefined,
     internal_notes: internalNotes,
   }
 

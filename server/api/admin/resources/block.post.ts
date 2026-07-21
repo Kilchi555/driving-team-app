@@ -23,6 +23,7 @@ import { requireAdminProfile } from '~/server/utils/auth'
 import { sendTenantEmail, sendEmail } from '~/server/utils/email'
 import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
 import { generateInvoicePdf } from '~/server/utils/invoice-pdf'
+import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 
 const INTERNAL_PURPOSES = ['internal', 'maintenance', 'meeting', 'event']
 const ALL_PURPOSES = [...INTERNAL_PURPOSES, 'external']
@@ -310,7 +311,7 @@ export default defineEventHandler(async (event) => {
       const resourceLabel = resource_type === 'room' ? 'Raum' : 'Fahrzeug'
       const costRappen = resource_type === 'room' ? (booking as any).room_cost_rappen : (booking as any).cost_rappen
       if (costRappen && costRappen > 0) {
-        // Load tenant for invoice number + branding
+        // Load tenant for branding
         const { data: tenant } = await supabase
           .from('tenants')
           .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city')
@@ -318,16 +319,7 @@ export default defineEventHandler(async (event) => {
           .single()
 
         const tenantData = tenant as any
-        const prefix = tenantData?.invoice_number_prefix || 'RE'
-        const nextNum = tenantData?.next_invoice_number || 1
-        const year = new Date().getFullYear()
-        invoiceNumber = `${prefix}-${year}-${String(nextNum).padStart(4, '0')}`
-
-        // Reserve invoice number
-        await supabase
-          .from('tenants')
-          .update({ next_invoice_number: nextNum + 1 })
-          .eq('id', profile.tenant_id)
+        invoiceNumber = await allocateInvoiceNumber(supabase, profile.tenant_id)
 
         const today = new Date()
         const dueDate = new Date(today)
