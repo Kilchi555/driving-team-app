@@ -342,9 +342,15 @@ export default defineEventHandler(async (event) => {
 
     // Upload to Supabase Storage and return a URL (same pattern as receipts)
     // so that native app clients can open it via Browser.open()
+    // ✅ SECURITY: filename only depends on student name + date, so two students with the
+    // same name (or repeated exports for the same student) collide on the exact same storage
+    // path. With upsert: true this overwrites the previous file, so whoever opens that public
+    // URL afterwards can receive another student's evaluation PDF. A random token per upload
+    // prevents the collision.
     const year = new Date().getFullYear()
     const month = String(new Date().getMonth() + 1).padStart(2, '0')
-    const filepath = `evaluations/${year}/${month}/${filename}`
+    const uniqueToken = crypto.randomUUID()
+    const filepath = `evaluations/${year}/${month}/${uniqueToken}_${filename}`
 
     const { error: uploadError } = await supabase.storage
       .from('receipts')

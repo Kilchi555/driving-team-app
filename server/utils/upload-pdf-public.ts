@@ -12,7 +12,13 @@ export async function uploadPdfAndGetPublicUrl(
   const safeName = opts.filename.replace(/[^\w.\-äöüÄÖÜß]+/g, '_').replace(/_+/g, '_')
   const year = new Date().getFullYear()
   const month = String(new Date().getMonth() + 1).padStart(2, '0')
-  const filepath = `${opts.folder}/${year}/${month}/${safeName}`
+  // ✅ SECURITY: filenames derived from user-facing data (invoice numbers, student names,
+  // dates, ...) can collide across different requests/customers/tenants. Since uploads use
+  // upsert: true, a collision silently overwrites the other document at the same public URL,
+  // letting one customer end up downloading someone else's PDF. A random, unguessable token
+  // guarantees every upload gets its own path, regardless of what filename was requested.
+  const uniqueToken = crypto.randomUUID()
+  const filepath = `${opts.folder}/${year}/${month}/${uniqueToken}_${safeName}`
 
   const { error: uploadError } = await supabase.storage
     .from('receipts')
