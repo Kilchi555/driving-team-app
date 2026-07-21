@@ -20,7 +20,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'Nur Admins dürfen Rechnungen als bezahlt markieren' })
   }
 
-  const { invoice_id, paid_at, paid_amount_rappen, note, payment_method } = await readBody(event)
+  const {
+    invoice_id, paid_at, paid_amount_rappen, note, payment_method,
+    camt_dedupe_key, camt_bank_ref, camt_reference, camt_debtor_name, import_source,
+  } = await readBody(event)
   if (!invoice_id) throw createError({ statusCode: 400, statusMessage: 'invoice_id required' })
 
   const now = new Date().toISOString()
@@ -35,6 +38,37 @@ export default defineEventHandler(async (event) => {
     .single()
 
   if (!invoice) throw createError({ statusCode: 404, statusMessage: 'Rechnung nicht gefunden' })
+
+  // Herkunft aus einem CAMT- oder CSV-Import? Dann diese Bank-Transaktion
+  // registrieren, damit ein erneuter/überlappender Import derselben Buchung
+  // nicht nochmal eine Zahlung verbucht (siehe bank_import_records).
+  if (camt_dedupe_key) {
+    const { error: dedupeError } = await supabase
+      .from('bank_import_records')
+      .insert({
+        tenant_id: staffUser.tenant_id,
+        dedupe_key: camt_dedupe_key,
+        bank_ref: camt_bank_ref || null,
+        entry_date: paid_at ? paidAt.substring(0, 10) : null,
+        amount_rappen: paid_amount_rappen || invoice.total_amount_rappen,
+        reference: camt_reference || null,
+        debtor_name: camt_debtor_name || null,
+        invoice_id,
+        imported_by: staffUser.id,
+        source: import_source === 'csv' ? 'csv' : 'camt',
+      })
+    // Unique-Violation (Code 23505) bedeutet: diese Transaktion wurde bereits
+    // verbucht — dann NICHT ein zweites Mal als Zahlung anrechnen.
+    if (dedupeError) {
+      if (dedupeError.code === '23505') {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Diese Bank-Transaktion wurde bereits importiert und verbucht.',
+        })
+      }
+      console.warn('⚠️ bank_import_records insert warning:', dedupeError.message)
+    }
+  }
 
   // Neuen Betrag zum bereits bezahlten addieren (kumulativ)
   const newPayment = paid_amount_rappen || invoice.total_amount_rappen
@@ -56,6 +90,10 @@ export default defineEventHandler(async (event) => {
       paid_at: paidAt,
       paid_amount_rappen: clampedTotal,
       ...(note ? { internal_notes: note } : {}),
+      // Ist die Rechnung vollständig bezahlt, macht eine weiterhin angezeigte
+      // Mahnstufe keinen Sinn mehr — zurücksetzen, damit z.B. die Mahnstufen-
+      // Badge in der Rechnungsliste wieder verschwindet.
+      ...(!isPartial ? { dunning_level: 0, dunning_paused: false } : {}),
       updated_at: now,
     })
     .eq('id', invoice_id)

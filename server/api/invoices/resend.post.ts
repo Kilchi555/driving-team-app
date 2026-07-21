@@ -26,6 +26,11 @@ export default defineEventHandler(async (event) => {
 
     if (invoiceError || !invoice) throw createError({ statusCode: 404, statusMessage: 'Invoice not found' })
 
+    // Bereits versendete Mahngebühren wieder herausrechnen — die gehören nur
+    // aufs Mahnschreiben, nicht auf die Original-Rechnung (siehe Item-Filter unten).
+    const invoiceSubtotalRappen = (invoice.subtotal_rappen || invoice.total_amount_rappen) - (invoice.dunning_fees_rappen || 0)
+    const invoiceTotalRappen = invoice.total_amount_rappen - (invoice.dunning_fees_rappen || 0)
+
     // Sicherstellen dass nur Rechnungen des eigenen Tenants versendet werden
     const { data: staffUser } = await supabase
       .from('users')
@@ -45,11 +50,17 @@ export default defineEventHandler(async (event) => {
       .single()
 
     // Rechnungspositionen + Appointment-Daten laden
-    const { data: rawItems } = await supabase
+    const { data: allRawItems } = await supabase
       .from('invoice_items')
       .select('*')
       .eq('invoice_id', invoiceId)
       .order('sort_order', { ascending: true })
+
+    // Mahngebühren (angehängt beim Versand einer Zahlungserinnerung/Mahnung, siehe
+    // send-dunning.post.ts) gehören nur aufs Mahnschreiben, nicht auf die
+    // ursprüngliche Rechnung — sonst taucht die Gebühr nachträglich auch auf,
+    // wenn die "normale" Rechnung erneut versendet wird.
+    const rawItems = (allRawItems || []).filter((i: any) => i.notes !== 'Mahngebühr')
 
     const appointmentIds = (rawItems || []).map((i: any) => i.appointment_id).filter(Boolean)
     const appointmentMap: Record<string, any> = {}
@@ -150,7 +161,7 @@ export default defineEventHandler(async (event) => {
           debtor_street_nr: (invoice as any).billing_street_number || '',
           debtor_zip: invoice.billing_zip || '',
           debtor_city: invoice.billing_city || '',
-          amount_rappen: invoice.total_amount_rappen,
+          amount_rappen: invoiceTotalRappen,
           reference: paymentRef,
           additional_info: `Rechnung ${invoice.invoice_number}`,
         })
@@ -164,9 +175,9 @@ export default defineEventHandler(async (event) => {
       invoiceDate: invoice.invoice_date,
       dueDate: invoice.due_date,
       items: finalItems,
-      subtotalRappen: invoice.subtotal_rappen || invoice.total_amount_rappen,
+      subtotalRappen: invoiceSubtotalRappen,
       discountRappen: invoice.discount_amount_rappen || 0,
-      totalRappen: invoice.total_amount_rappen,
+      totalRappen: invoiceTotalRappen,
       tenantName,
       staffName,
       primaryColor: (tenant as any)?.primary_color || null,
@@ -240,9 +251,9 @@ export default defineEventHandler(async (event) => {
           credit_used_rappen: i.credit_used_rappen || 0,
           product_details: i.product_details || [],
         })),
-        subtotalRappen: invoice.subtotal_rappen || invoice.total_amount_rappen,
+        subtotalRappen: invoiceSubtotalRappen,
         discountRappen: invoice.discount_amount_rappen || 0,
-        totalRappen: invoice.total_amount_rappen,
+        totalRappen: invoiceTotalRappen,
         qrCodeDataUrl,
         qrIban,
         scorRef: scorRef || null,
