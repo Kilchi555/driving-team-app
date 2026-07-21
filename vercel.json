@@ -168,6 +168,10 @@
     {
       "path": "/api/cron/review-vercel-logs",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-expired-receipts",
+      "schedule": "15 3 * * *"
     }
   ],
   "rewrites": [
