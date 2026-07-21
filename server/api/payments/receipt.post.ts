@@ -1281,12 +1281,20 @@ export default defineEventHandler(async (event) => {
       logger.debug('✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes')
       
       // Upload PDF to Supabase Storage
-      const filename = authorizedPayments.length === 1 
+      // ✅ SECURITY: The path MUST be unique per request/user. Previously the combined
+      // ("Alle Quittungen") filename only depended on the calendar date, so two different
+      // clients downloading their receipts on the same day would upload to the exact same
+      // storage path (with upsert: true), overwriting each other's PDF. Whoever fetched the
+      // public URL afterwards - including the same client re-opening an old link/tab - could
+      // then receive another client's receipt. Scoping the path by user id + a random,
+      // unguessable token prevents both the overwrite and URL-guessing.
+      const uniqueToken = crypto.randomUUID()
+      const filename = authorizedPayments.length === 1
         ? `Quittung_${authorizedPayments[0].id}_${new Date().toISOString().split('T')[0]}.pdf`
         : `Alle_Quittungen_${new Date().toISOString().split('T')[0]}.pdf`
-      
+
       // Don't include 'receipts/' in path since bucket is already named 'receipts'
-      const filepath = `${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${filename}`
+      const filepath = `${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${user.id}/${uniqueToken}_${filename}`
       
       logger.debug('📤 Uploading PDF to Supabase Storage:', filepath)
       
