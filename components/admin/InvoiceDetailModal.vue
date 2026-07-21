@@ -785,6 +785,7 @@
       :invoice-id="invoice?.id || null"
       :invoice-number="invoice?.invoice_number"
       :current-level="dunningLevel"
+      :last-sent-at="dunningLog[0]?.sent_at || invoice?.last_dunning_sent_at"
       @close="showDunningDialog = false"
       @sent="onDunningSent"
     />

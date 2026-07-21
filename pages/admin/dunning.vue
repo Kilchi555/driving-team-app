@@ -138,6 +138,7 @@
       :invoice-number="activeInvoice?.invoice_number"
       :suggested-stage="activeInvoice?.next_stage"
       :current-level="activeInvoice?.dunning_level || 0"
+      :last-sent-at="activeInvoice?.last_dunning_sent_at"
       @close="showSendDialog = false"
       @sent="onSent"
     />

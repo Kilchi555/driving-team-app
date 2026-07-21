@@ -20,6 +20,15 @@
 
         <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
 
+          <!-- Hinweis: bereits versendete Stufe(n) -->
+          <div v-if="currentStageDef" class="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200">
+            <svg class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p class="text-xs text-amber-800">
+              <strong>{{ currentStageDef.label }}</strong> wurde für diese Rechnung bereits versendet{{ lastSentAt ? ` (${formatDate(lastSentAt)})` : '' }}.
+              Es kann daher nur noch eine höhere Mahnstufe erstellt werden — automatisch vorausgewählt: <strong>{{ stageLabel }}</strong>.
+            </p>
+          </div>
+
           <!-- Stufenwahl -->
           <div>
             <label class="block text-xs font-medium text-gray-500 mb-1.5">Mahnstufe</label>
@@ -121,6 +130,7 @@ const props = defineProps<{
   invoiceNumber?: string
   suggestedStage?: number | null
   currentLevel?: number
+  lastSentAt?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -157,9 +167,14 @@ const availableStages = computed(() => {
 })
 const stageColor = computed(() => STAGE_DEFS.find(d => d.stage === stage.value)?.color || '#2563eb')
 const stageLabel = computed(() => STAGE_DEFS.find(d => d.stage === stage.value)?.label || 'Mahnung')
+// Höchste bereits versendete Stufe — für den Hinweis-Banner oben im Dialog.
+const currentStageDef = computed(() => STAGE_DEFS.find(d => d.stage === (props.currentLevel || 0)) || null)
 
 function formatChf(rappen: number): string {
   return `CHF ${((rappen || 0) / 100).toFixed(2)}`
+}
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 function rappenToChf(rappen: number): string {
   return ((rappen || 0) / 100).toFixed(2)
@@ -247,6 +262,21 @@ watch(() => props.show, (val) => {
   } else {
     preview.value = null
     errorMsg.value = ''
+  }
+})
+
+// currentLevel wird im Elternkomponent oft erst per Nachlade-Request aktuell
+// (z.B. InvoiceDetailModal lädt Mahnstatus asynchron nach). Wenn sich der Wert
+// ändert während der Dialog bereits offen ist und die aktuell gewählte Stufe
+// dadurch ungültig wird (z.B. "Zahlungserinnerung" nachträglich als bereits
+// versendet erkannt), automatisch auf die nächste erlaubte Stufe wechseln —
+// unabhängig davon, in welcher Reihenfolge die Daten eintreffen.
+watch(() => props.currentLevel, () => {
+  if (!props.show) return
+  const stillValid = availableStages.value.some(d => d.stage === stage.value)
+  if (!stillValid) {
+    stage.value = props.suggestedStage || availableStages.value[0]?.stage || stage.value
+    loadPreview()
   }
 })
 </script>
