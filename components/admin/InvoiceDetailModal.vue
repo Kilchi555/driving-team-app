@@ -23,21 +23,7 @@
               <h3 class="text-base font-semibold text-gray-900 truncate">
                 {{ isEditing ? 'Bearbeiten' : (invoice?.invoice_number || 'Rechnung') }}
               </h3>
-              <span
-                v-if="!isEditing && invoice && effectiveDunningLevel > 0"
-                class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold flex-shrink-0"
-                :style="dunningLevelBadgeStyle"
-              >{{ dunningLevelLabel }}</span>
-              <InvoiceStatusBadge
-                v-else-if="!isEditing && invoice && effectiveDunningLevel === 0"
-                class="hidden sm:inline-flex flex-shrink-0"
-                :status="invoice.status"
-              />
             </div>
-            <p v-if="!isEditing && invoice" class="text-xs text-gray-400 truncate mt-0.5">
-              {{ displayCustomer.name || '—' }}
-              <span v-if="invoice.total_amount_rappen != null"> · {{ formatCurrency(invoice.total_amount_rappen) }}</span>
-            </p>
           </div>
 
           <!-- Actions -->
@@ -202,15 +188,15 @@
 
             <!-- ── Betragsübersicht ── -->
             <div class="rounded-2xl border border-gray-100 bg-gradient-to-br from-gray-50 to-white p-4 sm:p-5">
-              <div class="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <p class="text-xs font-medium text-gray-400 uppercase tracking-wide">Rechnungsbetrag</p>
-                  <p class="text-2xl font-semibold text-gray-900 tracking-tight mt-0.5">{{ formatCurrency(invoice.total_amount_rappen) }}</p>
+              <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+                <div class="flex items-baseline gap-2 min-w-0">
+                  <p class="text-xs font-medium text-gray-400 uppercase tracking-wide whitespace-nowrap">Rechnungsbetrag</p>
+                  <p class="text-2xl font-semibold text-gray-900 tracking-tight whitespace-nowrap">{{ formatCurrency(invoice.total_amount_rappen) }}</p>
                 </div>
-                <div class="flex flex-wrap items-center gap-2">
+                <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 flex-shrink-0">
                   <span
                     v-if="effectiveDunningLevel > 0"
-                    class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                    class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap"
                     :style="dunningLevelBadgeStyle"
                   >{{ dunningLevelLabel }}</span>
                   <InvoiceStatusBadge v-else :status="invoice.status" />
@@ -246,25 +232,10 @@
                     <p class="text-sm font-medium mt-0.5" :class="isOverdue(effectiveDueDate) ? 'text-red-600' : 'text-gray-900'">
                       {{ invoice.due_date || invoice.dunning_due_date ? formatDate(effectiveDueDate) : '—' }}
                     </p>
-                    <p v-if="invoice.dunning_due_date && effectiveDunningLevel > 0 && invoice.due_date !== invoice.dunning_due_date" class="text-[11px] text-blue-600 mt-0.5">
-                      Original {{ formatDate(invoice.due_date) }}
-                    </p>
                   </template>
                 </div>
               </div>
 
-              <div v-if="(invoice.paid_amount_rappen || 0) > 0 && invoice.total_amount_rappen > 0" class="mt-4">
-                <div class="flex items-center justify-between text-[11px] text-gray-400 mb-1.5">
-                  <span>Zahlungsfortschritt</span>
-                  <span>{{ Math.min(100, Math.round(((invoice.paid_amount_rappen || 0) / invoice.total_amount_rappen) * 100)) }}%</span>
-                </div>
-                <div class="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
-                  <div
-                    class="h-full rounded-full bg-emerald-500 transition-all"
-                    :style="{ width: Math.min(100, ((invoice.paid_amount_rappen || 0) / invoice.total_amount_rappen) * 100) + '%' }"
-                  />
-                </div>
-              </div>
             </div>
 
             <!-- ── Kunde & Adresse ── -->

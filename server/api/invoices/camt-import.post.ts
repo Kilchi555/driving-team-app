@@ -3,10 +3,33 @@
 
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import {
+  matchEntriesToInvoices, flagAlreadyImported, computeDedupeKey,
+  type MatchableEntry, type OpenInvoiceForMatching,
+} from '~/server/utils/bank-reconciliation'
 
 // Einfacher XML-Wert-Extraktor ohne externe Dependencies
 function xmlVal(xml: string, tag: string): string {
   const m = xml.match(new RegExp(`<(?:[^:>]+:)?${tag}[^>]*>([^<]*)<`, 'i'))
+  return m ? m[1].trim() : ''
+}
+
+// Wert eines verschachtelten Tags, z.B. <ValDt><Dt>2026-07-15</Dt></ValDt> → '2026-07-15'.
+// xmlVal allein scheitert hier, weil der Regex am ersten "<" (dem öffnenden <Dt>) stoppt
+// und dadurch immer einen leeren String liefert.
+function xmlNestedVal(xml: string, outerTag: string, innerTags: string[]): string {
+  const outer = xmlBlock(xml, outerTag)[0]
+  if (!outer) return ''
+  for (const inner of innerTags) {
+    const v = xmlVal(outer, inner)
+    if (v) return v
+  }
+  // Fallback: outer-Block ohne jegliche Tags (z.B. <ValDt>2026-07-15</ValDt> ohne <Dt>)
+  return outer.replace(/<[^>]+>/g, '').trim()
+}
+
+function xmlAttr(xml: string, tag: string, attr: string): string {
+  const m = xml.match(new RegExp(`<(?:[^:>]+:)?${tag}[^>]*\\s${attr}="([^"]*)"`, 'i'))
   return m ? m[1].trim() : ''
 }
 
@@ -26,8 +49,8 @@ function xmlBlock(xml: string, tag: string): string[] {
   return results
 }
 
-function parseCamt(xml: string): CamtEntry[] {
-  const entries: CamtEntry[] = []
+function parseCamt(xml: string): MatchableEntry[] {
+  const entries: MatchableEntry[] = []
 
   // Unterstützt sowohl Ntry (CAMT.053) als auch TxDtls (CAMT.054)
   const ntryBlocks = xmlBlock(xml, 'Ntry')
@@ -36,12 +59,24 @@ function parseCamt(xml: string): CamtEntry[] {
     const cdtDbt = xmlVal(ntry, 'CdtDbtInd')
     if (cdtDbt !== 'CRDT') continue // Nur Gutschriften (Zahlungseingänge)
 
+    // Stornierte/rückgebuchte Buchungen (z.B. eine zurückgerufene Gutschrift)
+    // dürfen nicht als Zahlungseingang gewertet werden.
+    const reversal = xmlVal(ntry, 'RvslInd').toLowerCase()
+    if (reversal === 'true') continue
+
     const amtStr = xmlVal(ntry, 'Amt')
     const amt = parseFloat(amtStr.replace(',', '.')) || 0
     if (amt <= 0) continue
 
-    const valDt = xmlVal(ntry, 'ValDt') || xmlVal(ntry, 'BookgDt') || ''
-    const date = valDt ? (xmlVal(valDt, 'Dt') || valDt.replace(/<[^>]+>/g, '').trim()) : ''
+    // Fremdwährungen können nicht 1:1 gegen CHF-Rechnungsbeträge gematcht werden.
+    const currency = xmlAttr(ntry, 'Amt', 'Ccy') || 'CHF'
+    if (currency !== 'CHF') continue
+
+    const date = xmlNestedVal(ntry, 'ValDt', ['Dt', 'DtTm']) || xmlNestedVal(ntry, 'BookgDt', ['Dt', 'DtTm'])
+
+    // Bank-eigene, i.d.R. eindeutige Transaktionsreferenz — für Duplikat-Erkennung.
+    const acctSvcrRefEntry = xmlVal(ntry, 'AcctSvcrRef')
+    const ntryRef = xmlVal(ntry, 'NtryRef')
 
     // TxDtls Blöcke innerhalb dieses Eintrags
     const txBlocks = xmlBlock(ntry, 'TxDtls')
@@ -58,44 +93,29 @@ function parseCamt(xml: string): CamtEntry[] {
       const dbtrName = xmlVal(tx, 'Nm') || xmlVal(ntry, 'Nm') || ''
       const iban = xmlVal(tx, 'IBAN') || ''
 
+      const bankRef = xmlVal(tx, 'AcctSvcrRef') || acctSvcrRefEntry || ntryRef || endToEnd || ''
+      const cleanRef = ref.replace(/\s/g, '').toUpperCase()
+      const amountRappen = Math.round(amt * 100)
+      const dateStr = date.substring(0, 10)
+
       entries.push({
-        amount_rappen: Math.round(amt * 100),
-        date: date.substring(0, 10),
-        reference: ref.replace(/\s/g, '').toUpperCase(),
+        amount_rappen: amountRappen,
+        date: dateStr,
+        reference: cleanRef,
         reference_raw: ref,
         debtor_name: dbtrName,
         iban,
         remittance_info: ustrd,
         raw_amount: amt,
+        bank_ref: bankRef || null,
+        dedupe_key: computeDedupeKey({
+          bankRef: bankRef || null, date: dateStr, amountRappen, reference: cleanRef, debtorName: dbtrName,
+        }),
       })
     }
   }
 
   return entries
-}
-
-export interface CamtEntry {
-  amount_rappen: number
-  date: string
-  reference: string
-  reference_raw: string
-  debtor_name: string
-  iban: string
-  remittance_info: string
-  raw_amount: number
-}
-
-export interface MatchResult {
-  entry: CamtEntry
-  match_type: 'exact_ref' | 'invoice_number' | 'amount_name' | 'none'
-  confidence: number // 0–100
-  invoice_id?: string
-  invoice_number?: string
-  invoice_total?: number
-  customer_name?: string
-  invoice_status?: string
-  invoice_payment_status?: string
-  already_paid?: boolean
 }
 
 export default defineEventHandler(async (event) => {
@@ -127,6 +147,15 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 422, statusMessage: 'Keine Zahlungseingänge in der CAMT-Datei gefunden' })
   }
 
+  // Tenant-QR-IBAN laden, um pro Rechnung die exakt erwartete Zahlungsreferenz
+  // (QRR bei QR-IBAN, SCOR bei normaler IBAN) berechnen zu können.
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('qr_iban')
+    .eq('id', staffUser.tenant_id)
+    .single()
+  const tenantQrIban = tenant?.qr_iban || ''
+
   // Alle offenen Rechnungen dieses Tenants laden
   const { data: openInvoices } = await supabase
     .from('invoices')
@@ -141,122 +170,24 @@ export default defineEventHandler(async (event) => {
     .neq('payment_status', 'paid')
     .order('invoice_date', { ascending: false })
 
-  const invoices = openInvoices || []
+  const invoices: OpenInvoiceForMatching[] = openInvoices || []
 
-  // Matching-Logik
-  const results: MatchResult[] = entries.map(entry => {
-    let bestMatch: MatchResult = {
-      entry,
-      match_type: 'none',
-      confidence: 0,
-    }
+  // Matching + Duplikat-Erkennung
+  const results = matchEntriesToInvoices(entries, invoices, tenantQrIban)
 
-    for (const inv of invoices) {
-      const invNum = (inv.invoice_number || '').replace(/\s/g, '').toUpperCase()
-      const custName = (inv.billing_contact_person || inv.billing_company_name || '').toLowerCase()
-
-      // 1. Exakte Referenznummer (QR-SCOR oder Rechnungsnummer in Ref)
-      const refClean = entry.reference.replace(/[^A-Z0-9]/g, '')
-      const invNumClean = invNum.replace(/[^A-Z0-9]/g, '')
-      if (refClean && invNumClean && (refClean === invNumClean || refClean.includes(invNumClean) || invNumClean.includes(refClean))) {
-        const amtMatch = Math.abs(inv.total_amount_rappen - entry.amount_rappen) <= 1
-        const confidence = amtMatch ? 99 : 75
-        if (confidence > bestMatch.confidence) {
-          bestMatch = {
-            entry,
-            match_type: 'exact_ref',
-            confidence,
-            invoice_id: inv.id,
-            invoice_number: inv.invoice_number,
-            invoice_total: inv.total_amount_rappen,
-            customer_name: inv.billing_contact_person || inv.billing_company_name || '',
-            invoice_status: inv.status,
-            invoice_payment_status: inv.payment_status,
-          }
-        }
-      }
-
-      // 2. Rechnungsnummer im freien Text (Zahlungszweck)
-      const remit = entry.remittance_info.replace(/\s/g, '').toUpperCase()
-      if (invNumClean && remit.includes(invNumClean)) {
-        const amtMatch = Math.abs(inv.total_amount_rappen - entry.amount_rappen) <= 1
-        const confidence = amtMatch ? 90 : 65
-        if (confidence > bestMatch.confidence) {
-          bestMatch = {
-            entry,
-            match_type: 'invoice_number',
-            confidence,
-            invoice_id: inv.id,
-            invoice_number: inv.invoice_number,
-            invoice_total: inv.total_amount_rappen,
-            customer_name: inv.billing_contact_person || inv.billing_company_name || '',
-            invoice_status: inv.status,
-            invoice_payment_status: inv.payment_status,
-          }
-        }
-      }
-
-      // 3. Betrag + Kundenname (Fuzzy)
-      const amtExact = Math.abs(inv.total_amount_rappen - entry.amount_rappen) <= 1
-      if (amtExact && custName && entry.debtor_name) {
-        const debtorLower = entry.debtor_name.toLowerCase()
-        const nameParts = custName.split(/\s+/)
-        const nameMatch = nameParts.some(part => part.length > 2 && debtorLower.includes(part))
-        if (nameMatch) {
-          const confidence = 70
-          if (confidence > bestMatch.confidence) {
-            bestMatch = {
-              entry,
-              match_type: 'amount_name',
-              confidence,
-              invoice_id: inv.id,
-              invoice_number: inv.invoice_number,
-              invoice_total: inv.total_amount_rappen,
-              customer_name: inv.billing_contact_person || inv.billing_company_name || '',
-              invoice_status: inv.status,
-              invoice_payment_status: inv.payment_status,
-            }
-          }
-        }
-      }
-
-      // 4. Nur Betrag (niedriges Konfidenz)
-      if (amtExact && bestMatch.confidence < 40) {
-        bestMatch = {
-          entry,
-          match_type: 'amount_name',
-          confidence: 35,
-          invoice_id: inv.id,
-          invoice_number: inv.invoice_number,
-          invoice_total: inv.total_amount_rappen,
-          customer_name: inv.billing_contact_person || inv.billing_company_name || '',
-          invoice_status: inv.status,
-          invoice_payment_status: inv.payment_status,
-        }
-      }
-    }
-
-    return bestMatch
-  })
-
-  // Duplikate: wenn zwei Entries auf dieselbe Rechnung zeigen, confidence des schwächeren auf 0 setzen
-  const usedInvoices = new Set<string>()
-  const sorted = [...results].sort((a, b) => b.confidence - a.confidence)
-  for (const r of sorted) {
-    if (r.invoice_id) {
-      if (usedInvoices.has(r.invoice_id)) {
-        r.confidence = Math.min(r.confidence, 20)
-        r.match_type = 'none'
-        delete r.invoice_id
-      } else {
-        usedInvoices.add(r.invoice_id)
-      }
-    }
-  }
+  const dedupeKeys = entries.map(e => e.dedupe_key)
+  const { data: existingImports } = await supabase
+    .from('bank_import_records')
+    .select('dedupe_key, imported_at')
+    .eq('tenant_id', staffUser.tenant_id)
+    .in('dedupe_key', dedupeKeys)
+  const importedKeyMap = new Map((existingImports || []).map(r => [r.dedupe_key, r.imported_at]))
+  flagAlreadyImported(results, importedKeyMap)
 
   return {
     entries_count: entries.length,
-    matched_count: results.filter(r => r.confidence >= 65).length,
+    matched_count: results.filter(r => r.confidence >= 65 && !r.already_imported).length,
+    already_imported_count: results.filter(r => r.already_imported).length,
     results,
     open_invoices: invoices.map(i => ({
       id: i.id,
